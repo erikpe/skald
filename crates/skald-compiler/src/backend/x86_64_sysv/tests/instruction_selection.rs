@@ -49,7 +49,7 @@ fn selects_every_supported_arithmetic_operation_and_storage_copy() {
     assert!(output.contains("imul rax, rcx"));
     assert!(output.contains("sub rax, rcx"));
     assert!(output.contains("add rax, rcx"));
-    assert!(output.contains("call .Lska_fn_0"));
+    assert!(output.contains("call .Lska.fn.main.helper.f0"));
     assert!(output.contains("mov qword ptr [rbp - 8], rax"));
 }
 
@@ -134,7 +134,10 @@ fn selects_every_integer_cast_through_canonical_scalar_moves() {
     let output = assembly(&source);
     assert_eq!(output, assembly(&source));
     for (index, (source_type, target_type)) in functions.into_iter().enumerate() {
-        let function = function_assembly(&output, &format!(".Lska_fn_{index}"));
+        let function = function_assembly(
+            &output,
+            &format!(".Lska.fn.main.cast_{source_type}_to_{target_type}.f{index}"),
+        );
         assert!(function.contains("mov rax, qword ptr [rbp"));
         assert!(!function.contains("ud2"));
         assert!(!function.contains("cmp "));

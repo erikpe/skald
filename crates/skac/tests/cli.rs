@@ -97,7 +97,7 @@ fn logical_entry_compiles_reachable_modules_and_uses_its_leaf_output_default() {
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
     let assembly = fs::read_to_string(directory.join("main.s")).unwrap();
-    assert!(assembly.contains("call .Lska_fn_1"));
+    assert!(assembly.contains("call .Lska.fn.lib.answer.value.f1"));
     assert!(assembly.contains(".globl main"));
 }
 
@@ -171,7 +171,7 @@ fn installed_standard_library_root_is_injectable_through_the_real_binary() {
     );
     assert!(fs::read_to_string(directory.join("main.s"))
         .unwrap()
-        .contains("call .Lska_fn_1"));
+        .contains("call .Lska.fn.std.answer.value.f1"));
 }
 
 #[test]

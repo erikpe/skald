@@ -154,10 +154,13 @@ fn graph_resolution_allocates_canonical_global_ids_and_direct_public_surfaces() 
     assert!(mir_dump.contains("Class c1 module m1 \"Thing\""));
     assert_eq!(mir.definitions.iter().count(), 7);
     let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
-    assert!(assembly.contains(".Lska_fn_0:"));
-    assert!(assembly.contains(".Lska_fn_6:"));
-    assert!(assembly.contains("call .Lska_fn_5"));
-    assert!(assembly.contains("call .Lska_fn_6"));
+    assert!(assembly.contains(".Lska.fn.a.value.f0:"));
+    assert!(assembly.contains(".Lska.fn.m.value.f3:"));
+    assert!(assembly.contains(".Lska.fn.z.entry.local.f6:"));
+    assert!(assembly.contains(".Lska.class.a.Thing.c0.dispatch:"));
+    assert!(assembly.contains(".Lska.class.m.Thing.c1.dispatch:"));
+    assert!(assembly.contains("call .Lska.fn.z.entry.main.f5"));
+    assert!(assembly.contains("call .Lska.fn.z.entry.local.f6"));
 }
 
 #[test]

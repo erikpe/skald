@@ -35,8 +35,14 @@ fn emits_unique_class_metadata_membership_checks_and_failure_reports() {
          fn main() -> i64 {{ return 0; }}\n"
     ));
 
-    for class in 0..5 {
-        assert!(output.contains(&format!(".Lska_class_{class}_dispatch:")));
+    for symbol in [
+        ".Lska.class.main.Root.c0.dispatch:",
+        ".Lska.class.main.Middle.c1.dispatch:",
+        ".Lska.class.main.Leaf.c2.dispatch:",
+        ".Lska.class.main.Both.c3.dispatch:",
+        ".Lska.class.main.Other.c4.dispatch:",
+    ] {
+        assert!(output.contains(symbol));
     }
     assert!(output.contains("cmp r11, rcx"));
     assert!(output.contains("call ska_rt_panic"));

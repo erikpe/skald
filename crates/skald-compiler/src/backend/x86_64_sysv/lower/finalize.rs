@@ -62,7 +62,7 @@ fn lower_class(
     )?;
     instructions.extend([Instruction::Leave, Instruction::Return]);
     Ok(AssemblyFunction {
-        symbol: symbol::complete_finalizer(class),
+        symbol: symbol::complete_finalizer(program, class),
         exported: false,
         instructions,
     })
@@ -112,7 +112,7 @@ fn select_plan(
                 load_complete_address(complete_offset, Register::Rdi, output);
                 load_complete_address(complete_offset, Register::Rsi, output);
                 output.push(Instruction::LoadSymbolAddress {
-                    symbol: symbol::dispatch_table(class),
+                    symbol: symbol::dispatch_table(program, class),
                     destination: Register::Rdx,
                 });
                 output.push(Instruction::Call(symbol::callable(
@@ -173,7 +173,7 @@ fn select_plan(
                     source: memory(Register::R11, 0),
                     destination: Register::Rax.into(),
                 });
-                let labels = release_labels(complete_class, field, output.len());
+                let labels = release_labels(program, complete_class, field, output.len());
                 emit_release_loaded_handle(
                     labels.failure,
                     labels.last,
@@ -205,8 +205,8 @@ fn select_plan(
                         )
                     })?;
                 let finished = Label::new(format!(
-                    "finalize_optional_shared_{}_{}_{}",
-                    complete_class.index(),
+                    ".Lska.{}.finalize_optional_shared.field_{}_{}",
+                    symbol::class_label_stem(program, complete_class),
                     field.index(),
                     output.len()
                 ));
@@ -217,7 +217,7 @@ fn select_plan(
                 });
                 output.push(Instruction::Test(Register::Rax));
                 output.push(Instruction::JumpIfEqual(finished.clone()));
-                let labels = release_labels(complete_class, field, output.len());
+                let labels = release_labels(program, complete_class, field, output.len());
                 emit_release_loaded_handle(
                     labels.failure,
                     labels.last,
@@ -251,8 +251,8 @@ fn select_plan(
                     finalizer_error("finalizer optional-field address exceeds target limits")
                 })?;
                 let finished = Label::new(format!(
-                    "finalize_optional_{}_{}_{}",
-                    complete_class.index(),
+                    ".Lska.{}.finalize_optional.field_{}_{}",
+                    symbol::class_label_stem(program, complete_class),
                     field.index(),
                     output.len()
                 ));
@@ -318,13 +318,14 @@ struct ReleaseLabels {
 }
 
 fn release_labels(
+    program: &MirProgram,
     complete_class: ClassId,
     field: crate::identity::FieldId,
     index: usize,
 ) -> ReleaseLabels {
     let stem = format!(
-        ".Lska_class_{}_field_{}_{}_release",
-        complete_class.index(),
+        ".Lska.{}.field_{}_{}_release",
+        symbol::class_label_stem(program, complete_class),
         field.class().index(),
         field.index(),
     );

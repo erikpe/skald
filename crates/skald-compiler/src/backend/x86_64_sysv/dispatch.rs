@@ -61,9 +61,9 @@ impl DispatchMetadata {
         })
     }
 
-    pub(super) fn table_symbol(&self, class: ClassId) -> String {
+    pub(super) fn table_symbol(&self, program: &MirProgram, class: ClassId) -> String {
         debug_assert!(class.index() < self.tables.len());
-        symbol::dispatch_table(class)
+        symbol::dispatch_table(program, class)
     }
 
     pub(super) fn classes_providing_view(
@@ -109,11 +109,13 @@ impl DispatchMetadata {
         let class_tables = self.tables.iter().enumerate().map(|(index, entries)| {
             let class = ClassId::new(index);
             AssemblyDispatchTable {
-                symbol: symbol::dispatch_table(class),
+                symbol: symbol::dispatch_table(program, class),
                 entries: entries
                     .iter()
                     .map(|method| method.map(|method| callable(program, method.into())))
-                    .chain(std::iter::once(Some(symbol::complete_finalizer(class))))
+                    .chain(std::iter::once(Some(symbol::complete_finalizer(
+                        program, class,
+                    ))))
                     .collect(),
             }
         });

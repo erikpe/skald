@@ -77,7 +77,7 @@ impl InstructionSelector<'_, '_> {
         };
         self.load_shared_handle(publish.allocation, Register::R11);
         self.output.push(Instruction::LoadSymbolAddress {
-            symbol: symbol::dispatch_table(class),
+            symbol: symbol::dispatch_table(self.program, class),
             destination: Register::Rax,
         });
         value::store_rax(
@@ -319,8 +319,8 @@ impl InstructionSelector<'_, '_> {
 
     fn ownership_label(&self, purpose: &str) -> Label {
         Label::new(format!(
-            ".Lska_{}_ownership_{}_{}",
-            symbol::local_label_stem(self.function.callable()),
+            ".Lska.{}.ownership_{}_{}",
+            symbol::local_label_stem(self.program, self.function.callable()),
             purpose,
             self.output.len()
         ))

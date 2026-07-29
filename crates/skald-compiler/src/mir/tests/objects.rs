@@ -411,8 +411,8 @@ fn source_lowered_objects_are_accepted_by_the_existing_backend() {
 
     let assembly = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program)
         .expect("source-lowered object MIR must be accepted by the object backend");
-    assert!(assembly.contains("call .Lska_class_0_init_0"));
-    assert!(assembly.contains("call .Lska_class_0_method_0"));
+    assert!(assembly.contains("call .Lska.class.main.Box.c0.init.i0"));
+    assert!(assembly.contains("call .Lska.class.main.Box.c0.method.get.m0"));
 }
 
 fn calls_in_source_order(body: &MirBody) -> Vec<MirCallTarget> {

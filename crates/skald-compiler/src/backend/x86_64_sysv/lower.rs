@@ -93,11 +93,14 @@ fn lower_definition(
 
     call::spill_parameters(signature, function, &frame, &mut instructions)?;
     if function.body().blocks[0].id != function.body().entry {
-        instructions.push(Instruction::Jump(block_label(function.body().entry)));
+        instructions.push(Instruction::Jump(block_label(
+            context.program,
+            function.body().entry,
+        )));
     }
-    let epilogue = epilogue_label(function.callable());
+    let epilogue = epilogue_label(context.program, function.callable());
     for block in &function.body().blocks {
-        instructions.push(Instruction::Label(block_label(block.id)));
+        instructions.push(Instruction::Label(block_label(context.program, block.id)));
         let mut selector =
             InstructionSelector::new(context, function, block.id, &frame, &mut instructions);
         for instruction in &block.instructions {
@@ -113,6 +116,7 @@ fn lower_definition(
             && !selector.select_type_operation_terminator(block_terminator, block.id)?
         {
             terminator::select(
+                context.program,
                 block_terminator,
                 &frame,
                 signature.return_type,
@@ -262,17 +266,17 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
     }
 }
 
-fn block_label(block: BlockId) -> Label {
+fn block_label(program: &MirProgram, block: BlockId) -> Label {
     Label::new(format!(
-        ".Lska_{}_block_{}",
-        symbol::local_label_stem(block.callable()),
+        ".Lska.{}.block_{}",
+        symbol::local_label_stem(program, block.callable()),
         block.index()
     ))
 }
 
-fn epilogue_label(callable: CallableId) -> Label {
+fn epilogue_label(program: &MirProgram, callable: CallableId) -> Label {
     Label::new(format!(
-        ".Lska_{}_epilogue",
-        symbol::local_label_stem(callable)
+        ".Lska.{}.epilogue",
+        symbol::local_label_stem(program, callable)
     ))
 }

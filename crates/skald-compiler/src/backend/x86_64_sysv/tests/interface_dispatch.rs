@@ -25,10 +25,10 @@ fn emits_witness_entries_in_typed_identity_order() {
     ));
 
     assert!(output.contains(concat!(
-        ".Lska_class_0_dispatch:\n",
-        "    .quad .Lska_class_0_method_2\n",
-        "    .quad .Lska_class_0_method_0\n",
-        "    .quad .Lska_class_0_method_1\n",
+        ".Lska.class.main.Worker.c0.dispatch:\n",
+        "    .quad .Lska.class.main.Worker.c0.method.later.m2\n",
+        "    .quad .Lska.class.main.Worker.c0.method.earlier.m0\n",
+        "    .quad .Lska.class.main.Worker.c0.method.other.m1\n",
     )));
     assert_eq!(output.matches("call r11").count(), 2);
     assert_system_assembler_accepts(&output);

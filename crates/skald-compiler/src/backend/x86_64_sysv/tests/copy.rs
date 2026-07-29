@@ -21,11 +21,21 @@ const COPY_SOURCE: &str = concat!(
 fn lowers_user_and_synthesized_copy_in_mir_defined_field_order() {
     let output = assembly(COPY_SOURCE);
 
-    assert!(output.contains(".Lska_class_0_init_0:"));
-    assert!(output.contains(".Lska_class_0_copy_0:"));
-    assert!(!output.contains(".Lska_class_0_init_1"));
-    assert_eq!(output.matches("call .Lska_class_0_copy_0").count(), 2);
-    assert_eq!(output.matches("call .Lska_class_0_assign_0").count(), 2);
+    assert!(output.contains(".Lska.class.main.Value.c0.init.i0:"));
+    assert!(output.contains(".Lska.class.main.Value.c0.copy.k0:"));
+    assert!(!output.contains(".Lska.class.main.Value.c0.init.i1"));
+    assert_eq!(
+        output
+            .matches("call .Lska.class.main.Value.c0.copy.k0")
+            .count(),
+        2
+    );
+    assert_eq!(
+        output
+            .matches("call .Lska.class.main.Value.c0.assign.a0")
+            .count(),
+        2
+    );
     assert!(output.contains("movzx"));
     assert!(output.contains("movsd"));
     assert!(!output.contains("memcpy"));

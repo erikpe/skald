@@ -235,7 +235,7 @@ fn saturated_optional_guard_state_terminates_on_checked_view_begin() {
         }\n";
     let output = assembly(source);
     let begin_view = concat!(
-        "call .Lska_class_1_init_0\n",
+        "call .Lska.class.main.Holder.c1.init.i0\n",
         "    mov rax, qword ptr [rbp - 16]"
     );
     assert_eq!(
@@ -246,7 +246,7 @@ fn saturated_optional_guard_state_terminates_on_checked_view_begin() {
     let mut saturated = output.replacen(
         begin_view,
         concat!(
-            "call .Lska_class_1_init_0\n",
+            "call .Lska.class.main.Holder.c1.init.i0\n",
             "    mov rax, -1\n",
             "    mov qword ptr [rbp - 16], rax\n",
             "    mov rax, qword ptr [rbp - 16]"
@@ -271,7 +271,7 @@ fn dynamically_pinned_optional_state_terminates_before_container_destruction() {
         }\n";
     let output = assembly(source);
     let initialized = concat!(
-        "call .Lska_class_1_init_0\n",
+        "call .Lska.class.main.Holder.c1.init.i0\n",
         "    mov rax, 42\n",
         "    mov qword ptr [rbp - 48], rax"
     );
@@ -283,7 +283,7 @@ fn dynamically_pinned_optional_state_terminates_before_container_destruction() {
     let pinned = output.replacen(
         initialized,
         concat!(
-            "call .Lska_class_1_init_0\n",
+            "call .Lska.class.main.Holder.c1.init.i0\n",
             "    mov rax, 2\n",
             "    mov qword ptr [rbp - 16], rax\n",
             "    mov rax, 42\n",
@@ -391,7 +391,7 @@ fn optional_fields_calls_results_and_stack_pressure_execute() {
     }\n";
     let output = assembly(source);
 
-    assert!(output.contains("call .Lska_fn_"));
+    assert!(output.contains("call .Lska.fn."));
     assert!(output.contains("mov qword ptr [rsp]"));
     assert_eq!(run_native_assembly(&output).code(), Some(7), "{output}");
 }

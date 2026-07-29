@@ -444,10 +444,14 @@ impl InstructionSelector<'_, '_> {
                 ..
             } => {
                 self.output.push(Instruction::Test(Register::R11));
-                self.output
-                    .push(Instruction::JumpIfNotZero(block_label(*success_target)));
-                self.output
-                    .push(Instruction::Jump(block_label(*failure_target)));
+                self.output.push(Instruction::JumpIfNotZero(block_label(
+                    self.program,
+                    *success_target,
+                )));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *failure_target,
+                )));
                 Ok(true)
             }
             MirTerminator::ArrayLoop {
@@ -466,10 +470,14 @@ impl InstructionSelector<'_, '_> {
                     source: Register::R11,
                     destination: Register::Rax,
                 });
-                self.output
-                    .push(Instruction::JumpIfBelow(block_label(*body_target)));
-                self.output
-                    .push(Instruction::Jump(block_label(*complete_target)));
+                self.output.push(Instruction::JumpIfBelow(block_label(
+                    self.program,
+                    *body_target,
+                )));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *complete_target,
+                )));
                 Ok(true)
             }
             MirTerminator::ArrayPositionCheck {
@@ -488,10 +496,14 @@ impl InstructionSelector<'_, '_> {
                     source: Register::R11,
                     destination: Register::Rax,
                 });
-                self.output
-                    .push(Instruction::JumpIfNotZero(block_label(*success_target)));
-                self.output
-                    .push(Instruction::Jump(block_label(*failure_target)));
+                self.output.push(Instruction::JumpIfNotZero(block_label(
+                    self.program,
+                    *success_target,
+                )));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *failure_target,
+                )));
                 Ok(true)
             }
             _ => Ok(false),
@@ -950,8 +962,8 @@ impl InstructionSelector<'_, '_> {
 
     fn array_label(&self, sequence: usize, purpose: &str) -> Label {
         Label::new(format!(
-            ".Lska_{}_array_{}_{}_{}",
-            symbol::local_label_stem(self.function.callable()),
+            ".Lska.{}.array_{}_{}_{}",
+            symbol::local_label_stem(self.program, self.function.callable()),
             self.block.index(),
             sequence,
             purpose

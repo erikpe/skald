@@ -33,26 +33,26 @@ fn lowers_body_then_recursive_fields_through_existing_place_and_call_machinery()
     let second = assembly(NESTED_DESTRUCTION_SOURCE);
 
     assert_eq!(first, second);
-    assert!(first.contains(".Lska_class_0_destroy_0:"));
-    assert!(first.contains(".Lska_class_1_destroy_0:"));
-    assert!(first.contains(".Lska_class_2_destroy_0:"));
+    assert!(first.contains(".Lska.class.main.Root.c0.destroy.d0:"));
+    assert!(first.contains(".Lska.class.main.Owner.c1.destroy.d0:"));
+    assert!(first.contains(".Lska.class.main.Leaf.c2.destroy.d0:"));
     assert!(first.contains(concat!(
         "    lea rdi, [rbp - 96]\n",
         "    lea rsi, [rbp - 96]\n",
-        "    lea rdx, [rip + .Lska_class_0_dispatch]\n",
-        "    call .Lska_class_0_destroy_0\n",
+        "    lea rdx, [rip + .Lska.class.main.Root.c0.dispatch]\n",
+        "    call .Lska.class.main.Root.c0.destroy.d0\n",
         "    lea rdi, [rbp - 88]\n",
         "    lea rsi, [rbp - 88]\n",
-        "    lea rdx, [rip + .Lska_class_1_dispatch]\n",
-        "    call .Lska_class_1_destroy_0\n",
+        "    lea rdx, [rip + .Lska.class.main.Owner.c1.dispatch]\n",
+        "    call .Lska.class.main.Owner.c1.destroy.d0\n",
         "    lea rdi, [rbp - 40]\n",
         "    lea rsi, [rbp - 40]\n",
-        "    lea rdx, [rip + .Lska_class_2_dispatch]\n",
-        "    call .Lska_class_2_destroy_0\n",
+        "    lea rdx, [rip + .Lska.class.main.Leaf.c2.dispatch]\n",
+        "    call .Lska.class.main.Leaf.c2.destroy.d0\n",
         "    lea rdi, [rbp - 80]\n",
         "    lea rsi, [rbp - 80]\n",
-        "    lea rdx, [rip + .Lska_class_2_dispatch]\n",
-        "    call .Lska_class_2_destroy_0\n",
+        "    lea rdx, [rip + .Lska.class.main.Leaf.c2.dispatch]\n",
+        "    call .Lska.class.main.Leaf.c2.destroy.d0\n",
     )));
     assert_system_assembler_accepts(&first);
 }
@@ -76,7 +76,7 @@ fn cleanup_preserves_the_precomputed_return_value_without_aggregate_runtime_oper
         .unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     let cleanup = output
-        .find("call .Lska_class_0_destroy_0")
+        .find("call .Lska.class.main.Root.c0.destroy.d0")
         .expect("root cleanup must call its user body");
     let expected_reload = format!(
         "mov rax, qword ptr [rbp - {}]",
@@ -111,11 +111,11 @@ fn floating_return_values_reload_into_xmm0_after_cleanup_calls() {
     };
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     let function = output
-        .split(".Lska_fn_1:")
+        .split(".Lska.fn.main.main.f1:")
         .next()
         .expect("compute assembly must precede main");
     let cleanup = function
-        .find("call .Lska_class_0_destroy_0")
+        .find("call .Lska.class.main.Resource.c0.destroy.d0")
         .expect("compute must clean its local resource");
     let expected_reload = format!(
         "movsd xmm0, qword ptr [rbp - {}]",
@@ -177,12 +177,12 @@ fn projected_receiver_cleanup_reuses_indirect_place_addressing() {
 
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     assert!(output.contains(concat!(
-        ".Lska_class_0_method_0_block_0:\n",
+        ".Lska.class.main.Owner.c0.method.release.m0.block_0:\n",
         "    mov rdi, qword ptr [rbp - 8]\n",
         "    lea rdi, [rdi + 8]\n",
         "    mov rsi, qword ptr [rbp - 8]\n",
         "    lea rsi, [rsi + 8]\n",
-        "    lea rdx, [rip + .Lska_class_1_dispatch]\n",
-        "    call .Lska_class_1_destroy_0\n",
+        "    lea rdx, [rip + .Lska.class.main.Leaf.c1.dispatch]\n",
+        "    call .Lska.class.main.Leaf.c1.destroy.d0\n",
     )));
 }

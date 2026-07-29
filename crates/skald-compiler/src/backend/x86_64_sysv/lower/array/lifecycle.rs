@@ -110,18 +110,18 @@ fn lower_class_copy(
     match &declaration.copy_constructor {
         MirCopyCapability::User(copy) => {
             if let Some(base) = copy.base {
-                emit_class_helper_call(data_layout, class, base.base, &mut output)?;
+                emit_class_helper_call(program, data_layout, class, base.base, &mut output)?;
             }
             load_home_address(DESTINATION_HOME, 0, Register::Rdi, &mut output);
             load_home_address(DESTINATION_HOME, 0, Register::Rsi, &mut output);
             output.push(Instruction::LoadSymbolAddress {
-                symbol: symbol::dispatch_table(class),
+                symbol: symbol::dispatch_table(program, class),
                 destination: Register::Rdx,
             });
             load_home_address(SOURCE_HOME, 0, Register::Rcx, &mut output);
             load_home_address(SOURCE_HOME, 0, Register::R8, &mut output);
             output.push(Instruction::LoadSymbolAddress {
-                symbol: symbol::dispatch_table(class),
+                symbol: symbol::dispatch_table(program, class),
                 destination: Register::R9,
             });
             output.push(Instruction::Call(symbol::callable(
@@ -131,7 +131,7 @@ fn lower_class_copy(
         }
         MirCopyCapability::Synthesized(copy) => {
             if let Some(base) = copy.base {
-                emit_class_helper_call(data_layout, class, base.base, &mut output)?;
+                emit_class_helper_call(program, data_layout, class, base.base, &mut output)?;
             }
             for field in &copy.fields {
                 emit_field_copy(program, data_layout, class, *field, &mut output)?;
@@ -144,7 +144,7 @@ fn lower_class_copy(
 
     output.extend([Instruction::Leave, Instruction::Return]);
     Ok(AssemblyFunction {
-        symbol: symbol::class_copy_helper(class),
+        symbol: symbol::class_copy_helper(program, class),
         exported: false,
         instructions: output,
     })
@@ -170,6 +170,7 @@ fn emit_field_copy<I: Copy>(
         MirSynthesizedFieldCopy::OptionalPrimitive { payload, .. } => {
             let layout = data_layout.optional(payload)?;
             emit_optional_copy(
+                program,
                 owner,
                 field_id,
                 offset,
@@ -183,12 +184,12 @@ fn emit_field_copy<I: Copy>(
             let MirType::Class(class) = ty else {
                 unreachable!("verified synthesized class field has class type")
             };
-            emit_helper_call_at(class, offset, offset, output);
+            emit_helper_call_at(program, class, offset, offset, output);
         }
         MirSynthesizedFieldCopy::OptionalClass { class, .. } => {
             let payload = i32::try_from(data_layout.optional_class(class)?.payload_offset())
                 .map_err(|_| lifecycle_error("optional class payload offset exceeds x86-64"))?;
-            emit_optional_class_copy(owner, field_id, class, offset, payload, output);
+            emit_optional_class_copy(program, owner, field_id, class, offset, payload, output);
         }
         MirSynthesizedFieldCopy::Array { array, .. } => {
             load_home_address(SOURCE_HOME, offset, Register::R11, output);
@@ -201,16 +202,17 @@ fn emit_field_copy<I: Copy>(
             value::store_rax(memory(Register::R11, 0), output);
         }
         MirSynthesizedFieldCopy::Shared { .. } => {
-            emit_shared_copy(owner, field_id, offset, false, output);
+            emit_shared_copy(program, owner, field_id, offset, false, output);
         }
         MirSynthesizedFieldCopy::OptionalShared { .. } => {
-            emit_shared_copy(owner, field_id, offset, true, output);
+            emit_shared_copy(program, owner, field_id, offset, true, output);
         }
     }
     Ok(())
 }
 
 fn emit_class_helper_call(
+    program: &MirProgram,
     data_layout: &DataLayout,
     owner: ClassId,
     class: ClassId,
@@ -224,11 +226,12 @@ fn emit_class_helper_call(
         .offset;
     let offset =
         i32::try_from(offset).map_err(|_| lifecycle_error("base copy offset exceeds x86-64"))?;
-    emit_helper_call_at(class, offset, offset, output);
+    emit_helper_call_at(program, class, offset, offset, output);
     Ok(())
 }
 
 fn emit_helper_call_at(
+    program: &MirProgram,
     class: ClassId,
     destination_offset: i32,
     source_offset: i32,
@@ -236,10 +239,11 @@ fn emit_helper_call_at(
 ) {
     load_home_address(DESTINATION_HOME, destination_offset, Register::Rdi, output);
     load_home_address(SOURCE_HOME, source_offset, Register::Rsi, output);
-    output.push(Instruction::Call(symbol::class_copy_helper(class)));
+    output.push(Instruction::Call(symbol::class_copy_helper(program, class)));
 }
 
 fn emit_optional_copy(
+    program: &MirProgram,
     owner: ClassId,
     field: crate::identity::FieldId,
     offset: i32,
@@ -248,8 +252,8 @@ fn emit_optional_copy(
     output: &mut Vec<Instruction>,
 ) {
     let stem = format!(
-        ".Lska_class_{}_field_{}_optional_copy",
-        owner.index(),
+        ".Lska.{}.field_{}_optional_copy",
+        symbol::class_label_stem(program, owner),
         field.index()
     );
     let present = Label::new(format!("{stem}_present"));
@@ -282,6 +286,7 @@ fn emit_optional_copy(
 }
 
 fn emit_optional_class_copy(
+    program: &MirProgram,
     owner: ClassId,
     field: crate::identity::FieldId,
     class: ClassId,
@@ -290,8 +295,8 @@ fn emit_optional_class_copy(
     output: &mut Vec<Instruction>,
 ) {
     let stem = format!(
-        ".Lska_class_{}_field_{}_optional_copy",
-        owner.index(),
+        ".Lska.{}.field_{}_optional_copy",
+        symbol::class_label_stem(program, owner),
         field.index()
     );
     let present = Label::new(format!("{stem}_present"));
@@ -308,6 +313,7 @@ fn emit_optional_class_copy(
     output.push(Instruction::Jump(complete.clone()));
     output.push(Instruction::Label(present));
     emit_helper_call_at(
+        program,
         class,
         offset
             .checked_add(payload_offset)
@@ -327,6 +333,7 @@ fn emit_optional_class_copy(
 }
 
 fn emit_shared_copy(
+    program: &MirProgram,
     owner: ClassId,
     field: crate::identity::FieldId,
     offset: i32,
@@ -334,8 +341,8 @@ fn emit_shared_copy(
     output: &mut Vec<Instruction>,
 ) {
     let stem = format!(
-        ".Lska_class_{}_field_{}_shared_copy",
-        owner.index(),
+        ".Lska.{}.field_{}_shared_copy",
+        symbol::class_label_stem(program, owner),
         field.index()
     );
     let absent = Label::new(format!("{stem}_absent"));

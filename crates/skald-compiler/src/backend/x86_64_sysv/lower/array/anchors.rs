@@ -104,7 +104,7 @@ impl InstructionSelector<'_, '_> {
             self.output,
         );
         self.output.push(Instruction::LoadSymbolAddress {
-            symbol: symbol::dispatch_table(class),
+            symbol: symbol::dispatch_table(self.program, class),
             destination: Register::Rax,
         });
         value::store_rax(

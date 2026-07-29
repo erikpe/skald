@@ -60,8 +60,8 @@ fn receiverless_static_methods_use_method_symbols_and_stack_arguments() {
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains(".Lska_class_0_method_0:"));
-    assert!(output.contains("call .Lska_class_0_method_0"));
+    assert!(output.contains(".Lska.class.main.Math.c0.method.sum.m0:"));
+    assert!(output.contains("call .Lska.class.main.Math.c0.method.sum.m0"));
     assert!(output.contains("sub rsp, 16"));
     assert_eq!(run_native_assembly(&output).code(), Some(28));
 }

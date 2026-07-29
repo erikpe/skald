@@ -24,7 +24,7 @@ pub(super) fn lower_all(
         .flat_map(|array| {
             [
                 lower_initializer(array.id, array.element, data_layout),
-                lower_copier(array.id, array.element, data_layout),
+                lower_copier(program, array.id, array.element, data_layout),
                 lower_clone(array.id, data_layout),
                 lower_destroyer(program, array.id, array.element, data_layout),
                 lower_release(array.id),
@@ -337,6 +337,7 @@ fn lower_clone(
 }
 
 fn lower_copier(
+    program: &MirProgram,
     array: crate::identity::ArrayTypeId,
     element: MirType,
     data_layout: &DataLayout,
@@ -447,10 +448,10 @@ fn lower_copier(
                 source,
                 destination: Register::Rsi,
             },
-            Instruction::Call(symbol::class_copy_helper(class)),
+            Instruction::Call(symbol::class_copy_helper(program, class)),
         ],
         MirType::OptionalClass(class) => {
-            lower_optional_class_copier(array, class, source, destination, data_layout)?
+            lower_optional_class_copier(program, array, class, source, destination, data_layout)?
         }
         MirType::Array(inner) => lower_nested_array_copier(array, inner, source, destination),
         MirType::Shared(_) => lower_shared_copier(array, source, destination, false),
@@ -486,6 +487,7 @@ fn lower_copier(
 }
 
 fn lower_optional_class_copier(
+    program: &MirProgram,
     array: crate::identity::ArrayTypeId,
     class: crate::identity::ClassId,
     source: Operand,
@@ -529,7 +531,7 @@ fn lower_optional_class_copier(
             source: source_payload,
             destination: Register::Rsi,
         },
-        Instruction::Call(symbol::class_copy_helper(class)),
+        Instruction::Call(symbol::class_copy_helper(program, class)),
         Instruction::Move {
             source: value::memory(Register::Rsp, 0),
             destination: Register::R11.into(),
@@ -648,7 +650,7 @@ fn lower_shared_copier(
 }
 
 fn lower_destroyer(
-    _program: &MirProgram,
+    program: &MirProgram,
     array: crate::identity::ArrayTypeId,
     element: MirType,
     data_layout: &DataLayout,
@@ -686,7 +688,7 @@ fn lower_destroyer(
                 source: element_address,
                 destination: Register::Rdi,
             },
-            Instruction::Call(symbol::complete_finalizer(class)),
+            Instruction::Call(symbol::complete_finalizer(program, class)),
         ],
         MirType::OptionalClass(class) => {
             let payload_offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
@@ -712,7 +714,7 @@ fn lower_destroyer(
                     source: offset_operand(element_address, payload_offset)?,
                     destination: Register::Rdi,
                 },
-                Instruction::Call(symbol::complete_finalizer(class)),
+                Instruction::Call(symbol::complete_finalizer(program, class)),
                 Instruction::Label(complete),
             ]
         }

@@ -368,8 +368,8 @@ impl InstructionSelector<'_, '_> {
 
         self.load_state(source)?;
         self.output.push(Instruction::Test(Register::Rax));
-        let matched = optional_label(result, "matched");
-        let finished = optional_label(result, "finished");
+        let matched = optional_label(self.program, result, "matched");
+        let finished = optional_label(self.program, result, "finished");
         self.output.push(match kind {
             MirPresenceTestKind::Some => Instruction::JumpIfNotZero(matched.clone()),
             MirPresenceTestKind::None => Instruction::JumpIfEqual(matched.clone()),
@@ -399,8 +399,10 @@ impl InstructionSelector<'_, '_> {
                 let (_, source) = self.frame_place(&unwrap.source)?;
                 value::load_rax(source, self.output);
                 self.output.push(Instruction::Test(Register::Rax));
-                self.output
-                    .push(Instruction::JumpIfEqual(block_label(*failure_target)));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *failure_target,
+                )));
                 let invalid = self.next_optional_label("shared_unwrap_invalid");
                 let overflow = self.next_optional_label("shared_unwrap_overflow");
                 emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
@@ -408,8 +410,10 @@ impl InstructionSelector<'_, '_> {
                     value::frame_storage(self.frame, unwrap.destination),
                     self.output,
                 );
-                self.output
-                    .push(Instruction::Jump(block_label(*success_target)));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *success_target,
+                )));
                 self.output.push(Instruction::Label(overflow));
                 super::terminator::emit_ownership_overflow(self.output);
                 self.output.push(Instruction::Label(invalid));
@@ -426,12 +430,16 @@ impl InstructionSelector<'_, '_> {
             } => {
                 self.load_state(source)?;
                 self.output.push(Instruction::Test(Register::Rax));
-                self.output
-                    .push(Instruction::JumpIfEqual(block_label(*failure_target)));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *failure_target,
+                )));
                 let payload = self.optional_payload(source)?;
                 self.copy_payload_to_storage(*destination, payload)?;
-                self.output
-                    .push(Instruction::Jump(block_label(*success_target)));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *success_target,
+                )));
                 Ok(true)
             }
             MirTerminator::BeginOptionalView {
@@ -443,8 +451,10 @@ impl InstructionSelector<'_, '_> {
             } => {
                 self.load_class_optional_state(&begin.source)?;
                 self.output.push(Instruction::Test(Register::Rax));
-                self.output
-                    .push(Instruction::JumpIfEqual(block_label(*absent_target)));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *absent_target,
+                )));
                 self.output.push(Instruction::MoveImmediate64 {
                     bits: u64::MAX,
                     destination: Register::Rcx,
@@ -453,8 +463,10 @@ impl InstructionSelector<'_, '_> {
                     source: Register::Rcx,
                     destination: Register::Rax,
                 });
-                self.output
-                    .push(Instruction::JumpIfEqual(block_label(*overflow_target)));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *overflow_target,
+                )));
                 self.output.push(Instruction::MoveImmediate64 {
                     bits: 1,
                     destination: Register::Rdx,
@@ -473,8 +485,10 @@ impl InstructionSelector<'_, '_> {
                     destination: Register::Rax.into(),
                 });
                 value::store_rax(state, self.output);
-                self.output
-                    .push(Instruction::Jump(block_label(*success_target)));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *success_target,
+                )));
                 Ok(true)
             }
             MirTerminator::CheckOptionalMutation {
@@ -485,8 +499,10 @@ impl InstructionSelector<'_, '_> {
             } => {
                 self.load_class_optional_state(source)?;
                 self.output.push(Instruction::Test(Register::Rax));
-                self.output
-                    .push(Instruction::JumpIfEqual(block_label(*success_target)));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *success_target,
+                )));
                 self.output.push(Instruction::MoveImmediate64 {
                     bits: 1,
                     destination: Register::Rcx,
@@ -495,10 +511,14 @@ impl InstructionSelector<'_, '_> {
                     source: Register::Rcx,
                     destination: Register::Rax,
                 });
-                self.output
-                    .push(Instruction::JumpIfEqual(block_label(*success_target)));
-                self.output
-                    .push(Instruction::Jump(block_label(*failure_target)));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *success_target,
+                )));
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *failure_target,
+                )));
                 Ok(true)
             }
             _ => Ok(false),
@@ -721,8 +741,8 @@ impl InstructionSelector<'_, '_> {
         let sequence = self.optional_sequence;
         self.optional_sequence += 1;
         Label::new(format!(
-            ".Lska_{}_optional_{}_{}_{}",
-            symbol::local_label_stem(self.function.callable()),
+            ".Lska.{}.optional_{}_{}_{}",
+            symbol::local_label_stem(self.program, self.function.callable()),
             self.block.index(),
             sequence,
             suffix
@@ -767,10 +787,10 @@ fn offset_operand(
     })
 }
 
-fn optional_label(result: ValueId, suffix: &str) -> Label {
+fn optional_label(program: &crate::mir::MirProgram, result: ValueId, suffix: &str) -> Label {
     Label::new(format!(
-        ".Lska_{}_optional_test_{}_{}",
-        symbol::local_label_stem(result.callable()),
+        ".Lska.{}.optional_test_{}_{}",
+        symbol::local_label_stem(program, result.callable()),
         result.index(),
         suffix
     ))

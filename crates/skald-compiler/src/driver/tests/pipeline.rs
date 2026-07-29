@@ -44,7 +44,9 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(artifact.report.sources.len(), 2);
-    assert!(artifact.assembly.contains("call .Lska_fn_1"));
+    assert!(artifact
+        .assembly
+        .contains("call .Lska.fn.lib.answer.value.f1"));
     assert!(artifact.assembly.contains(".globl main"));
 }
 
@@ -220,7 +222,9 @@ fn unused_destructor_bodies_lower_through_the_backend() {
     .expect("valid destructor definitions must lower deterministically");
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains(".Lska_class_0_destroy_0"));
+    assert!(artifact
+        .assembly
+        .contains(".Lska.class.main.Resource.c0.destroy.d0"));
 }
 
 #[test]
@@ -241,9 +245,15 @@ fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
     .expect("copy lifecycle bodies must lower as MIR member definitions");
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains(".Lska_class_0_init_0"));
-    assert!(artifact.assembly.contains(".Lska_class_0_copy_0"));
-    assert!(artifact.assembly.contains(".Lska_class_0_assign_0"));
+    assert!(artifact
+        .assembly
+        .contains(".Lska.class.main.Value.c0.init.i0"));
+    assert!(artifact
+        .assembly
+        .contains(".Lska.class.main.Value.c0.copy.k0"));
+    assert!(artifact
+        .assembly
+        .contains(".Lska.class.main.Value.c0.assign.a0"));
 }
 
 #[test]
@@ -285,7 +295,7 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
     .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains("call .Lska_fn_0"));
+    assert!(artifact.assembly.contains("call .Lska.fn.main.double.f0"));
     assert!(artifact.assembly.contains(".globl main"));
 }
 
@@ -303,7 +313,9 @@ fn static_inheritance_composes_through_the_complete_pipeline() {
     .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains("call .Lska_class_0_init_0"));
+    assert!(artifact
+        .assembly
+        .contains("call .Lska.class.main.Base.c0.init.i0"));
 }
 
 #[test]
@@ -320,8 +332,12 @@ fn composes_the_complete_object_frontend_and_backend_pipeline() {
     .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains("call .Lska_class_0_init_0"));
-    assert!(artifact.assembly.contains("call .Lska_class_0_method_0"));
+    assert!(artifact
+        .assembly
+        .contains("call .Lska.class.main.Box.c0.init.i0"));
+    assert!(artifact
+        .assembly
+        .contains("call .Lska.class.main.Box.c0.method.get.m0"));
 }
 
 #[test]
@@ -374,7 +390,7 @@ fn typed_alias_syntax_reaches_the_backend_pipeline() {
     .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains(".Lska_fn_0:"));
+    assert!(artifact.assembly.contains(".Lska.fn.main.inspect.f0:"));
 }
 
 #[test]

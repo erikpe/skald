@@ -202,7 +202,10 @@ fn lowers_the_current_handle_header_and_runtime_call_contract() {
     assert!(output.contains("call ska_rt_free"));
     assert!(output.contains("ownership_release_invalid"));
     assert!(output.contains("    ud2"));
-    assert!(output.contains(".Lska_class_1_dispatch:\n    .quad .Lska_class_1_finalize_complete"));
+    assert!(output.contains(concat!(
+        ".Lska.class.main.Leaf.c1.dispatch:\n",
+        "    .quad .Lska.class.main.Leaf.c1.finalize_complete"
+    )));
     assert_system_assembler_accepts(&output);
 }
 
@@ -345,9 +348,9 @@ fn shared_parameters_and_results_use_integer_arguments_and_rax_without_hidden_de
     ));
 
     let forward = output
-        .split(".Lska_fn_0:")
+        .split(".Lska.fn.main.forward.f0:")
         .nth(1)
-        .and_then(|tail| tail.split(".size .Lska_fn_0").next())
+        .and_then(|tail| tail.split(".size .Lska.fn.main.forward.f0").next())
         .expect("forward function assembly");
     assert!(forward.contains("mov qword ptr [rbp - 16], rdi"));
     assert!(forward.contains("mov rax, qword ptr [rbp - 8]"));

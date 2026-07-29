@@ -45,6 +45,9 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
             output.matches(&format!(".type {symbol}, @object")).count(),
             1
         );
+        assert!(output.contains(&format!(
+            "{symbol}:\n    .ascii \"{message}\"\n.size {symbol}, .-{symbol}\n"
+        )));
         assert!(output.contains(&format!("lea rdi, [rip + {symbol}]")));
         assert!(output.contains(&format!("mov rsi, {}", message.len())));
     }

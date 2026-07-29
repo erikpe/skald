@@ -87,8 +87,8 @@ fn source_projected_assembly_is_deterministic_and_accepted() {
     let second = assembly(INLINE_FIELD_SOURCE);
 
     assert_eq!(first, second);
-    assert!(first.contains("call .Lska_class_3_init_0"));
-    assert!(first.contains("call .Lska_class_2_method_1"));
+    assert!(first.contains("call .Lska.class.main.Branch.c3.init.i0"));
+    assert!(first.contains("call .Lska.class.main.Leaf.c2.method.add.m1"));
     assert_system_assembler_accepts(&first);
 }
 
@@ -143,16 +143,16 @@ fn lowers_initializer_and_method_bodies_with_identity_based_symbols() {
     verify_mir(&program).unwrap();
 
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    assert!(output.contains(".Lska_class_0_init_0:"));
-    assert!(output.contains(".Lska_class_0_method_0:"));
-    assert!(output.contains(".Lska_class_0_method_1:"));
-    assert!(output.contains(".Lska_class_0_method_2:"));
+    assert!(output.contains(".Lska.class.main.Counter.c0.init.i0:"));
+    assert!(output.contains(".Lska.class.main.Counter.c0.method.add.m0:"));
+    assert!(output.contains(".Lska.class.main.Counter.c0.method.get.m1:"));
+    assert!(output.contains(".Lska.class.main.Counter.c0.method.get_via_receiver.m2:"));
     assert!(output.contains("lea rdi, [rbp - 8]"));
-    assert!(output.contains("call .Lska_class_0_init_0"));
-    assert!(output.contains("call .Lska_class_0_method_0"));
-    assert!(output.contains("call .Lska_class_0_method_1"));
-    assert!(output.contains("call .Lska_class_0_method_2"));
-    assert!(output.contains("call .Lska_fn_1"));
+    assert!(output.contains("call .Lska.class.main.Counter.c0.init.i0"));
+    assert!(output.contains("call .Lska.class.main.Counter.c0.method.add.m0"));
+    assert!(output.contains("call .Lska.class.main.Counter.c0.method.get.m1"));
+    assert!(output.contains("call .Lska.class.main.Counter.c0.method.get_via_receiver.m2"));
+    assert!(output.contains("call .Lska.fn.main.sum.f1"));
     assert!(output.contains("mov qword ptr [rbp - 8], rdi"));
     assert_system_assembler_accepts(&format!("{output}\n{}", println_i64_stub()));
 }
@@ -201,7 +201,7 @@ fn emits_a_class_owned_definition_with_no_receiver_abi_components() {
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains(".Lska_class_0_method_0:"));
+    assert!(output.contains(".Lska.class.main.Tools.c0.method.answer.m0:"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -235,17 +235,17 @@ fn alias_homes_are_pointer_sized_and_indirect_places_lower_deterministically() {
     let first = emit_assembly(Target::X86_64SysV, &program).unwrap();
     let second = emit_assembly(Target::X86_64SysV, &program).unwrap();
     assert_eq!(first, second);
-    assert!(first.contains(".Lska_fn_3:"));
-    assert!(first.contains(".Lska_fn_4:"));
+    assert!(first.contains(".Lska.fn.main.alias_add.f3:"));
+    assert!(first.contains(".Lska.fn.main.alias_forward.f4:"));
     assert!(first.contains("mov qword ptr [rbp - 8], rdi"));
     assert!(first.contains("mov rdi, qword ptr [rbp - 8]"));
-    assert!(first.contains("call .Lska_fn_3"));
-    assert!(first.contains(".Lska_class_0_init_0:"));
-    assert!(first.contains(".Lska_class_0_init_1:"));
-    assert!(first.contains(".Lska_class_0_init_0_block_0:"));
-    assert!(first.contains(".Lska_class_0_init_1_block_0:"));
-    assert!(first.contains("call .Lska_class_0_init_1"));
-    assert!(first.contains("call .Lska_class_0_method_3"));
+    assert!(first.contains("call .Lska.fn.main.alias_add.f3"));
+    assert!(first.contains(".Lska.class.main.Counter.c0.init.i0:"));
+    assert!(first.contains(".Lska.class.main.Counter.c0.init.i1:"));
+    assert!(first.contains(".Lska.class.main.Counter.c0.init.i0.block_0:"));
+    assert!(first.contains(".Lska.class.main.Counter.c0.init.i1.block_0:"));
+    assert!(first.contains("call .Lska.class.main.Counter.c0.init.i1"));
+    assert!(first.contains("call .Lska.class.main.Counter.c0.method.add_from_alias.m3"));
     assert_system_assembler_accepts(&format!("{first}\n{}", println_i64_stub()));
 }
 

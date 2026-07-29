@@ -97,15 +97,18 @@ fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
     assert!(output.contains("    .quad 3\n    .ascii \"abc\"\n"));
     assert!(output.contains("    .quad 4\n    .ascii \"a\\000\\200\\377\"\n"));
     assert!(output.contains("    .quad 7\n    .ascii \"\\\"\\\\\\n\\r\\t\\001\\177\"\n"));
-    let ascii = function_assembly(&output, ".Lska_fn_1");
+    let ascii = function_assembly(&output, ".Lska.fn.app.ascii.f1");
     assert!(ascii.contains("lea rax, [rip + .Lska_literal_1_backing]"));
     assert!(ascii.contains("mov qword ptr [rdx], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 8], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 16], rax"));
     assert!(!ascii.contains("call .Lska_array_0_copy_element"));
-    for function in 0..5 {
+    for (function, name) in ["empty", "ascii", "duplicate", "binary", "escaped"]
+        .into_iter()
+        .enumerate()
+    {
         assert!(
-            !function_assembly(&output, &format!(".Lska_fn_{function}"))
+            !function_assembly(&output, &format!(".Lska.fn.app.{name}.f{function}"))
                 .contains("call ska_rt_alloc"),
             "literal materialization must not allocate"
         );
@@ -192,7 +195,7 @@ fn panic_extracts_the_exact_descriptor_slice_and_uses_the_common_reporter() {
     ));
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    let main = function_assembly(&output, ".Lska_fn_0");
+    let main = function_assembly(&output, ".Lska.fn.app.main.f0");
     // One call is the explicit panic and one is the generic retain-overflow
     // edge used while copying its string argument.
     assert_eq!(main.matches("call ska_rt_panic").count(), 2);

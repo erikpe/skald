@@ -78,7 +78,7 @@ fn lowers_deep_base_places_through_checked_target_offsets() {
     let program = lower_source_to_mir(INHERITED_LAYOUT_SOURCE);
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains("call .Lska_class_1_init_0"));
+    assert!(output.contains("call .Lska.class.main.Padded.c1.init.i0"));
     assert_system_assembler_accepts(&output);
     assert_eq!(run_native_assembly(&output).code(), Some(7));
 }

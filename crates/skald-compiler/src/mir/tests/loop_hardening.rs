@@ -179,7 +179,7 @@ fn equivalent_split_and_renumbered_loop_cfg_survives_passes_and_backend() {
     assert_eq!(run_mir_pipeline(mir.clone()).unwrap(), expected);
     let assembly = emit_assembly(Target::X86_64SysV, &mir)
         .expect("backend must consume verified generic CFG without loop metadata");
-    assert!(assembly.contains("jmp .Lska_fn_0_block_"));
+    assert!(assembly.contains("jmp .Lska.fn.main.main.f0.block_"));
     assert_eq!(run_native_assembly(&assembly).code(), Some(3));
 }
 

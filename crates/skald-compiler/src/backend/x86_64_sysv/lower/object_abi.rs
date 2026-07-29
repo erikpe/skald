@@ -338,7 +338,7 @@ impl InstructionSelector<'_, '_> {
     }
 
     pub(super) fn select_metadata_symbol(&mut self, class: ClassId, location: ArgumentLocation) {
-        let symbol = self.dispatch.table_symbol(class);
+        let symbol = self.dispatch.table_symbol(self.program, class);
         match location {
             ArgumentLocation::IntegerRegister(destination) => {
                 self.output.push(Instruction::LoadSymbolAddress {
@@ -360,7 +360,7 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn load_table_address(&mut self, class: ClassId, destination: Register) {
-        let symbol = self.dispatch.table_symbol(class);
+        let symbol = self.dispatch.table_symbol(self.program, class);
         self.output.push(Instruction::LoadSymbolAddress {
             symbol,
             destination,

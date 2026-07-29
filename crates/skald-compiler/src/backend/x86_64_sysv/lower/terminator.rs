@@ -211,6 +211,7 @@ fn emit_reporter_call(output: &mut Vec<Instruction>) {
 }
 
 pub(super) fn select(
+    program: &crate::mir::MirProgram,
     terminator: &MirTerminator,
     frame: &FrameLayout,
     return_type: MirType,
@@ -236,7 +237,7 @@ pub(super) fn select(
             output.push(Instruction::Jump(epilogue.clone()));
         }
         MirTerminator::Goto { target, .. } => {
-            output.push(Instruction::Jump(block_label(*target)));
+            output.push(Instruction::Jump(block_label(program, *target)));
         }
         MirTerminator::Branch {
             condition,
@@ -246,8 +247,11 @@ pub(super) fn select(
         } => {
             value::load_rax(value::frame_value(frame, *condition), output);
             output.push(Instruction::Test(Register::Rax));
-            output.push(Instruction::JumpIfNotZero(block_label(*true_target)));
-            output.push(Instruction::Jump(block_label(*false_target)));
+            output.push(Instruction::JumpIfNotZero(block_label(
+                program,
+                *true_target,
+            )));
+            output.push(Instruction::Jump(block_label(program, *false_target)));
         }
         MirTerminator::CheckedCast { .. }
         | MirTerminator::Panic { .. }

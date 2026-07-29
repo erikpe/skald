@@ -1,10 +1,13 @@
 //! Collision-proof assembly symbols derived from canonical identities.
 
 use crate::{
-    identity::{ArrayTypeId, CallableId, ClassId},
+    identity::{ArrayTypeId, CallableId, ClassId, ModuleId},
     mir::{MirFunctionLinkage, MirProgram},
 };
 
+// Source identifiers and logical module components cannot contain dots, so
+// dot-separated names retain their readable boundaries. Request-local
+// declaration IDs remain as suffixes to preserve collision-proof identity.
 pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
     match callable {
         CallableId::Function(function) => {
@@ -13,7 +16,9 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
                 .get(function)
                 .expect("verified function callable must be declared");
             match &declaration.linkage {
-                MirFunctionLinkage::Internal => format!(".Lska_fn_{}", function.index()),
+                MirFunctionLinkage::Internal => {
+                    format!(".Lska.{}", callable_stem(program, callable))
+                }
                 MirFunctionLinkage::External { link } => program
                     .external_links
                     .get(*link)
@@ -25,42 +30,20 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
                 }
             }
         }
-        CallableId::Initializer(initializer) => format!(
-            ".Lska_class_{}_init_{}",
-            initializer.class().index(),
-            initializer.index()
-        ),
-        CallableId::CopyConstructor(copy) => {
-            format!(".Lska_class_{}_copy_{}", copy.class().index(), copy.index())
-        }
-        CallableId::CopyAssignment(assignment) => format!(
-            ".Lska_class_{}_assign_{}",
-            assignment.class().index(),
-            assignment.index()
-        ),
-        CallableId::Destructor(destructor) => format!(
-            ".Lska_class_{}_destroy_{}",
-            destructor.class().index(),
-            destructor.index()
-        ),
-        CallableId::Method(method) => format!(
-            ".Lska_class_{}_method_{}",
-            method.class().index(),
-            method.index()
-        ),
+        _ => format!(".Lska.{}", callable_stem(program, callable)),
     }
 }
 
-pub(super) fn dispatch_table(class: ClassId) -> String {
-    format!(".Lska_class_{}_dispatch", class.index())
+pub(super) fn dispatch_table(program: &MirProgram, class: ClassId) -> String {
+    format!(".Lska.{}.dispatch", class_stem(program, class))
 }
 
-pub(super) fn complete_finalizer(class: ClassId) -> String {
-    format!(".Lska_class_{}_finalize_complete", class.index())
+pub(super) fn complete_finalizer(program: &MirProgram, class: ClassId) -> String {
+    format!(".Lska.{}.finalize_complete", class_stem(program, class))
 }
 
-pub(super) fn class_copy_helper(class: ClassId) -> String {
-    format!(".Lska_class_{}_copy_complete", class.index())
+pub(super) fn class_copy_helper(program: &MirProgram, class: ClassId) -> String {
+    format!(".Lska.{}.copy_complete", class_stem(program, class))
 }
 
 pub(super) fn array_initialize_element(array: ArrayTypeId) -> String {
@@ -103,29 +86,88 @@ pub(super) fn shared_handle_release() -> String {
     ".Lska_shared_handle_release".to_owned()
 }
 
-pub(super) fn local_label_stem(callable: CallableId) -> String {
+pub(super) fn local_label_stem(program: &MirProgram, callable: CallableId) -> String {
+    callable_stem(program, callable)
+}
+
+pub(super) fn class_label_stem(program: &MirProgram, class: ClassId) -> String {
+    class_stem(program, class)
+}
+
+fn callable_stem(program: &MirProgram, callable: CallableId) -> String {
     match callable {
-        CallableId::Function(function) => format!("fn_{}", function.index()),
+        CallableId::Function(function) => {
+            let declaration = program
+                .declarations
+                .get(function)
+                .expect("verified function callable must be declared");
+            format!(
+                "fn.{}.{}.f{}",
+                module_stem(program, declaration.module),
+                declaration.name,
+                function.index()
+            )
+        }
         CallableId::Initializer(initializer) => format!(
-            "class_{}_init_{}",
-            initializer.class().index(),
+            "{}.init.i{}",
+            class_stem(program, initializer.class()),
             initializer.index()
         ),
         CallableId::CopyConstructor(copy) => {
-            format!("class_{}_copy_{}", copy.class().index(), copy.index())
+            format!(
+                "{}.copy.k{}",
+                class_stem(program, copy.class()),
+                copy.index()
+            )
         }
         CallableId::CopyAssignment(assignment) => format!(
-            "class_{}_assign_{}",
-            assignment.class().index(),
+            "{}.assign.a{}",
+            class_stem(program, assignment.class()),
             assignment.index()
         ),
         CallableId::Destructor(destructor) => format!(
-            "class_{}_destroy_{}",
-            destructor.class().index(),
+            "{}.destroy.d{}",
+            class_stem(program, destructor.class()),
             destructor.index()
         ),
         CallableId::Method(method) => {
-            format!("class_{}_method_{}", method.class().index(), method.index())
+            let class = program
+                .classes
+                .get(method.class())
+                .expect("verified method callable must belong to a declared class");
+            let declaration = class
+                .method(method)
+                .expect("verified method callable must be declared");
+            format!(
+                "{}.method.{}.m{}",
+                class_stem(program, method.class()),
+                declaration.name,
+                method.index()
+            )
         }
     }
+}
+
+fn class_stem(program: &MirProgram, class: ClassId) -> String {
+    let declaration = program
+        .classes
+        .get(class)
+        .expect("verified class symbol must reference a declared class");
+    format!(
+        "class.{}.{}.c{}",
+        module_stem(program, declaration.module),
+        declaration.name,
+        class.index()
+    )
+}
+
+fn module_stem(program: &MirProgram, module: ModuleId) -> String {
+    program
+        .modules
+        .get(module)
+        .expect("verified symbol owner must reference a loaded module")
+        .module_path()
+        .components()
+        .collect::<Vec<_>>()
+        .join(".")
 }

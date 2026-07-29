@@ -157,7 +157,7 @@ fn recursively_non_trivial_source_cleanup_reaches_the_backend() {
     ));
 
     let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
-    assert!(output.contains("call .Lska_class_0_destroy_0"));
+    assert!(output.contains("call .Lska.class.main.Resource.c0.destroy.d0"));
     assert_system_assembler_accepts(&output);
 }
 

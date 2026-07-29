@@ -365,7 +365,7 @@ fn nontrivial_and_nested_inline_array_lifecycle_reaches_native_lowering() {
     );
     let mut output = assembly(source);
 
-    assert!(output.contains(".Lska_class_0_copy_complete:"));
+    assert!(output.contains(".Lska.class.main.Item.c0.copy_complete:"));
     assert!(output.contains(".Lska_array_0_destroy_element:"));
     assert!(output.contains(".Lska_array_3_clone:"));
     output.push_str(native_allocator());

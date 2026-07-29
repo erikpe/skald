@@ -61,14 +61,7 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
             output.push_str(".p2align 0\n");
             writeln!(output, ".type {}, @object", message.symbol).unwrap();
             writeln!(output, "{}:", message.symbol).unwrap();
-            output.push_str("    .byte ");
-            for (index, byte) in message.bytes.iter().enumerate() {
-                if index != 0 {
-                    output.push_str(", ");
-                }
-                write!(output, "0x{byte:02x}").unwrap();
-            }
-            output.push('\n');
+            emit_ascii_bytes(&mut output, message.bytes);
             writeln!(output, ".size {}, .-{}", message.symbol, message.symbol).unwrap();
         }
     }

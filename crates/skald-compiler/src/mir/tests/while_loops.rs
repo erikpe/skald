@@ -506,7 +506,7 @@ fn loop_dump_pipeline_backend_and_native_execution_accept_the_backedge() {
     let assembly = emit_assembly(Target::X86_64SysV, &mir)
         .expect("the generic loop CFG must reach the native backend");
     assert!(
-        assembly.contains("jmp .Lska_fn_0_block_1"),
+        assembly.contains("jmp .Lska.fn.main.main.f0.block_1"),
         "assembly must retain a mechanical backward jump to the header"
     );
     assert_eq!(run_native_assembly(&assembly).code(), Some(3));

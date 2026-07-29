@@ -15,7 +15,7 @@ fn lowers_u64_payloads_arithmetic_and_integer_class_calls() {
     assert!(output.contains("sub rax, rcx"));
     assert!(output.contains("mov qword ptr [rbp - 8], rdi"));
     assert!(output.contains("mov rax, qword ptr [rbp + 16]"));
-    assert!(output.contains("call .Lska_fn_0"));
+    assert!(output.contains("call .Lska.fn.main.seventh.f0"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -73,7 +73,7 @@ fn lowers_verified_f64_mir_with_sse2_and_xmm_abi_results() {
     assert!(output.contains("subsd xmm14, xmm15"));
     assert!(output.contains("movsd qword ptr [rbp - 8], xmm14"));
     assert!(output.contains("movsd xmm0, qword ptr [rbp - 72]"));
-    assert!(output.contains("call .Lska_fn_0\n    movsd qword ptr [rbp"));
+    assert!(output.contains("call .Lska.fn.main.compute.f0\n    movsd qword ptr [rbp"));
     assert!(output.contains("movsd xmm0, ") && output.contains("\n    call validate_f64"));
     assert_system_assembler_accepts(&output);
 }
@@ -91,7 +91,7 @@ fn source_f64_uses_independent_integer_and_sse_argument_registers() {
     assert!(output.contains("mov qword ptr [rbp - 24], rsi"));
     assert!(output.contains("movsd qword ptr [rbp - 32], xmm1"));
     assert!(output.contains("addsd xmm14, xmm15"));
-    assert!(output.contains("call .Lska_fn_1\n    movsd qword ptr [rbp"));
+    assert!(output.contains("call .Lska.fn.main.choose.f1\n    movsd qword ptr [rbp"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -119,10 +119,10 @@ fn unit_calls_and_returns_do_not_move_a_fictitious_result() {
         "fn main() -> i64 { notify(42); return 7; }\n",
     ));
 
-    assert!(output.contains("call .Lska_fn_0\n    mov rax, 7"));
-    assert!(!output.contains("call .Lska_fn_0\n    mov qword ptr [rbp"));
+    assert!(output.contains("call .Lska.fn.main.notify.f0\n    mov rax, 7"));
+    assert!(!output.contains("call .Lska.fn.main.notify.f0\n    mov qword ptr [rbp"));
     assert!(output.contains(
-        ".Lska_fn_0:\n    push rbp\n    mov rbp, rsp\n    sub rsp, 16\n    mov qword ptr [rbp - 8], rdi\n.Lska_fn_0_block_0:\n    jmp .Lska_fn_0_epilogue\n.Lska_fn_0_epilogue:\n    leave\n    ret"
+        ".Lska.fn.main.notify.f0:\n    push rbp\n    mov rbp, rsp\n    sub rsp, 16\n    mov qword ptr [rbp - 8], rdi\n.Lska.fn.main.notify.f0.block_0:\n    jmp .Lska.fn.main.notify.f0.epilogue\n.Lska.fn.main.notify.f0.epilogue:\n    leave\n    ret"
     ));
 }
 
@@ -147,7 +147,7 @@ fn lowers_register_and_stack_arguments_at_the_abi_boundary() {
     assert!(output.contains("mov rax, qword ptr [rbp + 16]"));
     assert!(output.contains("sub rsp, 16"));
     assert!(output.contains("mov qword ptr [rsp], rax"));
-    assert!(output.contains("call .Lska_fn_0\n    add rsp, 16"));
+    assert!(output.contains("call .Lska.fn.main.seventh.f0\n    add rsp, 16"));
 }
 
 #[test]
@@ -160,9 +160,9 @@ fn emits_a_c_compatible_entry_boundary() {
         "    push rbp\n",
         "    mov rbp, rsp\n",
         "    call ska_rt_abi_v6\n",
-        "    call .Lska_fn_1",
+        "    call .Lska.fn.main.main.f1",
     )));
-    assert!(!output.contains(".globl .Lska_fn_"));
+    assert!(!output.contains(".globl .Lska.fn."));
 }
 
 #[test]
@@ -178,7 +178,7 @@ fn external_calls_use_the_declared_symbol_without_emitting_a_body() {
 
     assert!(output.contains("call ska_fn_1"));
     assert!(!output.contains("\nska_fn_1:\n"));
-    assert!(output.contains(".Lska_fn_1:"));
+    assert!(output.contains(".Lska.fn.main.main.f1:"));
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn lowers_boolean_values_through_internal_and_external_abi_boundaries() {
     ));
 
     assert!(output.contains("mov rax, 1"));
-    assert!(output.contains("call .Lska_fn_1"));
+    assert!(output.contains("call .Lska.fn.main.identity.f1"));
     assert!(output.contains("call external_flag\n    movzx rax, al"));
     assert!(output.contains("mov qword ptr [rbp - 8], rdi"));
 }

@@ -18,16 +18,16 @@ fn emits_deterministic_tables_and_indirect_calls() {
     ));
 
     assert!(output.contains(concat!(
-        ".Lska_class_0_dispatch:\n",
-        "    .quad .Lska_class_0_method_0\n",
+        ".Lska.class.main.Root.c0.dispatch:\n",
+        "    .quad .Lska.class.main.Root.c0.method.value.m0\n",
     )));
     assert!(output.contains(concat!(
-        ".Lska_class_1_dispatch:\n",
-        "    .quad .Lska_class_1_method_0\n",
+        ".Lska.class.main.Middle.c1.dispatch:\n",
+        "    .quad .Lska.class.main.Middle.c1.method.value.m0\n",
     )));
     assert!(output.contains(concat!(
-        ".Lska_class_2_dispatch:\n",
-        "    .quad .Lska_class_1_method_0\n",
+        ".Lska.class.main.Leaf.c2.dispatch:\n",
+        "    .quad .Lska.class.main.Middle.c1.method.value.m0\n",
     )));
     assert!(output.contains("call r11"));
     assert_system_assembler_accepts(&output);
