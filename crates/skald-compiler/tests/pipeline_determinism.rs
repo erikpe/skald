@@ -303,22 +303,27 @@ fn module_phase_dump(variant: usize) -> String {
     link_directory(&application, &application_alias);
 
     let imports = if variant == 0 {
-        "import lib::answer;\nfrom support import zero;\n"
+        "import first;\nimport second;\nfrom second import Item as SecondItem;\n"
     } else {
-        "from support import zero;\nimport lib::answer;\n"
+        "from second import Item as SecondItem;\nimport second;\nimport first;\n"
     };
     let sources = [
         (
-            application.join("app/main.ska"),
-            format!("{imports}fn main() -> i64 {{ return lib::answer::value() + zero(); }}\n"),
+            application.join("app.ska"),
+            format!(
+                "{imports}\n{}",
+                source_body_after_imports(include_str!(
+                    "../../../tests/golden/run/modules_cycle/modules/app.ska"
+                ))
+            ),
         ),
         (
-            dependencies.join("lib/answer.ska"),
-            "public fn value() -> i64 { return 42; }\n".to_owned(),
+            dependencies.join("first.ska"),
+            include_str!("../../../tests/golden/run/modules_cycle/modules/first.ska").to_owned(),
         ),
         (
-            dependencies.join("support.ska"),
-            "public fn zero() -> i64 { return 0; }\n".to_owned(),
+            dependencies.join("second.ska"),
+            include_str!("../../../tests/golden/run/modules_cycle/modules/second.ska").to_owned(),
         ),
     ];
     for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
@@ -340,9 +345,9 @@ fn module_phase_dump(variant: usize) -> String {
     };
     let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
     let entry = if variant == 0 {
-        EntrySelector::Module("app::main".parse().unwrap())
+        EntrySelector::Module("app".parse().unwrap())
     } else {
-        EntrySelector::File(application_alias.join("app/main.ska"))
+        EntrySelector::File(application_alias.join("app.ska"))
     };
     let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
     let resolved = resolve_module_graph(&graph);
@@ -369,36 +374,60 @@ fn module_phase_dump(variant: usize) -> String {
 
 fn module_diagnostic_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("module-diagnostics", variant);
-    let application = fixture.path.join("application");
-    let first = fixture.path.join("first");
-    let second = fixture.path.join("second");
-    write_source(
-        &application.join("app.ska"),
-        "import collision;\nfn main() -> i64 { return 0; }\n",
-    );
-    write_source(&first.join("collision.ska"), "fn first() -> unit {}\n");
-    write_source(&second.join("collision.ska"), "fn second() -> unit {}\n");
-    let roots = if variant == 0 {
-        [&second, &application, &first]
+    let modules = fixture.path.join("modules");
+    let modules_alias = fixture.path.join("modules-alias");
+    let sources = [
+        (
+            modules.join("app.ska"),
+            include_str!(
+                "../../../tests/golden/compile_fail/modules_cycle_diagnostics/modules/app.ska"
+            ),
+        ),
+        (
+            modules.join("left.ska"),
+            include_str!(
+                "../../../tests/golden/compile_fail/modules_cycle_diagnostics/modules/left.ska"
+            ),
+        ),
+        (
+            modules.join("right.ska"),
+            include_str!(
+                "../../../tests/golden/compile_fail/modules_cycle_diagnostics/modules/right.ska"
+            ),
+        ),
+    ];
+    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
+        write_source(&sources[index].0, sources[index].1);
+    }
+    link_directory(&modules, &modules_alias);
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::module_root(modules_alias.clone()),
+            ProviderRootConfiguration::module_root(modules.clone()),
+        ]
     } else {
-        [&first, &application, &second]
+        vec![
+            ProviderRootConfiguration::module_root(modules.clone()),
+            ProviderRootConfiguration::module_root(modules_alias),
+        ]
     };
-    let configurations = roots
-        .into_iter()
-        .map(|root| ProviderRootConfiguration::module_root(root.to_owned()))
-        .collect::<Vec<_>>();
     let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
-    let failure = load_module_graph(
-        &EntrySelector::Module("app".parse().unwrap()),
-        &fixture.path,
-        &providers,
-    )
-    .unwrap_err();
+    let entry = EntrySelector::Module("app".parse().unwrap());
+    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(resolved.has_errors());
 
     normalize_fixture_paths(
         &fixture.path,
-        render_diagnostics(failure.sources(), failure.diagnostics()),
+        render_diagnostics(graph.sources(), &resolved.diagnostics),
     )
+}
+
+fn source_body_after_imports(source: &str) -> &str {
+    source
+        .split_once("\n\n")
+        .expect("a reusable module fixture must separate imports from its body")
+        .1
 }
 
 fn write_source(path: &Path, text: &str) {

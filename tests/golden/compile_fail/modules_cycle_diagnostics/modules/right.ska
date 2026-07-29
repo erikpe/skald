@@ -1,0 +1,9 @@
+import left;
+
+fn hidden() -> unit {}
+
+public fn public_value() -> i64 {
+    return 0;
+}
+
+public interface PublicView {}

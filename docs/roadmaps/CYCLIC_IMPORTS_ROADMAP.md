@@ -1,6 +1,6 @@
 # Cyclic Module Imports Roadmap
 
-Status: in progress; C0 is complete. C1 is next.
+Status: in progress; C0–C1 are complete. C2 is next.
 
 This roadmap permits mutually dependent modules without weakening import
 visibility, semantic-cycle validation, deterministic identity allocation, or
@@ -46,7 +46,7 @@ bounds failure.
 ## Progress
 
 - [x] C0 — Admit cyclic module graphs
-- [ ] C1 — Prove semantic resolution across cycles
+- [x] C1 — Prove semantic resolution across cycles
 - [ ] C2 — Migrate string failures and harden the feature
 
 ## PR-sized implementation sequence
@@ -92,27 +92,27 @@ cycle rejection.
 resolver handles useful cyclic programs without order dependence or semantic
 shortcuts.
 
-- [ ] Add qualified and selective-import tests where mutually dependent
+- [x] Add qualified and selective-import tests where mutually dependent
       modules resolve functions, parameters, results, classes, interfaces, and
       shared or alias views declared on opposite sides of a cycle.
-- [ ] Exercise mutually recursive function identities without requiring a
+- [x] Exercise mutually recursive function identities without requiring a
       terminating runtime recursion, and prove ordinary cross-module calls
       lower through verified MIR and native assembly.
-- [ ] Verify private, missing, wrong-kind, duplicate-binding, and non-re-export
+- [x] Verify private, missing, wrong-kind, duplicate-binding, and non-re-export
       diagnostics remain exact and deterministic inside cyclic components.
-- [ ] Verify inheritance cycles, recursive inline containment, invalid
+- [x] Verify inheritance cycles, recursive inline containment, invalid
       interface relationships, and incompatible external declarations remain
       rejected by their existing semantic owners even when their modules form
       a valid import cycle.
-- [ ] Prove canonical declaration identities, resolved/HIR/MIR dumps,
+- [x] Prove canonical declaration identities, resolved/HIR/MIR dumps,
       diagnostics, and assembly are stable across import spelling order,
       discovery order, and different selected entries with the same reachable
       closure.
-- [ ] Refactor resolver orchestration or cyclic test fixtures only where doing
+- [x] Refactor resolver orchestration or cyclic test fixtures only where doing
       so makes the declaration-before-use phase boundary explicit and reusable;
       do not add component-specific resolution or a fixed-point engine without
       evidence that it is required.
-- [ ] Update development testing guidance with cyclic graph, semantic-cycle,
+- [x] Update development testing guidance with cyclic graph, semantic-cycle,
       and cross-process determinism ownership.
 
 **Tests:** Focused resolver and type-check tests, verifier/backend coverage for

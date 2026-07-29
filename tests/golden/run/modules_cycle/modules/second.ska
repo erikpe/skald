@@ -1,5 +1,37 @@
 import first;
+from first import Item as FirstItem, View as FirstView;
 
-public fn value() -> i64 {
-    return 0;
+public interface View {
+    fn value() -> i64;
+}
+
+public class Item implements FirstView {
+    value_field: i64;
+
+    init(value: i64) {
+        self.value_field = value;
+    }
+
+    fn value() -> i64 {
+        return self.value_field;
+    }
+}
+
+public fn make_first(value: i64) -> shared FirstItem {
+    return new FirstItem(value);
+}
+
+public fn read_first(ref value: FirstItem) -> i64 {
+    return value.value();
+}
+
+public fn read_view(ref value: FirstView) -> i64 {
+    return value.value();
+}
+
+public fn recurse(value: i64, cross: bool) -> i64 {
+    if (cross) {
+        return first::recurse(value, false);
+    }
+    return value;
 }

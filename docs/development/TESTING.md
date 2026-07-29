@@ -113,6 +113,16 @@ Exact dump and diagnostic expectations should remain readable and intentional.
 When an expectation changes, inspect the semantic difference before updating
 it. Do not introduce a second renderer solely to make a test convenient.
 
+Cyclic-module tests are split by owner. Graph tests prove reachable-closure
+loading and canonical module identities without recursion. Resolver and
+type-check tests prove declaration-first lookup across cycles and retain
+inheritance, containment, interface, external-ABI, privacy, and direct-import
+diagnostics at their existing semantic phases. The cross-process determinism
+suite permutes source discovery, provider spelling, and import order while
+comparing graph, resolved, HIR, MIR, diagnostic, and assembly products.
+Native and compile-failure goldens remain the source-visible end-to-end
+observations.
+
 ### Module-system coverage map
 
 The required diagnostics in the
@@ -125,8 +135,9 @@ have explicit owners:
 | Root equivalence, provider ambiguity independent of contents or physical target, symlink traversal and failure, exact case, unreadable/non-regular candidates, and positional containment | `module::provider::tests` and `module::graph::tests` filesystem matrices |
 | Missing and ambiguous imports, import-source aliases, direct self-imports, malformed reached sources, binding conflicts, privacy, direct-import enforcement, unknown/wrong-kind declarations, selected `main`, and incompatible external ABI declarations | exact single- and multi-file snapshots under `tests/golden/compile_fail/`, plus structured graph and resolver tests |
 | Two-module, longer, selected-entry, synthetic string, and deep cyclic dependency graphs | successful native goldens plus structured `module::graph::tests` coverage |
+| Qualified/selective lookup, opposite-side declarations, non-module semantic cycles, and access diagnostics inside cyclic graphs | `resolve::tests::cyclic_imports`, the `modules_cycle` native golden, and the `modules_cycle_diagnostics` exact compile-failure golden |
 | Multi-segment aliases, wildcard imports, and trailing selective-import commas | exact parser goldens and syntax recovery tests |
-| Ordering and independent-process stability | `pipeline_determinism`, graph/provider permutation tests, and the two-process golden runner |
+| Ordering and independent-process stability, including semantic cycles and alternate selected entries with one closure | `pipeline_determinism`, `resolve::tests::cyclic_imports`, graph/provider permutation tests, and the two-process golden runner |
 
 Host-dependent filesystem wording stays asserted structurally at the provider
 boundary; portable source diagnostics use byte-exact golden snapshots. This

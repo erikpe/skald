@@ -1,0 +1,9 @@
+import right;
+import right as right;
+
+public fn trigger() -> i64 {
+    right::hidden();
+    right::missing();
+    right::PublicView();
+    return right::public_value();
+}

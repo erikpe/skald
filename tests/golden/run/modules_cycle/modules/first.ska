@@ -1,5 +1,33 @@
 import second;
+from second import Item as SecondItem;
 
-public fn value() -> i64 {
-    return second::value();
+public interface View {
+    fn value() -> i64;
+}
+
+public class Item implements second::View {
+    value_field: i64;
+
+    init(value: i64) {
+        self.value_field = value;
+    }
+
+    fn value() -> i64 {
+        return self.value_field;
+    }
+}
+
+public fn make_second(value: i64) -> shared SecondItem {
+    return new SecondItem(value);
+}
+
+public fn read_second(ref value: SecondItem) -> i64 {
+    return value.value();
+}
+
+public fn recurse(value: i64, cross: bool) -> i64 {
+    if (cross) {
+        return second::recurse(value, false);
+    }
+    return value;
 }

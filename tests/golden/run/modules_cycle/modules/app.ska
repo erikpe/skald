@@ -1,5 +1,14 @@
 import first;
+import second;
+from second import Item as SecondItem;
 
 fn main() -> i64 {
-    return first::value();
+    var first_item: first::Item = first::Item(5);
+    var second_item: SecondItem = SecondItem(7);
+    var owned_first: shared first::Item = second::make_first(11);
+    var owned_second: shared SecondItem = first::make_second(13);
+    return second::read_first(first_item)
+        + first::read_second(second_item)
+        + second::read_view(second_item)
+        + first::recurse(23, true);
 }

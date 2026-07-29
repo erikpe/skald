@@ -1,0 +1,44 @@
+error[RES024]: repeated module binding `right`
+ --> modules/left.ska:2:17
+   |
+2 | import right as right;
+   |                 ^^^^^ rebound here
+   |
+1 | import right;
+   |        ----- first bound here
+  = note: the first binding selects `right`; this import selects `right`
+
+error[RES025]: unknown module binding `right`
+ --> modules/app.ska:4:12
+   |
+4 |     return right::public_value() + left::trigger();
+   |            ^^^^^^^^^^^^^^^^^^^ qualified access requires an exact direct module import
+   |
+1 | import left;
+   | ------------ this module is reachable but is not directly imported here
+  = note: add `import right;` to this module
+  = note: lookup occurred in module `app`
+
+error[RES026]: declaration `right::hidden` is private
+ --> modules/left.ska:5:12
+   |
+5 |     right::hidden();
+   |            ^^^^^^ private declaration used here
+   |
+3 | fn hidden() -> unit {}
+   |    ------ declared private here
+
+error[RES027]: module `right` has no declaration named `missing`
+ --> modules/left.ska:6:12
+   |
+6 |     right::missing();
+   |            ^^^^^^^ unknown declaration
+   |
+1 | import right;
+   |        ----- module bound here
+
+error[RES004]: interface `right::PublicView` is not callable
+ --> modules/left.ska:7:5
+   |
+7 |     right::PublicView();
+   |     ^^^^^^^^^^^^^^^^^ interfaces describe non-owning views and cannot be constructed

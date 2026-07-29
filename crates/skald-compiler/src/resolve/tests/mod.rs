@@ -36,6 +36,7 @@ mod arrays;
 mod bindings;
 mod comparisons;
 mod control_flow;
+mod cyclic_imports;
 mod declarations;
 mod diagnostics;
 mod dumps;
