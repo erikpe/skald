@@ -113,11 +113,13 @@ fn dumps_object_metadata_and_projected_places_deterministically() {
             "      EntryBlock f0:b0\n",
             "      Blocks\n",
             "        f0:b0 @17..30\n",
+            "          storage-live f0:s0 @0..30\n",
             "          f0:v0 = const.i64 7 : i64 @26..27\n",
             "          initialize f0:s0 with c1:init0(value(f0:v0)) @0..30\n",
             "          f0:v1 = load f0:s0.field(c1:field0).field(c0:field0) : i64 @0..30\n",
             "          f0:v2 = call direct c1:method0 on f0:s0 origin exact(f0:s0 : c1)() @0..30\n",
             "          cleanup f0:s0 as c1 @0..30\n",
+            "          storage-dead f0:s0 @0..30\n",
             "          return f0:v0 @19..28\n",
             "  MemberDefinitions\n",
             "    MemberDefinition c1:init0 @0..30\n",
@@ -145,9 +147,18 @@ fn rejects_object_rvalues_and_bad_initialization_targets() {
         .get_mut_for_test(object_value.entry_function)
         .unwrap();
     function.values[1].ty = MirType::Class(ids.outer);
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[2] else {
-        panic!("expected projected load");
-    };
+    let assignment = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(assignment.rvalue.kind, MirRvalueKind::Load(_)) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .expect("expected projected load");
     assignment.rvalue.ty = MirType::Class(ids.outer);
     assignment.rvalue.kind = MirRvalueKind::Load(ids.object_storage.into());
     let errors = messages(&object_value);
@@ -163,10 +174,14 @@ fn rejects_object_rvalues_and_bad_initialization_targets() {
         .definitions
         .get_mut_for_test(bad_target.entry_function)
         .unwrap();
-    let MirInstruction::Initialize(initialize) = &mut function.body.blocks[0].instructions[1]
-    else {
-        panic!("expected initializer");
-    };
+    let initialize = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Initialize(initialize) => Some(initialize),
+            _ => None,
+        })
+        .expect("expected initializer");
     initialize.destination = MirPlace::base(ids.object_storage).project_field(ids.outer_inner);
     assert!(messages(&bad_target)
         .iter()
@@ -201,10 +216,10 @@ fn lowers_typed_source_objects_into_verified_mir() {
         .values
         .iter()
         .all(|value| value.ty != MirType::Class(class.id)));
-    assert!(matches!(
-        main.body.blocks[0].instructions[1],
-        MirInstruction::Initialize(_)
-    ));
+    assert!(main.body.blocks[0]
+        .instructions
+        .iter()
+        .any(|instruction| matches!(instruction, MirInstruction::Initialize(_))));
 }
 
 #[test]
@@ -247,10 +262,12 @@ fn source_object_mir_dump_is_exact_and_identity_based() {
             "      EntryBlock f0:b0\n",
             "      Blocks\n",
             "        f0:b0 @123..171\n",
+            "          storage-live f0:s0 @125..149\n",
             "          f0:v0 = const.i64 1 : i64 @146..147\n",
             "          initialize f0:s0 with c0:init0(value(f0:v0)) @142..148\n",
             "          f0:v1 = call direct c0:method0 on f0:s0 origin exact(f0:s0 : c0)() @157..168\n",
             "          cleanup f0:s0 as c0 @150..169\n",
+            "          storage-dead f0:s0 @150..169\n",
             "          return f0:v1 @150..169\n",
             "  MemberDefinitions\n",
             "    MemberDefinition c0:init0 @24..64\n",

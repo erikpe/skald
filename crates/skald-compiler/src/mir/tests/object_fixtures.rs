@@ -143,6 +143,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         target: outer,
         span,
     }));
+    fixture_add_body_storage_lifetimes(&function.storage, &mut function.body, span);
 
     (
         program,

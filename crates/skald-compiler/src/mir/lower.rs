@@ -96,6 +96,7 @@ struct BodyLowerer<'hir> {
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
     full_expression_temporaries: Vec<FullExpressionTemporary>,
+    full_expression_storage: Vec<StorageId>,
     full_expression_checked_views: Vec<StorageId>,
     full_expression_has_shared_effect: bool,
     next_optional_guard: usize,
@@ -123,6 +124,7 @@ impl<'hir> BodyLowerer<'hir> {
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
             cleanup: CleanupPlanner::new(),
             full_expression_temporaries: Vec::new(),
+            full_expression_storage: Vec::new(),
             full_expression_checked_views: Vec::new(),
             full_expression_has_shared_effect: false,
             next_optional_guard: 0,
@@ -156,7 +158,7 @@ impl<'hir> BodyLowerer<'hir> {
         }
         lowerer.lower_block(lowerer.input.source_body);
         if !lowerer.body.is_current_terminated() && lowerer.input.return_type == Type::Unit {
-            lowerer.emit_cleanups(
+            lowerer.emit_scope_exit(
                 lowerer
                     .cleanup
                     .for_current_scope(lowerer.input.source_body.span),
@@ -301,8 +303,8 @@ impl<'hir> BodyLowerer<'hir> {
             .expect("HIR lowering must not emit after a terminator");
     }
 
-    fn emit_cleanups(&mut self, cleanups: Vec<cleanup::PlannedCleanup>) {
-        for cleanup in cleanups {
+    fn emit_scope_exit(&mut self, exit: cleanup::PlannedScopeExit) {
+        for cleanup in exit.cleanups {
             match cleanup {
                 cleanup::PlannedCleanup::Inline(cleanup) => {
                     self.emit(MirInstruction::Cleanup(cleanup))
@@ -327,6 +329,37 @@ impl<'hir> BodyLowerer<'hir> {
                 })),
             }
         }
+        for storage in exit.storage {
+            self.end_storage_lifetime(storage, exit.span);
+        }
+    }
+
+    fn begin_storage_lifetime(&mut self, storage: StorageId, span: crate::source::Span) {
+        self.emit(MirInstruction::StorageLive(MirStorageLive {
+            storage,
+            span,
+        }));
+    }
+
+    fn end_storage_lifetime(&mut self, storage: StorageId, span: crate::source::Span) {
+        self.emit(MirInstruction::StorageDead(MirStorageDead {
+            storage,
+            span,
+        }));
+    }
+
+    fn track_full_expression_storage(&mut self, storage: StorageId, span: crate::source::Span) {
+        self.begin_storage_lifetime(storage, span);
+        self.full_expression_storage.push(storage);
+    }
+
+    fn extend_storage_beyond_full_expression(&mut self, storage: StorageId) {
+        let index = self
+            .full_expression_storage
+            .iter()
+            .rposition(|candidate| *candidate == storage)
+            .expect("extended storage must belong to the current full expression");
+        self.full_expression_storage.remove(index);
     }
 
     fn terminate(&mut self, terminator: MirTerminator) {

@@ -268,6 +268,7 @@ impl BodyLowerer<'_> {
             ty,
             span,
         });
+        self.track_full_expression_storage(storage, span);
         self.emit(MirInstruction::Store(MirStore {
             destination: storage.into(),
             value,

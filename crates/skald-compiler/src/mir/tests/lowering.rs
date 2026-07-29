@@ -10,9 +10,13 @@ fn lowers_storage_values_arithmetic_and_return_explicitly() {
     assert_eq!(function.storage[0].kind, MirStorageKind::Local);
     assert_eq!(function.values.len(), 4);
     let block = function.block(function.body.entry).unwrap();
-    assert_eq!(block.instructions.len(), 5);
+    assert_eq!(block.instructions.len(), 7);
     assert!(matches!(
         block.instructions[0],
+        MirInstruction::StorageLive(MirStorageLive { .. })
+    ));
+    assert!(matches!(
+        block.instructions[1],
         MirInstruction::Assign(MirAssignment {
             rvalue: MirRvalue {
                 kind: MirRvalueKind::ConstantI64(1),
@@ -21,9 +25,9 @@ fn lowers_storage_values_arithmetic_and_return_explicitly() {
             ..
         })
     ));
-    assert!(matches!(block.instructions[1], MirInstruction::Store(_)));
+    assert!(matches!(block.instructions[2], MirInstruction::Store(_)));
     assert!(matches!(
-        block.instructions[4],
+        block.instructions[5],
         MirInstruction::Assign(MirAssignment {
             rvalue: MirRvalue {
                 kind: MirRvalueKind::Binary {
@@ -34,6 +38,10 @@ fn lowers_storage_values_arithmetic_and_return_explicitly() {
             },
             ..
         })
+    ));
+    assert!(matches!(
+        block.instructions[6],
+        MirInstruction::StorageDead(MirStorageDead { .. })
     ));
     assert!(matches!(
         block.terminator,

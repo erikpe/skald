@@ -13,8 +13,8 @@ use super::{
     BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall,
     MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage,
     MirInstruction, MirMemberDefinition, MirMethodReceiver, MirParameter, MirParameterMode,
-    MirPlace, MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator,
-    MirType, MirValue, StorageId, ValueId,
+    MirPlace, MirRvalue, MirRvalueKind, MirStorage, MirStorageDead, MirStorageKind, MirStorageLive,
+    MirStore, MirTerminator, MirType, MirValue, StorageId, ValueId,
 };
 
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
@@ -55,6 +55,68 @@ pub(crate) fn storage(
         kind,
         ty,
         span,
+    }
+}
+
+pub(crate) fn storage_live(storage: StorageId, span: Span) -> MirInstruction {
+    MirInstruction::StorageLive(MirStorageLive { storage, span })
+}
+
+pub(crate) fn storage_dead(storage: StorageId, span: Span) -> MirInstruction {
+    MirInstruction::StorageDead(MirStorageDead { storage, span })
+}
+
+/// Wraps storage that a hand-built fixture models as live for its complete
+/// callable body. Source-derived fixtures should retain their precise lowered
+/// lexical and full-expression epochs instead.
+pub(crate) fn add_body_storage_lifetimes(storage: &[MirStorage], body: &mut MirBody, span: Span) {
+    let managed: Vec<_> = storage
+        .iter()
+        .filter(|storage| {
+            !matches!(
+                storage.kind,
+                MirStorageKind::Return
+                    | MirStorageKind::Receiver
+                    | MirStorageKind::Parameter
+                    | MirStorageKind::AliasParameter(_)
+            )
+        })
+        .map(|storage| storage.id)
+        .collect();
+    if managed.is_empty() {
+        return;
+    }
+
+    for block in &mut body.blocks {
+        block.instructions.retain(|instruction| match instruction {
+            MirInstruction::StorageLive(operation) => !managed.contains(&operation.storage),
+            MirInstruction::StorageDead(operation) => !managed.contains(&operation.storage),
+            _ => true,
+        });
+    }
+
+    let entry = body
+        .blocks
+        .iter_mut()
+        .find(|block| block.id == body.entry)
+        .expect("hand-built fixture entry block must exist");
+    entry.instructions.splice(
+        0..0,
+        managed
+            .iter()
+            .copied()
+            .map(|storage| storage_live(storage, span)),
+    );
+    for block in &mut body.blocks {
+        if matches!(block.terminator, Some(MirTerminator::Return { .. })) {
+            block.instructions.extend(
+                managed
+                    .iter()
+                    .rev()
+                    .copied()
+                    .map(|storage| storage_dead(storage, span)),
+            );
+        }
     }
 }
 

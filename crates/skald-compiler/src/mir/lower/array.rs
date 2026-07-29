@@ -209,6 +209,7 @@ impl BodyLowerer<'_> {
             ty: lower_type(element.element),
             span: element.span,
         });
+        self.track_full_expression_storage(alias, element.span);
         self.emit(MirInstruction::Array(MirArrayInstruction::AliasBind {
             alias,
             source,
@@ -767,6 +768,7 @@ impl BodyLowerer<'_> {
             ty: MirType::Array(array),
             span,
         });
+        self.track_full_expression_storage(id, span);
         id
     }
 

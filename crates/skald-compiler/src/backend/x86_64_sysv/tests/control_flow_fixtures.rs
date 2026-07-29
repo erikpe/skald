@@ -102,12 +102,15 @@ pub(super) fn branch_call_diamond_mir() -> MirProgram {
     function.body.blocks = vec![
         fixture_block(
             entry,
-            vec![fixture_assign(
-                condition,
-                MirRvalueKind::ConstantBool(true),
-                MirType::Bool,
-                span,
-            )],
+            vec![
+                fixture_storage_live(storage, span),
+                fixture_assign(
+                    condition,
+                    MirRvalueKind::ConstantBool(true),
+                    MirType::Bool,
+                    span,
+                ),
+            ],
             Some(MirTerminator::Branch {
                 condition,
                 true_target: true_block,
@@ -134,12 +137,15 @@ pub(super) fn branch_call_diamond_mir() -> MirProgram {
         ),
         fixture_block(
             join,
-            vec![fixture_assign(
-                joined_result,
-                MirRvalueKind::Load(storage.into()),
-                MirType::I64,
-                span,
-            )],
+            vec![
+                fixture_assign(
+                    joined_result,
+                    MirRvalueKind::Load(storage.into()),
+                    MirType::I64,
+                    span,
+                ),
+                fixture_storage_dead(storage, span),
+            ],
             Some(MirTerminator::Return {
                 value: Some(joined_result),
                 span,

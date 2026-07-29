@@ -435,6 +435,14 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
     for instruction in &block.instructions {
         output.push_str("          ");
         match instruction {
+            MirInstruction::StorageLive(lifetime) => {
+                let _ = write!(output, "storage-live {}", lifetime.storage);
+                write_span(output, lifetime.span);
+            }
+            MirInstruction::StorageDead(lifetime) => {
+                let _ = write!(output, "storage-dead {}", lifetime.storage);
+                write_span(output, lifetime.span);
+            }
             MirInstruction::Assign(assignment) => {
                 let _ = write!(output, "{} = ", assignment.result);
                 dump_rvalue(output, &assignment.rvalue);

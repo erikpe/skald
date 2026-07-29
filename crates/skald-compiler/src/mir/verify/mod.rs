@@ -21,6 +21,7 @@ mod dispatch;
 mod inheritance;
 mod instructions;
 mod interfaces;
+mod lifetime;
 mod optional;
 mod place;
 mod shared;

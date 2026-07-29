@@ -17,7 +17,10 @@ impl BodyLowerer<'_> {
                 span,
             }));
         }
-        if self.full_expression_temporaries.is_empty() && !self.full_expression_has_shared_effect {
+        if self.full_expression_temporaries.is_empty()
+            && !self.full_expression_has_shared_effect
+            && self.full_expression_storage.is_empty()
+        {
             return;
         }
         let temporaries: Vec<_> = self.full_expression_temporaries.drain(..).rev().collect();
@@ -90,6 +93,10 @@ impl BodyLowerer<'_> {
             span,
         }));
         self.full_expression_has_shared_effect = false;
+        let storage: Vec<_> = self.full_expression_storage.drain(..).rev().collect();
+        for storage in storage {
+            self.end_storage_lifetime(storage, span);
+        }
     }
 }
 
@@ -121,6 +128,20 @@ pub(super) enum PlannedCleanup {
     },
 }
 
+pub(super) struct PlannedScopeExit {
+    pub(super) cleanups: Vec<PlannedCleanup>,
+    pub(super) storage: Vec<StorageId>,
+    pub(super) span: Span,
+}
+
+impl PlannedScopeExit {
+    pub(super) fn requires_optional_check(&self) -> bool {
+        self.cleanups
+            .iter()
+            .any(PlannedCleanup::requires_optional_check)
+    }
+}
+
 impl PlannedCleanup {
     pub(super) const fn requires_optional_check(&self) -> bool {
         matches!(self, Self::ClassOptional(_))
@@ -133,7 +154,13 @@ impl PlannedCleanup {
 /// CFG edges, and each edge needs the same cleanup sequence. Leaving the source
 /// scope is the only operation that discards its registrations.
 pub(super) struct CleanupPlanner {
-    scopes: Vec<Vec<InitializedStorage>>,
+    scopes: Vec<LexicalScope>,
+}
+
+#[derive(Default)]
+struct LexicalScope {
+    initialized: Vec<InitializedStorage>,
+    storage: Vec<StorageId>,
 }
 
 impl CleanupPlanner {
@@ -142,13 +169,22 @@ impl CleanupPlanner {
     }
 
     pub(super) fn enter_scope(&mut self) {
-        self.scopes.push(Vec::new());
+        self.scopes.push(LexicalScope::default());
+    }
+
+    pub(super) fn register_storage(&mut self, storage: StorageId) {
+        self.scopes
+            .last_mut()
+            .expect("live local storage must belong to an active lexical scope")
+            .storage
+            .push(storage);
     }
 
     pub(super) fn register_owned(&mut self, storage: StorageId, class: ClassId) {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
+            .initialized
             .push(InitializedStorage {
                 storage,
                 kind: OwnedStorageKind::Inline(class),
@@ -159,6 +195,7 @@ impl CleanupPlanner {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
+            .initialized
             .push(InitializedStorage {
                 storage,
                 kind: OwnedStorageKind::Shared,
@@ -169,6 +206,7 @@ impl CleanupPlanner {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
+            .initialized
             .push(InitializedStorage {
                 storage,
                 kind: OwnedStorageKind::ClassOptional(class),
@@ -183,6 +221,7 @@ impl CleanupPlanner {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
+            .initialized
             .push(InitializedStorage {
                 storage,
                 kind: OwnedStorageKind::OptionalShared(target),
@@ -197,29 +236,48 @@ impl CleanupPlanner {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
+            .initialized
             .push(InitializedStorage {
                 storage,
                 kind: OwnedStorageKind::Array(array),
             });
     }
 
-    pub(super) fn for_current_scope(&self, span: Span) -> Vec<PlannedCleanup> {
-        self.scopes
+    pub(super) fn for_current_scope(&self, span: Span) -> PlannedScopeExit {
+        let scope = self
+            .scopes
             .last()
-            .expect("a scope exit requires an active lexical scope")
-            .iter()
-            .rev()
-            .map(|local| local.cleanup(span))
-            .collect()
+            .expect("a scope exit requires an active lexical scope");
+        PlannedScopeExit {
+            cleanups: scope
+                .initialized
+                .iter()
+                .rev()
+                .map(|local| local.cleanup(span))
+                .collect(),
+            storage: scope.storage.iter().rev().copied().collect(),
+            span,
+        }
     }
 
-    pub(super) fn for_all_scopes(&self, span: Span) -> Vec<PlannedCleanup> {
-        self.scopes
-            .iter()
-            .rev()
-            .flat_map(|scope| scope.iter().rev())
-            .map(|local| local.cleanup(span))
-            .collect()
+    pub(super) fn for_all_scopes(&self, span: Span) -> PlannedScopeExit {
+        PlannedScopeExit {
+            cleanups: self
+                .scopes
+                .iter()
+                .rev()
+                .flat_map(|scope| scope.initialized.iter().rev())
+                .map(|local| local.cleanup(span))
+                .collect(),
+            storage: self
+                .scopes
+                .iter()
+                .rev()
+                .flat_map(|scope| scope.storage.iter().rev())
+                .copied()
+                .collect(),
+            span,
+        }
     }
 
     pub(super) fn leave_scope(&mut self) {
@@ -284,14 +342,18 @@ mod tests {
         let mut planner = CleanupPlanner::new();
 
         planner.enter_scope();
+        planner.register_storage(outer);
         planner.register_owned(outer, ClassId::new(0));
         planner.enter_scope();
+        planner.register_storage(first_inner);
+        planner.register_storage(second_inner);
         planner.register_owned(first_inner, ClassId::new(1));
         planner.register_owned(second_inner, ClassId::new(2));
 
         let all = planner.for_all_scopes(span);
         assert_eq!(
-            all.iter()
+            all.cleanups
+                .iter()
                 .map(|cleanup| match cleanup {
                     PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
                     PlannedCleanup::Shared(release) => release.owner,
@@ -306,11 +368,13 @@ mod tests {
                 .collect::<Vec<_>>(),
             [second_inner, first_inner, outer]
         );
-        assert_eq!(planner.for_current_scope(span).len(), 2);
-        assert_eq!(planner.for_current_scope(span).len(), 2);
+        assert_eq!(all.storage, [second_inner, first_inner, outer]);
+        assert_eq!(planner.for_current_scope(span).cleanups.len(), 2);
+        assert_eq!(planner.for_current_scope(span).storage.len(), 2);
         planner.leave_scope();
+        let outer_exit = planner.for_current_scope(span);
         assert_eq!(
-            match &planner.for_current_scope(span)[0] {
+            match &outer_exit.cleanups[0] {
                 PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
                 PlannedCleanup::Shared(release) => release.owner,
                 PlannedCleanup::ClassOptional(cleanup) => cleanup.destination.base.storage(),
@@ -319,5 +383,6 @@ mod tests {
             },
             outer
         );
+        assert_eq!(outer_exit.storage, [outer]);
     }
 }

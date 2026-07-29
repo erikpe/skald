@@ -1,6 +1,43 @@
 use super::*;
 
 #[test]
+fn storage_lifetime_markers_emit_no_machine_instructions() {
+    let mut without_markers = lower_source_to_mir("fn main() -> i64 { return 7; }");
+    let function = without_markers
+        .definitions
+        .get_mut_for_test(without_markers.entry_function)
+        .unwrap();
+    let span = function.span;
+    let unused = StorageId::new(function.function, function.storage.len());
+    function.storage.push(MirStorage {
+        id: unused,
+        source: Some(BindingId::Local(LocalId::new(function.function, 0))),
+        name: "unused".to_owned(),
+        kind: MirStorageKind::Local,
+        ty: MirType::I64,
+        span,
+    });
+    verify_mir(&without_markers).expect("unused dead storage is valid");
+
+    let mut with_markers = without_markers.clone();
+    let function = with_markers
+        .definitions
+        .get_mut_for_test(with_markers.entry_function)
+        .unwrap();
+    let block = &mut function.body.blocks[0];
+    block
+        .instructions
+        .insert(0, fixture_storage_live(unused, span));
+    block.instructions.push(fixture_storage_dead(unused, span));
+    verify_mir(&with_markers).expect("balanced unused lifetime markers are valid");
+
+    assert_eq!(
+        emit_assembly(Target::X86_64SysV, &without_markers).unwrap(),
+        emit_assembly(Target::X86_64SysV, &with_markers).unwrap()
+    );
+}
+
+#[test]
 fn selects_every_supported_arithmetic_operation_and_storage_copy() {
     let output = assembly(concat!(
         "fn helper(a: i64) -> i64 { return -a; }\n",

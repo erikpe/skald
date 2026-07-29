@@ -6,16 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [While Loops and Loop Exits Roadmap](WHILE_LOOPS_ROADMAP.md) — **in
+  progress; repeatable MIR storage lifetime epochs are complete and cycle-safe
+  verification is next**. Delivers cycle-safe storage and verification
+  foundations before activating source `while`, then adds `break` and
+  `continue` as separate slices.
 
 ## Planned
 
-- [While Loops and Loop Exits Roadmap](WHILE_LOOPS_ROADMAP.md) — **planned;
-  repeatable MIR storage lifetime epochs are next**. Delivers cycle-safe
-  storage and verification foundations before activating source `while`, then
-  adds `break` and `continue` as separate slices. It depends on the current
-  deterministic-cleanup, ownership, optional, array, generic-CFG, pass, and
-  x86-64 backend baselines; it requires no runtime ABI change.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

@@ -44,10 +44,10 @@ pub use model::{
     MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace,
     MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedStatic,
     MirSharedTarget, MirStaticAllocationOrigin, MirStaticDataMutability, MirStorage,
-    MirStorageKind, MirStore, MirStringInitialize, MirStringLanguageItem, MirSynthesizedCopy,
-    MirSynthesizedFieldCopy, MirTerminationReason, MirTerminator, MirType, MirUnaryOperation,
-    MirUserCopy, MirValue, MirViewTarget, MirVirtualFamily, MirVirtualFamilyTable, OptionalGuardId,
-    StorageId, ValueId,
+    MirStorageDead, MirStorageKind, MirStorageLive, MirStore, MirStringInitialize,
+    MirStringLanguageItem, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminationReason,
+    MirTerminator, MirType, MirUnaryOperation, MirUserCopy, MirValue, MirViewTarget,
+    MirVirtualFamily, MirVirtualFamilyTable, OptionalGuardId, StorageId, ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
 

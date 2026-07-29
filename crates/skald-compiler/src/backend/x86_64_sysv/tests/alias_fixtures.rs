@@ -88,8 +88,22 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
         span,
     });
     let amount = ValueId::new(main.function, 2);
+    let after_first_add = main.body.blocks[0]
+        .instructions
+        .iter()
+        .position(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::Call(MirCall {
+                    target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
+                    ..
+                }) if *method == MethodId::new(class, 0)
+            )
+        })
+        .expect("counter fixture must contain its first add call")
+        + 1;
     main.body.blocks[0].instructions.splice(
-        5..5,
+        after_first_add..after_first_add,
         [
             MirInstruction::Call(MirCall {
                 target: MirCallTarget::Direct(add),
@@ -173,6 +187,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
             span,
         }),
     );
+    fixture_add_body_storage_lifetimes(&main.storage, &mut main.body, span);
 
     let sum = FunctionId::new(1);
     let existing_sum = program.definitions.get(sum).unwrap().clone();
@@ -337,6 +352,7 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
             target: ids.container,
             span,
         }));
+    fixture_add_body_storage_lifetimes(&main.storage, &mut main.body, span);
     program
 }
 

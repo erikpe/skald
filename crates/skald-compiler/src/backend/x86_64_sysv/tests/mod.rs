@@ -1,9 +1,11 @@
 use crate::mir::test_fixtures::{
-    assign as fixture_assign, block as fixture_block, call as fixture_call,
+    add_body_storage_lifetimes as fixture_add_body_storage_lifetimes, assign as fixture_assign,
+    block as fixture_block, call as fixture_call,
     function_declaration as fixture_function_declaration,
     function_definition as fixture_function_definition,
     member_definition as fixture_member_definition, parameter as fixture_parameter,
     receiver_storage as fixture_receiver_storage, storage as fixture_storage,
+    storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
     store as fixture_store, value as fixture_value, OneBlockDefinition,
 };
 use crate::{

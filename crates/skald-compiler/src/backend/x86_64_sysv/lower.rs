@@ -192,6 +192,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
     /// in sibling modules so adding an instruction identifies one clear owner.
     fn select(&mut self, instruction: &MirInstruction) -> Result<(), BackendError> {
         match instruction {
+            MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
             MirInstruction::Assign(assignment) => self.select_assignment(assignment)?,
             MirInstruction::Call(call) => self.select_call(call)?,
             MirInstruction::Cleanup(cleanup) => self.select_cleanup(cleanup)?,

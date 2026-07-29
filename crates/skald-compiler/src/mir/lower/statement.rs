@@ -17,7 +17,7 @@ impl BodyLowerer<'_> {
             self.lower_statement(statement);
         }
         if !self.body.is_current_terminated() {
-            self.emit_cleanups(self.cleanup.for_current_scope(block.span));
+            self.emit_scope_exit(self.cleanup.for_current_scope(block.span));
         }
         self.cleanup.leave_scope();
     }
@@ -123,6 +123,8 @@ impl BodyLowerer<'_> {
 
     fn lower_local(&mut self, local: &crate::hir::HirLocalDecl) {
         let storage = self.local_storage[local.local.index()];
+        self.begin_storage_lifetime(storage, local.span);
+        self.cleanup.register_storage(storage);
         match &local.initializer {
             crate::hir::HirLocalInitializer::Value(initializer) => {
                 let value = self
@@ -250,7 +252,7 @@ impl BodyLowerer<'_> {
                     .expect("shared-returning body must have return storage");
                 self.lower_shared_transfer(destination, transfer);
                 self.finish_full_expression(statement.span);
-                self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
+                self.emit_scope_exit(self.cleanup.for_all_scopes(statement.span));
                 self.terminate(MirTerminator::ReturnShared {
                     owner: destination,
                     span: statement.span,
@@ -263,7 +265,7 @@ impl BodyLowerer<'_> {
                     .expect("optional-shared-returning body must have return storage");
                 self.lower_optional_shared_initialize(destination, value);
                 self.finish_full_expression(statement.span);
-                self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
+                self.emit_scope_exit(self.cleanup.for_all_scopes(statement.span));
                 self.terminate(MirTerminator::ReturnOptionalShared {
                     owner: destination,
                     span: statement.span,
@@ -280,21 +282,22 @@ impl BodyLowerer<'_> {
             }
             None => None,
         };
-        let cleanups = self.cleanup.for_all_scopes(statement.span);
+        let scope_exit = self.cleanup.for_all_scopes(statement.span);
         let spilled_value = value
-            .filter(|_| {
-                cleanups
-                    .iter()
-                    .any(|cleanup| cleanup.requires_optional_check())
-            })
+            .filter(|_| scope_exit.requires_optional_check())
             .map(|value| {
                 self.spill_scalar(value, lower_type(self.input.return_type), statement.span)
             });
+        if let Some((storage, _)) = spilled_value {
+            self.extend_storage_beyond_full_expression(storage);
+        }
         self.finish_full_expression(statement.span);
-        self.emit_cleanups(cleanups);
+        self.emit_scope_exit(scope_exit);
         let value = spilled_value
             .map(|(storage, ty)| {
-                self.assign(MirRvalueKind::Load(storage.into()), ty, statement.span)
+                let value = self.assign(MirRvalueKind::Load(storage.into()), ty, statement.span);
+                self.end_storage_lifetime(storage, statement.span);
+                value
             })
             .or(value);
         self.terminate(MirTerminator::Return {

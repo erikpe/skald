@@ -33,6 +33,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         for block in &function.body().blocks {
             for instruction in &block.instructions {
                 match instruction {
+                    MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
                     MirInstruction::Initialize(initialize) => {
                         check_member_target(
                             program,

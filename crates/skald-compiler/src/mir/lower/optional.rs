@@ -272,6 +272,7 @@ impl BodyLowerer<'_> {
             ty: payload.payload_type(),
             span: expression.span,
         });
+        self.track_full_expression_storage(destination, expression.span);
 
         let success_target = self.body.allocate_block(expression.span);
         let failure_target = self.body.allocate_block(expression.span);
@@ -441,6 +442,7 @@ impl BodyLowerer<'_> {
             ty: MirType::Shared(super::lower_shared_target(target)),
             span,
         });
+        self.track_full_expression_storage(storage, span);
         storage
     }
 
@@ -634,6 +636,7 @@ impl BodyLowerer<'_> {
             ty: mir_ty,
             span,
         });
+        self.track_full_expression_storage(id, span);
         id
     }
 }

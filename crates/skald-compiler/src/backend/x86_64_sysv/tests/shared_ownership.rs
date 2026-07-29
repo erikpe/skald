@@ -258,6 +258,7 @@ fn verified_copy_fixture_contains_checked_count_overflow_termination() {
     function.body.blocks[0].instructions.splice(
         release..release,
         [
+            fixture_storage_live(destination, function.span),
             MirInstruction::SharedCopy(MirSharedCopy {
                 destination,
                 source,
@@ -271,6 +272,7 @@ fn verified_copy_fixture_contains_checked_count_overflow_termination() {
                 owner: destination,
                 span: function.span,
             }),
+            fixture_storage_dead(destination, function.span),
         ],
     );
     verify_mir(&program).expect("the retain fixture must remain valid MIR");

@@ -17,6 +17,8 @@ use super::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirInstruction {
+    StorageLive(MirStorageLive),
+    StorageDead(MirStorageDead),
     Assign(MirAssignment),
     Call(MirCall),
     Cleanup(MirCleanup),
@@ -56,6 +58,8 @@ pub enum MirInstruction {
 impl MirInstruction {
     pub const fn span(&self) -> Span {
         match self {
+            Self::StorageLive(instruction) => instruction.span,
+            Self::StorageDead(instruction) => instruction.span,
             Self::Assign(instruction) => instruction.span,
             Self::Call(instruction) => instruction.span,
             Self::Cleanup(instruction) => instruction.span,
@@ -92,6 +96,20 @@ impl MirInstruction {
             Self::Array(instruction) => instruction.span(),
         }
     }
+}
+
+/// Begins one dynamic lifetime epoch for a static MIR storage identity.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirStorageLive {
+    pub storage: StorageId,
+    pub span: Span,
+}
+
+/// Ends one dynamic lifetime epoch after all required cleanup or transfer.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirStorageDead {
+    pub storage: StorageId,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

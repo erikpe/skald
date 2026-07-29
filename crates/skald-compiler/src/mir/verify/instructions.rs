@@ -51,6 +51,7 @@ impl Verifier<'_> {
         defined_in_block: &mut HashSet<ValueId>,
     ) {
         match instruction {
+            MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
             MirInstruction::Assign(assignment) => self.verify_assignment(
                 function,
                 block,

@@ -1,7 +1,9 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::test_fixtures::{
-    assign as fixture_assign, block as fixture_block,
-    empty_member_definition as fixture_empty_member_definition, value as fixture_value,
+    add_body_storage_lifetimes as fixture_add_body_storage_lifetimes, assign as fixture_assign,
+    block as fixture_block, empty_member_definition as fixture_empty_member_definition,
+    storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
+    value as fixture_value,
 };
 use super::*;
 use crate::{
@@ -9,7 +11,7 @@ use crate::{
         BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
         MethodId,
     },
-    test_support::{lower_source_to_mir, type_check_source},
+    test_support::{lower_source_to_mir, parse_source, type_check_source},
 };
 
 mod alias_fixtures;
@@ -31,6 +33,7 @@ mod robustness;
 mod shared;
 mod static_inheritance;
 mod static_methods;
+mod storage_lifetimes;
 mod strings;
 mod type_operation_fixtures;
 mod type_operations;
@@ -67,7 +70,23 @@ fn goto_join_mir() -> MirProgram {
         .unwrap();
     let entry = &mut function.body.blocks[0];
     let join_id = BlockId::new(function.function, 1);
-    let join_instructions = entry.instructions.split_off(2);
+    let join_start = entry
+        .instructions
+        .iter()
+        .position(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::Assign(MirAssignment {
+                    rvalue: MirRvalue {
+                        kind: MirRvalueKind::Load(_),
+                        ..
+                    },
+                    ..
+                })
+            )
+        })
+        .expect("fixture return must load the local in the join block");
+    let join_instructions = entry.instructions.split_off(join_start);
     let join_terminator = entry.terminator.take();
     entry.terminator = Some(MirTerminator::Goto {
         target: join_id,

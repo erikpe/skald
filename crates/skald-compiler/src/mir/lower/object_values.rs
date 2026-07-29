@@ -204,6 +204,7 @@ impl BodyLowerer<'_> {
             ty: MirType::Class(class),
             span,
         });
+        self.track_full_expression_storage(id, span);
         id
     }
 }

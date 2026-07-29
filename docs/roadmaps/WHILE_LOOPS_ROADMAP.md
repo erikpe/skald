@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: planned; L0 is next.
+Status: in progress; L0 is complete and L1 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -83,7 +83,7 @@ Explicitly excluded from this roadmap:
 
 ## Progress
 
-- [ ] L0 — Add repeatable MIR storage lifetime epochs
+- [x] L0 — Add repeatable MIR storage lifetime epochs
 - [ ] L1 — Make MIR verification cycle-safe
 - [ ] L2 — Add structured loop identities and control effects
 - [ ] L3 — Lower internal HIR `while` loops through generic MIR
@@ -105,27 +105,27 @@ automation interface; this roadmap does not add repository CI.
 **Purpose:** Give a static MIR storage identity explicit dynamic lifetime
 boundaries before any generic backedge can execute its declaration twice.
 
-- [ ] Add target-independent live/dead lifetime operations, equivalent to
+- [x] Add target-independent live/dead lifetime operations, equivalent to
       `StorageLive(storage)` and `StorageDead(storage)`, with stable storage
       identity and source spans.
-- [ ] Define entry-state treatment for receivers and parameters and explicit
+- [x] Define entry-state treatment for receivers and parameters and explicit
       epoch boundaries for source locals, return storage, spills, temporaries,
       checked views, shared allocations and anchors, optional unwraps, and
       array-owned compiler storage.
-- [ ] Migrate HIR-to-MIR lowering so every currently emitted storage use occurs
+- [x] Migrate HIR-to-MIR lowering so every currently emitted storage use occurs
       in a live epoch and every normal lifetime end emits cleanup before the
       corresponding dead boundary.
-- [ ] Keep lexical-scope epochs distinct from full-expression epochs without
+- [x] Keep lexical-scope epochs distinct from full-expression epochs without
       changing source evaluation or cleanup order.
-- [ ] Add structural MIR checks for invalid storage IDs, use while dead,
+- [x] Add structural MIR checks for invalid storage IDs, use while dead,
       duplicate live, duplicate dead, cleanup after dead, and a live local left
       on an ordinary function exit.
-- [ ] Teach MIR dumps to display lifetime boundaries deterministically.
-- [ ] Make the x86-64 backend validate and otherwise emit no code for lifetime
+- [x] Teach MIR dumps to display lifetime boundaries deterministically.
+- [x] Make the x86-64 backend validate and otherwise emit no code for lifetime
       operations; frame allocation remains based on static storage identities.
-- [ ] Keep lifetime modeling in cohesive MIR model, lowering, verification,
+- [x] Keep lifetime modeling in cohesive MIR model, lowering, verification,
       and dump owners rather than growing their facade modules.
-- [ ] Update the phase/IR document only if implementation reveals a
+- [x] Update the phase/IR document only if implementation reveals a
       representation invariant not already covered by the frozen contract.
 
 **Tests:** MIR builder and dump tests; straight-line and diamond-shaped

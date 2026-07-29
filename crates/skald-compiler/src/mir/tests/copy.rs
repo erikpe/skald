@@ -205,26 +205,33 @@ fn verifies_temporary_storage_and_reverse_full_expression_cleanup() {
     });
     let source = MirPlace::base(function.storage[0].id);
     let temporary_place = MirPlace::base(temporary);
-    function.body.blocks[0].instructions.insert(
-        1,
-        MirInstruction::CopyConstruct(MirCopyConstruction {
-            destination: temporary_place.clone(),
-            source,
-            class,
-            operation: MirSelectedCopyOperation::Synthesized(class),
-            span,
-        }),
-    );
-    function.body.blocks[0].instructions.insert(
-        2,
-        MirInstruction::EndFullExpression(MirEndFullExpression {
-            temporaries: vec![MirCleanup {
-                destination: temporary_place,
-                target: class,
+    let insertion = function.body.blocks[0]
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::Initialize(_)))
+        .expect("fixture source local must be initialized")
+        + 1;
+    function.body.blocks[0].instructions.splice(
+        insertion..insertion,
+        [
+            fixture_storage_live(temporary, span),
+            MirInstruction::CopyConstruct(MirCopyConstruction {
+                destination: temporary_place.clone(),
+                source,
+                class,
+                operation: MirSelectedCopyOperation::Synthesized(class),
                 span,
-            }],
-            span,
-        }),
+            }),
+            MirInstruction::EndFullExpression(MirEndFullExpression {
+                temporaries: vec![MirCleanup {
+                    destination: temporary_place,
+                    target: class,
+                    span,
+                }],
+                span,
+            }),
+            fixture_storage_dead(temporary, span),
+        ],
     );
     assert!(verify_mir(&mir).is_ok());
     assert!(dump_mir(&mir).contains("temporary <temporary> \"temporary0\" : class c0"));
@@ -233,10 +240,21 @@ fn verifies_temporary_storage_and_reverse_full_expression_cleanup() {
         .definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap();
-    let MirInstruction::EndFullExpression(end) = &mut function.body.blocks[0].instructions[2]
-    else {
-        unreachable!()
-    };
+    let end = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::EndFullExpression(end)
+                if end
+                    .temporaries
+                    .iter()
+                    .any(|cleanup| cleanup.destination.base.storage() == temporary) =>
+            {
+                Some(end)
+            }
+            _ => None,
+        })
+        .expect("fixture must contain the temporary cleanup boundary");
     end.temporaries.clear();
     let errors = verify_mir(&mir).unwrap_err().to_string();
     assert!(errors.contains("reverse completion order"));

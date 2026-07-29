@@ -144,6 +144,7 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
             span,
         }),
     ]);
+    fixture_add_body_storage_lifetimes(&main.storage, &mut main.body, span);
 
     program.definitions = MirFunctionDefinitionTable::new(vec![
         Some(main),

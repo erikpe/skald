@@ -664,8 +664,10 @@ somehow reached after the trust boundary.
 
 The source behavior of `while`, `break`, and `continue` is frozen in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
-The representation below is likewise frozen for implementation but is not
-present in current resolved IR, HIR, MIR, or verification.
+The structured loop representation below remains frozen for implementation
+and is not present in current resolved IR or HIR. MIR storage lifetime epochs
+and their structural verification are implemented as the first representation
+foundation; source loops and cyclic ownership verification remain later work.
 
 The contract fixes which phase owns each decision and the invariants visible
 across phase boundaries. It does not fix private Rust organization, concrete
@@ -726,7 +728,8 @@ cleanup, release, move, or transfer as required
 storage-dead storage
 ```
 
-The exact operation names are not frozen. Their required meaning is:
+Current MIR spells these operations `StorageLive` and `StorageDead`; their
+required meaning is:
 
 - initialization, use, projection, and cleanup require live storage;
 - beginning another epoch while storage is live is invalid;
@@ -754,6 +757,17 @@ receiving loop-specific reset exceptions.
 Lifetime operations carry no target layout, stack-slot, or register decision.
 Frame planning may map repeated epochs to one physical home, and a later phase
 may erase operations after every analysis that consumes them.
+
+The implemented callable-entry convention treats receiver, parameter,
+alias-parameter, and hidden result storage as implicitly live for the complete
+callable body. Those storage categories do not receive explicit lifetime
+operations. Source locals begin an explicit lexical epoch immediately before
+their initializer and end it after any required cleanup on each ordinary scope
+exit. Compiler-owned arguments, spills, temporaries, checked views, shared
+allocations and anchors, optional unwraps, and array storage use explicit
+full-expression epochs unless lowering deliberately extends a result carrier
+through scope-exit cleanup. Every ordinary end emits ownership cleanup before
+the corresponding `StorageDead`.
 
 ### Generic CFG lowering and cleanup edges
 

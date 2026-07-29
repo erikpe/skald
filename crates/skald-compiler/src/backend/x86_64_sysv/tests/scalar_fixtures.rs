@@ -14,7 +14,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     let assignment =
         |function, index, kind, ty| fixture_assign(ValueId::new(function, index), kind, ty, span);
 
-    let compute = fixture_function_definition(
+    let mut compute = fixture_function_definition(
         compute_id,
         OneBlockDefinition {
             return_storage: None,
@@ -107,6 +107,8 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
             span,
         },
     );
+    fixture_add_body_storage_lifetimes(&compute.storage, &mut compute.body, span);
+
     let main = fixture_function_definition(
         main_id,
         OneBlockDefinition {

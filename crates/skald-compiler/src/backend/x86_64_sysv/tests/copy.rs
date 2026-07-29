@@ -101,26 +101,27 @@ fn allocates_and_destroys_bounded_full_expression_temporaries() {
         .iter()
         .position(|instruction| matches!(instruction, MirInstruction::Initialize(_)))
         .unwrap();
-    function.body.blocks[0].instructions.insert(
-        initialize + 1,
-        MirInstruction::CopyConstruct(MirCopyConstruction {
-            destination: MirPlace::base(temporary),
-            source: MirPlace::base(function.storage[0].id),
-            class,
-            operation: MirSelectedCopyOperation::Synthesized(class),
-            span,
-        }),
-    );
-    function.body.blocks[0].instructions.insert(
-        initialize + 2,
-        MirInstruction::EndFullExpression(MirEndFullExpression {
-            temporaries: vec![MirCleanup {
+    function.body.blocks[0].instructions.splice(
+        initialize + 1..initialize + 1,
+        [
+            fixture_storage_live(temporary, span),
+            MirInstruction::CopyConstruct(MirCopyConstruction {
                 destination: MirPlace::base(temporary),
-                target: class,
+                source: MirPlace::base(function.storage[0].id),
+                class,
+                operation: MirSelectedCopyOperation::Synthesized(class),
                 span,
-            }],
-            span,
-        }),
+            }),
+            MirInstruction::EndFullExpression(MirEndFullExpression {
+                temporaries: vec![MirCleanup {
+                    destination: MirPlace::base(temporary),
+                    target: class,
+                    span,
+                }],
+                span,
+            }),
+            fixture_storage_dead(temporary, span),
+        ],
     );
     verify_mir(&program).unwrap();
 

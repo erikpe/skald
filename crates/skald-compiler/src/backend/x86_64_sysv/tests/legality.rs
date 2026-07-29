@@ -11,9 +11,18 @@ fn malformed_f64_mir_is_a_structured_backend_error() {
         .definitions
         .get_mut_for_test(FunctionId::new(0))
         .unwrap();
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
-        panic!("expected f64 constant assignment");
-    };
+    let assignment = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(assignment.rvalue.kind, MirRvalueKind::ConstantF64Bits(_)) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .expect("expected f64 constant assignment");
     assignment.rvalue.ty = MirType::I64;
 
     let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();

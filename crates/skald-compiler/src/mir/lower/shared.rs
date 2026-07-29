@@ -230,6 +230,7 @@ impl BodyLowerer<'_> {
             ty: MirType::Class(allocation.class),
             span: allocation.span,
         });
+        self.track_full_expression_storage(allocation_storage, allocation.span);
         self.emit(MirInstruction::SharedAllocate(MirSharedAllocate {
             allocation: allocation_storage,
             class: allocation.class,
@@ -287,6 +288,7 @@ impl BodyLowerer<'_> {
             ty: lower_type(Type::Shared(target)),
             span,
         });
+        self.track_full_expression_storage(storage, span);
         self.full_expression_temporaries
             .push(FullExpressionTemporary::Shared(storage));
         storage
@@ -306,6 +308,7 @@ impl BodyLowerer<'_> {
             ty: lower_type(Type::Shared(source.target())),
             span,
         });
+        self.track_full_expression_storage(storage, span);
         self.lower_shared_source(storage, source, span);
         self.full_expression_temporaries
             .push(FullExpressionTemporary::Shared(storage));

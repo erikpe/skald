@@ -212,6 +212,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         for instruction in &block.instructions {
             self.check_pointee_uses(block.id, state, instruction);
             match instruction {
+                MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
                 MirInstruction::SharedAllocate(allocation) => {
                     if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
                         self.require_live_pointee(block.id, state, source);

@@ -480,6 +480,7 @@ impl BodyLowerer<'_> {
                         ty: lower_type(Type::Shared(transfer.target)),
                         span: transfer.span,
                     });
+                    self.track_full_expression_storage(storage, transfer.span);
                     self.lower_shared_transfer(storage, transfer);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
@@ -663,6 +664,7 @@ impl BodyLowerer<'_> {
             ty: type_operations::lower_view_target(checked.view.target).ty(),
             span: checked.span,
         });
+        self.track_full_expression_storage(destination, checked.span);
         let binding = MirCheckedViewBinding {
             destination,
             view: source.clone(),

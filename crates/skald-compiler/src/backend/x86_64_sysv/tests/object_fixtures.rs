@@ -179,6 +179,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             span,
         ),
     ]);
+    fixture_add_body_storage_lifetimes(&function.storage, &mut function.body, span);
 
     (
         program,
@@ -343,6 +344,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             span,
         }),
     ]);
+    fixture_add_body_storage_lifetimes(&main.storage, &mut main.body, span);
     program
 }
 
@@ -470,6 +472,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
             target: ids.container,
             span: program.span,
         }));
+    fixture_add_body_storage_lifetimes(&function.storage, &mut function.body, program.span);
     program
 }
 
