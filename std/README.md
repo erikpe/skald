@@ -12,6 +12,20 @@ explicitly. Call statements execute through the compiler's non-returning panic
 terminator and the length-delimited runtime reporter. It is not an external
 function or an exception API.
 
+Import and call it as a standalone statement:
+
+```ska
+from std::error import panic;
+
+fn main() -> i64 {
+    panic("configuration is missing");
+}
+```
+
+The reporter writes `panic: `, the exact string bytes, and a line feed to
+standard error, then terminates unsuccessfully. It does not unwind or run
+remaining cleanup.
+
 Named private standard-library members begin with `_` by convention, including
 private fields and private instance or static methods. Declarations without a
 member name, such as `private init(...)`, are unchanged. Parameters and local

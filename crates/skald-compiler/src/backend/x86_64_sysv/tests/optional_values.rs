@@ -243,7 +243,7 @@ fn saturated_optional_guard_state_terminates_on_checked_view_begin() {
         1,
         "fixture must identify the checked container state load\n{output}"
     );
-    let saturated = output.replacen(
+    let mut saturated = output.replacen(
         begin_view,
         concat!(
             "call .Lska_class_1_init_0\n",
@@ -253,8 +253,12 @@ fn saturated_optional_guard_state_terminates_on_checked_view_begin() {
         ),
         1,
     );
+    saturated.push_str(native_panic_reporter());
 
-    assert!(!run_native_assembly(&saturated).success(), "{saturated}");
+    let result = run_native_assembly_output(&saturated);
+    assert_eq!(result.status.code(), Some(1), "{saturated}");
+    assert!(result.stdout.is_empty());
+    assert_eq!(result.stderr, b"panic: optional presence guard overflow\n");
 }
 
 #[test]

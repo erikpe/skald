@@ -287,7 +287,7 @@ fn verified_copy_fixture_contains_checked_count_overflow_termination() {
 }
 
 #[test]
-fn checked_retain_distinguishes_invalid_dynamic_and_immortal_counts() {
+fn checked_retain_reports_exhaustion_but_invalid_state_is_a_silent_hard_trap() {
     let source = concat!(
         "class Widget { init() {} }\n",
         "fn main() -> i64 {\n",

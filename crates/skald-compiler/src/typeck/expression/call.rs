@@ -13,7 +13,7 @@ use crate::{
 
 use crate::typeck::function::MemberBodyKind;
 use crate::typeck::program::{
-    lower_type, INTRINSIC_NOT_EXECUTABLE, INVALID_INITIALIZER_BODY, READ_ONLY_RECEIVER,
+    lower_type, INVALID_INITIALIZER_BODY, PANIC_REQUIRES_CALL_STATEMENT, READ_ONLY_RECEIVER,
     WRONG_ARGUMENT_COUNT,
 };
 
@@ -33,7 +33,7 @@ impl CallableChecker<'_, '_> {
         ) {
             self.diagnostics.push(
                 crate::diagnostics::Diagnostic::error(
-                    INTRINSIC_NOT_EXECUTABLE,
+                    PANIC_REQUIRES_CALL_STATEMENT,
                     "`std::error::panic` can only be used as a call statement",
                 )
                 .with_primary_label(

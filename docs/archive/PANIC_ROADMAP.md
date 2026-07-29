@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: in progress; P0 through P5 are complete. P6 is next.
+Status: complete; P0 through P6 are implemented and validated.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -87,7 +87,7 @@ duplicate its exact bytes.
 - [x] P3 — Execute explicit source panic end to end
 - [x] P4 — Report target-independent static failures
 - [x] P5 — Separate ownership overflow from compiler-defect traps
-- [ ] P6 — Harden the completed panic boundary
+- [x] P6 — Harden the completed panic boundary
 
 ## PR-sized implementation sequence
 
@@ -341,27 +341,27 @@ one documented invariant owner.
 **Purpose:** Close cross-layer gaps, remove rollout scaffolding, and prove that
 the final reporter/trap partition is complete and deterministic.
 
-- [ ] Audit lexer through backend, runtime, standard library, tests, samples,
+- [x] Audit lexer through backend, runtime, standard library, tests, samples,
       and living documentation for stale claims that panic is unavailable or
       language failures use an illegal-instruction boundary.
-- [ ] Remove temporary diagnostics, compatibility branches, duplicate panic
+- [x] Remove temporary diagnostics, compatibility branches, duplicate panic
       emitters, duplicated static messages, task codes outside roadmap
       documents, and dead version-5 runtime assumptions.
-- [ ] Add one representative panic sample and concise standard-library usage
+- [x] Add one representative panic sample and concise standard-library usage
       documentation without presenting panic as an exception or ordinary FFI.
-- [ ] Prove deterministic assembly, static-message pooling, stderr, and
+- [x] Prove deterministic assembly, static-message pooling, stderr, and
       process status across repeated compilations and executions.
-- [ ] Add a regression audit that every `MirTerminationReason` maps
+- [x] Add a regression audit that every `MirTerminationReason` maps
       exhaustively to the reporter and every remaining hard trap is excluded
       from source-reachable semantic-failure tests.
-- [ ] Confirm complete golden stderr coverage for explicit panic, every static
+- [x] Confirm complete golden stderr coverage for explicit panic, every static
       message, host allocation failure, and ownership-count overflow.
-- [ ] Confirm internal-defect fixtures still hard-trap without printing a
+- [x] Confirm internal-defect fixtures still hard-trap without printing a
       `panic:` record.
-- [ ] Keep shadow trace stack, source locations, stacktrace output, exception
+- [x] Keep shadow trace stack, source locations, stacktrace output, exception
       syntax, unwinding, and exceptional cleanup absent from runtime symbols,
       compiler options, and source claims.
-- [ ] Run the complete repository gate from an artifact-free snapshot and
+- [x] Run the complete repository gate from an artifact-free snapshot and
       inspect repository status, links, and diff hygiene before closeout.
 
 **Tests:** Run focused suites while auditing, then `make check`,

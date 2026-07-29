@@ -6,16 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Panic and Unrecoverable Failure Reporting](PANIC_ROADMAP.md) — **in
-  progress**. P0 froze the source, intrinsic, reporting ABI, and hard-trap
-  contracts. P1 implemented the version-6 runtime reporter and exact native
-  stderr expectations without adding compiler-generated reporter calls. P2
-  implemented the canonical intrinsic declaration, validation, stable
-  identity, and temporary pre-HIR call diagnostic. P3 implemented executable
-  source panic from type checking through exact native reporting. P4 routed
-  static MIR failures and valid host-allocation exhaustion through the same
-  reporter, and P5 separated legal ownership overflow from invalid-state
-  traps. P6 is next.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

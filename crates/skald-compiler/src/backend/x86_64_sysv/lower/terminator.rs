@@ -67,8 +67,18 @@ impl PanicMessage {
         }
     }
 
-    fn symbol(self) -> String {
-        format!(".Lska_panic_message_{}", self.index())
+    const fn symbol(self) -> &'static str {
+        match self {
+            Self::ObjectCastFailure => ".Lska_panic_message_0",
+            Self::OptionalAccessFailure => ".Lska_panic_message_1",
+            Self::OptionalGuardOverflow => ".Lska_panic_message_2",
+            Self::OptionalPinnedMutation => ".Lska_panic_message_3",
+            Self::ArrayAllocationFailure => ".Lska_panic_message_4",
+            Self::ArrayIndexOutOfBounds => ".Lska_panic_message_5",
+            Self::ArrayInvalidSliceBounds => ".Lska_panic_message_6",
+            Self::ArraySliceLengthMismatch => ".Lska_panic_message_7",
+            Self::OwnershipCountOverflow => ".Lska_panic_message_8",
+        }
     }
 }
 
@@ -86,7 +96,7 @@ impl PanicMessagePool {
                 };
                 if let Some(message) = PanicMessage::ALL
                     .into_iter()
-                    .find(|message| message.symbol() == *symbol)
+                    .find(|message| message.symbol() == symbol)
                 {
                     used[message.index()] = true;
                 }
@@ -100,7 +110,7 @@ impl PanicMessagePool {
             .into_iter()
             .filter(|message| self.used[message.index()])
             .map(|message| AssemblyPanicMessage {
-                symbol: message.symbol(),
+                symbol: message.symbol().to_owned(),
                 bytes: message.bytes(),
             })
             .collect()
@@ -175,29 +185,28 @@ impl InstructionSelector<'_, '_> {
             source: value::memory(Register::Rdx, field_offset(item.length_field)),
             destination: Register::Rsi.into(),
         });
-        self.call_reporter();
+        emit_reporter_call(self.output);
         Ok(())
     }
 
     fn select_static_panic(&mut self, message: PanicMessage) {
         emit_static_panic(message, self.output);
     }
-
-    fn call_reporter(&mut self) {
-        self.output
-            .push(Instruction::Call("ska_rt_panic".to_owned()));
-    }
 }
 
 fn emit_static_panic(message: PanicMessage, output: &mut Vec<Instruction>) {
     output.push(Instruction::LoadSymbolAddress {
-        symbol: message.symbol(),
+        symbol: message.symbol().to_owned(),
         destination: Register::Rdi,
     });
     output.push(Instruction::MoveImmediate64 {
         bits: message.bytes().len() as u64,
         destination: Register::Rsi,
     });
+    emit_reporter_call(output);
+}
+
+fn emit_reporter_call(output: &mut Vec<Instruction>) {
     output.push(Instruction::Call("ska_rt_panic".to_owned()));
 }
 

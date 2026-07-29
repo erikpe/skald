@@ -149,10 +149,10 @@ declaration, any signature other than one by-value exact
 `std::str::Str` parameter and `unit` result, and any attempt to combine the
 declaration with ordinary function, member, lifecycle, interface, override,
 or external-function syntax. An unused valid declaration remains bodyless
-metadata through executable IR. A call resolves to the stable intrinsic
-function identity but currently receives a focused compile-time diagnostic;
-panic execution is the next implementation phase.
-Intrinsics cannot be entry points, methods,
+metadata through executable IR. A call statement resolves to the stable
+intrinsic function identity and becomes the dedicated non-returning panic
+operation before HIR. Expression-position use is rejected because panic does
+not produce a value. Intrinsics cannot be entry points, methods,
 initializers, lifecycle members, interface requirements, overrides, or native
 exports.
 

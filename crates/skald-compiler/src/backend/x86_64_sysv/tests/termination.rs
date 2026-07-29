@@ -9,17 +9,7 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
         .unwrap();
     let span = definition.span;
     definition.values.clear();
-    let reasons = [
-        MirTerminationReason::ObjectCastFailure,
-        MirTerminationReason::OptionalAccessFailure,
-        MirTerminationReason::OptionalGuardOverflow,
-        MirTerminationReason::OptionalPinnedMutation,
-        MirTerminationReason::ArrayAllocationFailure,
-        MirTerminationReason::ArrayIndexOutOfBounds,
-        MirTerminationReason::ArrayInvalidSliceBounds,
-        MirTerminationReason::ArraySliceLengthMismatch,
-    ];
-    definition.body.blocks = reasons
+    definition.body.blocks = MirTerminationReason::ALL
         .into_iter()
         .enumerate()
         .map(|(index, reason)| MirBasicBlock {
@@ -32,6 +22,11 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
 
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert_eq!(
+        output,
+        emit_assembly(Target::X86_64SysV, &program).unwrap(),
+        "static message pooling must be deterministic"
+    );
     for (index, message) in [
         "checked object cast failed",
         "optional value is absent",
@@ -56,6 +51,44 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
     assert_eq!(output.matches("call ska_rt_panic").count(), 8);
     assert!(!output.contains("ud2"));
     assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn every_static_termination_reason_reports_exact_native_stderr() {
+    for (reason, message) in MirTerminationReason::ALL.into_iter().zip([
+        "checked object cast failed",
+        "optional value is absent",
+        "optional presence guard overflow",
+        "cannot mutate a guarded optional value",
+        "array allocation failed",
+        "array index out of bounds",
+        "array slice bounds are invalid",
+        "array slice length mismatch",
+    ]) {
+        let mut program = lower_text("fn main() -> i64 { return 0; }");
+        let definition = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        definition.values.clear();
+        definition.body.blocks[0].instructions.clear();
+        definition.body.blocks[0].terminator = Some(MirTerminator::Terminate {
+            reason,
+            span: definition.span,
+        });
+
+        verify_mir(&program).unwrap();
+        let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+        output.push_str(native_panic_reporter());
+        let result = run_native_assembly_output(&output);
+        assert_eq!(result.status.code(), Some(1), "{reason:?}");
+        assert!(result.stdout.is_empty(), "{reason:?}");
+        assert_eq!(
+            result.stderr,
+            format!("panic: {message}\n").as_bytes(),
+            "{reason:?}"
+        );
+    }
 }
 
 #[test]

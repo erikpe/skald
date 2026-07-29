@@ -138,6 +138,19 @@ pub enum MirTerminationReason {
     ArraySliceLengthMismatch,
 }
 
+impl MirTerminationReason {
+    pub const ALL: [Self; 8] = [
+        Self::ObjectCastFailure,
+        Self::OptionalAccessFailure,
+        Self::OptionalGuardOverflow,
+        Self::OptionalPinnedMutation,
+        Self::ArrayAllocationFailure,
+        Self::ArrayIndexOutOfBounds,
+        Self::ArrayInvalidSliceBounds,
+        Self::ArraySliceLengthMismatch,
+    ];
+}
+
 impl MirTerminator {
     pub const fn span(&self) -> Span {
         match self {

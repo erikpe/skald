@@ -50,6 +50,7 @@ Archived plans:
 - [String types](STRINGS_ROADMAP.md)
 - [Private ordinary initializers](PRIVATE_INITIALIZERS_ROADMAP.md)
 - [Primitive local reassignment](PRIMITIVE_LOCAL_REASSIGNMENT_ROADMAP.md)
+- [Panic and unrecoverable failure reporting](PANIC_ROADMAP.md)
 
 Resolved string-design inputs:
 

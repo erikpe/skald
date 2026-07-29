@@ -262,6 +262,17 @@ sidecar requires its stream to be empty. The focused
 `make golden-expectations-test` suite owns sidecar loading and escaped
 byte-mismatch rendering independently of compiler execution.
 
+Panic goldens cover every failure that a compact source program can trigger,
+including explicit dynamic messages, cast and optional failures, array and
+string bounds, invalid allocation requests, and valid host-allocation
+exhaustion. Counter saturation cannot be reached by a tractable source fixture:
+backend native tests inject the optional-guard and ownership-count boundary
+states into otherwise compiler-generated assembly, use the same exact stderr
+expectations, and separately prove that invalid ownership states remain silent
+hard traps. The exhaustive termination-selector test covers every
+`MirTerminationReason`, requires one reporter call and no `ud2`, and therefore
+keeps new compiler-known failures inside the common reporting boundary.
+
 Preserve this process isolation for behavior affected by identity allocation,
 table traversal, filesystem paths, labels, diagnostics, or formatting. A
 single-process equality check is useful but does not replace it.
