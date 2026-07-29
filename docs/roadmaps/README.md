@@ -14,7 +14,13 @@ No implementation roadmaps are currently planned.
 
 ## Design proposals
 
-No design proposals are currently pending confirmation.
+- [While Loops Design Proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) — **pending
+  confirmation**. Defines the proposed source semantics, control effects,
+  cleanup boundaries, repeatable MIR storage lifetimes, generic CFG lowering,
+  and optimization invariants for `while` and future `break` and `continue`.
+  Decisions W1 through W13 are open; review begins with source form and keyword
+  reservation. A later implementation roadmap depends on confirming the
+  repeatable-storage and cyclic-verification design.
 
 ## Pending discoveries
 
