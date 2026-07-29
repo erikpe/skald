@@ -6,11 +6,14 @@
 mod dump;
 mod ir;
 
+#[cfg(test)]
+mod tests;
+
 pub use dump::dump_hir;
 pub use ir::{
-    BlockFlow, HirAccess, HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor,
-    HirArrayAssignElement, HirArrayAssignment, HirArrayConstruction, HirArrayConstructionMode,
-    HirArrayCopyElement, HirArrayDefaultElement, HirArrayDestroyElement, HirArrayElementAssignment,
+    HirAccess, HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor, HirArrayAssignElement,
+    HirArrayAssignment, HirArrayConstruction, HirArrayConstructionMode, HirArrayCopyElement,
+    HirArrayDefaultElement, HirArrayDestroyElement, HirArrayElementAssignment,
     HirArrayElementPlace, HirArrayElementValue, HirArrayEvaluationOrder, HirArrayFieldInitialize,
     HirArrayIndex, HirArrayIndexNormalization, HirArrayInitialize, HirArrayLength,
     HirArrayLifecycle, HirArrayOwnership, HirArrayPlace, HirArrayProvenance, HirArrayReceiver,
@@ -22,7 +25,7 @@ pub use ir::{
     HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,
     HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
     HirClassOptionalSource, HirComparisonPredicate, HirConditional, HirConditionalArm,
-    HirConstruction, HirConstructionMode, HirCopyArgument, HirCopyAssignment,
+    HirConstruction, HirConstructionMode, HirControlEffects, HirCopyArgument, HirCopyAssignment,
     HirCopyAssignmentDeclaration, HirCopyCapability, HirCopyConstruction,
     HirCopyConstructorDeclaration, HirDestructionPlan, HirDestructionStep,
     HirDestructorDeclaration, HirDirectBase, HirExpression, HirExpressionKind, HirFieldAssignment,
@@ -47,5 +50,5 @@ pub use ir::{
     HirSharedSource, HirSharedTarget, HirSharedTransfer, HirStatement, HirStringLanguageItem,
     HirStringLiteral, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirTypeTest, HirTypeTestKind,
     HirUnaryOperation, HirUserCopy, HirViewSource, HirViewTarget, HirVirtualFamily,
-    HirVirtualFamilyTable, ObjectProjection, Type,
+    HirVirtualFamilyTable, HirWhile, ObjectProjection, Type,
 };

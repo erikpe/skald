@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 and L1 are complete and L2 is next.
+Status: in progress; L0 through L2 are complete and L3 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -85,7 +85,7 @@ Explicitly excluded from this roadmap:
 
 - [x] L0 — Add repeatable MIR storage lifetime epochs
 - [x] L1 — Make MIR verification cycle-safe
-- [ ] L2 — Add structured loop identities and control effects
+- [x] L2 — Add structured loop identities and control effects
 - [ ] L3 — Lower internal HIR `while` loops through generic MIR
 - [ ] L4 — Activate source `while` end to end
 - [ ] L5 — Add targeted `break` statements
@@ -186,24 +186,24 @@ and source loop syntax remains unavailable.
 **Purpose:** Represent loop meaning and exit targets explicitly in semantic
 IR, independently of parsing and executable CFG construction.
 
-- [ ] Add a stable callable-local `LoopId` identity with the same
+- [x] Add a stable callable-local `LoopId` identity with the same
       owner-validation and deterministic-display discipline as existing
       callable-local identities.
-- [ ] Replace the two-state HIR block-flow result with a composable effect set
+- [x] Replace the two-state HIR block-flow result with a composable effect set
       containing fallthrough, function exit, divergence, `Break(LoopId)`, and
       `Continue(LoopId)`.
-- [ ] Preserve the existing return, panic, conditional, block, and callable
+- [x] Preserve the existing return, panic, conditional, block, and callable
       completeness behavior while migrating it to the effect-set operations.
-- [ ] Add a structured HIR `while` node with its `LoopId`, exact condition,
+- [x] Add a structured HIR `while` node with its `LoopId`, exact condition,
       body, conservative fallthrough effect, and source span.
-- [ ] Extend deterministic HIR dumps and test fixtures without adding source
+- [x] Extend deterministic HIR dumps and test fixtures without adding source
       syntax or making source diagnostics depend on HIR internals.
-- [ ] Give cleanup planning an opaque retained-scope depth and a non-consuming
+- [x] Give cleanup planning an opaque retained-scope depth and a non-consuming
       operation that plans precisely the scopes exited by a targeted edge.
-- [ ] Define a lowering loop context that associates a `LoopId` with its exit
+- [x] Define a lowering loop context that associates a `LoopId` with its exit
       target, latch target, and retained cleanup depth, ready for later
       `break` and `continue`.
-- [ ] Keep identity, flow composition, cleanup-depth planning, and lowering
+- [x] Keep identity, flow composition, cleanup-depth planning, and lowering
       context in cohesive owners behind the existing phase facades.
 
 **Tests:** Identity ownership and display tests; effect-set sequencing, union,

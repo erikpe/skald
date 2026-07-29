@@ -7,8 +7,8 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [While Loops and Loop Exits Roadmap](WHILE_LOOPS_ROADMAP.md) — **in
-  progress; repeatable MIR storage lifetime epochs are complete and cycle-safe
-  verification is next**. Delivers cycle-safe storage and verification
+  progress; structured loop semantics are complete and internal HIR-to-MIR
+  loop lowering is next**. Delivers cycle-safe storage and verification
   foundations before activating source `while`, then adds `break` and
   `continue` as separate slices.
 

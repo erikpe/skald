@@ -642,6 +642,14 @@ impl HirDumper {
                 self.indented(|dumper| dumper.object_source(&statement.message.source));
             }
             HirStatement::Conditional(statement) => self.conditional(statement),
+            HirStatement::While(statement) => {
+                self.line(&format!("While {}", statement.loop_id), statement.span);
+                self.indented(|dumper| {
+                    dumper.line("Condition", statement.condition.span);
+                    dumper.indented(|dumper| dumper.expression(&statement.condition));
+                    dumper.block(&statement.body);
+                });
+            }
             HirStatement::Block(block) => self.block(block),
             HirStatement::PrimitiveBindingAssignment(assignment) => {
                 self.line(

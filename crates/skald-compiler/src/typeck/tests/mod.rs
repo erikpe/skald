@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
     hir::{
-        dump_hir, BlockFlow, HirBinaryOperation, HirExpression, HirExpressionKind,
-        HirFunctionDefinition, HirLocalInitializer, HirReturnValue, HirStatement, Type,
+        dump_hir, HirBinaryOperation, HirExpression, HirExpressionKind, HirFunctionDefinition,
+        HirLocalInitializer, HirReturnValue, HirStatement, Type,
     },
     identity::FunctionId,
     test_support::{resolve_source, type_check_source},

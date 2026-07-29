@@ -99,6 +99,42 @@ macro_rules! interface_member_id {
     };
 }
 
+macro_rules! callable_local_id {
+    ($(#[$new_attribute:meta])* $name:ident, $prefix:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub struct $name {
+            callable: CallableId,
+            index: usize,
+        }
+
+        impl $name {
+            pub const fn callable(self) -> CallableId {
+                self.callable
+            }
+
+            pub const fn index(self) -> usize {
+                self.index
+            }
+
+            // Construction stays crate-private so the semantic owner remains
+            // the production authority that allocates callable-local IDs.
+            $(#[$new_attribute])*
+            pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
+                Self {
+                    callable: callable.into(),
+                    index,
+                }
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(formatter, "{}:{}{}", self.callable(), $prefix, self.index())
+            }
+        }
+    };
+}
+
 global_id!(
     #[allow(dead_code)]
     ModuleId,
@@ -219,63 +255,14 @@ impl fmt::Display for CallableId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ParameterId {
-    callable: CallableId,
-    index: usize,
-}
-
-impl ParameterId {
-    pub const fn callable(self) -> CallableId {
-        self.callable
-    }
-
-    pub const fn index(self) -> usize {
-        self.index
-    }
-
-    pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
-        Self {
-            callable: callable.into(),
-            index,
-        }
-    }
-}
-
-impl fmt::Display for ParameterId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:p{}", self.callable(), self.index())
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct LocalId {
-    callable: CallableId,
-    index: usize,
-}
-
-impl LocalId {
-    pub const fn callable(self) -> CallableId {
-        self.callable
-    }
-
-    pub const fn index(self) -> usize {
-        self.index
-    }
-
-    pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
-        Self {
-            callable: callable.into(),
-            index,
-        }
-    }
-}
-
-impl fmt::Display for LocalId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:l{}", self.callable(), self.index())
-    }
-}
+callable_local_id!(ParameterId, "p");
+callable_local_id!(LocalId, "l");
+// Resolution begins allocating these when source loops are activated.
+callable_local_id!(
+    #[allow(dead_code)]
+    LoopId,
+    "loop"
+);
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BindingId {
@@ -333,6 +320,8 @@ mod tests {
         let slot = VirtualSlotId::new(7);
         let parameter = ParameterId::new(first, 4);
         let local = LocalId::new(first, 5);
+        let loop_id = LoopId::new(first, 6);
+        let method_loop = LoopId::new(MethodId::new(ClassId::new(0), 1), 0);
 
         assert_eq!(module.index(), 1);
         assert_eq!(provider.index(), 2);
@@ -346,11 +335,16 @@ mod tests {
         assert_eq!(parameter.index(), 4);
         assert_eq!(local.callable(), CallableId::Function(first));
         assert_eq!(local.index(), 5);
+        assert_eq!(loop_id.callable(), CallableId::Function(first));
+        assert_eq!(loop_id.index(), 6);
         assert_eq!(first.to_string(), "f2");
         assert_eq!(family.to_string(), "vf6");
         assert_eq!(slot.to_string(), "vs7");
         assert_eq!(parameter.to_string(), "f2:p4");
         assert_eq!(local.to_string(), "f2:l5");
+        assert_eq!(loop_id.to_string(), "f2:loop6");
+        assert_eq!(method_loop.to_string(), "c0:method1:loop0");
+        assert_ne!(loop_id.callable(), method_loop.callable());
         assert_eq!(
             BindingId::Parameter(parameter).callable(),
             CallableId::Function(first)

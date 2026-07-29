@@ -15,6 +15,8 @@ mod cleanup;
 mod control_effect;
 mod control_flow;
 mod expression;
+#[allow(dead_code)]
+mod loop_context;
 mod object_values;
 mod optional;
 mod places;
@@ -24,6 +26,7 @@ mod statement;
 mod type_operations;
 
 use cleanup::CleanupPlanner;
+use loop_context::LoopContextStack;
 
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
@@ -95,6 +98,8 @@ struct BodyLowerer<'hir> {
     values: Vec<MirValue>,
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
+    #[allow(dead_code)]
+    loop_contexts: LoopContextStack,
     full_expression_temporaries: Vec<FullExpressionTemporary>,
     full_expression_storage: Vec<StorageId>,
     full_expression_checked_views: Vec<StorageId>,
@@ -123,6 +128,7 @@ impl<'hir> BodyLowerer<'hir> {
             values: Vec::new(),
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
             cleanup: CleanupPlanner::new(),
+            loop_contexts: LoopContextStack::new(),
             full_expression_temporaries: Vec::new(),
             full_expression_storage: Vec::new(),
             full_expression_checked_views: Vec::new(),

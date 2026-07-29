@@ -3,11 +3,11 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        BlockFlow, HirAccess, HirBaseInitialization, HirBlock, HirCallArgument, HirCallStatement,
-        HirConditional, HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
-        HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage, HirOptionalWriteKind,
-        HirPanic, HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirSharedAssignment,
-        HirStatement, Type,
+        HirAccess, HirBaseInitialization, HirBlock, HirCallArgument, HirCallStatement,
+        HirConditional, HirConditionalArm, HirControlEffects, HirLocalDecl, HirLocalInitializer,
+        HirObjectReturn, HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage,
+        HirOptionalWriteKind, HirPanic, HirPrimitiveBindingAssignment, HirReturn, HirReturnValue,
+        HirSharedAssignment, HirStatement, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
@@ -24,10 +24,10 @@ use super::{
 impl CallableChecker<'_, '_> {
     pub(super) fn check_block(&mut self, block: &ResolvedBlock) -> HirBlock {
         let mut statements = Vec::with_capacity(block.statements.len());
-        let mut flow = BlockFlow::FallsThrough;
+        let mut effects = HirControlEffects::fallthrough();
         for statement in &block.statements {
             let checked = self.check_statement(statement);
-            flow = flow.then(checked.flow);
+            effects = effects.then(checked.effects);
             if let Some(statement) = checked.hir {
                 statements.push(statement);
             }
@@ -35,7 +35,7 @@ impl CallableChecker<'_, '_> {
 
         HirBlock {
             statements,
-            flow,
+            effects,
             span: block.span,
         }
     }
@@ -322,7 +322,7 @@ impl CallableChecker<'_, '_> {
         let hir = match (self.return_type, &statement.value) {
             (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, Some(value)) => {
                 let Some(value) = self.check_expression(value) else {
-                    return CheckedStatement::terminates(None);
+                    return CheckedStatement::exits_function(None);
                 };
                 require_type(
                     value.ty,
@@ -378,7 +378,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_primary_label(statement.span, "expected `return object_place;`"),
                     );
-                    return CheckedStatement::terminates(None);
+                    return CheckedStatement::exits_function(None);
                 };
                 let object_return = if matches!(
                     value,
@@ -391,7 +391,7 @@ impl CallableChecker<'_, '_> {
                     let Some(construction) =
                         self.check_object_construction(class, construction, "return destination")
                     else {
-                        return CheckedStatement::terminates(None);
+                        return CheckedStatement::exits_function(None);
                     };
                     let omitted_copy = match &construction.mode {
                         crate::hir::HirConstructionMode::Initialize { .. } => {
@@ -399,7 +399,7 @@ impl CallableChecker<'_, '_> {
                                 self.copy_capabilities.constructor(class).selected()
                             else {
                                 self.report_unavailable_copy_operation(class, true, value.span());
-                                return CheckedStatement::terminates(None);
+                                return CheckedStatement::exits_function(None);
                             };
                             Some(operation)
                         }
@@ -419,17 +419,17 @@ impl CallableChecker<'_, '_> {
                                 construction,
                                 "return destination",
                             );
-                            return CheckedStatement::terminates(None);
+                            return CheckedStatement::exits_function(None);
                         }
                     }
                     let Some(source) = self.check_object_source(value, class, "object return")
                     else {
-                        return CheckedStatement::terminates(None);
+                        return CheckedStatement::exits_function(None);
                     };
                     let Some(operation) = self.copy_capabilities.constructor(class).selected()
                     else {
                         self.report_unavailable_copy_operation(class, true, value.span());
-                        return CheckedStatement::terminates(None);
+                        return CheckedStatement::exits_function(None);
                     };
                     HirObjectReturn::Copy {
                         source: Box::new(source),
@@ -547,7 +547,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
         };
-        CheckedStatement::terminates(hir)
+        CheckedStatement::exits_function(hir)
     }
 
     fn check_call_statement(
@@ -583,7 +583,7 @@ impl CallableChecker<'_, '_> {
                     }
                     Some(_) | None => None,
                 });
-                return CheckedStatement::terminates(panic);
+                return CheckedStatement::diverges(panic);
             }
         }
         let Some(expression) = self.check_expression(&statement.expression) else {
@@ -625,11 +625,11 @@ impl CallableChecker<'_, '_> {
     ) -> CheckedStatement {
         let mut arms = Vec::with_capacity(conditional.arms.len());
         let mut valid = true;
-        let mut all_arms_terminate = true;
+        let mut effects = HirControlEffects::default();
         for arm in &conditional.arms {
             let condition = self.check_expression(&arm.condition);
             let body = self.check_block(&arm.body);
-            all_arms_terminate &= body.flow == BlockFlow::Terminates;
+            effects = effects.union(body.effects.clone());
             match condition {
                 Some(condition)
                     if require_type(
@@ -653,52 +653,55 @@ impl CallableChecker<'_, '_> {
             .else_block
             .as_ref()
             .map(|block| self.check_block(block));
-        let flow = if all_arms_terminate
-            && else_block
-                .as_ref()
-                .is_some_and(|block| block.flow == BlockFlow::Terminates)
-        {
-            BlockFlow::Terminates
+        if let Some(block) = &else_block {
+            effects = effects.union(block.effects.clone());
         } else {
-            BlockFlow::FallsThrough
-        };
+            effects = effects.union(HirControlEffects::fallthrough());
+        }
 
         let hir = valid.then_some(HirStatement::Conditional(HirConditional {
             arms,
             else_block,
-            flow,
+            effects: effects.clone(),
             span: conditional.span,
         }));
-        CheckedStatement { hir, flow }
+        CheckedStatement { hir, effects }
     }
 
     fn check_nested_block_statement(&mut self, block: &ResolvedBlock) -> CheckedStatement {
         let block = self.check_block(block);
-        let flow = block.flow;
+        let effects = block.effects.clone();
         CheckedStatement {
             hir: Some(HirStatement::Block(block)),
-            flow,
+            effects,
         }
     }
 }
 
 pub(super) struct CheckedStatement {
     hir: Option<HirStatement>,
-    flow: BlockFlow,
+    effects: HirControlEffects,
 }
 
 impl CheckedStatement {
-    pub(super) const fn falls_through(hir: Option<HirStatement>) -> Self {
+    pub(super) fn falls_through(hir: Option<HirStatement>) -> Self {
         Self {
             hir,
-            flow: BlockFlow::FallsThrough,
+            effects: HirControlEffects::fallthrough(),
         }
     }
 
-    const fn terminates(hir: Option<HirStatement>) -> Self {
+    fn exits_function(hir: Option<HirStatement>) -> Self {
         Self {
             hir,
-            flow: BlockFlow::Terminates,
+            effects: HirControlEffects::function_exit(),
+        }
+    }
+
+    fn diverges(hir: Option<HirStatement>) -> Self {
+        Self {
+            hir,
+            effects: HirControlEffects::divergence(),
         }
     }
 }

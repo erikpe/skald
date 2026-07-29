@@ -664,14 +664,14 @@ somehow reached after the trust boundary.
 
 The source behavior of `while`, `break`, and `continue` is frozen in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
-The structured loop representation below remains frozen for implementation
-and is not present in current resolved IR or HIR. MIR storage lifetime epochs
-and their structural verification are implemented as the first representation
-foundation. Generic cyclic MIR verification is also implemented: every
-stateful verifier uses deterministic finite forward dataflow, checks
-disconnected cyclic components, and resets per-epoch ownership and
-initialization facts at storage lifetime boundaries. Source loops and
-structured HIR loop representation remain later work.
+The semantic foundation is partially implemented ahead of source syntax.
+Callable-local `LoopId`, composable HIR control effects, and structured
+`HirWhile` are current representations. MIR storage lifetime epochs and
+cycle-safe verification are also implemented: every stateful verifier uses
+deterministic finite forward dataflow, checks disconnected cyclic components,
+and resets per-epoch ownership and initialization facts at storage lifetime
+boundaries. Resolution does not yet produce loops, and HIR-to-MIR loop CFG
+lowering remains later work.
 
 The contract fixes which phase owns each decision and the invariants visible
 across phase boundaries. It does not fix private Rust organization, concrete
@@ -687,7 +687,7 @@ recover an exit target from source names or a nesting-depth count. Future
 labels, if separately frozen, may resolve to the same identity model without
 changing lower phases.
 
-Typed HIR retains a structured loop operation containing:
+Typed HIR can retain a structured loop operation containing:
 
 - the resolved loop identity;
 - the exact-`bool` condition;
@@ -715,9 +715,16 @@ divergence, and exits targeting an outer loop propagate. Every `while` also
 retains the source contract's conservative condition-false fallthrough.
 
 Different effects remain distinguishable until the structured operation that
-owns them consumes them. The exact HIR type name, set or bitset
-representation, loop-identity encoding, and checker helper organization remain
-private implementation choices.
+owns them consumes them. Current HIR names the outcome set
+`HirControlEffects`; its concrete storage remains private. The type checker
+uses the same composition for existing blocks, conditionals, returns, and
+panic, preserving the established callable-completeness diagnostics.
+
+MIR cleanup planning exposes an opaque retained lexical-scope depth. Planning
+an edge to that depth is non-consuming and returns cleanup and storage-dead
+work for precisely the exited scopes. The lowering loop context binds a
+`LoopId` to exit and latch block targets plus that retained depth; executable
+loop CFG construction does not yet consume the context.
 
 ### Repeatable MIR storage lifetimes
 

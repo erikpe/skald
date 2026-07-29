@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        BlockFlow, HirAccess, HirConstruction, HirFieldAssignment, HirFieldConstruction,
+        HirAccess, HirConstruction, HirFieldAssignment, HirFieldConstruction,
         HirFunctionDefinition, HirLocal, HirMemberDefinition, HirStatement, Type,
     },
     identity::{BindingId, CallableId, ClassId, FieldId},
@@ -115,7 +115,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         let locals = self.lower_locals();
         let body = self.check_block(self.body);
 
-        if self.return_type != Type::Unit && body.flow == BlockFlow::FallsThrough {
+        if self.return_type != Type::Unit && body.effects.can_fall_through() {
             self.diagnostics.push(
                 Diagnostic::error(
                     MISSING_RETURN,
@@ -212,7 +212,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                     );
                 }
             }
-        } else if self.return_type != Type::Unit && body.flow == BlockFlow::FallsThrough {
+        } else if self.return_type != Type::Unit && body.effects.can_fall_through() {
             self.diagnostics.push(
                 Diagnostic::error(
                     MISSING_RETURN,

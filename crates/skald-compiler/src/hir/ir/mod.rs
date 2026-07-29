@@ -7,6 +7,7 @@ pub use crate::object_path::ObjectProjection;
 
 mod array;
 mod body;
+mod control_flow;
 mod declarations;
 mod expression;
 mod object;
@@ -26,11 +27,12 @@ pub use array::{
     HirArrayTypeTable,
 };
 pub use body::{
-    BlockFlow, HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
-    HirConditional, HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
-    HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirStatement,
+    HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable, HirConditional,
+    HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable, HirLocalDecl,
+    HirLocalInitializer, HirMemberDefinition, HirPanic, HirPrimitiveBindingAssignment, HirReturn,
+    HirReturnValue, HirStatement, HirWhile,
 };
+pub use control_flow::HirControlEffects;
 pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,
     HirCopyAssignmentDeclaration, HirCopyConstructorDeclaration, HirDestructionPlan,

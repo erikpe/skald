@@ -77,11 +77,13 @@ fn checks_destructor_bodies_as_mutable_complete_object_members() {
     let HirStatement::Conditional(conditional) = &definition.body.statements[4] else {
         panic!("expected conditional");
     };
-    assert_eq!(conditional.flow, BlockFlow::FallsThrough);
-    assert_eq!(
-        conditional.else_block.as_ref().unwrap().flow,
-        BlockFlow::Terminates
-    );
+    assert!(conditional.effects.can_fall_through());
+    assert!(!conditional
+        .else_block
+        .as_ref()
+        .unwrap()
+        .effects
+        .can_fall_through());
 }
 
 #[test]

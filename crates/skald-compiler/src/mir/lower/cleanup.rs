@@ -157,6 +157,10 @@ pub(super) struct CleanupPlanner {
     scopes: Vec<LexicalScope>,
 }
 
+/// Opaque count of lexical scopes retained by a targeted control-flow edge.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct RetainedScopeDepth(usize);
+
 #[derive(Default)]
 struct LexicalScope {
     initialized: Vec<InitializedStorage>,
@@ -170,6 +174,11 @@ impl CleanupPlanner {
 
     pub(super) fn enter_scope(&mut self) {
         self.scopes.push(LexicalScope::default());
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn retained_scope_depth(&self) -> RetainedScopeDepth {
+        RetainedScopeDepth(self.scopes.len())
     }
 
     pub(super) fn register_storage(&mut self, storage: StorageId) {
@@ -244,26 +253,34 @@ impl CleanupPlanner {
     }
 
     pub(super) fn for_current_scope(&self, span: Span) -> PlannedScopeExit {
-        let scope = self
+        let retained = self
             .scopes
-            .last()
+            .len()
+            .checked_sub(1)
+            .map(RetainedScopeDepth)
             .expect("a scope exit requires an active lexical scope");
-        PlannedScopeExit {
-            cleanups: scope
-                .initialized
-                .iter()
-                .rev()
-                .map(|local| local.cleanup(span))
-                .collect(),
-            storage: scope.storage.iter().rev().copied().collect(),
-            span,
-        }
+        self.for_scopes_exiting_to(retained, span)
     }
 
     pub(super) fn for_all_scopes(&self, span: Span) -> PlannedScopeExit {
+        self.for_scopes_exiting_to(RetainedScopeDepth(0), span)
+    }
+
+    /// Plan cleanup for scopes above `retained` without consuming planner state.
+    pub(super) fn for_scopes_exiting_to(
+        &self,
+        retained: RetainedScopeDepth,
+        span: Span,
+    ) -> PlannedScopeExit {
+        assert!(
+            retained.0 <= self.scopes.len(),
+            "retained cleanup depth must belong to the active scope stack"
+        );
         PlannedScopeExit {
             cleanups: self
                 .scopes
+                .get(retained.0..)
+                .expect("validated retained cleanup depth must slice active scopes")
                 .iter()
                 .rev()
                 .flat_map(|scope| scope.initialized.iter().rev())
@@ -271,6 +288,8 @@ impl CleanupPlanner {
                 .collect(),
             storage: self
                 .scopes
+                .get(retained.0..)
+                .expect("validated retained cleanup depth must slice active scopes")
                 .iter()
                 .rev()
                 .flat_map(|scope| scope.storage.iter().rev())
@@ -344,6 +363,7 @@ mod tests {
         planner.enter_scope();
         planner.register_storage(outer);
         planner.register_owned(outer, ClassId::new(0));
+        let retain_outer = planner.retained_scope_depth();
         planner.enter_scope();
         planner.register_storage(first_inner);
         planner.register_storage(second_inner);
@@ -371,6 +391,10 @@ mod tests {
         assert_eq!(all.storage, [second_inner, first_inner, outer]);
         assert_eq!(planner.for_current_scope(span).cleanups.len(), 2);
         assert_eq!(planner.for_current_scope(span).storage.len(), 2);
+        let targeted = planner.for_scopes_exiting_to(retain_outer, span);
+        let repeated = planner.for_scopes_exiting_to(retain_outer, span);
+        assert_eq!(targeted.storage, [second_inner, first_inner]);
+        assert_eq!(repeated.storage, targeted.storage);
         planner.leave_scope();
         let outer_exit = planner.for_current_scope(span);
         assert_eq!(
@@ -384,5 +408,41 @@ mod tests {
             outer
         );
         assert_eq!(outer_exit.storage, [outer]);
+    }
+
+    #[test]
+    fn targeted_cleanup_can_retain_zero_one_or_every_active_scope() {
+        let callable = CallableId::Function(FunctionId::new(0));
+        let outer = StorageId::new(callable, 0);
+        let middle = StorageId::new(callable, 1);
+        let inner = StorageId::new(callable, 2);
+        let mut sources = SourceDatabase::new();
+        let source = sources.add("test.ska", "");
+        let span = sources.get(source).unwrap().span(0, 0).unwrap();
+        let mut planner = CleanupPlanner::new();
+
+        planner.enter_scope();
+        planner.register_storage(outer);
+        let retain_outer = planner.retained_scope_depth();
+        planner.enter_scope();
+        planner.register_storage(middle);
+        planner.enter_scope();
+        planner.register_storage(inner);
+        let retain_all = planner.retained_scope_depth();
+
+        assert_eq!(
+            planner
+                .for_scopes_exiting_to(RetainedScopeDepth(0), span)
+                .storage,
+            [inner, middle, outer]
+        );
+        assert_eq!(
+            planner.for_scopes_exiting_to(retain_outer, span).storage,
+            [inner, middle]
+        );
+        assert!(planner
+            .for_scopes_exiting_to(retain_all, span)
+            .storage
+            .is_empty());
     }
 }

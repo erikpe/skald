@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{BindingId, CallableId, ClassId, FunctionId, LocalId},
+    identity::{BindingId, CallableId, ClassId, FunctionId, LocalId, LoopId},
     source::Span,
 };
 
@@ -15,7 +15,7 @@ use super::{
         HirObjectInitialization, HirObjectReturn,
     },
     shared::{HirSharedAssignment, HirSharedFieldWrite, HirSharedTransfer},
-    HirArrayInitialize, HirClassOptionalAssignment, HirClassOptionalInitialize,
+    HirArrayInitialize, HirClassOptionalAssignment, HirClassOptionalInitialize, HirControlEffects,
     HirOptionalAssignment, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
     HirOptionalSource,
 };
@@ -144,6 +144,14 @@ impl HirFunctionDefinitionTable {
     pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
+    #[cfg(test)]
+    pub(crate) fn get_mut_for_test(
+        &mut self,
+        function: FunctionId,
+    ) -> Option<&mut HirFunctionDefinition> {
+        self.entries.get_mut_for_test(function)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -163,29 +171,10 @@ impl HirFunctionDefinition {
     }
 }
 
-/// Whether execution can reach the end of a checked block or conditional.
-///
-/// `Terminates` means every path exits the current function, either by
-/// returning or by an unrecoverable language operation such as `panic`.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BlockFlow {
-    FallsThrough,
-    Terminates,
-}
-
-impl BlockFlow {
-    pub(crate) const fn then(self, next: Self) -> Self {
-        match self {
-            Self::FallsThrough => next,
-            Self::Terminates => Self::Terminates,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirBlock {
     pub statements: Vec<HirStatement>,
-    pub flow: BlockFlow,
+    pub effects: HirControlEffects,
     pub span: Span,
 }
 
@@ -197,6 +186,7 @@ pub enum HirStatement {
     Panic(HirPanic),
     Call(HirCallStatement),
     Conditional(HirConditional),
+    While(HirWhile),
     Block(HirBlock),
     PrimitiveBindingAssignment(HirPrimitiveBindingAssignment),
     FieldAssignment(HirFieldAssignment),
@@ -224,6 +214,7 @@ impl HirStatement {
             Self::Panic(statement) => statement.span,
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
+            Self::While(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::PrimitiveBindingAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
@@ -308,8 +299,35 @@ pub struct HirPanic {
 pub struct HirConditional {
     pub arms: Vec<HirConditionalArm>,
     pub else_block: Option<HirBlock>,
-    pub flow: BlockFlow,
+    pub effects: HirControlEffects,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirWhile {
+    pub loop_id: LoopId,
+    pub condition: HirExpression,
+    pub body: HirBlock,
+    pub effects: HirControlEffects,
+    pub span: Span,
+}
+
+impl HirWhile {
+    pub fn new(loop_id: LoopId, condition: HirExpression, body: HirBlock, span: Span) -> Self {
+        assert_eq!(
+            condition.ty,
+            super::Type::Bool,
+            "typed while conditions must have exact bool type"
+        );
+        let effects = body.effects.clone().through_loop(loop_id);
+        Self {
+            loop_id,
+            condition,
+            body,
+            effects,
+            span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

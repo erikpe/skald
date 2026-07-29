@@ -1,12 +1,12 @@
 //! Conditional CFG construction and deterministic block allocation.
 
 use super::*;
-use crate::hir::{BlockFlow, HirConditional};
+use crate::hir::HirConditional;
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_conditional(&mut self, conditional: &HirConditional) {
         debug_assert!(!conditional.arms.is_empty());
-        let needs_join = conditional.flow == BlockFlow::FallsThrough;
+        let needs_join = conditional.effects.can_fall_through();
 
         // Allocate the complete shape before emitting edges. IDs therefore
         // follow source structure rather than a traversal chosen by lowering:

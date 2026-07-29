@@ -170,7 +170,8 @@ fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
         .iter()
         .find(|definition| hir.declarations.get(definition.function).unwrap().name == "stop")
         .unwrap();
-    assert_eq!(stop.body.flow, crate::hir::BlockFlow::Terminates);
+    assert!(!stop.body.effects.can_fall_through());
+    assert!(stop.body.effects.can_diverge());
     assert!(matches!(
         stop.body.statements[0],
         crate::hir::HirStatement::Panic(_)

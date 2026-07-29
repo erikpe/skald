@@ -1,5 +1,5 @@
 use crate::{
-    hir::{BlockFlow, HirStatement},
+    hir::HirStatement,
     identity::FunctionId,
     test_support::type_check_source,
     typeck::{INVALID_CALL_STATEMENT, TYPE_MISMATCH},
@@ -20,27 +20,29 @@ fn blocks_and_conditionals_retain_structured_flow_composition() {
     let hir = output.hir.unwrap();
 
     let inspect = hir.definitions.get(FunctionId::new(0)).unwrap();
-    assert_eq!(inspect.body.flow, BlockFlow::FallsThrough);
+    assert!(inspect.body.effects.can_fall_through());
     let HirStatement::Conditional(conditional) = &inspect.body.statements[0] else {
         panic!("expected conditional");
     };
-    assert_eq!(conditional.flow, BlockFlow::FallsThrough);
-    assert_eq!(conditional.arms[0].body.flow, BlockFlow::Terminates);
-    assert_eq!(
-        conditional.else_block.as_ref().unwrap().flow,
-        BlockFlow::FallsThrough
-    );
+    assert!(conditional.effects.can_fall_through());
+    assert!(!conditional.arms[0].body.effects.can_fall_through());
+    assert!(conditional
+        .else_block
+        .as_ref()
+        .unwrap()
+        .effects
+        .can_fall_through());
 
     let main = hir.definitions.get(hir.entry_function).unwrap();
-    assert_eq!(main.body.flow, BlockFlow::Terminates);
+    assert!(!main.body.effects.can_fall_through());
     let HirStatement::Block(nested) = &main.body.statements[0] else {
         panic!("expected nested block");
     };
-    assert_eq!(nested.flow, BlockFlow::Terminates);
+    assert!(!nested.effects.can_fall_through());
     let HirStatement::Conditional(conditional) = &nested.statements[0] else {
         panic!("expected nested conditional");
     };
-    assert_eq!(conditional.flow, BlockFlow::Terminates);
+    assert!(!conditional.effects.can_fall_through());
 }
 
 #[test]
