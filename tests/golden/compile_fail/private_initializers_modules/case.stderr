@@ -1,0 +1,9 @@
+error[TYP040]: initializer of class `Secret` is private
+ --> modules/app.ska:4:33
+   |
+4 |     var secret: vault::Secret = vault::Secret();
+   |                                 ^^^^^^^^^^^^^ private initializer is not accessible here
+   |
+2 |     private init() {}
+   |     ------- declared private here
+  = note: private access is granted only inside the declaring class

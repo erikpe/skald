@@ -1,0 +1,7 @@
+public class Secret {
+    private init() {}
+
+    static fn make() -> Secret {
+        return Secret();
+    }
+}

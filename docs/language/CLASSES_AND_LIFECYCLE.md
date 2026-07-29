@@ -61,30 +61,43 @@ construction and direct-base `super(arguments)` use the same overload
 selection engine. `T(copy source)` selects the separate copy-construction slot
 and never participates in ordinary initializer overload resolution.
 
-Fields and methods are public by default and may instead begin with the
-contextual modifier `private`. Lifecycle declarations do not declare
-visibility. Static methods use `static fn`; `private static fn` composes the
-same visibility rule with receiverless method kind. Static fields are not
-implemented.
+Fields, methods, and ordinary initializer overloads are public by default and
+may instead begin with the contextual modifier `private`. Copy constructors,
+copy assignments, and destructors do not declare visibility. Static methods
+use `static fn`; `private static fn` composes the same visibility rule with
+receiverless method kind. Ordinary initializers and the other lifecycle
+declarations cannot be static. Static fields are not implemented.
 
 ### Declaring-class privacy
 
-A selected private field or method is accessible exactly when the accessing
-callable is lexically owned by that member's declaring class. This is the
-authoritative private-member access rule. It applies uniformly to ordinary
-methods, initializers, copy constructors, copy assignments, and destructors,
-and to every receiver form. The receiver's static spelling, dynamic class,
-module, base relationship, and the class that supplied an inherited lookup do
-not grant access. Consequently, a class body may use its own private members
-through `self` or another instance of that exact class, while a derived class,
-unrelated class, and top-level function may not.
+A selected private field, method, or ordinary initializer overload is
+accessible exactly when the accessing callable is lexically owned by that
+declaration's class. This is the authoritative private-member access rule. It
+applies uniformly inside ordinary methods, static methods, ordinary
+initializers, copy constructors, copy assignments, and destructors, and to
+every receiver or construction form. Receiver spelling, dynamic class,
+module, import, inheritance, and same-package relationships do not grant
+access. Consequently, every body owned by a class may use that exact class's
+private declarations, while a derived class, unrelated class, and top-level
+function may not.
 
 Lookup still selects the nearest declaration before checking access. A private
 inherited declaration therefore remains part of the complete ordinary-member
 namespace: it cannot be hidden or redeclared, and an attempted use diagnoses
 privacy rather than reporting an unknown member. Resolution preserves
-visibility and its source span long enough to make and diagnose this decision;
-typed HIR and later phases contain only already-authorized member identities.
+visibility and its source span long enough to diagnose these decisions. Type
+checking selects ordinary initializer overloads before checking access, so an
+inaccessible most-specific overload does not fall back to a less-specific
+public overload. No-match and ambiguity errors retain precedence because they
+produce no selected initializer. Typed HIR and later phases contain only
+already-authorized member identities and no visibility.
+
+Direct `T(arguments)`, shared `new T(arguments)`, and a derived initializer's
+`super(arguments)` enforce the same rule. A derived class therefore cannot
+call a private base initializer. Default-length class-element array
+construction also checks access at its source call site; the detailed array
+capability rule is defined by
+[arrays](ARRAYS.md#construction-and-default-initialization).
 
 Static methods use the same rule: a private static method is accessible only
 from a body lexically owned by its exact declaring class. It is not a separate
@@ -209,7 +222,8 @@ An ordinary initializer has an implicit mutable `self`, an implicit `unit`
 result, and the implemented internal parameter categories described in
 [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md#parameters). Its
 `self` storage exists while the body runs but is not yet a live complete
-object.
+object. Each overload is public by default and may be declared
+`private init(...)`; visibility does not participate in its signature.
 
 For a root class, the body is a straight-line sequence of direct assignments
 to fields of that `self`. A derived initializer must begin with exactly one
@@ -311,9 +325,11 @@ No applicable candidate is a compile-time error. More than one applicable
 candidate without a unique most-specific candidate is ambiguous and is also a
 compile-time error. Diagnostics identify the supplied static argument types
 and competing declared signatures. Selection depends only on static source
-types and access; a source's runtime dynamic class never selects an overload.
-An explicit checked cast may refine a source before ordinary overload
-selection.
+types; a source's runtime dynamic class never selects an overload. After
+unique selection, the authoritative
+[declaring-class privacy rule](#declaring-class-privacy) checks the selected
+overload. An explicit checked cast may refine a source before ordinary
+overload selection.
 
 For example:
 
@@ -356,7 +372,8 @@ The constraints on any future exceptional construction path are owned by
 
 Copy construction, copy assignment, and destruction occupy independent
 class-owned slots. Each slot may have at most one explicit declaration. These
-members have an implicit `unit` result and are not ordinary callable methods.
+members have an implicit `unit` result, do not accept `private`, and are not
+ordinary callable methods.
 
 | Operation | Declaration | Receiver state | Body contract |
 |---|---|---|---|

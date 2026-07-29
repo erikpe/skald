@@ -10,9 +10,10 @@ progress. Completed roadmaps and resolved discovery records move to
   progress; adds per-overload `private init` access across direct construction,
   shared allocation, base initialization, and class-element default arrays
   without changing copy lifecycle or lower-phase execution. Internal
-  visibility representation and authorization are complete; exposing the
-  source syntax is next. The roadmap depends on the implemented
-  declaring-class privacy and initializer-overload contracts.
+  visibility representation, authorization, and source syntax are complete;
+  standard-library adoption and final hardening are next. The roadmap depends
+  on the implemented declaring-class privacy and initializer-overload
+  contracts.
 
 ## Planned
 

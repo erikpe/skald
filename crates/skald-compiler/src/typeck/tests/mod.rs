@@ -4,8 +4,7 @@ use crate::{
         dump_hir, BlockFlow, HirBinaryOperation, HirExpression, HirExpressionKind,
         HirFunctionDefinition, HirLocalInitializer, HirReturnValue, HirStatement, Type,
     },
-    identity::{FunctionId, InitializerId},
-    resolve::ResolvedMemberVisibility,
+    identity::FunctionId,
     test_support::{resolve_source, type_check_source},
 };
 
@@ -20,21 +19,6 @@ fn resolve_text(text: &str) -> crate::resolve::ResolvedProgram {
         "test source must resolve cleanly"
     );
     resolved.program
-}
-
-fn make_initializer_private(
-    program: &mut crate::resolve::ResolvedProgram,
-    initializer: InitializerId,
-) {
-    let declaration = program
-        .classes
-        .get_mut(initializer.class())
-        .and_then(|class| class.initializers.get_mut(initializer.index()))
-        .filter(|declaration| declaration.id == initializer)
-        .expect("test initializer must exist");
-    declaration.visibility = ResolvedMemberVisibility::Private {
-        span: declaration.span,
-    };
 }
 
 fn returned_expression(function: &HirFunctionDefinition) -> &HirExpression {

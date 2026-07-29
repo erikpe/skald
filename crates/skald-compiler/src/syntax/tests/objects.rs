@@ -68,20 +68,11 @@ fn parses_the_restricted_class_and_member_surface_without_lookup() {
 
 #[test]
 fn initializer_visibility_is_explicit_in_the_ast_dump() {
-    let (_, mut output) = parse_text("class Sample { init() {} }\n");
-    let TopLevelDeclaration::Class(class) = &mut output.ast.declarations[0] else {
-        panic!("expected class");
-    };
-    let ClassMember::Initializer(initializer) = &mut class.members[0] else {
-        panic!("expected initializer");
-    };
-    initializer.visibility = MemberVisibility::Private {
-        span: initializer.introducer_span,
-    };
-
+    let (_, output) = parse_text("class Sample { private init() {} }\n");
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_ast(&output.ast);
     assert!(
-        dump.contains("Initializer @15..24\n        Private @15..19\n        Introducer @15..19\n"),
+        dump.contains("Initializer @15..32\n        Private @15..22\n        Introducer @23..27\n"),
         "{dump}"
     );
 }
@@ -226,6 +217,7 @@ fn parses_contextual_private_members_with_source_shaped_spans() {
         "  private value: i64;\n",
         "  private mut fn set(value: i64) -> unit { self.value = value; }\n",
         "  private fn read() -> i64 { return self.value; }\n",
+        "  private init() {}\n",
         "  private: bool;\n",
         "  fn private() -> unit {}\n",
         "}\n",
@@ -253,12 +245,22 @@ fn parses_contextual_private_members_with_source_shaped_spans() {
     assert!(matches!(set.visibility, MemberVisibility::Private { .. }));
     assert_eq!(source_text(&sources, set.mut_span.unwrap()), "mut");
 
-    let ClassMember::Field(contextual_field) = &secrets.members[3] else {
+    let ClassMember::Initializer(initializer) = &secrets.members[3] else {
+        panic!("expected private initializer");
+    };
+    assert_eq!(source_text(&sources, initializer.span), "private init() {}");
+    let MemberVisibility::Private { span } = initializer.visibility else {
+        panic!("expected private initializer visibility");
+    };
+    assert_eq!(source_text(&sources, span), "private");
+    assert_eq!(source_text(&sources, initializer.introducer_span), "init");
+
+    let ClassMember::Field(contextual_field) = &secrets.members[4] else {
         panic!("expected field named private");
     };
     assert_eq!(contextual_field.name.text, "private");
     assert_eq!(contextual_field.visibility, MemberVisibility::Public);
-    let ClassMember::Method(contextual_method) = &secrets.members[4] else {
+    let ClassMember::Method(contextual_method) = &secrets.members[5] else {
         panic!("expected method named private");
     };
     assert_eq!(contextual_method.name.text, "private");
@@ -269,7 +271,7 @@ fn parses_contextual_private_members_with_source_shaped_spans() {
         dump.lines()
             .filter(|line| line.trim_start().starts_with("Private @"))
             .count(),
-        3
+        4
     );
 }
 
@@ -297,12 +299,96 @@ fn invalid_private_member_modifiers_recover_at_later_members() {
             .iter()
             .map(|diagnostic| diagnostic.code)
             .collect::<Vec<_>>(),
-        [INVALID_CLASS_MEMBER; 9]
+        [INVALID_CLASS_MEMBER; 8]
     );
     let broken = class(&output.ast, 0);
     assert!(broken.members.iter().any(
+        |member| matches!(member, ClassMember::Initializer(initializer)
+            if matches!(initializer.visibility, MemberVisibility::Private { .. }))
+    ));
+    assert!(broken.members.iter().any(
         |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
     ));
+    assert!(broken
+        .members
+        .iter()
+        .any(|member| matches!(member, ClassMember::Field(field) if field.name.text == "after")));
+}
+
+#[test]
+fn invalid_private_initializer_modifier_sequences_recover_at_following_members() {
+    let (_, output) = parse_text(concat!(
+        "class Broken {\n",
+        "  private private init() {}\n",
+        "  private static init() {}\n",
+        "  private mut init() {}\n",
+        "  private virtual init() {}\n",
+        "  private override init() {}\n",
+        "  static private init() {}\n",
+        "  mut private init() {}\n",
+        "  virtual private init() {}\n",
+        "  override private init() {}\n",
+        "  private copy(ref source: Broken) {}\n",
+        "  private assign(ref source: Broken) {}\n",
+        "  private destroy {}\n",
+        "  private init(value: i64) {}\n",
+        "  after: i64;\n",
+        "}\n",
+    ));
+
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == INVALID_CLASS_MEMBER),
+        "{:?}",
+        output.diagnostics
+    );
+    assert_eq!(output.diagnostics.len(), 12);
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.message == "init members cannot be static")
+            .count(),
+        2,
+        "{:?}",
+        output.diagnostics
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| {
+                diagnostic.message == "ordinary initializers cannot use method modifiers"
+            })
+            .count(),
+        6
+    );
+    for deferred in [
+        "copy constructors cannot be private",
+        "copy assignments cannot be private",
+        "destructors cannot be private",
+    ] {
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.message == deferred));
+    }
+
+    let broken = class(&output.ast, 0);
+    let initializers = broken
+        .members
+        .iter()
+        .filter_map(|member| match member {
+            ClassMember::Initializer(initializer) => Some(initializer),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(initializers.len(), 2);
+    assert!(initializers
+        .iter()
+        .all(|initializer| matches!(initializer.visibility, MemberVisibility::Private { .. })));
     assert!(broken
         .members
         .iter()

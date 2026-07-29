@@ -124,6 +124,21 @@ impl Parser<'_> {
 
         if self.at_contextual("static") && self.peek_ahead(1).kind != TokenKind::Colon {
             let static_token = self.advance();
+            if self.at_contextual("private")
+                && self.peek_ahead(1).kind == TokenKind::Identifier
+                && self.lexeme(self.peek_ahead(1)) == "init"
+                && self.peek_ahead(2).kind == TokenKind::LeftParen
+            {
+                let private_span = self.advance().span;
+                self.report(
+                    INVALID_CLASS_MEMBER,
+                    "init members cannot be static",
+                    static_token.span,
+                    "ordinary initializers may use `private`, but not `static`",
+                );
+                self.parse_initializer(MemberVisibility::Private { span: private_span });
+                return None;
+            }
             if self.peek_ahead(1).kind == TokenKind::Colon {
                 self.report(
                     INVALID_CLASS_MEMBER,
@@ -149,7 +164,7 @@ impl Parser<'_> {
                 );
                 match lifecycle.as_str() {
                     "init" => {
-                        self.parse_initializer();
+                        self.parse_initializer(visibility);
                     }
                     "copy" => {
                         self.parse_copy_constructor();
@@ -178,6 +193,37 @@ impl Parser<'_> {
                 self.peek().span,
                 "`ref` and `mut ref` are supported only on parameters",
             );
+            return None;
+        }
+
+        let initializer_follows_modifier = self.peek_ahead(1).kind == TokenKind::Identifier
+            && self.lexeme(self.peek_ahead(1)) == "init"
+            && self.peek_ahead(2).kind == TokenKind::LeftParen;
+        let private_initializer_follows_modifier = self.peek_ahead(1).kind == TokenKind::Identifier
+            && self.lexeme(self.peek_ahead(1)) == "private"
+            && self.peek_ahead(2).kind == TokenKind::Identifier
+            && self.lexeme(self.peek_ahead(2)) == "init"
+            && self.peek_ahead(3).kind == TokenKind::LeftParen;
+        if (self.at(TokenKind::Mut)
+            || self.at_contextual("virtual")
+            || self.at_contextual("override"))
+            && (initializer_follows_modifier || private_initializer_follows_modifier)
+        {
+            let modifier = self.advance();
+            let visibility = if self.at_contextual("private") {
+                MemberVisibility::Private {
+                    span: self.advance().span,
+                }
+            } else {
+                visibility
+            };
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "ordinary initializers cannot use method modifiers",
+                modifier.span,
+                "`init` has an implicit mutable receiver and uses direct dispatch",
+            );
+            self.parse_initializer(visibility);
             return None;
         }
 
@@ -218,12 +264,9 @@ impl Parser<'_> {
         if self.at(TokenKind::Identifier) {
             let text = self.lexeme(self.peek());
             if text == "init" && self.peek_ahead(1).kind == TokenKind::LeftParen {
-                if let MemberVisibility::Private { span } = visibility {
-                    self.report_private_lifecycle(span, "initializers");
-                    self.parse_initializer();
-                    return None;
-                }
-                return self.parse_initializer().map(ClassMember::Initializer);
+                return self
+                    .parse_initializer(visibility)
+                    .map(ClassMember::Initializer);
             }
             if text == "copy" && self.peek_ahead(1).kind == TokenKind::LeftParen {
                 if let MemberVisibility::Private { span } = visibility {
@@ -333,7 +376,14 @@ impl Parser<'_> {
             || (next.kind == TokenKind::Identifier
                 && (matches!(
                     self.lexeme(next),
-                    "static" | "virtual" | "override" | "init" | "copy" | "assign" | "destroy"
+                    "private"
+                        | "static"
+                        | "virtual"
+                        | "override"
+                        | "init"
+                        | "copy"
+                        | "assign"
+                        | "destroy"
                 ) || self.peek_ahead(2).kind == TokenKind::Colon))
     }
 
@@ -342,7 +392,7 @@ impl Parser<'_> {
             INVALID_CLASS_MEMBER,
             format!("{member} cannot be private"),
             span,
-            "lifecycle members do not declare visibility",
+            "private visibility is supported on ordinary `init`, fields, and methods",
         );
     }
 
@@ -366,16 +416,16 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_initializer(&mut self) -> Option<InitializerDecl> {
+    fn parse_initializer(&mut self, visibility: MemberVisibility) -> Option<InitializerDecl> {
         let introducer = self.advance();
         debug_assert_eq!(self.lexeme(introducer), "init");
         let parameters = self.parse_parameter_list()?;
         let body = self.parse_block()?;
         Some(InitializerDecl {
-            visibility: MemberVisibility::Public,
+            visibility,
             introducer_span: introducer.span,
             parameters,
-            span: self.cover(introducer.span, body.span),
+            span: self.cover(visibility.start_span(introducer.span), body.span),
             body,
         })
     }

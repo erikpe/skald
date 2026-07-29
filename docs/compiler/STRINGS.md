@@ -189,9 +189,11 @@ The compiler owns:
 The standard library owns range preservation, public constructors/factories,
 slicing, byte access, conversion, concatenation, and the broader API. It may
 use ordinary public static factories and private instance/static helpers.
-Because lifecycle visibility is not private, caller-provided mutable bytes are
-accepted only through copying APIs; trusted slices copy an existing descriptor
-and update private bounds. No method spelling is compiler-selected.
+Ordinary initializers may be private, although the canonical implementation
+currently retains its public empty initializer and uses helpers for trusted
+descriptor construction. Caller-provided mutable bytes are accepted only
+through copying APIs; trusted slices copy an existing descriptor and update
+private bounds. No initializer or method spelling is compiler-selected.
 Checked public range APIs use ordinary exact-type `u64` comparisons before an
 explicit total `u64`-to-`i64` cast supplies an array position. Every array
 length is at most `i64::MAX`, and a valid descriptor range stays within its

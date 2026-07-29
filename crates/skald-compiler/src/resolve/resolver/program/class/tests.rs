@@ -145,7 +145,7 @@ fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
         "    copy(ref source: Sample) {}\n",
         "    first: i64;\n",
         "    fn read() -> i64 { return 0; }\n",
-        "    init(value: i64) {}\n",
+        "    private init(value: i64) {}\n",
         "    second: u8;\n",
         "    mut fn write() -> unit {}\n",
         "    assign(ref source: Sample) {}\n",
@@ -165,10 +165,10 @@ fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
         ResolvedCopyOperation::User(CopyConstructorId::new(class.id, 0))
     );
     assert_eq!(class.initializers[0].id, InitializerId::new(class.id, 0));
-    assert_eq!(
+    assert!(matches!(
         class.initializers[0].visibility,
-        ResolvedMemberVisibility::Public
-    );
+        ResolvedMemberVisibility::Private { .. }
+    ));
     assert_eq!(
         class.initializers[0].parameters[0].id,
         ParameterId::new(InitializerId::new(class.id, 0), 0)

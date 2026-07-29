@@ -1,0 +1,6 @@
+import vault;
+
+fn main() -> i64 {
+    var secret: vault::Secret = vault::Secret();
+    return 0;
+}

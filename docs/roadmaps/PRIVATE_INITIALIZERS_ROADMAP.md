@@ -1,6 +1,6 @@
 # Private Ordinary Initializers Roadmap
 
-Status: in progress; PRI1 is next.
+Status: in progress; PRI2 is next.
 
 This roadmap adds per-overload declaring-class privacy to ordinary `init`
 declarations without turning lifecycle declarations into ordinary named
@@ -67,7 +67,7 @@ remain unchanged.
 ## Progress
 
 - [x] PRI0 — Represent and enforce initializer privacy without source exposure
-- [ ] PRI1 — Expose private ordinary initializers through the source language
+- [x] PRI1 — Expose private ordinary initializers through the source language
 - [ ] PRI2 — Adopt, harden, document, and close private initializer support
 
 ## PR-sized implementation sequence
@@ -125,31 +125,31 @@ and lower phases remain visibility-independent.
 **Purpose:** Accept the complete source feature only after its internal access
 boundary is already exhaustive and verified.
 
-- [ ] Accept `private init(parameters) { ... }` while keeping `init` public by
+- [x] Accept `private init(parameters) { ... }` while keeping `init` public by
       default and `private` contextual. Include the modifier in the complete
       declaration span.
-- [ ] Preserve focused recovery for duplicate or misplaced `private`, and
+- [x] Preserve focused recovery for duplicate or misplaced `private`, and
       reject combinations with `static`, `mut`, `virtual`, or `override`
       without losing later class members.
-- [ ] Continue rejecting `private copy`, `private assign`, and
+- [x] Continue rejecting `private copy`, `private assign`, and
       `private destroy` with diagnostics that distinguish those deferred
       lifecycle-visibility questions from supported private ordinary
       initializers.
-- [ ] Exercise access from every exact-class body category, including
+- [x] Exercise access from every exact-class body category, including
       receiverless static factories, and reject top-level, same-module,
       cross-module, unrelated-class, and derived `super(...)` callers.
-- [ ] Prove per-overload behavior: a selected public overload succeeds, a
+- [x] Prove per-overload behavior: a selected public overload succeeds, a
       selected private overload outside its owner fails without public
       fallback, and mixed public/private ambiguity and no-match diagnostics
       retain their defined precedence.
-- [ ] Exercise direct construction, field construction, local initialization,
+- [x] Exercise direct construction, field construction, local initialization,
       produced results, shared allocation, and both inline and shared
       class-element default-length arrays from source.
-- [ ] Update the implemented grammar, classes/lifecycle contract, array
+- [x] Update the implemented grammar, classes/lifecycle contract, array
       contract, compiler phase contract, language overview, and status matrix.
       Keep one authoritative exact-declaring-class rule and link to it rather
       than duplicating variants.
-- [ ] Update string language/compiler documentation to remove the obsolete
+- [x] Update string language/compiler documentation to remove the obsolete
       statement that lifecycle declarations cannot be private, without yet
       changing the canonical standard-library implementation.
 

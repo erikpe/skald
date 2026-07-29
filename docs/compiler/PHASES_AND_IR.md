@@ -299,6 +299,15 @@ authorized, visibility is deliberately erased: HIR, MIR, verification, layout,
 lifecycle lowering, and target code operate on the same field and method
 identities as public members.
 
+Resolved ordinary initializer declarations likewise retain per-overload
+visibility and the exact modifier span. Type checking first performs ordinary
+applicability and unique-most-specific selection, then applies the same exact
+declaring-class owner comparison to the selected `InitializerId`. Direct,
+shared-allocation, base, and class-element array-default construction all use
+that centralized check. No-match and ambiguity stop before access checking.
+Authorized HIR deliberately erases initializer visibility along with field
+and method visibility.
+
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
@@ -333,10 +342,13 @@ initializers below name resolution. Resolution retains the target class
 identity and source-ordered arguments, while that class owns the stable,
 source-ordered candidate set. Type checking analyzes each argument once,
 determines applicability from the existing argument-binding relation, selects
-the unique most-specific static parameter-type sequence, and records exactly
-one `InitializerId`. HIR and MIR therefore contain no unresolved overload
-choice. Both IRs store dense, source-ordered initializer declaration and
-definition vectors, and MIR lowers, verifies, dumps, and emits every entry.
+the unique most-specific static parameter-type sequence, checks that selected
+initializer against the callable's lexical class owner, and records exactly
+one authorized `InitializerId`. An inaccessible private selection does not
+fall back to another candidate. HIR and MIR therefore contain neither
+unresolved overload choice nor visibility. Both IRs store dense,
+source-ordered initializer declaration and definition vectors, and MIR
+lowers, verifies, dumps, and emits every entry.
 
 The distinct `copy(ref source: T)` declaration is a separate lifecycle
 capability rather than an initializer candidate. `T(copy source)` selects that

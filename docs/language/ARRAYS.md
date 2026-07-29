@@ -137,6 +137,15 @@ A shared array element has an exact allocation target and defaults to a fresh
 shared empty array. This does not require its leaf element type to be
 default-initializable because the new inner array contains no elements.
 
+When the default plan for an exact inline or shared class element selects a
+private zero-argument initializer, the array construction is valid only when
+its source call site satisfies the authoritative
+[declaring-class privacy rule](CLASSES_AND_LIFECYCLE.md#declaring-class-privacy).
+The capability plan remains a stable property of the element type; access is
+checked when `T[](length)` or `new T[](length)` consumes it. Empty and
+explicit-copy array construction do not select or authorize an ordinary
+initializer.
+
 These rules are invoked only by an explicit array construction requesting
 default elements. They do not make initializer-free locals or fields legal.
 The array itself remains empty-constructible even when its element type is not

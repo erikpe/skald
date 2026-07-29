@@ -2,22 +2,13 @@ use super::*;
 
 #[test]
 fn resolved_initializer_visibility_dump_is_exact_and_identity_based() {
-    let mut output = resolve_text("class Sample { init() {} }\n");
+    let output = resolve_text("class Sample { private init() {} }\n");
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
-    let initializer = &mut output
-        .program
-        .classes
-        .get_mut(ClassId::new(0))
-        .expect("expected class")
-        .initializers[0];
-    initializer.visibility = ResolvedMemberVisibility::Private {
-        span: initializer.span,
-    };
 
     let dump = dump_resolved(&output.program);
     assert!(
         dump.contains(
-            "OrdinaryInitializers\n        Initializer c0:init0 private @15..24\n          Private @15..24\n          Parameters\n"
+            "OrdinaryInitializers\n        Initializer c0:init0 private @15..32\n          Private @15..22\n          Parameters\n"
         ),
         "{dump}"
     );

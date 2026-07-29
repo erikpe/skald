@@ -86,13 +86,14 @@ factory accepting caller-owned bytes must copy them into fresh storage rather
 than retain mutable caller backing. A mutable builder similarly freezes by
 copying.
 
-Skald lifecycle declarations have no private visibility. Trusted slicing
-therefore does not rely on a private initializer: a private instance or static
-helper may copy an already valid `Str` descriptor and adjust its private
-bounds. A helper may install backing only when that backing is freshly created
-and owned by trusted standard-library code. These paths use the implemented
-`private fn`, `static fn`, and `private static fn` rules; private static
-methods are ordinary composition, not a distinct capability.
+Ordinary initializers may be private; copy construction, assignment, and
+destruction remain visibility-free lifecycle slots. The canonical `Str`
+implementation currently keeps its empty initializer public and uses private
+instance or static helpers to copy an already valid descriptor and adjust its
+private bounds. A helper may install backing only when that backing is freshly
+created and owned by trusted standard-library code. These paths use the
+implemented `private fn`, `static fn`, and `private static fn` rules; private
+static methods are ordinary composition, not a distinct capability.
 
 ## String literals
 

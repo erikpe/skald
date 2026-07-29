@@ -42,6 +42,13 @@ const STRING_TEST_NAME: &str = "string_phase_products_are_deterministic_across_p
 const STRING_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_STRING_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STRING_DIAGNOSTIC_TEST_NAME: &str =
     "string_language_item_diagnostics_are_deterministic_across_processes";
+const PRIVATE_INITIALIZER_HELPER_OUTPUT: &str = "SKALD_PRIVATE_INITIALIZER_DETERMINISM_OUTPUT";
+const PRIVATE_INITIALIZER_TEST_NAME: &str =
+    "private_initializer_phase_products_are_deterministic_across_processes";
+const PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_PRIVATE_INITIALIZER_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME: &str =
+    "private_initializer_diagnostics_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
 const MODULE_HELPER_VARIANT: &str = "SKALD_MODULE_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
@@ -131,6 +138,26 @@ fn string_language_item_diagnostics_are_deterministic_across_processes() {
         STRING_DIAGNOSTIC_HELPER_OUTPUT,
         STRING_DIAGNOSTIC_TEST_NAME,
         MODULE_HELPER_VARIANT,
+    );
+}
+
+#[test]
+fn private_initializer_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "private-initializers",
+        PRIVATE_INITIALIZER_HELPER_OUTPUT,
+        PRIVATE_INITIALIZER_TEST_NAME,
+        private_initializer_phase_dump,
+    );
+}
+
+#[test]
+fn private_initializer_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "private-initializer-diagnostics",
+        PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT,
+        PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME,
+        private_initializer_diagnostic_dump,
     );
 }
 
@@ -473,6 +500,40 @@ fn integer_operation_phase_dump() -> String {
     complete_phase_dump(include_str!(
         "../../../tests/golden/run/integer_string_range_guards.ska"
     ))
+}
+
+fn private_initializer_phase_dump() -> String {
+    complete_phase_dump(concat!(
+        "class Secret { value: i64; private init(value: i64) { self.value = value; } ",
+        "static fn make(value: i64) -> Secret { return Secret(value); } ",
+        "fn reveal() -> i64 { return self.value; } }\n",
+        "fn main() -> i64 { var secret: Secret = Secret.make(42); return secret.reveal(); }\n",
+    ))
+}
+
+fn private_initializer_diagnostic_dump() -> String {
+    let text = concat!(
+        "class Secret { private init() {} }\n",
+        "fn main() -> i64 { var secret: Secret = Secret(); return 0; }\n",
+    );
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("private-initializer-diagnostic.ska", text);
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+
+    format!(
+        "AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
+        dump_ast(&parsed.ast),
+        dump_resolved(&resolved.program),
+        render_diagnostics(&sources, &checked.diagnostics),
+    )
 }
 
 fn string_phase_dump() -> String {

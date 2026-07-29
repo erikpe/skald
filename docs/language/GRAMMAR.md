@@ -83,8 +83,9 @@ initializer. Both spellings remain ordinary identifiers outside those shapes.
 alias-parameter and type-operation target positions; it remains an ordinary
 identifier elsewhere except that it cannot name a top-level declaration.
 `virtual` and `override` are contextually recognized only as method modifiers.
-`private` is contextually recognized before a field declaration or before the
-optional `mut` or `static` of a direct method declaration. `static` is
+`private` is contextually recognized before an ordinary `init` declaration,
+a field declaration, or the optional `mut` or `static` of a direct method
+declaration. `static` is
 contextually recognized before `fn` in a class member, including after
 `private`. Both remain ordinary
 identifier elsewhere, including in `private: i64;`, `fn private() -> unit {}`,
@@ -241,7 +242,7 @@ class-member                = field-declaration
                             | method-declaration
 
 field-declaration           = ["private"] identifier ":" storage-type ";"
-initializer-declaration     = "init" parameter-list block
+initializer-declaration     = ["private"] "init" parameter-list block
 copy-constructor-declaration = "copy" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
 destruction-declaration     = "destroy" block
@@ -267,11 +268,13 @@ validity, the required number or signature of lifecycle members,
 initializer-body restrictions, receiver access, or member type legality. It
 only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
-name. Fields and methods are public unless prefixed by `private`. Lifecycle
-declarations do not accept visibility or `static`; static methods cannot use
-`mut`, `virtual`, or `override`. Static field forms such as `static name: T`
-and `private static name: T` are rejected because static storage is a separate
-future feature.
+name. Fields, methods, and ordinary initializers are public unless prefixed by
+`private`. Copy constructors, copy assignments, and destructors do not accept
+visibility, and no lifecycle declaration accepts `static`. Ordinary
+initializers do not accept `mut`, `virtual`, or `override`; static methods
+cannot use those modifiers either. Static field forms such as
+`static name: T` and `private static name: T` are rejected because static
+storage is a separate future feature.
 
 ### Construction-selection syntax
 
@@ -282,11 +285,13 @@ arity, binding mode, and target type precisely. An `init` declaration is
 always ordinary, including `init(ref source: EnclosingClass)`.
 
 Each class requires one or more `initializer-declaration` members, which form
-an overload set. `Class(arguments)` uses the ordinary argument grammar and
-selects the unique applicable, most-specific initializer from static argument
-types. A derived initializer's leading `super(arguments)` applies the same
-selection to the direct base's overload set. The copy constructor remains a
-separate lifecycle slot and is never an ordinary initializer candidate.
+an overload set. Visibility belongs to each overload. `Class(arguments)` uses
+the ordinary argument grammar and selects the unique applicable,
+most-specific initializer from static argument types before enforcing that
+initializer's declaring-class access. A derived initializer's leading
+`super(arguments)` applies the same selection and access rules to the direct
+base's overload set. The copy constructor remains a separate lifecycle slot
+and is never an ordinary initializer candidate.
 
 Construction has two syntactically distinct argument modes:
 

@@ -1,0 +1,20 @@
+class Secret {
+    private value: i64;
+
+    private init(value: i64) {
+        self.value = value;
+    }
+
+    static fn make(value: i64) -> Secret {
+        return Secret(value);
+    }
+
+    fn reveal() -> i64 {
+        return self.value;
+    }
+}
+
+fn main() -> i64 {
+    var secret: Secret = Secret.make(42);
+    return secret.reveal();
+}

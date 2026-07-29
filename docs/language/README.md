@@ -137,8 +137,8 @@ makes a result source-observable.
   declarations, bindings and scopes, statements, returns, and evaluation order.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,
-  explicit copy construction, and object places, plus assignment, temporaries,
-  and deterministic lifetime.
+  per-overload private factory boundaries, explicit copy construction, and
+  object places, plus assignment, temporaries, and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the
