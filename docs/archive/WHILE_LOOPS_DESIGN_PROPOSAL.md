@@ -4,7 +4,7 @@ Status: confirmed, promoted, and archived on 2026-07-29. W1 through W13 adopt
 their recommended decisions. The living language, phase/IR, runtime ABI, and
 backend documents now own the frozen source, representation, and
 target-boundary behavior; the
-[implementation roadmap](../roadmaps/WHILE_LOOPS_ROADMAP.md) owns delivery
+[implementation roadmap](WHILE_LOOPS_ROADMAP.md) owns delivery
 order, and this archived proposal retains the decision rationale and promotion
 record.
 

@@ -51,6 +51,7 @@ Archived plans:
 - [Private ordinary initializers](PRIVATE_INITIALIZERS_ROADMAP.md)
 - [Primitive local reassignment](PRIMITIVE_LOCAL_REASSIGNMENT_ROADMAP.md)
 - [Panic and unrecoverable failure reporting](PANIC_ROADMAP.md)
+- [While loops and loop exits](WHILE_LOOPS_ROADMAP.md)
 
 Resolved string-design inputs:
 

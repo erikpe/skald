@@ -7,7 +7,9 @@
 use std::{any::Any, panic};
 
 use skald_compiler::{
+    backend::Target,
     diagnostics::render_diagnostics,
+    driver::compile_source_to_assembly,
     lexer::lex,
     source::SourceDatabase,
     syntax::{parse, EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
@@ -31,6 +33,61 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_class_header_mutations();
     exercise_optional_syntax_mutations();
     exercise_array_syntax_mutations();
+}
+
+#[test]
+fn bounded_source_loops_compile_deterministically_without_pipeline_panics() {
+    let cases = generated_case_count();
+    let mut random = DeterministicRandom::new(0x3c6e_f372_fe94_f82b);
+
+    for index in 0..cases {
+        let limit = 1 + random.index(8);
+        let continue_at = 1 + random.index(limit);
+        let break_at = continue_at + 1 + random.index(3);
+        let nesting = 1 + random.index(3);
+        let source = generated_loop_source(limit, continue_at, break_at, nesting);
+        let name = format!("generated-loop-{index}.ska");
+
+        let first =
+            panic::catch_unwind(|| compile_source_to_assembly(&name, &source, Target::X86_64SysV))
+                .unwrap_or_else(|payload| {
+                    panic!(
+                        "loop pipeline panicked for case {index}: {}",
+                        panic_message(payload)
+                    )
+                })
+                .unwrap_or_else(|error| {
+                    panic!("generated loop case {index} was rejected: {error:?}")
+                });
+        let second = compile_source_to_assembly(&name, &source, Target::X86_64SysV)
+            .unwrap_or_else(|error| panic!("repeated loop case {index} was rejected: {error:?}"));
+        assert_eq!(
+            first.assembly, second.assembly,
+            "generated loop case {index} was nondeterministic"
+        );
+    }
+}
+
+fn generated_loop_source(
+    limit: usize,
+    continue_at: usize,
+    break_at: usize,
+    nesting: usize,
+) -> String {
+    let mut source = format!(
+        "fn main() -> i64 {{ var value: i64 = 0; while (value < {limit}) {{ \
+         value = value + 1; if (value == {continue_at}) {{ continue; }} \
+         if (value == {break_at}) {{ break; }} "
+    );
+    for _ in 0..nesting {
+        source.push_str("{ ");
+    }
+    source.push_str("var observed: i64 = value; value = observed;");
+    for _ in 0..nesting {
+        source.push_str(" }");
+    }
+    source.push_str(" } return value; }");
+    source
 }
 
 fn exercise_class_header_mutations() {

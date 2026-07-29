@@ -190,6 +190,25 @@ condition/body/break/continue cleanup, ownership-heavy exits, mixed
 fallthrough/return/panic behavior, and return from a body. The golden runner's
 repeated assembly comparison remains the source-to-target determinism check.
 
+The complete source-observation matrix has these owners:
+
+| Loop lifecycle area | Source-to-observation evidence |
+|---|---|
+| Condition false and condition-owned compiler temporaries | `while_loops.ska` and `loop_lifecycle_matrix.ska` |
+| Primitive mutation, normal body fallthrough, and fresh body epochs | `while_loops.ska` |
+| Inline objects, shared owners, primitive/class/shared optionals, arrays, checked views, aliases, and shared-backed anchors | `loop_lifecycle_matrix.ska` |
+| Immediate, conditional, nested-scope, ownership-heavy, and nested-loop `break` | `break_loops.ska` and `loop_lifecycle_matrix.ska` |
+| Immediate, conditional, nested-scope, ownership-heavy, nearest-loop, and condition-effect `continue` | `continue_loops.ska` and `loop_lifecycle_matrix.ska` |
+| Return cleanup and mixed fallthrough, break, continue, return, and panic effects | `while_loops.ska`, `continue_loops.ska`, and `loop_lifecycle_matrix.ska` |
+
+Colocated MIR hardening tests separately prove that condition-owned storage is
+dead before body or exit, body-owned storage is dead before latch, header, or
+exit, and redirected edges cannot skip cleanup. Bounded generators cover both
+source loops through the complete pipeline and target-independent cyclic CFGs
+through deterministic verification. Equivalent split and renumbered loop CFGs
+must survive the pass boundary and x86-64 lowering without canonical-layout or
+source-loop recognition.
+
 Primitive integer operation coverage keeps the closed matrices explicit.
 Type-check and MIR tests enumerate all eighteen same-type comparisons and all
 nine casts, while rejection tests enumerate every ordered mixed integer pair,

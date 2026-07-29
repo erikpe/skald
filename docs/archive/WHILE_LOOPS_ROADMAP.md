@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 through L6 are complete and L7 is next.
+Status: complete.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -91,7 +91,7 @@ Explicitly excluded from this roadmap:
 - [x] L4 — Activate source `while` end to end
 - [x] L5 — Add targeted `break` statements
 - [x] L6 — Add targeted `continue` statements
-- [ ] L7 — Harden loop lifecycles and optimization boundaries
+- [x] L7 — Harden loop lifecycles and optimization boundaries
 
 A task is complete only when its checklist, focused tests, exit criteria, and
 applicable repository gates pass. Each Rust task runs focused owner tests
@@ -367,28 +367,28 @@ true.
 **Purpose:** Close cross-feature gaps and leave a verifier and test boundary
 that later loop forms and CFG optimizations can safely reuse.
 
-- [ ] Build a source-to-observation lifecycle matrix covering primitive,
+- [x] Build a source-to-observation lifecycle matrix covering primitive,
       inline object, shared, optional primitive/class/shared, array, checked
       view, alias, anchor, and compiler-temporary behavior on condition false,
       body fallthrough, `break`, `continue`, `return`, and nested loops.
-- [ ] Verify condition temporaries never enter a body or exit state and body
+- [x] Verify condition temporaries never enter a body or exit state and body
       lifetimes never enter a latch, header, or loop exit state.
-- [ ] Add malformed-MIR mutations for redirected loop edges, omitted lifetime
+- [x] Add malformed-MIR mutations for redirected loop edges, omitted lifetime
       boundaries, leaked ownership, incompatible joins/backedges, foreign
       `LoopId`-derived fixtures, and unreachable cyclic components.
-- [ ] Extend generative robustness to bounded generic CFG cycles and confirm
+- [x] Extend generative robustness to bounded generic CFG cycles and confirm
       verifier termination and deterministic diagnostics.
-- [ ] Add pass-pipeline tests that reorder blocks or insert equivalent
+- [x] Add pass-pipeline tests that reorder blocks or insert equivalent
       intermediate blocks while preserving successor, lifetime, cleanup, and
       observable-order invariants.
-- [ ] Confirm that verified alternative generic CFG shapes lower mechanically
+- [x] Confirm that verified alternative generic CFG shapes lower mechanically
       on x86-64 without backend recognition of the canonical source shape.
-- [ ] Audit touched Rust modules by responsibility, keeping facades concise,
+- [x] Audit touched Rust modules by responsibility, keeping facades concise,
       extracting only demonstrated cohesive loop/lifetime concerns, and
       placing tests with their owners.
-- [ ] Remove rollout wording and roadmap task codes from living code, tests,
+- [x] Remove rollout wording and roadmap task codes from living code, tests,
       and current documentation; retain codes only in roadmap history.
-- [ ] Reconcile all living language, compiler, backend, runtime, debugging, and
+- [x] Reconcile all living language, compiler, backend, runtime, debugging, and
       test documents and archive this roadmap only after the complete quality
       gate passes from an artifact-free snapshot.
 

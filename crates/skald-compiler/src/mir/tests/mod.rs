@@ -24,6 +24,7 @@ mod cycles;
 mod integer_casts;
 mod interface_dispatch;
 mod interface_fixtures;
+mod loop_hardening;
 mod object_fixtures;
 mod object_results;
 mod object_temporaries;

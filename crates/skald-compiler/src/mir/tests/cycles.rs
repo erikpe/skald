@@ -183,6 +183,24 @@ fn verifies_disconnected_cyclic_components_and_bounded_cycle_sizes() {
 }
 
 #[test]
+fn generated_bounded_generic_cfg_cycles_terminate_deterministically() {
+    for seed in 0..128_u64 {
+        let mut program = lower_text("fn main() -> i64 { var value: i64 = 0; return value; }\n");
+        append_generated_cyclic_component(&mut program, seed);
+
+        let first = verify_mir(&program).map_err(|errors| errors.to_string());
+        let second = verify_mir(&program).map_err(|errors| errors.to_string());
+        assert_eq!(first, second, "cyclic CFG seed {seed} was nondeterministic");
+        if let Err(errors) = first {
+            assert!(
+                errors.lines().count() < 128,
+                "cyclic CFG seed {seed} produced unbounded diagnostics:\n{errors}"
+            );
+        }
+    }
+}
+
+#[test]
 fn rejects_cyclic_optional_view_anchor_shared_and_array_state_leaks() {
     let mut shared = lower_text(concat!(
         "class Resource { init() {} }\n",
@@ -351,6 +369,70 @@ fn append_unreachable_ring(
             span,
         ));
     }
+}
+
+fn append_generated_cyclic_component(program: &mut MirProgram, seed: u64) {
+    let entry = program.entry_function;
+    let function = program.definitions.get_mut_for_test(entry).unwrap();
+    let span = function.span;
+    let first = function.body.blocks.len();
+    let block_count = 1 + (seed as usize % 8);
+    let local = function
+        .storage
+        .iter()
+        .find(|storage| storage.kind == MirStorageKind::Local)
+        .unwrap()
+        .id;
+
+    for offset in 0..block_count {
+        let id = BlockId::new(function.function, first + offset);
+        let first_target = BlockId::new(
+            function.function,
+            first + generated_index(seed, offset, block_count),
+        );
+        let mut instructions = Vec::new();
+        let terminator = if (seed + offset as u64) % 3 == 0 {
+            let condition = ValueId::new(function.function, function.values.len());
+            function
+                .values
+                .push(fixture_value(condition, MirType::Bool, span));
+            instructions.push(fixture_assign(
+                condition,
+                MirRvalueKind::ConstantBool((seed + offset as u64) % 2 == 0),
+                MirType::Bool,
+                span,
+            ));
+            let second_target = BlockId::new(
+                function.function,
+                first + generated_index(seed.rotate_left(17), offset + 1, block_count),
+            );
+            MirTerminator::Branch {
+                condition,
+                true_target: first_target,
+                false_target: second_target,
+                span,
+            }
+        } else {
+            MirTerminator::Goto {
+                target: first_target,
+                span,
+            }
+        };
+        if seed % 5 == 0 && offset == 0 {
+            instructions.push(fixture_storage_live(local, span));
+        }
+        function
+            .body
+            .blocks
+            .push(fixture_block(id, instructions, Some(terminator), span));
+    }
+}
+
+fn generated_index(seed: u64, offset: usize, bound: usize) -> usize {
+    let mixed = seed
+        .wrapping_add((offset as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+        .rotate_left((offset % 63) as u32);
+    (mixed as usize) % bound
 }
 
 fn remove_instructions(

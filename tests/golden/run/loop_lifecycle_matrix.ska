@@ -1,0 +1,123 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    fn read() -> i64 {
+        return self.marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Holder {
+    edge: shared Trace;
+
+    init(marker: i64) {
+        self.edge = new Trace(marker);
+    }
+
+    fn read() -> i64 {
+        return self.edge->read();
+    }
+}
+
+fn inspect(ref value: Obj) -> i64 {
+    return ((Trace) value).read();
+}
+
+fn alias_read(ref value: Trace) -> i64 {
+    return value.read();
+}
+
+fn condition(token: Trace, owner: shared Trace) -> bool {
+    return token.read() + owner->read() == -1;
+}
+
+fn condition_false() -> i64 {
+    while (condition(Trace(140), new Trace(141))) {
+        return 99;
+    }
+    return 0;
+}
+
+fn body_fallthrough() -> i64 {
+    var holder: Holder = Holder(150);
+    var iterations: i64 = 0;
+    var result: i64 = 0;
+    while (iterations < 1) {
+        var inline: Trace = Trace(151);
+        var owner: shared Trace = new Trace(152);
+        var primitive_optional: i64? = iterations;
+        var class_optional: Trace? = Trace(153);
+        var optional_owner: shared? Trace = owner;
+        var values: i64[] = i64[](1u);
+        var viewed: Trace = Trace(154);
+        values[0] = 7;
+        result = alias_read(viewed)
+            + inspect(viewed)
+            + holder.read()
+            + primitive_optional!
+            + values[0];
+        iterations = iterations + 1;
+    }
+    return result;
+}
+
+fn break_cleanup() -> i64 {
+    while (true) {
+        var body: Trace = Trace(160);
+        { var nested: Trace = Trace(161); break; }
+    }
+    return 1;
+}
+
+fn continue_cleanup() -> i64 {
+    var iterations: i64 = 0;
+    while (iterations < 1) {
+        var body: Trace = Trace(170);
+        {
+            var nested: Trace = Trace(171);
+            iterations = iterations + 1;
+            continue;
+        }
+    }
+    return iterations;
+}
+
+fn return_cleanup() -> i64 {
+    while (true) {
+        var body: Trace = Trace(180);
+        { var nested: Trace = Trace(181); return 2; }
+    }
+    return 0;
+}
+
+fn nested_loops() -> i64 {
+    var iterations: i64 = 0;
+    while (iterations < 1) {
+        var outer: Trace = Trace(190);
+        while (true) {
+            var inner: Trace = Trace(191);
+            break;
+        }
+        iterations = iterations + 1;
+    }
+    return iterations;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(condition_false());
+    ska_rt_println_i64(body_fallthrough());
+    ska_rt_println_i64(break_cleanup());
+    ska_rt_println_i64(continue_cleanup());
+    ska_rt_println_i64(return_cleanup());
+    ska_rt_println_i64(nested_loops());
+    return 0;
+}
