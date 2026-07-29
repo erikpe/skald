@@ -173,10 +173,21 @@ The installed representative public surface is:
 | `init()` | Construct an empty dynamic string. |
 | `static fn from_bytes(ref bytes: u8[]) -> Str` | Copy caller bytes into fresh shared storage. |
 | `fn len() -> u64` | Return the descriptor length. |
-| `fn byte(index: u64) -> u8` | Return one checked byte. |
-| `fn slice(start: u64, length: u64) -> Str` | Return an `O(1)` shared-backing slice after checked bounds validation. |
+| `fn byte(index: i64) -> u8` | Return one checked byte using array index semantics. |
+| `fn slice(start: i64, end: i64) -> Str` | Return an `O(1)` shared-backing half-open slice using array bound semantics. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
+
+Byte indices and slice bounds use the same one-time negative normalization as
+array indices and explicit array slice bounds, relative to the current
+string's length. Thus `byte(-1)` selects the final byte, and
+`slice(1, -1)` excludes the first and final bytes. Slice ranges are half-open:
+the normalized start is included and the normalized end is excluded. Both
+bounds are required because this method surface has no omitted-argument form.
+A valid byte position satisfies `0 <= index < len`; a valid slice satisfies
+`0 <= start <= end <= len` after normalization. See
+[array length, indices, and bounds](ARRAYS.md#length-indices-and-bounds) and
+[array slices](ARRAYS.md#slices).
 
 Invalid byte and slice bounds terminate through ordinary checked array
 behavior. The library's dynamic factories and slicing method call a private
@@ -202,12 +213,11 @@ Indexing,
 slicing, equality, comparison, hashing, concatenation, formatting, and parsing
 are not string-specific operators in this contract. In particular, `+` is not
 lowered by searching for a method named `concat`. Public checked byte/range
-methods use ordinary general primitive comparison, arithmetic, and conversion
-operations. They compare their `u64` bounds before converting a successful
-position to the array index type. The array maximum-length rule and descriptor
-invariant make every successful position representable as `i64`; values above
-`i64::MAX` fail the unsigned range comparison before the total cast is used.
-The compiler adds neither a checked cast nor string-only numeric rules.
+methods implement their array-compatible normalization through ordinary
+general primitive comparison, arithmetic, and total conversion operations.
+The backing-array maximum-length rule makes the descriptor length and every
+valid absolute position representable as `i64`. The compiler adds neither a
+checked cast nor string-only numeric rules.
 
 ## Exclusions
 

@@ -222,8 +222,9 @@ String coverage follows the
   sentinel-aware retain/release, dynamic reclamation, malformed-input
   rejection, and the unchanged runtime ABI;
 - native goldens own copying, assignment, arguments, results, temporaries,
-  checked failures, slicing, factory isolation, conversion, concatenation,
-  embedded zero/high bytes, and repeated execution; and
+  signed and negative byte positions, half-open and negative slice bounds,
+  checked failures, factory isolation, conversion, concatenation, embedded
+  zero/high bytes, and repeated execution; and
 - `pipeline_determinism` compares canonical graph, diagnostics, resolved HIR,
   verified MIR, and assembly across independent processes and provider/source
   permutations.

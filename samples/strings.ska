@@ -5,7 +5,7 @@ extern fn ska_rt_println_u8(value: u8) -> unit;
 
 fn main() -> i64 {
     var greeting: Str = "hello";
-    var tail: Str = greeting.slice(1u, 4u);
+    var tail: Str = greeting.slice(1, 5);
 
     var punctuation: u8[] = u8[](1u);
     punctuation[0] = 33u8;
@@ -16,8 +16,8 @@ fn main() -> i64 {
     independent[0] = 65u8;
 
     ska_rt_println_u64(message.len());
-    ska_rt_println_u8(message.byte(5u));
-    ska_rt_println_u8(tail.byte(0u));
+    ska_rt_println_u8(message.byte(5));
+    ska_rt_println_u8(tail.byte(0));
     ska_rt_println_u8(independent[0]);
     return 0;
 }

@@ -19,18 +19,29 @@ public class Str {
         return self._length;
     }
 
-    fn byte(index: u64) -> u8 {
-        if (index < self._length) {
-            return self._storage->[(i64) (self._start + index)];
+    fn byte(index: i64) -> u8 {
+        var normalized: i64 = self._normalize_position(index);
+        if (normalized >= 0) {
+            if ((u64) normalized < self._length) {
+                return self._storage->[(i64) self._start + normalized];
+            }
         }
         Str._fail_bounds_check();
         return 0u8;
     }
 
-    fn slice(start: u64, length: u64) -> Str {
-        if (start <= self._length) {
-            if (length <= self._length - start) {
-                return Str(self._storage, self._start + start, length);
+    fn slice(start: i64, end: i64) -> Str {
+        var normalized_start: i64 = self._normalize_position(start);
+        var normalized_end: i64 = self._normalize_position(end);
+        if (normalized_start >= 0) {
+            if (normalized_start <= normalized_end) {
+                if ((u64) normalized_end <= self._length) {
+                    return Str(
+                        self._storage,
+                        self._start + (u64) normalized_start,
+                        (u64) (normalized_end - normalized_start)
+                    );
+                }
             }
         }
         Str._fail_bounds_check();
@@ -61,6 +72,13 @@ public class Str {
         result->[:middle] = self._storage->[self_start:self_end];
         result->[middle:end] = other._storage->[other_start:other_end];
         return Str(result, 0u, combined_length);
+    }
+
+    private fn _normalize_position(position: i64) -> i64 {
+        if (position < 0) {
+            return (i64) self._length + position;
+        }
+        return position;
     }
 
     private static fn _fail_bounds_check() -> unit {

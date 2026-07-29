@@ -208,9 +208,11 @@ allocator or copy helper. Dynamic strings created by `std::str::Str` methods
 instead use ordinary shared-array allocation and an exact-class call to the
 private descriptor initializer. Slices call the same initializer with existing
 backing and a checked subrange, followed by ordinary retain/release and
-last-owner reclamation. If a public byte/range operation fails only for very
-large `u64` input, inspect the unsigned comparison branch before the explicit
-total cast to the signed array-position type.
+last-owner reclamation. For byte or slice-bound failures, inspect the
+array-compatible one-time negative normalization relative to the descriptor
+length, then the normalized signed ordering/bounds checks. Conversion to the
+internal `u64` descriptor range occurs only after the normalized position is
+known to be non-negative.
 
 Use the string-focused tests for the nearest reproduction:
 

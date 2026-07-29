@@ -2,6 +2,6 @@ from std::str import Str;
 
 fn main() -> i64 {
     var value: Str = "x";
-    var invalid: u8 = value.byte(9223372036854775808u);
+    var invalid: u8 = value.byte(-9223372036854775808);
     return (i64) invalid;
 }
