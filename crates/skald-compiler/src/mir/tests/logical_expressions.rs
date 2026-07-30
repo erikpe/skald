@@ -68,7 +68,7 @@ fn lowered_logical(operation: HirLogicalOperation, left: bool, right: bool) -> M
 }
 
 #[test]
-fn internal_logical_hir_executes_both_truth_tables_natively() {
+fn structured_logical_hir_executes_both_truth_tables_natively() {
     for operation in [HirLogicalOperation::And, HirLogicalOperation::Or] {
         for left in [false, true] {
             for right in [false, true] {
@@ -300,7 +300,7 @@ fn logical_result_composes_as_a_call_argument() {
 }
 
 #[test]
-fn malformed_logical_hir_and_mir_are_rejected() {
+fn malformed_logical_hir_is_rejected() {
     let result = std::panic::catch_unwind(|| {
         let mut hir = logical_program(|span| HirExpression {
             kind: HirExpressionKind::Logical(Box::new(HirLogicalExpression {
@@ -324,119 +324,6 @@ fn malformed_logical_hir_and_mir_are_rejected() {
         lower_hir(&hir)
     });
     assert!(result.is_err());
-
-    let mut wrong_short = lowered_logical(HirLogicalOperation::And, true, true);
-    let function = wrong_short
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let short = function.body.logical_expressions[0].short;
-    let block = &mut function.body.blocks[short.index()];
-    let fixed = block
-        .instructions
-        .iter_mut()
-        .find_map(|instruction| match instruction {
-            MirInstruction::Assign(assignment) => Some(assignment),
-            _ => None,
-        })
-        .unwrap();
-    fixed.rvalue.kind = MirRvalueKind::ConstantBool(true);
-    let errors = verify_mir(&wrong_short).unwrap_err().to_string();
-    assert!(errors.contains("logical short path stores the wrong selected result"));
-
-    let mut missing_store = lowered_logical(HirLogicalOperation::Or, false, true);
-    let function = missing_store
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let right = function.body.logical_expressions[0].right_exit;
-    function.body.blocks[right.index()].instructions.pop();
-    let errors = verify_mir(&missing_store).unwrap_err().to_string();
-    assert!(errors.contains("logical right result block must end by storing its result"));
-
-    let mut wrong_branch = lowered_logical(HirLogicalOperation::And, true, false);
-    let function = wrong_branch
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let logical = function.body.logical_expressions[0].clone();
-    let Some(MirTerminator::Branch {
-        true_target,
-        false_target,
-        ..
-    }) = &mut function.body.blocks[logical.split.index()].terminator
-    else {
-        unreachable!()
-    };
-    std::mem::swap(true_target, false_target);
-    let errors = verify_mir(&wrong_branch).unwrap_err().to_string();
-    assert!(errors.contains("logical split has the wrong operand or branch targets"));
-
-    let mut duplicate_right = lowered_logical(HirLogicalOperation::Or, false, true);
-    let function = duplicate_right
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let logical = function.body.logical_expressions[0].clone();
-    let duplicated = function.body.blocks[logical.right_exit.index()]
-        .instructions
-        .last()
-        .unwrap()
-        .clone();
-    function.body.blocks[logical.right_exit.index()]
-        .instructions
-        .push(duplicated);
-    let errors = verify_mir(&duplicate_right).unwrap_err().to_string();
-    assert!(errors.contains("logical result carrier must be written exactly once"));
-
-    let mut duplicated_evaluation = lowered_logical(HirLogicalOperation::And, true, false);
-    let function = duplicated_evaluation
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let logical = function.body.logical_expressions[0].clone();
-    let right_definition = function.body.blocks[logical.right_exit.index()]
-        .instructions
-        .iter()
-        .find(|instruction| {
-            matches!(
-                instruction,
-                MirInstruction::Assign(assignment)
-                    if assignment.result == logical.right_result
-            )
-        })
-        .unwrap()
-        .clone();
-    function.body.blocks[logical.split.index()]
-        .instructions
-        .push(right_definition);
-    let errors = verify_mir(&duplicated_evaluation).unwrap_err().to_string();
-    assert!(errors.contains("is defined more than once"));
-
-    let mut use_before_join = lowered_logical(HirLogicalOperation::Or, false, true);
-    let function = use_before_join
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let logical = function.body.logical_expressions[0].clone();
-    let join = &mut function.body.blocks[logical.join.index()];
-    let selected = join
-        .instructions
-        .iter()
-        .position(|instruction| {
-            matches!(
-                instruction,
-                MirInstruction::Assign(assignment)
-                    if assignment.result == logical.selected_result
-            )
-        })
-        .unwrap();
-    let selected = join.instructions.remove(selected);
-    function.body.blocks[logical.split.index()]
-        .instructions
-        .push(selected);
-    let errors = verify_mir(&use_before_join).unwrap_err().to_string();
-    assert!(errors.contains("logical selected result must load its carrier in the result join"));
 }
 
 #[test]

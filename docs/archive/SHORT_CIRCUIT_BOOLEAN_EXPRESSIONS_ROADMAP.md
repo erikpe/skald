@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 through SC7 are complete and SC8 is next.
+Status: complete and archived on 2026-07-31.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -193,7 +193,7 @@ unimplemented.
 - [x] SC5 — Compose bounded views, guards, failures, and enclosing control flow
 - [x] SC6 — Add source syntax and exact type selection behind the completion gate
 - [x] SC7 — Enable arbitrary valid operands through every expression consumer
-- [ ] SC8 — Harden, document, and promote short-circuit expressions
+- [x] SC8 — Harden, document, and promote short-circuit expressions
 
 ## PR-sized implementation sequence
 
@@ -553,31 +553,31 @@ documentation call the feature implemented.
 **Purpose:** Freeze the implementation boundary as a durable compiler feature
 and remove roadmap-only scaffolding.
 
-- [ ] Audit complete valid, invalid, nesting, consumer, failure, ownership,
+- [x] Audit complete valid, invalid, nesting, consumer, failure, ownership,
       cleanup, loop, return, and determinism matrices against the frozen
       contracts.
-- [ ] Add adversarial verifier mutations for every invariant listed in this
+- [x] Add adversarial verifier mutations for every invariant listed in this
       roadmap and confirm transformations preserve conditional state.
-- [ ] Confirm no pure-operand shortcut, eager logical rvalue, early cleanup,
+- [x] Confirm no pure-operand shortcut, eager logical rvalue, early cleanup,
       general-continuation cloning, runtime helper, ABI change, or
       target-specific logical semantics entered the implementation.
-- [ ] Stress deeply nested and long mixed chains within the syntax budget and
+- [x] Stress deeply nested and long mixed chains within the syntax budget and
       verify compiler work, CFG growth, cleanup decision growth, and diagnostic
       output remain bounded and deterministic.
-- [ ] Audit touched lexer, syntax, AST, resolution, type checking, HIR, MIR,
+- [x] Audit touched lexer, syntax, AST, resolution, type checking, HIR, MIR,
       full-expression tracking, each verifier domain, passes, backend, dumps,
       facades, tests, and documentation by responsibility.
-- [ ] Resolve small maintainability findings directly. Record material
+- [x] Resolve small maintainability findings directly. Record material
       out-of-scope findings in
       `docs/roadmaps/SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_DISCOVERIES.md` and
       index that file under pending discoveries.
-- [ ] Remove the temporary completion gate, rollout-only flags, task codes,
+- [x] Remove the temporary completion gate, rollout-only flags, task codes,
       and roadmap terminology from living code, diagnostics, fixtures, and
       general documentation.
-- [ ] Confirm public runtime headers, archives, ABI version, panic catalog, and
+- [x] Confirm public runtime headers, archives, ABI version, panic catalog, and
       generated artifacts are unchanged unless a separately approved
       correction documents otherwise.
-- [ ] Run the artifact-free final validation gate, repair documentation links,
+- [x] Run the artifact-free final validation gate, repair documentation links,
       mark this roadmap complete, move it to `docs/archive/`, and update active
       and archive indexes.
 
@@ -593,6 +593,45 @@ fully documented source-to-native feature over the entire currently valid
 operand language; all selected-path lifetime and cleanup invariants are
 verified; no rollout scaffolding remains; and the completed roadmap is
 archived.
+
+#### SC8 closure audit
+
+The final audit maps each contract family to an owning observation rather than
+repeating the complete Cartesian product at every layer:
+
+| Contract family | Owning evidence |
+| --- | --- |
+| Tokens, precedence, associativity, grouping, recovery, and nesting | lexer coverage plus `syntax/tests/short_circuit_boolean.rs`; the parser admits 10 nested logical operations and deterministically rejects the next depth with `PAR005` |
+| Resolution, exact typing, and structured HIR | `resolve/tests/short_circuit_boolean.rs`, `typeck/tests/short_circuit_boolean.rs`, HIR dumps, and the exact-type compile-failure golden |
+| Truth tables, arbitrary operands, consumers, loops, and returns | `logical_expressions.rs`, `logical_boundaries.rs`, and `short_circuit_boolean_expressions.ska` |
+| Inline-object, optional, shared-owner, array, view, guard, anchor, and cleanup lifetimes | `logical_object_lifetimes.rs`, `logical_shared_array_lifetimes.rs`, conditional-cleanup verifier suites, and `short_circuit_lifetimes.ska` |
+| Selected and skipped failures | MIR failure-edge mutations plus the selected- and skipped-failure native goldens |
+| Structural MIR invariants | `logical_verification.rs` independently corrupts types, carriers, stores, split/selection/join edges, right-region isolation, condition declaration and epochs, right-result uniqueness, and failure isolation |
+| Transformations and targets | the MIR pass pipeline preserves a logical program byte-for-byte; MIR dumps and x86-64 assembly are deterministic; the backend consumes only generic verified branches, loads, stores, cleanup, and jumps |
+| Bounded work and output | `logical_stress.rs` pins linear flat-chain CFG growth, quadratic ancestor-conditioned cleanup growth, effectful cleanup growth, deterministic MIR/assembly, and deterministic over-budget diagnostics |
+
+The operand audit includes literals, bindings, grouping, negation, equality,
+type and presence tests, primitive unwrap, fields, array elements, and every
+currently callable `bool` producer: direct, static, instance, interface, and
+external calls. Consumers include locals, reassignment, fields, every call
+position, receivers, indices, eager expressions, return, conditionals, and
+loops. String literals, object values, shared handles, arrays as whole values,
+and class optionals are intentionally absent as direct logical operands
+because none has static type `bool`; their boolean-producing operations and
+selected-path ownership effects are covered.
+
+Structural inspection found no literal-only or pure-operand lowering path, no
+eager logical MIR rvalue, and no logical operation in target instruction
+selection. The sole lowering path creates structured HIR and a verified MIR
+selection diamond for arbitrary valid operands. Full-expression cleanup uses
+small local condition/action/bypass regions that reconverge immediately; it
+does not copy the later continuation. The runtime exports no logical helper,
+the public header and runtime sources are unchanged, the ABI marker remains
+version 6, and the panic catalog and generated-artifact contract are unchanged.
+
+Final validation passed `cargo test --locked --workspace`, `make check`,
+`make msrv-check`, `make robustness-long`, `git diff --check`, documentation
+link checking after archival, and a clean temporary-snapshot `make check`.
 
 ## Cross-cutting test matrix
 
@@ -669,5 +708,5 @@ ABI revision.
   its exit criteria; SC8 remains responsible for hardening and archive
   closeout.
 - After SC8, move this file to `docs/archive/`, repair relative links, update
-  both roadmap indexes, and ensure no active discovery entry remains
-  unresolved.
+  both roadmap indexes, and keep any unresolved discovery record active and
+  indexed.

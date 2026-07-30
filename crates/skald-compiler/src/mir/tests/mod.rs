@@ -32,6 +32,8 @@ mod logical_expressions;
 mod logical_fixtures;
 mod logical_object_lifetimes;
 mod logical_shared_array_lifetimes;
+mod logical_stress;
+mod logical_verification;
 mod loop_hardening;
 mod object_fixtures;
 mod object_results;

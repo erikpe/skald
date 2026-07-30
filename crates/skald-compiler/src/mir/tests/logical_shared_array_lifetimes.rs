@@ -1,5 +1,5 @@
 use super::logical_fixtures::{
-    function_id, function_id_from_mir, lower_internal_logical, native_output,
+    function_id, function_id_from_mir, lower_fixture_logical, native_output,
     replace_return_with_logical_expressions, returned_scalar,
 };
 use super::*;
@@ -44,7 +44,7 @@ const SHARED_OPERANDS: &str = concat!(
 
 #[test]
 fn selected_shared_receivers_release_in_reverse_order_and_skipped_receivers_do_nothing() {
-    let selected = lower_internal_logical(
+    let selected = lower_fixture_logical(
         SHARED_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,
@@ -56,7 +56,7 @@ fn selected_shared_receivers_release_in_reverse_order_and_skipped_receivers_do_n
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"2\n1\n");
 
-    let skipped = lower_internal_logical(
+    let skipped = lower_fixture_logical(
         SHARED_OPERANDS,
         "evaluate",
         HirLogicalOperation::Or,
@@ -78,7 +78,7 @@ fn shared_arguments_type_tests_checked_places_and_optional_owners_are_path_sensi
         ("right_optional", 0, b"2\n1\n".as_slice()),
         ("right_presence", 1, b"2\n1\n".as_slice()),
     ] {
-        let selected = lower_internal_logical(
+        let selected = lower_fixture_logical(
             SHARED_OPERANDS,
             "evaluate",
             HirLogicalOperation::And,
@@ -90,7 +90,7 @@ fn shared_arguments_type_tests_checked_places_and_optional_owners_are_path_sensi
         assert_eq!(output.status.code(), Some(expected), "{right}");
         assert_eq!(output.stdout, selected_output, "{right}");
 
-        let skipped = lower_internal_logical(
+        let skipped = lower_fixture_logical(
             SHARED_OPERANDS,
             "evaluate",
             HirLogicalOperation::Or,
@@ -265,7 +265,7 @@ fn conditional_retained_argument_does_not_release_the_stable_owner() {
 
 #[test]
 fn shared_verifier_rejects_lost_duplicate_and_early_selected_cleanup() {
-    let valid = lower_internal_logical(
+    let valid = lower_fixture_logical(
         SHARED_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,
@@ -337,7 +337,7 @@ fn shared_verifier_rejects_lost_duplicate_and_early_selected_cleanup() {
 
 #[test]
 fn optional_shared_verifier_rejects_lost_and_duplicate_selected_cleanup() {
-    let valid = lower_internal_logical(
+    let valid = lower_fixture_logical(
         SHARED_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,

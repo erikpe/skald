@@ -353,8 +353,15 @@ their existing lifetime categories. Compiler-known failures remain terminal
 inside the selected operand and are unreachable from the short path.
 Conditional and loop conditions consume selected cleanup and activation
 storage before either successor or the next loop epoch; returns secure their
-scalar before cleanup. Source construction and the final every-consumer source
-surface remain gated for their later roadmap tasks.
+scalar before cleanup. The accepted source surface reaches this representation
+through every currently valid exact-`bool` operand and expression consumer.
+
+The parser caps nested logical operations before semantic phases. Within that
+budget, a flat chain produces linear logical diamonds and sibling condition
+state. Right nesting produces linear diamonds plus quadratic local cleanup
+decisions because each selected lifetime must test its ancestor chain. These
+decisions reconverge immediately and never clone an arbitrary later
+continuation.
 
 MIR verification rejects:
 
@@ -424,7 +431,8 @@ inferred types, access decisions, or target details.
 
 Grammar nesting uses a shared finite budget. Exceeding it is a source
 diagnostic with recovery rather than unbounded recursion. The precise accepted
-source shape and nesting limit are owned by the
+source shape, recursive nesting limit, and separate logical-expression limit
+are owned by the
 [implemented grammar](../language/GRAMMAR.md).
 
 Optional AST nodes retain separate payload, `shared`, `?`, `!`, `is`, and

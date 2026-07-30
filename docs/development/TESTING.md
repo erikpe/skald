@@ -42,6 +42,20 @@ self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,
 ABI register/stack pressure, absent-access failure, and exactly-once
 last-owner finalization.
 
+Logical MIR verification mutations live in
+`mir/tests/logical_verification.rs`. They independently corrupt exact boolean
+types, result-carrier lifetimes and stores, selection and join edges,
+right-only reachability, path-condition declaration and reuse, right-result
+uniqueness, and failure isolation. Existing cleanup, optional, shared, array,
+view, and guard verifier modules continue to own their resource-specific
+mutations.
+
+`mir/tests/logical_stress.rs` exercises a mixed chain at the accepted logical
+depth boundary, right nesting, and effectful selected-path cleanup. It pins
+linear chain growth, the intended quadratic bound for ancestor-conditioned
+cleanup decisions, deterministic MIR and assembly, and deterministic
+over-budget syntax diagnostics.
+
 | Layer | Location | Use it for |
 |---|---|---|
 | Compiler unit tests | `crates/skald-compiler/src/` beside the owner | Private algorithms, diagnostics, exact phase dumps, MIR verification, target legality, and lowering |

@@ -380,6 +380,12 @@ as eager, cleaning one operand early, or accepting only effect-free operands
 does not implement this contract. The
 [status matrix](STATUS.md) records the implemented compiler boundary.
 
+The compiler currently accepts at most 10 nested short-circuit operations on
+one expression-tree path. This is an implementation resource limit rather than
+a change to the evaluation rules; split a larger logical expression into
+smaller statements. The exact syntax-budget behavior is documented in
+[Grammar and Syntax](GRAMMAR.md#syntax-errors-and-nesting).
+
 ## Unsupported control flow and callability
 
 Other loop forms, iteration and iterator protocols, function values, closures,

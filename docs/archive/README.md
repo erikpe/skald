@@ -54,6 +54,7 @@ Archived plans:
 - [While loops and loop exits](WHILE_LOOPS_ROADMAP.md)
 - [Cyclic module imports](CYCLIC_IMPORTS_ROADMAP.md)
 - [Eager boolean operators](EAGER_BOOLEAN_OPERATORS_ROADMAP.md)
+- [Short-circuit boolean expressions](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
 
 Resolved string-design inputs:
 

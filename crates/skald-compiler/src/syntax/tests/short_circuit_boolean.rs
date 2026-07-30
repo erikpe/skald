@@ -94,8 +94,8 @@ fn grouping_and_prefix_and_postfix_not_remain_explicit() {
 }
 
 #[test]
-fn long_ungrouped_logical_chains_do_not_consume_nesting_budget() {
-    let chain = std::iter::repeat_n("true", MAX_SYNTAX_NESTING * 3)
+fn logical_chains_at_the_logical_depth_limit_parse_without_recursion() {
+    let chain = std::iter::repeat_n("true", MAX_LOGICAL_EXPRESSION_DEPTH + 1)
         .collect::<Vec<_>>()
         .join(" && ");
     let source =
@@ -103,6 +103,39 @@ fn long_ungrouped_logical_chains_do_not_consume_nesting_budget() {
     let (_, output) = parse_text(&source);
 
     assert!(!output.has_errors());
+}
+
+#[test]
+fn excessive_logical_tree_depth_is_rejected_deterministically() {
+    let chain = std::iter::repeat_n("true", MAX_LOGICAL_EXPRESSION_DEPTH + 2)
+        .collect::<Vec<_>>()
+        .join(" && ");
+    let source =
+        format!("fn invalid() -> bool {{ return {chain}; }} fn main() -> i64 {{ return 0; }}");
+    let (_, output) = parse_text(&source);
+    let (_, repeated) = parse_text(&source);
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == EXCESSIVE_NESTING)
+            .count(),
+        1
+    );
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().message,
+        format!(
+            "logical expression depth exceeds the implementation limit of \
+             {MAX_LOGICAL_EXPRESSION_DEPTH}"
+        )
+    );
+    assert_eq!(output.ast.declarations.len(), 1);
+    assert_eq!(output.ast.declarations[0].name().text.as_str(), "main");
+    assert_eq!(
+        output.diagnostics.iter().collect::<Vec<_>>(),
+        repeated.diagnostics.iter().collect::<Vec<_>>()
+    );
 }
 
 #[test]

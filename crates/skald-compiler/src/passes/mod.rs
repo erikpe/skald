@@ -35,6 +35,30 @@ mod tests {
     }
 
     #[test]
+    fn pipeline_preserves_logical_path_and_cleanup_metadata() {
+        let mir = lower_source_to_mir(
+            "class Flag {
+               truth: bool;
+               init(truth: bool) { self.truth = truth; }
+               fn read() -> bool { return self.truth; }
+               destroy {}
+             }
+             fn make(truth: bool) -> shared Flag { return new Flag(truth); }
+             fn evaluate(left: bool) -> bool {
+               return left && make(true)->read();
+             }
+             fn main() -> i64 { return 0; }",
+        );
+        assert!(mir
+            .definitions
+            .iter()
+            .any(|definition| !definition.body.path_conditions.is_empty()));
+        let expected = mir.clone();
+
+        assert_eq!(run_mir_pipeline(mir).unwrap(), expected);
+    }
+
+    #[test]
     fn pipeline_preserves_valid_multi_block_mir() {
         let mut mir = lowered_program();
         let function = mir

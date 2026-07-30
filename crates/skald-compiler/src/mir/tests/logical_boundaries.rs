@@ -1,7 +1,7 @@
 //! Bounded lifetime, failure, and enclosing-control-flow logical expressions.
 
 use super::logical_fixtures::{
-    boolean, function_id, function_id_from_mir, logical_expression, lower_internal_logical,
+    boolean, function_id, function_id_from_mir, logical_expression, lower_fixture_logical,
     native_output, replace_return_with_logical_expressions, returned_scalar,
 };
 use super::*;
@@ -41,7 +41,7 @@ const BOUNDED_OPERANDS: &str = concat!(
 #[test]
 fn bounded_optional_views_end_inside_the_selected_operand() {
     for (right, expected) in [("payload_field", 1), ("payload_method", 0)] {
-        let selected = lower_internal_logical(
+        let selected = lower_fixture_logical(
             BOUNDED_OPERANDS,
             "evaluate",
             HirLogicalOperation::And,
@@ -75,7 +75,7 @@ fn bounded_optional_views_end_inside_the_selected_operand() {
             .expect("the selected operand must publish its scalar result");
         assert!(end < store);
 
-        let skipped = lower_internal_logical(
+        let skipped = lower_fixture_logical(
             BOUNDED_OPERANDS,
             "evaluate",
             HirLogicalOperation::Or,
@@ -89,7 +89,7 @@ fn bounded_optional_views_end_inside_the_selected_operand() {
 
 #[test]
 fn primitive_unwrap_copies_its_result_before_conditional_storage_cleanup() {
-    let mir = lower_internal_logical(
+    let mir = lower_fixture_logical(
         BOUNDED_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,
@@ -145,7 +145,7 @@ fn primitive_unwrap_copies_its_result_before_conditional_storage_cleanup() {
 
 #[test]
 fn optional_shared_unwrap_uses_a_secured_owner_not_a_bounded_payload_guard() {
-    let mir = lower_internal_logical(
+    let mir = lower_fixture_logical(
         BOUNDED_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,
@@ -633,7 +633,7 @@ fn logical_return_result_is_secured_until_after_conditional_cleanup() {
 
 #[test]
 fn verifiers_reject_leaked_guards_and_returning_failure_edges() {
-    let valid = lower_internal_logical(
+    let valid = lower_fixture_logical(
         BOUNDED_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,

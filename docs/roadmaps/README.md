@@ -6,19 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Short-Circuit Boolean Expressions Roadmap](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
-  — in progress; implement exact-`bool` `&&` and `||` with skipped effects,
-  path-dependent lifetime and cleanup, arbitrary valid operands, and every
-  current expression consumer. Verified MIR path conditions, conditional
-  full-expression cleanup planning, structured logical lowering,
-  inline-object and class-optional lifetimes, and shared/array ownership are
-  complete. Bounded optional views, selected failure paths, condition and loop
-  cleanup, return-result securing, arbitrary source operands and consumers,
-  native ABI behavior, and source-to-native goldens are also complete. The
-  next task hardens the implemented feature and closes the roadmap. The
-  roadmap depends on the completed eager boolean,
-  control-flow, lifecycle, optional, shared-ownership, array, cast, and panic
-  foundations.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 
@@ -31,9 +19,9 @@ No design proposals are currently awaiting decisions or promotion.
 ## Pending discoveries
 
 - [Short-Circuit Boolean Expressions Discoveries](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_DISCOVERIES.md)
-  — split path propagation from transition and use checks in the large
-  optional-initialization and shared-ownership verifiers after the
-  short-circuit representation has stabilized.
+  — compact equivalent path-state alternatives before raising the logical
+  expression-depth limit, then split propagation from transition and use
+  checks in the large optional-initialization and shared-ownership verifiers.
 
 ## Implementation baseline
 

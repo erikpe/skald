@@ -13,6 +13,7 @@ mod class;
 mod declaration;
 mod expression;
 mod interface;
+mod logical_depth;
 mod module;
 mod recovery;
 mod statement;
@@ -32,11 +33,18 @@ pub const MISPLACED_IMPORT: &str = "PAR012";
 pub const INVALID_VISIBILITY: &str = "PAR013";
 pub const INVALID_COMPARISON: &str = "PAR014";
 
-/// Maximum number of simultaneously active recursive syntax constructs.
+/// Maximum recursive grammar depth.
 ///
 /// A function body consumes one level. Grouped and unary expressions, calls,
 /// and nested blocks consume another level while their contents are parsed.
 pub const MAX_SYNTAX_NESTING: usize = 128;
+
+/// Maximum number of nested short-circuit operations on one expression path.
+///
+/// Logical chains are parsed iteratively, so this is checked separately after
+/// parsing. The verifier retains selected path conditions until their shared
+/// full-expression boundary; this cap bounds that path-sensitive work.
+pub const MAX_LOGICAL_EXPRESSION_DEPTH: usize = 10;
 
 const STORED_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -83,6 +91,7 @@ struct Parser<'source> {
     current: usize,
     diagnostics: Diagnostics,
     nesting_depth: usize,
+    expression_parse_depth: usize,
     brace_depth: usize,
     class_depth: usize,
     recovering_from_excessive_nesting: bool,
@@ -96,6 +105,7 @@ impl<'source> Parser<'source> {
             current: 0,
             diagnostics: Diagnostics::new(),
             nesting_depth: 0,
+            expression_parse_depth: 0,
             brace_depth: 0,
             class_depth: 0,
             recovering_from_excessive_nesting: false,
@@ -308,6 +318,25 @@ impl<'source> Parser<'source> {
             )
             .with_primary_label(span, "this construct exceeds the nesting limit")
             .with_note("split deeply nested expressions or blocks into smaller statements"),
+        );
+        self.recovering_from_excessive_nesting = true;
+    }
+
+    fn report_excessive_logical_depth(&mut self, span: Span) {
+        if self.recovering_from_excessive_nesting {
+            return;
+        }
+
+        self.diagnostics.push(
+            Diagnostic::error(
+                EXCESSIVE_NESTING,
+                format!(
+                    "logical expression depth exceeds the implementation limit of \
+                     {MAX_LOGICAL_EXPRESSION_DEPTH}"
+                ),
+            )
+            .with_primary_label(span, "this logical expression exceeds the depth limit")
+            .with_note("split the logical expression into smaller statements"),
         );
         self.recovering_from_excessive_nesting = true;
     }

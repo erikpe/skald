@@ -1,5 +1,5 @@
 use super::logical_fixtures::{
-    function_id, function_id_from_mir, lower_internal_logical, native_output,
+    function_id, function_id_from_mir, lower_fixture_logical, native_output,
     replace_return_with_logical_expressions, returned_scalar, returned_scalar_mut,
 };
 use super::*;
@@ -41,7 +41,7 @@ const OBJECT_OPERANDS: &str = concat!(
 #[test]
 fn selected_inline_object_receivers_live_until_conditional_cleanup() {
     for (operation, expected) in [(HirLogicalOperation::And, 0), (HirLogicalOperation::Or, 1)] {
-        let mir = lower_internal_logical(OBJECT_OPERANDS, "evaluate", operation, "left", "right");
+        let mir = lower_fixture_logical(OBJECT_OPERANDS, "evaluate", operation, "left", "right");
         verify_mir(&mir).unwrap();
         let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
         assert_eq!(run_native_assembly(&assembly).code(), Some(expected));
@@ -93,7 +93,7 @@ const OBSERVABLE_OBJECT_OPERANDS: &str = concat!(
 
 #[test]
 fn inline_object_destruction_observes_skip_and_reverse_completion_order() {
-    let selected = lower_internal_logical(
+    let selected = lower_fixture_logical(
         OBSERVABLE_OBJECT_OPERANDS,
         "evaluate",
         HirLogicalOperation::And,
@@ -104,7 +104,7 @@ fn inline_object_destruction_observes_skip_and_reverse_completion_order() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"1\n2\n2\n1\n");
 
-    let skipped = lower_internal_logical(
+    let skipped = lower_fixture_logical(
         OBSERVABLE_OBJECT_OPERANDS,
         "evaluate",
         HirLogicalOperation::Or,
@@ -339,7 +339,7 @@ fn conditional_class_optional_arguments_publish_only_on_the_selected_path() {
             b"".as_slice(),
         ),
     ] {
-        let mir = lower_internal_logical(
+        let mir = lower_fixture_logical(
             OBSERVABLE_OPTIONAL_OPERANDS,
             "evaluate",
             operation,

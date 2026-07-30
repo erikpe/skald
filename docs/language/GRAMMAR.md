@@ -640,8 +640,17 @@ to 128 levels. Class bodies, function and class-member bodies, nested blocks,
 grouped expressions, unary expressions, primitive and object casts, nested
 calls, and postfix chains share this budget. Recursive array type grouping and
 postfix array dimensions use the same budget.
-Exceeding it reports `PAR005`, omits the affected declaration from the partial
-syntax tree, and resumes at a later top-level declaration when possible.
+
+Separately, one expression-tree path may contain at most 10 nested
+short-circuit operations. A flat left-associated chain can therefore contain
+up to 11 operands. Logical chains are parsed iteratively, but their selected
+path conditions remain live to a shared full-expression boundary; the smaller
+logical limit bounds path-sensitive verification and conditional-cleanup graph
+construction.
+
+Exceeding either limit reports `PAR005`, omits the affected declaration from
+the partial syntax tree, and resumes at a later top-level declaration when
+possible.
 
 Exact synchronization mechanics and the partial tree retained after erroneous
 input are compiler behavior, not additional grammar productions. Later

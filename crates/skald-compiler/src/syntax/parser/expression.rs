@@ -4,6 +4,28 @@ use super::*;
 
 impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expression> {
+        let outermost = self.expression_parse_depth == 0;
+        self.expression_parse_depth += 1;
+        let expression = self.parse_expression_shape();
+        self.expression_parse_depth -= 1;
+
+        if outermost
+            && expression
+                .as_ref()
+                .is_some_and(super::logical_depth::exceeds_limit)
+        {
+            let span = expression
+                .as_ref()
+                .expect("depth check requires an expression")
+                .span();
+            self.report_excessive_logical_depth(span);
+            self.recover_from_excessive_nesting();
+            return None;
+        }
+        expression
+    }
+
+    fn parse_expression_shape(&mut self) -> Option<Expression> {
         let source = self.parse_additive()?;
         let first = self.parse_expression_suffix(source)?;
         if !self.at_any(&[TokenKind::AndAnd, TokenKind::OrOr]) {

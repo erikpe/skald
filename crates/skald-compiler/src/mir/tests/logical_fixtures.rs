@@ -126,7 +126,7 @@ pub(super) fn logical_expression(
     }
 }
 
-pub(super) fn lower_internal_logical(
+pub(super) fn lower_fixture_logical(
     source: &str,
     destination: &str,
     operation: HirLogicalOperation,
