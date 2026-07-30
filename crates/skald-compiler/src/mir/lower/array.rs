@@ -344,7 +344,12 @@ impl BodyLowerer<'_> {
             HirExpressionKind::FieldRead(place) => self.lower_field_place(place),
             HirExpressionKind::ArrayElement(element) => self.lower_array_element_place(element),
             HirExpressionKind::Grouped(inner) => self.lower_array_expression_place(inner),
-            HirExpressionKind::ArrayConstruction(_) | HirExpressionKind::ArraySlice(_) => {
+            HirExpressionKind::DirectCall { .. }
+            | HirExpressionKind::StaticCall { .. }
+            | HirExpressionKind::MethodCall { .. }
+            | HirExpressionKind::InterfaceCall { .. }
+            | HirExpressionKind::ArrayConstruction(_)
+            | HirExpressionKind::ArraySlice(_) => {
                 MirPlace::base(self.lower_array_produced_expression(expression))
             }
             _ => invalid_array_hir(),

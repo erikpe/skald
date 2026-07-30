@@ -1,118 +1,16 @@
+use super::logical_fixtures::{
+    function_id, function_id_from_mir, lower_internal_logical, native_output,
+    replace_return_with_logical_expressions, returned_scalar, returned_scalar_mut,
+};
 use super::*;
 use crate::{
     backend::{emit_assembly, Target},
     hir::{
-        HirCallArgument, HirExpression, HirExpressionKind, HirFunctionDefinition,
-        HirLogicalExpression, HirLogicalOperation, HirOptionalOperand, HirPresenceTestKind,
-        HirProgram, HirReturnValue, HirStatement, Type,
+        HirCallArgument, HirExpression, HirExpressionKind, HirLogicalExpression,
+        HirLogicalOperation, HirOptionalOperand, HirPresenceTestKind, HirProgram, Type,
     },
-    test_support::{run_native_assembly, run_native_assembly_output, type_check_source},
+    test_support::{run_native_assembly, type_check_source},
 };
-
-fn function_id(program: &HirProgram, name: &str) -> FunctionId {
-    program
-        .declarations
-        .iter()
-        .find(|declaration| declaration.name == name)
-        .map(|declaration| declaration.id)
-        .unwrap_or_else(|| panic!("fixture function `{name}` must be declared"))
-}
-
-fn returned_scalar(definition: &HirFunctionDefinition) -> &HirExpression {
-    let HirStatement::Return(statement) = definition.body.statements.last().unwrap() else {
-        panic!("expected final return statement");
-    };
-    let HirReturnValue::Scalar(expression) = statement
-        .value
-        .as_ref()
-        .expect("expected scalar return value")
-    else {
-        panic!("expected scalar return value");
-    };
-    expression
-}
-
-fn returned_scalar_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {
-    let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
-        panic!("expected final return statement");
-    };
-    let HirReturnValue::Scalar(expression) = statement
-        .value
-        .as_mut()
-        .expect("expected scalar return value")
-    else {
-        panic!("expected scalar return value");
-    };
-    expression
-}
-
-fn replace_return_with_logical(
-    program: &mut HirProgram,
-    destination: &str,
-    operation: HirLogicalOperation,
-    left: &str,
-    right: &str,
-) {
-    let left = returned_scalar(
-        program
-            .definitions
-            .get(function_id(program, left))
-            .expect("left fixture function must have a body"),
-    )
-    .clone();
-    let right = returned_scalar(
-        program
-            .definitions
-            .get(function_id(program, right))
-            .expect("right fixture function must have a body"),
-    )
-    .clone();
-    replace_return_with_logical_expressions(program, destination, operation, left, right);
-}
-
-fn replace_return_with_logical_expressions(
-    program: &mut HirProgram,
-    destination: &str,
-    operation: HirLogicalOperation,
-    left: HirExpression,
-    right: HirExpression,
-) {
-    let destination = function_id(program, destination);
-    let span = returned_scalar(
-        program
-            .definitions
-            .get(destination)
-            .expect("destination fixture function must have a body"),
-    )
-    .span;
-    *returned_scalar_mut(
-        program
-            .definitions
-            .get_mut_for_test(destination)
-            .expect("destination fixture function must have a body"),
-    ) = HirExpression {
-        kind: HirExpressionKind::Logical(Box::new(HirLogicalExpression::new(
-            operation, left, right,
-        ))),
-        ty: Type::Bool,
-        span,
-    };
-}
-
-fn lower_internal_logical(
-    source: &str,
-    destination: &str,
-    operation: HirLogicalOperation,
-    left: &str,
-    right: &str,
-) -> MirProgram {
-    let checked = type_check_source(source);
-    let mut hir = checked
-        .hir
-        .unwrap_or_else(|| panic!("fixture must type-check: {:?}", checked.diagnostics));
-    replace_return_with_logical(&mut hir, destination, operation, left, right);
-    lower_hir(&hir)
-}
 
 const OBJECT_OPERANDS: &str = concat!(
     "class Trace {\n",
@@ -164,42 +62,6 @@ fn selected_inline_object_receivers_live_until_conditional_cleanup() {
             2
         );
     }
-}
-
-fn function_id_from_mir(program: &MirProgram, name: &str) -> FunctionId {
-    program
-        .declarations
-        .iter()
-        .find(|declaration| declaration.name == name)
-        .map(|declaration| declaration.id)
-        .unwrap_or_else(|| panic!("fixture function `{name}` must be declared"))
-}
-
-fn println_digit_stub() -> &'static str {
-    concat!(
-        ".text\n",
-        ".globl ska_rt_println_i64\n",
-        ".type ska_rt_println_i64, @function\n",
-        "ska_rt_println_i64:\n",
-        "    sub rsp, 8\n",
-        "    add dil, 48\n",
-        "    mov byte ptr [rsp], dil\n",
-        "    mov byte ptr [rsp + 1], 10\n",
-        "    mov eax, 1\n",
-        "    mov edi, 1\n",
-        "    mov rsi, rsp\n",
-        "    mov edx, 2\n",
-        "    syscall\n",
-        "    add rsp, 8\n",
-        "    ret\n",
-        ".size ska_rt_println_i64, .-ska_rt_println_i64\n",
-    )
-}
-
-fn native_output(mir: &MirProgram) -> std::process::Output {
-    let mut assembly = emit_assembly(Target::X86_64SysV, mir).unwrap();
-    assembly.push_str(println_digit_stub());
-    run_native_assembly_output(&assembly)
 }
 
 const OBSERVABLE_OBJECT_OPERANDS: &str = concat!(

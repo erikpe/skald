@@ -79,7 +79,7 @@ impl Verifier<'_> {
                             reset_storage_places(state, operation.storage);
                         }
                         MirInstruction::StorageDead(operation) => {
-                            require_finished_class_optional_storage(
+                            require_finished_owned_optional_storage(
                                 self,
                                 function,
                                 block,
@@ -129,6 +129,7 @@ impl Verifier<'_> {
                                 &initialize.source,
                                 state,
                             );
+                            consume_moved_optional_shared_source(&initialize.source, state);
                             if !state.insert(initialize.destination.clone()) {
                                 self.block_error(
                                     function.callable(),
@@ -153,15 +154,19 @@ impl Verifier<'_> {
                                 &assignment.source,
                                 state,
                             );
+                            consume_moved_optional_shared_source(&assignment.source, state);
                         }
-                        MirInstruction::OptionalSharedCleanup(cleanup) => require_initialized(
-                            self,
-                            function,
-                            block,
-                            &cleanup.destination,
-                            state,
-                            "optional shared cleanup destination",
-                        ),
+                        MirInstruction::OptionalSharedCleanup(cleanup) => {
+                            require_initialized(
+                                self,
+                                function,
+                                block,
+                                &cleanup.destination,
+                                state,
+                                "optional shared cleanup destination",
+                            );
+                            state.remove(&cleanup.destination);
+                        }
                         MirInstruction::ClassOptionalInitialize(initialize) => {
                             require_initialized_class_source(
                                 self,
@@ -228,6 +233,13 @@ impl Verifier<'_> {
                                 &call.arguments,
                                 state,
                             );
+                            consume_optional_shared_arguments(
+                                self,
+                                function,
+                                block,
+                                &call.arguments,
+                                state,
+                            );
                             if let Some(result) = call.shared_result {
                                 if function.storage(result).is_some_and(|storage| {
                                     matches!(storage.ty, MirType::OptionalShared(_))
@@ -272,6 +284,13 @@ impl Verifier<'_> {
                                 &initialize.arguments,
                                 state,
                             );
+                            consume_optional_shared_arguments(
+                                self,
+                                function,
+                                block,
+                                &initialize.arguments,
+                                state,
+                            );
                             initialize_optional_fields(
                                 self.program,
                                 initialize.target.class(),
@@ -281,6 +300,13 @@ impl Verifier<'_> {
                         }
                         MirInstruction::SharedInitialize(initialize) => {
                             consume_class_optional_arguments(
+                                self,
+                                function,
+                                block,
+                                &initialize.arguments,
+                                state,
+                            );
+                            consume_optional_shared_arguments(
                                 self,
                                 function,
                                 block,
@@ -582,10 +608,18 @@ fn apply_initializations(
                 state.remove(&cleanup.destination);
             }
             MirInstruction::OptionalSharedInitialize(initialize) => {
+                consume_moved_optional_shared_source(&initialize.source, state);
                 state.insert(initialize.destination.clone());
+            }
+            MirInstruction::OptionalSharedAssign(assignment) => {
+                consume_moved_optional_shared_source(&assignment.source, state);
+            }
+            MirInstruction::OptionalSharedCleanup(cleanup) => {
+                state.remove(&cleanup.destination);
             }
             MirInstruction::Call(call) => {
                 transfer_class_optional_arguments(function, &call.arguments, state);
+                transfer_optional_shared_arguments(function, &call.arguments, state);
                 if let Some(result) = call.shared_result {
                     if function
                         .storage(result)
@@ -614,6 +648,7 @@ fn apply_initializations(
             }
             MirInstruction::Initialize(initialize) => {
                 transfer_class_optional_arguments(function, &initialize.arguments, state);
+                transfer_optional_shared_arguments(function, &initialize.arguments, state);
                 initialize_optional_fields(
                     program,
                     initialize.target.class(),
@@ -623,6 +658,7 @@ fn apply_initializations(
             }
             MirInstruction::SharedInitialize(initialize) => {
                 transfer_class_optional_arguments(function, &initialize.arguments, state);
+                transfer_optional_shared_arguments(function, &initialize.arguments, state);
             }
             MirInstruction::CopyConstruct(copy) => {
                 initialize_optional_fields(program, copy.class, &copy.destination, state)
@@ -636,24 +672,26 @@ fn reset_storage_places(state: &mut HashSet<MirPlace>, storage: crate::mir::Stor
     state.retain(|place| place.base.storage() != storage);
 }
 
-fn require_finished_class_optional_storage(
+fn require_finished_owned_optional_storage(
     verifier: &mut Verifier<'_>,
     function: MirDefinitionRef<'_>,
     block: &MirBasicBlock,
     storage: crate::mir::StorageId,
     state: &HashSet<MirPlace>,
 ) {
-    if function
-        .storage(storage)
-        .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
-        && state.contains(&MirPlace::base(storage))
-    {
-        verifier.block_error(
-            function.callable(),
-            block.id,
-            "initialized class optional reaches storage-dead without cleanup or ownership transfer",
-        );
+    if !state.contains(&MirPlace::base(storage)) {
+        return;
     }
+    let message = match function.storage(storage).map(|storage| storage.ty) {
+        Some(MirType::OptionalClass(_)) => {
+            "initialized class optional reaches storage-dead without cleanup or ownership transfer"
+        }
+        Some(MirType::OptionalShared(_)) => {
+            "initialized optional shared reaches storage-dead without cleanup or ownership transfer"
+        }
+        _ => return,
+    };
+    verifier.block_error(function.callable(), block.id, message);
 }
 
 fn consume_class_optional_arguments(
@@ -685,6 +723,36 @@ fn consume_class_optional_arguments(
     }
 }
 
+fn consume_optional_shared_arguments(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    arguments: &[MirArgument],
+    state: &mut HashSet<MirPlace>,
+) {
+    for argument in arguments {
+        let MirArgument::SharedOwner(storage) = argument else {
+            continue;
+        };
+        if !function
+            .storage(*storage)
+            .is_some_and(|entry| matches!(entry.ty, MirType::OptionalShared(_)))
+        {
+            continue;
+        }
+        let place = MirPlace::base(*storage);
+        require_initialized(
+            verifier,
+            function,
+            block,
+            &place,
+            state,
+            "optional shared value argument",
+        );
+        state.remove(&place);
+    }
+}
+
 fn transfer_class_optional_arguments(
     function: MirDefinitionRef<'_>,
     arguments: &[MirArgument],
@@ -699,6 +767,24 @@ fn transfer_class_optional_arguments(
             .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
         {
             state.remove(place);
+        }
+    }
+}
+
+fn transfer_optional_shared_arguments(
+    function: MirDefinitionRef<'_>,
+    arguments: &[MirArgument],
+    state: &mut HashSet<MirPlace>,
+) {
+    for argument in arguments {
+        let MirArgument::SharedOwner(storage) = argument else {
+            continue;
+        };
+        if function
+            .storage(*storage)
+            .is_some_and(|entry| matches!(entry.ty, MirType::OptionalShared(_)))
+        {
+            state.remove(&MirPlace::base(*storage));
         }
     }
 }
@@ -826,6 +912,15 @@ fn require_initialized_optional_shared_source(
             state,
             "optional shared copy source",
         );
+    }
+}
+
+fn consume_moved_optional_shared_source(
+    source: &MirOptionalSharedSource,
+    state: &mut HashSet<MirPlace>,
+) {
+    if let MirOptionalSharedSource::Move(storage) = source {
+        state.remove(&MirPlace::base(*storage));
     }
 }
 

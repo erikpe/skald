@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 through SC3 are complete and SC4 is next.
+Status: in progress; SC0 through SC4 are complete and SC5 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -189,7 +189,7 @@ unimplemented.
 - [x] SC1 — Plan conditional full-expression cleanup
 - [x] SC2 — Lower structured logical HIR to selected boolean control flow
 - [x] SC3 — Preserve path-dependent object and optional-object lifetimes
-- [ ] SC4 — Preserve path-dependent shared and array ownership
+- [x] SC4 — Preserve path-dependent shared and array ownership
 - [ ] SC5 — Compose bounded views, guards, failures, and enclosing control flow
 - [ ] SC6 — Add source syntax and exact type selection behind the completion gate
 - [ ] SC7 — Enable arbitrary valid operands through every expression consumer
@@ -381,22 +381,22 @@ and observable reverse cleanup, while source activation remains gated.
 **Purpose:** Complete conditional ownership for retained resources, backing
 anchors, and aggregates whose cleanup is not a single inline destruction.
 
-- [ ] Carry shared-owner retain, release, call-result, receiver, argument, and
+- [x] Carry shared-owner retain, release, call-result, receiver, argument, and
       full-expression temporary state under path conditions.
-- [ ] Carry optional shared-owner unwrap and its secured resulting owner;
+- [x] Carry optional shared-owner unwrap and its secured resulting owner;
       skipping the unwrap must perform no presence check, retain, or release.
-- [ ] Carry arrays, element initialization state, array cleanup, and hidden
+- [x] Carry arrays, element initialization state, array cleanup, and hidden
       array anchors under conditional completion.
-- [ ] Preserve checked object-place casts and their backing shared owners or
+- [x] Preserve checked object-place casts and their backing shared owners or
       anchors for the existing consuming full-expression lifetime.
-- [ ] Preserve boolean field, method, type-test, presence-test, and array
+- [x] Preserve boolean field, method, type-test, presence-test, and array
       element results obtained through shared, optional-shared, array, or
       checked-place paths.
-- [ ] Ensure view end precedes the matching anchor release and that nested
+- [x] Ensure view end precedes the matching anchor release and that nested
       selected paths cannot release an owner still needed by a later consumer.
-- [ ] Extend shared-ownership, array, anchor, checked-view, storage, and cleanup
+- [x] Extend shared-ownership, array, anchor, checked-view, storage, and cleanup
       verifiers to reason about explicit conditional state.
-- [ ] Keep retain/release, array cleanup, and anchor operations absent from
+- [x] Keep retain/release, array cleanup, and anchor operations absent from
       every skipped path and ordered deterministically on selected paths.
 
 **Tests:** Internal HIR-to-native matrices for shared-returning calls,

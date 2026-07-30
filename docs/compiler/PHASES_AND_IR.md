@@ -319,24 +319,28 @@ established before this cleanup graph, remain live through it, and are ended
 only after selected-path resource state is compatible. Child activation
 epochs end inside their active parent path, followed by root activations.
 
-Storage-lifetime, inline-object cleanup, and exact-class optional
-definite-initialization verification retain distinct states for the declared
-path alternatives. Conditional cleanup must destroy exactly the selected
-temporaries in reverse completion order, leave the skipped alternative
-untouched, consume selected optional initialization state, and converge before
-activation storage
-dies. Cleanup history for storage whose epoch has ended may differ between
-alternatives; live objects, outstanding cleanup, argument ownership, and
-temporary order may not. Backend lowering sees only the resulting ordinary
-loads, branches, cleanup instructions, lifetime markers, and jumps.
+Storage-lifetime, inline-object cleanup, optional definite-initialization,
+shared-owner, checked-view, array-owner, and array-anchor verification retain
+distinct states for the declared path alternatives. Conditional cleanup must
+destroy or release exactly the selected temporaries in reverse completion
+order, leave the skipped alternative untouched, consume selected optional and
+aggregate ownership state, and converge before activation storage dies.
+Cleanup history for storage whose epoch has ended may differ between
+alternatives; live objects and owners, checked views, outstanding cleanup,
+array backings and anchors, argument ownership, and temporary order may not.
+Backend lowering sees only the resulting ordinary loads, branches, cleanup
+instructions, lifetime markers, and jumps.
 
 Dedicated exact-`bool` logical HIR and its primitive/call-capable MIR lowering
 are implemented for internal construction. Logical metadata retains the
 operation, selection path, right and short regions, result carrier, and join so
 verification can reject malformed control-flow shapes while the backend stays
 generic. Right-operand completions inherit the selected logical condition;
-left completions retain the enclosing condition. Source construction and the
-ownership-heavy operand families remain gated for their later roadmap tasks.
+left completions retain the enclosing condition. Internal operands may already
+complete inline objects, class or shared optionals, ordinary shared owners,
+checked shared-backed places, arrays, and array anchors. Source construction,
+bounded optional-view and failure composition, and the final every-consumer
+surface remain gated for their later roadmap tasks.
 
 MIR verification rejects:
 

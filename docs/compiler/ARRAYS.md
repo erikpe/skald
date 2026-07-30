@@ -357,6 +357,14 @@ secures one ordinary non-null owner. Each anchor remains live through bound
 evaluation, right-side evaluation, selected element lifecycle work, and the
 complete call or immediate checked consumer.
 
+Within the internal short-circuit MIR representation, produced arrays,
+partially initialized backings, element lifecycle state, aliases, and anchors
+remain attached to the path condition that established them. Conditional
+full-expression cleanup releases only the selected arrays and ends only the
+selected anchors, in reverse completion order; the skipped alternative
+performs no allocation, bounds check, element operation, release, or anchor
+operation.
+
 ## Target layout direction
 
 Exact descriptor and allocation bytes are target implementation details, but

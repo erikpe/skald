@@ -2,12 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use super::super::{
     super::model::{
-        MirArgument, MirArrayFailure, MirArrayInstruction, MirCall, MirCallReceiver,
+        BlockId, MirArgument, MirArrayFailure, MirArrayInstruction, MirCall, MirCallReceiver,
         MirDefinitionRef, MirInstruction, MirPlace, MirPlaceProjection, MirStorageKind,
         MirTerminator, MirType, StorageId,
     },
     context::Verifier,
     dataflow::ForwardDataflow,
+    path_state::{condition_reads, PathStates},
 };
 
 impl Verifier<'_> {
@@ -33,44 +34,62 @@ impl Verifier<'_> {
                 _ => None,
             })
             .collect();
+        let condition_reads = condition_reads(function);
+        let activation_conditions: HashMap<_, _> = function
+            .path_conditions()
+            .iter()
+            .map(|condition| (condition.activation, condition.id))
+            .collect();
         let mut flow = ForwardDataflow::new(function.callable(), function.body().blocks.len());
-        flow.seed(function.body().entry, ArrayOwnerState::default());
+        flow.seed(
+            function.body().entry,
+            PathStates::initial(ArrayOwnerState::default()),
+        );
         let mut reported_joins = HashSet::new();
 
         loop {
-            while let Some((block_id, mut state)) = flow.pop() {
+            while let Some((block_id, mut states)) = flow.pop() {
                 let Some(block) = function.block(block_id) else {
                     continue;
                 };
                 for instruction in &block.instructions {
-                    if let MirInstruction::Call(call) = instruction {
-                        self.verify_array_alias_dependencies(
-                            function,
-                            block.id,
-                            call,
-                            &state,
-                            &anchor_owners,
-                        );
-                    }
-                    if let MirInstruction::Array(MirArrayInstruction::AliasBind {
-                        anchor,
-                        source,
-                        ..
-                    }) = instruction
-                    {
-                        let compatible = state.anchors.contains(anchor)
-                            && anchor_owners
-                                .get(anchor)
-                                .is_some_and(|owner| array_anchor_covers(*anchor, owner, source));
-                        if !compatible {
-                            self.block_error(
-                            function.callable(),
-                            block.id,
-                            "array alias binding requires one compatible live backing or owner anchor",
-                        );
+                    for state in states.states_mut() {
+                        if let MirInstruction::Call(call) = instruction {
+                            self.verify_array_alias_dependencies(
+                                function,
+                                block.id,
+                                call,
+                                state,
+                                &anchor_owners,
+                            );
                         }
+                        if let MirInstruction::Array(MirArrayInstruction::AliasBind {
+                            anchor,
+                            source,
+                            ..
+                        }) = instruction
+                        {
+                            let compatible = state.anchors.contains(anchor)
+                                && anchor_owners.get(anchor).is_some_and(|owner| {
+                                    array_anchor_covers(*anchor, owner, source)
+                                });
+                            if !compatible {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "array alias binding requires one compatible live backing or owner anchor",
+                                );
+                            }
+                        }
+                        state.apply(self, function, block.id, instruction);
                     }
-                    state.apply(self, function, block.id, instruction);
+                    self.end_condition_at_storage_death(
+                        function,
+                        block.id,
+                        instruction,
+                        &activation_conditions,
+                        &mut states,
+                    );
                 }
 
                 let Some(terminator) = &block.terminator else {
@@ -87,24 +106,26 @@ impl Verifier<'_> {
                             function,
                             block.id,
                             *success_target,
-                            &state,
+                            &states,
                             &mut flow,
                             &mut reported_joins,
                         );
-                        let mut failure_state = state.clone();
+                        let mut failure_states = states.clone();
                         if let Some(MirInstruction::Array(MirArrayInstruction::Allocate {
                             backing,
                             ..
                         })) = block.instructions.last()
                         {
-                            failure_state.backings.remove(backing);
-                            failure_state.completed_backings.remove(backing);
+                            for state in failure_states.states_mut() {
+                                state.backings.remove(backing);
+                                state.completed_backings.remove(backing);
+                            }
                         }
                         self.merge_array_owner_state(
                             function,
                             block.id,
                             *failure_target,
-                            &failure_state,
+                            &failure_states,
                             &mut flow,
                             &mut reported_joins,
                         );
@@ -119,17 +140,19 @@ impl Verifier<'_> {
                             function,
                             block.id,
                             *body_target,
-                            &state,
+                            &states,
                             &mut flow,
                             &mut reported_joins,
                         );
-                        let mut complete_state = state.clone();
-                        complete_state.completed_backings.insert(*backing);
+                        let mut complete_states = states.clone();
+                        for state in complete_states.states_mut() {
+                            state.completed_backings.insert(*backing);
+                        }
                         self.merge_array_owner_state(
                             function,
                             block.id,
                             *complete_target,
-                            &complete_state,
+                            &complete_states,
                             &mut flow,
                             &mut reported_joins,
                         );
@@ -137,28 +160,49 @@ impl Verifier<'_> {
                     MirTerminator::Return { .. }
                     | MirTerminator::ReturnShared { .. }
                     | MirTerminator::ReturnOptionalShared { .. } => {
-                        if !state.backings.is_empty()
-                            || !state.completed_backings.is_empty()
-                            || !state.produced.is_empty()
-                            || !state.anchors.is_empty()
-                            || !state.aliases.is_empty()
-                            || !state.slice_checks.is_empty()
-                        {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "array owner state must be fully consumed at normal return",
-                            );
+                        for state in states.states_mut() {
+                            if !state.backings.is_empty()
+                                || !state.completed_backings.is_empty()
+                                || !state.produced.is_empty()
+                                || !state.anchors.is_empty()
+                                || !state.aliases.is_empty()
+                                || !state.slice_checks.is_empty()
+                            {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "array owner state must be fully consumed at normal return",
+                                );
+                            }
                         }
                     }
                     MirTerminator::Terminate { .. } => {}
+                    MirTerminator::Branch {
+                        condition,
+                        true_target,
+                        false_target,
+                        ..
+                    } if condition_reads.contains_key(condition) => {
+                        let path_condition = condition_reads[condition];
+                        for (target, active) in [(*true_target, true), (*false_target, false)] {
+                            let (selected, _) = states.select(path_condition, active);
+                            self.merge_array_owner_state(
+                                function,
+                                block.id,
+                                target,
+                                &selected,
+                                &mut flow,
+                                &mut reported_joins,
+                            );
+                        }
+                    }
                     _ => {
                         for target in terminator.successors() {
                             self.merge_array_owner_state(
                                 function,
                                 block.id,
                                 target,
-                                &state,
+                                &states,
                                 &mut flow,
                                 &mut reported_joins,
                             );
@@ -166,7 +210,10 @@ impl Verifier<'_> {
                     }
                 }
             }
-            if !flow.seed_next_component(&function.body().blocks, ArrayOwnerState::default()) {
+            if !flow.seed_next_component(
+                &function.body().blocks,
+                PathStates::initial(ArrayOwnerState::default()),
+            ) {
                 break;
             }
         }
@@ -218,22 +265,67 @@ impl Verifier<'_> {
     fn merge_array_owner_state(
         &mut self,
         function: MirDefinitionRef<'_>,
-        predecessor: crate::mir::BlockId,
-        target: crate::mir::BlockId,
-        state: &ArrayOwnerState,
-        flow: &mut ForwardDataflow<ArrayOwnerState>,
-        reported_joins: &mut HashSet<crate::mir::BlockId>,
+        predecessor: BlockId,
+        target: BlockId,
+        states: &PathStates<ArrayOwnerState>,
+        flow: &mut ForwardDataflow<PathStates<ArrayOwnerState>>,
+        reported_joins: &mut HashSet<BlockId>,
     ) {
-        flow.merge(target, state, |existing, incoming| {
-            if existing != incoming && reported_joins.insert(target) {
-                self.block_error(
-                    function.callable(),
-                    predecessor,
-                    format!("array owner state disagrees at control-flow join {target}"),
-                );
-            }
-            false
+        if states.is_empty() {
+            return;
+        }
+        let selected = states
+            .on_edge(function, predecessor, target)
+            .unwrap_or_else(|_| states.clone());
+        flow.merge(target, &selected, |existing, incoming| {
+            existing.merge(incoming, |_existing, _incoming| {
+                if reported_joins.insert(target) {
+                    self.block_error(
+                        function.callable(),
+                        predecessor,
+                        format!("array owner state disagrees at control-flow join {target}"),
+                    );
+                }
+            })
         });
+    }
+
+    fn end_condition_at_storage_death(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        instruction: &MirInstruction,
+        activation_conditions: &HashMap<StorageId, crate::mir::PathConditionId>,
+        states: &mut PathStates<ArrayOwnerState>,
+    ) {
+        let MirInstruction::StorageDead(operation) = instruction else {
+            return;
+        };
+        let Some(condition) = activation_conditions.get(&operation.storage).copied() else {
+            return;
+        };
+        let mut incompatible = false;
+        let missing = states.end_condition(condition, |_existing, _incoming| {
+            incompatible = true;
+        });
+        if incompatible {
+            self.block_error(
+                function.callable(),
+                block,
+                format!(
+                    "conditional array owner state remains when path condition {condition} ends"
+                ),
+            );
+        }
+        if missing {
+            self.block_error(
+                function.callable(),
+                block,
+                format!(
+                    "path condition {condition} ends outside its selected array-ownership region"
+                ),
+            );
+        }
     }
 }
 

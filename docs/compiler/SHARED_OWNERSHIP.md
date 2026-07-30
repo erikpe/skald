@@ -426,6 +426,13 @@ explicit `SharedAnchor` storage and copy/adopt/release lifetime operations.
 Neither phase performs arbitrary object-graph search or a general exclusivity
 borrow analysis.
 
+Within the internal short-circuit MIR representation, owner, allocation,
+retain/release, checked-view, and hidden-anchor state remains separated by the
+declared path condition until conditional full-expression cleanup converges.
+The skipped alternative acquires and releases no owner. A selected checked
+view must still end before its matching owner or anchor is released, including
+when nested logical selections establish several owners before cleanup.
+
 ## Minimal C runtime ABI
 
 Runtime ABI version 6 carries its version-specific marker, the common panic

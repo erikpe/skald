@@ -152,7 +152,9 @@ failure successor is an explicit empty block ending in
 initialized wrapper storage at ordinary CFG joins and deliberately does not
 treat dynamic presence as a static fact. Across a declared MIR path condition,
 it instead retains selected alternatives until their conditional storage and
-cleanup have converged.
+cleanup have converged. Owning exact-class and optional-shared cleanup or value
+transfer consumes the selected wrapper state; a skipped alternative neither
+initializes nor releases it.
 
 Exact-class optional MIR additionally records conditional initialization,
 publication after destination-directed construction, copy construction,
