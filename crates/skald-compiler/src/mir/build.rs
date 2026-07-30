@@ -4,7 +4,10 @@ use std::fmt;
 
 use crate::{identity::CallableId, source::Span};
 
-use super::{BlockId, MirBasicBlock, MirBody, MirInstruction, MirTerminator};
+use super::{
+    BlockId, MirBasicBlock, MirBody, MirInstruction, MirPathCondition, MirTerminator,
+    PathConditionId,
+};
 
 /// A small stateful builder that keeps block allocation and termination
 /// invariants in one place. Blocks are allocated in stable ID order; changing
@@ -13,6 +16,7 @@ pub(super) struct MirBodyBuilder {
     callable: CallableId,
     entry: BlockId,
     blocks: Vec<MirBasicBlock>,
+    path_conditions: Vec<MirPathCondition>,
     current: BlockId,
 }
 
@@ -48,6 +52,7 @@ impl MirBodyBuilder {
                 terminator: None,
                 span: entry_span,
             }],
+            path_conditions: Vec::new(),
             current: entry,
         }
     }
@@ -69,6 +74,21 @@ impl MirBodyBuilder {
             terminator: None,
             span,
         });
+        id
+    }
+
+    /// Register path-condition metadata in deterministic callable-local order.
+    #[allow(dead_code)]
+    pub(super) fn register_path_condition(
+        &mut self,
+        condition: MirPathCondition,
+    ) -> PathConditionId {
+        let id = PathConditionId::new(self.callable, self.path_conditions.len());
+        assert_eq!(
+            condition.id, id,
+            "path-condition registration must follow deterministic ID order"
+        );
+        self.path_conditions.push(condition);
         id
     }
 
@@ -107,7 +127,7 @@ impl MirBodyBuilder {
         MirBody {
             entry: self.entry,
             blocks: self.blocks,
-            path_conditions: Vec::new(),
+            path_conditions: self.path_conditions,
         }
     }
 

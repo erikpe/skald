@@ -101,7 +101,7 @@ impl BodyLowerer<'_> {
                     expression.span,
                 );
                 self.lower_optional_call(expression, crate::mir::MirPlace::base(storage));
-                self.full_expression_temporaries.push(
+                self.full_expression.register_temporary(
                     super::FullExpressionTemporary::ClassOptional(
                         crate::mir::MirClassOptionalCleanup {
                             destination: crate::mir::MirPlace::base(storage),
@@ -503,7 +503,7 @@ impl BodyLowerer<'_> {
                     expression.span,
                 );
                 self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
-                self.full_expression_temporaries.push(
+                self.full_expression.register_temporary(
                     super::FullExpressionTemporary::ClassOptional(
                         crate::mir::MirClassOptionalCleanup {
                             destination: crate::mir::MirPlace::base(destination),
@@ -530,7 +530,7 @@ impl BodyLowerer<'_> {
                     expression.span,
                 );
                 self.lower_optional_shared_call(expression, destination);
-                self.full_expression_temporaries.push(
+                self.full_expression.register_temporary(
                     super::FullExpressionTemporary::OptionalShared(
                         crate::mir::MirOptionalSharedCleanup {
                             destination: crate::mir::MirPlace::base(destination),

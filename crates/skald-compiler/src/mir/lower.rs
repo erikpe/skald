@@ -15,6 +15,7 @@ mod cleanup;
 mod control_effect;
 mod control_flow;
 mod expression;
+mod full_expression;
 #[allow(dead_code)]
 mod loop_context;
 mod loop_flow;
@@ -27,6 +28,7 @@ mod statement;
 mod type_operations;
 
 use cleanup::CleanupPlanner;
+use full_expression::FullExpressionTracker;
 use loop_context::LoopContextStack;
 
 /// Lowers every currently representable HIR operation into executable MIR.
@@ -100,10 +102,7 @@ struct BodyLowerer<'hir> {
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
     loop_contexts: LoopContextStack,
-    full_expression_temporaries: Vec<FullExpressionTemporary>,
-    full_expression_storage: Vec<StorageId>,
-    full_expression_checked_views: Vec<StorageId>,
-    full_expression_has_shared_effect: bool,
+    full_expression: FullExpressionTracker,
     next_optional_guard: usize,
     active_optional_guards: Vec<ActiveOptionalGuard>,
 }
@@ -117,28 +116,7 @@ struct ActiveOptionalGuard {
 
 impl<'hir> BodyLowerer<'hir> {
     fn lower(input: BodyLoweringInput<'hir>) -> LoweredBody {
-        let mut lowerer = Self {
-            parameter_storage: Vec::with_capacity(input.parameters.len()),
-            local_storage: Vec::with_capacity(input.locals.len()),
-            storage: Vec::with_capacity(
-                input.parameters.len()
-                    + input.locals.len()
-                    + usize::from(input.receiver_class.is_some()),
-            ),
-            values: Vec::new(),
-            body: MirBodyBuilder::new(input.callable, input.source_body.span),
-            cleanup: CleanupPlanner::new(),
-            loop_contexts: LoopContextStack::new(),
-            full_expression_temporaries: Vec::new(),
-            full_expression_storage: Vec::new(),
-            full_expression_checked_views: Vec::new(),
-            full_expression_has_shared_effect: false,
-            next_optional_guard: 0,
-            active_optional_guards: Vec::new(),
-            return_storage: None,
-            receiver_storage: None,
-            input,
-        };
+        let mut lowerer = Self::new(input);
         lowerer.allocate_storage();
         lowerer.cleanup.enter_scope();
         for (parameter, storage) in lowerer
@@ -186,6 +164,28 @@ impl<'hir> BodyLowerer<'hir> {
             storage: lowerer.storage,
             values: lowerer.values,
             body: lowerer.body.finish(),
+        }
+    }
+
+    fn new(input: BodyLoweringInput<'hir>) -> Self {
+        Self {
+            parameter_storage: Vec::with_capacity(input.parameters.len()),
+            local_storage: Vec::with_capacity(input.locals.len()),
+            storage: Vec::with_capacity(
+                input.parameters.len()
+                    + input.locals.len()
+                    + usize::from(input.receiver_class.is_some()),
+            ),
+            values: Vec::new(),
+            body: MirBodyBuilder::new(input.callable, input.source_body.span),
+            cleanup: CleanupPlanner::new(),
+            loop_contexts: LoopContextStack::new(),
+            full_expression: FullExpressionTracker::default(),
+            next_optional_guard: 0,
+            active_optional_guards: Vec::new(),
+            return_storage: None,
+            receiver_storage: None,
+            input,
         }
     }
 
@@ -356,16 +356,28 @@ impl<'hir> BodyLowerer<'hir> {
 
     fn track_full_expression_storage(&mut self, storage: StorageId, span: crate::source::Span) {
         self.begin_storage_lifetime(storage, span);
-        self.full_expression_storage.push(storage);
+        self.full_expression.register_storage(storage);
     }
 
     fn extend_storage_beyond_full_expression(&mut self, storage: StorageId) {
-        let index = self
-            .full_expression_storage
-            .iter()
-            .rposition(|candidate| *candidate == storage)
-            .expect("extended storage must belong to the current full expression");
-        self.full_expression_storage.remove(index);
+        self.full_expression.remove_storage(storage);
+    }
+
+    /// Give the current full expression ownership of one selected MIR path.
+    #[allow(dead_code)]
+    fn register_full_expression_condition(
+        &mut self,
+        condition: MirPathCondition,
+    ) -> PathConditionId {
+        let id = self.body.register_path_condition(condition.clone());
+        self.full_expression.register_condition(condition);
+        id
+    }
+
+    /// Select the path condition inherited by subsequently completed resources.
+    #[allow(dead_code)]
+    fn select_full_expression_condition(&mut self, condition: Option<PathConditionId>) {
+        self.full_expression.select_condition(condition);
     }
 
     fn terminate(&mut self, terminator: MirTerminator) {

@@ -5,16 +5,18 @@
 //! that participates in the contract under examination.
 
 use crate::{
-    identity::{BindingId, CallableId, ClassId, FunctionId, ModuleId, ParameterId},
+    identity::{BindingId, CallableId, ClassId, FunctionId, InitializerId, ModuleId, ParameterId},
     source::Span,
+    test_support::lower_source_to_mir,
 };
 
 use super::{
     BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall,
-    MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage,
-    MirInstruction, MirMemberDefinition, MirMethodReceiver, MirParameter, MirParameterMode,
-    MirPlace, MirRvalue, MirRvalueKind, MirStorage, MirStorageDead, MirStorageKind, MirStorageLive,
-    MirStore, MirTerminator, MirType, MirValue, StorageId, ValueId,
+    MirCallTarget, MirCleanup, MirEndFullExpression, MirFunctionDeclaration, MirFunctionDefinition,
+    MirFunctionLinkage, MirInitialize, MirInstruction, MirMemberDefinition, MirMethodReceiver,
+    MirParameter, MirParameterMode, MirPathCondition, MirPathConditionValue, MirPlace, MirProgram,
+    MirRvalue, MirRvalueKind, MirStorage, MirStorageDead, MirStorageKind, MirStorageLive, MirStore,
+    MirTerminator, MirType, MirValue, PathConditionId, StorageId, ValueId,
 };
 
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
@@ -314,6 +316,276 @@ pub(crate) fn member_definition(
         ),
         span: definition.span,
     }
+}
+
+/// One selected inline temporary plus its complete conditional cleanup graph.
+///
+/// This fixture is shared by MIR verification and backend legality tests. It
+/// deliberately starts from declared source metadata but hand-builds the
+/// control flow that source logical operators cannot produce until their
+/// completion gate is removed.
+pub(crate) fn conditional_full_expression_cleanup_program() -> MirProgram {
+    let mut mir =
+        lower_source_to_mir("class Token { init() {} }\nfn main() -> i64 { return 0; }\n");
+    let function = mir.entry_function;
+    let callable = CallableId::Function(function);
+    let span = mir.definitions.get(function).unwrap().span;
+    let class = ClassId::new(0);
+    let initializer = InitializerId::new(class, 0);
+    let activation = StorageId::new(callable, 0);
+    let first = StorageId::new(callable, 1);
+    let second = StorageId::new(callable, 2);
+    let result = StorageId::new(callable, 3);
+    let condition = PathConditionId::new(callable, 0);
+    let blocks: Vec<_> = (0..10).map(|index| BlockId::new(callable, index)).collect();
+    let values: Vec<_> = [
+        MirType::Bool,
+        MirType::Bool,
+        MirType::Bool,
+        MirType::I64,
+        MirType::Bool,
+        MirType::Bool,
+        MirType::I64,
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(index, ty)| value(ValueId::new(callable, index), ty, span))
+    .collect();
+    let cleanup = |storage| MirCleanup {
+        destination: MirPlace::base(storage),
+        target: class,
+        span,
+    };
+
+    let definition = mir.definitions.get_mut_for_test(function).unwrap();
+    definition.storage = vec![
+        storage(
+            activation,
+            None,
+            "condition",
+            MirStorageKind::PathCondition,
+            MirType::Bool,
+            span,
+        ),
+        storage(
+            first,
+            None,
+            "first",
+            MirStorageKind::Temporary,
+            MirType::Class(class),
+            span,
+        ),
+        storage(
+            second,
+            None,
+            "second",
+            MirStorageKind::Temporary,
+            MirType::Class(class),
+            span,
+        ),
+        storage(
+            result,
+            None,
+            "result",
+            MirStorageKind::ScalarSpill,
+            MirType::I64,
+            span,
+        ),
+    ];
+    definition.values = values;
+    definition.body = MirBody {
+        entry: blocks[0],
+        blocks: vec![
+            block(
+                blocks[0],
+                vec![
+                    storage_live(activation, span),
+                    storage_live(result, span),
+                    assign(
+                        ValueId::new(callable, 0),
+                        MirRvalueKind::ConstantBool(true),
+                        MirType::Bool,
+                        span,
+                    ),
+                ],
+                Some(MirTerminator::Branch {
+                    condition: ValueId::new(callable, 0),
+                    true_target: blocks[1],
+                    false_target: blocks[2],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[1],
+                vec![
+                    storage_live(first, span),
+                    MirInstruction::Initialize(MirInitialize {
+                        destination: MirPlace::base(first),
+                        target: initializer,
+                        arguments: Vec::new(),
+                        span,
+                    }),
+                    storage_live(second, span),
+                    MirInstruction::Initialize(MirInitialize {
+                        destination: MirPlace::base(second),
+                        target: initializer,
+                        arguments: Vec::new(),
+                        span,
+                    }),
+                    assign(
+                        ValueId::new(callable, 1),
+                        MirRvalueKind::ConstantBool(true),
+                        MirType::Bool,
+                        span,
+                    ),
+                    store(MirPlace::base(activation), ValueId::new(callable, 1), span),
+                ],
+                Some(MirTerminator::Goto {
+                    target: blocks[3],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[2],
+                vec![
+                    assign(
+                        ValueId::new(callable, 2),
+                        MirRvalueKind::ConstantBool(false),
+                        MirType::Bool,
+                        span,
+                    ),
+                    store(MirPlace::base(activation), ValueId::new(callable, 2), span),
+                ],
+                Some(MirTerminator::Goto {
+                    target: blocks[3],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[3],
+                vec![
+                    assign(
+                        ValueId::new(callable, 3),
+                        MirRvalueKind::ConstantI64(41),
+                        MirType::I64,
+                        span,
+                    ),
+                    store(MirPlace::base(result), ValueId::new(callable, 3), span),
+                    assign(
+                        ValueId::new(callable, 4),
+                        MirRvalueKind::PathCondition(MirPathConditionValue {
+                            condition,
+                            activation,
+                        }),
+                        MirType::Bool,
+                        span,
+                    ),
+                ],
+                Some(MirTerminator::Branch {
+                    condition: ValueId::new(callable, 4),
+                    true_target: blocks[4],
+                    false_target: blocks[5],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[4],
+                vec![MirInstruction::EndFullExpression(MirEndFullExpression {
+                    temporaries: vec![cleanup(second), cleanup(first)],
+                    span,
+                })],
+                Some(MirTerminator::Goto {
+                    target: blocks[6],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[5],
+                Vec::new(),
+                Some(MirTerminator::Goto {
+                    target: blocks[6],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[6],
+                vec![
+                    MirInstruction::EndFullExpression(MirEndFullExpression {
+                        temporaries: Vec::new(),
+                        span,
+                    }),
+                    assign(
+                        ValueId::new(callable, 5),
+                        MirRvalueKind::PathCondition(MirPathConditionValue {
+                            condition,
+                            activation,
+                        }),
+                        MirType::Bool,
+                        span,
+                    ),
+                ],
+                Some(MirTerminator::Branch {
+                    condition: ValueId::new(callable, 5),
+                    true_target: blocks[7],
+                    false_target: blocks[8],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[7],
+                vec![storage_dead(second, span), storage_dead(first, span)],
+                Some(MirTerminator::Goto {
+                    target: blocks[9],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[8],
+                Vec::new(),
+                Some(MirTerminator::Goto {
+                    target: blocks[9],
+                    span,
+                }),
+                span,
+            ),
+            block(
+                blocks[9],
+                vec![
+                    storage_dead(activation, span),
+                    assign(
+                        ValueId::new(callable, 6),
+                        MirRvalueKind::Load(MirPlace::base(result)),
+                        MirType::I64,
+                        span,
+                    ),
+                    storage_dead(result, span),
+                ],
+                Some(MirTerminator::Return {
+                    value: Some(ValueId::new(callable, 6)),
+                    span,
+                }),
+                span,
+            ),
+        ],
+        path_conditions: vec![MirPathCondition {
+            id: condition,
+            parent: None,
+            activation,
+            active_predecessor: blocks[1],
+            inactive_predecessor: blocks[2],
+            merge: blocks[3],
+            span,
+        }],
+    };
+    mir
 }
 
 #[cfg(test)]

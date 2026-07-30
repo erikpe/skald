@@ -30,6 +30,16 @@ predecessors, and exact merge. A `path-condition` rvalue names both the
 condition and activation storage. This makes an explicitly represented join
 distinguishable from an ordinary join whose lifetime states disagree.
 
+At a conditional full-expression boundary, follow each `path-condition`
+value into its ordinary `branch`. The true successor contains the selected
+cleanup or `storage-dead`, the false successor bypasses it, and both jump to a
+small local merge before later cleanup continues. Nested cleanup tests parents
+before children. After reverse cleanup and storage death have made every
+alternative compatible, child activation storage ends inside its active
+parent and root activation storage ends last. Assembly contains the same
+ordinary loads, tests, branches, cleanup calls, and jumps; there is no runtime
+conditional-cleanup operation.
+
 Exact dump tests live with each phase. A focused search is usually enough:
 
 ```text

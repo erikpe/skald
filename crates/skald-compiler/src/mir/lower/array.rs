@@ -329,8 +329,8 @@ impl BodyLowerer<'_> {
             kind,
             span: receiver.span,
         }));
-        self.full_expression_temporaries
-            .push(FullExpressionTemporary::ArrayAnchor(anchor));
+        self.full_expression
+            .register_temporary(FullExpressionTemporary::ArrayAnchor(anchor));
         (owner, anchor)
     }
 
@@ -779,23 +779,20 @@ impl BodyLowerer<'_> {
         span: crate::source::Span,
     ) -> StorageId {
         let storage = self.new_array_storage(array, kind, "temporary", span);
-        self.full_expression_temporaries
-            .push(FullExpressionTemporary::Array { storage, array });
+        self.full_expression
+            .register_temporary(FullExpressionTemporary::Array { storage, array });
         storage
     }
 
     fn consume_array_temporary(&mut self, storage: StorageId) {
-        let index = self
-            .full_expression_temporaries
-            .iter()
-            .rposition(|temporary| {
-                matches!(
-                    temporary,
-                    FullExpressionTemporary::Array { storage: candidate, .. }
-                        if *candidate == storage
-                )
-            })
-            .expect("consumed array temporary belongs to the current full expression");
-        self.full_expression_temporaries.remove(index);
+        self.full_expression.remove_temporary(|temporary| {
+            matches!(
+                temporary,
+                FullExpressionTemporary::Array {
+                    storage: candidate,
+                    ..
+                } if *candidate == storage
+            )
+        });
     }
 }

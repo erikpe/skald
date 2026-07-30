@@ -11,7 +11,7 @@ impl BodyLowerer<'_> {
                 break;
             }
             debug_assert!(
-                self.full_expression_temporaries.is_empty(),
+                !self.full_expression.has_temporaries(),
                 "a source statement must begin outside any previous full expression"
             );
             self.lower_statement(statement);

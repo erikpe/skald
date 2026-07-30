@@ -70,7 +70,7 @@ impl BodyLowerer<'_> {
             length,
             span: literal.span,
         }));
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_construction(
@@ -168,8 +168,8 @@ impl BodyLowerer<'_> {
                 );
                 let destination = MirPlace::base(storage);
                 self.lower_object_producer(producer, destination.clone());
-                self.full_expression_temporaries
-                    .push(FullExpressionTemporary::Inline(MirCleanup {
+                self.full_expression
+                    .register_temporary(FullExpressionTemporary::Inline(MirCleanup {
                         destination: destination.clone(),
                         target: producer.class(),
                         span: producer.span(),

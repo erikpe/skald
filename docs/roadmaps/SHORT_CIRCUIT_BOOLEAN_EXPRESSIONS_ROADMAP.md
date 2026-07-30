@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 is complete and SC1 is next.
+Status: in progress; SC0 and SC1 are complete and SC2 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -186,7 +186,7 @@ unimplemented.
 ## Progress
 
 - [x] SC0 — Represent path conditions in verified MIR
-- [ ] SC1 — Plan conditional full-expression cleanup
+- [x] SC1 — Plan conditional full-expression cleanup
 - [ ] SC2 — Lower structured logical HIR to selected boolean control flow
 - [ ] SC3 — Preserve path-dependent object and optional-object lifetimes
 - [ ] SC4 — Preserve path-dependent shared and array ownership
@@ -251,28 +251,28 @@ unchanged.
 **Purpose:** Make the existing full-expression owner produce correct cleanup
 for conditional registrations, independently of logical expression lowering.
 
-- [ ] Extend the full-expression tracker from one traversal-global live list
+- [x] Extend the full-expression tracker from one traversal-global live list
       to ordered registrations that distinguish unconditional resources from
       resources conditional on a path condition.
-- [ ] Preserve actual completion order independently of activation nesting so
+- [x] Preserve actual completion order independently of activation nesting so
       cleanup traverses registrations in reverse and ignores inactive ones.
-- [ ] Build a deterministic cleanup decision graph at the full-expression
+- [x] Build a deterministic cleanup decision graph at the full-expression
       boundary rather than cloning the general continuation.
-- [ ] Test parent conditions before conditionally defined children and allow
+- [x] Test parent conditions before conditionally defined children and allow
       sibling conditions to be active together.
-- [ ] Secure scalar results and later unconditional temporaries before entering
+- [x] Secure scalar results and later unconditional temporaries before entering
       the cleanup graph, then reconverge only after all path-dependent lifetime
       state is compatible.
-- [ ] Keep result and activation storage live until the cleanup graph has
+- [x] Keep result and activation storage live until the cleanup graph has
       consumed it, then emit the existing end-of-full-expression and reverse
       storage-death sequence.
-- [ ] Extend cleanup-order, storage-lifetime, ownership, and control-flow
+- [x] Extend cleanup-order, storage-lifetime, ownership, and control-flow
       verification for generated conditional cleanup and its final
       convergence.
-- [ ] Keep x86-64 and the runtime unaware of conditional cleanup semantics:
+- [x] Keep x86-64 and the runtime unaware of conditional cleanup semantics:
       target lowering receives ordinary verified storage, branches, cleanup
       actions, and jumps.
-- [ ] Add reusable internal test builders for path conditions and conditional
+- [x] Add reusable internal test builders for path conditions and conditional
       cleanup without exposing roadmap-specific concepts in public facades.
 
 **Tests:** Builder-driven MIR cases for no active registration, one selected

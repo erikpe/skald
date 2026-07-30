@@ -16,6 +16,18 @@ extra temporaries, missed conditional cleanup, and incorrect argument/result
 ownership. Checked-view tests additionally cover bounded consumers, nested
 guards, invalidating later arguments, shared-root anchor order, and failure
 traps.
+
+Conditional full-expression coverage starts below the still-disabled logical
+source surface. Tracker tests cover ordered unconditional, parent, child, and
+later registrations plus an activation with no selected resource. MIR fixture
+tests cover selected and skipped inline temporaries, multiple resources under
+one condition, reverse cleanup, a secured scalar result, conditional storage
+death, activation death, and final convergence. Mutations remove, duplicate,
+reorder, move, or place cleanup on the skipped path. Nested and sibling graph
+tests check parent-before-child decisions and local continuation sharing, and
+the shared fixture must also pass deterministic MIR dumping and system
+assembler acceptance. These tests establish cleanup planning; they do not
+imply that source `&&` or `||` is accepted.
 Optional shared-owner coverage additionally checks the one-word zero niche,
 copy/adopt/move and conditional release, field and callable ownership,
 self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,

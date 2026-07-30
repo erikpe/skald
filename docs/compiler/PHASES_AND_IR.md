@@ -303,8 +303,32 @@ Ending the activation storage epoch requires all conditional storage state to
 have converged, ends the predicate fact, and permits the same static identity
 to begin a later loop epoch. Child conditions can be selected and read only
 inside an active parent alternative. Undeclared ordinary joins retain their
-existing exact-state checks. Conditional full-expression cleanup planning and
-logical HIR/source construction remain unimplemented.
+existing exact-state checks.
+
+The full-expression owner records resource completion as one ordered sequence
+of unconditional or path-conditioned registrations. At the enclosing
+boundary it walks that sequence in reverse and surrounds each conditional
+cleanup or storage death with a local path-condition decision. An ancestor is
+tested before a child activation can be read; independent sibling conditions
+are tested separately and can therefore both select cleanup. Each decision
+reconverges immediately after its action instead of cloning the later
+continuation. Scalar result carriers and later unconditional resources are
+established before this cleanup graph, remain live through it, and are ended
+only after selected-path resource state is compatible. Child activation
+epochs end inside their active parent path, followed by root activations.
+
+Storage-lifetime and inline-object cleanup verification retain distinct
+object states for the declared path alternatives. Conditional cleanup must
+destroy exactly the selected temporaries in reverse completion order, leave
+the skipped alternative untouched, and converge before activation storage
+dies. Cleanup history for storage whose epoch has ended may differ between
+alternatives; live objects, outstanding cleanup, argument ownership, and
+temporary order may not. Backend lowering sees only the resulting ordinary
+loads, branches, cleanup instructions, lifetime markers, and jumps.
+
+Logical HIR and source construction remain unimplemented. Existing HIR
+therefore creates only unconditional registrations; later logical lowering
+will select the path condition inherited by right-operand completions.
 
 MIR verification rejects:
 

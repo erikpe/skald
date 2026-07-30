@@ -3,99 +3,175 @@
 use crate::{identity::ClassId, source::Span};
 
 use super::{
+    full_expression::{
+        build_conditional_region, finish_conditional_region, ConditionalRegistration,
+    },
     BodyLowerer, MirArrayInstruction, MirCheckedViewEnd, MirCleanup, MirEndFullExpression,
-    MirInstruction, MirPlace, MirSharedRelease, StorageId,
+    MirInstruction, MirPathCondition, MirPlace, MirSharedRelease, StorageId,
 };
 
 impl BodyLowerer<'_> {
     pub(super) fn finish_full_expression(&mut self, span: Span) {
         self.end_optional_views_from(0, span);
-        let checked_views: Vec<_> = self.full_expression_checked_views.drain(..).rev().collect();
-        for carrier in checked_views {
-            self.emit(MirInstruction::EndCheckedView(MirCheckedViewEnd {
-                carrier,
+        let plan = self.full_expression.take_plan();
+        let requires_boundary = plan.requires_boundary();
+        let conditions = plan.conditions.clone();
+
+        for registration in plan.checked_views.into_iter().rev() {
+            self.emit_conditional_registration(
+                registration,
+                &conditions,
                 span,
-            }));
+                |lowerer, carrier| {
+                    lowerer.emit(MirInstruction::EndCheckedView(MirCheckedViewEnd {
+                        carrier,
+                        span,
+                    }));
+                },
+            );
         }
-        if self.full_expression_temporaries.is_empty()
-            && !self.full_expression_has_shared_effect
-            && self.full_expression_storage.is_empty()
-        {
+        if !requires_boundary {
             return;
         }
-        let temporaries: Vec<_> = self.full_expression_temporaries.drain(..).rev().collect();
+
+        self.emit_full_expression_temporaries(plan.temporaries, &conditions, span);
+        for registration in plan.storage.into_iter().rev() {
+            self.emit_conditional_registration(
+                registration,
+                &conditions,
+                span,
+                |lowerer, storage| lowerer.end_storage_lifetime(storage, span),
+            );
+        }
+        self.end_path_condition_lifetimes(&conditions, span);
+    }
+
+    fn emit_full_expression_temporaries(
+        &mut self,
+        temporaries: Vec<ConditionalRegistration<super::FullExpressionTemporary>>,
+        conditions: &[MirPathCondition],
+        span: Span,
+    ) {
         let mut inline = Vec::new();
-        for temporary in temporaries {
-            match temporary {
-                super::FullExpressionTemporary::Inline(mut cleanup) => {
+        for registration in temporaries.into_iter().rev() {
+            match (registration.condition, registration.value) {
+                (None, super::FullExpressionTemporary::Inline(mut cleanup)) => {
                     cleanup.span = span;
                     inline.push(cleanup);
                 }
-                super::FullExpressionTemporary::Shared(owner) => {
-                    if !inline.is_empty() {
-                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-                            temporaries: std::mem::take(&mut inline),
-                            span,
-                        }));
-                    }
-                    self.emit(MirInstruction::SharedRelease(MirSharedRelease {
-                        owner,
+                (condition, temporary) => {
+                    self.flush_inline_temporaries(&mut inline, span);
+                    let registration = ConditionalRegistration {
+                        condition,
+                        value: temporary,
+                    };
+                    self.emit_conditional_registration(
+                        registration,
+                        conditions,
                         span,
-                    }));
-                }
-                super::FullExpressionTemporary::ClassOptional(cleanup) => {
-                    if !inline.is_empty() {
-                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-                            temporaries: std::mem::take(&mut inline),
-                            span,
-                        }));
-                    }
-                    self.emit_class_optional_cleanup(cleanup);
-                }
-                super::FullExpressionTemporary::OptionalShared(cleanup) => {
-                    if !inline.is_empty() {
-                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-                            temporaries: std::mem::take(&mut inline),
-                            span,
-                        }));
-                    }
-                    self.emit(MirInstruction::OptionalSharedCleanup(cleanup));
-                }
-                super::FullExpressionTemporary::Array { storage, array } => {
-                    if !inline.is_empty() {
-                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-                            temporaries: std::mem::take(&mut inline),
-                            span,
-                        }));
-                    }
-                    self.emit(MirInstruction::Array(MirArrayInstruction::Release {
-                        owner: MirPlace::base(storage),
-                        array,
-                        span,
-                    }));
-                }
-                super::FullExpressionTemporary::ArrayAnchor(anchor) => {
-                    if !inline.is_empty() {
-                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-                            temporaries: std::mem::take(&mut inline),
-                            span,
-                        }));
-                    }
-                    self.emit(MirInstruction::Array(MirArrayInstruction::AnchorEnd {
-                        anchor,
-                        span,
-                    }));
+                        |lowerer, temporary| {
+                            lowerer.emit_full_expression_temporary(temporary, span);
+                        },
+                    );
                 }
             }
         }
+        // Keep one explicit boundary even when all cleanup actions were
+        // conditional or non-inline. Existing verifier domains use this as
+        // the point after which expression temporaries must be exhausted.
         self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
             temporaries: inline,
             span,
         }));
-        self.full_expression_has_shared_effect = false;
-        let storage: Vec<_> = self.full_expression_storage.drain(..).rev().collect();
-        for storage in storage {
-            self.end_storage_lifetime(storage, span);
+    }
+
+    fn flush_inline_temporaries(&mut self, inline: &mut Vec<MirCleanup>, span: Span) {
+        if inline.is_empty() {
+            return;
+        }
+        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+            temporaries: std::mem::take(inline),
+            span,
+        }));
+    }
+
+    fn emit_full_expression_temporary(
+        &mut self,
+        temporary: super::FullExpressionTemporary,
+        span: Span,
+    ) {
+        match temporary {
+            super::FullExpressionTemporary::Inline(mut cleanup) => {
+                cleanup.span = span;
+                self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                    temporaries: vec![cleanup],
+                    span,
+                }));
+            }
+            super::FullExpressionTemporary::Shared(owner) => {
+                self.emit(MirInstruction::SharedRelease(MirSharedRelease {
+                    owner,
+                    span,
+                }));
+            }
+            super::FullExpressionTemporary::ClassOptional(cleanup) => {
+                self.emit_class_optional_cleanup(cleanup);
+            }
+            super::FullExpressionTemporary::OptionalShared(cleanup) => {
+                self.emit(MirInstruction::OptionalSharedCleanup(cleanup));
+            }
+            super::FullExpressionTemporary::Array { storage, array } => {
+                self.emit(MirInstruction::Array(MirArrayInstruction::Release {
+                    owner: MirPlace::base(storage),
+                    array,
+                    span,
+                }));
+            }
+            super::FullExpressionTemporary::ArrayAnchor(anchor) => {
+                self.emit(MirInstruction::Array(MirArrayInstruction::AnchorEnd {
+                    anchor,
+                    span,
+                }));
+            }
+        }
+    }
+
+    fn emit_conditional_registration<T>(
+        &mut self,
+        registration: ConditionalRegistration<T>,
+        conditions: &[MirPathCondition],
+        span: Span,
+        emit: impl FnOnce(&mut Self, T),
+    ) {
+        let Some(condition) = registration.condition else {
+            emit(self, registration.value);
+            return;
+        };
+
+        let region = build_conditional_region(
+            &mut self.body,
+            &mut self.values,
+            self.input.callable,
+            condition,
+            conditions,
+            span,
+        );
+        emit(self, registration.value);
+        finish_conditional_region(&mut self.body, region, span);
+    }
+
+    fn end_path_condition_lifetimes(&mut self, conditions: &[MirPathCondition], span: Span) {
+        for condition in conditions.iter().rev() {
+            let registration = ConditionalRegistration {
+                condition: condition.parent,
+                value: condition.activation,
+            };
+            self.emit_conditional_registration(
+                registration,
+                conditions,
+                span,
+                |lowerer, activation| lowerer.end_storage_lifetime(activation, span),
+            );
         }
     }
 
@@ -105,10 +181,7 @@ impl BodyLowerer<'_> {
     /// only the lowerer's traversal state is reset before it visits another
     /// independently selected basic block.
     pub(super) fn discard_terminated_full_expression_tracking(&mut self) {
-        self.full_expression_temporaries.clear();
-        self.full_expression_storage.clear();
-        self.full_expression_checked_views.clear();
-        self.full_expression_has_shared_effect = false;
+        self.full_expression.clear();
         self.active_optional_guards.clear();
     }
 }

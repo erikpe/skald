@@ -14,7 +14,7 @@ impl BodyLowerer<'_> {
         transfer: &HirSharedTransfer,
     ) {
         self.lower_shared_transfer(destination, transfer);
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_shared_assignment(&mut self, assignment: &HirSharedAssignment) {
@@ -31,7 +31,7 @@ impl BodyLowerer<'_> {
             source: secured,
             span: assignment.span,
         }));
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_shared_field_write(&mut self, write: &HirSharedFieldWrite) {
@@ -55,7 +55,7 @@ impl BodyLowerer<'_> {
                 })
             }
         });
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_shared_transfer(
@@ -64,7 +64,7 @@ impl BodyLowerer<'_> {
         transfer: &HirSharedTransfer,
     ) {
         self.lower_shared_source(destination, &transfer.source, transfer.span);
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_shared_source(
@@ -289,8 +289,8 @@ impl BodyLowerer<'_> {
             span,
         });
         self.track_full_expression_storage(storage, span);
-        self.full_expression_temporaries
-            .push(FullExpressionTemporary::Shared(storage));
+        self.full_expression
+            .register_temporary(FullExpressionTemporary::Shared(storage));
         storage
     }
 
@@ -310,24 +310,19 @@ impl BodyLowerer<'_> {
         });
         self.track_full_expression_storage(storage, span);
         self.lower_shared_source(storage, source, span);
-        self.full_expression_temporaries
-            .push(FullExpressionTemporary::Shared(storage));
-        self.full_expression_has_shared_effect = true;
+        self.full_expression
+            .register_temporary(FullExpressionTemporary::Shared(storage));
+        self.full_expression.mark_shared_effect();
         storage
     }
 
     pub(super) fn consume_shared_temporary(&mut self, storage: StorageId) {
-        let index = self
-            .full_expression_temporaries
-            .iter()
-            .rposition(|candidate| {
-                matches!(
-                    candidate,
-                    FullExpressionTemporary::Shared(candidate) if *candidate == storage
-                )
-            })
-            .expect("consumed shared temporary must belong to the current full expression");
-        self.full_expression_temporaries.remove(index);
+        self.full_expression.remove_temporary(|candidate| {
+            matches!(
+                candidate,
+                FullExpressionTemporary::Shared(candidate) if *candidate == storage
+            )
+        });
     }
 }
 

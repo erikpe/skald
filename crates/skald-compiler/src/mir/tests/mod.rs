@@ -1,9 +1,11 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::test_fixtures::{
     add_body_storage_lifetimes as fixture_add_body_storage_lifetimes, assign as fixture_assign,
-    block as fixture_block, empty_member_definition as fixture_empty_member_definition,
-    storage as fixture_storage, storage_dead as fixture_storage_dead,
-    storage_live as fixture_storage_live, store as fixture_store, value as fixture_value,
+    block as fixture_block,
+    conditional_full_expression_cleanup_program as fixture_conditional_cleanup_program,
+    empty_member_definition as fixture_empty_member_definition, storage as fixture_storage,
+    storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
+    store as fixture_store, value as fixture_value,
 };
 use super::*;
 use crate::{
@@ -19,6 +21,7 @@ mod alias_lowering;
 mod aliases;
 mod arrays;
 mod comparisons;
+mod conditional_cleanup;
 mod copy;
 mod cycles;
 mod integer_casts;

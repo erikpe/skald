@@ -169,7 +169,7 @@ impl BodyLowerer<'_> {
             span: expression.span,
         }));
         self.end_optional_views_from(optional_mark, expression.span);
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_array_call(&mut self, expression: &HirExpression, destination: StorageId) {
@@ -357,7 +357,7 @@ impl BodyLowerer<'_> {
             span: expression.span,
         }));
         self.end_optional_views_from(optional_mark, expression.span);
-        self.full_expression_has_shared_effect = true;
+        self.full_expression.mark_shared_effect();
     }
 
     pub(super) fn lower_call_arguments(
@@ -695,7 +695,7 @@ impl BodyLowerer<'_> {
                     .expect("allocated cast success block must be selectable");
             }
         }
-        self.full_expression_checked_views.push(destination);
+        self.full_expression.register_checked_view(destination);
         let source = checked.projections.iter().fold(
             MirPlace::checked_view(destination),
             |place, projection| match projection {
