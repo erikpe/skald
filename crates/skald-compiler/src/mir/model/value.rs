@@ -223,8 +223,8 @@ pub enum MirRvalueKind {
         left: ValueId,
         right: ValueId,
     },
-    IntegerComparison {
-        operation: MirIntegerComparison,
+    PrimitiveComparison {
+        operation: MirPrimitiveComparison,
         left: ValueId,
         right: ValueId,
     },
@@ -251,6 +251,7 @@ pub enum MirRvalueKind {
 pub enum MirUnaryOperation {
     NegateI64,
     NegateF64,
+    LogicalNotBool,
 }
 
 impl MirUnaryOperation {
@@ -258,7 +259,12 @@ impl MirUnaryOperation {
         match self {
             Self::NegateI64 => MirType::I64,
             Self::NegateF64 => MirType::F64,
+            Self::LogicalNotBool => MirType::Bool,
         }
+    }
+
+    pub const fn result_type(self) -> MirType {
+        self.operand_type()
     }
 }
 
@@ -338,9 +344,47 @@ impl MirComparisonPredicate {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct MirIntegerComparison {
+pub enum MirComparisonOperand {
+    Integer(MirIntegerType),
+    Bool,
+}
+
+impl MirComparisonOperand {
+    pub const fn operand_type(self) -> MirType {
+        match self {
+            Self::Integer(integer) => integer.operand_type(),
+            Self::Bool => MirType::Bool,
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Integer(integer) => integer.name(),
+            Self::Bool => "bool",
+        }
+    }
+
+    pub const fn supports_predicate(self, predicate: MirComparisonPredicate) -> bool {
+        match self {
+            Self::Integer(_) => true,
+            Self::Bool => matches!(
+                predicate,
+                MirComparisonPredicate::Equal | MirComparisonPredicate::NotEqual
+            ),
+        }
+    }
+}
+
+impl From<MirIntegerType> for MirComparisonOperand {
+    fn from(integer: MirIntegerType) -> Self {
+        Self::Integer(integer)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct MirPrimitiveComparison {
     pub predicate: MirComparisonPredicate,
-    pub operand: MirIntegerType,
+    pub operand: MirComparisonOperand,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -359,12 +403,16 @@ impl MirIntegerCast {
     }
 }
 
-impl MirIntegerComparison {
+impl MirPrimitiveComparison {
     pub const fn operand_type(self) -> MirType {
         self.operand.operand_type()
     }
 
     pub const fn result_type(self) -> MirType {
         MirType::Bool
+    }
+
+    pub const fn is_valid(self) -> bool {
+        self.operand.supports_predicate(self.predicate)
     }
 }

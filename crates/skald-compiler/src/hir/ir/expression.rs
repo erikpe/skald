@@ -41,8 +41,8 @@ pub enum HirExpressionKind {
         left: Box<HirExpression>,
         right: Box<HirExpression>,
     },
-    IntegerComparison {
-        operation: HirIntegerComparison,
+    PrimitiveComparison {
+        operation: HirPrimitiveComparison,
         left: Box<HirExpression>,
         right: Box<HirExpression>,
     },
@@ -178,6 +178,21 @@ impl HirCallArgument {
 pub enum HirUnaryOperation {
     NegateI64,
     NegateF64,
+    LogicalNotBool,
+}
+
+impl HirUnaryOperation {
+    pub const fn operand_type(self) -> Type {
+        match self {
+            Self::NegateI64 => Type::I64,
+            Self::NegateF64 => Type::F64,
+            Self::LogicalNotBool => Type::Bool,
+        }
+    }
+
+    pub const fn result_type(self) -> Type {
+        self.operand_type()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -238,9 +253,47 @@ impl HirComparisonPredicate {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct HirIntegerComparison {
+pub enum HirComparisonOperand {
+    Integer(HirIntegerType),
+    Bool,
+}
+
+impl HirComparisonOperand {
+    pub const fn operand_type(self) -> Type {
+        match self {
+            Self::Integer(integer) => integer.operand_type(),
+            Self::Bool => Type::Bool,
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Integer(integer) => integer.name(),
+            Self::Bool => "bool",
+        }
+    }
+
+    pub const fn supports_predicate(self, predicate: HirComparisonPredicate) -> bool {
+        match self {
+            Self::Integer(_) => true,
+            Self::Bool => matches!(
+                predicate,
+                HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
+            ),
+        }
+    }
+}
+
+impl From<HirIntegerType> for HirComparisonOperand {
+    fn from(integer: HirIntegerType) -> Self {
+        Self::Integer(integer)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct HirPrimitiveComparison {
     pub predicate: HirComparisonPredicate,
-    pub operand: HirIntegerType,
+    pub operand: HirComparisonOperand,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -259,13 +312,17 @@ impl HirIntegerCast {
     }
 }
 
-impl HirIntegerComparison {
+impl HirPrimitiveComparison {
     pub const fn operand_type(self) -> Type {
         self.operand.operand_type()
     }
 
     pub const fn result_type(self) -> Type {
         Type::Bool
+    }
+
+    pub const fn is_valid(self) -> bool {
+        self.operand.supports_predicate(self.predicate)
     }
 }
 

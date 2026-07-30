@@ -12,7 +12,7 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::IntegerCast { operand, .. }
         | HirExpressionKind::Grouped(operand) => expression_contains_control_effect(operand),
         HirExpressionKind::Binary { left, right, .. }
-        | HirExpressionKind::IntegerComparison { left, right, .. } => {
+        | HirExpressionKind::PrimitiveComparison { left, right, .. } => {
             expression_contains_control_effect(left) || expression_contains_control_effect(right)
         }
         HirExpressionKind::DirectCall { arguments, .. }

@@ -44,10 +44,10 @@ pub use declarations::{
     HirProgram, HirRequirementImplementation, HirVirtualFamily, HirVirtualFamilyTable,
 };
 pub use expression::{
-    HirBinaryOperation, HirCallArgument, HirComparisonPredicate, HirCopyArgument, HirExpression,
-    HirExpressionKind, HirIntegerCast, HirIntegerComparison, HirIntegerType,
-    HirInterfaceCallTarget, HirInterfaceReceiver, HirMethodCallTarget, HirTypeTest,
-    HirTypeTestKind, HirUnaryOperation,
+    HirBinaryOperation, HirCallArgument, HirComparisonOperand, HirComparisonPredicate,
+    HirCopyArgument, HirExpression, HirExpressionKind, HirIntegerCast, HirIntegerType,
+    HirInterfaceCallTarget, HirInterfaceReceiver, HirMethodCallTarget, HirPrimitiveComparison,
+    HirTypeTest, HirTypeTestKind, HirUnaryOperation,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,

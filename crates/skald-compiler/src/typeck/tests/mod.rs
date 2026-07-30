@@ -39,7 +39,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             assert_expression_is_fully_typed(operand)
         }
         HirExpressionKind::Binary { left, right, .. }
-        | HirExpressionKind::IntegerComparison { left, right, .. } => {
+        | HirExpressionKind::PrimitiveComparison { left, right, .. } => {
             assert_expression_is_fully_typed(left);
             assert_expression_is_fully_typed(right);
         }

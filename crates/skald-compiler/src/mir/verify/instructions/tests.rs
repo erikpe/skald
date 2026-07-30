@@ -1,8 +1,96 @@
 use crate::{
     identity::FunctionId,
-    mir::{verify_mir, MirBinaryOperation, MirInstruction, MirIntegerType, MirRvalueKind, MirType},
+    mir::{
+        test_fixtures::{assign as fixture_assign, value as fixture_value},
+        verify_mir, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
+        MirInstruction, MirIntegerType, MirPrimitiveComparison, MirProgram, MirRvalueKind,
+        MirTerminator, MirType, MirUnaryOperation, ValueId,
+    },
     test_support::lower_source_to_mir,
 };
+
+fn eager_boolean_mir() -> MirProgram {
+    let mut program = lower_source_to_mir(concat!(
+        "fn invert() -> bool { return true; }\n",
+        "fn compare() -> bool { return true; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let invert = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let span = invert.span;
+    let source = ValueId::new(invert.function, 0);
+    let result = ValueId::new(invert.function, 1);
+    invert.values = vec![
+        fixture_value(source, MirType::Bool, span),
+        fixture_value(result, MirType::Bool, span),
+    ];
+    invert.body.blocks[0].instructions = vec![
+        fixture_assign(
+            source,
+            MirRvalueKind::ConstantBool(false),
+            MirType::Bool,
+            span,
+        ),
+        fixture_assign(
+            result,
+            MirRvalueKind::Unary {
+                operation: MirUnaryOperation::LogicalNotBool,
+                operand: source,
+            },
+            MirType::Bool,
+            span,
+        ),
+    ];
+    invert.body.blocks[0].terminator = Some(MirTerminator::Return {
+        value: Some(result),
+        span,
+    });
+
+    let compare = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .unwrap();
+    let span = compare.span;
+    let left = ValueId::new(compare.function, 0);
+    let right = ValueId::new(compare.function, 1);
+    let result = ValueId::new(compare.function, 2);
+    compare.values = vec![
+        fixture_value(left, MirType::Bool, span),
+        fixture_value(right, MirType::Bool, span),
+        fixture_value(result, MirType::Bool, span),
+    ];
+    compare.body.blocks[0].instructions = vec![
+        fixture_assign(left, MirRvalueKind::ConstantBool(true), MirType::Bool, span),
+        fixture_assign(
+            right,
+            MirRvalueKind::ConstantBool(false),
+            MirType::Bool,
+            span,
+        ),
+        fixture_assign(
+            result,
+            MirRvalueKind::PrimitiveComparison {
+                operation: MirPrimitiveComparison {
+                    predicate: MirComparisonPredicate::NotEqual,
+                    operand: MirComparisonOperand::Bool,
+                },
+                left,
+                right,
+            },
+            MirType::Bool,
+            span,
+        ),
+    ];
+    compare.body.blocks[0].terminator = Some(MirTerminator::Return {
+        value: Some(result),
+        span,
+    });
+
+    program
+}
 
 #[test]
 fn arithmetic_corruption_accumulates_errors_in_deterministic_order() {
@@ -85,10 +173,10 @@ fn comparison_corruption_accumulates_errors_in_deterministic_order() {
     let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[2] else {
         panic!("expected comparison assignment");
     };
-    let MirRvalueKind::IntegerComparison { operation, .. } = &mut assignment.rvalue.kind else {
+    let MirRvalueKind::PrimitiveComparison { operation, .. } = &mut assignment.rvalue.kind else {
         panic!("expected integer comparison rvalue");
     };
-    operation.operand = MirIntegerType::I64;
+    operation.operand = MirComparisonOperand::Integer(MirIntegerType::I64);
     assignment.rvalue.ty = MirType::U64;
 
     assert_eq!(
@@ -104,4 +192,113 @@ fn comparison_corruption_accumulates_errors_in_deterministic_order() {
             "comparison operand is not `i64`",
         ]
     );
+}
+
+#[test]
+fn verifier_accepts_exact_eager_boolean_operations() {
+    verify_mir(&eager_boolean_mir()).unwrap();
+}
+
+#[test]
+fn verifier_rejects_boolean_ordering() {
+    let mut program = eager_boolean_mir();
+    let compare = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .unwrap();
+    let MirInstruction::Assign(assignment) = &mut compare.body.blocks[0].instructions[2] else {
+        panic!("expected comparison assignment");
+    };
+    let MirRvalueKind::PrimitiveComparison { operation, .. } = &mut assignment.rvalue.kind else {
+        panic!("expected primitive comparison rvalue");
+    };
+    operation.predicate = MirComparisonPredicate::LessThan;
+
+    assert_eq!(
+        verify_mir(&program)
+            .unwrap_err()
+            .iter()
+            .map(|error| error.message.as_str())
+            .collect::<Vec<_>>(),
+        ["comparison predicate `lt` is not valid for `bool`"]
+    );
+}
+
+#[test]
+fn eager_boolean_corruption_accumulates_errors_in_deterministic_order() {
+    let mut program = eager_boolean_mir();
+    let invert = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    invert.values[0].ty = MirType::I64;
+    let MirInstruction::Assign(source) = &mut invert.body.blocks[0].instructions[0] else {
+        panic!("expected source assignment");
+    };
+    source.rvalue.kind = MirRvalueKind::ConstantI64(0);
+    source.rvalue.ty = MirType::I64;
+    let MirInstruction::Assign(operation) = &mut invert.body.blocks[0].instructions[1] else {
+        panic!("expected unary assignment");
+    };
+    operation.rvalue.ty = MirType::U64;
+
+    assert_eq!(
+        verify_mir(&program)
+            .unwrap_err()
+            .iter()
+            .map(|error| error.message.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "assignment type does not match value f0:v1",
+            "unary operation result type mismatch",
+            "unary operand is not `bool`",
+        ]
+    );
+}
+
+#[test]
+fn eager_boolean_comparison_corruption_accumulates_errors_in_deterministic_order() {
+    let mut program = eager_boolean_mir();
+    let compare = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .unwrap();
+    compare.values[0].ty = MirType::I64;
+    let MirInstruction::Assign(left) = &mut compare.body.blocks[0].instructions[0] else {
+        panic!("expected left assignment");
+    };
+    left.rvalue.kind = MirRvalueKind::ConstantI64(1);
+    left.rvalue.ty = MirType::I64;
+    let MirInstruction::Assign(operation) = &mut compare.body.blocks[0].instructions[2] else {
+        panic!("expected comparison assignment");
+    };
+    operation.rvalue.ty = MirType::U64;
+
+    assert_eq!(
+        verify_mir(&program)
+            .unwrap_err()
+            .iter()
+            .map(|error| error.message.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "assignment type does not match value f1:v2",
+            "boolean comparison result must be `bool`",
+            "comparison operand is not `bool`",
+        ]
+    );
+}
+
+#[test]
+fn verifier_rejects_eager_boolean_use_before_definition() {
+    let mut program = eager_boolean_mir();
+    let invert = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    invert.body.blocks[0].instructions.swap(0, 1);
+
+    assert!(verify_mir(&program)
+        .unwrap_err()
+        .iter()
+        .any(|error| error.message.contains("used before it is defined")));
 }

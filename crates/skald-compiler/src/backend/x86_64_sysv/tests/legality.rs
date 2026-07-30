@@ -46,7 +46,7 @@ fn malformed_integer_comparisons_are_rejected_at_the_verifier_boundary() {
             MirInstruction::Assign(MirAssignment {
                 rvalue:
                     MirRvalue {
-                        kind: MirRvalueKind::IntegerComparison { operation, .. },
+                        kind: MirRvalueKind::PrimitiveComparison { operation, .. },
                         ..
                     },
                 ..
@@ -54,12 +54,46 @@ fn malformed_integer_comparisons_are_rejected_at_the_verifier_boundary() {
             _ => None,
         })
         .expect("comparison source must lower to a comparison rvalue");
-    operation.operand = crate::mir::MirIntegerType::I64;
+    operation.operand = crate::mir::MirComparisonOperand::Integer(crate::mir::MirIntegerType::I64);
 
     let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
     assert!(error.message().contains("input MIR failed verification"));
     assert!(error.message().contains("comparison operand is not `i64`"));
+}
+
+#[test]
+fn malformed_boolean_ordering_is_rejected_at_the_verifier_boundary() {
+    let mut program = eager_boolean_program();
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let operation = function
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(MirAssignment {
+                rvalue:
+                    MirRvalue {
+                        kind: MirRvalueKind::PrimitiveComparison { operation, .. },
+                        ..
+                    },
+                ..
+            }) => Some(operation),
+            _ => None,
+        })
+        .expect("fixture must contain a boolean comparison");
+    operation.predicate = MirComparisonPredicate::LessThan;
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error
+        .message()
+        .contains("comparison predicate `lt` is not valid for `bool`"));
 }
 
 #[test]

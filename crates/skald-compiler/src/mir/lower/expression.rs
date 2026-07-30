@@ -2,8 +2,8 @@
 
 use super::*;
 use crate::hir::{
-    HirBinaryOperation, HirComparisonPredicate, HirExpression, HirExpressionKind, HirIntegerCast,
-    HirIntegerComparison, HirIntegerType, HirUnaryOperation,
+    HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate, HirExpression,
+    HirExpressionKind, HirIntegerCast, HirIntegerType, HirPrimitiveComparison, HirUnaryOperation,
 };
 
 impl BodyLowerer<'_> {
@@ -50,11 +50,11 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             } => self.lower_binary(expression, *operation, left, right),
-            HirExpressionKind::IntegerComparison {
+            HirExpressionKind::PrimitiveComparison {
                 operation,
                 left,
                 right,
-            } => self.lower_integer_comparison(expression, *operation, left, right),
+            } => self.lower_primitive_comparison(expression, *operation, left, right),
             HirExpressionKind::IntegerCast { operation, operand } => {
                 self.lower_integer_cast(expression, *operation, operand)
             }
@@ -132,6 +132,7 @@ impl BodyLowerer<'_> {
                 operation: match operation {
                     HirUnaryOperation::NegateI64 => MirUnaryOperation::NegateI64,
                     HirUnaryOperation::NegateF64 => MirUnaryOperation::NegateF64,
+                    HirUnaryOperation::LogicalNotBool => MirUnaryOperation::LogicalNotBool,
                 },
                 operand,
             },
@@ -177,14 +178,14 @@ impl BodyLowerer<'_> {
         ))
     }
 
-    fn lower_integer_comparison(
+    fn lower_primitive_comparison(
         &mut self,
         expression: &HirExpression,
-        operation: HirIntegerComparison,
+        operation: HirPrimitiveComparison,
         left: &HirExpression,
         right: &HirExpression,
     ) -> Option<ValueId> {
-        let operation = MirIntegerComparison {
+        let operation = MirPrimitiveComparison {
             predicate: match operation.predicate {
                 HirComparisonPredicate::Equal => MirComparisonPredicate::Equal,
                 HirComparisonPredicate::NotEqual => MirComparisonPredicate::NotEqual,
@@ -193,12 +194,17 @@ impl BodyLowerer<'_> {
                 HirComparisonPredicate::GreaterThan => MirComparisonPredicate::GreaterThan,
                 HirComparisonPredicate::GreaterEqual => MirComparisonPredicate::GreaterEqual,
             },
-            operand: lower_integer_type(operation.operand),
+            operand: match operation.operand {
+                HirComparisonOperand::Integer(integer) => {
+                    MirComparisonOperand::Integer(lower_integer_type(integer))
+                }
+                HirComparisonOperand::Bool => MirComparisonOperand::Bool,
+            },
         };
         let (left, right) =
             self.lower_binary_operands(left, right, operation.operand_type(), expression);
         Some(self.assign(
-            MirRvalueKind::IntegerComparison {
+            MirRvalueKind::PrimitiveComparison {
                 operation,
                 left,
                 right,

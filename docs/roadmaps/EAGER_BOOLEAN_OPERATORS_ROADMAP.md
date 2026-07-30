@@ -1,6 +1,6 @@
 # Eager Boolean Operators Roadmap
 
-Status: planned; EB0 is next.
+Status: in progress; EB1 is next.
 
 This roadmap implements the eager part of Skald's frozen boolean operator
 profile: prefix logical negation and exact boolean equality and inequality. It
@@ -86,7 +86,7 @@ structure.
 
 ## Progress
 
-- [ ] EB0 — Establish verified eager-boolean IR operations
+- [x] EB0 — Establish verified eager-boolean IR operations
 - [ ] EB1 — Enable eager boolean source expressions end to end
 - [ ] EB2 — Harden and promote eager boolean operators
 
@@ -98,30 +98,30 @@ structure.
 boundary before source selection depends on it, while preserving the currently
 accepted source language.
 
-- [ ] Generalize the integer-only HIR comparison carrier into the settled
+- [x] Generalize the integer-only HIR comparison carrier into the settled
       primitive-comparison shape, initially covering `i64`, `u64`, `u8`, and
       `bool`, without encoding target condition codes or register widths.
-- [ ] Generalize the corresponding MIR operation and rvalue while preserving
+- [x] Generalize the corresponding MIR operation and rvalue while preserving
       integer predicate, signedness, operand-type, result-type, and
       definition-before-use invariants.
-- [ ] Add exact logical-negation variants to the HIR and MIR unary operation
+- [x] Add exact logical-negation variants to the HIR and MIR unary operation
       families with `bool` operand and result types.
-- [ ] Lower both operation families as pure, block-local scalar rvalues with no
+- [x] Lower both operation families as pure, block-local scalar rvalues with no
       control-effect classification, failure capability, cleanup action, or
       exceptional edge.
-- [ ] Extend MIR verification to accept boolean equality and inequality,
+- [x] Extend MIR verification to accept boolean equality and inequality,
       reject boolean ordering and mismatched operand/result types, and retain
       deterministic mutation diagnostics.
-- [ ] Extend x86-64 legality and instruction selection so logical negation and
+- [x] Extend x86-64 legality and instruction selection so logical negation and
       boolean equality produce canonical zero-or-one results through private
       target operations.
-- [ ] Keep source construction of the new boolean operations disabled in this
+- [x] Keep source construction of the new boolean operations disabled in this
       task; direct IR and backend tests establish the complete downstream path
       before parser and type-check activation.
-- [ ] Update HIR/MIR facades, deterministic dumps, and debugging vocabulary for
+- [x] Update HIR/MIR facades, deterministic dumps, and debugging vocabulary for
       the cohesive comparison representation without leaking implementation
       helpers as new public API.
-- [ ] Preserve the runtime header, runtime archive, ABI version, frame model,
+- [x] Preserve the runtime header, runtime archive, ABI version, frame model,
       deterministic labels, and all existing integer comparison observations.
 
 **Tests:** Existing eighteen-case integer comparison matrices and native

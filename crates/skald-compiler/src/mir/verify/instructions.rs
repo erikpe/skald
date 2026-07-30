@@ -4,9 +4,9 @@ use std::collections::HashSet;
 
 use super::{
     super::model::{
-        MirAliasAccess, MirAssignment, MirBasicBlock, MirCopyAssignment, MirCopyConstruction,
-        MirDefinitionRef, MirEndFullExpression, MirInstruction, MirPlace, MirPlaceBase, MirRvalue,
-        MirRvalueKind, MirStorageKind, MirStore, MirType, ValueId,
+        MirAliasAccess, MirAssignment, MirBasicBlock, MirComparisonOperand, MirCopyAssignment,
+        MirCopyConstruction, MirDefinitionRef, MirEndFullExpression, MirInstruction, MirPlace,
+        MirPlaceBase, MirRvalue, MirRvalueKind, MirStorageKind, MirStore, MirType, ValueId,
     },
     context::Verifier,
     place::places_overlap,
@@ -581,15 +581,20 @@ impl Verifier<'_> {
                 }
             }
             MirRvalueKind::Unary { operation, operand } => {
-                let expected = operation.operand_type();
-                if rvalue.ty != expected {
+                if rvalue.ty != operation.result_type() {
                     self.block_error(
                         function.callable(),
                         block.id,
                         "unary operation result type mismatch",
                     );
                 }
-                self.verify_arithmetic_operand(function, block, *operand, expected, defined);
+                self.verify_unary_operand(
+                    function,
+                    block,
+                    *operand,
+                    operation.operand_type(),
+                    defined,
+                );
             }
             MirRvalueKind::Binary {
                 operation,
@@ -607,16 +612,29 @@ impl Verifier<'_> {
                 self.verify_arithmetic_operand(function, block, *left, expected, defined);
                 self.verify_arithmetic_operand(function, block, *right, expected, defined);
             }
-            MirRvalueKind::IntegerComparison {
+            MirRvalueKind::PrimitiveComparison {
                 operation,
                 left,
                 right,
             } => {
                 if rvalue.ty != operation.result_type() {
+                    let message = match operation.operand {
+                        MirComparisonOperand::Integer(_) => {
+                            "integer comparison result must be `bool`"
+                        }
+                        MirComparisonOperand::Bool => "boolean comparison result must be `bool`",
+                    };
+                    self.block_error(function.callable(), block.id, message);
+                }
+                if !operation.is_valid() {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "integer comparison result must be `bool`",
+                        format!(
+                            "comparison predicate `{}` is not valid for `{}`",
+                            operation.predicate.mnemonic(),
+                            operation.operand.name()
+                        ),
                     );
                 }
                 let expected = operation.operand_type();
@@ -684,6 +702,25 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!("arithmetic operand is not `{expected}`"),
+                );
+            }
+        }
+    }
+
+    fn verify_unary_operand(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        value: ValueId,
+        expected: MirType,
+        defined: &HashSet<ValueId>,
+    ) {
+        if let Some(ty) = self.verify_value_use(function, block, value, defined) {
+            if ty != expected {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("unary operand is not `{expected}`"),
                 );
             }
         }

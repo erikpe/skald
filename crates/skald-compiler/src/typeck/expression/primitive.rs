@@ -4,8 +4,8 @@ use super::*;
 use crate::{
     diagnostics::format_type_list,
     hir::{
-        HirBinaryOperation, HirComparisonPredicate, HirExpressionKind, HirIntegerCast,
-        HirIntegerComparison, HirIntegerType, HirUnaryOperation,
+        HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate, HirExpressionKind,
+        HirIntegerCast, HirIntegerType, HirPrimitiveComparison, HirUnaryOperation,
     },
     resolve::{ResolvedBinaryOperator, ResolvedIntegerType, ResolvedUnaryOperator},
 };
@@ -244,9 +244,12 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         };
-        let operation = HirIntegerComparison { predicate, operand };
+        let operation = HirPrimitiveComparison {
+            predicate,
+            operand: HirComparisonOperand::Integer(operand),
+        };
         Some(HirExpression {
-            kind: HirExpressionKind::IntegerComparison {
+            kind: HirExpressionKind::PrimitiveComparison {
                 operation,
                 left: Box::new(left),
                 right: Box::new(right),

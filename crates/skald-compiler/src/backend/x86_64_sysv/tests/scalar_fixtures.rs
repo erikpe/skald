@@ -5,6 +5,192 @@ use crate::{
     mir::{MirClassDeclarationTable, MirInterfaceDeclarationTable},
 };
 
+pub(super) fn eager_boolean_program() -> MirProgram {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let span = function.span;
+    let function_id = function.function;
+    let value = |index, ty| fixture_value(ValueId::new(function_id, index), ty, span);
+    let assignment =
+        |index, kind, ty| fixture_assign(ValueId::new(function_id, index), kind, ty, span);
+    let block = |index, instructions, condition, expected, next: BlockId, failure: BlockId| {
+        fixture_block(
+            BlockId::new(function_id, index),
+            instructions,
+            Some(MirTerminator::Branch {
+                condition,
+                true_target: if expected { next } else { failure },
+                false_target: if expected { failure } else { next },
+                span,
+            }),
+            span,
+        )
+    };
+
+    function.values = (0..16)
+        .map(|index| value(index, MirType::Bool))
+        .chain((16..18).map(|index| value(index, MirType::I64)))
+        .collect();
+
+    let success = BlockId::new(function_id, 6);
+    let failure = BlockId::new(function_id, 7);
+    function.body.entry = BlockId::new(function_id, 0);
+    function.body.blocks = vec![
+        block(
+            0,
+            vec![
+                assignment(0, MirRvalueKind::ConstantBool(false), MirType::Bool),
+                assignment(
+                    1,
+                    MirRvalueKind::Unary {
+                        operation: MirUnaryOperation::LogicalNotBool,
+                        operand: ValueId::new(function_id, 0),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            ValueId::new(function_id, 1),
+            true,
+            BlockId::new(function_id, 1),
+            failure,
+        ),
+        block(
+            1,
+            vec![
+                assignment(2, MirRvalueKind::ConstantBool(true), MirType::Bool),
+                assignment(
+                    3,
+                    MirRvalueKind::Unary {
+                        operation: MirUnaryOperation::LogicalNotBool,
+                        operand: ValueId::new(function_id, 2),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            ValueId::new(function_id, 3),
+            false,
+            BlockId::new(function_id, 2),
+            failure,
+        ),
+        block(
+            2,
+            vec![
+                assignment(4, MirRvalueKind::ConstantBool(true), MirType::Bool),
+                assignment(5, MirRvalueKind::ConstantBool(true), MirType::Bool),
+                assignment(
+                    6,
+                    MirRvalueKind::PrimitiveComparison {
+                        operation: MirPrimitiveComparison {
+                            predicate: MirComparisonPredicate::Equal,
+                            operand: MirComparisonOperand::Bool,
+                        },
+                        left: ValueId::new(function_id, 4),
+                        right: ValueId::new(function_id, 5),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            ValueId::new(function_id, 6),
+            true,
+            BlockId::new(function_id, 3),
+            failure,
+        ),
+        block(
+            3,
+            vec![
+                assignment(7, MirRvalueKind::ConstantBool(true), MirType::Bool),
+                assignment(8, MirRvalueKind::ConstantBool(false), MirType::Bool),
+                assignment(
+                    9,
+                    MirRvalueKind::PrimitiveComparison {
+                        operation: MirPrimitiveComparison {
+                            predicate: MirComparisonPredicate::Equal,
+                            operand: MirComparisonOperand::Bool,
+                        },
+                        left: ValueId::new(function_id, 7),
+                        right: ValueId::new(function_id, 8),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            ValueId::new(function_id, 9),
+            false,
+            BlockId::new(function_id, 4),
+            failure,
+        ),
+        block(
+            4,
+            vec![
+                assignment(10, MirRvalueKind::ConstantBool(false), MirType::Bool),
+                assignment(11, MirRvalueKind::ConstantBool(false), MirType::Bool),
+                assignment(
+                    12,
+                    MirRvalueKind::PrimitiveComparison {
+                        operation: MirPrimitiveComparison {
+                            predicate: MirComparisonPredicate::NotEqual,
+                            operand: MirComparisonOperand::Bool,
+                        },
+                        left: ValueId::new(function_id, 10),
+                        right: ValueId::new(function_id, 11),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            ValueId::new(function_id, 12),
+            false,
+            BlockId::new(function_id, 5),
+            failure,
+        ),
+        block(
+            5,
+            vec![
+                assignment(13, MirRvalueKind::ConstantBool(false), MirType::Bool),
+                assignment(14, MirRvalueKind::ConstantBool(true), MirType::Bool),
+                assignment(
+                    15,
+                    MirRvalueKind::PrimitiveComparison {
+                        operation: MirPrimitiveComparison {
+                            predicate: MirComparisonPredicate::NotEqual,
+                            operand: MirComparisonOperand::Bool,
+                        },
+                        left: ValueId::new(function_id, 13),
+                        right: ValueId::new(function_id, 14),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            ValueId::new(function_id, 15),
+            true,
+            success,
+            failure,
+        ),
+        fixture_block(
+            success,
+            vec![assignment(16, MirRvalueKind::ConstantI64(91), MirType::I64)],
+            Some(MirTerminator::Return {
+                value: Some(ValueId::new(function_id, 16)),
+                span,
+            }),
+            span,
+        ),
+        fixture_block(
+            failure,
+            vec![assignment(17, MirRvalueKind::ConstantI64(1), MirType::I64)],
+            Some(MirTerminator::Return {
+                value: Some(ValueId::new(function_id, 17)),
+                span,
+            }),
+            span,
+        ),
+    ];
+
+    verify_mir(&mir).expect("eager boolean fixture must be valid");
+    mir
+}
+
 pub(super) fn f64_arithmetic_program() -> MirProgram {
     let span = test_span();
     let compute_id = FunctionId::new(0);

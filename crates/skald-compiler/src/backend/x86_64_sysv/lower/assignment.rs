@@ -3,9 +3,9 @@
 use crate::{
     backend::BackendError,
     mir::{
-        MirAssignment, MirBinaryOperation, MirComparisonPredicate, MirIntegerCast,
-        MirIntegerComparison, MirIntegerType, MirPlace, MirRvalueKind, MirType, MirUnaryOperation,
-        ValueId,
+        MirAssignment, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
+        MirIntegerCast, MirIntegerType, MirPlace, MirPrimitiveComparison, MirRvalueKind, MirType,
+        MirUnaryOperation, ValueId,
     },
 };
 
@@ -78,11 +78,11 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
-            MirRvalueKind::IntegerComparison {
+            MirRvalueKind::PrimitiveComparison {
                 operation,
                 left,
                 right,
-            } => self.select_integer_comparison(*operation, *left, *right, destination),
+            } => self.select_primitive_comparison(*operation, *left, *right, destination),
             MirRvalueKind::IntegerCast { operation, operand } => {
                 self.select_integer_cast(*operation, *operand, destination)
             }
@@ -167,6 +167,11 @@ impl InstructionSelector<'_, '_> {
                 value::store_canonical_rax(ty, destination, self.output);
             }
             MirUnaryOperation::NegateF64 => self.select_float_negate(operand, destination),
+            MirUnaryOperation::LogicalNotBool => {
+                value::load_rax(value::frame_value(self.frame, operand), self.output);
+                self.output.push(Instruction::Test(Register::Rax));
+                self.store_condition(ConditionCode::Equal, destination);
+            }
         }
     }
 
@@ -273,9 +278,9 @@ impl InstructionSelector<'_, '_> {
         value::store_canonical_rax(ty, destination, self.output);
     }
 
-    fn select_integer_comparison(
+    fn select_primitive_comparison(
         &mut self,
-        operation: MirIntegerComparison,
+        operation: MirPrimitiveComparison,
         left: ValueId,
         right: ValueId,
         destination: Operand,
@@ -289,8 +294,12 @@ impl InstructionSelector<'_, '_> {
             source: Register::Rcx,
             destination: Register::Rax,
         });
+        self.store_condition(comparison_condition(operation), destination);
+    }
+
+    fn store_condition(&mut self, condition: ConditionCode, destination: Operand) {
         self.output.push(Instruction::SetCondition {
-            condition: comparison_condition(operation),
+            condition,
             destination: ByteRegister::Al,
         });
         self.output.push(Instruction::ZeroExtendByte {
@@ -353,25 +362,43 @@ impl InstructionSelector<'_, '_> {
     }
 }
 
-fn comparison_condition(operation: MirIntegerComparison) -> ConditionCode {
+fn comparison_condition(operation: MirPrimitiveComparison) -> ConditionCode {
     match operation.predicate {
         MirComparisonPredicate::Equal => ConditionCode::Equal,
         MirComparisonPredicate::NotEqual => ConditionCode::NotEqual,
-        MirComparisonPredicate::LessThan => match operation.operand {
-            MirIntegerType::I64 => ConditionCode::SignedLess,
-            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedBelow,
-        },
-        MirComparisonPredicate::LessEqual => match operation.operand {
-            MirIntegerType::I64 => ConditionCode::SignedLessEqual,
-            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedBelowEqual,
-        },
-        MirComparisonPredicate::GreaterThan => match operation.operand {
-            MirIntegerType::I64 => ConditionCode::SignedGreater,
-            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedAbove,
-        },
-        MirComparisonPredicate::GreaterEqual => match operation.operand {
-            MirIntegerType::I64 => ConditionCode::SignedGreaterEqual,
-            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedAboveEqual,
-        },
+        MirComparisonPredicate::LessThan => ordering_condition(
+            operation.operand,
+            ConditionCode::SignedLess,
+            ConditionCode::UnsignedBelow,
+        ),
+        MirComparisonPredicate::LessEqual => ordering_condition(
+            operation.operand,
+            ConditionCode::SignedLessEqual,
+            ConditionCode::UnsignedBelowEqual,
+        ),
+        MirComparisonPredicate::GreaterThan => ordering_condition(
+            operation.operand,
+            ConditionCode::SignedGreater,
+            ConditionCode::UnsignedAbove,
+        ),
+        MirComparisonPredicate::GreaterEqual => ordering_condition(
+            operation.operand,
+            ConditionCode::SignedGreaterEqual,
+            ConditionCode::UnsignedAboveEqual,
+        ),
+    }
+}
+
+fn ordering_condition(
+    operand: MirComparisonOperand,
+    signed: ConditionCode,
+    unsigned: ConditionCode,
+) -> ConditionCode {
+    match operand {
+        MirComparisonOperand::Integer(MirIntegerType::I64) => signed,
+        MirComparisonOperand::Integer(MirIntegerType::U64 | MirIntegerType::U8) => unsigned,
+        MirComparisonOperand::Bool => {
+            unreachable!("verified boolean comparisons cannot use ordering")
+        }
     }
 }

@@ -1,5 +1,7 @@
 use super::*;
-use crate::hir::{HirComparisonPredicate, HirIntegerComparison, HirIntegerType};
+use crate::hir::{
+    HirComparisonOperand, HirComparisonPredicate, HirIntegerType, HirPrimitiveComparison,
+};
 
 const OPERATORS: &[(HirComparisonPredicate, &str)] = &[
     (HirComparisonPredicate::Equal, "=="),
@@ -31,7 +33,7 @@ fn checks_all_eighteen_exact_type_integer_comparisons() {
             );
             let hir = output.hir.unwrap();
             let comparison = returned_expression(hir.definitions.get(FunctionId::new(0)).unwrap());
-            let HirExpressionKind::IntegerComparison {
+            let HirExpressionKind::PrimitiveComparison {
                 operation,
                 left,
                 right,
@@ -42,9 +44,9 @@ fn checks_all_eighteen_exact_type_integer_comparisons() {
 
             assert_eq!(
                 *operation,
-                HirIntegerComparison {
+                HirPrimitiveComparison {
                     predicate: *predicate,
-                    operand: *operand,
+                    operand: HirComparisonOperand::Integer(*operand),
                 }
             );
             assert_eq!(operation.operand_type(), operand.operand_type());

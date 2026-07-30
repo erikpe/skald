@@ -870,6 +870,7 @@ impl HirDumper {
                 let operation = match operation {
                     HirUnaryOperation::NegateI64 => "NegateI64",
                     HirUnaryOperation::NegateF64 => "NegateF64",
+                    HirUnaryOperation::LogicalNotBool => "LogicalNotBool",
                 };
                 self.typed_line(&format!("Unary {operation}"), expression);
                 self.indented(|dumper| dumper.expression(operand));
@@ -899,14 +900,18 @@ impl HirDumper {
                     dumper.expression(right);
                 });
             }
-            HirExpressionKind::IntegerComparison {
+            HirExpressionKind::PrimitiveComparison {
                 operation,
                 left,
                 right,
             } => {
+                let family = match operation.operand {
+                    HirComparisonOperand::Integer(_) => "IntegerComparison",
+                    HirComparisonOperand::Bool => "BooleanComparison",
+                };
                 self.typed_line(
                     &format!(
-                        "IntegerComparison {}.{}",
+                        "{family} {}.{}",
                         operation.predicate.mnemonic(),
                         operation.operand.name()
                     ),

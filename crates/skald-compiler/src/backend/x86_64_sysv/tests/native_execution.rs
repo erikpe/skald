@@ -2,6 +2,13 @@ use super::*;
 use crate::test_support::INLINE_FIELD_SOURCE;
 
 #[test]
+fn eager_boolean_truth_tables_execute_with_canonical_results() {
+    let output = emit_assembly(Target::X86_64SysV, &eager_boolean_program()).unwrap();
+
+    assert_eq!(run_native_assembly(&output).code(), Some(91));
+}
+
+#[test]
 fn integer_comparison_boundaries_store_canonical_booleans_and_branch_natively() {
     let output = assembly(concat!(
         "fn main() -> i64 {\n",

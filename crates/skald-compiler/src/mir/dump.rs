@@ -1034,6 +1034,7 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             let operation = match operation {
                 MirUnaryOperation::NegateI64 => "neg.i64",
                 MirUnaryOperation::NegateF64 => "neg.f64",
+                MirUnaryOperation::LogicalNotBool => "not.bool",
             };
             let _ = write!(output, "{operation} {operand}");
         }
@@ -1058,7 +1059,7 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             };
             let _ = write!(output, "{operation} {left}, {right}");
         }
-        MirRvalueKind::IntegerComparison {
+        MirRvalueKind::PrimitiveComparison {
             operation,
             left,
             right,

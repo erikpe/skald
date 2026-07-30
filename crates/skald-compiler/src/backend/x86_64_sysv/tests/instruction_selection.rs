@@ -117,6 +117,42 @@ fn selects_every_integer_comparison_with_exact_signedness_and_canonical_results(
 }
 
 #[test]
+fn selects_eager_boolean_operations_with_canonical_results() {
+    let output = emit_assembly(Target::X86_64SysV, &eager_boolean_program()).unwrap();
+    assert_eq!(
+        output,
+        emit_assembly(Target::X86_64SysV, &eager_boolean_program()).unwrap()
+    );
+
+    let lines: Vec<_> = output.lines().map(str::trim).collect();
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|line| **line == "test rax, rax")
+            .count(),
+        8
+    );
+    assert_eq!(
+        lines.iter().filter(|line| **line == "cmp rax, rcx").count(),
+        4
+    );
+    assert_eq!(lines.iter().filter(|line| **line == "sete al").count(), 4);
+    assert_eq!(lines.iter().filter(|line| **line == "setne al").count(), 2);
+
+    for index in lines
+        .iter()
+        .enumerate()
+        .filter_map(|(index, line)| line.starts_with("set").then_some(index))
+    {
+        assert_eq!(lines[index + 1], "movzx rax, al");
+        assert!(lines[index + 2].starts_with("mov qword ptr [rbp"));
+        assert!(lines[index + 2].ends_with(", rax"));
+    }
+    assert!(!output.contains("ska_rt_boolean"));
+    assert!(!output.contains("ska_rt_compare"));
+}
+
+#[test]
 fn selects_every_integer_cast_through_canonical_scalar_moves() {
     let mut source = String::new();
     let mut functions = Vec::new();

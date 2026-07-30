@@ -1,4 +1,8 @@
 use super::*;
+use crate::hir::{
+    HirComparisonOperand, HirExpression, HirExpressionKind, HirFunctionDefinition, HirReturnValue,
+    HirStatement, HirUnaryOperation, Type,
+};
 
 const OPERATORS: &[(MirComparisonPredicate, &str, &str)] = &[
     (MirComparisonPredicate::Equal, "==", "eq"),
@@ -14,6 +18,64 @@ const INTEGER_TYPES: &[(MirIntegerType, &str, &str, &str)] = &[
     (MirIntegerType::U64, "u64", "1u", "2u"),
     (MirIntegerType::U8, "u8", "1u8", "2u8"),
 ];
+
+fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {
+    let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
+        panic!("expected final return statement");
+    };
+    let HirReturnValue::Scalar(expression) =
+        statement.value.as_mut().expect("expected return value")
+    else {
+        panic!("expected scalar return value");
+    };
+    expression
+}
+
+fn lower_manually_selected_eager_boolean_operations() -> MirProgram {
+    let mut hir = type_check_source(concat!(
+        "fn invert() -> bool { return false; }\n",
+        "fn compare() -> bool { return 1 != 2; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+
+    let invert = returned_expression_mut(
+        hir.definitions
+            .get_mut_for_test(FunctionId::new(0))
+            .unwrap(),
+    );
+    let span = invert.span;
+    invert.kind = HirExpressionKind::Unary {
+        operation: HirUnaryOperation::LogicalNotBool,
+        operand: Box::new(HirExpression {
+            kind: HirExpressionKind::Boolean(false),
+            ty: Type::Bool,
+            span,
+        }),
+    };
+
+    let comparison = returned_expression_mut(
+        hir.definitions
+            .get_mut_for_test(FunctionId::new(1))
+            .unwrap(),
+    );
+    let HirExpressionKind::PrimitiveComparison {
+        operation,
+        left,
+        right,
+    } = &mut comparison.kind
+    else {
+        panic!("expected comparison expression");
+    };
+    operation.operand = HirComparisonOperand::Bool;
+    left.kind = HirExpressionKind::Boolean(true);
+    left.ty = Type::Bool;
+    right.kind = HirExpressionKind::Boolean(false);
+    right.ty = Type::Bool;
+
+    lower_hir(&hir)
+}
 
 #[test]
 fn lowers_and_verifies_every_integer_comparison_operation() {
@@ -38,7 +100,7 @@ fn lowers_and_verifies_every_integer_comparison_operation() {
                         rvalue:
                             MirRvalue {
                                 kind:
-                                    MirRvalueKind::IntegerComparison {
+                                    MirRvalueKind::PrimitiveComparison {
                                         operation,
                                         left,
                                         right,
@@ -53,9 +115,9 @@ fn lowers_and_verifies_every_integer_comparison_operation() {
 
             assert_eq!(
                 comparison.0,
-                MirIntegerComparison {
+                MirPrimitiveComparison {
                     predicate,
-                    operand: integer,
+                    operand: MirComparisonOperand::Integer(integer),
                 }
             );
             assert_eq!(comparison.0.operand_type(), integer.operand_type());
@@ -68,6 +130,62 @@ fn lowers_and_verifies_every_integer_comparison_operation() {
             );
         }
     }
+}
+
+#[test]
+fn lowers_manually_selected_eager_boolean_operations_as_pure_scalar_rvalues() {
+    let mir = lower_manually_selected_eager_boolean_operations();
+    verify_mir(&mir).unwrap();
+
+    let invert = mir.definitions.get(FunctionId::new(0)).unwrap();
+    assert_eq!(invert.body.blocks.len(), 1);
+    assert!(invert.body.blocks[0]
+        .instructions
+        .iter()
+        .any(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::Assign(MirAssignment {
+                    rvalue: MirRvalue {
+                        kind: MirRvalueKind::Unary {
+                            operation: MirUnaryOperation::LogicalNotBool,
+                            ..
+                        },
+                        ty: MirType::Bool,
+                    },
+                    ..
+                })
+            )
+        }));
+
+    let compare = mir.definitions.get(FunctionId::new(1)).unwrap();
+    assert_eq!(compare.body.blocks.len(), 1);
+    assert!(compare.body.blocks[0]
+        .instructions
+        .iter()
+        .any(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::Assign(MirAssignment {
+                    rvalue: MirRvalue {
+                        kind: MirRvalueKind::PrimitiveComparison {
+                            operation: MirPrimitiveComparison {
+                                predicate: MirComparisonPredicate::NotEqual,
+                                operand: MirComparisonOperand::Bool,
+                            },
+                            ..
+                        },
+                        ty: MirType::Bool,
+                    },
+                    ..
+                })
+            )
+        }));
+
+    let dump = dump_mir(&mir);
+    assert_eq!(dump, dump_mir(&mir));
+    assert!(dump.contains("not.bool"));
+    assert!(dump.contains("ne.bool"));
 }
 
 #[test]
