@@ -1,9 +1,10 @@
 # Operator Semantics Design Proposal
 
-Status: proposed; O1 through O12 contain recommended decisions awaiting
-confirmation. This proposal must be iterated, confirmed, and promoted into
-living language and compiler contracts before any operator implementation
-roadmap is written.
+Status: confirmed on 2026-07-30; O1 through O12 adopt the decisions recorded
+below, and the contract audit is complete. Promotion into living language and
+compiler contracts remains before any operator implementation roadmap is
+written. Until promotion, this proposal records accepted direction but is not
+a living language or compiler authority.
 
 This proposal defines a coherent source and semantic model for Skald operators.
 It expands the deliberately small implemented primitive surface without
@@ -95,24 +96,24 @@ design.
 
 ## Decision register
 
-Every decision in this register must be confirmed or deliberately revised
-before promotion. An implementation roadmap must not treat a recommended row
-as frozen.
+Every decision in this register was confirmed on 2026-07-30. Promotion must
+transfer the complete design into living contracts before an implementation
+roadmap may consume it as frozen behavior.
 
-| ID | Decision | Recommended direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [O1](#o1--initial-operator-surface) | Initial operator surface | Freeze the primitive matrix below; do not include power or object operators | **Recommended** |
-| [O2](#o2--exact-type-selection) | Operand compatibility and cast extension boundary | Select operators from actual static types only; shifts are the sole mixed-type shape, and future explicit casts complete before selection | **Recommended** |
-| [O3](#o3--precedence-associativity-and-is) | Precedence and `is` | Use bitwise-before-comparison precedence and one non-associative comparison/`is` tier | **Recommended** |
-| [O4](#o4--evaluation-and-temporary-lifetimes) | Evaluation and cleanup | Left-to-right, exactly once; logical RHS conditional; all completed temporaries live to the enclosing full-expression boundary | **Recommended** |
-| [O5](#o5--integer-overflow) | Integer overflow | Wrap `i64`, `u64`, and `u8` arithmetic modulo their width | **Recommended** |
-| [O6](#o6--integer-division-and-remainder) | Division edge behavior | Floor division, divisor-sign remainder, panic on zero, wrap `i64::MIN / -1` | **Recommended** |
-| [O7](#o7--bitwise-and-shift-semantics) | Bitwise and shifts | Integer-only bitwise operations; `u64` shift count; panic at or above the left width | **Recommended** |
-| [O8](#o8--floating-point-semantics) | Floating arithmetic and comparisons | IEEE-754 binary64 division and unordered comparisons; no floating `%` | **Recommended** |
-| [O9](#o9--boolean-operators) | Boolean operations | `!`, short-circuit `&&`/`||`, and exact `bool` equality | **Recommended** |
-| [O10](#o10--panic-and-diagnostic-boundaries) | Failure and diagnostics | Extend the compiler-known panic catalog; keep compile-time wording non-normative | **Recommended** |
-| [O11](#o11--compiler-representation-boundary) | HIR, MIR, and optimization | Typed eager operations; structured short-circuit HIR lowered to verified CFG; no runtime-owned operator semantics | **Recommended** |
-| [O12](#o12--promotion-and-delivery-boundary) | Freeze and roadmap ordering | Promote the whole design first, then create separate implementation roadmaps | **Recommended** |
+| [O1](#o1--initial-operator-surface) | Initial operator surface | Freeze the primitive matrix below; do not include power or object operators | **Confirmed** |
+| [O2](#o2--exact-type-selection) | Operand compatibility and cast extension boundary | Select operators from actual static types only; shifts are the sole mixed-type shape, and future explicit casts complete before selection | **Confirmed** |
+| [O3](#o3--precedence-associativity-and-is) | Precedence and `is` | Use bitwise-before-comparison precedence and one non-associative comparison/`is` tier | **Confirmed** |
+| [O4](#o4--evaluation-and-temporary-lifetimes) | Evaluation and cleanup | Left-to-right, exactly once; logical RHS conditional; all completed temporaries live to the enclosing full-expression boundary | **Confirmed** |
+| [O5](#o5--integer-overflow) | Integer overflow | Wrap `i64`, `u64`, and `u8` arithmetic modulo their width | **Confirmed** |
+| [O6](#o6--integer-division-and-remainder) | Division edge behavior | Floor division, divisor-sign remainder, panic on zero, wrap `i64::MIN / -1` | **Confirmed** |
+| [O7](#o7--bitwise-and-shift-semantics) | Bitwise and shifts | Integer-only bitwise operations; `u64` shift count; panic at or above the left width | **Confirmed** |
+| [O8](#o8--floating-point-semantics) | Floating arithmetic and comparisons | IEEE-754 binary64 division and unordered comparisons; no floating `%` | **Confirmed** |
+| [O9](#o9--boolean-operators) | Boolean operations | `!`, short-circuit `&&`/`||`, and exact `bool` equality | **Confirmed** |
+| [O10](#o10--panic-and-diagnostic-boundaries) | Failure and diagnostics | Extend the compiler-known panic catalog; keep compile-time wording non-normative | **Confirmed** |
+| [O11](#o11--compiler-representation-boundary) | HIR, MIR, and optimization | Typed eager operations; structured short-circuit HIR lowered to verified CFG; no runtime-owned operator semantics | **Confirmed** |
+| [O12](#o12--promotion-and-delivery-boundary) | Freeze and roadmap ordering | Promote the whole design first, then create separate implementation roadmaps | **Confirmed** |
 
 ## Proposed source surface
 
@@ -160,7 +161,7 @@ object views, or shared-owner handles.
 
 **Question:** Which operators belong to the first frozen primitive profile?
 
-**Recommended decision:** Freeze exactly the unary and binary matrices above.
+**Confirmed decision:** Freeze exactly the unary and binary matrices above.
 This includes source and semantic behavior even when a particular operator is
 implemented later.
 
@@ -177,7 +178,7 @@ between truncating remainder, IEEE remainder, and other conventions.
 **Question:** Can operator selection convert either operand, and may a future
 expansion of explicit casts alter operator selection?
 
-**Recommended decision:** No operator in this profile performs an implicit
+**Confirmed decision:** No operator in this profile performs an implicit
 cast, promotion, narrowing, signedness change, boolean conversion, truthiness
 conversion, or expected-type reinterpretation.
 
@@ -225,7 +226,7 @@ presenting itself as a cast-only extension.
 **Question:** How do all proposed operators compose, and where does contextual
 `is` belong?
 
-**Recommended decision:** From tightest to loosest binding:
+**Confirmed decision:** From tightest to loosest binding:
 
 1. postfix unwrap, member access, shared member access, calls, indexing, and
    slicing;
@@ -299,7 +300,7 @@ Bitwise operators bind above comparison so the common form
 
 **Question:** When do operands execute and when do their temporaries end?
 
-**Recommended decision:**
+**Confirmed decision:**
 
 - a unary operand evaluates once before its operator;
 - eager binary operands evaluate exactly once, left then right;
@@ -320,16 +321,31 @@ temporary belonging only to a skipped right operand never becomes live. This
 extends the existing full-expression contract to path-dependent expression
 evaluation rather than introducing operand-local cleanup.
 
+Here, a full-expression temporary includes an owning object or shared-owner
+temporary and any hidden anchor whose existing contract ends at that boundary.
+This rule does not lengthen a construct whose existing contract is bounded by
+its immediate consumer:
+
+- an inline-class optional payload view and its presence guard end after the
+  complete immediate field, call, alias, cast, type-test, or owning-copy
+  consumer;
+- a primitive optional unwrap finishes after copying its value;
+- an optional shared-owner unwrap first secures an independent ordinary owner,
+  whose own temporary lifetime then follows the full-expression rule; and
+- an object checked-place cast retains its existing complete consuming
+  full-expression lifetime.
+
 When a logical expression is used as an `if`, `elif`, or `while` condition, the
 complete selected expression path is cleaned before control enters either
-successor, under the existing condition boundary.
+successor. This preserves the explicit existing `while` boundary and current
+conditional lowering, and freezes the same source rule for `if` and `elif`.
 
 ## O5 — Integer overflow
 
 **Question:** What happens when an integer arithmetic result is outside its
 mathematical range?
 
-**Recommended decision:** `i64`, `u64`, and `u8` arithmetic wraps modulo the
+**Confirmed decision:** `i64`, `u64`, and `u8` arithmetic wraps modulo the
 type width:
 
 - `i64` retains the low 64 bits and interprets them as two's-complement;
@@ -350,7 +366,7 @@ wrapping operations rather than host-language overflow.
 **Question:** How do signed rounding, zero divisors, and
 `i64::MIN / -1` behave?
 
-**Recommended decision:**
+**Confirmed decision:**
 
 - unsigned division uses the ordinary nonnegative quotient and remainder;
 - signed division rounds the mathematical quotient toward negative infinity;
@@ -385,7 +401,7 @@ not valid implementation of the source panic contract.
 **Question:** What bit widths and count rules govern bitwise operations and
 shifts?
 
-**Recommended decision:**
+**Confirmed decision:**
 
 - `&`, `|`, `^`, and `~` operate on the exact fixed-width representation of
   `i64`, `u64`, or `u8`;
@@ -405,7 +421,7 @@ accepted low bits. A valid `u8` result is canonicalized after an operation.
 **Question:** What observable binary64 behavior is frozen for `/` and
 comparison?
 
-**Recommended decision:** `f64` unary negation and `+`, `-`, `*`, and `/`
+**Confirmed decision:** `f64` unary negation and `+`, `-`, `*`, and `/`
 follow IEEE-754 binary64 operations in the existing round-to-nearest,
 ties-to-even environment. Floating division by zero does not panic; it produces
 the applicable signed infinity or NaN. Overflow, underflow, signed zero,
@@ -438,7 +454,7 @@ Floating `%` is not defined by this proposal.
 **Question:** Which operations exist for `bool`, and are conjunction and
 disjunction eager?
 
-**Recommended decision:** `bool` supports:
+**Confirmed decision:** `bool` supports:
 
 - prefix `!`;
 - equality `==` and inequality `!=`;
@@ -459,15 +475,15 @@ evaluation, panic, ownership, cleanup, and result behavior remain unchanged.
 **Question:** How are invalid runtime operands reported, and what compile-time
 diagnostics are part of the language contract?
 
-**Recommended decision:** Integer zero divisors and excessive shift counts are
+**Confirmed decision:** Integer zero divisors and excessive shift counts are
 compiler-known source-reachable failures under the existing non-returning,
 non-unwinding panic contract. They must carry distinct target-independent
 semantic reasons through verified IR and use the common panic reporter.
 
-Before promotion, the closed panic catalog must be extended with confirmed
-exact static messages. Recommended messages are:
+Before promotion, the closed panic catalog must be extended with these
+confirmed exact static messages:
 
-| Failure | Recommended static message |
+| Failure | Confirmed static message |
 |---|---|
 | Integer division by zero | `integer division by zero` |
 | Integer remainder by zero | `integer remainder by zero` |
@@ -487,7 +503,7 @@ compiler quality obligations.
 **Question:** Which internal invariants must be settled before implementation
 can be divided among roadmaps?
 
-**Recommended decision:**
+**Confirmed decision:**
 
 - source syntax retains exact operator and operand spans;
 - resolved form preserves operator identity without selecting target
@@ -496,7 +512,10 @@ can be divided among roadmaps?
   and failure capability;
 - eager unary and binary primitive operations remain explicit typed values;
 - short-circuit boolean operations remain structured in HIR and lower to
-  ordinary MIR control flow with one selected result;
+  ordinary MIR control flow with one selected canonical `bool` result;
+- because current MIR transient values are block-local, a short-circuit result
+  used after its branch is carried through explicit target-independent storage
+  or an equivalently verified future representation;
 - MIR represents eager scalar operations and compiler-known failure reasons
   target-independently;
 - MIR verification proves operand/result types, valid operation flavors,
@@ -513,9 +532,13 @@ instruction sequences, register choices, branch shapes, and optimization
 algorithms remain private implementation decisions.
 
 The path-dependent temporary state introduced by `&&` and `||` is a material
-representation prerequisite. The eventual compiler design must merge selected
-paths while retaining every completed temporary until the enclosing
-full-expression cleanup. A roadmap must not avoid this obligation by
+representation prerequisite. MIR must retain every completed temporary until
+the enclosing full-expression cleanup without pretending that a skipped-path
+temporary became live. A join before that boundary must therefore either
+represent path-dependent lifetime and conditional cleanup explicitly or keep
+the affected continuations distinct until their lifetime states are
+compatible. The exact mechanism remains a compiler-design choice, but a
+roadmap must not avoid the obligation by cleaning a logical operand early or
 restricting logical operands to effect-free primitive expressions.
 
 ## O12 — Promotion and delivery boundary
@@ -523,7 +546,7 @@ restricting logical operands to effect-free primitive expressions.
 **Question:** When may implementation roadmaps begin, and how may they divide
 the work?
 
-**Recommended decision:** No implementation roadmap begins until O1 through
+**Confirmed decision:** No implementation roadmap begins until O1 through
 O12 are confirmed, contradictions are resolved, and the selected rules are
 promoted into living contracts.
 
@@ -560,36 +583,59 @@ roadmap must inspect current ownership and deliver its selected family
 source-to-native without silently claiming that every other frozen operator is
 implemented.
 
+## Contract audit
+
+The confirmed design was audited on 2026-07-30 against the implemented
+optional, shared-owner, object-cast, evaluation, temporary, panic, IR, backend,
+and runtime contracts. No confirmed operator decision changed. The audit
+resolved the following preservation and promotion boundaries:
+
+| Contract | Audit result | Required promotion treatment |
+|---|---|---|
+| [Grammar](../language/GRAMMAR.md#expressions) | Postfix `!` already binds above unary operators and casts already occupy the unary tier. Moving contextual `is` from its separate weaker tier into the non-associative comparison tier is an intentional grammar revision, not a change to its specialized right side. | Add prefix `!` and the remaining operator tiers atomically; preserve postfix priority, cast priority, longest-match punctuation, and complete comparison-chain rejection. |
+| [Optional values](../language/OPTIONAL_VALUES.md) | `is some`/`is none` already produce exact `bool`, do not narrow, copy, or bind, and optionals have no truthiness. Postfix unwrap remains checked. Consumer-bounded inline payload views are not ordinary full-expression temporaries. | Preserve presence-test and unwrap behavior; do not extend a payload guard across a later logical operand after its immediate consumer has completed. A skipped logical operand establishes no unwrap or guard. |
+| [Shared ownership](../language/SHARED_OWNERSHIP.md) | The primitive matrix adds no shared-owner operator. Produced owners and hidden anchors already survive to full-expression cleanup in reverse completion order. | Preserve copy/adopt/release and anchor timing. A selected logical path owns only the owners it actually completes. |
+| [Object casts](../language/OBJECT_CASTS.md) | Casts retain unary precedence, evaluate once, preserve access and ownership, and fail through the common reporter. `is` remains a type test rather than identity equality. Checked-place views and anchors retain their existing consuming full-expression lifetime. | Preserve cast source order, bounded views, anchors, and failure behavior across eager and short-circuit operands. |
+| [Evaluation order](../language/FUNCTIONS_AND_CONTROL_FLOW.md#evaluation-order) | Unary-before-operator and eager left-to-right binary evaluation already match O4. `while` explicitly cleans its completed condition before branching; `if`/`elif` conditions have fixed arm order and current lowering performs the same cleanup, although the living conditional section does not state that boundary explicitly. Short-circuiting is the deliberate exception that skips the right operand. | State one `if`/`elif`/`while` condition boundary explicitly while retaining all receiver, argument, assignment, return, and condition ordering. |
+| [Temporaries](../language/CLASSES_AND_LIFECYCLE.md#temporaries-and-full-expressions) | Reverse completion cleanup agrees with O4. The current statement that conditional joins have no path-dependent temporary ownership is intentionally superseded. The lifecycle boundary list is narrower than the separate `while` contract and current conditional lowering. | Unify the living full-expression list to include conditions and define path-dependent logical-expression ownership without changing consumer-bounded optional views. |
+| [Errors and panic](../language/ERRORS.md#frozen-panic-design) | Zero divisors and excessive shifts fit the existing non-returning, non-unwinding compiler-known failure model. The currently closed catalog deliberately lacks the three confirmed operator messages. | Add the three reasons and exact messages to the sole catalog and verified IR. Continue to guarantee no remaining cleanup after reporting begins. |
+| [IR, backend, and runtime](../compiler/PHASES_AND_IR.md) | Structured HIR and ordinary MIR CFG match existing loop precedent. Current MIR transient values are block-local and joins require compatible lifetime state; conditional RHS temporaries therefore need the O11 carrier and path treatment. The existing reporter accepts arbitrary static bytes, so no public runtime entry point is needed. | Add typed operation flavors, canonical result carriage, path-correct cleanup verification, and the new static reasons. Keep instruction selection mechanical and runtime ABI version 6 unchanged. |
+
+The design is therefore compatible with the existing contracts when promoted
+as one coherent revision. Promotion must not copy only the new grammar or
+operator matrix while leaving the condition, temporary, panic, or IR
+boundaries inconsistent.
+
 ## Decisions required before roadmap work
 
 The proposal is ready for promotion only after all of the following have been
 handled explicitly:
 
-- [ ] Confirm the complete initial unary and binary operator matrix.
-- [ ] Confirm that no operator performs an implicit cast or promotion, shifts
+- [x] Confirm the complete initial unary and binary operator matrix.
+- [x] Confirm that no operator performs an implicit cast or promotion, shifts
       are the only mixed-type exception, operators cannot observe cast
       provenance, and future explicit casts complete independently before
       operator selection.
-- [ ] Confirm the full precedence ladder, one non-associative comparison tier,
+- [x] Confirm the full precedence ladder, one non-associative comparison tier,
       and contextual `is` placement and meaning.
-- [ ] Confirm left-to-right evaluation and path-dependent full-expression
+- [x] Confirm left-to-right evaluation and path-dependent full-expression
       temporary lifetime for `&&` and `||`.
-- [ ] Confirm wrapping two's-complement `i64`, wrapping `u64`, and canonical
+- [x] Confirm wrapping two's-complement `i64`, wrapping `u64`, and canonical
       wrapping `u8` arithmetic.
-- [ ] Confirm floor signed division, divisor-sign remainder, zero-divisor
+- [x] Confirm floor signed division, divisor-sign remainder, zero-divisor
       panic, and the `i64::MIN / -1` and remainder results.
-- [ ] Confirm bitwise width, signed/unsigned right shift, exact `u64` counts,
+- [x] Confirm bitwise width, signed/unsigned right shift, exact `u64` counts,
       and excessive-count panic.
-- [ ] Confirm IEEE binary64 division, NaN comparison, signed-zero, infinity,
+- [x] Confirm IEEE binary64 division, NaN comparison, signed-zero, infinity,
       and floating `%` exclusion.
-- [ ] Confirm exact boolean equality, logical negation, mandatory
+- [x] Confirm exact boolean equality, logical negation, mandatory
       short-circuiting, and absence of boolean bitwise operations.
-- [ ] Confirm new compiler-known panic reasons and their exact static catalog
+- [x] Confirm new compiler-known panic reasons and their exact static catalog
       messages.
-- [ ] Confirm the HIR/MIR split between eager values and structured
+- [x] Confirm the HIR/MIR split between eager values and structured
       short-circuit control flow, including verifier and optimization
       invariants.
-- [ ] Check the complete proposal for contradictions with existing optional,
+- [x] Check the complete proposal for contradictions with existing optional,
       shared-owner, object-cast, temporary, panic, and evaluation-order
       contracts.
 - [ ] Promote every confirmed source and representation rule into living

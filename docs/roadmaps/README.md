@@ -14,15 +14,15 @@ No implementation roadmaps are currently planned.
 
 ## Design proposals
 
-- [Operator semantics](OPERATORS_DESIGN_PROPOSAL.md) — **Proposed.** Defines
-  the intended primitive operator matrix, precedence, exact typing, wrapping
-  arithmetic, division and remainder, shifts, floating comparison,
-  short-circuit evaluation, panic behavior, and compiler representation
-  boundaries. Next: iterate and confirm O1 through O12, promote the complete
-  design into living contracts, and only then write implementation roadmaps
-  for selected operator families. It depends on preserving the implemented
-  optional, ownership, object-cast, full-expression cleanup, and panic
-  contracts.
+- [Operator semantics](OPERATORS_DESIGN_PROPOSAL.md) — **Confirmed; promotion
+  pending.** O1 through O12 adopt the primitive operator matrix, precedence,
+  exact typing, wrapping arithmetic, division and remainder, shifts, floating
+  comparison, short-circuit evaluation, panic behavior, and compiler
+  representation boundaries. Its audit against the implemented optional,
+  ownership, object-cast, full-expression cleanup, panic, and IR contracts is
+  complete. Next: promote the accepted design into living language and
+  compiler documentation, validate and archive the proposal, and only then
+  write implementation roadmaps for selected operator families.
 
 ## Pending discoveries
 
