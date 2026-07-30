@@ -242,6 +242,10 @@ impl<'mir> MirDefinitionRef<'mir> {
             .filter(|condition| condition.id == id)
     }
 
+    pub fn logical_expressions(self) -> &'mir [super::logical::MirLogicalExpression] {
+        &self.body().logical_expressions
+    }
+
     pub const fn span(self) -> Span {
         match self {
             Self::Function(definition) => definition.span,

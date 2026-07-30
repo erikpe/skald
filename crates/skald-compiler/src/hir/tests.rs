@@ -5,8 +5,8 @@ use crate::{
 
 use super::{
     dump_hir, HirBlock, HirComparisonOperand, HirControlEffects, HirExpression, HirExpressionKind,
-    HirFunctionDefinition, HirPrimitiveComparison, HirReturnValue, HirStatement, HirUnaryOperation,
-    HirWhile, Type,
+    HirFunctionDefinition, HirLogicalExpression, HirLogicalOperation, HirPrimitiveComparison,
+    HirReturnValue, HirStatement, HirUnaryOperation, HirWhile, Type,
 };
 
 fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {
@@ -123,4 +123,37 @@ fn dumps_manually_constructed_eager_boolean_operations_deterministically() {
     assert!(dump.contains("Unary LogicalNotBool : bool"));
     assert!(dump.contains("BooleanComparison eq.bool : bool"));
     assert!(!dump.contains("BooleanComparison lt.bool"));
+}
+
+#[test]
+fn dumps_manually_constructed_logical_expression_shape_deterministically() {
+    let mut hir = type_check_source(concat!(
+        "fn evaluate() -> bool { return false; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    let expression = returned_expression_mut(
+        hir.definitions
+            .get_mut_for_test(FunctionId::new(0))
+            .unwrap(),
+    );
+    let span = expression.span;
+    let boolean = |value| HirExpression {
+        kind: HirExpressionKind::Boolean(value),
+        ty: Type::Bool,
+        span,
+    };
+    expression.kind = HirExpressionKind::Logical(Box::new(HirLogicalExpression::new(
+        HirLogicalOperation::And,
+        boolean(true),
+        boolean(false),
+    )));
+    expression.ty = HirLogicalOperation::And.result_type();
+
+    let dump = dump_hir(&hir);
+    assert_eq!(dump, dump_hir(&hir));
+    assert!(dump.contains("Logical And : bool"));
+    assert!(dump.contains("Left\n"));
+    assert!(dump.contains("Right\n"));
 }

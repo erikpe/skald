@@ -12,6 +12,7 @@ pub struct MirBody {
     pub entry: BlockId,
     pub blocks: Vec<MirBasicBlock>,
     pub path_conditions: Vec<super::path_condition::MirPathCondition>,
+    pub logical_expressions: Vec<super::logical::MirLogicalExpression>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

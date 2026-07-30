@@ -11,6 +11,31 @@ use super::{
 };
 
 impl BodyLowerer<'_> {
+    /// Finish a boundary without carrying a block-local scalar across the
+    /// conditional cleanup graph.
+    pub(super) fn finish_full_expression_with_scalar(
+        &mut self,
+        value: super::ValueId,
+        ty: super::MirType,
+        span: Span,
+    ) -> super::ValueId {
+        if !self.full_expression.has_conditions() {
+            self.finish_full_expression(span);
+            return value;
+        }
+
+        let (storage, ty) = self.spill_scalar(value, ty, span);
+        self.extend_storage_beyond_full_expression(storage);
+        self.finish_full_expression(span);
+        let value = self.assign(
+            super::MirRvalueKind::Load(super::MirPlace::base(storage)),
+            ty,
+            span,
+        );
+        self.end_storage_lifetime(storage, span);
+        value
+    }
+
     pub(super) fn finish_full_expression(&mut self, span: Span) {
         self.end_optional_views_from(0, span);
         let plan = self.full_expression.take_plan();

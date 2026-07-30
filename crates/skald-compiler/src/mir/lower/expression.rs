@@ -50,6 +50,7 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             } => self.lower_binary(expression, *operation, left, right),
+            HirExpressionKind::Logical(logical) => Some(self.lower_logical(expression, logical)),
             HirExpressionKind::PrimitiveComparison {
                 operation,
                 left,

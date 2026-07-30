@@ -287,11 +287,11 @@ impl BodyLowerer<'_> {
             None => None,
         };
         let scope_exit = self.cleanup.for_all_scopes(statement.span);
-        let spilled_value = value
-            .filter(|_| scope_exit.requires_optional_check())
-            .map(|value| {
-                self.spill_scalar(value, lower_type(self.input.return_type), statement.span)
-            });
+        let preserve_scalar =
+            scope_exit.requires_optional_check() || self.full_expression.has_conditions();
+        let spilled_value = value.filter(|_| preserve_scalar).map(|value| {
+            self.spill_scalar(value, lower_type(self.input.return_type), statement.span)
+        });
         if let Some((storage, _)) = spilled_value {
             self.extend_storage_beyond_full_expression(storage);
         }

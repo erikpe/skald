@@ -383,6 +383,7 @@ fn function_definition(
                 span,
             }],
             path_conditions: vec![],
+            logical_expressions: vec![],
         },
         span,
     }
@@ -445,6 +446,7 @@ fn empty_member_definition(
                 span,
             }],
             path_conditions: vec![],
+            logical_expressions: vec![],
         },
         span,
     }

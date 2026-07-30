@@ -16,6 +16,7 @@ mod control_effect;
 mod control_flow;
 mod expression;
 mod full_expression;
+mod logical;
 #[allow(dead_code)]
 mod loop_context;
 mod loop_flow;
@@ -364,7 +365,6 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     /// Give the current full expression ownership of one selected MIR path.
-    #[allow(dead_code)]
     fn register_full_expression_condition(
         &mut self,
         condition: MirPathCondition,
@@ -375,9 +375,12 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     /// Select the path condition inherited by subsequently completed resources.
-    #[allow(dead_code)]
     fn select_full_expression_condition(&mut self, condition: Option<PathConditionId>) {
         self.full_expression.select_condition(condition);
+    }
+
+    fn current_full_expression_condition(&self) -> Option<PathConditionId> {
+        self.full_expression.current_condition()
     }
 
     fn terminate(&mut self, terminator: MirTerminator) {

@@ -71,6 +71,7 @@ impl<'mir> Verifier<'mir> {
             self.verify_block(return_type, function, block, &mut defined_values);
         }
         self.verify_path_conditions(function);
+        self.verify_logical_expressions(function);
         self.verify_cleanup_liveness(function);
         self.verify_storage_lifetimes(function);
         self.verify_shared_ownership(function);

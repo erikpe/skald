@@ -7,6 +7,7 @@ mod definition;
 mod ids;
 mod instruction;
 mod interface;
+mod logical;
 mod optional;
 mod path_condition;
 mod shared;
@@ -43,6 +44,7 @@ pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,
     MirInterfaceRequirement, MirRequirementImplementation,
 };
+pub use logical::{MirLogicalExpression, MirLogicalOperation};
 pub use optional::{
     MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
     MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,

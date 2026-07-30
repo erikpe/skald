@@ -414,6 +414,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
                     span: program.span,
                 }],
                 path_conditions: vec![],
+                logical_expressions: vec![],
             },
             span: program.span,
         },

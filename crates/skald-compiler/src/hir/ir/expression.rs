@@ -41,6 +41,9 @@ pub enum HirExpressionKind {
         left: Box<HirExpression>,
         right: Box<HirExpression>,
     },
+    /// Structured short-circuit selection, deliberately distinct from eager
+    /// scalar binary operations.
+    Logical(Box<HirLogicalExpression>),
     PrimitiveComparison {
         operation: HirPrimitiveComparison,
         left: Box<HirExpression>,
@@ -80,6 +83,70 @@ pub enum HirExpressionKind {
     ArrayLength(Box<super::HirArrayLength>),
     ArrayElement(Box<super::HirArrayElementPlace>),
     ArraySlice(Box<super::HirArraySlice>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirLogicalExpression {
+    pub operation: HirLogicalOperation,
+    pub left: Box<HirExpression>,
+    pub right: Box<HirExpression>,
+}
+
+impl HirLogicalExpression {
+    pub fn new(operation: HirLogicalOperation, left: HirExpression, right: HirExpression) -> Self {
+        assert_eq!(
+            left.ty,
+            Type::Bool,
+            "typed logical left operand must have exact type `bool`"
+        );
+        assert_eq!(
+            right.ty,
+            Type::Bool,
+            "typed logical right operand must have exact type `bool`"
+        );
+        Self {
+            operation,
+            left: Box::new(left),
+            right: Box::new(right),
+        }
+    }
+
+    pub fn validate(&self, result_type: Type) {
+        assert_eq!(
+            self.left.ty,
+            Type::Bool,
+            "typed logical left operand must have exact type `bool`"
+        );
+        assert_eq!(
+            self.right.ty,
+            Type::Bool,
+            "typed logical right operand must have exact type `bool`"
+        );
+        assert_eq!(
+            result_type,
+            Type::Bool,
+            "typed logical expression must have exact result type `bool`"
+        );
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum HirLogicalOperation {
+    And,
+    Or,
+}
+
+impl HirLogicalOperation {
+    pub const fn result_type(self) -> Type {
+        Type::Bool
+    }
+
+    pub const fn fixed_short_result(self) -> bool {
+        match self {
+            Self::And => false,
+            Self::Or => true,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

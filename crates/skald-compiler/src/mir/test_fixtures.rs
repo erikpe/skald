@@ -260,6 +260,7 @@ pub(crate) fn one_block_body(
         entry,
         blocks: vec![block(entry, instructions, terminator, span)],
         path_conditions: Vec::new(),
+        logical_expressions: Vec::new(),
     }
 }
 
@@ -584,6 +585,7 @@ pub(crate) fn conditional_full_expression_cleanup_program() -> MirProgram {
             merge: blocks[3],
             span,
         }],
+        logical_expressions: vec![],
     };
     mir
 }

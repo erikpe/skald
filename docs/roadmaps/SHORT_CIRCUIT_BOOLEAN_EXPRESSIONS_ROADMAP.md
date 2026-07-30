@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 and SC1 are complete and SC2 is next.
+Status: in progress; SC0 through SC2 are complete and SC3 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -187,7 +187,7 @@ unimplemented.
 
 - [x] SC0 — Represent path conditions in verified MIR
 - [x] SC1 — Plan conditional full-expression cleanup
-- [ ] SC2 — Lower structured logical HIR to selected boolean control flow
+- [x] SC2 — Lower structured logical HIR to selected boolean control flow
 - [ ] SC3 — Preserve path-dependent object and optional-object lifetimes
 - [ ] SC4 — Preserve path-dependent shared and array ownership
 - [ ] SC5 — Compose bounded views, guards, failures, and enclosing control flow
@@ -297,29 +297,29 @@ with ordinary compatible state. No logical HIR or source syntax exists yet.
 **Purpose:** Prove exact evaluation and result selection over the new path
 model before ownership-heavy source operands depend on it.
 
-- [ ] Add a dedicated typed HIR logical-expression node and exact `And`/`Or`
+- [x] Add a dedicated typed HIR logical-expression node and exact `And`/`Or`
       semantic operator. Do not add the operators to eager binary operation
       families in HIR or MIR.
-- [ ] Require `bool` operands and a `bool` result when constructing or
+- [x] Require `bool` operands and a `bool` result when constructing or
       validating the HIR node, while keeping source selection disabled.
-- [ ] Mark logical HIR as expression-level control flow so enclosing eager
+- [x] Mark logical HIR as expression-level control flow so enclosing eager
       operations spill block-local values before lowering it and reload only
       after its join.
-- [ ] Lower the left operand once, create deterministic short, right, and join
+- [x] Lower the left operand once, create deterministic short, right, and join
       blocks, and establish a result carrier before the split.
-- [ ] Write `false` on the `&&` short path and `true` on the `||` short path;
+- [x] Write `false` on the `&&` short path and `true` on the `||` short path;
       evaluate the right operand once only on the selected right block and
       write its canonical result.
-- [ ] Associate right-operand completion with the logical activation while
+- [x] Associate right-operand completion with the logical activation while
       leaving left-operand completion under the enclosing condition.
-- [ ] Support recursively nested and mixed logical HIR on either side without
+- [x] Support recursively nested and mixed logical HIR on either side without
       treating an operand join as a full-expression boundary.
-- [ ] Return the selected scalar to any larger expression while preserving the
+- [x] Return the selected scalar to any larger expression while preserving the
       caller's current block, control-effect accounting, scalar spills, and
       one enclosing cleanup boundary.
-- [ ] Extend HIR and MIR verification and dumps for structured logical shape,
+- [x] Extend HIR and MIR verification and dumps for structured logical shape,
       selected result, block reachability, and activation association.
-- [ ] Keep backend lowering generic and preserve the runtime and ABI boundary.
+- [x] Keep backend lowering generic and preserve the runtime and ABI boundary.
 
 **Tests:** Direct HIR fixtures for both truth tables; left-associated chains;
 grouped right nesting; mixed `(a && b) || c` and `a && (b || c)`; use under

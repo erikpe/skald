@@ -445,6 +445,32 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             output.push('\n');
         }
     }
+    if !function.logical_expressions().is_empty() {
+        output.push_str("      LogicalExpressions\n");
+        for logical in function.logical_expressions() {
+            let operation = match logical.operation {
+                MirLogicalOperation::And => "and",
+                MirLogicalOperation::Or => "or",
+            };
+            let _ = write!(
+                output,
+                "        {operation} condition {} result {} left {} split {} selection {} right {}..{} value {} short {} join {} selected {}",
+                logical.condition,
+                logical.result,
+                logical.left_result,
+                logical.split,
+                logical.selection,
+                logical.right_entry,
+                logical.right_exit,
+                logical.right_result,
+                logical.short,
+                logical.join,
+                logical.selected_result,
+            );
+            write_span(output, logical.span);
+            output.push('\n');
+        }
+    }
     let _ = writeln!(output, "      EntryBlock {}", function.body().entry);
     output.push_str("      Blocks\n");
     for block in &function.body().blocks {

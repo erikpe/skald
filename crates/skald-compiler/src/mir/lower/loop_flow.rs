@@ -58,7 +58,11 @@ impl BodyLowerer<'_> {
         let condition = self
             .lower_expression(&statement.condition)
             .expect("typed while condition must produce a boolean value");
-        self.finish_full_expression(statement.condition.span);
+        let condition = self.finish_full_expression_with_scalar(
+            condition,
+            MirType::Bool,
+            statement.condition.span,
+        );
         self.terminate(MirTerminator::Branch {
             condition,
             true_target: body,

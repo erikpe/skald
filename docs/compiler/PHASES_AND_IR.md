@@ -272,11 +272,13 @@ It preserves:
 - IEEE binary64 operation and unordered comparison flavor; and
 - canonical `bool` and `u8` results.
 
-Short-circuit HIR lowers to ordinary MIR branches and jumps with one selected
-canonical `bool` result. Because MIR transient values are block-local, a result
-used after the branch crosses through explicit target-independent storage or
-an equivalently verified future representation. MIR has no eager logical
-scalar operation whose lowering may evaluate both operands.
+Internal short-circuit HIR lowers to ordinary MIR branches and jumps with one
+selected canonical `bool` result. A selection diamond records whether the
+right operand runs before entering that operand, which lets recursively nested
+logical expressions inherit an already selected parent path. The short and
+right paths write one explicit target-independent result carrier and reload it
+only after their result join. MIR has no eager logical scalar operation whose
+lowering may evaluate both operands.
 
 The selected path owns only temporaries, checked views, guards, and anchors
 that it actually establishes. Every completed full-expression temporary
@@ -286,9 +288,9 @@ affected continuations distinct until their lifetime states are compatible.
 Consumer-bounded optional payload views retain their immediate-consumer
 lifetime; they are not promoted to full-expression temporaries.
 
-MIR implements the first representation foundation without yet accepting
-logical source expressions. A callable body may declare deterministic
-path-condition identities. Each identity names canonical compiler-owned
+MIR implements this internal representation without yet accepting logical
+source expressions. A callable body may declare deterministic path-condition
+identities. Each identity names canonical compiler-owned
 `bool` activation storage, an optional earlier parent condition, distinct
 active and inactive predecessors, and their exact merge block. The
 predecessors store `true` and `false` respectively before ordinary jumps to
@@ -326,9 +328,13 @@ alternatives; live objects, outstanding cleanup, argument ownership, and
 temporary order may not. Backend lowering sees only the resulting ordinary
 loads, branches, cleanup instructions, lifetime markers, and jumps.
 
-Logical HIR and source construction remain unimplemented. Existing HIR
-therefore creates only unconditional registrations; later logical lowering
-will select the path condition inherited by right-operand completions.
+Dedicated exact-`bool` logical HIR and its primitive/call-capable MIR lowering
+are implemented for internal construction. Logical metadata retains the
+operation, selection path, right and short regions, result carrier, and join so
+verification can reject malformed control-flow shapes while the backend stays
+generic. Right-operand completions inherit the selected logical condition;
+left completions retain the enclosing condition. Source construction and the
+ownership-heavy operand families remain gated for their later roadmap tasks.
 
 MIR verification rejects:
 

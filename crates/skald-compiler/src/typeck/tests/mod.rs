@@ -43,6 +43,9 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             assert_expression_is_fully_typed(left);
             assert_expression_is_fully_typed(right);
         }
+        HirExpressionKind::Logical(_) => {
+            panic!("source typing helper does not accept gated logical expressions")
+        }
         HirExpressionKind::IntegerCast { operation, operand } => {
             assert_eq!(operand.ty, operation.source_type());
             assert_eq!(expression.ty, operation.result_type());

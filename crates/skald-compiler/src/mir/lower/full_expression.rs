@@ -88,10 +88,9 @@ impl FullExpressionTracker {
 
     /// Establish the condition inherited by subsequent registrations.
     ///
-    /// Logical-expression lowering will use this boundary when it is added in
-    /// the next roadmap task. Keeping condition selection here prevents each
-    /// resource family from maintaining an independent path stack.
-    #[allow(dead_code)]
+    /// Logical-expression lowering selects this boundary for its right
+    /// operand. Keeping condition selection here prevents each resource family
+    /// from maintaining an independent path stack.
     pub(super) fn select_condition(&mut self, condition: Option<PathConditionId>) {
         if let Some(condition) = condition {
             assert!(
@@ -104,8 +103,15 @@ impl FullExpressionTracker {
         self.current_condition = condition;
     }
 
+    pub(super) const fn current_condition(&self) -> Option<PathConditionId> {
+        self.current_condition
+    }
+
+    pub(super) fn has_conditions(&self) -> bool {
+        !self.conditions.is_empty()
+    }
+
     /// Register one path decision owned by the current full expression.
-    #[allow(dead_code)]
     pub(super) fn register_condition(&mut self, condition: MirPathCondition) {
         assert!(
             self.conditions

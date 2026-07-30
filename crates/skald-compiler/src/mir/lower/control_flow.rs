@@ -35,7 +35,11 @@ impl BodyLowerer<'_> {
             let condition = self
                 .lower_expression(&arm.condition)
                 .expect("typed conditional condition must produce a value");
-            self.finish_full_expression(arm.condition.span);
+            let condition = self.finish_full_expression_with_scalar(
+                condition,
+                MirType::Bool,
+                arm.condition.span,
+            );
             let false_target = condition_blocks
                 .get(index + 1)
                 .copied()

@@ -15,6 +15,9 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::PrimitiveComparison { left, right, .. } => {
             expression_contains_control_effect(left) || expression_contains_control_effect(right)
         }
+        // Logical expressions always select blocks even when both operands
+        // are otherwise pure.
+        HirExpressionKind::Logical(_) => true,
         HirExpressionKind::DirectCall { arguments, .. }
         | HirExpressionKind::StaticCall { arguments, .. } => {
             arguments.iter().any(call_argument_contains_control_effect)

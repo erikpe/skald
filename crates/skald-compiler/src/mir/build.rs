@@ -5,8 +5,8 @@ use std::fmt;
 use crate::{identity::CallableId, source::Span};
 
 use super::{
-    BlockId, MirBasicBlock, MirBody, MirInstruction, MirPathCondition, MirTerminator,
-    PathConditionId,
+    BlockId, MirBasicBlock, MirBody, MirInstruction, MirLogicalExpression, MirPathCondition,
+    MirTerminator, PathConditionId,
 };
 
 /// A small stateful builder that keeps block allocation and termination
@@ -17,6 +17,7 @@ pub(super) struct MirBodyBuilder {
     entry: BlockId,
     blocks: Vec<MirBasicBlock>,
     path_conditions: Vec<MirPathCondition>,
+    logical_expressions: Vec<Option<MirLogicalExpression>>,
     current: BlockId,
 }
 
@@ -53,6 +54,7 @@ impl MirBodyBuilder {
                 span: entry_span,
             }],
             path_conditions: Vec::new(),
+            logical_expressions: Vec::new(),
             current: entry,
         }
     }
@@ -92,6 +94,33 @@ impl MirBodyBuilder {
         id
     }
 
+    pub(super) fn next_path_condition_id(&self) -> PathConditionId {
+        PathConditionId::new(self.callable, self.path_conditions.len())
+    }
+
+    /// Reserve source-structural dump order before recursively lowering the
+    /// operands of a logical expression.
+    pub(super) fn reserve_logical_expression(&mut self) -> usize {
+        let index = self.logical_expressions.len();
+        self.logical_expressions.push(None);
+        index
+    }
+
+    pub(super) fn define_logical_expression(
+        &mut self,
+        index: usize,
+        expression: MirLogicalExpression,
+    ) {
+        let slot = self
+            .logical_expressions
+            .get_mut(index)
+            .expect("logical-expression reservation must exist");
+        assert!(
+            slot.replace(expression).is_none(),
+            "logical-expression reservation must be defined exactly once"
+        );
+    }
+
     pub(super) fn select_block(&mut self, block: BlockId) -> Result<(), MirBuildError> {
         self.block(block)?;
         self.current = block;
@@ -128,6 +157,13 @@ impl MirBodyBuilder {
             entry: self.entry,
             blocks: self.blocks,
             path_conditions: self.path_conditions,
+            logical_expressions: self
+                .logical_expressions
+                .into_iter()
+                .map(|expression| {
+                    expression.expect("reserved logical expression must be defined before finish")
+                })
+                .collect(),
         }
     }
 

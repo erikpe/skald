@@ -900,6 +900,19 @@ impl HirDumper {
                     dumper.expression(right);
                 });
             }
+            HirExpressionKind::Logical(logical) => {
+                let operation = match logical.operation {
+                    crate::hir::HirLogicalOperation::And => "And",
+                    crate::hir::HirLogicalOperation::Or => "Or",
+                };
+                self.typed_line(&format!("Logical {operation}"), expression);
+                self.indented(|dumper| {
+                    dumper.heading("Left");
+                    dumper.indented(|dumper| dumper.expression(&logical.left));
+                    dumper.heading("Right");
+                    dumper.indented(|dumper| dumper.expression(&logical.right));
+                });
+            }
             HirExpressionKind::PrimitiveComparison {
                 operation,
                 left,

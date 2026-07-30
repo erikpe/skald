@@ -23,6 +23,7 @@ mod inheritance;
 mod instructions;
 mod interfaces;
 mod lifetime;
+mod logical;
 mod optional;
 mod path_conditions;
 mod path_state;

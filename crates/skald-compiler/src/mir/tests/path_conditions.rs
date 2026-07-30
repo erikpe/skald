@@ -28,6 +28,7 @@ fn replace_main(
         entry: BlockId::new(function.function, 0),
         blocks,
         path_conditions,
+        logical_expressions: Vec::new(),
     };
 }
 
