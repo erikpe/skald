@@ -335,11 +335,18 @@ Dedicated exact-`bool` logical HIR and its primitive/call-capable MIR lowering
 are implemented for internal construction. Logical metadata retains the
 operation, selection path, right and short regions, result carrier, and join so
 verification can reject malformed control-flow shapes while the backend stays
-generic. Right-operand completions inherit the selected logical condition;
-left completions retain the enclosing condition. Internal operands may already
-complete inline objects, class or shared optionals, ordinary shared owners,
-checked shared-backed places, arrays, and array anchors. Source construction,
-bounded optional-view and failure composition, and the final every-consumer
+generic. Every block in the right-only region must have no incoming edge from
+outside that selected region. Right-operand completions inherit the selected
+logical condition; left completions retain the enclosing condition. Internal
+operands may complete inline objects, class or shared optionals, ordinary
+shared owners, checked shared-backed places, arrays, and array anchors.
+Consumer-bounded optional views end before their operand publishes its scalar
+result, while primitive unwrap copies and secured optional-owner unwrap retain
+their existing lifetime categories. Compiler-known failures remain terminal
+inside the selected operand and are unreachable from the short path.
+Conditional and loop conditions consume selected cleanup and activation
+storage before either successor or the next loop epoch; returns secure their
+scalar before cleanup. Source construction and the final every-consumer source
 surface remain gated for their later roadmap tasks.
 
 MIR verification rejects:

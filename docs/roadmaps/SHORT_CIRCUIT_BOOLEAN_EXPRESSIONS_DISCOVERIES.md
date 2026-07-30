@@ -8,11 +8,12 @@ Status: pending; address after the short-circuit boolean expressions roadmap.
   fixed-point propagation, instruction and terminator diagnostics,
   exact-class optional ownership transfer, storage-epoch checks, and recursive
   optional-field seeding in one large module.
-- **Evidence:** SC3 and SC4 required the same optional initialization state to
+- **Evidence:** SC3 through SC5 required the same optional initialization state to
   flow through declared path alternatives and to be consumed by class-optional
   and optional-shared cleanup, moved sources, and value-argument transfer. The
-  resulting owner is cohesive but exceeds 900 lines, and SC5 may add more
-  path-sensitive optional interactions.
+  resulting owner is cohesive but exceeds 900 lines. Bounded optional guards
+  remained an immediate-consumer responsibility and did not justify expanding
+  this module further.
 - **Likely owner:** MIR optional verification.
 - **Priority:** Medium, after the short-circuit representation and verifier
   contracts stabilize.

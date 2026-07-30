@@ -100,13 +100,30 @@ pub(super) fn replace_return_with_logical_expressions(
             .definitions
             .get_mut_for_test(destination)
             .expect("destination fixture function must have a body"),
-    ) = HirExpression {
+    ) = logical_expression(operation, left, right, span);
+}
+
+pub(super) fn boolean(value: bool, span: crate::source::Span) -> HirExpression {
+    HirExpression {
+        kind: HirExpressionKind::Boolean(value),
+        ty: Type::Bool,
+        span,
+    }
+}
+
+pub(super) fn logical_expression(
+    operation: HirLogicalOperation,
+    left: HirExpression,
+    right: HirExpression,
+    span: crate::source::Span,
+) -> HirExpression {
+    HirExpression {
         kind: HirExpressionKind::Logical(Box::new(HirLogicalExpression::new(
             operation, left, right,
         ))),
         ty: Type::Bool,
         span,
-    };
+    }
 }
 
 pub(super) fn lower_internal_logical(

@@ -27,6 +27,7 @@ mod cycles;
 mod integer_casts;
 mod interface_dispatch;
 mod interface_fixtures;
+mod logical_boundaries;
 mod logical_expressions;
 mod logical_fixtures;
 mod logical_object_lifetimes;

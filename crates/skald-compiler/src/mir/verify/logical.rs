@@ -206,6 +206,40 @@ impl Verifier<'_> {
                 "logical right completion is not reachable exclusively from its right entry",
             );
         }
+        self.verify_right_region_exclusivity(function, logical, predecessors);
+    }
+
+    fn verify_right_region_exclusivity(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        logical: &MirLogicalExpression,
+        predecessors: &HashMap<BlockId, HashSet<BlockId>>,
+    ) {
+        let region = reachable_region(
+            function,
+            logical.right_entry,
+            &[logical.short, logical.join],
+        );
+        for block in &region {
+            let has_external_predecessor = if *block == logical.right_entry {
+                predecessors
+                    .get(block)
+                    .is_some_and(|incoming| incoming != &HashSet::from([logical.selection]))
+            } else {
+                predecessors
+                    .get(block)
+                    .is_some_and(|incoming| !incoming.is_subset(&region))
+            };
+            if has_external_predecessor {
+                self.logical_error(
+                    function,
+                    logical,
+                    format!(
+                        "logical right-only block {block} has an incoming edge outside its selected region"
+                    ),
+                );
+            }
+        }
     }
 
     fn verify_selection_block(
@@ -372,4 +406,22 @@ fn reachable_without(
         }
     }
     false
+}
+
+fn reachable_region(
+    function: MirDefinitionRef<'_>,
+    start: BlockId,
+    boundaries: &[BlockId],
+) -> HashSet<BlockId> {
+    let mut pending = VecDeque::from([start]);
+    let mut region = HashSet::new();
+    while let Some(block) = pending.pop_front() {
+        if boundaries.contains(&block) || !region.insert(block) {
+            continue;
+        }
+        if let Some(block) = function.block(block) {
+            pending.extend(block.terminator.iter().flat_map(MirTerminator::successors));
+        }
+    }
+    region
 }

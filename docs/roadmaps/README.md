@@ -12,8 +12,10 @@ progress. Completed roadmaps and resolved discovery records move to
   current expression consumer. Verified MIR path conditions, conditional
   full-expression cleanup planning, internal structured logical lowering,
   inline-object and class-optional lifetimes, and shared/array ownership are
-  complete; the next task composes bounded views, failures, and enclosing
-  control flow. The roadmap depends on the completed eager boolean,
+  complete. Bounded optional views, selected failure paths, condition and loop
+  cleanup, and return-result securing are also complete; the next task adds
+  source syntax and exact type selection behind the completion gate. The
+  roadmap depends on the completed eager boolean,
   control-flow, lifecycle, optional, shared-ownership, array, cast, and panic
   foundations.
 

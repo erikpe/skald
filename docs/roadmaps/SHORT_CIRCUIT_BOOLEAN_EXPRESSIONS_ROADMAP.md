@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 through SC4 are complete and SC5 is next.
+Status: in progress; SC0 through SC5 are complete and SC6 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -190,7 +190,7 @@ unimplemented.
 - [x] SC2 — Lower structured logical HIR to selected boolean control flow
 - [x] SC3 — Preserve path-dependent object and optional-object lifetimes
 - [x] SC4 — Preserve path-dependent shared and array ownership
-- [ ] SC5 — Compose bounded views, guards, failures, and enclosing control flow
+- [x] SC5 — Compose bounded views, guards, failures, and enclosing control flow
 - [ ] SC6 — Add source syntax and exact type selection behind the completion gate
 - [ ] SC7 — Enable arbitrary valid operands through every expression consumer
 - [ ] SC8 — Harden, document, and promote short-circuit expressions
@@ -418,30 +418,30 @@ cleanup, with no operation invented for a skipped operand.
 **Purpose:** Close the subtle lifetime and termination boundaries that do not
 follow ordinary full-expression temporary rules.
 
-- [ ] Keep inline-class optional payload views and presence guards bounded to
+- [x] Keep inline-class optional payload views and presence guards bounded to
       their complete immediate consumer inside a logical operand.
-- [ ] Keep primitive optional unwrap bounded through its copied result, while
+- [x] Keep primitive optional unwrap bounded through its copied result, while
       preserving any ordinary temporary established by the larger consumer.
-- [ ] Ensure optional shared unwrap follows the secured-owner behavior covered
+- [x] Ensure optional shared unwrap follows the secured-owner behavior covered
       by SC4 rather than the bounded inline-view behavior.
-- [ ] Compose logical lowering inside receiver evaluation, call arguments,
+- [x] Compose logical lowering inside receiver evaluation, call arguments,
       field and array places, indices, assignments, unary/eager binary
       operands, comparisons, type tests, and presence tests without duplicating
       or moving effects.
-- [ ] Compose optional-unwrap absence, checked-cast failure, array-bounds
+- [x] Compose optional-unwrap absence, checked-cast failure, array-bounds
       failure, allocation failure paths already represented by the compiler,
       explicit panic, and calls that do not return.
-- [ ] Prove skipped failure paths are unreachable and contain no speculative
+- [x] Prove skipped failure paths are unreachable and contain no speculative
       guard, check, ownership, anchor, or cleanup operations.
-- [ ] Finish a logical condition's selected-path cleanup before both `if` and
+- [x] Finish a logical condition's selected-path cleanup before both `if` and
       `elif` successors and before a `while` body, exit, or next condition
       attempt.
-- [ ] Preserve loop/backedge epoch equality after conditional cleanup and
+- [x] Preserve loop/backedge epoch equality after conditional cleanup and
       prevent path activations or result spill state from escaping their
       full-expression boundary.
-- [ ] Preserve return-result securing, full-expression cleanup, and lexical
+- [x] Preserve return-result securing, full-expression cleanup, and lexical
       cleanup order when a logical expression supplies a return value.
-- [ ] Extend all affected verifier domains and pass-preservation checks with
+- [x] Extend all affected verifier domains and pass-preservation checks with
       malformed nested, unreachable, and terminating CFG cases.
 
 **Tests:** Internal HIR-to-native cases for present/absent optional boolean
