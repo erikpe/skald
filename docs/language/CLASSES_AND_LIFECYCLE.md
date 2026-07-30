@@ -1,7 +1,8 @@
 # Skald Classes and Lifecycle
 
 Status: authoritative for the implemented inline class, ordinary-initializer
-overload, explicit-copy, and base-subobject lifecycle model. The
+overload, explicit-copy, and base-subobject lifecycle model, including the
+frozen path-dependent logical-expression temporary extension. The
 [status matrix](STATUS.md) records the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
@@ -580,7 +581,9 @@ The implemented full-expression boundaries are:
 - one complete local initializer;
 - the complete right side of an assignment statement;
 - one effect-only call statement, including its arguments; and
-- one return expression.
+- one return expression;
+- one complete `if` or `elif` condition; and
+- one complete `while` condition evaluation.
 
 Argument temporaries remain live through the call and are cleaned after its
 result has been secured. A newly initialized local becomes live and registered
@@ -589,8 +592,17 @@ completed first, then expression temporaries are destroyed, followed by
 lexical locals and owning value parameters.
 
 Grouping does not change an existing place, but it does change whether a fresh
-construction matches the restricted elision forms below. The current language has
-no path-dependent temporary ownership at a conditional join.
+construction matches the restricted elision forms below.
+
+The frozen `&&` and `||` contract introduces path-dependent temporary
+ownership inside a full expression. A selected right operand may complete
+owning temporaries that a skipped right operand does not. Every completed
+temporary remains live until the common enclosing boundary and is destroyed
+exactly once; no cleanup is scheduled for a temporary that never became live.
+The compiler representation must either retain that path dependence through
+the boundary or keep continuations distinct until their lifetime states are
+compatible. Source semantics never clean a logical operand early merely to
+simplify a join.
 
 ## Permitted copy elision
 

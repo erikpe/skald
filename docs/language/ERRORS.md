@@ -1,8 +1,9 @@
 # Errors and Exceptional Control Flow
 
 Status: authoritative for current language-level compile-time rejection and
-runtime-failure boundaries, the frozen panic design, normal-flow cleanup
-obligations, and the maturity of recoverable exceptions. The
+runtime-failure boundaries, the frozen panic and primitive-operator failure
+design, normal-flow cleanup obligations, and the maturity of recoverable
+exceptions. The
 [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Compile-time rejection
@@ -133,6 +134,9 @@ authoritative catalog:
 | Array slice length mismatch | `array slice length mismatch` |
 | Shared or inline-backing ownership-count overflow | `ownership count overflow` |
 | Host allocation failure for a valid request | `memory allocation failed` |
+| Integer division by zero | `integer division by zero` |
+| Integer remainder by zero | `integer remainder by zero` |
+| Shift count at or above operand width | `shift count out of range` |
 
 This catalog is closed for the frozen profile. A new compiler-known
 source-reachable failure requires a deliberate language-contract revision, a
@@ -174,6 +178,30 @@ payload views. Every failure occurs before producing an invalid payload or
 changing guarded presence, does not return to Skald, and does not guarantee
 remaining source-level cleanup. Each reason remains distinct through MIR and
 selects its message from the [common panic reporter and catalog](#frozen-panic-design).
+
+## Frozen operator failures
+
+The frozen primitive operator profile adds three compiler-known,
+source-reachable failures:
+
+- integer `/` with a zero divisor;
+- integer `%` with a zero divisor; and
+- `<<` or `>>` with a `u64` count at or above the left operand's bit width.
+
+Both operands evaluate exactly once from left to right before the check. A
+failure uses its distinct target-independent reason and exact catalog message,
+does not produce a value, never returns to Skald, and guarantees no remaining
+source-level cleanup after reporting begins. A compiler must perform the
+semantic check rather than expose a hardware division fault or masked shift
+count.
+
+`i64::MIN / -1` and `i64::MIN % -1` do not fail: they produce `i64::MIN` and
+zero respectively. Integer wrapping overflow and floating division by zero
+also do not use panic. The
+[operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
+defines their value behavior, while the
+[status matrix](STATUS.md) records that these new operations and failure edges
+are not yet implemented.
 
 ## Cleanup and abrupt termination
 

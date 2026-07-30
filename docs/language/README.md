@@ -123,9 +123,11 @@ makes a result source-observable.
   current compiler support.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
-  type model, literals, exact-type rules, and operator availability.
-  Primitive integer comparisons and explicit total integer casts execute
-  through verified MIR and the x86-64 backend.
+  type model, literals, exact-type rules, operator availability, and the frozen
+  complete primitive operator profile. Primitive integer comparisons and
+  explicit total integer casts execute through verified MIR and the x86-64
+  backend; the status matrix distinguishes that subset from the remaining
+  frozen operators.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.

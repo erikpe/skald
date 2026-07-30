@@ -220,6 +220,98 @@ These operations add no ownership or lifetime rule and no public runtime ABI.
 Floating, boolean/numeric, checked, saturating, implicit, mixed-type, and
 user-defined conversion remain outside this boundary.
 
+## Frozen primitive operator representation
+
+The
+[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
+selects a complete target-independent representation boundary without claiming
+that the corresponding phase products are implemented.
+
+Lexing and syntax retain exact operator spellings, source order, operand
+shapes, grouping, and operator/operand spans. Longest-match tokenization keeps
+multi-character punctuation intact. Resolution preserves operator identity
+without selecting target instructions, signedness, widths, or conversions.
+
+Type checking is the sole owner of primitive operation selection. It:
+
+- requires the exact operand matrix from the language contract;
+- inserts no cast, promotion, narrowing, truthiness conversion, or
+  expected-type literal reinterpretation;
+- selects a result type and one exact semantic operation;
+- records wrapping width and signedness where relevant;
+- distinguishes integer from binary64 division;
+- distinguishes arithmetic and logical right shift;
+- records whether an eager operation can reach a compiler-known failure; and
+- retains `is` as the existing specialized type or presence test rather than
+  an equality operation.
+
+Future explicit casts remain separate HIR operations that complete before
+operator selection. Operator HIR cannot observe cast provenance.
+
+Typed HIR represents eager unary and binary operations as exact typed values.
+Each operation retains its operand type, result type, semantic flavor, source
+span, and failure capability without encoding a backend opcode. Boolean `&&`
+and `||` remain structured short-circuit operations in HIR so a skipped right
+operand is absent from abstract execution rather than marked as an eager value
+whose effects may later be discarded.
+
+MIR lowers eager primitive operations to target-independent scalar operations.
+It preserves:
+
+- wrapping `i64`, `u64`, and canonical `u8` arithmetic;
+- floor signed division and divisor-sign remainder;
+- the non-failing signed-minimum division/remainder pair;
+- exact bitwise width and signed or unsigned right-shift flavor;
+- checked shift-count and integer zero-divisor failure reasons;
+- IEEE binary64 operation and unordered comparison flavor; and
+- canonical `bool` and `u8` results.
+
+Short-circuit HIR lowers to ordinary MIR branches and jumps with one selected
+canonical `bool` result. Because MIR transient values are block-local, a result
+used after the branch crosses through explicit target-independent storage or
+an equivalently verified future representation. MIR has no eager logical
+scalar operation whose lowering may evaluate both operands.
+
+The selected path owns only temporaries, checked views, guards, and anchors
+that it actually establishes. Every completed full-expression temporary
+remains live to the enclosing boundary. A join before that boundary must either
+represent path-dependent lifetime and conditional cleanup explicitly or keep
+affected continuations distinct until their lifetime states are compatible.
+Consumer-bounded optional payload views retain their immediate-consumer
+lifetime; they are not promoted to full-expression temporaries.
+
+MIR verification rejects:
+
+- operand or result types outside the frozen matrix;
+- a non-`u64` shift count;
+- operation flavors inconsistent with signedness or width;
+- noncanonical `bool` or `u8` production;
+- an eager or multiply evaluated logical right operand;
+- use of a logical result without a defined selected path;
+- cleanup of a skipped-path temporary or loss of a completed-path temporary;
+- joins with unrepresented incompatible lifetime state;
+- a source-reachable divide or shift fault without its semantic failure
+  reason; and
+- a compiler-known failure edge with an ordinary successor.
+
+The existing static-termination representation gains three distinct reasons:
+integer division by zero, integer remainder by zero, and shift count out of
+range. They remain distinct through verification and instruction selection and
+select exact messages from the
+[language panic catalog](../language/ERRORS.md#frozen-panic-design).
+
+Constant folding and every later transformation use the same wrapping,
+division, remainder, shift, NaN, panic, evaluation, ownership, and
+short-circuit rules as unoptimized execution. Algebraic identities are invalid
+when they remove required effects, change NaN results, suppress a panic, or
+alter temporary completion and cleanup.
+
+Generated target code mechanically realizes verified MIR. Exact Rust enum
+names, module organization, basic-block numbering, temporary-storage
+selection, branch shape, instruction sequence, and optimization algorithm
+remain private. The frozen profile adds no public runtime ABI entry point
+beyond the existing common panic reporter.
+
 ## Sources and diagnostics
 
 `SourceDatabase` owns source text and assigns `SourceId` values. `Span` and

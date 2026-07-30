@@ -2,7 +2,8 @@
 
 Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
-semantics, including implemented `while` loops, `break`, and `continue`. The
+semantics, including implemented `while` loops, `break`, and `continue`, plus
+the frozen short-circuit logical-expression and condition-cleanup contract. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -195,6 +196,11 @@ condition producing `true`, and only that arm executes. If no condition is
 true, the `else` body executes when present; otherwise execution continues
 after the conditional.
 
+Each `if` or `elif` condition is one full expression. Its result is preserved,
+and every temporary completed on its selected evaluation path is cleaned
+before control enters the arm or proceeds to the next condition. No condition
+temporary remains live in an arm body or after the conditional.
+
 Each condition resolves in the scope containing the complete conditional.
 Each arm body has its own child scope. A binding declared in one arm is not
 visible in another arm, in a later `elif` condition, or after the conditional.
@@ -286,28 +292,31 @@ cleanup are owned by
 
 ## Evaluation order
 
-Skald uses deterministic source order for the implemented expressions and
-calls:
+Skald uses deterministic source order. The following includes implemented
+expressions and calls plus the frozen logical-operator extension:
 
 1. a unary operand is evaluated before its operator;
-2. binary operands are evaluated left to right;
-3. a field receiver place is selected before the field is read;
-4. an assignment destination place is selected before its right-hand source;
-5. a method receiver is selected before explicit arguments;
-6. explicit function, instance-method, static-method, and constructor
+2. eager binary operands are evaluated exactly once from left to right;
+3. `&&` evaluates its right operand only after a `true` left result, while
+   `||` evaluates its right operand only after a `false` left result;
+4. a field receiver place is selected before the field is read;
+5. an assignment destination place is selected before its right-hand source;
+6. a method receiver is selected before explicit arguments;
+7. explicit function, instance-method, static-method, and constructor
    arguments are evaluated left to right; a static call's class spelling is
    not evaluated;
-7. an exact-class value-argument copy completes before the next argument is
+8. an exact-class value-argument copy completes before the next argument is
    evaluated;
-8. object destination storage is selected before construction or an
+9. object destination storage is selected before construction or an
    object-producing call, then the receiver and explicit arguments follow the
    ordering above;
-9. conditional conditions are evaluated in arm order and stop after the first
-   true result;
-10. a `while` condition is completed and cleaned before its branch, and each
+10. conditional conditions are evaluated in arm order, each selected condition
+    is cleaned before its branch, and evaluation stops after the first true
+    result;
+11. a `while` condition is completed and cleaned before its branch, and each
     normal body completion or `continue` is cleaned before the next condition
     evaluation;
-11. a return result is completed before its cleanup sequence begins.
+12. a return result is completed before its cleanup sequence begins.
 
 Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
@@ -335,6 +344,41 @@ The panic call uses these ordinary argument rules: its one exact
 `std::str::Str` value argument is evaluated and copied exactly once. An
 unrecoverable failure during that production wins; after reporting starts,
 the call terminates without performing remaining cleanup.
+
+## Short-circuit logical expressions
+
+The frozen primitive operator profile defines exact-`bool` `&&` and `||` as
+control-flow expressions rather than eager scalar operations:
+
+- `left && right` returns `false` without evaluating `right` when `left` is
+  `false`;
+- `left || right` returns `true` without evaluating `right` when `left` is
+  `true`; and
+- otherwise the right operand evaluates exactly once and supplies the result.
+
+A skipped operand performs no call, allocation, ownership operation, optional
+unwrap, cast or bounds check, panic, or cleanup. A temporary belonging only to
+that operand never becomes live.
+
+Every owning object or shared-owner temporary and hidden full-expression
+anchor completed on the selected path remains live until the enclosing
+full-expression boundary. A left-operand temporary therefore remains live
+while an evaluated right operand runs. Completed temporaries are cleaned in
+reverse completion order at the boundary.
+
+This lifetime rule is path-dependent: an evaluated right path may own
+temporaries that the skipped path does not. It does not extend a bounded
+immediate-consumer construct. An inline-class optional payload view and its
+presence guard end after their complete immediate consumer; a primitive unwrap
+ends after copying; and an optional shared-owner unwrap secures an ordinary
+owner whose resulting temporary follows the full-expression rule. Checked
+object-place casts retain their existing consuming full-expression lifetime.
+
+When a logical expression is an `if`, `elif`, or `while` condition, its
+selected-path cleanup completes before either successor. Treating `&&` or `||`
+as eager, cleaning one operand early, or accepting only effect-free operands
+does not implement this contract. The
+[status matrix](STATUS.md) records that logical operators remain unimplemented.
 
 ## Unsupported control flow and callability
 

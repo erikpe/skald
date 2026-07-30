@@ -138,6 +138,52 @@ with the sentinel. MIR
 verification remains the trust boundary that restricts static sentinel
 publication; ordinary dynamic publication writes count one.
 
+## Frozen primitive operator target boundary
+
+The
+[frozen operator representation](PHASES_AND_IR.md#frozen-primitive-operator-representation)
+defines future legal MIR input without making it current backend support. A
+target consumes already selected operation flavor, type, width, signedness,
+failure capability, and control flow. It never reconstructs semantics from
+source spelling or host-language arithmetic.
+
+Target realization must:
+
+- retain the low 64 or 8 result bits for wrapping integer arithmetic and
+  canonicalize `u8`;
+- implement signed floor division and divisor-sign remainder rather than
+  exposing the target's truncation convention;
+- handle `i64::MIN / -1` and `i64::MIN % -1` before any target divide
+  instruction that could fault;
+- branch to the verified integer zero-divisor reason before target division;
+- check a `u64` shift count against the left width before any instruction that
+  could mask the count;
+- use arithmetic right shift for `i64` and logical right shift for `u64` and
+  `u8`;
+- implement IEEE binary64 division without turning floating zero into panic;
+- materialize unordered NaN equality and ordering exactly, including `!=`
+  being true and all ordering predicates being false when either operand is
+  NaN; and
+- materialize every comparison and logical result as canonical `bool`.
+
+Short-circuit `&&` and `||` arrive as verified ordinary CFG with an explicit
+selected result and path-correct lifetime operations. The backend does not
+evaluate a skipped operand, invent logical eager instructions, merge
+incompatible ownership state, or synthesize cleanup. Branch layout and
+instruction selection may change only when evaluation, failure, ownership, and
+cleanup remain equivalent.
+
+Zero-divisor and excessive-shift paths use the existing static-termination
+pool and sole `ska_rt_panic` call. Raw divide faults, target count masking, and
+undefined or build-mode-dependent host overflow are not valid lowering
+strategies. Wrapping overflow, the signed-minimum division pair, and floating
+division by zero do not report panic.
+
+The frozen operator profile adds no target calling-convention rule, public
+symbol, metadata object, or runtime entry point. Exact instruction sequences,
+register choices, flag use, branch shapes, and constant-folding algorithms
+remain private after these observable requirements are met.
+
 ## While-loop target boundary
 
 The

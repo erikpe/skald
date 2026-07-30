@@ -116,6 +116,15 @@ The complete punctuation and operator token set outside literal delimiters is:
 Double quotes delimit one string-literal token. There are no character or
 division tokens in the implemented grammar.
 
+The frozen primitive-operator extension additionally selects these tokens:
+
+```text
+/ % ~ & | ^ << >> && ||
+```
+
+They are not accepted by the current compiler until their implementation
+roadmaps land. Power syntax is not frozen or reserved.
+
 ## Literals
 
 ```text
@@ -527,6 +536,91 @@ selects the existing object-cast syntax. Postfix use of either cast still
 requires grouping. The exact-type comparison semantics and closed primitive
 cast matrix are defined by
 [Types, Values, and Expressions](TYPES_AND_VALUES.md#primitive-integer-comparisons-and-casts).
+
+### Frozen primitive-operator expression extension
+
+The frozen operator grammar replaces the implemented expression ladder above
+when the corresponding syntax is implemented:
+
+```text
+expression                = logical-or-expression
+
+logical-or-expression     = logical-and-expression
+                            {"||" logical-and-expression}
+
+logical-and-expression    = comparison-expression
+                            {"&&" comparison-expression}
+
+comparison-expression     = bitwise-or-expression
+                            [comparison-suffix]
+comparison-suffix         = comparison-operator bitwise-or-expression
+                          | "is" (view-target | "some" | "none")
+comparison-operator       = "==" | "!=" | "<" | "<=" | ">" | ">="
+
+bitwise-or-expression     = bitwise-xor-expression
+                            {"|" bitwise-xor-expression}
+bitwise-xor-expression    = bitwise-and-expression
+                            {"^" bitwise-and-expression}
+bitwise-and-expression    = shift-expression
+                            {"&" shift-expression}
+
+shift-expression          = additive-expression
+                            {("<<" | ">>") additive-expression}
+additive-expression       = multiplicative-expression
+                            {("+" | "-") multiplicative-expression}
+multiplicative-expression = unary-expression
+                            {("*" | "/" | "%") unary-expression}
+
+unary-expression          = ("-" | "!" | "~" | "*") unary-expression
+                          | cast-expression
+                          | postfix-expression
+```
+
+The cast and postfix productions retain their implemented definitions. From
+tightest to loosest binding, the frozen precedence is:
+
+1. postfix unwrap, member access, dereferencing member access, calls, indexing,
+   and slicing;
+2. prefix `-`, `!`, `~`, explicit shared dereference `*`, and primitive or
+   object casts;
+3. binary `*`, `/`, and `%`;
+4. binary `+` and `-`;
+5. `<<` and `>>`;
+6. `&`;
+7. `^`;
+8. `|`;
+9. `==`, `!=`, `<`, `<=`, `>`, `>=`, and contextual `is`;
+10. `&&`;
+11. `||`.
+
+Postfix, arithmetic, shift, bitwise, and logical chains associate left to
+right. Prefix operators associate right to left. The complete comparison tier
+is non-associative: it accepts at most one comparison or `is` suffix without
+grouping. Contextual `is` retains its specialized type or presence-test right
+side; it is not identity equality and there is no `is not` syntax.
+
+Postfix `!` binds above prefix `!`, so these shapes are unambiguous:
+
+```ska
+!value!      // !(value!)
+!!flag       // !(!flag)
+value!!      // (value!)!; type checking rejects it without nested optionals
+left != right
+```
+
+Whitespace does not change those parses. Longest-match tokenization keeps
+`!=`, `<<`, `>>`, `&&`, and `||` intact. Forms such as
+`first < second < third` and `value is Item == flag` are invalid comparison
+chains; grouping may turn an intermediate result into an ordinary `bool`
+operand.
+
+Existing `//` line-comment recognition remains distinct from division: adjacent
+`//` begins a comment, while `/ /` is two division tokens separated by trivia.
+
+The source semantics and exact operand matrix are defined by the
+[frozen primitive operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile).
+The [status matrix](STATUS.md) remains authoritative for acceptance by the
+current compiler.
 
 ## Syntax errors and nesting
 

@@ -1,10 +1,10 @@
 # Operator Semantics Design Proposal
 
-Status: confirmed on 2026-07-30; O1 through O12 adopt the decisions recorded
-below, and the contract audit is complete. Promotion into living language and
-compiler contracts remains before any operator implementation roadmap is
-written. Until promotion, this proposal records accepted direction but is not
-a living language or compiler authority.
+Status: confirmed, promoted, validated, and archived on 2026-07-30. O1 through
+O12 adopt the decisions recorded below, and the contract audit is complete.
+The living language and compiler documents own the frozen behavior; this
+archived proposal retains the decision and promotion record. Selected operator
+implementation roadmaps may now be written independently.
 
 This proposal defines a coherent source and semantic model for Skald operators.
 It expands the deliberately small implemented primitive surface without
@@ -638,10 +638,10 @@ handled explicitly:
 - [x] Check the complete proposal for contradictions with existing optional,
       shared-owner, object-cast, temporary, panic, and evaluation-order
       contracts.
-- [ ] Promote every confirmed source and representation rule into living
+- [x] Promote every confirmed source and representation rule into living
       documentation so implementation roadmaps consume authoritative contracts
       rather than this proposal.
-- [ ] Validate documentation links and indexes, then archive this proposal as
+- [x] Validate documentation links and indexes, then archive this proposal as
       the historical decision record.
 
 ## Deliberately deferred decisions

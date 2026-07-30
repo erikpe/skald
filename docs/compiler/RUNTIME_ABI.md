@@ -282,6 +282,31 @@ version marker. Loop behavior, backward branches, and per-iteration cleanup
 belong to compiler, backend, assembler, and native golden tests rather than a
 new runtime harness.
 
+## Frozen primitive operator ABI boundary
+
+The
+[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
+adds no public C symbol, runtime-managed value, or ABI-version change. The
+runtime marker remains `ska_rt_abi_v6`.
+
+Wrapping arithmetic, division and remainder, bitwise operations, shifts,
+floating operations and comparisons, boolean operations, short-circuit
+control flow, result canonicalization, and path-dependent cleanup are
+compiler-generated. The runtime never receives an operator identity, operand
+type, shift count, floating status, logical branch, or temporary-lifetime
+state.
+
+Integer division by zero, integer remainder by zero, and excessive shift count
+reuse the existing `_Noreturn ska_rt_panic(bytes, length)` entry point. The
+compiler supplies their exact static message bytes from the sole
+[language catalog](../language/ERRORS.md#frozen-panic-design); the reporter
+does not classify the reason. These added callers do not change the reporter
+signature, output record, termination behavior, or compatibility marker.
+
+Operator verification belongs to compiler, backend, assembler, and native
+tests. Direct runtime tests continue covering the generic reporter rather than
+gaining operator-specific ABI harnesses.
+
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
 transition, and focused tests.

@@ -1,8 +1,8 @@
 # Skald Types, Values, and Expressions
 
 Status: authoritative for implemented type, value, literal, and expression
-semantics, the primitive integer comparison and cast contract, and the exact
-type rule for primitive binding reassignment. The
+semantics, the frozen primitive operator profile, the primitive integer cast
+contract, and the exact type rule for primitive binding reassignment. The
 [status matrix](STATUS.md) is authoritative for feature maturity, and the
 [implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
@@ -147,6 +147,8 @@ evaluation order are defined by
 
 ## Operators
 
+### Implemented surface
+
 The implemented arithmetic surface is deliberately exact-type:
 
 | Operator | Accepted operand types | Result |
@@ -154,9 +156,9 @@ The implemented arithmetic surface is deliberately exact-type:
 | binary `+`, `-`, `*` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | that same type |
 | unary `-` | `i64` or `f64` | the operand type |
 
-`u64` arithmetic wraps modulo 2^64. `u8` arithmetic wraps modulo 2^8, so every
-result remains in `0..=255`. Signed `i64` overflow behavior is not yet a
-language contract; code must not depend on a particular overflow result.
+Integer arithmetic wraps modulo its width: `i64` and `u64` retain the low
+64 bits, while `u8` retains the low 8 bits and remains in `0..=255`. The
+complete overflow contract is stated in the frozen profile below.
 
 `f64` arithmetic follows IEEE-754 binary64 addition, subtraction,
 multiplication, and negation in the default round-to-nearest, ties-to-even
@@ -174,6 +176,180 @@ outer arrays, and copied slices plus checked equal-length slice assignment
 execute for inline, shared, and optional-shared receivers. Call-scoped
 whole-array and exact class or nested-array element aliases execute with their
 declared read-only or mutable access.
+
+### Frozen primitive operator profile
+
+The complete primitive operator design below is frozen independently of
+compiler availability. The [status matrix](STATUS.md) identifies the currently
+implemented subset, and the
+[grammar](GRAMMAR.md#frozen-primitive-operator-expression-extension) records
+the frozen syntax and precedence.
+
+The unary matrix is:
+
+| Operator | Operand | Result | Meaning |
+|---|---|---|---|
+| `-` | `i64` | `i64` | Wrapping two's-complement negation |
+| `-` | `f64` | `f64` | IEEE-754 sign negation |
+| `!` | `bool` | `bool` | Logical negation |
+| `~` | `i64`, `u64`, or `u8` | Operand type | Bitwise complement within the operand width |
+| `*` | supported `shared T` owner | Existing pointee-place result | Existing explicit shared dereference |
+
+Unary `+` is not part of this profile.
+
+The binary primitive matrix is:
+
+| Operators | Left operand | Right operand | Result |
+|---|---|---|---|
+| `+`, `-`, `*`, `/` | One numeric type | The identical type | The operand type |
+| `%` | One integer type | The identical type | The operand type |
+| `&`, `|`, `^` | One integer type | The identical type | The operand type |
+| `<<`, `>>` | `i64`, `u64`, or `u8` | `u64` | The left type |
+| `==`, `!=` | One primitive type | The identical type | `bool` |
+| `<`, `<=`, `>`, `>=` | One numeric type | The identical type | `bool` |
+| `&&`, `||` | `bool` | `bool` | `bool` |
+
+Here, numeric means `i64`, `u64`, `u8`, or `f64`; integer means `i64`, `u64`,
+or `u8`. Boolean values have logical operations and equality but no ordering,
+arithmetic, shifts, or bitwise operations. `unit`, optionals, arrays, class
+values, object views, and shared-owner handles receive no new operator.
+
+#### Exact selection and explicit casts
+
+Operator selection never performs an implicit cast, promotion, narrowing,
+signedness change, boolean conversion, truthiness conversion, or expected-type
+reinterpretation. Except for shifts, both operands must have the identical
+static type. A shift has an integer left operand and exactly `u64` on the
+right.
+
+An explicit cast completes according to its own contract and, on success,
+produces an ordinary value with exactly its target type before a surrounding
+operator is selected or executed. Operator selection sees only resulting
+static types and cannot observe whether a value came from a literal, binding,
+call, cast, or another expression. An operator never inserts or requests a
+cast.
+
+Adding a future explicit source/target cast pair may make more operand
+expressions constructible, but does not add a mixed-type operator case or
+change an existing result or operation:
+
+```ska
+1 + 1u                   // invalid: i64 and u64
+(i64) 1u8 + 2            // valid i64 addition
+(i64) (255u8 + 1u8)      // valid: u8 addition wraps, then converts to i64
+1u8 << 3u                // valid; result is u8
+1u8 << 3u8               // invalid; count must be u64
+```
+
+The explicit cast matrix may expand independently after this design. Implicit
+conversion, mixed-type operator resolution, or contextual literal typing
+would revise this frozen boundary rather than merely add a cast.
+
+An unsupported operator/type combination is a compile-time error. Diagnostics
+identify the operator and incompatible operand types, but the language does
+not freeze a diagnostic code, exact wording, follow-on count, or ordering
+between independent errors.
+
+#### Integer arithmetic and overflow
+
+`i64`, `u64`, and `u8` addition, subtraction, and multiplication wrap modulo
+their width. Unary `i64` negation uses the same rule, so negating the minimum
+`i64` value returns that value unchanged. An `i64` result retains the low
+64 bits and interprets them as two's-complement; `u64` retains the low 64 bits;
+and `u8` retains the low 8 bits and remains canonical in `0..=255`.
+
+Overflow does not panic, produce an invalid value, depend on build mode, or
+expose a target overflow flag. Compile-time evaluation and runtime execution
+must agree.
+
+Unsigned integer division and remainder have the ordinary nonnegative
+quotient and remainder. Signed division rounds the mathematical quotient
+toward negative infinity. Signed remainder satisfies
+`remainder = dividend - quotient * divisor` under the type's wrapping
+arithmetic and is zero or has the divisor's sign:
+
+| Expression | Result |
+|---|---|
+| `7 / 3` | `2` |
+| `7 % 3` | `1` |
+| `-7 / 3` | `-3` |
+| `-7 % 3` | `2` |
+| `7 / -3` | `-3` |
+| `7 % -3` | `-2` |
+| `-7 / -3` | `2` |
+| `-7 % -3` | `-1` |
+| `-9223372036854775808 / -1` | `-9223372036854775808` |
+| `-9223372036854775808 % -1` | `0` |
+
+Integer `/` and `%` panic when the divisor is zero. The signed-minimum pair is
+handled before any target instruction that could fault; raw hardware faults
+do not implement Skald semantics.
+
+#### Bitwise operations and shifts
+
+`&`, `|`, `^`, and `~` operate on the exact fixed-width representation of
+their integer operand. Left shift inserts zero low bits and discards high bits.
+Right shift is arithmetic for `i64` and logical for `u64` and `u8`.
+
+Counts from `0u` through `63u` are valid for `i64` and `u64`; counts from `0u`
+through `7u` are valid for `u8`. A count at or above the left operand's width
+panics. Skald never masks an excessive count to target instruction count bits.
+Every `u8` result is canonicalized.
+
+#### Floating-point operations and comparisons
+
+`f64` unary negation and `+`, `-`, `*`, and `/` follow IEEE-754 binary64 in the
+existing round-to-nearest, ties-to-even environment. Division by floating zero
+does not panic; it produces the applicable signed infinity or NaN. Overflow,
+underflow, signed zero, subnormal, infinity, and NaN results follow the
+corresponding binary64 operation.
+
+Floating equality and ordering are unordered when either operand is NaN:
+
+| Operator | Result when either operand is NaN |
+|---|---|
+| `==` | `false` |
+| `!=` | `true` |
+| `<`, `<=`, `>`, `>=` | `false` |
+
+Positive and negative zero compare equal. Infinities use ordinary numeric
+ordering. These operators do not define a total order. Skald does not promise
+a particular NaN sign or payload, preservation of signaling NaN state, or
+source-visible floating exception flags.
+
+Floating `%` is not part of this profile.
+
+#### Boolean operations
+
+`bool` supports prefix `!`, exact equality and inequality, and mandatory
+short-circuit `&&` and `||`. There is no truthiness conversion from numeric,
+optional, owner, array, class, interface, `Obj`, or `unit` values.
+
+Logical evaluation, source order, skipped effects, and temporary lifetime are
+defined by
+[Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#short-circuit-logical-expressions).
+Integer zero-divisor and excessive-shift failure are defined by
+[Errors and Exceptional Control Flow](ERRORS.md#frozen-operator-failures).
+
+#### Deferred operator and conversion work
+
+This frozen profile does not define:
+
+- power or exponentiation;
+- floating remainder;
+- operators on `Str`, other class values, interfaces, `Obj`, shared owners,
+  optionals, arrays, or future value families;
+- user-defined operator declarations or overload resolution;
+- implicit numeric promotion or mixed-type operators;
+- total floating-point ordering or NaN payload facilities;
+- checked, saturating, arbitrary-precision, or selectable overflow modes;
+- rotations or integer bit utilities;
+- compound assignment, increment, decrement, or assignment expressions;
+- `is not`, identity equality, or object value equality; or
+- coalescing, conditional, pipeline, range, SIMD, atomic, volatile, or
+  concurrency operators.
+
+Each area requires a separate design. No deferred syntax is reserved.
 
 ## Primitive integer comparisons and casts
 
@@ -199,11 +375,12 @@ types are errors, including otherwise representable literal values:
 `1 == 1u` is invalid because its operands are `i64` and `u64`. A programmer
 must cast one operand explicitly before comparing different integer types.
 
-The two operands evaluate exactly once from left to right. All six operators
-share one non-associative precedence level below arithmetic and above
-contextual `is`; consequently an ungrouped chain such as `a < b < c` is a
-syntax error. The [grammar](GRAMMAR.md#expressions) records the exact accepted
-source shape.
+The two operands evaluate exactly once from left to right. In the implemented
+grammar all six operators share one non-associative level above contextual
+`is`; the frozen operator grammar places both forms in one non-associative
+comparison tier. Both reject an ungrouped chain such as `a < b < c`. The
+[grammar](GRAMMAR.md#expressions) distinguishes accepted and frozen source
+shape.
 
 ### Explicit integer casts
 
@@ -244,18 +421,18 @@ invoke runtime support, or introduce exceptional control flow. A literal must
 first be valid for the type selected by its spelling; applying an explicit
 cast adds no further range check. The conversion rule is portable language
 meaning, not a promise about memory layout, endianness, registers, or the
-external ABI. It does not settle signed `i64` arithmetic overflow.
+external ABI. Integer arithmetic overflow is defined independently by the
+[frozen primitive operator profile](#frozen-primitive-operator-profile).
 
-### Deferred conversion and comparison work
+### Deferred conversion work
 
 This contract does not define:
 
-- floating-point comparisons or casts between floating and integer types;
+- casts between floating and integer types;
 - conversions between `bool` and numeric types;
-- implicit numeric conversions or mixed-type comparisons;
+- implicit numeric conversions;
 - checked, saturating, or user-defined conversions;
-- object, optional, array, `Obj`, or `unit` conversion through primitive casts;
-- logical operators or equality for objects, owners, optionals, or arrays.
+- object, optional, array, `Obj`, or `unit` conversion through primitive casts.
 
 Those areas require separate design. In particular, no checked variant is
 implied by the total integer cast syntax.

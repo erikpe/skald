@@ -101,6 +101,16 @@ verification checks it, and x86-64 realizes it without runtime support. The
 detailed ownership boundary is documented in
 [Phases and IR](PHASES_AND_IR.md#primitive-integer-operation-boundary).
 
+The frozen complete primitive operator profile has a separately documented
+[phase and IR boundary](PHASES_AND_IR.md#frozen-primitive-operator-representation),
+[target boundary](BACKEND.md#frozen-primitive-operator-target-boundary), and
+[unchanged runtime ABI boundary](RUNTIME_ABI.md#frozen-primitive-operator-abi-boundary).
+Those contracts select exact typed operations, structured short-circuit HIR,
+ordinary MIR CFG with canonical result carriage, path-correct full-expression
+cleanup, verified compiler-known failures, and mechanical target realization.
+They do not claim support beyond the implemented subset in the
+[status matrix](../language/STATUS.md#frozen-language-designs).
+
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat

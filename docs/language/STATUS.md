@@ -31,7 +31,7 @@ does not imply support beyond that boundary.
 |---|---|---|
 | [Source and declarations](MODULES_AND_INTEROP.md#compilation-units-and-modules) | **Implemented contract** | UTF-8 `.ska` source modules; ASCII identifiers; line comments; top-level functions, exact-symbol external functions, nominal classes, and interfaces. |
 | [Primitive types and literals](TYPES_AND_VALUES.md#literal-types-and-ranges) | **Implemented contract** | `i64`, `u64`, `u8`, `f64`, and `bool`; payload-free `unit` results; spelling-selected numeric types with checked literal ranges. |
-| [Primitive expressions](TYPES_AND_VALUES.md#expressions) | **Implemented contract** | Exact-type `+`, `-`, and binary `*`; unary `-` for `i64` and `f64`; grouping, direct calls, field selection, and explicit shared dereference; no implicit conversions or truthiness. |
+| [Primitive expressions](TYPES_AND_VALUES.md#expressions) | **Implemented contract** | Exact-type `+`, `-`, and binary `*` with fixed-width wrapping integer semantics; unary `-` for `i64` and `f64`; grouping, direct calls, field selection, and explicit shared dereference; no implicit conversions or truthiness. |
 | [Primitive integer comparisons](TYPES_AND_VALUES.md#integer-comparisons) | **Implemented contract** | Exact-type `==`, `!=`, `<`, `<=`, `>`, and `>=` for `i64`, `u64`, and `u8` execute through verified MIR and x86-64 with signed `i64` ordering, unsigned `u64`/`u8` ordering, and canonical `bool` results. |
 | [Primitive integer casts](TYPES_AND_VALUES.md#explicit-integer-casts) | **Implemented contract** | All nine explicit total two's-complement/modulo casts among `i64`, `u64`, and `u8` execute through verified MIR and x86-64. They preserve same-width bits, retain the low byte when narrowing, zero-extend `u8` when widening, and require no runtime support. |
 | [Bindings and scopes](FUNCTIONS_AND_CONTROL_FLOW.md#lexical-scopes-and-locals) | **Implemented contract** | Typed `var` locals, value parameters, lexical blocks, declaration-before-use for locals, nested shadowing, duplicate rejection within one scope, and exact-type reassignment of initialized `i64`, `u64`, `u8`, `f64`, and `bool` locals and value parameters. Grouped destinations preserve lexical identity; sources evaluate once and store before full-expression cleanup. Parameter reassignment changes only callee-local value storage. |
@@ -63,6 +63,17 @@ The [implemented grammar](GRAMMAR.md) is the precise accepted syntax authority.
 Focused semantic documents own the corresponding language rules; this matrix
 changes only when feature maturity or compiler support changes.
 
+## Frozen language designs
+
+| Area | Maturity | Current compiler boundary |
+|---|---|---|
+| [Primitive operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile) | **Frozen design** | Exact primitive unary and binary matrices; no implicit conversion; frozen precedence with non-associative comparison/`is`; wrapping integer arithmetic; floor signed division and divisor-sign remainder; checked `u64` shift counts; IEEE binary64 division and unordered comparison; exact boolean equality and mandatory short-circuit `&&`/`||`; selected-path full-expression cleanup; and three compiler-known panic reasons. The compiler currently supports only the subsets listed under implemented primitive expressions and integer comparisons. The remaining frozen tokens, operations, logical CFG, failure reasons, and target lowering are not accepted or emitted. |
+
+Frozen operator behavior is authoritative even though availability is
+incomplete. Implementation roadmaps may divide delivery by operator family but
+must not redefine the shared source, cleanup, panic, or representation
+contracts.
+
 ## Compiler availability
 
 | Surface | Status | Current boundary |
@@ -88,7 +99,7 @@ guarantees.
 | [`break`](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits) | **Implemented contract** | Value-free statement targeting the nearest enclosing loop by stable identity, with deterministic cleanup of every exited body scope and preservation of enclosing state. |
 | [`continue`](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits) | **Implemented contract** | Value-free statement targeting the nearest enclosing loop, with deterministic cleanup of exited body scopes before a fresh condition evaluation. |
 | [Other loops and iteration](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability) | **Open question** | `for`, `for ... in`, `do while`, unconditional loops, iterator protocols, loop expressions and values, loop `else`, and labels are unspecified. |
-| [Other remaining primitive operations](TYPES_AND_VALUES.md#deferred-conversion-and-comparison-work) | **Open question** | Floating comparisons and conversions, checked and saturating conversions, numeric/boolean conversion, mixed-type comparison, division, remainder, bitwise operations, shifts, signed-overflow behavior, and broader floating operations remain deferred. |
+| [Deferred operator and conversion work](TYPES_AND_VALUES.md#deferred-operator-and-conversion-work) | **Open question** | Power, floating remainder, object and user-defined operators, implicit promotion, expanded explicit casts, total floating ordering, selectable overflow modes, compound assignment, and other explicitly excluded operations require separate designs. Frozen but unimplemented primitive operators are tracked above rather than treated as open questions. |
 | [Function values](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability), closures, and generics | **Open question** | Direct named calls are implemented; callable values, capture, generic declarations, inference, and specialization are not specified for Skald. |
 | Static state and broader class features | **Open question** | Static fields and state, abstract/final forms, method/function overloads, reflection, and user-defined conversions are not current language contracts. Declaring-class privacy, static methods, and ordinary initializer overloading are implemented separately above. |
 | Broader standard library | **Open question** | The canonical string module is implemented in Skald source. Collection, I/O, formatting, parsing, and broader library organization remain open; current scalar output is bootstrap runtime interoperation. |

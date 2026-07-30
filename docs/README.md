@@ -15,8 +15,8 @@ Use the authority closest to the behavior:
   [language status matrix](language/STATUS.md);
 - exact accepted syntax belongs in the
   [implemented grammar](language/GRAMMAR.md);
-- type, value, literal, and expression semantics, including the primitive
-  integer comparison and cast contract, belong in
+- type, value, literal, and expression semantics, including the frozen complete
+  primitive operator profile and implemented integer cast contract, belong in
   [types and values](language/TYPES_AND_VALUES.md);
 - the implemented raw-byte `std::str::Str` value, literals, and library
   boundary belong in
@@ -52,8 +52,9 @@ Use the authority closest to the behavior:
   [errors and exceptional control flow](language/ERRORS.md);
 - durable compiler structure, repository roles, crate API policy, and extension
   policy belong in the [compiler architecture](compiler/README.md);
-- phase products, IR responsibilities, verification, dumps, and trust
-  boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- phase products, IR responsibilities, verification, dumps, trust boundaries,
+  and the frozen primitive operator representation belong in
+  [compiler phases and IR](compiler/PHASES_AND_IR.md);
 - frozen multiple-file providers, filesystem resolution, entry selection,
   identities, loading, and linkage belong in the
   [module-system compiler contract](compiler/MODULE_SYSTEM.md);
