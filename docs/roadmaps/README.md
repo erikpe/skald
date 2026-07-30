@@ -14,7 +14,15 @@ No implementation roadmaps are currently planned.
 
 ## Design proposals
 
-No design proposals are currently awaiting decisions or promotion.
+- [Operator semantics](OPERATORS_DESIGN_PROPOSAL.md) — **Proposed.** Defines
+  the intended primitive operator matrix, precedence, exact typing, wrapping
+  arithmetic, division and remainder, shifts, floating comparison,
+  short-circuit evaluation, panic behavior, and compiler representation
+  boundaries. Next: iterate and confirm O1 through O12, promote the complete
+  design into living contracts, and only then write implementation roadmaps
+  for selected operator families. It depends on preserving the implemented
+  optional, ownership, object-cast, full-expression cleanup, and panic
+  contracts.
 
 ## Pending discoveries
 
