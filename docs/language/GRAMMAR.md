@@ -428,8 +428,7 @@ additive-expression
 multiplicative-expression
                  = unary-expression {"*" unary-expression}
 
-unary-expression = "-" unary-expression
-                 | "*" unary-expression
+unary-expression = ("-" | "!" | "*") unary-expression
                  | cast-expression
                  | postfix-expression
 
@@ -495,14 +494,14 @@ From tightest to loosest binding, precedence is:
 
 1. postfix unwrap, member access, dereferencing member access, calls, indexing,
    and slicing;
-2. unary `-`, unary `*`, and primitive or object casts;
+2. prefix `-`, `!`, and `*`, and primitive or object casts;
 3. binary `*`;
 4. binary `+` and `-`;
-5. integer comparisons `==`, `!=`, `<`, `<=`, `>`, and `>=`;
+5. primitive comparisons `==`, `!=`, `<`, `<=`, `>`, and `>=`;
 6. contextual `is`.
 
-Postfix and arithmetic binary operators associate left to right. Unary `-`
-and `*` associate right to left. Comparisons and `is` are non-associative, so
+Postfix and arithmetic binary operators associate left to right. Prefix `-`,
+`!`, and `*` associate right to left. Comparisons and `is` are non-associative, so
 ungrouped chained comparisons or tests are syntax errors. Grouping overrides
 precedence and remains represented in the source-shaped syntax tree.
 `*owner.field` therefore means `*(owner.field)`; use `(*owner).field` or
@@ -517,6 +516,11 @@ These spellings are semantically distinct: `.` remains within an already
 selected inline place, while `->` crosses exactly one shared edge. There is no
 implicit shared dereference.
 Declaration selection and call legality are semantic concerns.
+
+Postfix unwrap binds above prefix logical negation, so `!optional_flag!` means
+`!(optional_flag!)` and `!!flag` means `!(!flag)`. Operator position keeps the
+two uses distinct, while longest-match tokenization keeps `!=` as one
+comparison token.
 
 A primitive integer keyword in this position unambiguously selects an integer
 cast. A parenthesized identifier followed by an adjacent expression is an
@@ -535,7 +539,7 @@ primitive cast target, while a declaration path or `shared` declaration path
 selects the existing object-cast syntax. Postfix use of either cast still
 requires grouping. The exact-type comparison semantics and closed primitive
 cast matrix are defined by
-[Types, Values, and Expressions](TYPES_AND_VALUES.md#primitive-integer-comparisons-and-casts).
+[Types, Values, and Expressions](TYPES_AND_VALUES.md#implemented-primitive-comparisons-boolean-negation-and-integer-casts).
 
 ### Frozen primitive-operator expression extension
 

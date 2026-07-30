@@ -20,7 +20,7 @@ error[PAR004]: expected an expression
  --> tests/golden/compile_fail/optional_malformed_punctuation.ska:7:23
    |
 7 |     var boxed: shared?? Value = none;
-   |                       ^ expected an identifier, literal, `none`, `self`, unary `-`, or `(`
+   |                       ^ expected an identifier, literal, `none`, `self`, prefix operator, or `(`
 
 error[PAR002]: expected `;` after the local declaration
  --> tests/golden/compile_fail/optional_malformed_punctuation.ska:7:23

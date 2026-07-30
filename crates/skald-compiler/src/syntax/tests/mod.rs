@@ -30,6 +30,7 @@ mod comparisons;
 mod conditionals;
 mod declarations;
 mod dumps;
+mod eager_boolean_operators;
 mod expressions;
 mod integer_casts;
 mod interfaces;

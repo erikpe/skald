@@ -1,0 +1,136 @@
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:8:12
+   |
+8 |     return !value;
+   |            ^ operator cannot be applied to this operand
+   |
+8 |     return !value;
+   |             ----- operand has type `i64`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:12:12
+    |
+12 |     return !value;
+    |            ^ operator cannot be applied to this operand
+    |
+12 |     return !value;
+    |             ----- operand has type `f64`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:16:12
+    |
+16 |     return !value;
+    |            ^ operator cannot be applied to this operand
+    |
+16 |     return !value;
+    |             ----- operand has type `bool?`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:20:12
+    |
+20 |     return !value;
+    |            ^ operator cannot be applied to this operand
+    |
+20 |     return !value;
+    |             ----- operand has type `class c0`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:24:12
+    |
+24 |     return !value;
+    |            ^ operator cannot be applied to this operand
+    |
+24 |     return !value;
+    |             ----- operand has type `shared class c0`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:28:12
+    |
+28 |     return !value;
+    |            ^ operator cannot be applied to this operand
+    |
+28 |     return !value;
+    |             ----- operand has type `Obj`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:32:12
+    |
+32 |     return !value;
+    |            ^ operator cannot be applied to this operand
+    |
+32 |     return !value;
+    |             ----- operand has type `array a0`
+
+error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:36:12
+    |
+36 |     return !notify();
+    |            ^ operator cannot be applied to this operand
+    |
+36 |     return !notify();
+    |             -------- operand has type `unit`
+
+error[TYP005]: equality comparison requires operands of the same supported primitive type
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:40:17
+    |
+40 |     return true == 1;
+    |                 ^^ operator cannot be applied to these operand types
+    |
+40 |     return true == 1;
+    |            ---- left operand has type `bool`
+    |
+40 |     return true == 1;
+    |                    - right operand has type `i64`
+  = note: equality operand types are `i64`, `u64`, `u8`, or `bool`
+
+error[TYP005]: ordering comparison requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:44:17
+    |
+44 |     return true < false;
+    |                 ^ operator cannot be applied to these operand types
+    |
+44 |     return true < false;
+    |            ---- left operand has type `bool`
+    |
+44 |     return true < false;
+    |                   ----- right operand has type `bool`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: equality comparison requires operands of the same supported primitive type
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:48:16
+    |
+48 |     return 1.0 == 2.0;
+    |                ^^ operator cannot be applied to these operand types
+    |
+48 |     return 1.0 == 2.0;
+    |            --- left operand has type `f64`
+    |
+48 |     return 1.0 == 2.0;
+    |                   --- right operand has type `f64`
+  = note: equality operand types are `i64`, `u64`, `u8`, or `bool`
+
+error[TYP005]: equality comparison requires operands of the same supported primitive type
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:52:17
+    |
+52 |     return left == right;
+    |                 ^^ operator cannot be applied to these operand types
+    |
+52 |     return left == right;
+    |            ---- left operand has type `bool?`
+    |
+52 |     return left == right;
+    |                    ----- right operand has type `bool?`
+  = note: equality operand types are `i64`, `u64`, `u8`, or `bool`
+
+error[TYP005]: equality comparison requires operands of the same supported primitive type
+ --> tests/golden/compile_fail/eager_boolean_operator_types.ska:56:17
+    |
+56 |     return left == right;
+    |                 ^^ operator cannot be applied to these operand types
+    |
+56 |     return left == right;
+    |            ---- left operand has type `class c0`
+    |
+56 |     return left == right;
+    |                    ----- right operand has type `class c0`
+  = note: equality operand types are `i64`, `u64`, `u8`, or `bool`

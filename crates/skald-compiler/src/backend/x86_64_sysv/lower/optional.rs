@@ -683,7 +683,32 @@ impl InstructionSelector<'_, '_> {
         source: OptionalPayload,
     ) -> Result<(), BackendError> {
         let destination = value::frame_storage(self.frame, destination);
-        self.copy_payload(source, (source.0, destination));
+        match source.0.payload_type() {
+            MirType::F64 => {
+                value::load_float(
+                    value::float_operand(source.1),
+                    XmmRegister::Xmm14,
+                    self.output,
+                );
+                value::store_float(
+                    XmmRegister::Xmm14,
+                    value::float_operand(destination),
+                    self.output,
+                );
+            }
+            MirType::U8 | MirType::Bool => {
+                // MIR scalar values have canonical eight-byte homes even when
+                // their source storage uses one byte. Clear the upper bytes so
+                // every later full-register consumer observes the same value.
+                value::load_byte_rax(source.1, self.output);
+                value::store_rax(destination, self.output);
+            }
+            MirType::I64 | MirType::U64 => {
+                value::load_rax(source.1, self.output);
+                value::store_rax(destination, self.output);
+            }
+            _ => unreachable!("primitive optional payload must be primitive"),
+        }
         Ok(())
     }
 

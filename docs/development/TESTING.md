@@ -230,6 +230,16 @@ malformed-MIR rejection. Golden cases own exact diagnostics, extrema and
 modulo observations, and range-check-before-cast composition with array
 positions.
 
+Eager boolean operator coverage follows the same phase boundary. Lexer and
+syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
+recovery. Resolution and type-check tests own source-shaped negation, exact
+`bool` selection, boolean equality, invalid ordering, and focused actual-type
+diagnostics. HIR/MIR dumps and verifier tests own selected eager scalar
+operations; backend and native goldens own canonical truth tables,
+left-to-right exactly-once evaluation, optional-unwrapped booleans, calls,
+fields, assignments, conditions, and returns. Short-circuit behavior is not
+part of this matrix.
+
 ## Private initializer coverage
 
 Private ordinary initializer tests follow the owning phase instead of relying

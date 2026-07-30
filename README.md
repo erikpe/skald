@@ -20,8 +20,9 @@ compiler also supports plain checked object casts in receiver, alias-argument,
 field, inline copy-construction, value-parameter, result, slicing, and
 whole-object assignment contexts, plus allocation-free owner-preserving shared
 casts and explicit exact-class shared copy allocation. Primitive and owning
-arrays, explicit optional values, same-type integer comparisons, total integer
-casts, and raw-byte strings execute through verified MIR on x86-64. Strings
+arrays, explicit optional values, exact boolean negation and equality,
+same-type integer comparisons, total integer casts, and raw-byte strings
+execute through verified MIR on x86-64. Strings
 use the canonical `std::str::Str` class and Skald-written standard-library
 operations rather than compiler-selected method names. A `shared T`
 expression is an owner handle: `*owner` selects its bounded non-owning pointee

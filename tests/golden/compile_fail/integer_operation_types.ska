@@ -2,10 +2,6 @@ fn mixed_comparison() -> bool {
     return 1 < 2u;
 }
 
-fn boolean_comparison() -> bool {
-    return true == false;
-}
-
 fn floating_cast() -> i64 {
     return (i64) 1.0;
 }

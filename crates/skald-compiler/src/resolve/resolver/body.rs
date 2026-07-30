@@ -312,6 +312,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 Some(ResolvedExpression::Unary(ResolvedUnaryExpr {
                     operator: match unary.operator {
                         syntax::UnaryOperator::Negate => ResolvedUnaryOperator::Negate,
+                        syntax::UnaryOperator::LogicalNot => ResolvedUnaryOperator::LogicalNot,
                         syntax::UnaryOperator::Dereference => {
                             unreachable!("dereference returned above")
                         }

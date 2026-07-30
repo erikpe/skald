@@ -17,6 +17,7 @@ use crate::typeck::{
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
 const INTEGER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8"];
+const EQUALITY_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "bool"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
 impl CallableChecker<'_, '_> {
@@ -100,50 +101,78 @@ impl CallableChecker<'_, '_> {
         &mut self,
         unary: &crate::resolve::ResolvedUnaryExpr,
     ) -> Option<HirExpression> {
-        if unary.operator == ResolvedUnaryOperator::Negate {
-            if let Some(literal) = i64_literal_through_groups(&unary.operand) {
-                match classify_i64_magnitude(&literal.spelling) {
-                    Magnitude::MinimumBoundary => {
-                        return Some(HirExpression {
-                            kind: HirExpressionKind::I64(i64::MIN),
-                            ty: Type::I64,
-                            span: unary.span,
-                        });
+        match unary.operator {
+            ResolvedUnaryOperator::Negate => {
+                if let Some(literal) = i64_literal_through_groups(&unary.operand) {
+                    match classify_i64_magnitude(&literal.spelling) {
+                        Magnitude::MinimumBoundary => {
+                            return Some(HirExpression {
+                                kind: HirExpressionKind::I64(i64::MIN),
+                                ty: Type::I64,
+                                span: unary.span,
+                            });
+                        }
+                        Magnitude::TooLarge => {
+                            self.report_integer_out_of_range(
+                                unary.span,
+                                format!("-{}", literal.spelling),
+                            );
+                            return None;
+                        }
+                        Magnitude::PositiveI64 => {}
                     }
-                    Magnitude::TooLarge => {
-                        self.report_integer_out_of_range(
-                            unary.span,
-                            format!("-{}", literal.spelling),
-                        );
-                        return None;
-                    }
-                    Magnitude::PositiveI64 => {}
+                }
+            }
+            ResolvedUnaryOperator::LogicalNot => {
+                let actual = self.static_expression_type(&unary.operand);
+                if actual != Type::Bool {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            TYPE_MISMATCH,
+                            "logical negation requires a `bool` operand",
+                        )
+                        .with_primary_label(
+                            unary.operator_span,
+                            "operator cannot be applied to this operand",
+                        )
+                        .with_secondary_label(
+                            unary.operand.span(),
+                            format!("operand has type `{}`", actual.name()),
+                        ),
+                    );
+                    return None;
                 }
             }
         }
 
         let operand = self.check_expression(&unary.operand)?;
-        let operation = match operand.ty {
-            Type::I64 => HirUnaryOperation::NegateI64,
-            Type::F64 => HirUnaryOperation::NegateF64,
-            _ => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        TYPE_MISMATCH,
-                        format!(
-                            "unary negation requires an {} operand",
-                            format_type_list(NEGATABLE_TYPE_NAMES)
-                        ),
-                    )
-                    .with_primary_label(
-                        operand.span,
-                        format!("operand has type `{}`", operand.ty.name()),
-                    ),
-                );
-                return None;
+        let operation = match unary.operator {
+            ResolvedUnaryOperator::LogicalNot => {
+                debug_assert_eq!(operand.ty, Type::Bool);
+                HirUnaryOperation::LogicalNotBool
             }
+            ResolvedUnaryOperator::Negate => match operand.ty {
+                Type::I64 => HirUnaryOperation::NegateI64,
+                Type::F64 => HirUnaryOperation::NegateF64,
+                _ => {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            TYPE_MISMATCH,
+                            format!(
+                                "unary negation requires an {} operand",
+                                format_type_list(NEGATABLE_TYPE_NAMES)
+                            ),
+                        )
+                        .with_primary_label(
+                            operand.span,
+                            format!("operand has type `{}`", operand.ty.name()),
+                        ),
+                    );
+                    return None;
+                }
+            },
         };
-        let ty = operand.ty;
+        let ty = operation.result_type();
         Some(HirExpression {
             kind: HirExpressionKind::Unary {
                 operation,
@@ -158,6 +187,10 @@ impl CallableChecker<'_, '_> {
         &mut self,
         binary: &crate::resolve::ResolvedBinaryExpr,
     ) -> Option<HirExpression> {
+        if let Some(predicate) = comparison_predicate(binary.operator) {
+            return self.check_primitive_comparison(binary, predicate);
+        }
+
         // Both operands are checked in source order so independent diagnostics accumulate.
         let left = self.check_expression(&binary.left);
         let right = self.check_expression(&binary.right);
@@ -165,10 +198,6 @@ impl CallableChecker<'_, '_> {
             (Some(left), Some(right)) => (left, right),
             _ => return None,
         };
-        if let Some(predicate) = comparison_predicate(binary.operator) {
-            return self.check_integer_comparison(binary, predicate, left, right);
-        }
-
         let operation = (left.ty == right.ty)
             .then(|| select_arithmetic_operation(binary.operator, left.ty))
             .flatten();
@@ -209,45 +238,62 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn check_integer_comparison(
+    fn check_primitive_comparison(
         &mut self,
         binary: &crate::resolve::ResolvedBinaryExpr,
         predicate: HirComparisonPredicate,
-        left: HirExpression,
-        right: HirExpression,
     ) -> Option<HirExpression> {
-        let operand = (left.ty == right.ty)
-            .then(|| HirIntegerType::from_type(left.ty))
-            .flatten();
+        let left_type = self.static_expression_type(&binary.left);
+        let right_type = self.static_expression_type(&binary.right);
+        let operand = comparison_operand(predicate, left_type, right_type);
         let Some(operand) = operand else {
+            let equality = matches!(
+                predicate,
+                HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
+            );
+            let (message, type_description, type_names) = if equality {
+                (
+                    "equality comparison requires operands of the same supported primitive type",
+                    "equality operand types",
+                    EQUALITY_TYPE_NAMES,
+                )
+            } else {
+                (
+                    "ordering comparison requires operands of the same primitive integer type",
+                    "integer operand types",
+                    INTEGER_TYPE_NAMES,
+                )
+            };
             self.diagnostics.push(
-                Diagnostic::error(
-                    TYPE_MISMATCH,
-                    "integer comparison requires operands of the same primitive integer type",
-                )
-                .with_primary_label(
-                    binary.operator_span,
-                    "operator cannot be applied to these operand types",
-                )
-                .with_secondary_label(
-                    left.span,
-                    format!("left operand has type `{}`", left.ty.name()),
-                )
-                .with_secondary_label(
-                    right.span,
-                    format!("right operand has type `{}`", right.ty.name()),
-                )
-                .with_note(format!(
-                    "integer operand types are {}",
-                    format_type_list(INTEGER_TYPE_NAMES)
-                )),
+                Diagnostic::error(TYPE_MISMATCH, message)
+                    .with_primary_label(
+                        binary.operator_span,
+                        "operator cannot be applied to these operand types",
+                    )
+                    .with_secondary_label(
+                        binary.left.span(),
+                        format!("left operand has type `{}`", left_type.name()),
+                    )
+                    .with_secondary_label(
+                        binary.right.span(),
+                        format!("right operand has type `{}`", right_type.name()),
+                    )
+                    .with_note(format!(
+                        "{type_description} are {}",
+                        format_type_list(type_names)
+                    )),
             );
             return None;
         };
-        let operation = HirPrimitiveComparison {
-            predicate,
-            operand: HirComparisonOperand::Integer(operand),
+
+        // Valid comparison operands are checked exactly once in source order.
+        let left = self.check_expression(&binary.left);
+        let right = self.check_expression(&binary.right);
+        let (left, right) = match (left, right) {
+            (Some(left), Some(right)) => (left, right),
+            _ => return None,
         };
+        let operation = HirPrimitiveComparison { predicate, operand };
         Some(HirExpression {
             kind: HirExpressionKind::PrimitiveComparison {
                 operation,
@@ -298,6 +344,25 @@ impl CallableChecker<'_, '_> {
         );
         None
     }
+}
+
+fn comparison_operand(
+    predicate: HirComparisonPredicate,
+    left: Type,
+    right: Type,
+) -> Option<HirComparisonOperand> {
+    if left != right {
+        return None;
+    }
+    if let Some(integer) = HirIntegerType::from_type(left) {
+        return Some(HirComparisonOperand::Integer(integer));
+    }
+    (left == Type::Bool
+        && matches!(
+            predicate,
+            HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
+        ))
+    .then_some(HirComparisonOperand::Bool)
 }
 
 const fn comparison_predicate(operator: ResolvedBinaryOperator) -> Option<HirComparisonPredicate> {

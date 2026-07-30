@@ -844,6 +844,7 @@ pub struct BooleanExpr {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UnaryOperator {
     Negate,
+    LogicalNot,
     Dereference,
 }
 

@@ -1,6 +1,6 @@
 # Eager Boolean Operators Roadmap
 
-Status: in progress; EB1 is next.
+Status: in progress; EB2 is next.
 
 This roadmap implements the eager part of Skald's frozen boolean operator
 profile: prefix logical negation and exact boolean equality and inequality. It
@@ -87,7 +87,7 @@ structure.
 ## Progress
 
 - [x] EB0 — Establish verified eager-boolean IR operations
-- [ ] EB1 — Enable eager boolean source expressions end to end
+- [x] EB1 — Enable eager boolean source expressions end to end
 - [ ] EB2 — Harden and promote eager boolean operators
 
 ## PR-sized implementation sequence
@@ -143,33 +143,33 @@ depends on an incomplete downstream path.
 **Purpose:** Connect the settled operations to source syntax and exact type
 selection as one complete user-visible feature.
 
-- [ ] Parse `!` in the right-associative prefix tier while retaining postfix
+- [x] Parse `!` in the right-associative prefix tier while retaining postfix
       unwrap precedence, cast precedence, syntax nesting limits, source spans,
       recovery, and `!=` longest-match behavior.
-- [ ] Preserve logical-negation identity and operand shape through AST and
+- [x] Preserve logical-negation identity and operand shape through AST and
       resolved IR without selecting semantic or target operations early.
-- [ ] Select logical negation only for a `bool` operand and issue a focused
+- [x] Select logical negation only for a `bool` operand and issue a focused
       type error for numeric, optional, class, array, shared-owner, object-view,
       and `unit` operands.
-- [ ] Extend equality selection so `bool == bool` and `bool != bool` produce
+- [x] Extend equality selection so `bool == bool` and `bool != bool` produce
       the settled primitive comparison while existing same-type integer
       equality and ordering continue to select their current semantics.
-- [ ] Reject mixed boolean/numeric equality, boolean ordering, and every
+- [x] Reject mixed boolean/numeric equality, boolean ordering, and every
       unsupported equality family before HIR; diagnostics identify the
       operator and both relevant actual types without implying a cast or
       truthiness conversion.
-- [ ] Preserve unary evaluation-once and eager equality's left-to-right,
+- [x] Preserve unary evaluation-once and eager equality's left-to-right,
       exactly-once evaluation through HIR and MIR lowering.
-- [ ] Add deterministic AST, resolved, HIR, and MIR dumps for nested negation,
+- [x] Add deterministic AST, resolved, HIR, and MIR dumps for nested negation,
       boolean equality, grouping, calls, and prefix/postfix `!` compositions.
-- [ ] Add source-to-native and compile-failure goldens covering truth tables,
+- [x] Add source-to-native and compile-failure goldens covering truth tables,
       variables, fields, parameters, calls, returns, assignments, conditional
       use, optional-boolean unwrap followed by negation, precedence, and
       rejected type combinations.
-- [ ] Update the implemented grammar, types and values, status matrix,
+- [x] Update the implemented grammar, types and values, status matrix,
       compiler phase/IR contract, backend contract, and relevant testing or
       debugging guidance in the same change that enables the behavior.
-- [ ] Keep short-circuit syntax, floating comparisons, boolean casts, runtime
+- [x] Keep short-circuit syntax, floating comparisons, boolean casts, runtime
       support, and unrelated operator tokens outside the change.
 
 **Tests:** Lexer longest-match regression for `!`, `!=`, and `=`; parser,

@@ -122,6 +122,9 @@ fn unary_and_postfix_recursion_use_the_same_nesting_budget() {
     let unary = format!("{}1", "-".repeat(MAX_SYNTAX_NESTING));
     assert_single_nesting_error(&parse_text(source_with_return(&unary)));
 
+    let logical_nots = format!("{}true", "!".repeat(MAX_SYNTAX_NESTING));
+    assert_single_nesting_error(&parse_text(source_with_return(&logical_nots)));
+
     let dereferences = format!("{}owner", "*".repeat(MAX_SYNTAX_NESTING));
     assert_single_nesting_error(&parse_text(source_with_return(&dereferences)));
 

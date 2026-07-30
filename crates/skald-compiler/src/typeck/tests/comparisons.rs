@@ -87,7 +87,11 @@ fn rejects_every_ordered_mixed_integer_comparison_with_both_actual_types() {
 
                 assert_eq!(
                     diagnostic.message,
-                    "integer comparison requires operands of the same primitive integer type"
+                    if matches!(spelling, "==" | "!=") {
+                        "equality comparison requires operands of the same supported primitive type"
+                    } else {
+                        "ordering comparison requires operands of the same primitive integer type"
+                    }
                 );
                 assert!(diagnostic.labels.iter().any(|label| label
                     .message
@@ -103,7 +107,6 @@ fn rejects_every_ordered_mixed_integer_comparison_with_both_actual_types() {
 #[test]
 fn rejects_every_predicate_for_each_noninteger_operand_family_before_hir() {
     const SOURCES: &[&str] = &[
-        "fn compare() -> bool { return true {operator} false; } fn main() -> i64 { return 0; }",
         "fn compare() -> bool { return 1.0 {operator} 2.0; } fn main() -> i64 { return 0; }",
         "fn compare(left: i64?, right: i64?) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
         "fn notify() -> unit {} fn compare() -> bool { return notify() {operator} notify(); } fn main() -> i64 { return 0; }",
@@ -118,5 +121,34 @@ fn rejects_every_predicate_for_each_noninteger_operand_family_before_hir() {
             assert!(output.has_errors(), "{source}");
             assert!(output.hir.is_none(), "{source}");
         }
+    }
+}
+
+#[test]
+fn rejects_boolean_ordering_before_hir_with_both_actual_types() {
+    for &(_, spelling) in &OPERATORS[2..] {
+        let source = format!(
+            "fn compare() -> bool {{ return true {spelling} false; }} \
+             fn main() -> i64 {{ return 0; }}"
+        );
+        let output = check_text(&source);
+        assert!(output.hir.is_none());
+        let diagnostic = output
+            .diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+            .unwrap();
+        assert_eq!(
+            diagnostic.message,
+            "ordering comparison requires operands of the same primitive integer type"
+        );
+        assert_eq!(
+            diagnostic
+                .labels
+                .iter()
+                .filter(|label| label.message.contains("operand has type `bool`"))
+                .count(),
+            2
+        );
     }
 }

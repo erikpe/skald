@@ -1,0 +1,61 @@
+class Item {
+    init() {}
+}
+
+fn notify() -> unit {}
+
+fn negate_integer(value: i64) -> bool {
+    return !value;
+}
+
+fn negate_float(value: f64) -> bool {
+    return !value;
+}
+
+fn negate_optional(value: bool?) -> bool {
+    return !value;
+}
+
+fn negate_class(ref value: Item) -> bool {
+    return !value;
+}
+
+fn negate_shared(value: shared Item) -> bool {
+    return !value;
+}
+
+fn negate_object(ref value: Obj) -> bool {
+    return !value;
+}
+
+fn negate_array(value: bool[]) -> bool {
+    return !value;
+}
+
+fn negate_unit() -> bool {
+    return !notify();
+}
+
+fn mixed_equality() -> bool {
+    return true == 1;
+}
+
+fn boolean_ordering() -> bool {
+    return true < false;
+}
+
+fn floating_equality() -> bool {
+    return 1.0 == 2.0;
+}
+
+fn optional_equality(left: bool?, right: bool?) -> bool {
+    return left == right;
+}
+
+fn class_equality(ref left: Item, ref right: Item) -> bool {
+    return left == right;
+}
+
+fn main() -> i64 {
+    return 0;
+}

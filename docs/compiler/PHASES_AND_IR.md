@@ -176,49 +176,55 @@ parameters, invalid roots, compound and chained assignment, destructuring,
 and every existing non-primitive assignment family remain outside this
 boundary.
 
-## Primitive integer operation boundary
+## Implemented primitive operator boundary
 
-Primitive integer comparisons and casts have a
-[source contract](../language/TYPES_AND_VALUES.md#primitive-integer-comparisons-and-casts)
+Primitive integer comparisons and casts plus eager boolean negation and
+equality have a
+[source contract](../language/TYPES_AND_VALUES.md#implemented-primitive-comparisons-boolean-negation-and-integer-casts)
 and are current products through native x86-64 execution.
 The pipeline responsibilities are:
 
-- Lexing recognizes comparison punctuation by longest match and otherwise
-  preserves source spellings. Syntax retains each predicate, both operand
-  shapes and spans, or one primitive cast target and operand. It assigns no
-  numeric meaning or target behavior.
-- Resolution preserves comparison shape. Primitive casts preserve their
+- Lexing recognizes comparison punctuation by longest match and keeps prefix
+  `!` distinct from postfix unwrap by position. Syntax retains each predicate,
+  unary or binary operand shape and span, or one primitive cast target and
+  operand. It assigns no numeric meaning or target behavior.
+- Resolution preserves comparison and logical-negation shape. Primitive casts preserve their
   primitive target without declaration lookup, while nominal and shared
   object-cast targets continue through existing identity lookup; lower phases
   never disambiguate cast kinds from source text.
 - Type checking is the sole owner of operation selection. It requires matching
-  `i64`, `u64`, or `u8` comparison operands and records a `bool` result, or
-  selects one of the nine valid integer source/target cast pairs. Unsupported
-  and implicit conversions are rejected before HIR.
-- Typed HIR records the selected comparison predicate and integer operand
-  type. Primitive casts record both integer source and target types.
+  `i64`, `u64`, or `u8` comparison operands, admits `bool` only for equality
+  and inequality, selects logical negation only for `bool`, or selects one of
+  the nine valid integer source/target cast pairs. Unsupported operations and
+  implicit conversions are rejected before HIR.
+- Typed HIR records the selected primitive comparison predicate and operand
+  kind or the exact boolean logical-negation operation. Primitive casts record
+  both integer source and target types.
   Neither representation retains a backend condition code, register width, or
   spelling-based signedness choice.
-- MIR lowering evaluates comparison operands left to right and every operand
-  exactly once. Comparisons become typed boolean-producing rvalues; integer
+- MIR lowering evaluates comparison operands left to right and every unary or
+  binary operand exactly once. Comparisons and negation become typed
+  boolean-producing rvalues; integer
   casts become ordinary pure rvalues with no trap, call, allocation, cleanup,
   or exceptional control-flow edge.
-- MIR verification proves matching comparison operand definitions and types
-  plus a `bool` result. Cast verification proves the closed integer matrix with
+- MIR verification proves matching comparison operand definitions and types,
+  rejects boolean ordering, and requires exact boolean negation operands and
+  results. Cast verification proves the closed integer matrix with
   exact source and result types. Both operation families retain the existing
   block-local value, definition-before-use, and deterministic-error
   invariants.
 - Each backend receives already selected signedness and width through verified
-  MIR. The x86-64 target realizes signed `i64` ordering and unsigned
-  `u64`/`u8` ordering with canonical boolean results. It realizes integer
+  MIR. The x86-64 target realizes signed `i64` ordering, unsigned `u64`/`u8`
+  ordering, and boolean negation/equality with canonical results. It realizes integer
   casts through canonical scalar loads and stores: same-width bits are
   preserved, narrowing retains the low byte, and `u8` widening zero-extends.
   Selection does not infer semantics from source spelling or expose target
   registers to MIR.
 
 These operations add no ownership or lifetime rule and no public runtime ABI.
-Floating, boolean/numeric, checked, saturating, implicit, mixed-type, and
-user-defined conversion remain outside this boundary.
+Floating comparisons, boolean/numeric operations, short-circuit logic,
+checked, saturating, implicit, mixed-type, and user-defined conversion remain
+outside this boundary.
 
 ## Frozen primitive operator representation
 

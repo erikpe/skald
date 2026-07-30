@@ -155,6 +155,9 @@ The implemented arithmetic surface is deliberately exact-type:
 |---|---|---|
 | binary `+`, `-`, `*` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | that same type |
 | unary `-` | `i64` or `f64` | the operand type |
+| prefix `!` | `bool` | `bool` |
+| `==`, `!=` | two operands of the same type among `i64`, `u64`, `u8`, and `bool` | `bool` |
+| `<`, `<=`, `>`, `>=` | two operands of the same type among `i64`, `u64`, and `u8` | `bool` |
 
 Integer arithmetic wraps modulo its width: `i64` and `u64` retain the low
 64 bits, while `u8` retains the low 8 bits and remains in `0..=255`. The
@@ -166,9 +169,10 @@ environment. Signed zeroes, subnormals, infinities, and NaNs can result. An
 unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
-Integer equality and ordering are implemented as specified below. No floating
-equality or ordering, logical, division, remainder, bitwise, shift, or
-exponentiation operator is implemented. Built-in array indexing and slicing
+Integer equality and ordering plus boolean equality, inequality, and logical
+negation are implemented as specified below. Short-circuit `&&` and `||`,
+floating equality or ordering, division, remainder, bitwise, shift, and
+exponentiation are not implemented. Built-in array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
 and nested arrays on x86-64. The same element categories execute in shared
@@ -351,12 +355,12 @@ This frozen profile does not define:
 
 Each area requires a separate design. No deferred syntax is reserved.
 
-## Primitive integer comparisons and casts
+## Implemented primitive comparisons, boolean negation, and integer casts
 
-This section freezes the complete source-visible integer-only profile.
-Comparison syntax, exact-type checking, typed HIR, and verified
-target-independent MIR are implemented for both operation families, and all
-comparisons and casts execute through the x86-64 target. The
+This section defines the implemented source-visible comparison, eager boolean,
+and integer-cast profile. Syntax, exact-type checking, typed HIR, and verified
+target-independent MIR are implemented for these operations, and they execute
+through the x86-64 target. The
 [status matrix](STATUS.md#implemented-language) records availability
 separately from the language contract.
 
@@ -381,6 +385,22 @@ grammar all six operators share one non-associative level above contextual
 comparison tier. Both reject an ungrouped chain such as `a < b < c`. The
 [grammar](GRAMMAR.md#expressions) distinguishes accepted and frozen source
 shape.
+
+### Boolean negation and equality
+
+Prefix `!` accepts exactly one `bool` operand and produces its logical
+negation. Boolean `==` and `!=` accept two `bool` operands and compare their
+values. Boolean ordering is invalid, and none of these operations introduces
+truthiness or an implicit conversion.
+
+A unary operand evaluates exactly once. Equality operands evaluate exactly
+once from left to right. Postfix optional unwrap binds first, so
+`!optional_flag!` negates the extracted boolean and retains the unwrap's
+existing checked failure behavior. These eager operations produce canonical
+`bool` values and add no runtime ABI.
+
+`&&` and `||` remain unimplemented. Their frozen short-circuit semantics are
+not approximated with eager scalar evaluation.
 
 ### Explicit integer casts
 
@@ -439,8 +459,9 @@ implied by the total integer cast syntax.
 
 ## Other conversions and future value families
 
-The current compiler executes primitive integer comparisons and casts through
-the x86-64 backend. It performs no user-defined conversions. All other numeric
+The current compiler executes primitive integer comparisons and casts plus
+boolean negation and equality through the x86-64 backend. It performs no
+user-defined conversions. All other numeric
 conversion behavior remains deferred. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form

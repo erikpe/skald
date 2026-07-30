@@ -232,17 +232,21 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    fn static_expression_type(&self, expression: &ResolvedExpression) -> Type {
+    pub(in crate::typeck) fn static_expression_type(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Type {
         match expression {
-            ResolvedExpression::Absent(_) => {
-                unreachable!("absent arguments are handled before static type analysis")
-            }
+            // `none` has no standalone type. `unit` is the diagnostic-only
+            // sentinel already used for malformed projection shapes; callers
+            // that select optional arguments handle `none` before this helper.
+            ResolvedExpression::Absent(_) => Type::Unit,
             ResolvedExpression::PresenceTest(_) => Type::Bool,
             ResolvedExpression::Unwrap(unwrap) => {
                 match self.static_expression_type(&unwrap.source) {
                     Type::OptionalPrimitive(payload) => payload.payload_type(),
                     Type::OptionalClass(class) => Type::Class(class),
-                    _ => unreachable!("resolved unwrap source must have an optional type"),
+                    _ => Type::Unit,
                 }
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),

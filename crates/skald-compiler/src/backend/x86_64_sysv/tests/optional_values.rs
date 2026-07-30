@@ -191,6 +191,29 @@ fn primitive_optional_absence_presence_copy_assignment_and_joins_execute() {
 }
 
 #[test]
+fn byte_sized_optional_unwraps_write_canonical_scalar_homes() {
+    let output = assembly(
+        "fn main() -> i64 {\n\
+           var flag: bool? = false;\n\
+           var byte: u8? = 42u8;\n\
+           var selected: bool = !flag!;\n\
+           if (selected) { return (i64) byte!; }\n\
+           return 0;\n\
+         }\n",
+    );
+
+    let lines = output.lines().map(str::trim).collect::<Vec<_>>();
+    assert!(
+        lines.windows(2).any(|window| {
+            window[0].starts_with("movzx rax, byte ptr [rbp")
+                && window[1].starts_with("mov qword ptr [rbp")
+        }),
+        "byte-sized optional payloads must clear the complete MIR scalar home\n{output}"
+    );
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
 fn absent_primitive_optional_unwrap_terminates() {
     let output = assembly(
         "fn main() -> i64 {\n\

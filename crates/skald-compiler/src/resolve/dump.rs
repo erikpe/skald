@@ -790,6 +790,7 @@ impl ResolvedDumper {
             ResolvedExpression::Unary(unary) => {
                 let operator = match unary.operator {
                     ResolvedUnaryOperator::Negate => "Negate",
+                    ResolvedUnaryOperator::LogicalNot => "LogicalNot",
                 };
                 self.line(&format!("Unary {operator}"), unary.span);
                 self.indented(|dumper| dumper.expression(&unary.operand));

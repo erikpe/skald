@@ -1,0 +1,76 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Probe {
+    sequence: i64;
+    flag: bool;
+
+    init(flag: bool) {
+        self.sequence = 0;
+        self.flag = flag;
+    }
+
+    mut fn observe(value: bool, digit: i64) -> bool {
+        self.sequence = self.sequence * 10 + digit;
+        return value;
+    }
+
+    fn inverted() -> bool {
+        return !self.flag;
+    }
+}
+
+fn inverted(value: bool) -> bool {
+    return !value;
+}
+
+fn same(left: bool, right: bool) -> bool {
+    return left == right;
+}
+
+fn main() -> i64 {
+    ska_rt_println_bool(!false);
+    ska_rt_println_bool(!true);
+
+    ska_rt_println_bool(false == false);
+    ska_rt_println_bool(false == true);
+    ska_rt_println_bool(true == false);
+    ska_rt_println_bool(true == true);
+    ska_rt_println_bool(false != false);
+    ska_rt_println_bool(false != true);
+    ska_rt_println_bool(true != false);
+    ska_rt_println_bool(true != true);
+
+    var value: bool = false;
+    value = !value;
+    ska_rt_println_bool(value);
+    ska_rt_println_bool(inverted(value));
+    ska_rt_println_bool(same(value, true));
+
+    var optional: bool? = false;
+    ska_rt_println_bool(!optional!);
+
+    var probe: Probe = Probe(false);
+    ska_rt_println_bool(probe.inverted());
+    ska_rt_println_bool(!probe.observe(false, 1));
+    ska_rt_println_i64(probe.sequence);
+    ska_rt_println_bool(probe.observe(true, 2) == probe.observe(false, 3));
+    ska_rt_println_i64(probe.sequence);
+
+    ska_rt_println_bool(!true == false);
+    ska_rt_println_bool(true == !false);
+    ska_rt_println_bool(!(true == false));
+
+    if (!false) {
+        ska_rt_println_i64(40);
+    }
+
+    var done: bool = false;
+    var iterations: i64 = 0;
+    while (!done) {
+        iterations = iterations + 1;
+        done = true;
+    }
+    ska_rt_println_i64(iterations);
+    return 0;
+}

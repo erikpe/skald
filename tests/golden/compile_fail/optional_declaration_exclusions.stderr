@@ -14,4 +14,4 @@ error[PAR004]: expected an expression
  --> tests/golden/compile_fail/optional_declaration_exclusions.ska:8:28
    |
 8 |     var uninitialized: i64?;
-   |                            ^ expected an identifier, literal, `none`, `self`, unary `-`, or `(`
+   |                            ^ expected an identifier, literal, `none`, `self`, prefix operator, or `(`

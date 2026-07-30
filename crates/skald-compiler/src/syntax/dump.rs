@@ -539,6 +539,7 @@ impl AstDumper {
             Expression::Unary(unary) => {
                 let operator = match unary.operator {
                     UnaryOperator::Negate => "Negate",
+                    UnaryOperator::LogicalNot => "LogicalNot",
                     UnaryOperator::Dereference => "Dereference",
                 };
                 self.line(&format!("Unary {operator}"), unary.span);

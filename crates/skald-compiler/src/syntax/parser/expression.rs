@@ -143,13 +143,14 @@ impl Parser<'_> {
     }
 
     fn parse_unary(&mut self) -> Option<Expression> {
-        if self.at_any(&[TokenKind::Minus, TokenKind::Star]) {
+        if self.at_any(&[TokenKind::Minus, TokenKind::Bang, TokenKind::Star]) {
             let operator = self.advance();
             let operand = self.with_syntax_nesting(operator.span, |parser| parser.parse_unary())?;
             let span = self.cover(operator.span, operand.span());
             return Some(Expression::Unary(UnaryExpr {
                 operator: match operator.kind {
                     TokenKind::Minus => UnaryOperator::Negate,
+                    TokenKind::Bang => UnaryOperator::LogicalNot,
                     TokenKind::Star => UnaryOperator::Dereference,
                     _ => unreachable!("unary parser accepted a non-unary operator"),
                 },
@@ -198,13 +199,17 @@ impl Parser<'_> {
             && self.starts_cast_operand(right_paren_distance + 1, false)
     }
 
-    fn starts_cast_operand(&self, distance: usize, allow_leading_minus: bool) -> bool {
+    fn starts_cast_operand(&self, distance: usize, allow_primitive_prefix: bool) -> bool {
         if self.peek_ahead(distance).kind == TokenKind::LeftParen
             && self.peek_ahead(distance + 1).kind == TokenKind::RightParen
         {
             return false;
         }
-        (allow_leading_minus && self.peek_ahead(distance).kind == TokenKind::Minus)
+        (allow_primitive_prefix
+            && matches!(
+                self.peek_ahead(distance).kind,
+                TokenKind::Minus | TokenKind::Bang
+            ))
             || matches!(
                 self.peek_ahead(distance).kind,
                 TokenKind::Identifier
@@ -533,7 +538,7 @@ impl Parser<'_> {
             EXPECTED_EXPRESSION,
             "expected an expression",
             self.peek().span,
-            "expected an identifier, literal, `none`, `self`, unary `-`, or `(`",
+            "expected an identifier, literal, `none`, `self`, prefix operator, or `(`",
         );
         None
     }

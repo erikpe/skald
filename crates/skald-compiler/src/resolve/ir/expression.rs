@@ -332,6 +332,7 @@ pub struct ResolvedBooleanExpr {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedUnaryOperator {
     Negate,
+    LogicalNot,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

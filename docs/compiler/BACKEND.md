@@ -70,11 +70,13 @@ the cast failure on the verified failure edge. Shared-owner casts use the same
 metadata membership test, retain or transfer the source handle on success,
 preserve the existing allocation header, and never call the allocator.
 
-Verified primitive integer comparison rvalues lower inline. The selector
-compares canonical full-register operands, chooses signed conditions for
-`i64` and unsigned conditions for `u64` and `u8`, materializes the condition
-into one byte, and zero-extends it before storing a canonical `bool`.
-Comparisons add no target labels, runtime calls, or ABI surface.
+Verified primitive comparison and logical-negation rvalues lower inline. The
+selector compares canonical full-register operands, chooses signed conditions
+for `i64` and unsigned conditions for `u64` and `u8`, and uses equality
+conditions for `bool`. Logical negation tests one canonical boolean operand.
+Every condition is materialized into one byte and zero-extended before storing
+a canonical `bool`. These operations add no target labels, runtime calls, or
+ABI surface.
 
 Verified primitive integer cast rvalues lower inline through the canonical
 scalar load/store boundary. Same-width casts preserve all 64 bits, widening

@@ -189,6 +189,28 @@ fn lowers_manually_selected_eager_boolean_operations_as_pure_scalar_rvalues() {
 }
 
 #[test]
+fn lowers_source_selected_eager_boolean_operations_deterministically() {
+    let mir = lower_text(concat!(
+        "fn invert(value: bool) -> bool { return !value; }\n",
+        "fn compare(left: bool, right: bool) -> bool { return left == !right; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    verify_mir(&mir).unwrap();
+
+    let dump = dump_mir(&mir);
+    assert_eq!(dump, dump_mir(&mir));
+    assert!(dump.contains("not.bool"));
+    assert!(dump.contains("eq.bool"));
+    for function in [FunctionId::new(0), FunctionId::new(1)] {
+        assert_eq!(
+            mir.definitions.get(function).unwrap().body.blocks.len(),
+            1,
+            "eager boolean scalar operations must not introduce control flow"
+        );
+    }
+}
+
+#[test]
 fn spills_the_left_operand_before_a_control_affecting_right_operand() {
     let mir = lower_text(concat!(
         "fn compare(left: u64, values: u64[]) -> bool {\n",

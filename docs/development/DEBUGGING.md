@@ -58,10 +58,12 @@ ordinary intrinsic call. `TYP041` indicates an invalid expression-position
 use. Native assembly extracts the verified descriptor slice and calls
 `ska_rt_panic` once.
 
-For primitive integer comparisons, AST and resolved dumps retain the source
-predicate, HIR records the exact integer operand type, and MIR prints an
-operation such as `lt.u64` with a `bool` result. Signed versus unsigned target
-conditions first appear in backend selection. For `(T) source` integer casts,
+For primitive comparisons, AST and resolved dumps retain the source predicate,
+HIR records the exact integer or boolean operand kind, and MIR prints an
+operation such as `lt.u64` or `eq.bool` with a `bool` result. Prefix logical
+negation remains `LogicalNot` until type checking selects `LogicalNotBool`;
+MIR prints `not.bool`. Signed versus unsigned target conditions first appear
+in backend selection. For `(T) source` integer casts,
 HIR and MIR record both source and target integer types; MIR prints forms such
 as `cast.u64.i64`. A cast has no failure edge. When a total cast feeds a signed
 array position, inspect the preceding source-level unsigned comparison and its
