@@ -41,3 +41,4 @@ owned_id!(StorageId, "s");
 owned_id!(ValueId, "v");
 owned_id!(BlockId, "b");
 owned_id!(OptionalGuardId, "g");
+owned_id!(PathConditionId, "p");

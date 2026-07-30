@@ -107,6 +107,7 @@ impl MirBodyBuilder {
         MirBody {
             entry: self.entry,
             blocks: self.blocks,
+            path_conditions: Vec::new(),
         }
     }
 

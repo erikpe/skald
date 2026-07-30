@@ -8,6 +8,7 @@ mod ids;
 mod instruction;
 mod interface;
 mod optional;
+mod path_condition;
 mod shared;
 mod strings;
 mod value;
@@ -31,7 +32,7 @@ pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,
     MirMemberDefinition, MirMemberDefinitionTable, MirStorage, MirStorageKind,
 };
-pub use ids::{BlockId, OptionalGuardId, StorageId, ValueId};
+pub use ids::{BlockId, OptionalGuardId, PathConditionId, StorageId, ValueId};
 pub use instruction::{
     MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCheckedViewBinding,
     MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction, MirEndFullExpression,
@@ -49,6 +50,7 @@ pub use optional::{
     MirOptionalSharedSource, MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin,
     MirOptionalViewEnd, MirPresenceTestKind, MirPrimitiveType,
 };
+pub use path_condition::MirPathCondition;
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
     MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,
@@ -61,6 +63,6 @@ pub use strings::{
 };
 pub use value::{
     MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate, MirIntegerCast,
-    MirIntegerType, MirPlace, MirPlaceBase, MirPlaceProjection, MirPrimitiveComparison, MirRvalue,
-    MirRvalueKind, MirType, MirUnaryOperation, MirValue,
+    MirIntegerType, MirPathConditionValue, MirPlace, MirPlaceBase, MirPlaceProjection,
+    MirPrimitiveComparison, MirRvalue, MirRvalueKind, MirType, MirUnaryOperation, MirValue,
 };

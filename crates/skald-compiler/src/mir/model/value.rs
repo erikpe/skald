@@ -7,7 +7,7 @@ use crate::{
     source::Span,
 };
 
-use super::ids::{StorageId, ValueId};
+use super::ids::{PathConditionId, StorageId, ValueId};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirType {
@@ -213,6 +213,8 @@ pub enum MirRvalueKind {
     /// IEEE-754 binary64 payload, stored as raw bits for deterministic IR.
     ConstantF64Bits(u64),
     ConstantBool(bool),
+    /// Reads one verified canonical path activation from its storage.
+    PathCondition(MirPathConditionValue),
     Load(MirPlace),
     Unary {
         operation: MirUnaryOperation,
@@ -245,6 +247,12 @@ pub enum MirRvalueKind {
         source: MirPlace,
         array: ArrayTypeId,
     },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirPathConditionValue {
+    pub condition: PathConditionId,
+    pub activation: StorageId,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

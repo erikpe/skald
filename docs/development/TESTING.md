@@ -242,6 +242,15 @@ integer casts. Cross-process tests compare the complete token, AST, resolved,
 HIR, MIR, diagnostic, and assembly observations. Short-circuit behavior is
 not part of this matrix.
 
+The MIR-only path-condition foundation has a separate verifier matrix.
+Hand-built fixtures cover selected and skipped scalar-storage epochs, nested
+parent conditions, independently active siblings, repeated loop epochs,
+explicit cleanup branches, deterministic dumps, and strict ordinary joins.
+Mutations cover noncanonical or missing activation stores, invalid parents,
+reads outside the selected parent, wrong cleanup conditions, unresolved
+conditional state, and activation leakage. These fixtures do not imply source
+support for `&&` or `||`.
+
 ## Private initializer coverage
 
 Private ordinary initializer tests follow the owning phase instead of relying

@@ -286,6 +286,26 @@ affected continuations distinct until their lifetime states are compatible.
 Consumer-bounded optional payload views retain their immediate-consumer
 lifetime; they are not promoted to full-expression temporaries.
 
+MIR implements the first representation foundation without yet accepting
+logical source expressions. A callable body may declare deterministic
+path-condition identities. Each identity names canonical compiler-owned
+`bool` activation storage, an optional earlier parent condition, distinct
+active and inactive predecessors, and their exact merge block. The
+predecessors store `true` and `false` respectively before ordinary jumps to
+the merge. A dedicated target-independent value reads the activation storage;
+ordinary MIR branches consume that value.
+
+Path-sensitive storage verification retains separate, explicitly selected
+alternatives across such a declared merge. A resource live only in one
+alternative cannot be used or ended on another. Branching on the matching
+path-condition value selects the corresponding verifier alternative.
+Ending the activation storage epoch requires all conditional storage state to
+have converged, ends the predicate fact, and permits the same static identity
+to begin a later loop epoch. Child conditions can be selected and read only
+inside an active parent alternative. Undeclared ordinary joins retain their
+existing exact-state checks. Conditional full-expression cleanup planning and
+logical HIR/source construction remain unimplemented.
+
 MIR verification rejects:
 
 - operand or result types outside the frozen matrix;

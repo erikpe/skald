@@ -11,6 +11,7 @@ use super::{
 pub struct MirBody {
     pub entry: BlockId,
     pub blocks: Vec<MirBasicBlock>,
+    pub path_conditions: Vec<super::path_condition::MirPathCondition>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

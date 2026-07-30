@@ -565,10 +565,45 @@ impl Verifier<'_> {
                     );
                 }
             }
+            MirRvalueKind::PathCondition(condition) => {
+                if rvalue.ty != MirType::Bool {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "path-condition value is not `bool`",
+                    );
+                }
+                match function.path_condition(condition.condition) {
+                    Some(declaration) if declaration.activation == condition.activation => {}
+                    Some(_) => self.block_error(
+                        function.callable(),
+                        block.id,
+                        "path-condition value uses the wrong activation storage",
+                    ),
+                    None => self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!(
+                            "path-condition value references undeclared condition {}",
+                            condition.condition
+                        ),
+                    ),
+                }
+            }
             MirRvalueKind::Load(place) => {
                 let place_ty = self
                     .verify_place(function, block, place)
                     .map(|place| place.ty);
+                if function
+                    .storage(place.base.storage())
+                    .is_some_and(|storage| storage.kind == MirStorageKind::PathCondition)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "path-condition storage must be read through a path-condition value",
+                    );
+                }
                 if place_ty.is_some_and(|ty| !ty.is_scalar_value()) {
                     self.block_error(
                         function.callable(),

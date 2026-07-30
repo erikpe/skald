@@ -382,6 +382,7 @@ fn function_definition(
                 terminator: Some(MirTerminator::Return { value: None, span }),
                 span,
             }],
+            path_conditions: vec![],
         },
         span,
     }
@@ -443,6 +444,7 @@ fn empty_member_definition(
                 terminator: Some(MirTerminator::Return { value: None, span }),
                 span,
             }],
+            path_conditions: vec![],
         },
         span,
     }

@@ -6,17 +6,17 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Short-Circuit Boolean Expressions Roadmap](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
+  — in progress; implement exact-`bool` `&&` and `||` with skipped effects,
+  path-dependent lifetime and cleanup, arbitrary valid operands, and every
+  current expression consumer. Verified MIR path conditions are complete; the
+  next task plans conditional full-expression cleanup. The roadmap depends on
+  the completed eager boolean, control-flow, lifecycle, optional,
+  shared-ownership, array, cast, and panic foundations.
 
 ## Planned
 
-- [Short-Circuit Boolean Expressions Roadmap](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
-  — planned; implement exact-`bool` `&&` and `||` with skipped effects,
-  path-dependent lifetime and cleanup, arbitrary valid operands, and every
-  current expression consumer. The next task establishes conditional
-  full-expression state in verified MIR. It depends on the completed eager
-  boolean, control-flow, lifecycle, optional, shared-ownership, array, cast,
-  and panic foundations.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

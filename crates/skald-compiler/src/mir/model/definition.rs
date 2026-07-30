@@ -228,6 +228,20 @@ impl<'mir> MirDefinitionRef<'mir> {
         }
     }
 
+    pub fn path_conditions(self) -> &'mir [super::path_condition::MirPathCondition] {
+        &self.body().path_conditions
+    }
+
+    pub fn path_condition(
+        self,
+        id: super::ids::PathConditionId,
+    ) -> Option<&'mir super::path_condition::MirPathCondition> {
+        (id.callable() == self.callable())
+            .then(|| self.path_conditions().get(id.index()))
+            .flatten()
+            .filter(|condition| condition.id == id)
+    }
+
     pub const fn span(self) -> Span {
         match self {
             Self::Function(definition) => definition.span,
@@ -314,6 +328,8 @@ pub enum MirStorageKind {
     /// Compiler-owned scalar home used to preserve block-local MIR values
     /// across checked-cast control-flow edges.
     ScalarSpill,
+    /// Compiler-owned canonical boolean selecting conditional MIR state.
+    PathCondition,
     /// Compiler-owned scalar destination populated only by a successful
     /// checked primitive-optional unwrap edge.
     OptionalUnwrap,

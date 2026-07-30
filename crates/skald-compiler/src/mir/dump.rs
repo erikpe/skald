@@ -377,6 +377,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::Temporary => "temporary",
             MirStorageKind::SharedAnchor => "shared-anchor",
             MirStorageKind::ScalarSpill => "scalar-spill",
+            MirStorageKind::PathCondition => "path-condition",
             MirStorageKind::OptionalUnwrap => "optional-unwrap",
             MirStorageKind::SharedAllocation => "shared-allocation",
             MirStorageKind::ArrayBacking => "array-backing",
@@ -399,6 +400,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::SharedAnchor => output.push_str("<shared-anchor> "),
                 MirStorageKind::CheckedView(_) => output.push_str("<checked-view> "),
                 MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
+                MirStorageKind::PathCondition => output.push_str("<path-condition> "),
                 MirStorageKind::OptionalUnwrap => output.push_str("<optional-unwrap> "),
                 MirStorageKind::SharedAllocation => output.push_str("<shared-allocation> "),
                 MirStorageKind::ArrayBacking => output.push_str("<array-backing> "),
@@ -420,6 +422,28 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
         let _ = write!(output, "        {} : {}", value.id, value.ty);
         write_span(output, value.span);
         output.push('\n');
+    }
+    if !function.path_conditions().is_empty() {
+        output.push_str("      PathConditions\n");
+        for condition in function.path_conditions() {
+            let _ = write!(output, "        {} parent ", condition.id,);
+            match condition.parent {
+                Some(parent) => {
+                    let _ = write!(output, "{parent}");
+                }
+                None => output.push_str("<root>"),
+            }
+            let _ = write!(
+                output,
+                " activation {} active {} inactive {} merge {}",
+                condition.activation,
+                condition.active_predecessor,
+                condition.inactive_predecessor,
+                condition.merge,
+            );
+            write_span(output, condition.span);
+            output.push('\n');
+        }
     }
     let _ = writeln!(output, "      EntryBlock {}", function.body().entry);
     output.push_str("      Blocks\n");
@@ -1025,6 +1049,13 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         }
         MirRvalueKind::ConstantBool(value) => {
             let _ = write!(output, "const.bool {value}");
+        }
+        MirRvalueKind::PathCondition(condition) => {
+            let _ = write!(
+                output,
+                "path-condition {} from {}",
+                condition.condition, condition.activation
+            );
         }
         MirRvalueKind::Load(place) => {
             output.push_str("load ");

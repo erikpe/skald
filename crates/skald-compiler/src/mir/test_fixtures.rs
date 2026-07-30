@@ -257,6 +257,7 @@ pub(crate) fn one_block_body(
     MirBody {
         entry,
         blocks: vec![block(entry, instructions, terminator, span)],
+        path_conditions: Vec::new(),
     }
 }
 

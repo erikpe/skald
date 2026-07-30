@@ -173,6 +173,7 @@ pub(super) fn visit_terminator_storage(
 
 fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
     match &rvalue.kind {
+        MirRvalueKind::PathCondition(condition) => visit(condition.activation),
         MirRvalueKind::Load(place)
         | MirRvalueKind::OptionalPresence { source: place, .. }
         | MirRvalueKind::ArrayLength { source: place, .. } => visit_place(place, visit),

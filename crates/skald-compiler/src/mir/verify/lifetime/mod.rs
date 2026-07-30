@@ -1,10 +1,14 @@
 //! Dynamic storage-lifetime epoch verification.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::mir::{MirDefinitionRef, MirInstruction, MirStorageKind, MirTerminator, StorageId};
 
-use super::{context::Verifier, dataflow::ForwardDataflow};
+use super::{
+    context::Verifier,
+    dataflow::ForwardDataflow,
+    path_state::{condition_reads, PathStates},
+};
 
 mod uses;
 
@@ -14,29 +18,118 @@ mod tests;
 impl Verifier<'_> {
     pub(super) fn verify_storage_lifetimes(&mut self, function: MirDefinitionRef<'_>) {
         let entry_state = implicit_entry_storage(function);
+        let condition_reads = condition_reads(function);
+        let activation_conditions: HashMap<_, _> = function
+            .path_conditions()
+            .iter()
+            .map(|condition| (condition.activation, condition.id))
+            .collect();
         let mut flow = ForwardDataflow::new(function.callable(), function.body().blocks.len());
         let mut reported_joins = HashSet::new();
+        let mut reported_condition_ends = HashSet::new();
 
-        flow.seed(function.body().entry, entry_state.clone());
+        flow.seed(
+            function.body().entry,
+            PathStates::initial(entry_state.clone()),
+        );
         loop {
-            while let Some((block_id, mut live)) = flow.pop() {
+            while let Some((block_id, mut states)) = flow.pop() {
                 let Some(block) = function.block(block_id) else {
                     continue;
                 };
-                self.apply_storage_lifetimes(function, block, &mut live, &entry_state);
-                for successor in block.terminator.iter().flat_map(MirTerminator::successors) {
+                for live in states.states_mut() {
+                    self.apply_storage_lifetimes(function, block, live, &entry_state);
+                }
+                for instruction in &block.instructions {
+                    let MirInstruction::StorageDead(operation) = instruction else {
+                        continue;
+                    };
+                    let Some(condition) = activation_conditions.get(&operation.storage).copied()
+                    else {
+                        continue;
+                    };
+                    for child in function
+                        .path_conditions()
+                        .iter()
+                        .filter(|candidate| candidate.parent == Some(condition))
+                    {
+                        if states.any_select(child.id)
+                            && reported_condition_ends.insert((block.id, condition))
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                format!(
+                                    "path condition {condition} ends while child {} remains selected",
+                                    child.id
+                                ),
+                            );
+                        }
+                    }
+                    let missing = states.end_condition(condition, |existing, incoming| {
+                        if reported_condition_ends.insert((block.id, condition)) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                format!(
+                                    "conditional storage lifetime state remains when path condition {condition} ends"
+                                ),
+                            );
+                        }
+                        *existing = existing.intersection(incoming).copied().collect();
+                    });
+                    if missing && reported_condition_ends.insert((block.id, condition)) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!(
+                                "path condition {condition} ends outside its selected control-flow region"
+                            ),
+                        );
+                    }
+                }
+                let Some(terminator) = &block.terminator else {
+                    continue;
+                };
+                if let MirTerminator::Branch {
+                    condition,
+                    true_target,
+                    false_target,
+                    ..
+                } = terminator
+                {
+                    if let Some(path_condition) = condition_reads.get(condition).copied() {
+                        for (successor, active) in [(*true_target, true), (*false_target, false)] {
+                            let (selected, _) = states.select(path_condition, active);
+                            merge_state(
+                                self,
+                                function,
+                                block.id,
+                                successor,
+                                &selected,
+                                &mut flow,
+                                &mut reported_joins,
+                            );
+                        }
+                        continue;
+                    }
+                }
+                for successor in terminator.successors() {
                     merge_state(
                         self,
                         function,
                         block.id,
                         successor,
-                        &live,
+                        &states,
                         &mut flow,
                         &mut reported_joins,
                     );
                 }
             }
-            if !flow.seed_next_component(&function.body().blocks, entry_state.clone()) {
+            if !flow.seed_next_component(
+                &function.body().blocks,
+                PathStates::initial(entry_state.clone()),
+            ) {
                 break;
             }
         }
@@ -163,27 +256,26 @@ fn merge_state(
     function: MirDefinitionRef<'_>,
     predecessor: crate::mir::BlockId,
     target: crate::mir::BlockId,
-    state: &BTreeSet<StorageId>,
-    flow: &mut ForwardDataflow<BTreeSet<StorageId>>,
+    state: &PathStates<BTreeSet<StorageId>>,
+    flow: &mut ForwardDataflow<PathStates<BTreeSet<StorageId>>>,
     reported_joins: &mut HashSet<crate::mir::BlockId>,
 ) {
-    flow.merge(target, state, |existing, incoming| {
-        if existing == incoming {
-            return false;
-        }
-        if reported_joins.insert(target) {
-            verifier.block_error(
-                function.callable(),
-                predecessor,
-                format!("storage lifetime state disagrees at control-flow join {target}"),
-            );
-        }
-        let merged: BTreeSet<_> = existing.intersection(incoming).copied().collect();
-        if *existing != merged {
-            *existing = merged;
-            true
-        } else {
-            false
-        }
+    if state.is_empty() {
+        return;
+    }
+    let selected = state
+        .on_edge(function, predecessor, target)
+        .unwrap_or_else(|_| state.clone());
+    flow.merge(target, &selected, |existing, incoming| {
+        existing.merge(incoming, |existing, incoming| {
+            if reported_joins.insert(target) {
+                verifier.block_error(
+                    function.callable(),
+                    predecessor,
+                    format!("storage lifetime state disagrees at control-flow join {target}"),
+                );
+            }
+            *existing = existing.intersection(incoming).copied().collect();
+        })
     });
 }

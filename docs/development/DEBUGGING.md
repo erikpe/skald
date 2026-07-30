@@ -23,6 +23,13 @@ The phase renderers are repository-internal Rust APIs. There are no CLI modes
 for token, AST, resolved, HIR, or MIR dumps. Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
+When hand-built or future lowered MIR uses path-dependent state, the MIR dump
+prints a `PathConditions` table before the block list. Each row identifies the
+condition, optional parent, canonical activation storage, active and inactive
+predecessors, and exact merge. A `path-condition` rvalue names both the
+condition and activation storage. This makes an explicitly represented join
+distinguishable from an ordinary join whose lifetime states disagree.
+
 Exact dump tests live with each phase. A focused search is usually enough:
 
 ```text

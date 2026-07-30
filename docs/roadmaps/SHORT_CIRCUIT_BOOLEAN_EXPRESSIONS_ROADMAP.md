@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: planned; SC0 is the next task.
+Status: in progress; SC0 is complete and SC1 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -185,7 +185,7 @@ unimplemented.
 
 ## Progress
 
-- [ ] SC0 — Represent path conditions in verified MIR
+- [x] SC0 — Represent path conditions in verified MIR
 - [ ] SC1 — Plan conditional full-expression cleanup
 - [ ] SC2 — Lower structured logical HIR to selected boolean control flow
 - [ ] SC3 — Preserve path-dependent object and optional-object lifetimes
@@ -203,28 +203,30 @@ unimplemented.
 exists on only some returning paths, without yet automating cleanup or changing
 the accepted source language.
 
-- [ ] Add a target-independent, callable-owned path-condition identity with
+- [x] Add a target-independent, callable-owned path-condition identity with
       deterministic allocation, dump order, parent relation, and source
       provenance sufficient for diagnostics.
-- [ ] Define activation only along paths where its parent condition is active,
+- [x] Define activation only along paths where its parent condition is active,
       while requiring both the local short and right paths to record their
       selected state before joining.
-- [ ] Add an explicit verified conditional-state form at pre-boundary joins;
+- [x] Add an explicit verified conditional-state form at pre-boundary joins;
       do not relax ordinary join equality or silently union live resources.
-- [ ] Represent unconditional, conditionally live, and dead resource state
+- [x] Represent unconditional, conditionally live, and dead resource state
       without treating conditional liveness as ordinary liveness on every
       predecessor.
-- [ ] Keep activation scalar storage target-independent, canonical,
+- [x] Keep activation scalar storage target-independent, canonical,
       definition-before-use checked, and scoped to its enclosing
       full-expression epoch.
-- [ ] Extend block, storage-lifetime, cleanup-order, and ownership verification
-      with focused path-condition checks and diagnostics.
-- [ ] Teach MIR dumps and debug displays to expose conditions and conditional
+- [x] Extend block and storage-lifetime verification with focused
+      path-condition checks and diagnostics. Provide reusable path-sensitive
+      state for later cleanup and ownership verifiers without relaxing those
+      verifiers before their dedicated tasks.
+- [x] Teach MIR dumps and debug displays to expose conditions and conditional
       registrations deterministically without leaking pointer identity.
-- [ ] Exercise the representation with hand-built MIR containing
+- [x] Exercise the representation with hand-built MIR containing
       unconditional, selected, skipped, nested, and sibling conditional
       states plus explicit cleanup branches before lowering constructs them.
-- [ ] Keep existing non-conditional joins strict and preserve all current
+- [x] Keep existing non-conditional joins strict and preserve all current
       ownership, loop/backedge, storage-epoch, and unreachable-block checks.
 
 **Tests:** Direct MIR fixtures for one split, nested parent/child conditions,

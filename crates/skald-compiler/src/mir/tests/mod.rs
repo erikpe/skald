@@ -2,8 +2,8 @@ use super::build::{MirBodyBuilder, MirBuildError};
 use super::test_fixtures::{
     add_body_storage_lifetimes as fixture_add_body_storage_lifetimes, assign as fixture_assign,
     block as fixture_block, empty_member_definition as fixture_empty_member_definition,
-    storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
-    value as fixture_value,
+    storage as fixture_storage, storage_dead as fixture_storage_dead,
+    storage_live as fixture_storage_live, store as fixture_store, value as fixture_value,
 };
 use super::*;
 use crate::{
@@ -30,6 +30,7 @@ mod object_results;
 mod object_temporaries;
 mod objects;
 mod optional_values;
+mod path_conditions;
 mod primitive_binding_assignment;
 mod robustness;
 mod shared;

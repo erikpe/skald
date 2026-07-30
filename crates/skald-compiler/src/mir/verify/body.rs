@@ -70,6 +70,7 @@ impl<'mir> Verifier<'mir> {
             }
             self.verify_block(return_type, function, block, &mut defined_values);
         }
+        self.verify_path_conditions(function);
         self.verify_cleanup_liveness(function);
         self.verify_storage_lifetimes(function);
         self.verify_shared_ownership(function);
@@ -138,6 +139,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::SharedAnchor, None)
                     | (MirStorageKind::CheckedView(_), None)
                     | (MirStorageKind::ScalarSpill, None)
+                    | (MirStorageKind::PathCondition, None)
                     | (MirStorageKind::OptionalUnwrap, None)
                     | (MirStorageKind::SharedAllocation, None)
                     | (MirStorageKind::ArrayBacking, None)
@@ -230,6 +232,12 @@ impl<'mir> Verifier<'mir> {
                 self.function_error(
                     function.callable(),
                     format!("array position storage {} must be `u64`", storage.id),
+                );
+            }
+            if storage.kind == MirStorageKind::PathCondition && storage.ty != MirType::Bool {
+                self.function_error(
+                    function.callable(),
+                    format!("path-condition storage {} must be `bool`", storage.id),
                 );
             }
             if matches!(storage.ty, MirType::Shared(_) | MirType::OptionalShared(_))
