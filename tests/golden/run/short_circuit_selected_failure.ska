@@ -1,0 +1,11 @@
+fn fail() -> bool {
+    var absent: bool? = none;
+    return absent!;
+}
+
+fn main() -> i64 {
+    if (true && fail()) {
+        return 1;
+    }
+    return 0;
+}

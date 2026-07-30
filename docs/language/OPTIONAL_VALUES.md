@@ -285,7 +285,7 @@ A primitive unwrap finishes after copying its value. An optional shared-owner
 unwrap secures an independent ordinary owner before later effects. Neither
 requires a continuing presence guard after that copy completes.
 
-When an unwrap participates in a frozen short-circuit logical expression, an
+When an unwrap participates in an implemented short-circuit logical expression, an
 inline payload view and its presence guard still end after their complete
 immediate consumer; they do not extend across a later logical operand. An
 ordinary owner secured from `shared? T` is distinct: if it is a temporary, it

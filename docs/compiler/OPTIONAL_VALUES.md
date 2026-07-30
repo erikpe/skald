@@ -224,7 +224,7 @@ Primitive extraction copies before later effects and needs no continuing
 guard. Optional shared-owner extraction secures one ordinary non-null owner and
 likewise needs no continuing optional guard.
 
-Internal structured short-circuit lowering preserves those three distinct
+Structured source-level short-circuit lowering preserves those three distinct
 lifetimes. A selected inline-class payload view ends after its complete field,
 method, argument, cast, or other immediate consumer and before the operand
 publishes its boolean result. A primitive unwrap publishes its copied scalar

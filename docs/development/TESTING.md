@@ -17,8 +17,9 @@ ownership. Checked-view tests additionally cover bounded consumers, nested
 guards, invalidating later arguments, shared-root anchor order, and failure
 traps.
 
-Conditional full-expression coverage starts below the still-disabled logical
-source surface. Tracker tests cover ordered unconditional, parent, child, and
+Conditional full-expression coverage starts with tracker and MIR ownership
+tests and continues through the accepted logical source surface. Tracker tests
+cover ordered unconditional, parent, child, and
 later registrations plus an activation with no selected resource. MIR fixture
 tests cover selected and skipped inline temporaries, multiple resources under
 one condition, reverse cleanup, a secured scalar result, conditional storage
@@ -26,10 +27,9 @@ death, activation death, and final convergence. Mutations remove, duplicate,
 reorder, move, or place cleanup on the skipped path. Nested and sibling graph
 tests check parent-before-child decisions and local continuation sharing, and
 the shared fixture must also pass deterministic MIR dumping and system
-assembler acceptance. These tests establish cleanup planning; they do not
-imply that source `&&` or `||` is accepted.
+assembler acceptance.
 
-Internal logical-HIR lifetime tests extend that boundary through inline-object
+Structured logical-HIR lifetime tests extend that boundary through inline-object
 construction and call results, value/copy arguments, direct/static/instance
 calls, field-derived booleans, exact-class optional results and arguments, and
 later enclosing consumers. Native destructor traces distinguish selected from
@@ -259,8 +259,11 @@ operations; backend and native goldens own canonical truth tables,
 left-to-right exactly-once evaluation, optional-unwrapped booleans, calls,
 fields, assignments, conditions, returns, and composition with unrelated
 integer casts. Cross-process tests compare the complete token, AST, resolved,
-HIR, MIR, diagnostic, and assembly observations. Short-circuit behavior is
-not part of this matrix.
+HIR, MIR, diagnostic, and assembly observations. Short-circuit tests add
+complete truth-table, precedence, arbitrary-operand, every-consumer, external
+ABI, skipped-failure, and selected-path cleanup goldens. Destructor traces
+prove inactive resources never become live and active resources clean in
+reverse completion order.
 
 The MIR-only path-condition foundation has a separate verifier matrix.
 Hand-built fixtures cover selected and skipped scalar-storage epochs, nested
@@ -268,8 +271,8 @@ parent conditions, independently active siblings, repeated loop epochs,
 explicit cleanup branches, deterministic dumps, and strict ordinary joins.
 Mutations cover noncanonical or missing activation stores, invalid parents,
 reads outside the selected parent, wrong cleanup conditions, unresolved
-conditional state, and activation leakage. These fixtures do not imply source
-support for `&&` or `||`.
+conditional state, and activation leakage. Source-to-native goldens exercise
+the same verified representation through ordinary compilation.
 
 ## Private initializer coverage
 

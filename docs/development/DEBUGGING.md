@@ -86,6 +86,16 @@ as `cast.u64.i64`. A cast has no failure edge. When a total cast feeds a signed
 array position, inspect the preceding source-level unsigned comparison and its
 control-flow branch rather than looking for a hidden checked conversion.
 
+For `left && right` or `left || right`, AST and resolved dumps retain a
+distinct logical node and HIR prints `Logical And` or `Logical Or`. MIR should
+contain a `LogicalExpressions` row, a split branch, separate short and right
+paths, one result carrier, and a join reload. Follow the row's path condition
+into conditional cleanup: resources from a skipped right operand must never
+become live, while selected resources remain live until reverse
+full-expression cleanup. If a side effect or failure appears on a skipped
+path, inspect logical lowering before the backend; assembly only realizes the
+already verified CFG.
+
 For `while`, the AST must retain the keyword, condition, body, and complete
 statement span. The resolved dump assigns source-ordered callable-local
 `LoopId`s, and HIR retains the structured loop plus its conservative

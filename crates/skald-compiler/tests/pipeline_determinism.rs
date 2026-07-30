@@ -603,30 +603,10 @@ fn eager_boolean_diagnostic_dump() -> String {
 }
 
 fn short_circuit_source_phase_dump() -> String {
-    let text = concat!(
+    complete_phase_dump(concat!(
         "fn selected(a: bool, b: bool, c: bool) -> bool { return (a || b) && !c; }\n",
-        "fn rejected(left: i64, right: u64) -> bool { return left && right || true; }\n",
         "fn main() -> i64 { return 0; }\n",
-    );
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("short-circuit-source.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.hir.is_none());
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        render_diagnostics(&sources, &checked.diagnostics),
-    )
+    ))
 }
 
 fn private_initializer_phase_dump() -> String {

@@ -2,8 +2,8 @@
 
 Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
-semantics, including implemented `while` loops, `break`, and `continue`, plus
-the frozen short-circuit logical-expression and condition-cleanup contract. The
+semantics, including implemented `while` loops, `break`, `continue`, and
+short-circuit logical expressions with selected-path cleanup. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -347,8 +347,8 @@ the call terminates without performing remaining cleanup.
 
 ## Short-circuit logical expressions
 
-The frozen primitive operator profile defines exact-`bool` `&&` and `||` as
-control-flow expressions rather than eager scalar operations:
+Exact-`bool` `&&` and `||` are implemented as control-flow expressions rather
+than eager scalar operations:
 
 - `left && right` returns `false` without evaluating `right` when `left` is
   `false`;
@@ -378,7 +378,7 @@ When a logical expression is an `if`, `elif`, or `while` condition, its
 selected-path cleanup completes before either successor. Treating `&&` or `||`
 as eager, cleaning one operand early, or accepting only effect-free operands
 does not implement this contract. The
-[status matrix](STATUS.md) records that logical operators remain unimplemented.
+[status matrix](STATUS.md) records the implemented compiler boundary.
 
 ## Unsupported control flow and callability
 

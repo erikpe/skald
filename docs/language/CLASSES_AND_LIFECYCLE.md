@@ -594,7 +594,7 @@ lexical locals and owning value parameters.
 Grouping does not change an existing place, but it does change whether a fresh
 construction matches the restricted elision forms below.
 
-The frozen `&&` and `||` contract introduces path-dependent temporary
+The implemented `&&` and `||` contract introduces path-dependent temporary
 ownership inside a full expression. A selected right operand may complete
 owning temporaries that a skipped right operand does not. Every completed
 temporary remains live until the common enclosing boundary and is destroyed

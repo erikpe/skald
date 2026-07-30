@@ -322,9 +322,8 @@ pub(crate) fn member_definition(
 /// One selected inline temporary plus its complete conditional cleanup graph.
 ///
 /// This fixture is shared by MIR verification and backend legality tests. It
-/// deliberately starts from declared source metadata but hand-builds the
-/// control flow that source logical operators cannot produce until their
-/// completion gate is removed.
+/// deliberately starts from declared source metadata and hand-builds a narrow
+/// malformed/valid mutation surface that source lowering does not expose.
 pub(crate) fn conditional_full_expression_cleanup_program() -> MirProgram {
     let mut mir =
         lower_source_to_mir("class Token { init() {} }\nfn main() -> i64 { return 0; }\n");

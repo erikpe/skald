@@ -158,6 +158,7 @@ The implemented arithmetic surface is deliberately exact-type:
 | prefix `!` | `bool` | `bool` |
 | `==`, `!=` | two operands of the same type among `i64`, `u64`, `u8`, and `bool` | `bool` |
 | `<`, `<=`, `>`, `>=` | two operands of the same type among `i64`, `u64`, and `u8` | `bool` |
+| `&&`, `||` | two `bool` operands | `bool` |
 
 Integer arithmetic wraps modulo its width: `i64` and `u64` retain the low
 64 bits, while `u8` retains the low 8 bits and remains in `0..=255`. The
@@ -169,9 +170,9 @@ environment. Signed zeroes, subnormals, infinities, and NaNs can result. An
 unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
-Integer equality and ordering plus boolean equality, inequality, and logical
-negation are implemented as specified below. Short-circuit `&&` and `||`,
-floating equality or ordering, division, remainder, bitwise, shift, and
+Integer equality and ordering plus boolean equality, inequality, logical
+negation, and short-circuit `&&` and `||` are implemented as specified below.
+Floating equality or ordering, division, remainder, bitwise, shift, and
 exponentiation are not implemented. Built-in array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
@@ -399,8 +400,11 @@ once from left to right. Postfix optional unwrap binds first, so
 existing checked failure behavior. These eager operations produce canonical
 `bool` values and add no runtime ABI.
 
-`&&` and `||` remain unimplemented. Their frozen short-circuit semantics are
-not approximated with eager scalar evaluation.
+`&&` and `||` accept exactly two `bool` operands and produce a canonical
+`bool`. They use the implemented short-circuit evaluation and selected-path
+cleanup rules in
+[Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#short-circuit-logical-expressions);
+they are never approximated with eager scalar evaluation.
 
 ### Explicit integer casts
 

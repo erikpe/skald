@@ -10,13 +10,12 @@ progress. Completed roadmaps and resolved discovery records move to
   — in progress; implement exact-`bool` `&&` and `||` with skipped effects,
   path-dependent lifetime and cleanup, arbitrary valid operands, and every
   current expression consumer. Verified MIR path conditions, conditional
-  full-expression cleanup planning, internal structured logical lowering,
+  full-expression cleanup planning, structured logical lowering,
   inline-object and class-optional lifetimes, and shared/array ownership are
   complete. Bounded optional views, selected failure paths, condition and loop
-  cleanup, and return-result securing are also complete; the next task adds
-  arbitrary source operands and consumers by removing the completion gate.
-  Source tokens, precedence, AST/resolved shape, and exact-`bool` selection
-  are complete behind that gate. The
+  cleanup, return-result securing, arbitrary source operands and consumers,
+  native ABI behavior, and source-to-native goldens are also complete. The
+  next task hardens the implemented feature and closes the roadmap. The
   roadmap depends on the completed eager boolean,
   control-flow, lifecycle, optional, shared-ownership, array, cast, and panic
   foundations.

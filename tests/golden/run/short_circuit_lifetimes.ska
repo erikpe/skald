@@ -1,0 +1,102 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    marker: i64;
+    truth: bool;
+
+    init(marker: i64, truth: bool) {
+        self.marker = marker;
+        self.truth = truth;
+    }
+
+    fn read() -> bool {
+        return self.truth;
+    }
+
+    static fn static_read(value: Trace) -> bool {
+        return value.truth;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn inspect(value: Trace) -> bool {
+    return value.truth;
+}
+
+fn produce(marker: i64, truth: bool) -> Trace {
+    return Trace(marker, truth);
+}
+
+fn make(marker: i64, truth: bool) -> shared Trace {
+    return new Trace(marker, truth);
+}
+
+fn erase(marker: i64, truth: bool) -> shared Obj {
+    return new Trace(marker, truth);
+}
+
+fn present(marker: i64) -> Trace? {
+    return Trace(marker, true);
+}
+
+fn consume_later(flag: bool, value: Trace) -> bool {
+    return flag;
+}
+
+fn inline_selected() -> bool {
+    return inspect(Trace(1, true))
+        && Trace.static_read(produce(2, false));
+}
+
+fn inline_skipped() -> bool {
+    return inspect(Trace(3, true))
+        || Trace.static_read(produce(4, false));
+}
+
+fn shared_selected() -> bool {
+    return make(5, true)->read() && make(6, false)->read();
+}
+
+fn shared_skipped() -> bool {
+    return make(7, true)->read() || make(8, false)->read();
+}
+
+fn later_consumer() -> bool {
+    return consume_later(
+        inspect(Trace(9, true)) && inspect(Trace(10, true)),
+        Trace(11, true)
+    );
+}
+
+fn optional_selected() -> bool {
+    return present(12) is some && present(13) is some;
+}
+
+fn optional_skipped() -> bool {
+    return present(14) is some || present(15) is some;
+}
+
+fn checked_cast_selected() -> bool {
+    return true && ((Trace) *erase(16, true)).read();
+}
+
+fn checked_cast_skipped() -> bool {
+    return true || ((Trace) *erase(17, true)).read();
+}
+
+fn main() -> i64 {
+    ska_rt_println_bool(inline_selected());
+    ska_rt_println_bool(inline_skipped());
+    ska_rt_println_bool(shared_selected());
+    ska_rt_println_bool(shared_skipped());
+    ska_rt_println_bool(later_consumer());
+    ska_rt_println_bool(optional_selected());
+    ska_rt_println_bool(optional_skipped());
+    ska_rt_println_bool(checked_cast_selected());
+    ska_rt_println_bool(checked_cast_skipped());
+    return 0;
+}

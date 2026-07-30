@@ -1,37 +1,36 @@
 use super::*;
-use crate::typeck::{LOGICAL_EXPRESSION_NOT_ENABLED, TYPE_MISMATCH};
+use crate::{
+    hir::{HirLogicalOperation, HirReturnValue, HirStatement},
+    typeck::TYPE_MISMATCH,
+};
 
 #[test]
-fn exact_boolean_operands_reach_the_single_source_completion_gate() {
-    for operator in ["&&", "||"] {
+fn exact_boolean_operands_select_structured_logical_hir() {
+    for (operator, expected) in [
+        ("&&", HirLogicalOperation::And),
+        ("||", HirLogicalOperation::Or),
+    ] {
         let source = format!(
             "fn evaluate(left: bool, right: bool) -> bool {{ return left {operator} right; }} \
              fn main() -> i64 {{ return 0; }}"
         );
         let output = check_text(&source);
-        assert!(output.hir.is_none());
-        let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-        assert_eq!(diagnostics.len(), 1, "{source}");
-        let diagnostic = diagnostics[0];
-        assert_eq!(diagnostic.code, LOGICAL_EXPRESSION_NOT_ENABLED);
-        assert_eq!(
-            diagnostic.message,
-            format!(
-                "short-circuit logical operator `{operator}` is not enabled for source programs"
-            )
-        );
-        assert!(diagnostic
-            .labels
-            .iter()
-            .any(|label| label.message == "left operand has type `bool`"));
-        assert!(diagnostic
-            .labels
-            .iter()
-            .any(|label| label.message == "right operand has type `bool`"));
-        assert!(!output
-            .diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+        assert!(!output.has_errors(), "{source}");
+        let hir = output.hir.unwrap();
+        let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
+        let HirStatement::Return(statement) = &definition.body.statements[0] else {
+            panic!("expected return statement");
+        };
+        let HirReturnValue::Scalar(expression) = statement.value.as_ref().unwrap() else {
+            panic!("expected scalar return");
+        };
+        let HirExpressionKind::Logical(logical) = &expression.kind else {
+            panic!("expected structured logical HIR");
+        };
+        assert_eq!(logical.operation, expected);
+        assert_eq!(logical.left.ty, Type::Bool);
+        assert_eq!(logical.right.ty, Type::Bool);
+        assert_eq!(expression.ty, Type::Bool);
     }
 }
 
@@ -87,10 +86,6 @@ fn logical_operators_reject_every_non_boolean_type_family_without_conversion() {
                     .notes
                     .iter()
                     .any(|note| note.contains("does not perform implicit conversion")));
-                assert!(!output
-                    .diagnostics
-                    .iter()
-                    .any(|diagnostic| diagnostic.code == LOGICAL_EXPRESSION_NOT_ENABLED));
             }
         }
     }

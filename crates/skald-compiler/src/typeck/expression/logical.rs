@@ -1,19 +1,19 @@
-//! Exact boolean selection and the source-feature completion gate.
+//! Exact boolean selection for structured short-circuit expressions.
 
 use crate::{
     diagnostics::Diagnostic,
-    hir::Type,
+    hir::{HirExpression, HirExpressionKind, HirLogicalExpression, HirLogicalOperation, Type},
     resolve::{ResolvedLogicalExpr, ResolvedLogicalOperator},
 };
 
 use super::CallableChecker;
-use crate::typeck::{LOGICAL_EXPRESSION_NOT_ENABLED, TYPE_MISMATCH};
+use crate::typeck::TYPE_MISMATCH;
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_logical_expression(
         &mut self,
         logical: &ResolvedLogicalExpr,
-    ) -> Option<crate::hir::HirExpression> {
+    ) -> Option<HirExpression> {
         let left_type = self.static_expression_type(&logical.left);
         let right_type = self.static_expression_type(&logical.right);
 
@@ -49,29 +49,21 @@ impl CallableChecker<'_, '_> {
             return None;
         }
 
-        if left.is_none() || right.is_none() {
-            return None;
-        }
-
-        self.diagnostics.push(
-            Diagnostic::error(
-                LOGICAL_EXPRESSION_NOT_ENABLED,
-                format!(
-                    "short-circuit logical operator `{spelling}` is not enabled for source programs"
-                ),
-            )
-            .with_primary_label(
-                logical.operator_span,
-                "exact boolean operands were selected, but source lowering is not enabled",
-            )
-            .with_secondary_label(logical.left.span(), "left operand has type `bool`")
-            .with_secondary_label(logical.right.span(), "right operand has type `bool`")
-            .with_note(
-                "logical source lowering remains behind the compiler completion gate until every \
-                 valid operand and expression consumer is connected",
-            ),
-        );
-        None
+        let (left, right) = match (left, right) {
+            (Some(left), Some(right)) => (left, right),
+            _ => return None,
+        };
+        let operation = match logical.operator {
+            ResolvedLogicalOperator::And => HirLogicalOperation::And,
+            ResolvedLogicalOperator::Or => HirLogicalOperation::Or,
+        };
+        Some(HirExpression {
+            kind: HirExpressionKind::Logical(Box::new(HirLogicalExpression::new(
+                operation, left, right,
+            ))),
+            ty: operation.result_type(),
+            span: logical.span,
+        })
     }
 }
 

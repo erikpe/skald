@@ -175,6 +175,11 @@ incompatible ownership state, or synthesize cleanup. Branch layout and
 instruction selection may change only when evaluation, failure, ownership, and
 cleanup remain equivalent.
 
+The accepted source path uses this same boundary for arbitrary valid `bool`
+operands and consumers, including external calls. Canonical source-level
+results therefore cross the ordinary System V boolean call and return ABI
+without a logical-operator-specific convention.
+
 Zero-divisor and excessive-shift paths use the existing static-termination
 pool and sole `ska_rt_panic` call. Raw divide faults, target count masking, and
 undefined or build-mode-dependent host overflow are not valid lowering

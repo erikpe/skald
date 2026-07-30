@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 through SC6 are complete and SC7 is next.
+Status: in progress; SC0 through SC7 are complete and SC8 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -191,8 +191,8 @@ unimplemented.
 - [x] SC3 — Preserve path-dependent object and optional-object lifetimes
 - [x] SC4 — Preserve path-dependent shared and array ownership
 - [x] SC5 — Compose bounded views, guards, failures, and enclosing control flow
-- [ ] SC6 — Add source syntax and exact type selection behind the completion gate
-- [ ] SC7 — Enable arbitrary valid operands through every expression consumer
+- [x] SC6 — Add source syntax and exact type selection behind the completion gate
+- [x] SC7 — Enable arbitrary valid operands through every expression consumer
 - [ ] SC8 — Harden, document, and promote short-circuit expressions
 
 ## PR-sized implementation sequence
@@ -504,33 +504,33 @@ completion gate and claim partially supported logical operators.
 **Purpose:** Remove the gate only when the feature works for the whole
 currently valid expression language, not a privileged primitive subset.
 
-- [ ] Remove the downstream-completion gate and connect exact type selection
+- [x] Remove the downstream-completion gate and connect exact type selection
       to the structured HIR and verified MIR paths established by SC0–SC5.
-- [ ] Cover literals, bindings, grouping, prefix negation, boolean equality,
+- [x] Cover literals, bindings, grouping, prefix negation, boolean equality,
       contextual type and presence tests, primitive optional unwrap, and
       boolean fields and array elements.
-- [ ] Cover direct, static, instance, interface, and external calls returning
+- [x] Cover direct, static, instance, interface, and external calls returning
       `bool`, including receivers and arguments that allocate, retain, copy,
       unwrap, cast, index, mutate, or complete temporaries.
-- [ ] Cover nested and mixed logical expressions on both operands with
+- [x] Cover nested and mixed logical expressions on both operands with
       observable left-to-right, exactly-once behavior and all combinations of
       selected and skipped paths.
-- [ ] Cover local initialization, primitive reassignment, boolean field
+- [x] Cover local initialization, primitive reassignment, boolean field
       assignment, function/method/initializer/external arguments, receiver and
       index subexpressions, return, and `if`/`elif`/`while` conditions.
-- [ ] Add side-effect probes for mutation, calls, output, allocation,
+- [x] Add side-effect probes for mutation, calls, output, allocation,
       construction, destruction, retain/release, optional checks, casts,
       bounds checks, and panic reachability on both selected and skipped
       paths.
-- [ ] Add lifetime probes proving left temporaries survive the right operand,
+- [x] Add lifetime probes proving left temporaries survive the right operand,
       right temporaries survive later full-expression consumers, inactive
       resources never become live, and active resources clean in reverse
       completion order.
-- [ ] Confirm canonical boolean results across storage, calls, returns,
+- [x] Confirm canonical boolean results across storage, calls, returns,
       external output, branching, loops, and native ABI boundaries.
-- [ ] Add source-to-native and compile-failure goldens rather than relying only
+- [x] Add source-to-native and compile-failure goldens rather than relying only
       on unit-level IR fixtures.
-- [ ] Update the status matrix and implementation-facing language, phase, IR,
+- [x] Update the status matrix and implementation-facing language, phase, IR,
       backend, testing, and debugging documentation in the same change that
       removes the gate.
 
@@ -665,8 +665,9 @@ ABI revision.
 - A task may refine private Rust names or block layout, but any change to the
   frozen language or compiler representation contract requires design review
   before implementation continues.
-- The feature remains unimplemented in living status documentation until SC7
-  meets its exit criteria.
+- The feature is implemented in living status documentation after SC7 meets
+  its exit criteria; SC8 remains responsible for hardening and archive
+  closeout.
 - After SC8, move this file to `docs/archive/`, repair relative links, update
   both roadmap indexes, and ensure no active discovery entry remains
   unresolved.

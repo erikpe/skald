@@ -5,7 +5,7 @@ use crate::{
         dump_hir, HirExpression, HirExpressionKind, HirFunctionDefinition, HirLogicalExpression,
         HirLogicalOperation, HirProgram, HirReturnValue, HirStatement, Type,
     },
-    test_support::run_native_assembly,
+    test_support::{run_native_assembly, run_native_assembly_output},
 };
 
 fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {
@@ -440,15 +440,53 @@ fn malformed_logical_hir_and_mir_are_rejected() {
 }
 
 #[test]
-fn source_logical_lowering_remains_behind_the_completion_gate() {
+fn source_logical_syntax_reaches_structured_hir_and_verified_mir() {
     let output = crate::test_support::type_check_source(concat!(
         "fn evaluate() -> bool { return true && false; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    assert!(output.hir.is_none());
-    assert_eq!(output.diagnostics.len(), 1);
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == crate::typeck::LOGICAL_EXPRESSION_NOT_ENABLED));
+    assert!(output.diagnostics.is_empty());
+    let hir = output.hir.unwrap();
+    assert!(dump_hir(&hir).contains("Logical And : bool"));
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("LogicalExpressions"));
+    assert!(dump.contains("\n        and condition "));
+}
+
+#[test]
+fn source_logical_expressions_preserve_external_boolean_abi_and_skipping() {
+    let mir = lower_text(concat!(
+        "extern fn external_flag(value: bool) -> bool;\n",
+        "extern fn external_call_count() -> i64;\n",
+        "fn main() -> i64 {\n",
+        "  var first: bool = external_flag(true) || external_flag(false);\n",
+        "  var second: bool = external_flag(true) && external_flag(false);\n",
+        "  if (first && !second && external_call_count() == 3) { return 0; }\n",
+        "  return 1;\n",
+        "}\n",
+    ));
+    verify_mir(&mir).unwrap();
+    let mut assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    assembly.push_str(concat!(
+        ".data\n",
+        "external_counter:\n",
+        "    .quad 0\n",
+        ".text\n",
+        ".globl external_flag\n",
+        ".type external_flag, @function\n",
+        "external_flag:\n",
+        "    add qword ptr [rip + external_counter], 1\n",
+        "    mov eax, edi\n",
+        "    ret\n",
+        ".size external_flag, .-external_flag\n",
+        ".globl external_call_count\n",
+        ".type external_call_count, @function\n",
+        "external_call_count:\n",
+        "    mov rax, qword ptr [rip + external_counter]\n",
+        "    ret\n",
+        ".size external_call_count, .-external_call_count\n",
+    ));
+    assert_eq!(run_native_assembly_output(&assembly).status.code(), Some(0));
 }

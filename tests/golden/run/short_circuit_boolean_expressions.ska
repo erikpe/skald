@@ -1,0 +1,148 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Truth {
+    fn truth() -> bool;
+}
+
+class Probe implements Truth {
+    flag: bool;
+    sequence: i64;
+
+    init(flag: bool) {
+        self.flag = flag;
+        self.sequence = 0;
+    }
+
+    mut fn observe(value: bool, digit: i64) -> bool {
+        self.sequence = self.sequence * 10 + digit;
+        return value;
+    }
+
+    fn truth() -> bool {
+        return self.flag;
+    }
+
+    static fn select(value: bool) -> bool {
+        return value;
+    }
+}
+
+fn direct(value: bool) -> bool {
+    return value;
+}
+
+fn interface_truth(ref value: Truth) -> bool {
+    return value.truth();
+}
+
+fn consume(value: bool) -> bool {
+    return value;
+}
+
+fn output(value: bool, marker: i64) -> bool {
+    ska_rt_println_i64(marker);
+    return value;
+}
+
+fn choose_probe(value: bool) -> shared Probe {
+    if (value) {
+        return new Probe(true);
+    }
+    return new Probe(false);
+}
+
+fn choose_index(value: bool) -> i64 {
+    if (value) {
+        return 1;
+    }
+    return 0;
+}
+
+fn returned(left: bool, right: bool) -> bool {
+    return left && right || !left;
+}
+
+fn main() -> i64 {
+    ska_rt_println_bool(false && false);
+    ska_rt_println_bool(false && true);
+    ska_rt_println_bool(true && false);
+    ska_rt_println_bool(true && true);
+    ska_rt_println_bool(false || false);
+    ska_rt_println_bool(false || true);
+    ska_rt_println_bool(true || false);
+    ska_rt_println_bool(true || true);
+
+    ska_rt_println_bool(false || true && false);
+    ska_rt_println_bool((false || true) && false);
+    ska_rt_println_bool(true && true && false || true);
+    ska_rt_println_bool(true && (false || true));
+
+    var optional: bool? = true;
+    var flags: bool[] = bool[](2u);
+    flags[0] = false;
+    flags[1] = true;
+    var probe: Probe = Probe(true);
+
+    ska_rt_println_bool(optional! && probe.flag);
+    ska_rt_println_bool(optional is some && probe is Probe);
+    ska_rt_println_bool(flags[0] || flags[1]);
+    ska_rt_println_bool(true == probe.flag && !false);
+
+    ska_rt_println_bool(direct(true) && Probe.select(false || true));
+    ska_rt_println_bool(probe.truth() && interface_truth(probe));
+
+    var stored: bool = false && probe.observe(true, 9);
+    stored = true || probe.observe(false, 8);
+    probe.flag = stored && true;
+    flags[0] = stored || false;
+    ska_rt_println_bool(consume(stored && flags[0]));
+    var initialized: Probe = Probe(stored || false);
+    ska_rt_println_bool(initialized.truth());
+    ska_rt_println_bool(choose_probe(stored && true)->truth());
+    ska_rt_println_bool(flags[choose_index(false || true)]);
+    ska_rt_println_bool(returned(false, true));
+    ska_rt_println_i64(probe.sequence);
+
+    var argument_probe: Probe = Probe(false);
+    ska_rt_println_bool(argument_probe.observe(false || true, 1));
+    ska_rt_println_i64(argument_probe.sequence);
+
+    ska_rt_println_bool(false && output(true, 90));
+    ska_rt_println_bool(true || output(false, 91));
+    ska_rt_println_bool(true && output(true, 92));
+    ska_rt_println_bool(false || output(true, 93));
+
+    var effects: Probe = Probe(false);
+    ska_rt_println_bool(
+        effects.observe(false, 1) && effects.observe(true, 2)
+    );
+    ska_rt_println_i64(effects.sequence);
+    ska_rt_println_bool(
+        effects.observe(true, 3) || effects.observe(false, 4)
+    );
+    ska_rt_println_i64(effects.sequence);
+    ska_rt_println_bool(
+        effects.observe(true, 5)
+            && effects.observe(false, 6)
+            || effects.observe(true, 7)
+    );
+    ska_rt_println_i64(effects.sequence);
+
+    if (false && effects.observe(true, 8)) {
+        return 1;
+    }
+    elif (true || effects.observe(false, 9)) {
+        ska_rt_println_bool(true);
+    }
+
+    var first: bool = true;
+    var iterations: i64 = 0;
+    while (first && iterations < 2 || false) {
+        iterations = iterations + 1;
+        first = iterations < 2;
+    }
+    ska_rt_println_i64(iterations);
+    ska_rt_println_i64(effects.sequence);
+    return 0;
+}

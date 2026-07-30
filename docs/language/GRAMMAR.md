@@ -122,8 +122,9 @@ The frozen primitive-operator extension additionally selects these tokens:
 / % ~ & | ^ << >> && ||
 ```
 
-They are not accepted by the current compiler until their implementation
-roadmaps land. Power syntax is not frozen or reserved.
+`&&` and `||` are accepted by the current compiler. The other tokens in this
+extension remain unavailable until their implementation roadmaps land. Power
+syntax is not frozen or reserved.
 
 ## Literals
 

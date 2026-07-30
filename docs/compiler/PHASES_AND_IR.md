@@ -222,9 +222,10 @@ The pipeline responsibilities are:
   registers to MIR.
 
 These operations add no ownership or lifetime rule and no public runtime ABI.
-Floating comparisons, boolean/numeric operations, short-circuit logic,
-checked, saturating, implicit, mixed-type, and user-defined conversion remain
-outside this boundary.
+Floating comparisons, the remaining boolean/numeric operations, checked,
+saturating, implicit, mixed-type, and user-defined conversion remain outside
+this boundary. Implemented short-circuit logic uses the structured boundary
+below rather than this eager scalar boundary.
 
 ## Frozen primitive operator representation
 
@@ -272,7 +273,7 @@ It preserves:
 - IEEE binary64 operation and unordered comparison flavor; and
 - canonical `bool` and `u8` results.
 
-Internal short-circuit HIR lowers to ordinary MIR branches and jumps with one
+Structured short-circuit HIR lowers to ordinary MIR branches and jumps with one
 selected canonical `bool` result. A selection diamond records whether the
 right operand runs before entering that operand, which lets recursively nested
 logical expressions inherit an already selected parent path. The short and
@@ -290,11 +291,11 @@ lifetime; they are not promoted to full-expression temporaries.
 
 The source pipeline recognizes longest-match `&&` and `||`, preserves their
 precedence and grouping in distinct AST and resolved nodes, and checks both
-operands in source order for exact `bool`. A dedicated type-checking completion
-gate then rejects every otherwise valid logical source expression before HIR;
-ordinary compilation cannot yet reach the internal lowering described here.
+operands in source order for exact `bool`. Successful selection constructs the
+structured logical HIR directly, so every ordinary expression consumer reaches
+the same MIR lowering and verification path described here.
 
-MIR implements the internal representation behind that gate. A callable body
+MIR implements the path-dependent representation. A callable body
 may declare deterministic path-condition identities. Each identity names
 canonical compiler-owned `bool` activation storage, an optional earlier parent
 condition, distinct active and inactive predecessors, and their exact merge

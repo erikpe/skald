@@ -357,7 +357,7 @@ secures one ordinary non-null owner. Each anchor remains live through bound
 evaluation, right-side evaluation, selected element lifecycle work, and the
 complete call or immediate checked consumer.
 
-Within the internal short-circuit MIR representation, produced arrays,
+Within the structured short-circuit MIR representation, produced arrays,
 partially initialized backings, element lifecycle state, aliases, and anchors
 remain attached to the path condition that established them. Conditional
 full-expression cleanup releases only the selected arrays and ends only the

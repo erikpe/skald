@@ -1,0 +1,49 @@
+class Item {
+    init() {}
+}
+
+fn notify() -> unit {}
+
+fn integer_left(value: i64) -> bool {
+    return value && true;
+}
+
+fn integer_right(value: u64) -> bool {
+    return false || value;
+}
+
+fn float_left(value: f64) -> bool {
+    return value || true;
+}
+
+fn optional_right(value: bool?) -> bool {
+    return true && value;
+}
+
+fn class_left(ref value: Item) -> bool {
+    return value && false;
+}
+
+fn shared_right(value: shared Item) -> bool {
+    return false || value;
+}
+
+fn object_left(ref value: Obj) -> bool {
+    return value || false;
+}
+
+fn array_right(value: bool[]) -> bool {
+    return true && value;
+}
+
+fn unit_left() -> bool {
+    return notify() || true;
+}
+
+fn mixed(left: bool, right: i64) -> bool {
+    return left && right;
+}
+
+fn main() -> i64 {
+    return 0;
+}

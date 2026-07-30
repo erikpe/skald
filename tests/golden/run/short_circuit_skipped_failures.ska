@@ -1,0 +1,56 @@
+import std::error;
+
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+class Wanted {
+    init() {}
+
+    fn read() -> bool {
+        return true;
+    }
+}
+
+class Other {
+    init() {}
+}
+
+fn erased_other() -> shared Obj {
+    return new Other();
+}
+
+fn optional_failure() -> bool {
+    var absent: bool? = none;
+    return absent!;
+}
+
+fn cast_failure() -> bool {
+    return ((Wanted) *erased_other()).read();
+}
+
+fn bounds_failure() -> bool {
+    var values: bool[] = bool[](0u);
+    return values[0];
+}
+
+fn allocation_failure() -> bool {
+    var values: bool[] = bool[](9223372036854775807u);
+    return values.len() == 0u;
+}
+
+fn explicit_failure() -> bool {
+    std::error::panic("selected logical failure");
+}
+
+fn main() -> i64 {
+    ska_rt_println_bool(false && optional_failure());
+    ska_rt_println_bool(true || optional_failure());
+    ska_rt_println_bool(false && cast_failure());
+    ska_rt_println_bool(true || cast_failure());
+    ska_rt_println_bool(false && bounds_failure());
+    ska_rt_println_bool(true || bounds_failure());
+    ska_rt_println_bool(false && allocation_failure());
+    ska_rt_println_bool(true || allocation_failure());
+    ska_rt_println_bool(false && explicit_failure());
+    ska_rt_println_bool(true || explicit_failure());
+    return 0;
+}
