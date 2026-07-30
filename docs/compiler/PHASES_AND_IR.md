@@ -319,10 +319,12 @@ established before this cleanup graph, remain live through it, and are ended
 only after selected-path resource state is compatible. Child activation
 epochs end inside their active parent path, followed by root activations.
 
-Storage-lifetime and inline-object cleanup verification retain distinct
-object states for the declared path alternatives. Conditional cleanup must
-destroy exactly the selected temporaries in reverse completion order, leave
-the skipped alternative untouched, and converge before activation storage
+Storage-lifetime, inline-object cleanup, and exact-class optional
+definite-initialization verification retain distinct states for the declared
+path alternatives. Conditional cleanup must destroy exactly the selected
+temporaries in reverse completion order, leave the skipped alternative
+untouched, consume selected optional initialization state, and converge before
+activation storage
 dies. Cleanup history for storage whose epoch has ended may differ between
 alternatives; live objects, outstanding cleanup, argument ownership, and
 temporary order may not. Backend lowering sees only the resulting ordinary

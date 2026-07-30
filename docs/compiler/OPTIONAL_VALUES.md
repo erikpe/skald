@@ -149,15 +149,20 @@ Primitive optional MIR represents absent/present initialization, optional copy
 and assignment, presence tests, and unwrap as a success/failure terminator. Its
 failure successor is an explicit empty block ending in
 `OptionalAccessFailure`. Definite-initialization verification intersects
-initialized wrapper storage at CFG joins and deliberately does not treat
-dynamic presence as a static fact.
+initialized wrapper storage at ordinary CFG joins and deliberately does not
+treat dynamic presence as a static fact. Across a declared MIR path condition,
+it instead retains selected alternatives until their conditional storage and
+cleanup have converged.
 
 Exact-class optional MIR additionally records conditional initialization,
 publication after destination-directed construction, copy construction,
 assignment, cleanup, and explicit begin/end checked-view operations. A
 successful begin yields the exact payload projection; ordinary source access
 to those bytes is valid only for its verified immediate consumer while the
-matching guard is active.
+matching guard is active. Cleanup or ownership transfer consumes the
+wrapper's initialized owning state. Definite-initialization verification
+therefore rejects duplicate cleanup and storage death while an exact-class
+optional still owns its initialized absent-or-present state.
 
 ## Lifecycle state machine
 

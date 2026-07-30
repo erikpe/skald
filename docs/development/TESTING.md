@@ -28,6 +28,14 @@ tests check parent-before-child decisions and local continuation sharing, and
 the shared fixture must also pass deterministic MIR dumping and system
 assembler acceptance. These tests establish cleanup planning; they do not
 imply that source `&&` or `||` is accepted.
+
+Internal logical-HIR lifetime tests extend that boundary through inline-object
+construction and call results, value/copy arguments, direct/static/instance
+calls, field-derived booleans, exact-class optional results and arguments, and
+later enclosing consumers. Native destructor traces distinguish selected from
+skipped work and prove global reverse completion order. Optional verifier
+mutations additionally cover lost or duplicate conditional cleanup and
+initialization state that remains incompatible when a path condition ends.
 Optional shared-owner coverage additionally checks the one-word zero niche,
 copy/adopt/move and conditional release, field and callable ownership,
 self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,

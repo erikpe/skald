@@ -28,6 +28,7 @@ mod integer_casts;
 mod interface_dispatch;
 mod interface_fixtures;
 mod logical_expressions;
+mod logical_object_lifetimes;
 mod loop_hardening;
 mod object_fixtures;
 mod object_results;

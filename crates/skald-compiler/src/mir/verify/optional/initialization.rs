@@ -1,15 +1,16 @@
 //! Path-sensitive definite initialization for optional storage.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::super::{
     super::model::{
-        MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSharedSource,
+        MirArgument, MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSharedSource,
         MirOptionalSource, MirPlace, MirProgram, MirRvalueKind, MirStorageKind, MirTerminator,
         MirType,
     },
     context::Verifier,
     dataflow::ForwardDataflow,
+    path_state::{condition_reads, PathStates},
 };
 
 impl Verifier<'_> {
@@ -18,282 +19,442 @@ impl Verifier<'_> {
         function: MirDefinitionRef<'_>,
     ) {
         let entry_state = initialized_at_entry(function);
+        let activation_conditions: HashMap<_, _> = function
+            .path_conditions()
+            .iter()
+            .map(|condition| (condition.activation, condition.id))
+            .collect();
+        let condition_reads = condition_reads(function);
         let mut flow = ForwardDataflow::new(function.callable(), function.body().blocks.len());
-        flow.seed(function.body().entry, entry_state.clone());
+        flow.seed(
+            function.body().entry,
+            PathStates::initial(entry_state.clone()),
+        );
         loop {
-            while let Some((block_id, mut state)) = flow.pop() {
+            while let Some((block_id, mut states)) = flow.pop() {
                 let Some(block) = function.block(block_id) else {
                     continue;
                 };
-                apply_initializations(self.program, function, block, &mut state);
-                for successor in block.terminator.iter().flat_map(MirTerminator::successors) {
-                    flow.merge(successor, &state, |existing, incoming| {
-                        let merged: HashSet<_> = existing.intersection(incoming).cloned().collect();
-                        if *existing == merged {
-                            false
-                        } else {
-                            *existing = merged;
-                            true
+                for state in states.states_mut() {
+                    apply_initializations(self.program, function, block, state);
+                }
+                collapse_conditions_at_storage_death(&mut states, block, &activation_conditions);
+                if let Some(MirTerminator::Branch {
+                    condition,
+                    true_target,
+                    false_target,
+                    ..
+                }) = &block.terminator
+                {
+                    if let Some(path_condition) = condition_reads.get(condition).copied() {
+                        for (target, active) in [(*true_target, true), (*false_target, false)] {
+                            let (selected, _) = states.select(path_condition, active);
+                            merge_initialization_states(
+                                function, block.id, target, &selected, &mut flow,
+                            );
                         }
-                    });
+                        continue;
+                    }
+                }
+                for successor in block.terminator.iter().flat_map(MirTerminator::successors) {
+                    merge_initialization_states(function, block.id, successor, &states, &mut flow);
                 }
             }
-            if !flow.seed_next_component(&function.body().blocks, entry_state.clone()) {
+            if !flow.seed_next_component(
+                &function.body().blocks,
+                PathStates::initial(entry_state.clone()),
+            ) {
                 break;
             }
         }
 
         for block in &function.body().blocks {
-            let Some(mut state) = flow.state(block.id).cloned() else {
+            let Some(mut states) = flow.state(block.id).cloned() else {
                 continue;
             };
             for instruction in &block.instructions {
-                match instruction {
-                    MirInstruction::StorageLive(operation) => {
-                        reset_storage_places(&mut state, operation.storage);
-                    }
-                    MirInstruction::StorageDead(operation) => {
-                        reset_storage_places(&mut state, operation.storage);
-                    }
-                    MirInstruction::OptionalInitialize(initialize) => {
-                        require_initialized_source(
-                            self,
-                            function,
-                            block,
-                            &initialize.source,
-                            &state,
-                        );
-                        if !state.insert(initialize.destination.clone()) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "optional storage is initialized more than once",
-                            );
+                for state in states.states_mut() {
+                    match instruction {
+                        MirInstruction::StorageLive(operation) => {
+                            reset_storage_places(state, operation.storage);
                         }
-                    }
-                    MirInstruction::OptionalAssign(assignment) => {
-                        require_initialized(
-                            self,
-                            function,
-                            block,
-                            &assignment.destination,
-                            &state,
-                            "optional assignment destination",
-                        );
-                        require_initialized_source(
-                            self,
-                            function,
-                            block,
-                            &assignment.source,
-                            &state,
-                        );
-                    }
-                    MirInstruction::OptionalSharedInitialize(initialize) => {
-                        require_initialized_optional_shared_source(
-                            self,
-                            function,
-                            block,
-                            &initialize.source,
-                            &state,
-                        );
-                        if !state.insert(initialize.destination.clone()) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "optional shared storage is initialized more than once",
+                        MirInstruction::StorageDead(operation) => {
+                            require_finished_class_optional_storage(
+                                self,
+                                function,
+                                block,
+                                operation.storage,
+                                state,
                             );
+                            reset_storage_places(state, operation.storage);
                         }
-                    }
-                    MirInstruction::OptionalSharedAssign(assignment) => {
-                        require_initialized(
-                            self,
-                            function,
-                            block,
-                            &assignment.destination,
-                            &state,
-                            "optional shared assignment destination",
-                        );
-                        require_initialized_optional_shared_source(
-                            self,
-                            function,
-                            block,
-                            &assignment.source,
-                            &state,
-                        );
-                    }
-                    MirInstruction::OptionalSharedCleanup(cleanup) => require_initialized(
-                        self,
-                        function,
-                        block,
-                        &cleanup.destination,
-                        &state,
-                        "optional shared cleanup destination",
-                    ),
-                    MirInstruction::ClassOptionalInitialize(initialize) => {
-                        require_initialized_class_source(
-                            self,
-                            function,
-                            block,
-                            &initialize.source,
-                            &state,
-                        );
-                        if !state.insert(initialize.destination.clone()) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "class optional storage is initialized more than once",
+                        MirInstruction::OptionalInitialize(initialize) => {
+                            require_initialized_source(
+                                self,
+                                function,
+                                block,
+                                &initialize.source,
+                                state,
                             );
+                            if !state.insert(initialize.destination.clone()) {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "optional storage is initialized more than once",
+                                );
+                            }
                         }
-                    }
-                    MirInstruction::ClassOptionalAssign(assignment) => {
-                        require_initialized(
-                            self,
-                            function,
-                            block,
-                            &assignment.destination,
-                            &state,
-                            "class optional assignment destination",
-                        );
-                        require_initialized_class_source(
-                            self,
-                            function,
-                            block,
-                            &assignment.source,
-                            &state,
-                        );
-                    }
-                    MirInstruction::Assign(assignment) => {
-                        if let MirRvalueKind::OptionalPresence { source, .. } =
-                            &assignment.rvalue.kind
-                        {
+                        MirInstruction::OptionalAssign(assignment) => {
                             require_initialized(
                                 self,
                                 function,
                                 block,
-                                source,
-                                &state,
-                                "optional presence-test source",
+                                &assignment.destination,
+                                state,
+                                "optional assignment destination",
+                            );
+                            require_initialized_source(
+                                self,
+                                function,
+                                block,
+                                &assignment.source,
+                                state,
                             );
                         }
-                    }
-                    MirInstruction::Call(call) => {
-                        if let Some(result) = call.shared_result {
-                            if function.storage(result).is_some_and(|storage| {
-                                matches!(storage.ty, MirType::OptionalShared(_))
-                            }) {
-                                state.insert(MirPlace::base(result));
-                            }
-                        }
-                        if let Some(destination) = &call.destination {
-                            if function
-                                .storage(destination.base.storage())
-                                .is_some_and(|storage| {
-                                    matches!(
-                                        storage.ty,
-                                        MirType::OptionalPrimitive(_)
-                                            | MirType::OptionalClass(_)
-                                            | MirType::OptionalShared(_)
-                                    )
-                                })
-                                && !state.insert(destination.clone())
-                            {
+                        MirInstruction::OptionalSharedInitialize(initialize) => {
+                            require_initialized_optional_shared_source(
+                                self,
+                                function,
+                                block,
+                                &initialize.source,
+                                state,
+                            );
+                            if !state.insert(initialize.destination.clone()) {
                                 self.block_error(
                                     function.callable(),
                                     block.id,
-                                    "call destination is already initialized",
-                                );
-                            } else if let Some(class) =
-                                complete_class_storage(function, destination)
-                            {
-                                initialize_optional_fields(
-                                    self.program,
-                                    class,
-                                    destination,
-                                    &mut state,
+                                    "optional shared storage is initialized more than once",
                                 );
                             }
                         }
+                        MirInstruction::OptionalSharedAssign(assignment) => {
+                            require_initialized(
+                                self,
+                                function,
+                                block,
+                                &assignment.destination,
+                                state,
+                                "optional shared assignment destination",
+                            );
+                            require_initialized_optional_shared_source(
+                                self,
+                                function,
+                                block,
+                                &assignment.source,
+                                state,
+                            );
+                        }
+                        MirInstruction::OptionalSharedCleanup(cleanup) => require_initialized(
+                            self,
+                            function,
+                            block,
+                            &cleanup.destination,
+                            state,
+                            "optional shared cleanup destination",
+                        ),
+                        MirInstruction::ClassOptionalInitialize(initialize) => {
+                            require_initialized_class_source(
+                                self,
+                                function,
+                                block,
+                                &initialize.source,
+                                state,
+                            );
+                            if !state.insert(initialize.destination.clone()) {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "class optional storage is initialized more than once",
+                                );
+                            }
+                        }
+                        MirInstruction::ClassOptionalAssign(assignment) => {
+                            require_initialized(
+                                self,
+                                function,
+                                block,
+                                &assignment.destination,
+                                state,
+                                "class optional assignment destination",
+                            );
+                            require_initialized_class_source(
+                                self,
+                                function,
+                                block,
+                                &assignment.source,
+                                state,
+                            );
+                        }
+                        MirInstruction::ClassOptionalCleanup(cleanup) => {
+                            require_initialized(
+                                self,
+                                function,
+                                block,
+                                &cleanup.destination,
+                                state,
+                                "class optional cleanup destination",
+                            );
+                            state.remove(&cleanup.destination);
+                        }
+                        MirInstruction::Assign(assignment) => {
+                            if let MirRvalueKind::OptionalPresence { source, .. } =
+                                &assignment.rvalue.kind
+                            {
+                                require_initialized(
+                                    self,
+                                    function,
+                                    block,
+                                    source,
+                                    state,
+                                    "optional presence-test source",
+                                );
+                            }
+                        }
+                        MirInstruction::Call(call) => {
+                            consume_class_optional_arguments(
+                                self,
+                                function,
+                                block,
+                                &call.arguments,
+                                state,
+                            );
+                            if let Some(result) = call.shared_result {
+                                if function.storage(result).is_some_and(|storage| {
+                                    matches!(storage.ty, MirType::OptionalShared(_))
+                                }) {
+                                    state.insert(MirPlace::base(result));
+                                }
+                            }
+                            if let Some(destination) = &call.destination {
+                                if function.storage(destination.base.storage()).is_some_and(
+                                    |storage| {
+                                        matches!(
+                                            storage.ty,
+                                            MirType::OptionalPrimitive(_)
+                                                | MirType::OptionalClass(_)
+                                                | MirType::OptionalShared(_)
+                                        )
+                                    },
+                                ) && !state.insert(destination.clone())
+                                {
+                                    self.block_error(
+                                        function.callable(),
+                                        block.id,
+                                        "call destination is already initialized",
+                                    );
+                                } else if let Some(class) =
+                                    complete_class_storage(function, destination)
+                                {
+                                    initialize_optional_fields(
+                                        self.program,
+                                        class,
+                                        destination,
+                                        state,
+                                    );
+                                }
+                            }
+                        }
+                        MirInstruction::Initialize(initialize) => {
+                            consume_class_optional_arguments(
+                                self,
+                                function,
+                                block,
+                                &initialize.arguments,
+                                state,
+                            );
+                            initialize_optional_fields(
+                                self.program,
+                                initialize.target.class(),
+                                &initialize.destination,
+                                state,
+                            );
+                        }
+                        MirInstruction::SharedInitialize(initialize) => {
+                            consume_class_optional_arguments(
+                                self,
+                                function,
+                                block,
+                                &initialize.arguments,
+                                state,
+                            );
+                        }
+                        MirInstruction::CopyConstruct(copy) => initialize_optional_fields(
+                            self.program,
+                            copy.class,
+                            &copy.destination,
+                            state,
+                        ),
+                        _ => {}
                     }
-                    MirInstruction::Initialize(initialize) => initialize_optional_fields(
-                        self.program,
-                        initialize.target.class(),
-                        &initialize.destination,
-                        &mut state,
-                    ),
-                    MirInstruction::CopyConstruct(copy) => initialize_optional_fields(
-                        self.program,
-                        copy.class,
-                        &copy.destination,
-                        &mut state,
-                    ),
-                    _ => {}
                 }
-            }
-            if let Some(MirTerminator::OptionalUnwrap { source, .. }) = &block.terminator {
-                require_initialized(
+                end_condition_at_storage_death(
                     self,
                     function,
                     block,
-                    source,
-                    &state,
-                    "optional unwrap source",
+                    instruction,
+                    &activation_conditions,
+                    &mut states,
                 );
             }
-            if let Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) = &block.terminator {
-                require_initialized(
-                    self,
-                    function,
-                    block,
-                    &unwrap.source,
-                    &state,
-                    "optional shared unwrap source",
-                );
-            }
-            match &block.terminator {
-                Some(MirTerminator::BeginOptionalView { begin, .. }) => require_initialized(
-                    self,
-                    function,
-                    block,
-                    &begin.source,
-                    &state,
-                    "optional-view source",
-                ),
-                Some(MirTerminator::CheckOptionalMutation { source, .. }) => require_initialized(
-                    self,
-                    function,
-                    block,
-                    source,
-                    &state,
-                    "optional mutation-check source",
-                ),
-                _ => {}
-            }
-            if matches!(
-                block.terminator,
-                Some(MirTerminator::Return { .. } | MirTerminator::ReturnOptionalShared { .. })
-            ) {
-                if let Some(return_storage) = function.return_storage() {
-                    let place = MirPlace::base(return_storage);
-                    if function.storage(return_storage).is_some_and(|storage| {
-                        matches!(
-                            storage.ty,
-                            MirType::OptionalPrimitive(_)
-                                | MirType::OptionalClass(_)
-                                | MirType::OptionalShared(_)
-                        )
-                    }) {
+            for state in states.states_mut() {
+                if let Some(MirTerminator::OptionalUnwrap { source, .. }) = &block.terminator {
+                    require_initialized(
+                        self,
+                        function,
+                        block,
+                        source,
+                        state,
+                        "optional unwrap source",
+                    );
+                }
+                if let Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) = &block.terminator
+                {
+                    require_initialized(
+                        self,
+                        function,
+                        block,
+                        &unwrap.source,
+                        state,
+                        "optional shared unwrap source",
+                    );
+                }
+                match &block.terminator {
+                    Some(MirTerminator::BeginOptionalView { begin, .. }) => require_initialized(
+                        self,
+                        function,
+                        block,
+                        &begin.source,
+                        state,
+                        "optional-view source",
+                    ),
+                    Some(MirTerminator::CheckOptionalMutation { source, .. }) => {
                         require_initialized(
                             self,
                             function,
                             block,
-                            &place,
-                            &state,
-                            "optional return destination",
-                        );
+                            source,
+                            state,
+                            "optional mutation-check source",
+                        )
+                    }
+                    _ => {}
+                }
+                if matches!(
+                    block.terminator,
+                    Some(MirTerminator::Return { .. } | MirTerminator::ReturnOptionalShared { .. })
+                ) {
+                    if let Some(return_storage) = function.return_storage() {
+                        let place = MirPlace::base(return_storage);
+                        if function.storage(return_storage).is_some_and(|storage| {
+                            matches!(
+                                storage.ty,
+                                MirType::OptionalPrimitive(_)
+                                    | MirType::OptionalClass(_)
+                                    | MirType::OptionalShared(_)
+                            )
+                        }) {
+                            require_initialized(
+                                self,
+                                function,
+                                block,
+                                &place,
+                                state,
+                                "optional return destination",
+                            );
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+fn merge_initialization_states(
+    function: MirDefinitionRef<'_>,
+    predecessor: crate::mir::BlockId,
+    target: crate::mir::BlockId,
+    states: &PathStates<HashSet<MirPlace>>,
+    flow: &mut ForwardDataflow<PathStates<HashSet<MirPlace>>>,
+) {
+    if states.is_empty() {
+        return;
+    }
+    let selected = states
+        .on_edge(function, predecessor, target)
+        .unwrap_or_else(|_| states.clone());
+    flow.merge(target, &selected, |existing, incoming| {
+        existing.merge(incoming, merge_definitely_initialized)
+    });
+}
+
+fn merge_definitely_initialized(existing: &mut HashSet<MirPlace>, incoming: &HashSet<MirPlace>) {
+    existing.retain(|place| incoming.contains(place));
+}
+
+fn collapse_conditions_at_storage_death(
+    states: &mut PathStates<HashSet<MirPlace>>,
+    block: &MirBasicBlock,
+    activation_conditions: &HashMap<crate::mir::StorageId, crate::mir::PathConditionId>,
+) {
+    for instruction in &block.instructions {
+        let MirInstruction::StorageDead(operation) = instruction else {
+            continue;
+        };
+        let Some(condition) = activation_conditions.get(&operation.storage).copied() else {
+            continue;
+        };
+        states.end_condition(condition, |existing, incoming| {
+            merge_definitely_initialized(existing, incoming);
+        });
+    }
+}
+
+fn end_condition_at_storage_death(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    instruction: &MirInstruction,
+    activation_conditions: &HashMap<crate::mir::StorageId, crate::mir::PathConditionId>,
+    states: &mut PathStates<HashSet<MirPlace>>,
+) {
+    let MirInstruction::StorageDead(operation) = instruction else {
+        return;
+    };
+    let Some(condition) = activation_conditions.get(&operation.storage).copied() else {
+        return;
+    };
+    let mut incompatible = false;
+    let missing = states.end_condition(condition, |existing, incoming| {
+        incompatible = true;
+        merge_definitely_initialized(existing, incoming);
+    });
+    if incompatible {
+        verifier.block_error(
+            function.callable(),
+            block.id,
+            format!(
+                "conditional optional initialization state remains when path condition {condition} ends"
+            ),
+        );
+    }
+    if missing {
+        verifier.block_error(
+            function.callable(),
+            block.id,
+            format!(
+                "path condition {condition} ends outside its selected optional-initialization region"
+            ),
+        );
     }
 }
 
@@ -417,10 +578,14 @@ fn apply_initializations(
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 state.insert(initialize.destination.clone());
             }
+            MirInstruction::ClassOptionalCleanup(cleanup) => {
+                state.remove(&cleanup.destination);
+            }
             MirInstruction::OptionalSharedInitialize(initialize) => {
                 state.insert(initialize.destination.clone());
             }
             MirInstruction::Call(call) => {
+                transfer_class_optional_arguments(function, &call.arguments, state);
                 if let Some(result) = call.shared_result {
                     if function
                         .storage(result)
@@ -447,12 +612,18 @@ fn apply_initializations(
                     }
                 }
             }
-            MirInstruction::Initialize(initialize) => initialize_optional_fields(
-                program,
-                initialize.target.class(),
-                &initialize.destination,
-                state,
-            ),
+            MirInstruction::Initialize(initialize) => {
+                transfer_class_optional_arguments(function, &initialize.arguments, state);
+                initialize_optional_fields(
+                    program,
+                    initialize.target.class(),
+                    &initialize.destination,
+                    state,
+                );
+            }
+            MirInstruction::SharedInitialize(initialize) => {
+                transfer_class_optional_arguments(function, &initialize.arguments, state);
+            }
             MirInstruction::CopyConstruct(copy) => {
                 initialize_optional_fields(program, copy.class, &copy.destination, state)
             }
@@ -463,6 +634,73 @@ fn apply_initializations(
 
 fn reset_storage_places(state: &mut HashSet<MirPlace>, storage: crate::mir::StorageId) {
     state.retain(|place| place.base.storage() != storage);
+}
+
+fn require_finished_class_optional_storage(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    storage: crate::mir::StorageId,
+    state: &HashSet<MirPlace>,
+) {
+    if function
+        .storage(storage)
+        .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
+        && state.contains(&MirPlace::base(storage))
+    {
+        verifier.block_error(
+            function.callable(),
+            block.id,
+            "initialized class optional reaches storage-dead without cleanup or ownership transfer",
+        );
+    }
+}
+
+fn consume_class_optional_arguments(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    arguments: &[MirArgument],
+    state: &mut HashSet<MirPlace>,
+) {
+    for argument in arguments {
+        let MirArgument::OwnedPlace(place) = argument else {
+            continue;
+        };
+        if !function
+            .storage(place.base.storage())
+            .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
+        {
+            continue;
+        }
+        require_initialized(
+            verifier,
+            function,
+            block,
+            place,
+            state,
+            "class optional value argument",
+        );
+        state.remove(place);
+    }
+}
+
+fn transfer_class_optional_arguments(
+    function: MirDefinitionRef<'_>,
+    arguments: &[MirArgument],
+    state: &mut HashSet<MirPlace>,
+) {
+    for argument in arguments {
+        let MirArgument::OwnedPlace(place) = argument else {
+            continue;
+        };
+        if function
+            .storage(place.base.storage())
+            .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
+        {
+            state.remove(place);
+        }
+    }
 }
 
 fn complete_class_storage(

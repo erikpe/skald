@@ -10,10 +10,10 @@ progress. Completed roadmaps and resolved discovery records move to
   — in progress; implement exact-`bool` `&&` and `||` with skipped effects,
   path-dependent lifetime and cleanup, arbitrary valid operands, and every
   current expression consumer. Verified MIR path conditions, conditional
-  full-expression cleanup planning, and internal structured logical lowering
-  are complete; the next task preserves path-dependent object and
-  optional-object lifetimes. The roadmap depends on the completed eager
-  boolean, control-flow, lifecycle, optional,
+  full-expression cleanup planning, internal structured logical lowering, and
+  path-dependent inline-object and class-optional lifetimes are complete; the
+  next task preserves path-dependent shared and array ownership. The roadmap
+  depends on the completed eager boolean, control-flow, lifecycle, optional,
   shared-ownership, array, cast, and panic foundations.
 
 ## Planned
@@ -26,7 +26,10 @@ No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
-No maintainability discoveries are currently pending.
+- [Short-Circuit Boolean Expressions Discoveries](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_DISCOVERIES.md)
+  — split the optional-initialization verifier's path propagation,
+  instruction checks, and recursive field seeding after the short-circuit
+  representation has stabilized.
 
 ## Implementation baseline
 

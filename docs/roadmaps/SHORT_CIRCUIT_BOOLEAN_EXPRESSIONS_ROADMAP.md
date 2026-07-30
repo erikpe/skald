@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 through SC2 are complete and SC3 is next.
+Status: in progress; SC0 through SC3 are complete and SC4 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -188,7 +188,7 @@ unimplemented.
 - [x] SC0 — Represent path conditions in verified MIR
 - [x] SC1 — Plan conditional full-expression cleanup
 - [x] SC2 — Lower structured logical HIR to selected boolean control flow
-- [ ] SC3 — Preserve path-dependent object and optional-object lifetimes
+- [x] SC3 — Preserve path-dependent object and optional-object lifetimes
 - [ ] SC4 — Preserve path-dependent shared and array ownership
 - [ ] SC5 — Compose bounded views, guards, failures, and enclosing control flow
 - [ ] SC6 — Add source syntax and exact type selection behind the completion gate
@@ -340,24 +340,24 @@ select the incomplete feature.
 **Purpose:** Apply selected-path completion to owned inline resources and
 their storage before moving to shared and anchored ownership.
 
-- [ ] Carry the current inline-object full-expression temporary through
+- [x] Carry the current inline-object full-expression temporary through
       unconditional and conditional completion registrations.
-- [ ] Carry class-optional storage, presence state, payload initialization,
+- [x] Carry class-optional storage, presence state, payload initialization,
       payload cleanup, and absent-state handling without initializing or
       cleaning a skipped right operand.
-- [ ] Preserve construction, direct/static/instance call results, receiver
+- [x] Preserve construction, direct/static/instance call results, receiver
       temporaries, value arguments, explicit copy arguments, field access, and
       object-result destinations when they appear on either logical path.
-- [ ] Keep left-completed objects alive through an evaluated right operand and
+- [x] Keep left-completed objects alive through an evaluated right operand and
       through later consumers in the same full expression.
-- [ ] Secure a boolean result derived from an object or optional-object
+- [x] Secure a boolean result derived from an object or optional-object
       receiver before selected-path object cleanup.
-- [ ] Preserve reverse completion order when left, right, and later enclosing
+- [x] Preserve reverse completion order when left, right, and later enclosing
       expression components all complete objects.
-- [ ] Extend cleanup-order, initialization, storage-epoch, and object-result
+- [x] Extend cleanup-order, initialization, storage-epoch, and object-result
       verification for conditional state instead of weakening existing
       invariants.
-- [ ] Cover destructors with visible effects so skip behavior, lifetime
+- [x] Cover destructors with visible effects so skip behavior, lifetime
       extent, and cleanup ordering are native observations rather than only
       dump properties.
 
