@@ -65,6 +65,7 @@ pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
+pub const LOGICAL_EXPRESSION_NOT_ENABLED: &str = "TYP042";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

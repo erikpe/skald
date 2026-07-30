@@ -816,6 +816,17 @@ impl ResolvedDumper {
                     dumper.expression(&binary.right);
                 });
             }
+            ResolvedExpression::Logical(logical) => {
+                let operator = match logical.operator {
+                    ResolvedLogicalOperator::And => "And",
+                    ResolvedLogicalOperator::Or => "Or",
+                };
+                self.line(&format!("Logical {operator}"), logical.span);
+                self.indented(|dumper| {
+                    dumper.expression(&logical.left);
+                    dumper.expression(&logical.right);
+                });
+            }
             ResolvedExpression::TypeTest(test) => {
                 self.line(
                     &format!("TypeTest target {}", render_type_kind(test.target.kind)),

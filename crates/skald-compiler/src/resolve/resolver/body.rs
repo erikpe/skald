@@ -362,6 +362,25 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     _ => None,
                 }
             }
+            syntax::Expression::Logical(logical) => {
+                let left = self.resolve_expression(&logical.left);
+                let right = self.resolve_expression(&logical.right);
+                match (left, right) {
+                    (Some(left), Some(right)) => {
+                        Some(ResolvedExpression::Logical(ResolvedLogicalExpr {
+                            left: Box::new(left),
+                            operator: match logical.operator {
+                                syntax::LogicalOperator::And => ResolvedLogicalOperator::And,
+                                syntax::LogicalOperator::Or => ResolvedLogicalOperator::Or,
+                            },
+                            operator_span: logical.operator_span,
+                            right: Box::new(right),
+                            span: logical.span,
+                        }))
+                    }
+                    _ => None,
+                }
+            }
             syntax::Expression::TypeTest(test) => {
                 let source = self.resolve_expression(&test.source);
                 let target = self.resolve_view_target(&test.target);

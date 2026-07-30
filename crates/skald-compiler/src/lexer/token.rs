@@ -54,6 +54,8 @@ pub enum TokenKind {
     Dot,
     Question,
     Bang,
+    AndAnd,
+    OrOr,
     Invalid,
     Eof,
 }
@@ -114,6 +116,8 @@ impl TokenKind {
             Self::Dot => "DOT",
             Self::Question => "QUESTION",
             Self::Bang => "BANG",
+            Self::AndAnd => "AND_AND",
+            Self::OrOr => "OR_OR",
             Self::Invalid => "INVALID",
             Self::Eof => "EOF",
         }

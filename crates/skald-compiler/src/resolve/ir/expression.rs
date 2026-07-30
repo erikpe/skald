@@ -21,6 +21,7 @@ pub enum ResolvedExpression {
     Unary(ResolvedUnaryExpr),
     Dereference(ResolvedDereferenceExpr),
     Binary(ResolvedBinaryExpr),
+    Logical(ResolvedLogicalExpr),
     TypeTest(ResolvedTypeTestExpr),
     PresenceTest(ResolvedPresenceTestExpr),
     Unwrap(ResolvedUnwrapExpr),
@@ -50,6 +51,7 @@ impl ResolvedExpression {
             Self::Unary(expression) => expression.span,
             Self::Dereference(expression) => expression.span,
             Self::Binary(expression) => expression.span,
+            Self::Logical(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
@@ -360,6 +362,21 @@ pub enum ResolvedBinaryOperator {
 pub struct ResolvedBinaryExpr {
     pub left: Box<ResolvedExpression>,
     pub operator: ResolvedBinaryOperator,
+    pub operator_span: Span,
+    pub right: Box<ResolvedExpression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedLogicalOperator {
+    And,
+    Or,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedLogicalExpr {
+    pub left: Box<ResolvedExpression>,
+    pub operator: ResolvedLogicalOperator,
     pub operator_span: Span,
     pub right: Box<ResolvedExpression>,
     pub span: Span,

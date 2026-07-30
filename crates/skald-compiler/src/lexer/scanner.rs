@@ -18,6 +18,8 @@ const COMPOUND_PUNCTUATION: &[(&str, TokenKind)] = &[
     ("!=", TokenKind::BangEqual),
     ("<=", TokenKind::LessEqual),
     (">=", TokenKind::GreaterEqual),
+    ("&&", TokenKind::AndAnd),
+    ("||", TokenKind::OrOr),
 ];
 
 pub const UNEXPECTED_CHARACTER: &str = "LEX001";

@@ -563,6 +563,17 @@ impl AstDumper {
                     dumper.expression(&binary.right);
                 });
             }
+            Expression::Logical(logical) => {
+                let operator = match logical.operator {
+                    LogicalOperator::And => "And",
+                    LogicalOperator::Or => "Or",
+                };
+                self.line(&format!("Logical {operator}"), logical.span);
+                self.indented(|dumper| {
+                    dumper.expression(&logical.left);
+                    dumper.expression(&logical.right);
+                });
+            }
             Expression::TypeTest(test) => {
                 self.line("TypeTest", test.span);
                 self.indented(|dumper| {

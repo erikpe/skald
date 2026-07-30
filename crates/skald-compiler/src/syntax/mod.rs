@@ -19,13 +19,13 @@ pub use ast::{
     DestructorDecl, Expression, ExpressionStatement, ExternalFunctionDecl,
     FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr, IdentifierExpr,
     ImportDeclaration, InitializerDecl, IntegerCastExpr, IntrinsicFunctionDecl, LocalDecl,
-    MemberAccessExpr, MemberAccessOperator, MemberVisibility, MethodDecl, MethodModifier,
-    ModuleImport, Name, NameComponent, NameComponentRef, NameComponents, NameQualification,
-    NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode,
-    OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind,
-    PrimitiveIntegerType, ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr,
-    Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr,
-    UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
+    LogicalExpr, LogicalOperator, MemberAccessExpr, MemberAccessOperator, MemberVisibility,
+    MethodDecl, MethodModifier, ModuleImport, Name, NameComponent, NameComponentRef,
+    NameComponents, NameQualification, NameText, NumericLiteralExpr, ObjectAssignmentStatement,
+    ObjectCastExpr, ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode,
+    PresenceTestExpr, PresenceTestKind, PrimitiveIntegerType, ReturnStatement, SelectiveImport,
+    SelectiveImportItem, SelfExpr, Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind,
+    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
 };
 pub use dump::dump_ast;
 pub use parser::{

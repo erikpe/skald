@@ -109,6 +109,78 @@ fn comparison_punctuation_uses_longest_match_and_preserves_existing_tokens() {
 }
 
 #[test]
+fn logical_punctuation_uses_longest_match_with_precise_utf8_spans() {
+    let (sources, source_id, output) = lex_text("left&&right ||\nα&&β // && ||\n&&");
+    let source = sources.get(source_id).unwrap();
+
+    let logical_tokens: Vec<_> = output
+        .tokens
+        .iter()
+        .filter(|token| matches!(token.kind, TokenKind::AndAnd | TokenKind::OrOr))
+        .collect();
+    assert_eq!(
+        logical_tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::AndAnd,
+            TokenKind::OrOr,
+            TokenKind::AndAnd,
+            TokenKind::AndAnd,
+        ]
+    );
+    assert!(logical_tokens
+        .iter()
+        .all(|token| source.slice(token.span.range()).unwrap().len() == 2));
+    assert_eq!(
+        logical_tokens[2].span.range().start(),
+        "left&&right ||\nα".len()
+    );
+
+    let dump = dump_tokens(source, &output.tokens);
+    assert_eq!(dump, dump_tokens(source, &output.tokens));
+    assert_eq!(dump.matches("AND_AND").count(), 3);
+    assert_eq!(dump.matches("OR_OR").count(), 1);
+}
+
+#[test]
+fn malformed_logical_punctuation_is_split_deterministically() {
+    let (sources, source_id, output) = lex_text("& | &&& |||");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::Invalid,
+            TokenKind::Invalid,
+            TokenKind::AndAnd,
+            TokenKind::Invalid,
+            TokenKind::OrOr,
+            TokenKind::Invalid,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["&", "|", "&&", "&", "||", "|", ""]
+    );
+    assert_eq!(output.diagnostics.len(), 4);
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == UNEXPECTED_CHARACTER));
+}
+
+#[test]
 fn recognizes_string_literals_as_single_full_span_tokens() {
     let (sources, source_id, output) = lex_text("\"plain\" \"a\\n\\x42\\0\"");
     let source = sources.get(source_id).unwrap();

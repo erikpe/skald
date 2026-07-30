@@ -1,6 +1,6 @@
 # Short-Circuit Boolean Expressions Roadmap
 
-Status: in progress; SC0 through SC5 are complete and SC6 is next.
+Status: in progress; SC0 through SC6 are complete and SC7 is next.
 
 This roadmap implements Skald's frozen exact-boolean `&&` and `||` profile.
 The feature is complete only when arbitrary currently valid `bool`-producing
@@ -465,25 +465,25 @@ surface.
 **Purpose:** Establish the complete source and diagnostic shape without
 prematurely advertising the feature.
 
-- [ ] Add distinct longest-match `&&` and `||` tokens with precise spans and
+- [x] Add distinct longest-match `&&` and `||` tokens with precise spans and
       deterministic debug vocabulary.
-- [ ] Insert left-associative logical-and and logical-or parser tiers at the
+- [x] Insert left-associative logical-and and logical-or parser tiers at the
       frozen precedence, preserving comparison/contextual-`is`, grouping,
       prefix/postfix `!`, recovery, UTF-8 offsets, and nesting limits.
-- [ ] Preserve operator identity and source grouping through AST and resolved
+- [x] Preserve operator identity and source grouping through AST and resolved
       IR without constructing eager binary semantics.
-- [ ] Add focused recovery for missing right operands and malformed adjacent
+- [x] Add focused recovery for missing right operands and malformed adjacent
       punctuation including lone `&`, lone `|`, `&&&`, and `|||`.
-- [ ] Type-check both operands in source order and require exact `bool` on
+- [x] Type-check both operands in source order and require exact `bool` on
       each; diagnostics name the operator and both actual types without
       suggesting a cast or truthiness conversion.
-- [ ] Retain the checked operator and operand information needed for one
+- [x] Retain the checked operator and operand information needed for one
       focused downstream-completion diagnostic, but do not emit logical HIR
       during ordinary compilation until SC7 removes the gate.
-- [ ] Add deterministic token, AST, resolved, and gated-diagnostic
+- [x] Add deterministic token, AST, resolved, and gated-diagnostic
       observations for precedence, associativity, grouping, nesting, and
       invalid types.
-- [ ] Keep living status and implemented-feature documentation unchanged;
+- [x] Keep living status and implemented-feature documentation unchanged;
       grammar and frozen-design text already specify the eventual language.
 
 **Tests:** Lexer matrices for `&`, `|`, `&&`, `||`, longer malformed runs,

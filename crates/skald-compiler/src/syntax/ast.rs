@@ -607,6 +607,7 @@ pub enum Expression {
     Boolean(BooleanExpr),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
+    Logical(LogicalExpr),
     TypeTest(TypeTestExpr),
     PresenceTest(PresenceTestExpr),
     Unwrap(UnwrapExpr),
@@ -631,6 +632,7 @@ impl Expression {
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
+            Self::Logical(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
@@ -873,6 +875,21 @@ pub enum BinaryOperator {
 pub struct BinaryExpr {
     pub left: Box<Expression>,
     pub operator: BinaryOperator,
+    pub operator_span: Span,
+    pub right: Box<Expression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LogicalOperator {
+    And,
+    Or,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LogicalExpr {
+    pub left: Box<Expression>,
+    pub operator: LogicalOperator,
     pub operator_span: Span,
     pub right: Box<Expression>,
     pub span: Span,

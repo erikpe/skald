@@ -440,13 +440,15 @@ fn malformed_logical_hir_and_mir_are_rejected() {
 }
 
 #[test]
-fn source_logical_syntax_remains_unavailable() {
-    let mut sources = crate::source::SourceDatabase::new();
-    let source = sources.add("test.ska", "true && false");
-    let output = crate::lexer::lex(sources.get(source).unwrap());
-    assert_eq!(output.diagnostics.len(), 2);
+fn source_logical_lowering_remains_behind_the_completion_gate() {
+    let output = crate::test_support::type_check_source(concat!(
+        "fn evaluate() -> bool { return true && false; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1);
     assert!(output
         .diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.code == crate::lexer::UNEXPECTED_CHARACTER));
+        .all(|diagnostic| diagnostic.code == crate::typeck::LOGICAL_EXPRESSION_NOT_ENABLED));
 }

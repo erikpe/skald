@@ -14,7 +14,9 @@ progress. Completed roadmaps and resolved discovery records move to
   inline-object and class-optional lifetimes, and shared/array ownership are
   complete. Bounded optional views, selected failure paths, condition and loop
   cleanup, and return-result securing are also complete; the next task adds
-  source syntax and exact type selection behind the completion gate. The
+  arbitrary source operands and consumers by removing the completion gate.
+  Source tokens, precedence, AST/resolved shape, and exact-`bool` selection
+  are complete behind that gate. The
   roadmap depends on the completed eager boolean,
   control-flow, lifecycle, optional, shared-ownership, array, cast, and panic
   foundations.

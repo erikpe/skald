@@ -280,6 +280,7 @@ impl CallableChecker<'_, '_> {
                     self.static_expression_type(&binary.left)
                 }
             },
+            ResolvedExpression::Logical(_) => Type::Bool,
             ResolvedExpression::IntegerCast(cast) => match cast.target {
                 crate::resolve::ResolvedIntegerType::I64 => Type::I64,
                 crate::resolve::ResolvedIntegerType::U64 => Type::U64,

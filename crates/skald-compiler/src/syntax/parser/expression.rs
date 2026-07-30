@@ -5,7 +5,70 @@ use super::*;
 impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expression> {
         let source = self.parse_additive()?;
-        self.parse_expression_suffix(source)
+        let first = self.parse_expression_suffix(source)?;
+        if !self.at_any(&[TokenKind::AndAnd, TokenKind::OrOr]) {
+            return Some(first);
+        }
+        self.parse_logical_tail(first)
+    }
+
+    fn parse_logical_tail(&mut self, first: Expression) -> Option<Expression> {
+        let mut operands = vec![first];
+        let mut operators = Vec::new();
+
+        while self.at_any(&[TokenKind::AndAnd, TokenKind::OrOr]) {
+            let token = self.advance();
+            let (operator, spelling) = match token.kind {
+                TokenKind::AndAnd => (LogicalOperator::And, "&&"),
+                TokenKind::OrOr => (LogicalOperator::Or, "||"),
+                _ => unreachable!("logical parser accepted a non-logical token"),
+            };
+            if !self.starts_expression() {
+                self.report(
+                    EXPECTED_EXPRESSION,
+                    format!("expected a right operand after `{spelling}`"),
+                    self.peek().span,
+                    "expected an expression here",
+                );
+                return None;
+            }
+
+            let source = self.parse_additive()?;
+            let right = self.parse_expression_suffix(source)?;
+            while operators.last().is_some_and(|(pending, _)| {
+                logical_precedence(*pending) >= logical_precedence(operator)
+            }) {
+                self.reduce_logical_expression(&mut operands, operators.pop().unwrap());
+            }
+            operators.push((operator, token.span));
+            operands.push(right);
+        }
+
+        while let Some(operator) = operators.pop() {
+            self.reduce_logical_expression(&mut operands, operator);
+        }
+        operands.pop()
+    }
+
+    fn reduce_logical_expression(
+        &self,
+        operands: &mut Vec<Expression>,
+        (operator, operator_span): (LogicalOperator, Span),
+    ) {
+        let right = operands
+            .pop()
+            .expect("logical operator must have a right operand");
+        let left = operands
+            .pop()
+            .expect("logical operator must have a left operand");
+        let span = self.cover(left.span(), right.span());
+        operands.push(Expression::Logical(LogicalExpr {
+            left: Box::new(left),
+            operator,
+            operator_span,
+            right: Box::new(right),
+            span,
+        }));
     }
 
     fn parse_expression_suffix(&mut self, mut source: Expression) -> Option<Expression> {
@@ -143,32 +206,46 @@ impl Parser<'_> {
     }
 
     fn parse_unary(&mut self) -> Option<Expression> {
-        if self.at_any(&[TokenKind::Minus, TokenKind::Bang, TokenKind::Star]) {
-            let operator = self.advance();
-            let operand = self.with_syntax_nesting(operator.span, |parser| parser.parse_unary())?;
-            let span = self.cover(operator.span, operand.span());
-            return Some(Expression::Unary(UnaryExpr {
-                operator: match operator.kind {
+        let mut prefixes = Vec::new();
+        while self.at_any(&[TokenKind::Minus, TokenKind::Bang, TokenKind::Star]) {
+            if self.nesting_depth + prefixes.len() >= MAX_SYNTAX_NESTING {
+                self.report_excessive_nesting(self.peek().span);
+                self.recover_from_excessive_nesting();
+                return None;
+            }
+            let token = self.advance();
+            prefixes.push((
+                match token.kind {
                     TokenKind::Minus => UnaryOperator::Negate,
                     TokenKind::Bang => UnaryOperator::LogicalNot,
                     TokenKind::Star => UnaryOperator::Dereference,
                     _ => unreachable!("unary parser accepted a non-unary operator"),
                 },
-                operator_span: operator.span,
-                operand: Box::new(operand),
+                token.span,
+            ));
+        }
+
+        self.nesting_depth += prefixes.len();
+        let operand = if self.starts_integer_cast() {
+            self.parse_integer_cast()
+        } else if self.starts_object_cast() {
+            self.parse_object_cast()
+        } else {
+            self.parse_postfix()
+        };
+        self.nesting_depth -= prefixes.len();
+
+        let mut expression = operand?;
+        for (operator, operator_span) in prefixes.into_iter().rev() {
+            let span = self.cover(operator_span, expression.span());
+            expression = Expression::Unary(UnaryExpr {
+                operator,
+                operator_span,
+                operand: Box::new(expression),
                 span,
-            }));
+            });
         }
-
-        if self.starts_integer_cast() {
-            return self.parse_integer_cast();
-        }
-
-        if self.starts_object_cast() {
-            return self.parse_object_cast();
-        }
-
-        self.parse_postfix()
+        Some(expression)
     }
 
     fn starts_integer_cast(&self) -> bool {
@@ -583,5 +660,12 @@ const fn comparison_operator(kind: TokenKind) -> Option<BinaryOperator> {
         TokenKind::Greater => Some(BinaryOperator::GreaterThan),
         TokenKind::GreaterEqual => Some(BinaryOperator::GreaterEqual),
         _ => None,
+    }
+}
+
+const fn logical_precedence(operator: LogicalOperator) -> u8 {
+    match operator {
+        LogicalOperator::And => 2,
+        LogicalOperator::Or => 1,
     }
 }

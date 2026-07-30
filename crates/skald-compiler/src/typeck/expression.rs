@@ -17,6 +17,7 @@ use super::{
 
 mod alias;
 mod call;
+mod logical;
 mod object_view_relation;
 mod place;
 mod primitive;
@@ -108,6 +109,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             ResolvedExpression::Binary(binary) => self.check_binary_expression(binary),
+            ResolvedExpression::Logical(logical) => self.check_logical_expression(logical),
             ResolvedExpression::TypeTest(test) => self.check_type_test(test),
             ResolvedExpression::IntegerCast(cast) => self.check_integer_cast(cast),
             ResolvedExpression::ObjectCast(cast) => {

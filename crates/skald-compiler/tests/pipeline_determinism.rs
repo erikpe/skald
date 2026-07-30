@@ -44,6 +44,9 @@ const EAGER_BOOLEAN_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_EAGER_BOOLEAN_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_DIAGNOSTIC_TEST_NAME: &str =
     "eager_boolean_diagnostics_are_deterministic_across_processes";
+const SHORT_CIRCUIT_SOURCE_HELPER_OUTPUT: &str = "SKALD_SHORT_CIRCUIT_SOURCE_DETERMINISM_OUTPUT";
+const SHORT_CIRCUIT_SOURCE_TEST_NAME: &str =
+    "short_circuit_source_products_are_deterministic_across_processes";
 const STRING_HELPER_OUTPUT: &str = "SKALD_STRING_DETERMINISM_OUTPUT";
 const STRING_TEST_NAME: &str = "string_phase_products_are_deterministic_across_processes";
 const STRING_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_STRING_DIAGNOSTIC_DETERMINISM_OUTPUT";
@@ -139,6 +142,16 @@ fn eager_boolean_diagnostics_are_deterministic_across_processes() {
         EAGER_BOOLEAN_DIAGNOSTIC_HELPER_OUTPUT,
         EAGER_BOOLEAN_DIAGNOSTIC_TEST_NAME,
         eager_boolean_diagnostic_dump,
+    );
+}
+
+#[test]
+fn short_circuit_source_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "short-circuit-source",
+        SHORT_CIRCUIT_SOURCE_HELPER_OUTPUT,
+        SHORT_CIRCUIT_SOURCE_TEST_NAME,
+        short_circuit_source_phase_dump,
     );
 }
 
@@ -586,6 +599,33 @@ fn eager_boolean_diagnostic_dump() -> String {
     type_error_phase_dump(
         "eager-boolean-diagnostics.ska",
         include_str!("../../../tests/golden/compile_fail/eager_boolean_operator_types.ska"),
+    )
+}
+
+fn short_circuit_source_phase_dump() -> String {
+    let text = concat!(
+        "fn selected(a: bool, b: bool, c: bool) -> bool { return (a || b) && !c; }\n",
+        "fn rejected(left: i64, right: u64) -> bool { return left && right || true; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("short-circuit-source.ska", text);
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.hir.is_none());
+
+    format!(
+        "TOKENS\n{}AST\n{}RESOLVED\n{}DIAGNOSTICS\n{}",
+        dump_tokens(source, &lexed.tokens),
+        dump_ast(&parsed.ast),
+        dump_resolved(&resolved.program),
+        render_diagnostics(&sources, &checked.diagnostics),
     )
 }
 

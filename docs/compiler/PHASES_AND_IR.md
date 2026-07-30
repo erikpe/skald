@@ -288,11 +288,17 @@ affected continuations distinct until their lifetime states are compatible.
 Consumer-bounded optional payload views retain their immediate-consumer
 lifetime; they are not promoted to full-expression temporaries.
 
-MIR implements this internal representation without yet accepting logical
-source expressions. A callable body may declare deterministic path-condition
-identities. Each identity names canonical compiler-owned
-`bool` activation storage, an optional earlier parent condition, distinct
-active and inactive predecessors, and their exact merge block. The
+The source pipeline recognizes longest-match `&&` and `||`, preserves their
+precedence and grouping in distinct AST and resolved nodes, and checks both
+operands in source order for exact `bool`. A dedicated type-checking completion
+gate then rejects every otherwise valid logical source expression before HIR;
+ordinary compilation cannot yet reach the internal lowering described here.
+
+MIR implements the internal representation behind that gate. A callable body
+may declare deterministic path-condition identities. Each identity names
+canonical compiler-owned `bool` activation storage, an optional earlier parent
+condition, distinct active and inactive predecessors, and their exact merge
+block. The
 predecessors store `true` and `false` respectively before ordinary jumps to
 the merge. A dedicated target-independent value reads the activation storage;
 ordinary MIR branches consume that value.
