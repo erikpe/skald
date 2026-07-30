@@ -50,6 +50,41 @@ fn selects_exact_boolean_negation_equality_and_inequality() {
 }
 
 #[test]
+fn rejects_every_boolean_numeric_equality_direction_without_conversion() {
+    for (numeric_type, numeric_literal) in [("i64", "1"), ("u64", "1u"), ("u8", "1u8")] {
+        for operator in ["==", "!="] {
+            for (left, right, left_type, right_type) in [
+                ("true", numeric_literal, "bool", numeric_type),
+                (numeric_literal, "true", numeric_type, "bool"),
+            ] {
+                let source = format!(
+                    "fn invalid() -> bool {{ return {left} {operator} {right}; }} \
+                     fn main() -> i64 {{ return 0; }}"
+                );
+                let output = check_text(&source);
+                assert!(output.hir.is_none(), "{source}");
+                let diagnostic = output
+                    .diagnostics
+                    .iter()
+                    .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+                    .unwrap();
+
+                assert_eq!(
+                    diagnostic.message,
+                    "equality comparison requires operands of the same supported primitive type"
+                );
+                assert!(diagnostic.labels.iter().any(|label| label
+                    .message
+                    .contains(&format!("left operand has type `{left_type}`"))));
+                assert!(diagnostic.labels.iter().any(|label| label
+                    .message
+                    .contains(&format!("right operand has type `{right_type}`"))));
+            }
+        }
+    }
+}
+
+#[test]
 fn logical_negation_rejects_every_unsupported_operand_family_with_its_actual_type() {
     const CASES: &[(&str, &str)] = &[
         ("fn invalid(value: i64) -> bool { return !value; }", "i64"),

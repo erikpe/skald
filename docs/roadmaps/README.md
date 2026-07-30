@@ -6,13 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Eager boolean operators](EAGER_BOOLEAN_OPERATORS_ROADMAP.md) — Status: in
-  progress; EB2 is next. Implements prefix logical negation and
-  exact boolean equality through verified target-independent operations and
-  native x86-64 execution. It depends on the completed
-  boolean/conditional-control-flow and primitive-integer-operation roadmaps
-  plus the frozen primitive operator profile; short-circuit `&&` and `||` are
-  deliberately independent later work.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

@@ -188,10 +188,10 @@ The pipeline responsibilities are:
   `!` distinct from postfix unwrap by position. Syntax retains each predicate,
   unary or binary operand shape and span, or one primitive cast target and
   operand. It assigns no numeric meaning or target behavior.
-- Resolution preserves comparison and logical-negation shape. Primitive casts preserve their
-  primitive target without declaration lookup, while nominal and shared
-  object-cast targets continue through existing identity lookup; lower phases
-  never disambiguate cast kinds from source text.
+- Resolution preserves comparison and logical-negation shape. Primitive casts
+  preserve their primitive target without declaration lookup, while nominal
+  and shared object-cast targets continue through existing identity lookup;
+  lower phases never disambiguate cast kinds from source text.
 - Type checking is the sole owner of operation selection. It requires matching
   `i64`, `u64`, or `u8` comparison operands, admits `bool` only for equality
   and inequality, selects logical negation only for `bool`, or selects one of

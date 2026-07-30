@@ -37,6 +37,13 @@ const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_pro
 const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINISM_OUTPUT";
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
+const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
+const EAGER_BOOLEAN_TEST_NAME: &str =
+    "eager_boolean_phase_products_are_deterministic_across_processes";
+const EAGER_BOOLEAN_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_EAGER_BOOLEAN_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const EAGER_BOOLEAN_DIAGNOSTIC_TEST_NAME: &str =
+    "eager_boolean_diagnostics_are_deterministic_across_processes";
 const STRING_HELPER_OUTPUT: &str = "SKALD_STRING_DETERMINISM_OUTPUT";
 const STRING_TEST_NAME: &str = "string_phase_products_are_deterministic_across_processes";
 const STRING_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_STRING_DIAGNOSTIC_DETERMINISM_OUTPUT";
@@ -112,6 +119,26 @@ fn integer_operation_phase_products_are_deterministic_across_processes() {
         INTEGER_OPERATION_HELPER_OUTPUT,
         INTEGER_OPERATION_TEST_NAME,
         integer_operation_phase_dump,
+    );
+}
+
+#[test]
+fn eager_boolean_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "eager-booleans",
+        EAGER_BOOLEAN_HELPER_OUTPUT,
+        EAGER_BOOLEAN_TEST_NAME,
+        eager_boolean_phase_dump,
+    );
+}
+
+#[test]
+fn eager_boolean_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "eager-boolean-diagnostics",
+        EAGER_BOOLEAN_DIAGNOSTIC_HELPER_OUTPUT,
+        EAGER_BOOLEAN_DIAGNOSTIC_TEST_NAME,
+        eager_boolean_diagnostic_dump,
     );
 }
 
@@ -549,6 +576,19 @@ fn integer_operation_phase_dump() -> String {
     ))
 }
 
+fn eager_boolean_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/eager_boolean_operators.ska"
+    ))
+}
+
+fn eager_boolean_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "eager-boolean-diagnostics.ska",
+        include_str!("../../../tests/golden/compile_fail/eager_boolean_operator_types.ska"),
+    )
+}
+
 fn private_initializer_phase_dump() -> String {
     complete_phase_dump(concat!(
         "class Secret { value: i64; init(value: i64) { self.value = value; } ",
@@ -568,8 +608,12 @@ fn private_initializer_diagnostic_dump() -> String {
         "fn main() -> i64 { var key: Key = Key(); ",
         "var choice: Choice = Choice(key); return 0; }\n",
     );
+    type_error_phase_dump("private-initializer-diagnostic.ska", text)
+}
+
+fn type_error_phase_dump(name: &str, text: &str) -> String {
     let mut sources = SourceDatabase::new();
-    let source_id = sources.add("private-initializer-diagnostic.ska", text);
+    let source_id = sources.add(name, text);
     let source = sources.get(source_id).unwrap();
     let lexed = lex(source);
     assert!(lexed.diagnostics.is_empty());

@@ -111,6 +111,8 @@ fn rejects_every_predicate_for_each_noninteger_operand_family_before_hir() {
         "fn compare(left: i64?, right: i64?) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
         "fn notify() -> unit {} fn compare() -> bool { return notify() {operator} notify(); } fn main() -> i64 { return 0; }",
         "class Item { init() {} } fn compare(ref left: Item, ref right: Item) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn compare(left: shared Item, right: shared Item) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
+        "fn compare(ref left: Obj, ref right: Obj) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
         "fn compare(left: i64[], right: i64[]) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
     ];
 

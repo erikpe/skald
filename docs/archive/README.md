@@ -53,6 +53,7 @@ Archived plans:
 - [Panic and unrecoverable failure reporting](PANIC_ROADMAP.md)
 - [While loops and loop exits](WHILE_LOOPS_ROADMAP.md)
 - [Cyclic module imports](CYCLIC_IMPORTS_ROADMAP.md)
+- [Eager boolean operators](EAGER_BOOLEAN_OPERATORS_ROADMAP.md)
 
 Resolved string-design inputs:
 

@@ -49,8 +49,11 @@ fn main() -> i64 {
 
     var optional: bool? = false;
     ska_rt_println_bool(!optional!);
+    ska_rt_println_bool(!(optional is none));
+    ska_rt_println_bool(((i64) 1u8 == 1) == !false);
 
     var probe: Probe = Probe(false);
+    ska_rt_println_bool(probe.flag == false);
     ska_rt_println_bool(probe.inverted());
     ska_rt_println_bool(!probe.observe(false, 1));
     ska_rt_println_i64(probe.sequence);

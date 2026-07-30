@@ -1,6 +1,6 @@
 # Eager Boolean Operators Roadmap
 
-Status: in progress; EB2 is next.
+Status: complete; EB0 through EB2 are implemented and verified.
 
 This roadmap implements the eager part of Skald's frozen boolean operator
 profile: prefix logical negation and exact boolean equality and inequality. It
@@ -88,7 +88,7 @@ structure.
 
 - [x] EB0 — Establish verified eager-boolean IR operations
 - [x] EB1 — Enable eager boolean source expressions end to end
-- [ ] EB2 — Harden and promote eager boolean operators
+- [x] EB2 — Harden and promote eager boolean operators
 
 ## PR-sized implementation sequence
 
@@ -193,25 +193,25 @@ short-circuit support.
 observations, and no rollout-only structure before a short-circuit roadmap
 builds on boolean expressions.
 
-- [ ] Complete valid and invalid operator matrices across literals, bindings,
+- [x] Complete valid and invalid operator matrices across literals, bindings,
       fields, calls, grouping, explicit integer casts around unrelated
       operands, optional unwrap, assignments, conditions, and returns.
-- [ ] Prove prefix/postfix and precedence boundaries including `!!flag`,
+- [x] Prove prefix/postfix and precedence boundaries including `!!flag`,
       `!optional_flag!`, `!left == right`, `left == !right`,
       `!(left == right)`, contextual `is`, and ungrouped chain rejection.
-- [ ] Add independent-process determinism coverage for diagnostics and phase
+- [x] Add independent-process determinism coverage for diagnostics and phase
       dumps plus stable assembly/native observations where not already owned by
       focused tests.
-- [ ] Audit touched lexer, syntax, resolution, type-check, HIR, MIR, verifier,
+- [x] Audit touched lexer, syntax, resolution, type-check, HIR, MIR, verifier,
       backend, facade, dump, and test owners by responsibility; resolve
       high-priority hotspots and place any material out-of-scope findings in
       an indexed discoveries document.
-- [ ] Remove roadmap codes and rollout language from living code, tests, and
+- [x] Remove roadmap codes and rollout language from living code, tests, and
       general documentation; retain them only in this historical roadmap.
-- [ ] Confirm documentation links, status wording, ABI non-change, repository
+- [x] Confirm documentation links, status wording, ABI non-change, repository
       artifact cleanliness, and the boundary reserving `&&` and `||` for
       structured short-circuit work.
-- [ ] Mark this roadmap complete, move it to `docs/archive/`, update the active
+- [x] Mark this roadmap complete, move it to `docs/archive/`, update the active
       and archive indexes, and repair incoming relative links.
 
 **Tests:** Complete eager-boolean source and IR matrices; compile-failure and

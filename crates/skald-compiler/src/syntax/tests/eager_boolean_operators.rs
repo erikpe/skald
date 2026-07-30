@@ -90,6 +90,32 @@ fn logical_not_participates_in_comparison_and_cast_precedence() {
 }
 
 #[test]
+fn comparison_with_logical_not_precedes_contextual_is() {
+    let (_, output) = parse_text(concat!(
+        "fn inspect(flag: bool, expected: bool) -> bool {\n",
+        "  return !flag == expected is some;\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors());
+
+    let Expression::PresenceTest(test) = return_value(function(&output.ast, 0)) else {
+        panic!("contextual `is` must remain outside the comparison");
+    };
+    let Expression::Binary(comparison) = test.source.as_ref() else {
+        panic!("presence source must be the comparison");
+    };
+    assert_eq!(comparison.operator, BinaryOperator::Equal);
+    assert!(matches!(
+        comparison.left.as_ref(),
+        Expression::Unary(UnaryExpr {
+            operator: UnaryOperator::LogicalNot,
+            ..
+        })
+    ));
+}
+
+#[test]
 fn grouped_postfix_unwrap_is_not_reinterpreted_as_an_object_cast() {
     let (_, output) = parse_text(concat!(
         "fn unwrap(flag: bool?) -> bool { return (flag)!; }\n",
@@ -101,6 +127,31 @@ fn grouped_postfix_unwrap_is_not_reinterpreted_as_an_object_cast() {
         panic!("expected postfix unwrap");
     };
     assert!(matches!(unwrap.source.as_ref(), Expression::Grouped(_)));
+}
+
+#[test]
+fn logical_not_does_not_make_comparison_chains_associative() {
+    let (_, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var invalid: bool = !first == second != !third;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    let diagnostics: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_COMPARISON)
+        .collect();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(
+        diagnostics[0].message,
+        "comparison operators cannot be chained"
+    );
+    assert!(matches!(
+        function(&output.ast, 0).body.statements.last(),
+        Some(Statement::Return(_))
+    ));
 }
 
 #[test]

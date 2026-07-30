@@ -237,8 +237,10 @@ recovery. Resolution and type-check tests own source-shaped negation, exact
 diagnostics. HIR/MIR dumps and verifier tests own selected eager scalar
 operations; backend and native goldens own canonical truth tables,
 left-to-right exactly-once evaluation, optional-unwrapped booleans, calls,
-fields, assignments, conditions, and returns. Short-circuit behavior is not
-part of this matrix.
+fields, assignments, conditions, returns, and composition with unrelated
+integer casts. Cross-process tests compare the complete token, AST, resolved,
+HIR, MIR, diagnostic, and assembly observations. Short-circuit behavior is
+not part of this matrix.
 
 ## Private initializer coverage
 
