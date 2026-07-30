@@ -10,7 +10,13 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+- [Short-Circuit Boolean Expressions Roadmap](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
+  — planned; implement exact-`bool` `&&` and `||` with skipped effects,
+  path-dependent lifetime and cleanup, arbitrary valid operands, and every
+  current expression consumer. The next task establishes conditional
+  full-expression state in verified MIR. It depends on the completed eager
+  boolean, control-flow, lifecycle, optional, shared-ownership, array, cast,
+  and panic foundations.
 
 ## Design proposals
 
