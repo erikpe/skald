@@ -868,6 +868,21 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::PrimitiveCastRangeCheck {
+            check,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "primitive-cast-range-check f64.{} source={} result={} finite trunc=toward-zero -> {success_target} else {failure_target}",
+                check.relation.target.name(),
+                check.source,
+                check.result,
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::CheckedCast {
             binding,
             success_target,
@@ -1191,6 +1206,13 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 operation.source.name(),
                 operation.target.name(),
                 operation.kind().mnemonic()
+            );
+        }
+        MirRvalueKind::CheckedF64ToInteger { relation, operand } => {
+            let _ = write!(
+                output,
+                "checked-cast.f64.{} trunc=toward-zero {operand}",
+                relation.target.name()
             );
         }
         MirRvalueKind::TypeTest { source, target } => {

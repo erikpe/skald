@@ -268,22 +268,33 @@ impl BodyLowerer<'_> {
         span: crate::source::Span,
     ) -> (StorageId, MirType) {
         debug_assert!(ty.is_scalar_value());
-        let storage = StorageId::new(self.input.callable, self.storage.len());
-        self.storage.push(MirStorage {
-            id: storage,
-            source: None,
-            name: format!("spill{}", storage.index()),
-            kind: MirStorageKind::ScalarSpill,
-            ty,
-            span,
-        });
-        self.track_full_expression_storage(storage, span);
+        let storage = self.new_scalar_spill_storage("spill", ty, span);
         self.emit(MirInstruction::Store(MirStore {
             destination: storage.into(),
             value,
             span,
         }));
         (storage, ty)
+    }
+
+    pub(super) fn new_scalar_spill_storage(
+        &mut self,
+        name: &str,
+        ty: MirType,
+        span: crate::source::Span,
+    ) -> StorageId {
+        debug_assert!(ty.is_scalar_value());
+        let storage = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id: storage,
+            source: None,
+            name: format!("{name}{}", storage.index()),
+            kind: MirStorageKind::ScalarSpill,
+            ty,
+            span,
+        });
+        self.track_full_expression_storage(storage, span);
+        storage
     }
 
     pub(super) fn assign(

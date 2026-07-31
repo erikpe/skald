@@ -71,6 +71,14 @@ pub enum MirTerminator {
         failure_target: BlockId,
         span: Span,
     },
+    /// Proves the finite, truncation-toward-zero, and target-range relation
+    /// before the success block performs its matching conversion.
+    PrimitiveCastRangeCheck {
+        check: super::primitive::MirPrimitiveCastRangeCheck,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
     /// Performs a metadata check and establishes one full-expression cast
     /// carrier only on success.
     CheckedCast {
@@ -157,10 +165,11 @@ pub enum MirTerminationReason {
     ShiftCountOutOfRange,
     IntegerDivisionByZero,
     IntegerRemainderByZero,
+    PrimitiveCastOutOfRange,
 }
 
 impl MirTerminationReason {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -172,6 +181,7 @@ impl MirTerminationReason {
         Self::ShiftCountOutOfRange,
         Self::IntegerDivisionByZero,
         Self::IntegerRemainderByZero,
+        Self::PrimitiveCastOutOfRange,
     ];
 
     pub const fn mnemonic(self) -> &'static str {
@@ -187,6 +197,7 @@ impl MirTerminationReason {
             Self::ShiftCountOutOfRange => "shift-count-out-of-range",
             Self::IntegerDivisionByZero => "integer-division-by-zero",
             Self::IntegerRemainderByZero => "integer-remainder-by-zero",
+            Self::PrimitiveCastOutOfRange => "primitive-cast-out-of-range",
         }
     }
 }
@@ -202,6 +213,7 @@ impl MirTerminator {
             | Self::Branch { span, .. }
             | Self::ShiftCountCheck { span, .. }
             | Self::IntegerDivisorCheck { span, .. }
+            | Self::PrimitiveCastRangeCheck { span, .. }
             | Self::CheckedCast { span, .. }
             | Self::SharedCast { span, .. }
             | Self::OptionalUnwrap { span, .. }
@@ -235,6 +247,11 @@ impl MirTerminator {
                 ..
             } => [Some(*success_target), Some(*failure_target), None],
             Self::IntegerDivisorCheck {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::PrimitiveCastRangeCheck {
                 success_target,
                 failure_target,
                 ..

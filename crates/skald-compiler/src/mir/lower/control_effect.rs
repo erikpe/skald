@@ -266,7 +266,8 @@ mod tests {
     use crate::{
         hir::{
             HirBinaryOperation, HirCheckedIntegerDivision, HirIntegerDivisionKind,
-            HirIntegerDivisionOperation, HirIntegerType, HirReturnValue, HirStatement,
+            HirIntegerDivisionOperation, HirIntegerType, HirLocalInitializer, HirPrimitiveCast,
+            HirPrimitiveType, HirReturnValue, HirStatement, Type,
         },
         test_support::type_check_source,
     };
@@ -298,6 +299,34 @@ mod tests {
                 (**left).clone(),
                 (**right).clone(),
             )));
+
+        assert!(expression_contains_control_effect(expression));
+    }
+
+    #[test]
+    fn checked_primitive_cast_is_control_affecting_with_a_pure_operand() {
+        let mut hir = type_check_source(concat!(
+            "fn exercise() -> unit { var value: bool = (bool) 1.5; }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ))
+        .hir
+        .unwrap();
+        let definition = hir
+            .definitions
+            .get_mut_for_test(crate::identity::FunctionId::new(0))
+            .unwrap();
+        definition.locals[0].ty = Type::I64;
+        let HirStatement::Local(local) = &mut definition.body.statements[0] else {
+            unreachable!()
+        };
+        let HirLocalInitializer::Value(expression) = &mut local.initializer else {
+            unreachable!()
+        };
+        let HirExpressionKind::PrimitiveCast { operation, .. } = &mut expression.kind else {
+            unreachable!()
+        };
+        *operation = HirPrimitiveCast::new(HirPrimitiveType::F64, HirPrimitiveType::I64);
+        expression.ty = Type::I64;
 
         assert!(expression_contains_control_effect(expression));
     }

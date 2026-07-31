@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST5 is next.
+Status: in progress; CAST6 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -81,7 +81,7 @@ clean checkout.
 - [x] CAST2 — Execute identity and boolean-boundary casts
 - [x] CAST3 — Execute integer-to-floating casts
 - [x] CAST4 — Enable every non-failing cast from source
-- [ ] CAST5 — Establish verified checked floating-to-integer control flow
+- [x] CAST5 — Establish verified checked floating-to-integer control flow
 - [ ] CAST6 — Execute checked floating-to-integer casts
 - [ ] CAST7 — Enable checked floating-to-integer casts from source
 - [ ] CAST8 — Harden and promote the complete matrix
@@ -273,28 +273,28 @@ HIR with a focused temporary diagnostic.
 as explicit target-independent flow before machine thresholds or conversion
 sentinels can obscure the language rule.
 
-- [ ] Add the distinct primitive-cast-out-of-range static termination reason
+- [x] Add the distinct primitive-cast-out-of-range static termination reason
       and map it to the existing exact panic catalog message without changing
       the reporter ABI or link marker.
-- [ ] Model one checked `f64`-to-integer relation parameterized by exact target
+- [x] Model one checked `f64`-to-integer relation parameterized by exact target
       type. The relation denotes finite source, truncation toward zero, and
       membership of the truncated mathematical integer in the target range;
       it does not expose target comparison constants.
-- [ ] Lower checked typed HIR by evaluating and securing the source once, then
+- [x] Lower checked typed HIR by evaluating and securing the source once, then
       emitting the documented range-check diamond. Only the success edge may
       perform conversion, initialize the exact target result carrier, and
       reach the join; failure terminates.
-- [ ] Mark every checked primitive cast as control-affecting regardless of
+- [x] Mark every checked primitive cast as control-affecting regardless of
       operand purity, and integrate it with nested-expression spill,
       selected-path, loop, return, and cleanup planning.
-- [ ] Represent the success conversion distinctly enough that verification
+- [x] Represent the success conversion distinctly enough that verification
       can prove it is dominated by its matching check and cannot be reused for
       another source, target, or block.
-- [ ] Verify finite/post-truncation range semantics, exact source/target types,
+- [x] Verify finite/post-truncation range semantics, exact source/target types,
       branch destinations, success-only initialization, matching conversion,
       join reload, terminal failure, block-local definitions, and absence of
       a continuation from failure.
-- [ ] Add deterministic HIR/MIR vocabulary and malformed-model fixtures while
+- [x] Add deterministic HIR/MIR vocabulary and malformed-model fixtures while
       keeping source selection of all three checked cells disabled.
 
 **Tests:** Direct HIR/MIR checked shapes for `i64`, `u64`, and `u8`; nested

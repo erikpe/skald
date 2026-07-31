@@ -61,7 +61,10 @@ pub use optional::{
     MirOptionalViewEnd, MirPresenceTestKind,
 };
 pub use path_condition::MirPathCondition;
-pub use primitive::{MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType};
+pub use primitive::{
+    MirF64ToIntegerRange, MirF64ToIntegerRounding, MirPrimitiveCast, MirPrimitiveCastKind,
+    MirPrimitiveCastRangeCheck, MirPrimitiveType,
+};
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
     MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,

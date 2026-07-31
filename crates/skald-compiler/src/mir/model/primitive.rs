@@ -1,6 +1,6 @@
 //! Primitive value types and explicit cast semantics.
 
-use super::{MirIntegerType, MirType};
+use super::{MirIntegerType, MirTerminationReason, MirType, StorageId};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPrimitiveType {
@@ -161,4 +161,52 @@ impl MirPrimitiveCast {
     pub(crate) fn set_kind_for_test(&mut self, kind: MirPrimitiveCastKind) {
         self.kind = kind;
     }
+}
+
+/// The target-independent validity relation for one checked conversion from
+/// binary64 to an integer. A value satisfies this relation exactly when it is
+/// finite and its mathematical truncation toward zero belongs to `target`.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct MirF64ToIntegerRange {
+    pub target: MirIntegerType,
+}
+
+impl MirF64ToIntegerRange {
+    pub const fn source_type(self) -> MirType {
+        MirType::F64
+    }
+
+    pub const fn result_type(self) -> MirType {
+        self.target.operand_type()
+    }
+
+    pub const fn rounding(self) -> MirF64ToIntegerRounding {
+        MirF64ToIntegerRounding::TowardZero
+    }
+
+    pub const fn requires_finite(self) -> bool {
+        true
+    }
+
+    pub const fn failure_reason(self) -> MirTerminationReason {
+        MirTerminationReason::PrimitiveCastOutOfRange
+    }
+
+    pub fn operation(self) -> MirPrimitiveCast {
+        MirPrimitiveCast::new(MirPrimitiveType::F64, self.target.into())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirF64ToIntegerRounding {
+    TowardZero,
+}
+
+/// Exact scalar carriers participating in one checked floating-to-integer
+/// range-check diamond.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirPrimitiveCastRangeCheck {
+    pub relation: MirF64ToIntegerRange,
+    pub source: StorageId,
+    pub result: StorageId,
 }

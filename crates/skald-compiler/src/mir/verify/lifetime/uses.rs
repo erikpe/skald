@@ -145,6 +145,10 @@ pub(super) fn visit_terminator_storage(
             visit(check.divisor);
             visit(check.result);
         }
+        MirTerminator::PrimitiveCastRangeCheck { check, .. } => {
+            visit(check.source);
+            visit(check.result);
+        }
         MirTerminator::ReturnShared { owner, .. }
         | MirTerminator::ReturnOptionalShared { owner, .. } => visit(*owner),
         MirTerminator::Panic { message, .. } => visit_place(message, visit),
@@ -198,7 +202,8 @@ fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
         | MirRvalueKind::IntegerDivision { .. }
         | MirRvalueKind::Shift { .. }
         | MirRvalueKind::PrimitiveComparison { .. }
-        | MirRvalueKind::PrimitiveCast { .. } => {}
+        | MirRvalueKind::PrimitiveCast { .. }
+        | MirRvalueKind::CheckedF64ToInteger { .. } => {}
     }
 }
 

@@ -993,12 +993,18 @@ impl HirDumper {
                 });
             }
             HirExpressionKind::PrimitiveCast { operation, operand } => {
+                let failure = if operation.may_terminate() {
+                    " failure=primitive-cast-out-of-range"
+                } else {
+                    ""
+                };
                 self.typed_line(
                     &format!(
-                        "PrimitiveCast {} {}.{}",
+                        "PrimitiveCast {} {}.{}{}",
                         operation.kind().mnemonic(),
                         operation.source.name(),
-                        operation.target.name()
+                        operation.target.name(),
+                        failure,
                     ),
                     expression,
                 );

@@ -484,8 +484,10 @@ The
 has a cohesive source-to-native path for all twenty-two non-failing cells.
 Type checking selects them into typed HIR, lowering represents them as pure
 MIR, verification proves their exact operation and types, and x86-64 executes
-them inline. Only the three checked `f64`-to-integer cells remain gated before
-HIR until their explicit failure control flow is executable.
+them inline. Direct typed-HIR fixtures for the three checked
+`f64`-to-integer cells now lower to the verified control flow described below;
+source selection and target execution remain gated until that flow is
+executable.
 
 Lexing recognizes all five primitive type keywords. Syntax now uses one
 primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`
@@ -557,8 +559,8 @@ For ordinary primitive-cast rvalues, MIR verification now proves:
 - a legal source/target pair and selected semantic class;
 - exact operand, result-carrier, and rvalue types;
 - block-local definition-before-use for every pure cast;
-- rejection of the three checked semantic cells until their explicit control
-  flow exists; and, in the later checked representation,
+- rejection of a checked semantic class when it is encoded as an ordinary
+  primitive-cast rvalue;
 - one secured `f64` source, matching check, success-only conversion, unique
   result initialization, result join, and terminal catalog reason for every
   checked cast; and

@@ -556,8 +556,9 @@ external ABI. Integer arithmetic overflow is defined independently by the
 
 The complete primitive cast design is frozen for implementation. Source
 programs, typed HIR, verified MIR, and x86-64 execution support all twenty-two
-non-failing cells. The three checked `f64`-to-integer cells remain temporarily
-unavailable while their explicit failure control flow is implemented.
+non-failing cells. The three checked `f64`-to-integer cells have explicit
+verified MIR control flow but remain temporarily unavailable from source until
+target execution is implemented.
 An explicit primitive cast retains unary syntax `(T) source`, where `T` and
 the source type are each exactly one of `i64`, `u64`, `u8`, `f64`, and `bool`.
 All twenty-five source/target pairs are valid, including every same-type

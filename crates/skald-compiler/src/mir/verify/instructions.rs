@@ -759,6 +759,24 @@ impl Verifier<'_> {
                     }
                 }
             }
+            MirRvalueKind::CheckedF64ToInteger { relation, operand } => {
+                if rvalue.ty != relation.result_type() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "checked primitive cast result type mismatch",
+                    );
+                }
+                if let Some(ty) = self.verify_value_use(function, block, *operand, defined) {
+                    if ty != relation.source_type() {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "checked primitive cast source is not `f64`",
+                        );
+                    }
+                }
+            }
             MirRvalueKind::TypeTest { source, target } => {
                 self.verify_type_test(function, block, rvalue, source, *target)
             }

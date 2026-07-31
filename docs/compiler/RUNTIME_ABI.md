@@ -317,8 +317,9 @@ The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
 adds no public C symbol, runtime-managed value, or ABI-version change. All
 twenty-two pure cells are generated inline and retain the existing
-`ska_rt_abi_v6` marker; the remaining checked conversions are required to
-preserve that boundary as they are implemented.
+`ska_rt_abi_v6` marker. The compiler now catalogs the checked conversion's
+distinct termination reason and exact static message while preserving that
+marker; machine execution of the checked diamond remains pending.
 
 Identity, integer, boolean, and integer-to-`f64` conversions are entirely
 compiler-generated. Checked `f64`-to-integer conversion also remains

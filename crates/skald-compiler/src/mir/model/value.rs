@@ -246,6 +246,12 @@ pub enum MirRvalueKind {
         operation: super::primitive::MirPrimitiveCast,
         operand: ValueId,
     },
+    /// A success-only floating-to-integer conversion protected by the exact
+    /// matching `PrimitiveCastRangeCheck` predecessor.
+    CheckedF64ToInteger {
+        relation: super::primitive::MirF64ToIntegerRange,
+        operand: ValueId,
+    },
     /// A runtime metadata query. Statically known outcomes are constants.
     TypeTest {
         source: super::instruction::MirObjectView,

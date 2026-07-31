@@ -4,7 +4,7 @@ use crate::{
     hir::{HirCheckedShift, HirExpression, HirShiftDirection},
     mir::{
         MirInstruction, MirPlace, MirRvalueKind, MirShiftCountCheck, MirShiftDirection,
-        MirShiftOperation, MirStorage, MirStorageKind, MirStore, MirTerminator, StorageId, ValueId,
+        MirShiftOperation, MirStore, MirTerminator, StorageId, ValueId,
     },
 };
 
@@ -107,16 +107,6 @@ impl BodyLowerer<'_> {
         ty: crate::mir::MirType,
         span: crate::source::Span,
     ) -> StorageId {
-        let storage = StorageId::new(self.input.callable, self.storage.len());
-        self.storage.push(MirStorage {
-            id: storage,
-            source: None,
-            name: format!("shift-result{}", storage.index()),
-            kind: MirStorageKind::ScalarSpill,
-            ty,
-            span,
-        });
-        self.track_full_expression_storage(storage, span);
-        storage
+        self.new_scalar_spill_storage("shift-result", ty, span)
     }
 }

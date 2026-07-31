@@ -246,7 +246,9 @@ The frozen
 [primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
 defines legal target-independent MIR input. MIR can carry and verify all
 twenty-two pure cells, source type checking admits all of them, and the x86-64
-backend executes all of them. A target consumes
+backend executes all of them. MIR also carries and verifies the three checked
+diamonds, which x86-64 legality deliberately rejects until their CAST6
+selection is implemented. A target consumes
 already selected source type, target type, semantic class, and pure or checked
 control-flow shape. It never derives signedness from source spelling or
 substitutes a host language's conversion rules.

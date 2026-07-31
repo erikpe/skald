@@ -1,6 +1,7 @@
 use super::*;
 use crate::hir::{
-    HirExpressionKind, HirLocalInitializer, HirPrimitiveCast, HirPrimitiveType, HirStatement,
+    dump_hir, HirBinaryOperation, HirExpressionKind, HirLocalInitializer, HirPrimitiveCast,
+    HirPrimitiveType, HirStatement, Type,
 };
 
 const PRIMITIVE_TYPES: &[(HirPrimitiveType, MirPrimitiveType, &str)] = &[
@@ -188,6 +189,332 @@ fn primitive_cast_hir() -> crate::hir::HirProgram {
     .unwrap()
 }
 
+fn checked_primitive_cast_hir(target: HirPrimitiveType) -> crate::hir::HirProgram {
+    let mut hir = primitive_cast_hir();
+    let definition = hir
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let HirStatement::Local(local) = &mut definition.body.statements[0] else {
+        unreachable!()
+    };
+    let HirLocalInitializer::Value(expression) = &mut local.initializer else {
+        unreachable!()
+    };
+    let HirExpressionKind::PrimitiveCast { operand, .. } = &mut expression.kind else {
+        unreachable!()
+    };
+    operand.kind = HirExpressionKind::F64Bits(1.5f64.to_bits());
+    operand.ty = Type::F64;
+    select_checked_local_cast(&mut hir, FunctionId::new(0), target);
+    hir
+}
+
+fn select_checked_local_cast(
+    hir: &mut crate::hir::HirProgram,
+    function: FunctionId,
+    target: HirPrimitiveType,
+) {
+    let definition = hir.definitions.get_mut_for_test(function).unwrap();
+    definition.locals[0].ty = target.value_type();
+    let HirStatement::Local(local) = &mut definition.body.statements[0] else {
+        panic!("fixture must start with a local declaration");
+    };
+    let HirLocalInitializer::Value(expression) = &mut local.initializer else {
+        panic!("fixture local must have a scalar initializer");
+    };
+    let HirExpressionKind::PrimitiveCast { operation, operand } = &mut expression.kind else {
+        panic!("fixture initializer must be a primitive cast");
+    };
+    *operation = HirPrimitiveCast::new(HirPrimitiveType::F64, target);
+    assert_eq!(operand.ty, Type::F64);
+    expression.ty = target.value_type();
+}
+
+fn checked_primitive_cast_mir(target: HirPrimitiveType) -> MirProgram {
+    lower_hir(&checked_primitive_cast_hir(target))
+}
+
+#[test]
+fn lowers_and_verifies_all_checked_primitive_cast_diamonds() {
+    for &(hir_target, mir_target) in &[
+        (HirPrimitiveType::I64, MirIntegerType::I64),
+        (HirPrimitiveType::U64, MirIntegerType::U64),
+        (HirPrimitiveType::U8, MirIntegerType::U8),
+    ] {
+        let hir = checked_primitive_cast_hir(hir_target);
+        let hir_dump = dump_hir(&hir);
+        assert_eq!(hir_dump, dump_hir(&hir));
+        assert!(hir_dump.contains(&format!(
+            "PrimitiveCast checked_f64_to_integer f64.{} failure=primitive-cast-out-of-range",
+            mir_target.name()
+        )));
+
+        let mir = lower_hir(&hir);
+        verify_mir(&mir).unwrap();
+        let definition = mir.definitions.get(FunctionId::new(0)).unwrap();
+        let (check, success, failure) = definition
+            .body
+            .blocks
+            .iter()
+            .find_map(|block| match block.terminator {
+                Some(MirTerminator::PrimitiveCastRangeCheck {
+                    check,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => Some((check, success_target, failure_target)),
+                _ => None,
+            })
+            .expect("checked cast must contain a range-check terminator");
+        assert_eq!(check.relation.target, mir_target);
+        assert_eq!(check.relation.source_type(), MirType::F64);
+        assert_eq!(check.relation.result_type(), mir_target.operand_type());
+        assert!(check.relation.requires_finite());
+        assert_eq!(
+            check.relation.rounding(),
+            MirF64ToIntegerRounding::TowardZero
+        );
+        assert_eq!(
+            check.relation.failure_reason(),
+            MirTerminationReason::PrimitiveCastOutOfRange
+        );
+        assert!(matches!(
+            definition.block(success).unwrap().instructions.as_slice(),
+            [MirInstruction::Assign(_), MirInstruction::Assign(MirAssignment {
+                rvalue: MirRvalue {
+                    kind: MirRvalueKind::CheckedF64ToInteger { relation, .. },
+                    ..
+                },
+                ..
+            }), MirInstruction::Store(_)] if *relation == check.relation
+        ));
+        assert!(definition.block(failure).unwrap().instructions.is_empty());
+        assert!(matches!(
+            definition.block(failure).unwrap().terminator,
+            Some(MirTerminator::Terminate {
+                reason: MirTerminationReason::PrimitiveCastOutOfRange,
+                ..
+            })
+        ));
+
+        let dump = dump_mir(&mir);
+        assert_eq!(dump, dump_mir(&mir));
+        assert!(dump.contains(&format!(
+            "primitive-cast-range-check f64.{}",
+            mir_target.name()
+        )));
+        assert!(dump.contains(&format!(
+            "checked-cast.f64.{} trunc=toward-zero",
+            mir_target.name()
+        )));
+        assert!(dump.contains("terminate primitive-cast-out-of-range"));
+    }
+}
+
+#[test]
+fn checked_cast_is_control_affecting_and_spills_an_enclosing_eager_operand() {
+    let checked = {
+        let hir = checked_primitive_cast_hir(HirPrimitiveType::I64);
+        let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
+        let HirStatement::Local(local) = &definition.body.statements[0] else {
+            unreachable!()
+        };
+        let HirLocalInitializer::Value(expression) = &local.initializer else {
+            unreachable!()
+        };
+        expression.clone()
+    };
+    let mut hir = type_check_source(concat!(
+        "fn exercise() -> i64 { return 1 + 2; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    let definition = hir
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
+        unreachable!()
+    };
+    let crate::hir::HirReturnValue::Scalar(expression) = statement.value.as_mut().unwrap() else {
+        unreachable!()
+    };
+    let HirExpressionKind::Binary {
+        operation, right, ..
+    } = &mut expression.kind
+    else {
+        unreachable!()
+    };
+    *operation = HirBinaryOperation::AddI64;
+    **right = checked;
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+    let check = dump.find("primitive-cast-range-check f64.i64").unwrap();
+    let addition = dump.find("add.i64").unwrap();
+    assert!(check < addition);
+    let definition = mir.definitions.get(FunctionId::new(0)).unwrap();
+    assert!(definition.storage.iter().any(|storage| {
+        storage.kind == MirStorageKind::ScalarSpill
+            && storage.ty == MirType::I64
+            && storage.name.starts_with("spill")
+    }));
+    assert!(dump.find("add.i64").unwrap() < dump.find("return").unwrap());
+}
+
+#[test]
+fn checked_cast_stays_on_the_selected_path_of_a_loop_condition() {
+    let checked = {
+        let hir = checked_primitive_cast_hir(HirPrimitiveType::I64);
+        let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
+        let HirStatement::Local(local) = &definition.body.statements[0] else {
+            unreachable!()
+        };
+        let HirLocalInitializer::Value(expression) = &local.initializer else {
+            unreachable!()
+        };
+        expression.clone()
+    };
+    let mut hir = type_check_source(concat!(
+        "fn exercise() -> i64 { while (false && (bool) 1) {} return 0; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    let definition = hir
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let HirStatement::While(statement) = &mut definition.body.statements[0] else {
+        unreachable!()
+    };
+    let HirExpressionKind::Logical(logical) = &mut statement.condition.kind else {
+        unreachable!()
+    };
+    let HirExpressionKind::PrimitiveCast { operand, .. } = &mut logical.right.kind else {
+        unreachable!()
+    };
+    **operand = checked;
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let definition = mir.definitions.get(FunctionId::new(0)).unwrap();
+    let logical = &definition.body.logical_expressions[0];
+    let check_block = definition
+        .body
+        .blocks
+        .iter()
+        .find(|block| {
+            matches!(
+                block.terminator,
+                Some(MirTerminator::PrimitiveCastRangeCheck { .. })
+            )
+        })
+        .unwrap();
+    assert_eq!(check_block.id, logical.right_entry);
+
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("and condition"));
+    assert!(dump.contains("primitive-cast-range-check f64.i64"));
+}
+
+#[test]
+fn effectful_checked_cast_operands_are_evaluated_once_and_cleanup_after_the_join() {
+    let mut hir = type_check_source(concat!(
+        "class Trace {\n",
+        "  value: f64;\n",
+        "  init(value: f64) { self.value = value; }\n",
+        "  fn read() -> f64 { return self.value; }\n",
+        "  destroy {}\n",
+        "}\n",
+        "fn make(value: f64) -> shared Trace { return new Trace(value); }\n",
+        "fn exercise() -> unit { var value: bool = (bool) make(7.5)->read(); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    select_checked_local_cast(&mut hir, FunctionId::new(1), HirPrimitiveType::U64);
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let definition = mir.definitions.get(FunctionId::new(1)).unwrap();
+    assert_eq!(
+        definition
+            .body
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .filter(|instruction| matches!(instruction, MirInstruction::Call(_)))
+            .count(),
+        2,
+        "one producer call and one method call must each execute once"
+    );
+    let (join, failure) = definition
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::PrimitiveCastRangeCheck {
+                success_target,
+                failure_target,
+                ..
+            }) => {
+                let success = definition.block(success_target).unwrap();
+                let Some(MirTerminator::Goto { target: join, .. }) = success.terminator else {
+                    unreachable!()
+                };
+                Some((join, failure_target))
+            }
+            _ => None,
+        })
+        .unwrap();
+    assert!(definition.block(failure).unwrap().instructions.is_empty());
+    assert!(definition.body.blocks.iter().any(|block| {
+        block.id.index() >= join.index()
+            && block
+                .instructions
+                .iter()
+                .any(|instruction| matches!(instruction, MirInstruction::SharedRelease(_)))
+    }));
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("primitive-cast-range-check f64.u64"));
+    assert!(dump.contains("shared-release"));
+}
+
+#[test]
+fn checked_cast_secures_a_checked_operand_before_its_own_range_check() {
+    let mut hir = type_check_source(concat!(
+        "fn exercise(values: f64[]) -> unit {\n",
+        "  var value: bool = (bool) values[0];\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    select_checked_local_cast(&mut hir, FunctionId::new(0), HirPrimitiveType::U8);
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+    let operand_check = dump.find("array-position-check").unwrap();
+    let cast_check = dump.find("primitive-cast-range-check f64.u8").unwrap();
+    assert!(operand_check < cast_check);
+}
+
+#[test]
+fn checked_cast_execution_remains_reserved_for_cast6() {
+    let mir = checked_primitive_cast_mir(HirPrimitiveType::U8);
+    verify_mir(&mir).unwrap();
+    let error = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir)
+        .expect_err("CAST5 MIR must remain non-executable");
+    assert!(error
+        .to_string()
+        .contains("primitive cast `f64 -> u8` is not yet supported by this target"));
+}
+
 fn primitive_cast_mir(source: MirPrimitiveType, target: MirPrimitiveType) -> MirProgram {
     let mut mir = lower_text(concat!(
         "fn exercise() -> i64 { var value: u8 = (u8) 1u; return 0; }\n",
@@ -333,4 +660,219 @@ fn checked_cast_is_not_an_ordinary_mir_rvalue() {
             .collect::<Vec<_>>(),
         ["checked primitive cast requires explicit control flow"]
     );
+}
+
+fn checked_cast_block_indices(program: &MirProgram) -> (usize, usize, usize, usize) {
+    let definition = program.definitions.get(FunctionId::new(0)).unwrap();
+    checked_cast_block_indices_from_definition(definition)
+}
+
+fn checked_cast_verifier_errors(program: &MirProgram) -> String {
+    let errors = verify_mir(program).unwrap_err().to_string();
+    assert_eq!(errors, verify_mir(program).unwrap_err().to_string());
+    errors
+}
+
+#[test]
+fn verifier_rejects_checked_cast_type_relation_and_carrier_corruption() {
+    let mut wrong_source = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let definition = wrong_source
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let (check, _, _, _) = checked_cast_block_indices_from_definition(definition);
+    let source = match definition.body.blocks[check].terminator.as_ref().unwrap() {
+        MirTerminator::PrimitiveCastRangeCheck { check, .. } => check.source,
+        _ => unreachable!(),
+    };
+    definition.storage[source.index()].ty = MirType::I64;
+    assert!(checked_cast_verifier_errors(&wrong_source)
+        .contains("primitive cast source carrier must be an exact `f64` scalar spill"));
+
+    let mut wrong_result = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let definition = wrong_result
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let (check, _, _, _) = checked_cast_block_indices_from_definition(definition);
+    let result = match definition.body.blocks[check].terminator.as_ref().unwrap() {
+        MirTerminator::PrimitiveCastRangeCheck { check, .. } => check.result,
+        _ => unreachable!(),
+    };
+    definition.storage[result.index()].ty = MirType::F64;
+    assert!(checked_cast_verifier_errors(&wrong_result)
+        .contains("primitive cast result carrier must be an exact `i64` scalar spill"));
+
+    let mut mismatched_relation = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (check, success, _, _) = checked_cast_block_indices(&mismatched_relation);
+    let definition = mismatched_relation
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirTerminator::PrimitiveCastRangeCheck { check, .. } =
+        definition.body.blocks[check].terminator.as_mut().unwrap()
+    else {
+        unreachable!()
+    };
+    check.relation.target = MirIntegerType::U64;
+    let errors = checked_cast_verifier_errors(&mismatched_relation);
+    assert!(errors.contains("primitive cast result carrier must be an exact `u64` scalar spill"));
+    assert!(errors.contains("primitive cast success edge must load the secured source"));
+    assert!(errors.contains("checked floating-to-integer conversion is not protected"));
+    assert_eq!(success, 1);
+}
+
+#[test]
+fn verifier_rejects_checked_cast_success_failure_and_dominance_corruption() {
+    let mut wrong_conversion = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (_, success, _, _) = checked_cast_block_indices(&wrong_conversion);
+    let definition = wrong_conversion
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let conversion = definition.body.blocks[success]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(
+                    assignment.rvalue.kind,
+                    MirRvalueKind::CheckedF64ToInteger { .. }
+                ) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .unwrap();
+    let MirRvalueKind::CheckedF64ToInteger { relation, .. } = &mut conversion.rvalue.kind else {
+        unreachable!()
+    };
+    relation.target = MirIntegerType::U64;
+    let errors = checked_cast_verifier_errors(&wrong_conversion);
+    assert!(errors.contains("primitive cast success edge must load the secured source"));
+    assert!(errors.contains("checked primitive cast result type mismatch"));
+    assert!(errors.contains("checked floating-to-integer conversion is not protected"));
+
+    let mut wrong_operand = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (_, success, _, _) = checked_cast_block_indices(&wrong_operand);
+    let definition = wrong_operand
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let conversion = definition.body.blocks[success]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(
+                    assignment.rvalue.kind,
+                    MirRvalueKind::CheckedF64ToInteger { .. }
+                ) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .unwrap();
+    let MirRvalueKind::CheckedF64ToInteger { operand, .. } = &mut conversion.rvalue.kind else {
+        unreachable!()
+    };
+    *operand = ValueId::new(definition.function, 0);
+    assert!(checked_cast_verifier_errors(&wrong_operand)
+        .contains("primitive cast success edge must load the secured source"));
+
+    let mut wrong_join = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (check, _, _, join) = checked_cast_block_indices(&wrong_join);
+    let definition = wrong_join
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let source = match definition.body.blocks[check].terminator.as_ref().unwrap() {
+        MirTerminator::PrimitiveCastRangeCheck { check, .. } => check.source,
+        _ => unreachable!(),
+    };
+    let MirInstruction::Assign(load) = &mut definition.body.blocks[join].instructions[0] else {
+        unreachable!()
+    };
+    load.rvalue.kind = MirRvalueKind::Load(MirPlace::base(source));
+    assert!(checked_cast_verifier_errors(&wrong_join)
+        .contains("primitive cast join must begin by loading the checked result carrier"));
+
+    let mut wrong_failure = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (_, _, failure, _) = checked_cast_block_indices(&wrong_failure);
+    let definition = wrong_failure
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let span = definition.body.blocks[failure].span;
+    definition.body.blocks[failure].terminator = Some(MirTerminator::Terminate {
+        reason: MirTerminationReason::OptionalAccessFailure,
+        span,
+    });
+    assert!(checked_cast_verifier_errors(&wrong_failure)
+        .contains("primitive cast failure edge must directly terminate"));
+
+    let mut alternate_success_predecessor = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (_, success, failure, _) = checked_cast_block_indices(&alternate_success_predecessor);
+    let definition = alternate_success_predecessor
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let span = definition.body.blocks[failure].span;
+    definition.body.blocks[failure].terminator = Some(MirTerminator::Goto {
+        target: BlockId::new(definition.function, success),
+        span,
+    });
+    let errors = checked_cast_verifier_errors(&alternate_success_predecessor);
+    assert!(errors.contains("primitive cast success block must be dominated"));
+    assert!(errors.contains("primitive cast failure edge must directly terminate"));
+
+    let mut unprotected = checked_primitive_cast_mir(HirPrimitiveType::I64);
+    let (check, _, _, join) = checked_cast_block_indices(&unprotected);
+    let definition = unprotected
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirTerminator::PrimitiveCastRangeCheck { success_target, .. } =
+        definition.body.blocks[check].terminator.as_mut().unwrap()
+    else {
+        unreachable!()
+    };
+    *success_target = BlockId::new(definition.function, join);
+    let errors = checked_cast_verifier_errors(&unprotected);
+    assert!(errors.contains("primitive cast success edge must load the secured source"));
+    assert!(errors.contains("checked floating-to-integer conversion is not protected"));
+}
+
+fn checked_cast_block_indices_from_definition(
+    definition: &MirFunctionDefinition,
+) -> (usize, usize, usize, usize) {
+    definition
+        .body
+        .blocks
+        .iter()
+        .enumerate()
+        .find_map(|(check_index, block)| match block.terminator {
+            Some(MirTerminator::PrimitiveCastRangeCheck {
+                success_target,
+                failure_target,
+                ..
+            }) => {
+                let Some(MirTerminator::Goto { target: join, .. }) = definition
+                    .block(success_target)
+                    .and_then(|block| block.terminator.as_ref())
+                else {
+                    return None;
+                };
+                Some((
+                    check_index,
+                    success_target.index(),
+                    failure_target.index(),
+                    join.index(),
+                ))
+            }
+            _ => None,
+        })
+        .unwrap()
 }

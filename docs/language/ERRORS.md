@@ -211,7 +211,9 @@ remainder use the common reporter through their verified failure edges.
 
 The frozen
 [complete explicit primitive cast matrix](TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
-adds one compiler-known source-reachable failure, which is not yet implemented.
+adds one compiler-known source-reachable failure. Its distinct target-independent
+reason, exact static message, and verified MIR failure edge are implemented;
+source selection and target execution remain gated.
 An explicit `f64`-to-`i64`, `f64`-to-`u64`, or `f64`-to-`u8` cast evaluates its
 source exactly once, truncates a finite value toward zero, and succeeds only
 when that truncated mathematical integer is representable by the target. NaN,

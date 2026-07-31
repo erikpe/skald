@@ -4,8 +4,8 @@ use crate::{
     hir::{HirCheckedIntegerDivision, HirExpression, HirIntegerDivisionKind},
     mir::{
         MirInstruction, MirIntegerDivisionKind, MirIntegerDivisionOperation,
-        MirIntegerDivisorCheck, MirPlace, MirRvalueKind, MirStorage, MirStorageKind, MirStore,
-        MirTerminator, StorageId, ValueId,
+        MirIntegerDivisorCheck, MirPlace, MirRvalueKind, MirStore, MirTerminator, StorageId,
+        ValueId,
     },
 };
 
@@ -110,16 +110,6 @@ impl BodyLowerer<'_> {
         ty: crate::mir::MirType,
         span: crate::source::Span,
     ) -> StorageId {
-        let storage = StorageId::new(self.input.callable, self.storage.len());
-        self.storage.push(MirStorage {
-            id: storage,
-            source: None,
-            name: format!("integer-division-result{}", storage.index()),
-            kind: MirStorageKind::ScalarSpill,
-            ty,
-            span,
-        });
-        self.track_full_expression_storage(storage, span);
-        storage
+        self.new_scalar_spill_storage("integer-division-result", ty, span)
     }
 }

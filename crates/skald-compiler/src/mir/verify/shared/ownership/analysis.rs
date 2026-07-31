@@ -153,6 +153,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
                         failure_target,
                         ..
                     })
+                    | Some(MirTerminator::PrimitiveCastRangeCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    })
                     | Some(MirTerminator::ArrayOperationCheck {
                         success_target,
                         failure_target,

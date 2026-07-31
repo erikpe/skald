@@ -24,10 +24,11 @@ enum PanicMessage {
     ShiftCountOutOfRange,
     IntegerDivisionByZero,
     IntegerRemainderByZero,
+    PrimitiveCastOutOfRange,
 }
 
 impl PanicMessage {
-    const ALL: [Self; 12] = [
+    const ALL: [Self; 13] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -40,6 +41,7 @@ impl PanicMessage {
         Self::ShiftCountOutOfRange,
         Self::IntegerDivisionByZero,
         Self::IntegerRemainderByZero,
+        Self::PrimitiveCastOutOfRange,
     ];
 
     const fn for_reason(reason: MirTerminationReason) -> Option<Self> {
@@ -55,6 +57,7 @@ impl PanicMessage {
             MirTerminationReason::ShiftCountOutOfRange => Some(Self::ShiftCountOutOfRange),
             MirTerminationReason::IntegerDivisionByZero => Some(Self::IntegerDivisionByZero),
             MirTerminationReason::IntegerRemainderByZero => Some(Self::IntegerRemainderByZero),
+            MirTerminationReason::PrimitiveCastOutOfRange => Some(Self::PrimitiveCastOutOfRange),
         }
     }
 
@@ -76,6 +79,7 @@ impl PanicMessage {
             Self::ShiftCountOutOfRange => b"shift count out of range",
             Self::IntegerDivisionByZero => b"integer division by zero",
             Self::IntegerRemainderByZero => b"integer remainder by zero",
+            Self::PrimitiveCastOutOfRange => b"floating-point cast out of range",
         }
     }
 
@@ -93,6 +97,7 @@ impl PanicMessage {
             Self::ShiftCountOutOfRange => ".Lska_panic_message_9",
             Self::IntegerDivisionByZero => ".Lska_panic_message_10",
             Self::IntegerRemainderByZero => ".Lska_panic_message_11",
+            Self::PrimitiveCastOutOfRange => ".Lska_panic_message_12",
         }
     }
 }
@@ -281,6 +286,7 @@ pub(super) fn select(
         MirTerminator::CheckedCast { .. }
         | MirTerminator::ShiftCountCheck { .. }
         | MirTerminator::IntegerDivisorCheck { .. }
+        | MirTerminator::PrimitiveCastRangeCheck { .. }
         | MirTerminator::Panic { .. }
         | MirTerminator::SharedCast { .. }
         | MirTerminator::OptionalUnwrap { .. }
@@ -293,5 +299,18 @@ pub(super) fn select(
         | MirTerminator::Terminate { .. } => {
             unreachable!("type-operation terminators use their dedicated selector")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn primitive_cast_failure_maps_to_the_frozen_static_message() {
+        let message = PanicMessage::for_reason(MirTerminationReason::PrimitiveCastOutOfRange)
+            .expect("primitive cast failure must use the common reporter");
+        assert_eq!(message.bytes(), b"floating-point cast out of range");
+        assert_eq!(message.symbol(), ".Lska_panic_message_12");
     }
 }
