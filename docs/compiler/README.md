@@ -95,7 +95,7 @@ module. Its invalid byte and slice bounds call the canonical panic intrinsic
 through the ordinary `std::str` and `std::error` import cycle.
 
 Integer division and remainder, floating division, bitwise operations, checked
-shifts, comparisons and casts, eager boolean operators, and short-circuit
+shifts, integer and floating comparisons and casts, eager boolean operators, and short-circuit
 boolean expressions are complete source-to-native phase products. Type checking
 selects their exact operand and result kinds; HIR and MIR retain semantic
 operations and explicit checked control flow where required, verification

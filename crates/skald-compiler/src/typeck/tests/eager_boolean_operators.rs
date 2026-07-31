@@ -51,7 +51,9 @@ fn selects_exact_boolean_negation_equality_and_inequality() {
 
 #[test]
 fn rejects_every_boolean_numeric_equality_direction_without_conversion() {
-    for (numeric_type, numeric_literal) in [("i64", "1"), ("u64", "1u"), ("u8", "1u8")] {
+    for (numeric_type, numeric_literal) in
+        [("i64", "1"), ("u64", "1u"), ("u8", "1u8"), ("f64", "1.0")]
+    {
         for operator in ["==", "!="] {
             for (left, right, left_type, right_type) in [
                 ("true", numeric_literal, "bool", numeric_type),
@@ -71,7 +73,9 @@ fn rejects_every_boolean_numeric_equality_direction_without_conversion() {
 
                 assert_eq!(
                     diagnostic.message,
-                    "equality comparison requires operands of the same supported primitive type"
+                    format!(
+                        "binary `{operator}` requires operands of the same supported primitive type"
+                    )
                 );
                 assert!(diagnostic.labels.iter().any(|label| label
                     .message

@@ -36,6 +36,7 @@ does not imply support beyond that boundary.
 | [Floating division](TYPES_AND_VALUES.md#implemented-floating-division) | **Implemented contract** | Binary `/` accepts two exact `f64` operands and follows IEEE-754 binary64 behavior through verified non-failing MIR and x86-64. Signed zero, infinity, subnormal, overflow, underflow, and NaN remain ordinary results; zero divisors never enter a panic path. |
 | [Integer bitwise and shift operators](TYPES_AND_VALUES.md#implemented-integer-bitwise-and-shift-operators) | **Implemented contract** | Prefix `~` and binary `&`, `|`, and `^` accept exact integer operands. `<<` and `>>` accept an exact `i64`, `u64`, or `u8` left operand and `u64` count, check the count before shifting, and preserve signed or unsigned fixed-width meaning. All evaluate eagerly left to right, canonicalize `u8`, and execute through verified MIR and native x86-64; excessive counts use the common panic reporter. |
 | [Primitive integer comparisons](TYPES_AND_VALUES.md#integer-comparisons) | **Implemented contract** | Exact-type `==`, `!=`, `<`, `<=`, `>`, and `>=` for `i64`, `u64`, and `u8` execute through verified MIR and x86-64 with signed `i64` ordering, unsigned `u64`/`u8` ordering, and canonical `bool` results. |
+| [Floating comparisons](TYPES_AND_VALUES.md#floating-comparisons) | **Implemented contract** | Exact-type `==`, `!=`, `<`, `<=`, `>`, and `>=` for `f64` execute through verified MIR and x86-64 with IEEE unordered NaN semantics, signed-zero equality, ordinary infinity ordering, and canonical `bool` results. |
 | [Eager boolean operators](TYPES_AND_VALUES.md#boolean-negation-and-equality) | **Implemented contract** | Prefix `!` and exact-type `bool` equality and inequality execute eagerly through verified MIR and x86-64 with canonical results. Postfix optional unwrap binds before prefix negation; boolean ordering and truthiness are not accepted. |
 | [Short-circuit boolean expressions](FUNCTIONS_AND_CONTROL_FLOW.md#short-circuit-logical-expressions) | **Implemented contract** | Exact-type `bool` `&&` and `||` evaluate left to right through structured HIR and verified path-dependent MIR. The right operand is skipped when selected by the left result, skipped effects and failures do not occur, selected temporaries clean in reverse completion order, and results remain canonical across every expression consumer and primitive ABI boundary. |
 | [Primitive integer casts](TYPES_AND_VALUES.md#explicit-integer-casts) | **Implemented contract** | All nine explicit total two's-complement/modulo casts among `i64`, `u64`, and `u8` execute through verified MIR and x86-64. They preserve same-width bits, retain the low byte when narrowing, zero-extend `u8` when widening, and require no runtime support. |
@@ -72,12 +73,12 @@ changes only when feature maturity or compiler support changes.
 
 | Area | Maturity | Current compiler boundary |
 |---|---|---|
-| [Primitive operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile) | **Frozen design** | Exact primitive unary and binary matrices; no implicit conversion; frozen precedence with non-associative comparison/`is`; wrapping integer arithmetic; floor signed division and divisor-sign remainder; checked `u64` shift counts; IEEE binary64 division and unordered comparison; exact boolean equality and mandatory short-circuit `&&`/`||`; selected-path full-expression cleanup; and three compiler-known panic reasons. The compiler supports the source subsets listed under implemented primitive expressions, integer and floating division, integer remainder, integer bitwise and shift operators, integer comparisons, eager boolean operators, and short-circuit boolean expressions. Floating comparisons are the remaining frozen operations not yet implemented. |
+| [Primitive operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile) | **Frozen design** | Exact primitive unary and binary matrices; no implicit conversion; frozen precedence with non-associative comparison/`is`; wrapping integer arithmetic; floor signed division and divisor-sign remainder; checked `u64` shift counts; IEEE binary64 division and unordered comparison; exact boolean equality and mandatory short-circuit `&&`/`||`; selected-path full-expression cleanup; and three compiler-known panic reasons. Every operation in this frozen matrix is source-executable through verified MIR and x86-64. The cohesive profile remains frozen pending its final cross-family hardening and promotion milestone. |
 
-Frozen operator behavior is authoritative even though availability is
-incomplete. Implementation roadmaps may divide delivery by operator family but
-must not redefine the shared source, cleanup, panic, or representation
-contracts.
+Frozen operator behavior remains authoritative while final cross-family
+hardening is in progress. Implementation roadmaps may divide delivery by
+operator family but must not redefine the shared source, cleanup, panic, or
+representation contracts.
 
 ## Compiler availability
 

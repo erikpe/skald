@@ -206,11 +206,11 @@ The pipeline responsibilities are:
   identity lookup; lower phases never disambiguate cast kinds from source
   text.
 - Type checking is the sole owner of operation selection. It requires matching
-  `i64`, `u64`, or `u8` comparison operands, admits `bool` only for equality
-  and inequality, selects logical negation only for `bool`, selects exact-width
-  complement, AND, OR, or XOR only for matching integers, or selects one of
-  the nine valid integer source/target cast pairs. Unsupported operations and
-  implicit conversions are rejected before HIR.
+  `i64`, `u64`, `u8`, or `f64` comparison operands, admits `bool` only for
+  equality and inequality, selects logical negation only for `bool`, selects
+  exact-width complement, AND, OR, or XOR only for matching integers, or
+  selects one of the nine valid integer source/target cast pairs. Unsupported
+  operations and implicit conversions are rejected before HIR.
 - Typed HIR records the selected primitive comparison predicate and operand
   kind, exact-width bitwise operation, or exact boolean logical-negation
   operation. Primitive casts record both integer source and target types.
@@ -229,18 +229,17 @@ The pipeline responsibilities are:
   invariants.
 - Each backend receives already selected signedness and width through verified
   MIR. The x86-64 target realizes exact-width complement, AND, OR, and XOR,
-  signed `i64` ordering, unsigned `u64`/`u8` ordering, and boolean
-  negation/equality with canonical results. It realizes integer
+  signed `i64` ordering, unsigned `u64`/`u8` ordering, IEEE unordered `f64`
+  comparison, and boolean negation/equality with canonical results. It realizes integer
   casts through canonical scalar loads and stores: same-width bits are
   preserved, narrowing retains the low byte, and `u8` widening zero-extends.
   Selection does not infer semantics from source spelling or expose target
   registers to MIR.
 
 These operations add no ownership or lifetime rule and no public runtime ABI.
-Floating comparisons, the remaining boolean/numeric operations, checked,
-saturating, implicit, mixed-type, and user-defined conversion remain outside
-this boundary. Implemented short-circuit logic uses the structured boundary
-below rather than this eager scalar boundary.
+Checked, saturating, implicit, mixed-type, and user-defined operations remain
+outside this boundary. Implemented short-circuit logic uses the structured
+boundary below rather than this eager scalar boundary.
 
 ## Implemented checked-shift source boundary
 
@@ -323,14 +322,14 @@ value when a control-affecting right operand changes blocks, and introduces no
 semantic check, failure edge, or termination reason. MIR verification requires
 exact `f64` operands and result before the x86-64 backend may consume it.
 
-The internal HIR and MIR comparison models also carry an explicit `f64`
+The HIR and MIR comparison models carry an explicit `f64`
 operand flavor for all six predicates. Each comparison remains one eager,
 pure, non-failing scalar rvalue with exact `f64` operands and a canonical
 `bool` result; dumps retain the predicate as `eq.f64`, `ne.f64`, `lt.f64`,
 `le.f64`, `gt.f64`, or `ge.f64`. MIR verification rejects operand and result
-type mismatches before target lowering. Source type checking deliberately does
-not select this flavor yet, so source floating comparisons remain outside the
-implemented language subset until their end-to-end activation milestone.
+type mismatches before target lowering. Source type checking selects this
+flavor only for two exact `f64` operands and rejects mixed primitive types and
+boolean ordering before HIR.
 
 MIR lowers eager primitive operations to target-independent scalar operations.
 It preserves:

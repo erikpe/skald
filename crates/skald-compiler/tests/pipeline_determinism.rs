@@ -58,6 +58,13 @@ const FLOATING_DIVISION_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_FLOATING_DIVISION_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const FLOATING_DIVISION_DIAGNOSTIC_TEST_NAME: &str =
     "floating_division_diagnostics_are_deterministic_across_processes";
+const FLOATING_COMPARISON_HELPER_OUTPUT: &str = "SKALD_FLOATING_COMPARISON_DETERMINISM_OUTPUT";
+const FLOATING_COMPARISON_TEST_NAME: &str =
+    "floating_comparison_phase_products_are_deterministic_across_processes";
+const FLOATING_COMPARISON_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_FLOATING_COMPARISON_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const FLOATING_COMPARISON_DIAGNOSTIC_TEST_NAME: &str =
+    "floating_comparison_diagnostics_are_deterministic_across_processes";
 const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
@@ -203,6 +210,26 @@ fn floating_division_diagnostics_are_deterministic_across_processes() {
         FLOATING_DIVISION_DIAGNOSTIC_HELPER_OUTPUT,
         FLOATING_DIVISION_DIAGNOSTIC_TEST_NAME,
         floating_division_diagnostic_dump,
+    );
+}
+
+#[test]
+fn floating_comparison_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "floating-comparisons",
+        FLOATING_COMPARISON_HELPER_OUTPUT,
+        FLOATING_COMPARISON_TEST_NAME,
+        floating_comparison_phase_dump,
+    );
+}
+
+#[test]
+fn floating_comparison_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "floating-comparison-diagnostics",
+        FLOATING_COMPARISON_DIAGNOSTIC_HELPER_OUTPUT,
+        FLOATING_COMPARISON_DIAGNOSTIC_TEST_NAME,
+        floating_comparison_diagnostic_dump,
     );
 }
 
@@ -732,6 +759,26 @@ fn floating_division_diagnostic_dump() -> String {
             "  var mixed: f64 = left / integer;\n",
             "  var boolean: f64 = left / flag;\n",
             "  return left / owner;\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+    )
+}
+
+fn floating_comparison_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/floating_comparisons.ska"
+    ))
+}
+
+fn floating_comparison_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "floating-comparison-diagnostics.ska",
+        concat!(
+            "fn invalid(left: f64, integer: i64, flag: bool, optional: f64?) -> bool {\n",
+            "  var mixed: bool = left < integer;\n",
+            "  var boolean: bool = left == flag;\n",
+            "  return left >= optional;\n",
             "}\n",
             "fn main() -> i64 { return 0; }\n",
         ),

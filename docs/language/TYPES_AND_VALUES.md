@@ -161,8 +161,8 @@ The implemented arithmetic surface is deliberately exact-type:
 | prefix `~` | `i64`, `u64`, or `u8` | the operand type |
 | binary `&`, `|`, `^` | two operands of the same type among `i64`, `u64`, and `u8` | that same type |
 | `<<`, `>>` | left operand of `i64`, `u64`, or `u8`; right operand exactly `u64` | the left type |
-| `==`, `!=` | two operands of the same type among `i64`, `u64`, `u8`, and `bool` | `bool` |
-| `<`, `<=`, `>`, `>=` | two operands of the same type among `i64`, `u64`, and `u8` | `bool` |
+| `==`, `!=` | two operands of the same type among `i64`, `u64`, `u8`, `f64`, and `bool` | `bool` |
+| `<`, `<=`, `>`, `>=` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | `bool` |
 | `&&`, `||` | two `bool` operands | `bool` |
 
 Integer arithmetic wraps modulo its width: `i64` and `u64` retain the low
@@ -175,10 +175,10 @@ ties-to-even environment. Signed zeroes, subnormals, infinities, and NaNs can re
 unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
-Integer equality and ordering plus boolean equality, inequality, logical
-negation, and short-circuit `&&` and `||` are implemented as specified below.
-Floating equality or ordering, floating remainder, and exponentiation are not
-implemented. Built-in array indexing and slicing
+Integer and floating equality and ordering plus boolean equality, inequality,
+logical negation, and short-circuit `&&` and `||` are implemented as specified
+below. Floating remainder and exponentiation are not implemented. Built-in
+array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
 and nested arrays on x86-64. The same element categories execute in shared
@@ -475,6 +475,20 @@ grammar all six operators share one non-associative level above contextual
 comparison tier. Both reject an ungrouped chain such as `a < b < c`. The
 [grammar](GRAMMAR.md#expressions) distinguishes accepted and frozen source
 shape.
+
+### Floating comparisons
+
+The same six comparison operators accept exactly two `f64` operands and
+produce `bool`. They use IEEE-754 unordered comparison semantics: if either
+operand is NaN, `==` is false, `!=` is true, and every ordering predicate is
+false. Positive and negative zero compare equal, and infinities follow
+ordinary numeric ordering. These predicates do not define a total order.
+
+Operands evaluate exactly once from left to right. Comparisons introduce no
+failure edge or runtime call, produce canonical booleans, and compose with the
+ordinary boolean and control-flow consumers, including short-circuit `&&` and
+`||`. Mixed floating/integer comparisons remain errors; Skald inserts no
+promotion or conversion.
 
 ### Boolean negation and equality
 

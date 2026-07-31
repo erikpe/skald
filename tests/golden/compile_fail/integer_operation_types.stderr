@@ -1,4 +1,4 @@
-error[TYP005]: ordering comparison requires operands of the same primitive integer type
+error[TYP005]: binary `<` requires operands of the same numeric type
  --> tests/golden/compile_fail/integer_operation_types.ska:2:14
    |
 2 |     return 1 < 2u;
@@ -9,7 +9,7 @@ error[TYP005]: ordering comparison requires operands of the same primitive integ
    |
 2 |     return 1 < 2u;
    |                -- right operand has type `u64`
-  = note: integer operand types are `i64`, `u64`, or `u8`
+  = note: numeric operand types are `i64`, `u64`, `u8`, or `f64`
 
 error[TYP005]: integer cast requires a primitive integer source
  --> tests/golden/compile_fail/integer_operation_types.ska:6:18

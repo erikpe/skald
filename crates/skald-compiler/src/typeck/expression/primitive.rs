@@ -17,7 +17,8 @@ use crate::typeck::{
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
 const INTEGER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8"];
-const EQUALITY_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "bool"];
+const EQUALITY_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
+const ORDERING_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
 impl CallableChecker<'_, '_> {
@@ -276,17 +277,20 @@ impl CallableChecker<'_, '_> {
                 predicate,
                 HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
             );
+            let spelling = comparison_spelling(predicate);
             let (message, type_description, type_names) = if equality {
                 (
-                    "equality comparison requires operands of the same supported primitive type",
+                    format!(
+                        "binary `{spelling}` requires operands of the same supported primitive type"
+                    ),
                     "equality operand types",
                     EQUALITY_TYPE_NAMES,
                 )
             } else {
                 (
-                    "ordering comparison requires operands of the same primitive integer type",
-                    "integer operand types",
-                    INTEGER_TYPE_NAMES,
+                    format!("binary `{spelling}` requires operands of the same numeric type"),
+                    "numeric operand types",
+                    ORDERING_TYPE_NAMES,
                 )
             };
             self.diagnostics.push(
@@ -382,12 +386,26 @@ fn comparison_operand(
     if let Some(integer) = HirIntegerType::from_type(left) {
         return Some(HirComparisonOperand::Integer(integer));
     }
+    if left == Type::F64 {
+        return Some(HirComparisonOperand::F64);
+    }
     (left == Type::Bool
         && matches!(
             predicate,
             HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual
         ))
     .then_some(HirComparisonOperand::Bool)
+}
+
+const fn comparison_spelling(predicate: HirComparisonPredicate) -> &'static str {
+    match predicate {
+        HirComparisonPredicate::Equal => "==",
+        HirComparisonPredicate::NotEqual => "!=",
+        HirComparisonPredicate::LessThan => "<",
+        HirComparisonPredicate::LessEqual => "<=",
+        HirComparisonPredicate::GreaterThan => ">",
+        HirComparisonPredicate::GreaterEqual => ">=",
+    }
 }
 
 const fn comparison_predicate(operator: ResolvedBinaryOperator) -> Option<HirComparisonPredicate> {

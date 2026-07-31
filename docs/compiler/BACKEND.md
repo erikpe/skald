@@ -125,15 +125,15 @@ preserved. Floating zero, infinity, subnormal values, underflow, overflow, and
 NaN remain ordinary binary64 outcomes: this path emits no zero guard, panic
 message, runtime call, or additional control-flow block.
 
-Verified internal floating comparisons load their exact operands in source
-order and use scalar unordered binary64 comparison. Instruction selection
+Verified floating comparisons load their exact operands in source order and
+use scalar unordered binary64 comparison. Instruction selection
 forms every predicate from the relation flags plus an explicit parity gate:
 equality requires ordered-and-equal, inequality accepts unordered-or-not-equal,
 and each ordering predicate requires ordered plus its requested relation. The
 result is zero-extended into the ordinary canonical `bool` representation.
 This path adds no semantic branch, runtime call, failure edge, or ABI rule.
-Direct verified MIR fixtures exercise it while source floating-comparison
-selection remains disabled until the language activation milestone.
+Direct MIR fixtures and source-native goldens exercise the complete predicate
+matrix, including NaN in either operand position, signed zero, and infinities.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

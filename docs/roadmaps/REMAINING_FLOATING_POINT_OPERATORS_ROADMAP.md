@@ -1,6 +1,6 @@
 # Remaining Floating-Point Operators Roadmap
 
-Status: in progress; FP0 through FP2 are complete, and FP3 is next.
+Status: in progress; FP0 through FP3 are complete, and FP4 is next.
 
 This roadmap completes the remaining frozen primitive operators for `f64`:
 IEEE-754 binary64 division followed by unordered equality and ordering. The
@@ -126,7 +126,7 @@ the ABI remains unchanged rather than adding operator-specific C harnesses.
 - [x] FP0 — Establish executable IEEE floating division
 - [x] FP1 — Enable floating division from source end to end
 - [x] FP2 — Establish executable unordered floating comparisons
-- [ ] FP3 — Enable floating comparisons from source end to end
+- [x] FP3 — Enable floating comparisons from source end to end
 - [ ] FP4 — Harden and promote the complete primitive-operator profile
 
 ## PR-sized implementation sequence
@@ -272,32 +272,32 @@ source availability remains unchanged.
 **Purpose:** Expose the proven predicates as one complete source family and
 compose them with every existing boolean and control-flow consumer.
 
-- [ ] Select all six predicates for exactly two `f64` operands while
+- [x] Select all six predicates for exactly two `f64` operands while
       preserving exact integer comparison and boolean equality matrices.
       Continue rejecting mixed primitives and boolean ordering before HIR.
-- [ ] Check operands in source order and produce focused, stable diagnostics
+- [x] Check operands in source order and produce focused, stable diagnostics
       that identify the predicate and actual types without suggesting
       promotion, truthiness, or total ordering.
-- [ ] Preserve the existing unified non-associative comparison/`is` parser
+- [x] Preserve the existing unified non-associative comparison/`is` parser
       tier, grouping requirements, operator identity, exact spans, recovery,
       and precedence against bitwise, logical, cast, prefix, and postfix
       expressions.
-- [ ] Carry selected predicates through deterministic resolved, HIR, and MIR
+- [x] Carry selected predicates through deterministic resolved, HIR, and MIR
       dumps with exact floating flavor and canonical `bool` result.
-- [ ] Exercise arbitrary valid operands, including calls, fields, arrays,
+- [x] Exercise arbitrary valid operands, including calls, fields, arrays,
       optional unwrap, nested arithmetic and division, checked expressions,
       shared/object receivers, and cleanup-bearing effects; exercise results
       in bindings, arguments, returns, assignments, equality, `!`, `&&`,
       `||`, `if`/`elif`, and `while`.
-- [ ] Prove both operands execute once left to right, all selected-path
+- [x] Prove both operands execute once left to right, all selected-path
       temporaries survive to the enclosing full-expression boundary, and
       logical short-circuiting still skips an unselected comparison operand
       subtree completely.
-- [ ] Add source-native goldens that generate infinity and NaN through the now
+- [x] Add source-native goldens that generate infinity and NaN through the now
       implemented division operator, cover NaN in both positions for all six
       predicates, and observe signed-zero and infinity behavior without
       relying on unavailable literal spellings.
-- [ ] Update living documentation to advertise floating equality and ordering
+- [x] Update living documentation to advertise floating equality and ordering
       as implemented and remove language claiming any operation inside the
       frozen primitive matrix remains unavailable.
 
