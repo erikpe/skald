@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST1 is next.
+Status: in progress; CAST2 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -77,7 +77,7 @@ clean checkout.
 ## Progress
 
 - [x] CAST0 — Establish cohesive primitive-cast front-end vocabulary
-- [ ] CAST1 — Establish verified pure primitive-cast MIR
+- [x] CAST1 — Establish verified pure primitive-cast MIR
 - [ ] CAST2 — Execute identity and boolean-boundary casts
 - [ ] CAST3 — Execute integer-to-floating casts
 - [ ] CAST4 — Enable every non-failing cast from source
@@ -134,23 +134,23 @@ MIR.
 **Purpose:** Give all non-failing semantic classes a closed target-independent
 representation before any backend or source path depends on them.
 
-- [ ] Replace MIR's integer-only cast type and rvalue with one primitive-cast
+- [x] Replace MIR's integer-only cast type and rvalue with one primitive-cast
       operation carrying exact source, target, and selected semantic class.
-- [ ] Represent the twenty-two non-failing cells as ordinary pure rvalues;
+- [x] Represent the twenty-two non-failing cells as ordinary pure rvalues;
       preserve same-type operations rather than erasing them during lowering.
-- [ ] Lower each pure typed-HIR class after evaluating its operand once, with
+- [x] Lower each pure typed-HIR class after evaluating its operand once, with
       no block, termination reason, runtime call, storage lifecycle, or
       ownership action introduced by the cast itself.
-- [ ] Derive control-effect classification from the semantic class: every
+- [x] Derive control-effect classification from the semantic class: every
       operation in this task remains pure even when its operand contains an
       existing control effect.
-- [ ] Verify the complete non-failing source/target matrix, semantic-class
+- [x] Verify the complete non-failing source/target matrix, semantic-class
       consistency, exact operand/result types, definition-before-use,
       block-local use, and deterministic one-invariant diagnostics.
-- [ ] Generalize HIR and MIR dump vocabulary, facade exports, direct fixtures,
+- [x] Generalize HIR and MIR dump vocabulary, facade exports, direct fixtures,
       and mutation utilities without exposing a target instruction or
       constant-folding decision.
-- [ ] Keep type-check selection of the thirteen pending non-failing cells
+- [x] Keep type-check selection of the thirteen pending non-failing cells
       disabled. Direct HIR/MIR fixtures prove their downstream representation
       while ordinary source compilation remains executable.
 

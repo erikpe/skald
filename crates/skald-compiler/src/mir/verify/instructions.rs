@@ -722,12 +722,31 @@ impl Verifier<'_> {
                 self.verify_comparison_operand(function, block, *left, expected, defined);
                 self.verify_comparison_operand(function, block, *right, expected, defined);
             }
-            MirRvalueKind::IntegerCast { operation, operand } => {
+            MirRvalueKind::PrimitiveCast { operation, operand } => {
                 if rvalue.ty != operation.result_type() {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "integer cast result type mismatch",
+                        "primitive cast result type mismatch",
+                    );
+                }
+                if !operation.is_semantically_consistent() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!(
+                            "primitive cast semantic class `{}` does not match `{} -> {}`",
+                            operation.kind().mnemonic(),
+                            operation.source,
+                            operation.target
+                        ),
+                    );
+                }
+                if operation.may_terminate() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "checked primitive cast requires explicit control flow",
                     );
                 }
                 if let Some(ty) = self.verify_value_use(function, block, *operand, defined) {
@@ -735,7 +754,7 @@ impl Verifier<'_> {
                         self.block_error(
                             function.callable(),
                             block.id,
-                            format!("integer cast source is not `{}`", operation.source_type()),
+                            format!("primitive cast source is not `{}`", operation.source_type()),
                         );
                     }
                 }

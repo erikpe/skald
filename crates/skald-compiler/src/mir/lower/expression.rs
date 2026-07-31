@@ -3,8 +3,8 @@
 use super::*;
 use crate::hir::{
     HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate, HirExpression,
-    HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerType, HirPrimitiveCast,
-    HirPrimitiveCastKind, HirPrimitiveComparison, HirUnaryOperation,
+    HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerType, HirPrimitiveComparison,
+    HirUnaryOperation,
 };
 
 impl BodyLowerer<'_> {
@@ -232,44 +232,6 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             },
-            operation.result_type(),
-            expression.span,
-        ))
-    }
-
-    fn lower_primitive_cast(
-        &mut self,
-        expression: &HirExpression,
-        operation: HirPrimitiveCast,
-        operand: &HirExpression,
-    ) -> Option<ValueId> {
-        assert!(
-            matches!(
-                operation.kind(),
-                HirPrimitiveCastKind::Identity | HirPrimitiveCastKind::IntegerBits
-            ) && operation.source.is_integer()
-                && operation.target.is_integer(),
-            "only implemented integer primitive casts may reach MIR lowering"
-        );
-        let operand = self
-            .lower_expression(operand)
-            .expect("typed primitive-cast operand must produce a value");
-        let operation = MirIntegerCast {
-            source: lower_integer_type(
-                operation
-                    .source
-                    .integer_type()
-                    .expect("implemented primitive-cast source must be integer"),
-            ),
-            target: lower_integer_type(
-                operation
-                    .target
-                    .integer_type()
-                    .expect("implemented primitive-cast target must be integer"),
-            ),
-        };
-        Some(self.assign(
-            MirRvalueKind::IntegerCast { operation, operand },
             operation.result_type(),
             expression.span,
         ))

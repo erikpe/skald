@@ -9,8 +9,8 @@ use crate::{
     mir::{
         MirClassOptionalAssign, MirClassOptionalInitialize, MirClassOptionalPublish,
         MirClassOptionalSource, MirInstruction, MirOptionalAssign, MirOptionalInitialize,
-        MirOptionalSource, MirPresenceTestKind, MirPrimitiveType, MirRvalueKind, MirStorage,
-        MirStorageKind, MirTerminationReason, MirTerminator, MirType, StorageId,
+        MirOptionalSource, MirPresenceTestKind, MirRvalueKind, MirStorage, MirStorageKind,
+        MirTerminationReason, MirTerminator, MirType, StorageId,
     },
 };
 
@@ -262,7 +262,7 @@ impl BodyLowerer<'_> {
         source: &HirOptionalOperand,
     ) -> crate::mir::ValueId {
         let source_storage = self.lower_optional_operand(source);
-        let payload = lower_primitive_type(source.payload());
+        let payload = super::primitive::lower_primitive_type(source.payload());
         let destination = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
             id: destination,
@@ -619,7 +619,7 @@ impl BodyLowerer<'_> {
     ) -> StorageId {
         let mir_ty = match ty {
             Type::OptionalPrimitive(payload) => {
-                MirType::OptionalPrimitive(lower_primitive_type(payload))
+                MirType::OptionalPrimitive(super::primitive::lower_primitive_type(payload))
             }
             Type::OptionalClass(class) => MirType::OptionalClass(class),
             Type::OptionalShared(target) => {
@@ -638,17 +638,5 @@ impl BodyLowerer<'_> {
         });
         self.track_full_expression_storage(id, span);
         id
-    }
-}
-
-pub(super) const fn lower_primitive_type(
-    payload: crate::hir::HirPrimitiveType,
-) -> MirPrimitiveType {
-    match payload {
-        crate::hir::HirPrimitiveType::I64 => MirPrimitiveType::I64,
-        crate::hir::HirPrimitiveType::U64 => MirPrimitiveType::U64,
-        crate::hir::HirPrimitiveType::U8 => MirPrimitiveType::U8,
-        crate::hir::HirPrimitiveType::F64 => MirPrimitiveType::F64,
-        crate::hir::HirPrimitiveType::Bool => MirPrimitiveType::Bool,
     }
 }

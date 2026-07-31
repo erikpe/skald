@@ -27,10 +27,10 @@ use skald_compiler::{
     mir::{
         dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
         MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirComparisonOperand,
-        MirComparisonPredicate, MirDirectBase, MirIntegerBitwiseOperation, MirIntegerCast,
-        MirIntegerType, MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration,
-        MirObjectView, MirPlaceProjection, MirPrimitiveComparison, MirProgram, MirType,
-        MirUnaryOperation, MirViewTarget,
+        MirComparisonPredicate, MirDirectBase, MirIntegerBitwiseOperation, MirIntegerType,
+        MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
+        MirPlaceProjection, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveComparison,
+        MirPrimitiveType, MirProgram, MirType, MirUnaryOperation, MirViewTarget,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -200,10 +200,9 @@ fn intentional_phase_and_dump_paths_compose() {
     };
     assert_eq!(mir_comparison.operand_type(), MirType::U64);
     assert_eq!(mir_comparison.result_type(), MirType::Bool);
-    let mir_cast = MirIntegerCast {
-        source: MirIntegerType::U64,
-        target: MirIntegerType::U8,
-    };
+    let mir_cast = MirPrimitiveCast::new(MirPrimitiveType::U64, MirPrimitiveType::U8);
+    assert_eq!(mir_cast.kind(), MirPrimitiveCastKind::IntegerBits);
+    assert_eq!(MirPrimitiveType::Bool.payload_type(), MirType::Bool);
     assert_eq!(mir_cast.source_type(), MirType::U64);
     assert_eq!(mir_cast.result_type(), MirType::U8);
     let mir_bitwise = MirBinaryOperation::IntegerBitwise {

@@ -24,6 +24,7 @@ mod loop_flow;
 mod object_values;
 mod optional;
 mod places;
+mod primitive;
 mod program;
 mod shared;
 mod shift;
@@ -234,7 +235,7 @@ impl<'hir> BodyLowerer<'hir> {
                 source: None,
                 name: "optional-return".to_owned(),
                 kind: MirStorageKind::Return,
-                ty: MirType::OptionalPrimitive(optional::lower_primitive_type(payload)),
+                ty: MirType::OptionalPrimitive(primitive::lower_primitive_type(payload)),
                 span: self.input.source_body.span,
             });
         } else if let Type::OptionalClass(class) = self.input.return_type {
@@ -434,7 +435,7 @@ fn lower_type(ty: Type) -> MirType {
             crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
         }),
         Type::OptionalPrimitive(payload) => {
-            MirType::OptionalPrimitive(optional::lower_primitive_type(payload))
+            MirType::OptionalPrimitive(primitive::lower_primitive_type(payload))
         }
         Type::OptionalClass(class) => MirType::OptionalClass(class),
         Type::Array(array) => MirType::Array(array),

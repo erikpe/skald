@@ -120,11 +120,12 @@ has separately selected
 [phase and IR](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation),
 [target](BACKEND.md#frozen-complete-primitive-cast-target-boundary), and
 [unchanged runtime ABI](RUNTIME_ABI.md#frozen-complete-primitive-cast-abi-boundary)
-boundaries. Those contracts are implementation-ready but do not expand the
-current compiler beyond the nine integer cast cells. The active
+boundaries. The active
 [implementation roadmap](../roadmaps/PRIMITIVE_CAST_MATRIX_ROADMAP.md) has
-generalized syntax, resolution, and typed HIR to the cohesive primitive-cast
-vocabulary. Establishing the verified pure primitive-cast MIR boundary is the
+generalized syntax, resolution, typed HIR, and MIR to the cohesive
+primitive-cast vocabulary. All twenty-two non-failing cells can be represented
+and verified as pure MIR, while source admission and x86-64 execution remain at
+the nine integer cells. Identity and boolean-boundary target execution is the
 next implementation step.
 
 The implemented optional representation, IR, verification, x86-64 layout,

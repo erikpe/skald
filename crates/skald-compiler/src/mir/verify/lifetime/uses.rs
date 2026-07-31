@@ -198,7 +198,7 @@ fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
         | MirRvalueKind::IntegerDivision { .. }
         | MirRvalueKind::Shift { .. }
         | MirRvalueKind::PrimitiveComparison { .. }
-        | MirRvalueKind::IntegerCast { .. } => {}
+        | MirRvalueKind::PrimitiveCast { .. } => {}
     }
 }
 

@@ -100,8 +100,23 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                             check_member_target(program, function.callable(), target.into())?;
                         }
                     }
-                    MirInstruction::Assign(_)
-                    | MirInstruction::BindCheckedView(_)
+                    MirInstruction::Assign(assignment) => {
+                        if let crate::mir::MirRvalueKind::PrimitiveCast { operation, .. } =
+                            assignment.rvalue.kind
+                        {
+                            if !primitive_cast_is_supported(operation) {
+                                return Err(BackendError::new(
+                                    Target::X86_64SysV,
+                                    Some(function.callable()),
+                                    format!(
+                                        "primitive cast `{} -> {}` is not yet supported by this target",
+                                        operation.source, operation.target
+                                    ),
+                                ));
+                            }
+                        }
+                    }
+                    MirInstruction::BindCheckedView(_)
                     | MirInstruction::EndCheckedView(_)
                     | MirInstruction::Store(_)
                     | MirInstruction::EndFullExpression(_) => {}
@@ -132,6 +147,10 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         }
     }
     Ok((data_layout, dispatch))
+}
+
+const fn primitive_cast_is_supported(operation: crate::mir::MirPrimitiveCast) -> bool {
+    operation.source.is_integer() && operation.target.is_integer()
 }
 
 fn check_member_target(

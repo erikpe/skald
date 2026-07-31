@@ -3,8 +3,9 @@ use crate::{
     mir::{
         test_fixtures::{assign as fixture_assign, value as fixture_value},
         verify_mir, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
-        MirInstruction, MirIntegerType, MirPrimitiveComparison, MirProgram, MirRvalueKind,
-        MirTerminator, MirType, MirUnaryOperation, ValueId,
+        MirInstruction, MirIntegerType, MirPrimitiveCastKind, MirPrimitiveComparison,
+        MirPrimitiveType, MirProgram, MirRvalueKind, MirTerminator, MirType, MirUnaryOperation,
+        ValueId,
     },
     test_support::lower_source_to_mir,
 };
@@ -157,7 +158,7 @@ fn arithmetic_corruption_accumulates_errors_in_deterministic_order() {
 }
 
 #[test]
-fn integer_cast_corruption_accumulates_errors_in_deterministic_order() {
+fn primitive_cast_corruption_accumulates_errors_in_deterministic_order() {
     let mut program =
         lower_source_to_mir("fn cast() -> u8 { return (u8) 1u; } fn main() -> i64 { return 0; }");
     let function = program
@@ -169,17 +170,17 @@ fn integer_cast_corruption_accumulates_errors_in_deterministic_order() {
         .iter_mut()
         .find_map(|instruction| match instruction {
             MirInstruction::Assign(assignment)
-                if matches!(assignment.rvalue.kind, MirRvalueKind::IntegerCast { .. }) =>
+                if matches!(assignment.rvalue.kind, MirRvalueKind::PrimitiveCast { .. }) =>
             {
                 Some(assignment)
             }
             _ => None,
         })
-        .expect("expected integer cast assignment");
-    let MirRvalueKind::IntegerCast { operation, .. } = &mut assignment.rvalue.kind else {
+        .expect("expected primitive cast assignment");
+    let MirRvalueKind::PrimitiveCast { operation, .. } = &mut assignment.rvalue.kind else {
         unreachable!()
     };
-    operation.source = MirIntegerType::I64;
+    operation.source = MirPrimitiveType::I64;
     assignment.rvalue.ty = MirType::U64;
 
     assert_eq!(
@@ -190,9 +191,40 @@ fn integer_cast_corruption_accumulates_errors_in_deterministic_order() {
             .collect::<Vec<_>>(),
         [
             "assignment type does not match value f0:v1",
-            "integer cast result type mismatch",
-            "integer cast source is not `i64`",
+            "primitive cast result type mismatch",
+            "primitive cast source is not `i64`",
         ]
+    );
+}
+
+#[test]
+fn primitive_cast_semantic_class_mismatch_has_one_focused_error() {
+    let mut program =
+        lower_source_to_mir("fn cast() -> u8 { return (u8) 1u; } fn main() -> i64 { return 0; }");
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let operation = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment) => match &mut assignment.rvalue.kind {
+                MirRvalueKind::PrimitiveCast { operation, .. } => Some(operation),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap();
+    operation.set_kind_for_test(MirPrimitiveCastKind::ToBool);
+
+    assert_eq!(
+        verify_mir(&program)
+            .unwrap_err()
+            .iter()
+            .map(|error| error.message.as_str())
+            .collect::<Vec<_>>(),
+        ["primitive cast semantic class `to_bool` does not match `u64 -> u8`"]
     );
 }
 

@@ -27,7 +27,7 @@ pub enum MirType {
     /// A non-null strong owner carrying one object view of a live allocation.
     Shared(super::shared::MirSharedTarget),
     OptionalShared(super::shared::MirSharedTarget),
-    OptionalPrimitive(super::optional::MirPrimitiveType),
+    OptionalPrimitive(super::MirPrimitiveType),
     OptionalClass(ClassId),
     Unit,
 }
@@ -242,8 +242,8 @@ pub enum MirRvalueKind {
         left: ValueId,
         right: ValueId,
     },
-    IntegerCast {
-        operation: MirIntegerCast,
+    PrimitiveCast {
+        operation: super::primitive::MirPrimitiveCast,
         operand: ValueId,
     },
     /// A runtime metadata query. Statically known outcomes are constants.
@@ -437,22 +437,6 @@ impl From<MirIntegerType> for MirComparisonOperand {
 pub struct MirPrimitiveComparison {
     pub predicate: MirComparisonPredicate,
     pub operand: MirComparisonOperand,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct MirIntegerCast {
-    pub source: MirIntegerType,
-    pub target: MirIntegerType,
-}
-
-impl MirIntegerCast {
-    pub const fn source_type(self) -> MirType {
-        self.source.operand_type()
-    }
-
-    pub const fn result_type(self) -> MirType {
-        self.target.operand_type()
-    }
 }
 
 impl MirPrimitiveComparison {

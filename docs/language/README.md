@@ -129,9 +129,9 @@ makes a result source-observable.
   division, bitwise operations, checked shifts, integer and floating
   comparisons, the nine total integer casts, eager boolean operators, and
   short-circuit boolean expressions execute through verified MIR and the
-  x86-64 backend. The remaining sixteen primitive cast cells have settled
-  source, failure, representation, target, and runtime boundaries but await an
-  implementation roadmap.
+  x86-64 backend. MIR can represent and verify all twenty-two non-failing
+  primitive cast cells; source admission and x86-64 execution remain limited
+  to the nine integer cells while the active roadmap implements the rest.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.

@@ -1184,12 +1184,13 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 operation.operand.name()
             );
         }
-        MirRvalueKind::IntegerCast { operation, operand } => {
+        MirRvalueKind::PrimitiveCast { operation, operand } => {
             let _ = write!(
                 output,
-                "cast.{}.{} {operand}",
+                "cast.{}.{} {} {operand}",
                 operation.source.name(),
-                operation.target.name()
+                operation.target.name(),
+                operation.kind().mnemonic()
             );
         }
         MirRvalueKind::TypeTest { source, target } => {

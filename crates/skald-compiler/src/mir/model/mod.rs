@@ -11,6 +11,7 @@ mod interface;
 mod logical;
 mod optional;
 mod path_condition;
+mod primitive;
 mod shared;
 mod shift;
 mod strings;
@@ -57,9 +58,10 @@ pub use optional::{
     MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
     MirOptionalSharedAssign, MirOptionalSharedCleanup, MirOptionalSharedInitialize,
     MirOptionalSharedSource, MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin,
-    MirOptionalViewEnd, MirPresenceTestKind, MirPrimitiveType,
+    MirOptionalViewEnd, MirPresenceTestKind,
 };
 pub use path_condition::MirPathCondition;
+pub use primitive::{MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType};
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
     MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,
@@ -73,7 +75,6 @@ pub use strings::{
 };
 pub use value::{
     MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate, MirIntegerBitwiseOperation,
-    MirIntegerCast, MirIntegerType, MirPathConditionValue, MirPlace, MirPlaceBase,
-    MirPlaceProjection, MirPrimitiveComparison, MirRvalue, MirRvalueKind, MirType,
-    MirUnaryOperation, MirValue,
+    MirIntegerType, MirPathConditionValue, MirPlace, MirPlaceBase, MirPlaceProjection,
+    MirPrimitiveComparison, MirRvalue, MirRvalueKind, MirType, MirUnaryOperation, MirValue,
 };

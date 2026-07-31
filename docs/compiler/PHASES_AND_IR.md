@@ -480,10 +480,10 @@ beyond the existing common panic reporter.
 
 The
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
-has a frozen target-independent representation boundary but is not yet a
-complete compiler phase product. The implemented nine integer-to-integer cells
-remain the current compiler boundary until the whole selected representation
-reaches its documented implementation stage.
+now has a cohesive target-independent MIR representation for all twenty-two
+non-failing cells, but is not yet a complete source-to-native phase product.
+Type checking and x86-64 execution remain limited to the implemented nine
+integer-to-integer cells while later roadmap tasks add target realizations.
 
 Lexing recognizes all five primitive type keywords. Syntax now uses one
 primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`
@@ -494,7 +494,7 @@ targets remain separate syntax and resolution paths; lower phases never
 redisambiguate a cast from source text.
 
 Resolution preserves the primitive target and resolved operand without
-selecting conversion behavior. Typed HIR now has the cohesive complete-matrix
+selecting conversion behavior. Typed HIR has the cohesive complete-matrix
 operation described below, but type checking constructs it only for the nine
 implemented integer pairs; the other sixteen pairs stop with a focused
 temporary implementation diagnostic. The completed type-checking boundary
@@ -515,7 +515,7 @@ operations rather than being erased before typed inspection. Identity `f64`
 casts preserve the complete binary64 datum; other conversions preserve the
 exact source-visible rules rather than storage coincidences.
 
-HIR-to-MIR lowering evaluates every operand exactly once. Identity,
+HIR-to-MIR lowering now evaluates every pure cast operand exactly once. Identity,
 integer-to-integer, boolean/numeric, numeric/boolean, and integer-to-`f64`
 casts become ordinary pure primitive-cast rvalues carrying exact source,
 target, and selected semantics. They add no block, call, failure edge,
@@ -550,24 +550,24 @@ retain the ordinary rule for unrecoverable termination: success reaches their
 normal cleanup boundary, while failure does not return and guarantees no
 remaining source-level cleanup.
 
-MIR verification proves:
+For ordinary primitive-cast rvalues, MIR verification now proves:
 
 - a legal source/target pair and selected semantic class;
 - exact operand, result-carrier, and rvalue types;
-- canonical `bool` and `u8` results where applicable;
 - block-local definition-before-use for every pure cast;
+- rejection of the three checked semantic cells until their explicit control
+  flow exists; and, in the later checked representation,
 - one secured `f64` source, matching check, success-only conversion, unique
   result initialization, result join, and terminal catalog reason for every
   checked cast; and
 - deterministic error accumulation and dumps under malformed-MIR mutations.
 
-HIR and MIR dumps expose exact source and target types plus pure versus checked
-semantics without target registers or helper names. The syntax, resolution,
-and HIR public facades now expose cohesive primitive types and casts with no
-parallel integer-only front-end model. MIR deliberately remains on its
-implemented integer-cast vocabulary until the next representation stage
-replaces that phase atomically with the cohesive primitive operation, checked
-range relation, and termination vocabulary.
+HIR and MIR dumps expose exact source and target types without target registers
+or helper names. Syntax, resolution, HIR, and MIR public facades expose
+cohesive primitive types and casts with no parallel integer-only cast model.
+Direct HIR and MIR fixtures cover every pure cell while the source gate keeps
+the thirteen pending pure cells from reaching the current backend. Target
+legality rejects a valid pending primitive cast before instruction selection.
 
 Focused implementation validation must cover all twenty-five pairs through
 syntax, resolution, type checking, HIR, MIR, verification, target legality,

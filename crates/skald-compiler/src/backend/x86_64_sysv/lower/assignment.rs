@@ -4,7 +4,7 @@ use crate::{
     backend::BackendError,
     mir::{
         MirAssignment, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
-        MirIntegerBitwiseOperation, MirIntegerCast, MirIntegerType, MirPlace,
+        MirIntegerBitwiseOperation, MirIntegerType, MirPlace, MirPrimitiveCast,
         MirPrimitiveComparison, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
     },
 };
@@ -100,8 +100,8 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_primitive_comparison(*operation, *left, *right, destination),
-            MirRvalueKind::IntegerCast { operation, operand } => {
-                self.select_integer_cast(*operation, *operand, destination)
+            MirRvalueKind::PrimitiveCast { operation, operand } => {
+                self.select_primitive_cast(*operation, *operand, destination)
             }
             MirRvalueKind::TypeTest { .. } => {
                 unreachable!("runtime type tests are selected before ordinary rvalues")
@@ -398,13 +398,15 @@ impl InstructionSelector<'_, '_> {
         value::store_canonical_rax(MirType::Bool, destination, self.output);
     }
 
-    fn select_integer_cast(
+    fn select_primitive_cast(
         &mut self,
-        operation: MirIntegerCast,
+        operation: MirPrimitiveCast,
         operand: ValueId,
         destination: Operand,
     ) {
-        // Verified integer values use canonical eight-byte homes. Loading the
+        debug_assert!(operation.source.is_integer() && operation.target.is_integer());
+        // Currently executable primitive casts are integer-only. Verified
+        // integer values use canonical eight-byte homes. Loading the
         // complete home preserves every i64/u64 bit and the canonical u8
         // value. The target store is the only width-dependent operation:
         // u8 keeps and zero-extends AL, while 64-bit targets preserve RAX.
