@@ -10,7 +10,10 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+- [Integer Division and Remainder Roadmap](INTEGER_DIVISION_AND_REMAINDER_ROADMAP.md)
+  — planned; DR0 is next. Implements checked `/` and `%` for exact `i64`,
+  `u64`, and `u8`, including floor semantics, zero-divisor failures, and the
+  defined signed-overflow edge case.
 
 ## Design proposals
 
