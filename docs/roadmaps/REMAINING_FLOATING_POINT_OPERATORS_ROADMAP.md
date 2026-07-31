@@ -1,6 +1,6 @@
 # Remaining Floating-Point Operators Roadmap
 
-Status: in progress; FP0 and FP1 are complete, and FP2 is next.
+Status: in progress; FP0 through FP2 are complete, and FP3 is next.
 
 This roadmap completes the remaining frozen primitive operators for `f64`:
 IEEE-754 binary64 division followed by unordered equality and ordering. The
@@ -125,7 +125,7 @@ the ABI remains unchanged rather than adding operator-specific C harnesses.
 
 - [x] FP0 — Establish executable IEEE floating division
 - [x] FP1 — Enable floating division from source end to end
-- [ ] FP2 — Establish executable unordered floating comparisons
+- [x] FP2 — Establish executable unordered floating comparisons
 - [ ] FP3 — Enable floating comparisons from source end to end
 - [ ] FP4 — Harden and promote the complete primitive-operator profile
 
@@ -225,31 +225,31 @@ floating comparisons as still pending in the frozen profile.
 **Purpose:** Make unordered semantics explicit and verified before source
 selection can expose any floating predicate.
 
-- [ ] Extend HIR and MIR comparison operands with an exact floating flavor
+- [x] Extend HIR and MIR comparison operands with an exact floating flavor
       shared by `==`, `!=`, `<`, `<=`, `>`, and `>=`; retain the predicate,
       exact `f64` operands, canonical `bool` result, and deterministic
       mnemonic explicitly.
-- [ ] Keep floating comparisons eager, pure, and non-failing. Reuse existing
+- [x] Keep floating comparisons eager, pure, and non-failing. Reuse existing
       left-to-right operand lowering and full-expression lifetime behavior
       without introducing semantic branch blocks or runtime calls.
-- [ ] Extend MIR verification to reject predicate/operand-flavor mismatches,
+- [x] Extend MIR verification to reject predicate/operand-flavor mismatches,
       non-`f64` operands, non-boolean results, noncanonical boolean producers,
       undefined values, and block-local misuse deterministically.
-- [ ] Extend the private x86-64 machine model, legality checks, flag/register
+- [x] Extend the private x86-64 machine model, legality checks, flag/register
       uses, selection, emission, and dumps with an unordered scalar comparison
       and the minimal byte operations needed to form a canonical boolean.
-- [ ] Define each native predicate explicitly from ordered/unordered target
+- [x] Define each native predicate explicitly from ordered/unordered target
       flags: equality requires ordered-and-equal; inequality accepts
       unordered-or-not-equal; all ordering predicates require ordered plus the
       requested relation.
-- [ ] Verify target operand order for all asymmetric predicates and ensure NaN
+- [x] Verify target operand order for all asymmetric predicates and ensure NaN
       in either source position follows the same unordered truth row. Do not
       derive one predicate by unsafe inversion of another unless unordered
       behavior remains explicit and proven.
-- [ ] Keep source selection of all six `f64` comparisons disabled in this
+- [x] Keep source selection of all six `f64` comparisons disabled in this
       task. Direct HIR/MIR/backend construction provides the closed truth-table
       and malformed-model coverage first.
-- [ ] Preserve exact signed and unsigned integer comparison lowering, boolean
+- [x] Preserve exact signed and unsigned integer comparison lowering, boolean
       equality, `is`, non-associative syntax, control-flow consumers, runtime,
       and ABI observations.
 

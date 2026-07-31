@@ -31,6 +31,45 @@ fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirEx
     expression
 }
 
+fn lower_manually_selected_floating_comparison(
+    spelling: &str,
+) -> (MirProgram, MirComparisonPredicate) {
+    let mut hir = type_check_source(format!(
+        "fn compare() -> bool {{ return 1 {spelling} 2; }} fn main() -> i64 {{ return 0; }}"
+    ))
+    .hir
+    .unwrap();
+    let comparison = returned_expression_mut(
+        hir.definitions
+            .get_mut_for_test(FunctionId::new(0))
+            .unwrap(),
+    );
+    let HirExpressionKind::PrimitiveComparison {
+        operation,
+        left,
+        right,
+    } = &mut comparison.kind
+    else {
+        panic!("expected comparison expression");
+    };
+    operation.operand = HirComparisonOperand::F64;
+    left.kind = HirExpressionKind::F64Bits(1.0_f64.to_bits());
+    left.ty = Type::F64;
+    right.kind = HirExpressionKind::F64Bits(2.0_f64.to_bits());
+    right.ty = Type::F64;
+
+    let predicate = match operation.predicate {
+        crate::hir::HirComparisonPredicate::Equal => MirComparisonPredicate::Equal,
+        crate::hir::HirComparisonPredicate::NotEqual => MirComparisonPredicate::NotEqual,
+        crate::hir::HirComparisonPredicate::LessThan => MirComparisonPredicate::LessThan,
+        crate::hir::HirComparisonPredicate::LessEqual => MirComparisonPredicate::LessEqual,
+        crate::hir::HirComparisonPredicate::GreaterThan => MirComparisonPredicate::GreaterThan,
+        crate::hir::HirComparisonPredicate::GreaterEqual => MirComparisonPredicate::GreaterEqual,
+    };
+    let mir = lower_hir(&hir);
+    (mir, predicate)
+}
+
 fn lower_manually_selected_eager_boolean_operations() -> MirProgram {
     let mut hir = type_check_source(concat!(
         "fn invert() -> bool { return false; }\n",
@@ -130,6 +169,114 @@ fn lowers_and_verifies_every_integer_comparison_operation() {
             );
         }
     }
+}
+
+#[test]
+fn lowers_and_verifies_every_floating_comparison_as_a_pure_scalar_rvalue() {
+    for &(_, spelling, mnemonic) in OPERATORS {
+        let (mir, predicate) = lower_manually_selected_floating_comparison(spelling);
+        verify_mir(&mir).unwrap();
+        let function = mir.definitions.get(FunctionId::new(0)).unwrap();
+        assert_eq!(function.body.blocks.len(), 1);
+
+        let operation = function.body.blocks[0]
+            .instructions
+            .iter()
+            .find_map(|instruction| match instruction {
+                MirInstruction::Assign(MirAssignment {
+                    rvalue:
+                        MirRvalue {
+                            kind: MirRvalueKind::PrimitiveComparison { operation, .. },
+                            ty: MirType::Bool,
+                        },
+                    ..
+                }) => Some(*operation),
+                _ => None,
+            })
+            .expect("floating comparison must lower to one scalar rvalue");
+        assert_eq!(
+            operation,
+            MirPrimitiveComparison {
+                predicate,
+                operand: MirComparisonOperand::F64,
+            }
+        );
+        assert_eq!(operation.operand_type(), MirType::F64);
+        assert_eq!(operation.result_type(), MirType::Bool);
+
+        let dump = dump_mir(&mir);
+        assert_eq!(dump, dump_mir(&mir));
+        assert!(dump.contains(&format!("{mnemonic}.f64")));
+    }
+}
+
+#[test]
+fn floating_comparison_lowers_nested_operands_once_in_source_order() {
+    let mut hir =
+        type_check_source("fn compare() -> bool { return 1 < 2; } fn main() -> i64 { return 0; }")
+            .hir
+            .unwrap();
+    let comparison = returned_expression_mut(
+        hir.definitions
+            .get_mut_for_test(FunctionId::new(0))
+            .unwrap(),
+    );
+    let span = comparison.span;
+    let HirExpressionKind::PrimitiveComparison {
+        operation,
+        left,
+        right,
+    } = &mut comparison.kind
+    else {
+        panic!("expected comparison expression");
+    };
+    operation.operand = HirComparisonOperand::F64;
+    let division = |dividend: f64, divisor: f64| HirExpression {
+        kind: HirExpressionKind::Binary {
+            operation: crate::hir::HirBinaryOperation::DivideF64,
+            left: Box::new(HirExpression {
+                kind: HirExpressionKind::F64Bits(dividend.to_bits()),
+                ty: Type::F64,
+                span,
+            }),
+            right: Box::new(HirExpression {
+                kind: HirExpressionKind::F64Bits(divisor.to_bits()),
+                ty: Type::F64,
+                span,
+            }),
+        },
+        ty: Type::F64,
+        span,
+    };
+    **left = division(8.0, 2.0);
+    **right = division(9.0, 3.0);
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+    let operations: Vec<_> = dump
+        .lines()
+        .filter_map(|line| {
+            if line.contains("div.f64") {
+                Some("div")
+            } else if line.contains("lt.f64") {
+                Some("compare")
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(operations, ["div", "div", "compare"]);
+    assert_eq!(
+        mir.definitions
+            .get(FunctionId::new(0))
+            .unwrap()
+            .body
+            .blocks
+            .len(),
+        1,
+        "pure floating operands and comparison must not introduce control flow"
+    );
 }
 
 #[test]

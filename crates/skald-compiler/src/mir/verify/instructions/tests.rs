@@ -92,6 +92,40 @@ fn eager_boolean_mir() -> MirProgram {
     program
 }
 
+fn floating_comparison_mir(predicate: MirComparisonPredicate) -> MirProgram {
+    let mut program = lower_source_to_mir(
+        "fn compare() -> bool { return 1 < 2; } fn main() -> i64 { return 0; }",
+    );
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    function.values[0].ty = MirType::F64;
+    function.values[1].ty = MirType::F64;
+
+    let MirInstruction::Assign(left) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("expected left assignment");
+    };
+    left.rvalue.kind = MirRvalueKind::ConstantF64Bits(1.0_f64.to_bits());
+    left.rvalue.ty = MirType::F64;
+    let MirInstruction::Assign(right) = &mut function.body.blocks[0].instructions[1] else {
+        panic!("expected right assignment");
+    };
+    right.rvalue.kind = MirRvalueKind::ConstantF64Bits(2.0_f64.to_bits());
+    right.rvalue.ty = MirType::F64;
+    let MirInstruction::Assign(comparison) = &mut function.body.blocks[0].instructions[2] else {
+        panic!("expected comparison assignment");
+    };
+    let MirRvalueKind::PrimitiveComparison { operation, .. } = &mut comparison.rvalue.kind else {
+        panic!("expected comparison rvalue");
+    };
+    *operation = MirPrimitiveComparison {
+        predicate,
+        operand: MirComparisonOperand::F64,
+    };
+    program
+}
+
 #[test]
 fn arithmetic_corruption_accumulates_errors_in_deterministic_order() {
     let mut program =
@@ -192,6 +226,67 @@ fn comparison_corruption_accumulates_errors_in_deterministic_order() {
             "comparison operand is not `i64`",
         ]
     );
+}
+
+#[test]
+fn verifier_accepts_every_exact_floating_comparison() {
+    for predicate in [
+        MirComparisonPredicate::Equal,
+        MirComparisonPredicate::NotEqual,
+        MirComparisonPredicate::LessThan,
+        MirComparisonPredicate::LessEqual,
+        MirComparisonPredicate::GreaterThan,
+        MirComparisonPredicate::GreaterEqual,
+    ] {
+        verify_mir(&floating_comparison_mir(predicate)).unwrap();
+    }
+}
+
+#[test]
+fn floating_comparison_corruption_accumulates_errors_deterministically() {
+    let mut program = floating_comparison_mir(MirComparisonPredicate::LessThan);
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    function.values[0].ty = MirType::I64;
+    let MirInstruction::Assign(left) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("expected left assignment");
+    };
+    left.rvalue.kind = MirRvalueKind::ConstantI64(1);
+    left.rvalue.ty = MirType::I64;
+    let MirInstruction::Assign(comparison) = &mut function.body.blocks[0].instructions[2] else {
+        panic!("expected comparison assignment");
+    };
+    comparison.rvalue.ty = MirType::U64;
+
+    assert_eq!(
+        verify_mir(&program)
+            .unwrap_err()
+            .iter()
+            .map(|error| error.message.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "assignment type does not match value f0:v2",
+            "floating comparison result must be `bool`",
+            "comparison operand is not `f64`",
+        ]
+    );
+}
+
+#[test]
+fn verifier_rejects_floating_comparison_use_before_definition() {
+    let mut program = floating_comparison_mir(MirComparisonPredicate::Equal);
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    function.body.blocks[0].instructions.swap(0, 2);
+
+    assert!(verify_mir(&program)
+        .unwrap_err()
+        .iter()
+        .any(|error| error.message.contains("used before it is defined")));
 }
 
 #[test]

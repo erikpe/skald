@@ -98,6 +98,31 @@ fn malformed_integer_comparisons_are_rejected_at_the_verifier_boundary() {
 }
 
 #[test]
+fn malformed_floating_comparisons_are_rejected_at_the_verifier_boundary() {
+    let mut program = f64_comparison_program(
+        MirComparisonPredicate::LessThan,
+        1.0_f64.to_bits(),
+        2.0_f64.to_bits(),
+        true,
+    );
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    function.values[0].ty = MirType::I64;
+    let MirInstruction::Assign(left) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("fixture must contain the left floating operand");
+    };
+    left.rvalue.kind = MirRvalueKind::ConstantI64(1);
+    left.rvalue.ty = MirType::I64;
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains("comparison operand is not `f64`"));
+}
+
+#[test]
 fn malformed_boolean_ordering_is_rejected_at_the_verifier_boundary() {
     let mut program = eager_boolean_program();
     let function = program

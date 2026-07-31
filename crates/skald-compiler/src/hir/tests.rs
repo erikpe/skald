@@ -128,6 +128,51 @@ fn dumps_manually_constructed_eager_boolean_operations_deterministically() {
 }
 
 #[test]
+fn represents_every_floating_comparison_with_one_exact_operand_flavor() {
+    for (spelling, mnemonic) in [
+        ("==", "eq"),
+        ("!=", "ne"),
+        ("<", "lt"),
+        ("<=", "le"),
+        (">", "gt"),
+        (">=", "ge"),
+    ] {
+        let mut hir = type_check_source(format!(
+            "fn compare() -> bool {{ return 1 {spelling} 2; }} fn main() -> i64 {{ return 0; }}"
+        ))
+        .hir
+        .unwrap();
+        let comparison = returned_expression_mut(
+            hir.definitions
+                .get_mut_for_test(FunctionId::new(0))
+                .unwrap(),
+        );
+        let HirExpressionKind::PrimitiveComparison {
+            operation,
+            left,
+            right,
+        } = &mut comparison.kind
+        else {
+            panic!("expected comparison expression");
+        };
+        operation.operand = HirComparisonOperand::F64;
+        left.kind = HirExpressionKind::F64Bits(1.0_f64.to_bits());
+        left.ty = Type::F64;
+        right.kind = HirExpressionKind::F64Bits(2.0_f64.to_bits());
+        right.ty = Type::F64;
+
+        assert!(operation.is_valid());
+        assert_eq!(operation.operand_type(), Type::F64);
+        assert_eq!(operation.result_type(), Type::Bool);
+        assert_eq!(comparison.ty, Type::Bool);
+
+        let dump = dump_hir(&hir);
+        assert_eq!(dump, dump_hir(&hir));
+        assert!(dump.contains(&format!("FloatingComparison {mnemonic}.f64 : bool")));
+    }
+}
+
+#[test]
 fn dumps_manually_constructed_logical_expression_shape_deterministically() {
     let mut hir = type_check_source(concat!(
         "fn evaluate() -> bool { return false; }\n",

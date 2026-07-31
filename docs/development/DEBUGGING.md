@@ -118,6 +118,13 @@ uses scalar binary64 division. A floating zero divisor is therefore an
 ordinary input whose infinity or NaN result can be inspected through raw-bit
 runtime observation where the contract fixes those bits.
 
+Direct pre-activation floating-comparison fixtures print `eq.f64`, `ne.f64`,
+`lt.f64`, `le.f64`, `gt.f64`, or `ge.f64` in MIR. Their assembly must contain
+`ucomisd`, a relation `setcc`, an explicit `setp` or `setnp` parity gate, byte
+combination, and canonical zero extension. Source floating comparisons still
+diagnose before HIR, so those internal dumps are currently reached only by
+phase-owned fixtures.
+
 For `left && right` or `left || right`, AST and resolved dumps retain a
 distinct logical node and HIR prints `Logical And` or `Logical Or`. MIR should
 contain a `LogicalExpressions` row, a split branch, separate short and right

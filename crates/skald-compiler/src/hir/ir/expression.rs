@@ -326,6 +326,7 @@ impl HirComparisonPredicate {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum HirComparisonOperand {
     Integer(HirIntegerType),
+    F64,
     Bool,
 }
 
@@ -333,6 +334,7 @@ impl HirComparisonOperand {
     pub const fn operand_type(self) -> Type {
         match self {
             Self::Integer(integer) => integer.operand_type(),
+            Self::F64 => Type::F64,
             Self::Bool => Type::Bool,
         }
     }
@@ -340,13 +342,14 @@ impl HirComparisonOperand {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Integer(integer) => integer.name(),
+            Self::F64 => "f64",
             Self::Bool => "bool",
         }
     }
 
     pub const fn supports_predicate(self, predicate: HirComparisonPredicate) -> bool {
         match self {
-            Self::Integer(_) => true,
+            Self::Integer(_) | Self::F64 => true,
             Self::Bool => matches!(
                 predicate,
                 HirComparisonPredicate::Equal | HirComparisonPredicate::NotEqual

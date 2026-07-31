@@ -332,6 +332,16 @@ without freezing its payload, and trace exactly-once evaluation plus reverse
 full-expression cleanup. Cross-process snapshots cover phase products and
 focused diagnostics.
 
+Internal floating-comparison coverage owns the pre-activation executable
+boundary. Direct HIR and MIR matrices retain all six predicates with exact
+`f64` operands and canonical `bool` results; verifier mutations cover invalid
+flavors, types, and definition order. Backend tests require scalar unordered
+comparison, explicit parity gating, canonical zero extension, deterministic
+assembly, and assembler acceptance. Native fixtures cover finite
+less/equal/greater values, signed zero, both infinities, and quiet or signaling
+NaNs with distinct payloads in either operand position. Source type-check tests
+continue rejecting all six floating predicates until source activation.
+
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
 recovery. Resolution and type-check tests own source-shaped negation, exact

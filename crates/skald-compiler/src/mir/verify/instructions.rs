@@ -702,6 +702,7 @@ impl Verifier<'_> {
                         MirComparisonOperand::Integer(_) => {
                             "integer comparison result must be `bool`"
                         }
+                        MirComparisonOperand::F64 => "floating comparison result must be `bool`",
                         MirComparisonOperand::Bool => "boolean comparison result must be `bool`",
                     };
                     self.block_error(function.callable(), block.id, message);

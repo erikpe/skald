@@ -188,6 +188,18 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source.name()
         )
         .unwrap(),
+        Instruction::ByteBitwise {
+            operation,
+            source,
+            destination,
+        } => write!(
+            output,
+            "{} {}, {}",
+            operation.mnemonic(),
+            destination.name(),
+            source.name()
+        )
+        .unwrap(),
         Instruction::Shift {
             operation,
             destination,
@@ -226,6 +238,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "cmp {}, {}", destination.name(), source.name()).unwrap(),
+        Instruction::CompareFloat64 {
+            source,
+            destination,
+        } => write!(output, "ucomisd {}, {}", destination.name(), source.name()).unwrap(),
         Instruction::SetCondition {
             condition,
             destination,
@@ -351,10 +367,12 @@ mod tests {
     use crate::backend::x86_64_sysv::machine::{ByteRegister, ConditionCode};
 
     #[test]
-    fn emits_every_integer_condition_code() {
+    fn emits_every_condition_code() {
         for (condition, expected) in [
             (ConditionCode::Equal, "sete al"),
             (ConditionCode::NotEqual, "setne al"),
+            (ConditionCode::Parity, "setp al"),
+            (ConditionCode::NotParity, "setnp al"),
             (ConditionCode::SignedLess, "setl al"),
             (ConditionCode::SignedLessEqual, "setle al"),
             (ConditionCode::SignedGreater, "setg al"),

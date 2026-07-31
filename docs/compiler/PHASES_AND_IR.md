@@ -323,6 +323,15 @@ value when a control-affecting right operand changes blocks, and introduces no
 semantic check, failure edge, or termination reason. MIR verification requires
 exact `f64` operands and result before the x86-64 backend may consume it.
 
+The internal HIR and MIR comparison models also carry an explicit `f64`
+operand flavor for all six predicates. Each comparison remains one eager,
+pure, non-failing scalar rvalue with exact `f64` operands and a canonical
+`bool` result; dumps retain the predicate as `eq.f64`, `ne.f64`, `lt.f64`,
+`le.f64`, `gt.f64`, or `ge.f64`. MIR verification rejects operand and result
+type mismatches before target lowering. Source type checking deliberately does
+not select this flavor yet, so source floating comparisons remain outside the
+implemented language subset until their end-to-end activation milestone.
+
 MIR lowers eager primitive operations to target-independent scalar operations.
 It preserves:
 

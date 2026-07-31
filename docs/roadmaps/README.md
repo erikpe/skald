@@ -7,10 +7,10 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Remaining Floating-Point Operators Roadmap](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
-  — **in progress**; exact source IEEE-754 `f64` division is complete, and FP2
-  (executable unordered floating comparisons) is next. Source comparison
-  activation remains the separate FP3 semantic milestone. The roadmap depends
-  only on the completed primitive-operator and `f64` scalar foundations.
+  — **in progress**; the internal executable unordered floating-comparison
+  path is complete, and FP3 source comparison activation is next. The roadmap
+  depends only on the completed primitive-operator and `f64` scalar
+  foundations.
 
 ## Planned
 

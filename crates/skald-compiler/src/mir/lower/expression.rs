@@ -220,6 +220,7 @@ impl BodyLowerer<'_> {
                 HirComparisonOperand::Integer(integer) => {
                     MirComparisonOperand::Integer(lower_integer_type(integer))
                 }
+                HirComparisonOperand::F64 => MirComparisonOperand::F64,
                 HirComparisonOperand::Bool => MirComparisonOperand::Bool,
             },
         };

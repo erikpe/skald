@@ -423,6 +423,85 @@ pub(super) fn f64_division_program(dividend_bits: u64, divisor_bits: u64) -> Mir
     program
 }
 
+pub(super) fn f64_comparison_program(
+    predicate: MirComparisonPredicate,
+    left_bits: u64,
+    right_bits: u64,
+    expected: bool,
+) -> MirProgram {
+    let mut program = lower_text("fn main() -> i64 { return 0; }");
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let span = function.span;
+    let function_id = function.function;
+    let entry = BlockId::new(function_id, 0);
+    let success = BlockId::new(function_id, 1);
+    let failure = BlockId::new(function_id, 2);
+    let value = |index, ty| fixture_value(ValueId::new(function_id, index), ty, span);
+    let assignment =
+        |index, kind, ty| fixture_assign(ValueId::new(function_id, index), kind, ty, span);
+
+    function.values = vec![
+        value(0, MirType::F64),
+        value(1, MirType::F64),
+        value(2, MirType::Bool),
+        value(3, MirType::I64),
+        value(4, MirType::I64),
+    ];
+    function.body.entry = entry;
+    function.body.blocks = vec![
+        fixture_block(
+            entry,
+            vec![
+                assignment(0, MirRvalueKind::ConstantF64Bits(left_bits), MirType::F64),
+                assignment(1, MirRvalueKind::ConstantF64Bits(right_bits), MirType::F64),
+                assignment(
+                    2,
+                    MirRvalueKind::PrimitiveComparison {
+                        operation: MirPrimitiveComparison {
+                            predicate,
+                            operand: MirComparisonOperand::F64,
+                        },
+                        left: ValueId::new(function_id, 0),
+                        right: ValueId::new(function_id, 1),
+                    },
+                    MirType::Bool,
+                ),
+            ],
+            Some(MirTerminator::Branch {
+                condition: ValueId::new(function_id, 2),
+                true_target: if expected { success } else { failure },
+                false_target: if expected { failure } else { success },
+                span,
+            }),
+            span,
+        ),
+        fixture_block(
+            success,
+            vec![assignment(3, MirRvalueKind::ConstantI64(0), MirType::I64)],
+            Some(MirTerminator::Return {
+                value: Some(ValueId::new(function_id, 3)),
+                span,
+            }),
+            span,
+        ),
+        fixture_block(
+            failure,
+            vec![assignment(4, MirRvalueKind::ConstantI64(1), MirType::I64)],
+            Some(MirTerminator::Return {
+                value: Some(ValueId::new(function_id, 4)),
+                span,
+            }),
+            span,
+        ),
+    ];
+
+    verify_mir(&program).expect("floating comparison fixture must be valid");
+    program
+}
+
 pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     let span = test_span();
     let mixed_id = FunctionId::new(0);

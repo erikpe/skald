@@ -976,6 +976,7 @@ impl HirDumper {
             } => {
                 let family = match operation.operand {
                     HirComparisonOperand::Integer(_) => "IntegerComparison",
+                    HirComparisonOperand::F64 => "FloatingComparison",
                     HirComparisonOperand::Bool => "BooleanComparison",
                 };
                 self.typed_line(

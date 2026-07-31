@@ -84,6 +84,8 @@ impl Register {
 pub(super) enum ConditionCode {
     Equal,
     NotEqual,
+    Parity,
+    NotParity,
     SignedLess,
     SignedLessEqual,
     SignedGreater,
@@ -99,6 +101,8 @@ impl ConditionCode {
         match self {
             Self::Equal => "e",
             Self::NotEqual => "ne",
+            Self::Parity => "p",
+            Self::NotParity => "np",
             Self::SignedLess => "l",
             Self::SignedLessEqual => "le",
             Self::SignedGreater => "g",
@@ -230,6 +234,11 @@ pub(super) enum Instruction {
         source: Register,
         destination: Register,
     },
+    ByteBitwise {
+        operation: BitwiseOperation,
+        source: ByteRegister,
+        destination: ByteRegister,
+    },
     Shift {
         operation: ShiftOperation,
         destination: Register,
@@ -258,6 +267,10 @@ pub(super) enum Instruction {
     Compare {
         source: Register,
         destination: Register,
+    },
+    CompareFloat64 {
+        source: XmmRegister,
+        destination: XmmRegister,
     },
     SetCondition {
         condition: ConditionCode,
