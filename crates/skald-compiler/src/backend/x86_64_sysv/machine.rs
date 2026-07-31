@@ -202,6 +202,10 @@ pub(super) enum Instruction {
         source: Register,
         destination: XmmRegister,
     },
+    ConvertFloat64ToSignedInteger {
+        source: XmmRegister,
+        destination: Register,
+    },
     MoveFloat64 {
         source: FloatOperand,
         destination: FloatOperand,
@@ -290,6 +294,10 @@ pub(super) enum Instruction {
     JumpIfNotSign(Label),
     JumpIfBelow(Label),
     JumpIfAbove(Label),
+    JumpIf {
+        condition: ConditionCode,
+        target: Label,
+    },
     Trap,
     Leave,
     Return,

@@ -1,16 +1,112 @@
 //! Primitive-cast instruction selection.
 
-use crate::mir::{MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType, MirType, ValueId};
+use crate::mir::{
+    MirF64ToIntegerRange, MirIntegerType, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveType,
+    MirTerminator, MirType, ValueId,
+};
 
 use super::{
     super::machine::{
         BitwiseOperation, ByteRegister, ConditionCode, Instruction, Label, Operand, Register,
         ShiftOperation, XmmRegister,
     },
-    symbol, value, InstructionSelector,
+    block_label, symbol, value, InstructionSelector,
 };
 
+const NEGATIVE_ONE_BITS: u64 = 0xbff0_0000_0000_0000;
+const TWO_TO_8_BITS: u64 = 0x4070_0000_0000_0000;
+const TWO_TO_63_BITS: u64 = 0x43e0_0000_0000_0000;
+const NEGATIVE_TWO_TO_63_BITS: u64 = 0xc3e0_0000_0000_0000;
+const TWO_TO_64_BITS: u64 = 0x43f0_0000_0000_0000;
+
+#[derive(Clone, Copy)]
+struct F64IntegerBounds {
+    lower_bits: u64,
+    lower_failure: ConditionCode,
+    upper_bits: u64,
+}
+
+impl F64IntegerBounds {
+    const fn for_target(target: MirIntegerType) -> Self {
+        match target {
+            MirIntegerType::I64 => Self {
+                lower_bits: NEGATIVE_TWO_TO_63_BITS,
+                lower_failure: ConditionCode::UnsignedBelow,
+                upper_bits: TWO_TO_63_BITS,
+            },
+            MirIntegerType::U64 => Self {
+                lower_bits: NEGATIVE_ONE_BITS,
+                lower_failure: ConditionCode::UnsignedBelowEqual,
+                upper_bits: TWO_TO_64_BITS,
+            },
+            MirIntegerType::U8 => Self {
+                lower_bits: NEGATIVE_ONE_BITS,
+                lower_failure: ConditionCode::UnsignedBelowEqual,
+                upper_bits: TWO_TO_8_BITS,
+            },
+        }
+    }
+}
+
 impl InstructionSelector<'_, '_> {
+    /// Selects the finite and post-truncation range relation before control
+    /// can enter the success-only conversion block.
+    pub(super) fn select_primitive_cast_terminator(&mut self, terminator: &MirTerminator) -> bool {
+        let MirTerminator::PrimitiveCastRangeCheck {
+            check,
+            success_target,
+            failure_target,
+            ..
+        } = terminator
+        else {
+            return false;
+        };
+
+        let failure = block_label(self.program, *failure_target);
+        let bounds = F64IntegerBounds::for_target(check.relation.target);
+        value::load_float(
+            value::float_operand(value::frame_storage(self.frame, check.source)),
+            XmmRegister::Xmm14,
+            self.output,
+        );
+
+        // An unordered self-comparison identifies every NaN before the
+        // ordered threshold checks. Infinities fail one of those thresholds.
+        self.output.push(Instruction::CompareFloat64 {
+            source: XmmRegister::Xmm14,
+            destination: XmmRegister::Xmm14,
+        });
+        self.output.push(Instruction::JumpIf {
+            condition: ConditionCode::Parity,
+            target: failure.clone(),
+        });
+
+        self.load_f64_bits(bounds.lower_bits, XmmRegister::Xmm15);
+        self.output.push(Instruction::CompareFloat64 {
+            source: XmmRegister::Xmm15,
+            destination: XmmRegister::Xmm14,
+        });
+        self.output.push(Instruction::JumpIf {
+            condition: bounds.lower_failure,
+            target: failure.clone(),
+        });
+
+        self.load_f64_bits(bounds.upper_bits, XmmRegister::Xmm15);
+        self.output.push(Instruction::CompareFloat64 {
+            source: XmmRegister::Xmm15,
+            destination: XmmRegister::Xmm14,
+        });
+        self.output.push(Instruction::JumpIf {
+            condition: ConditionCode::UnsignedAboveEqual,
+            target: failure,
+        });
+        self.output.push(Instruction::Jump(block_label(
+            self.program,
+            *success_target,
+        )));
+        true
+    }
+
     pub(super) fn select_primitive_cast(
         &mut self,
         operation: MirPrimitiveCast,
@@ -40,9 +136,87 @@ impl InstructionSelector<'_, '_> {
                 self.select_integer_to_f64(operation.source, operand, destination);
             }
             MirPrimitiveCastKind::CheckedF64ToInteger => {
-                unreachable!("target legality rejects unsupported primitive casts")
+                unreachable!("checked primitive casts use their dedicated success conversion")
             }
         }
+    }
+
+    pub(super) fn select_checked_f64_to_integer(
+        &mut self,
+        relation: MirF64ToIntegerRange,
+        operand: ValueId,
+        ty: MirType,
+        destination: Operand,
+    ) {
+        debug_assert_eq!(relation.result_type(), ty);
+        value::load_float(
+            value::float_operand(value::frame_value(self.frame, operand)),
+            XmmRegister::Xmm14,
+            self.output,
+        );
+        if relation.target == MirIntegerType::U64 {
+            self.convert_checked_u64();
+        } else {
+            self.convert_f64_to_signed_rax();
+        }
+        value::store_canonical_rax(ty, destination, self.output);
+    }
+
+    fn convert_checked_u64(&mut self) {
+        let signed_domain = self.next_primitive_cast_label("f64_u64_signed_domain");
+        let result_ready = self.next_primitive_cast_label("f64_u64_result_ready");
+
+        self.load_f64_bits(TWO_TO_63_BITS, XmmRegister::Xmm15);
+        self.output.push(Instruction::CompareFloat64 {
+            source: XmmRegister::Xmm15,
+            destination: XmmRegister::Xmm14,
+        });
+        self.output.push(Instruction::JumpIf {
+            condition: ConditionCode::UnsignedBelow,
+            target: signed_domain.clone(),
+        });
+
+        // The verified upper bound makes `(source - 2^63)` a nonnegative
+        // signed-domain value. The subtraction is exact for this interval;
+        // restoring the high bit yields the complete u64 domain inline.
+        self.output.push(Instruction::SubtractFloat64 {
+            source: XmmRegister::Xmm15,
+            destination: XmmRegister::Xmm14,
+        });
+        self.convert_f64_to_signed_rax();
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 1_u64 << 63,
+            destination: Register::R11,
+        });
+        self.output.push(Instruction::Bitwise {
+            operation: BitwiseOperation::Or,
+            source: Register::R11,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::Jump(result_ready.clone()));
+
+        self.output.push(Instruction::Label(signed_domain));
+        self.convert_f64_to_signed_rax();
+        self.output.push(Instruction::Label(result_ready));
+    }
+
+    fn convert_f64_to_signed_rax(&mut self) {
+        self.output
+            .push(Instruction::ConvertFloat64ToSignedInteger {
+                source: XmmRegister::Xmm14,
+                destination: Register::Rax,
+            });
+    }
+
+    fn load_f64_bits(&mut self, bits: u64, destination: XmmRegister) {
+        self.output.push(Instruction::MoveImmediate64 {
+            bits,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::MoveBitsToFloat {
+            source: Register::Rax,
+            destination,
+        });
     }
 
     fn select_f64_identity(&mut self, operand: ValueId, destination: Operand) {

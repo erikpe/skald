@@ -319,7 +319,8 @@ adds no public C symbol, runtime-managed value, or ABI-version change. All
 twenty-two pure cells are generated inline and retain the existing
 `ska_rt_abi_v6` marker. The compiler now catalogs the checked conversion's
 distinct termination reason and exact static message while preserving that
-marker; machine execution of the checked diamond remains pending.
+marker. x86-64 now executes the checked diamond and reaches the existing
+reporter on failure without adding a runtime symbol or conversion helper.
 
 Identity, integer, boolean, and integer-to-`f64` conversions are entirely
 compiler-generated. Checked `f64`-to-integer conversion also remains

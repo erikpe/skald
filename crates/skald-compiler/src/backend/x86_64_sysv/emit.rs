@@ -138,6 +138,16 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "cvtsi2sd {}, {}", destination.name(), source.name()).unwrap(),
+        Instruction::ConvertFloat64ToSignedInteger {
+            source,
+            destination,
+        } => write!(
+            output,
+            "cvttsd2si {}, {}",
+            destination.name(),
+            source.name()
+        )
+        .unwrap(),
         Instruction::MoveFloat64 {
             source,
             destination,
@@ -260,6 +270,9 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         Instruction::JumpIfNotSign(label) => write!(output, "jns {}", label.name()).unwrap(),
         Instruction::JumpIfBelow(label) => write!(output, "jb {}", label.name()).unwrap(),
         Instruction::JumpIfAbove(label) => write!(output, "ja {}", label.name()).unwrap(),
+        Instruction::JumpIf { condition, target } => {
+            write!(output, "j{} {}", condition.mnemonic(), target.name()).unwrap()
+        }
         Instruction::Trap => output.push_str("ud2"),
         Instruction::Leave => output.push_str("leave"),
         Instruction::Return => output.push_str("ret"),
@@ -395,6 +408,19 @@ mod tests {
                 },
             );
             assert_eq!(output, expected);
+
+            let mut output = String::new();
+            emit_instruction(
+                &mut output,
+                &Instruction::JumpIf {
+                    condition,
+                    target: super::super::machine::Label::new("target".to_owned()),
+                },
+            );
+            assert_eq!(
+                output,
+                expected.replace("set", "j").replace(" al", " target")
+            );
         }
     }
 }

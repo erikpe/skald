@@ -486,8 +486,8 @@ Type checking selects them into typed HIR, lowering represents them as pure
 MIR, verification proves their exact operation and types, and x86-64 executes
 them inline. Direct typed-HIR fixtures for the three checked
 `f64`-to-integer cells now lower to the verified control flow described below;
-source selection and target execution remain gated until that flow is
-executable.
+x86-64 executes that flow inline, while ordinary source selection remains
+temporarily gated.
 
 Lexing recognizes all five primitive type keywords. Syntax now uses one
 primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`

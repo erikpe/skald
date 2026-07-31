@@ -116,6 +116,7 @@ fn lower_definition(
         if !selector.select_termination(block_terminator)?
             && !selector.select_shift_terminator(block_terminator)
             && !selector.select_integer_division_terminator(block_terminator)
+            && !selector.select_primitive_cast_terminator(block_terminator)
             && !selector.select_array_terminator(block_terminator)?
             && !selector.select_optional_terminator(block_terminator)?
             && !selector.select_type_operation_terminator(block_terminator, block.id)?

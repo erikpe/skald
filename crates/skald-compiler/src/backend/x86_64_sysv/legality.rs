@@ -144,18 +144,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     MirInstruction::Array(_) => {}
                 }
             }
-            if let Some(crate::mir::MirTerminator::PrimitiveCastRangeCheck { check, .. }) =
-                &block.terminator
-            {
-                return Err(BackendError::new(
-                    Target::X86_64SysV,
-                    Some(function.callable()),
-                    format!(
-                        "primitive cast `f64 -> {}` is not yet supported by this target",
-                        check.relation.target.name()
-                    ),
-                ));
-            }
         }
     }
     Ok((data_layout, dispatch))

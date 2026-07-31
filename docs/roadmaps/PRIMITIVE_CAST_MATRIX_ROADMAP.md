@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST6 is next.
+Status: in progress; CAST7 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -82,7 +82,7 @@ clean checkout.
 - [x] CAST3 — Execute integer-to-floating casts
 - [x] CAST4 — Enable every non-failing cast from source
 - [x] CAST5 — Establish verified checked floating-to-integer control flow
-- [ ] CAST6 — Execute checked floating-to-integer casts
+- [x] CAST6 — Execute checked floating-to-integer casts
 - [ ] CAST7 — Enable checked floating-to-integer casts from source
 - [ ] CAST8 — Harden and promote the complete matrix
 
@@ -313,25 +313,25 @@ reaches the existing reporter boundary, with no source exposure yet.
 depending on host-language cast behavior, runtime helpers, or ambiguous target
 conversion sentinels.
 
-- [ ] Select ordered finite/range checks equivalent to mathematical
+- [x] Select ordered finite/range checks equivalent to mathematical
       truncation followed by the exact `i64`, `u64`, or `u8` target range.
       Explicitly accept negative fractions greater than `-1.0` for unsigned
       targets and reject NaN and both infinities.
-- [ ] Perform truncation/conversion only after the matching success check and
+- [x] Perform truncation/conversion only after the matching success check and
       store one canonical exact target result before the join.
-- [ ] Implement the complete signed and unsigned 64-bit result domains inline;
+- [x] Implement the complete signed and unsigned 64-bit result domains inline;
       do not infer validity solely from a target instruction's sentinel result
       or pass through an unversioned C conversion.
-- [ ] Lower failure to the existing static-message `ska_rt_panic` path and
+- [x] Lower failure to the existing static-message `ska_rt_panic` path and
       prove it cannot resume, initialize the result, or execute remaining
       source-level cleanup after reporting begins.
-- [ ] Extend machine legality, flag/register-use modeling, threshold constant
+- [x] Extend machine legality, flag/register-use modeling, threshold constant
       materialization, selection, emission, and dumps with deterministic
       target-private structure.
-- [ ] Preserve verified source storage across checks and conversion, including
+- [x] Preserve verified source storage across checks and conversion, including
       nested casts and surrounding control effects, without evaluating or
       reloading an effectful source expression twice.
-- [ ] Keep ordinary source selection disabled until direct-MIR boundary and
+- [x] Keep ordinary source selection disabled until direct-MIR boundary and
       failure observations are complete.
 
 **Tests:** Direct-MIR selector, legality, assembly, and native success/failure

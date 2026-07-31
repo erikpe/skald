@@ -140,6 +140,117 @@ fn emitted_integer_to_f64_casts_are_deterministic_and_assemble_without_helpers()
 }
 
 #[test]
+fn checked_float_to_integer_selection_is_guarded_deterministic_and_inline() {
+    for target in [MirIntegerType::I64, MirIntegerType::U64, MirIntegerType::U8] {
+        let program = fixture_checked_primitive_cast_program(0.5_f64.to_bits(), target, 0);
+        let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+        assert_eq!(
+            assembly,
+            emit_assembly(Target::X86_64SysV, &program).unwrap()
+        );
+        assert_system_assembler_accepts(&assembly);
+        assert!(!assembly.contains("ska_rt_primitive_cast"));
+
+        let function = function_assembly(&assembly, ".Lska.fn.main.main.f0");
+        let check_block = cast_block_assembly(function, 0);
+        let success_block = cast_block_assembly(function, 1);
+        let failure_block = cast_block_assembly(function, 2);
+        let check = function.find("ucomisd xmm14, xmm14").unwrap();
+        let unordered_failure = function.find("jp .Lska.fn.main.main.f0.block_2").unwrap();
+        let upper_failure = function.find("jae .Lska.fn.main.main.f0.block_2").unwrap();
+        let conversion = function.find("cvttsd2si rax, xmm14").unwrap();
+        assert!(check < unordered_failure);
+        assert!(unordered_failure < upper_failure);
+        assert!(upper_failure < conversion);
+        assert!(function[conversion..].contains("mov qword ptr [rbp"));
+        assert!(!check_block.contains("cvttsd2si"));
+        assert!(success_block.contains("cvttsd2si rax, xmm14"));
+        assert!(success_block.contains("mov qword ptr [rbp"));
+        assert!(failure_block.contains("call ska_rt_panic"));
+        assert!(!failure_block.contains("cvttsd2si"));
+        assert!(!failure_block.contains("jmp "));
+        assert_eq!(
+            function.matches("cvttsd2si rax, xmm14").count(),
+            if target == MirIntegerType::U64 { 2 } else { 1 }
+        );
+    }
+}
+
+#[test]
+fn checked_float_to_integer_successes_cover_every_target_boundary() {
+    for (bits, target, expected) in [
+        (
+            (-9_223_372_036_854_775_808.0_f64).to_bits(),
+            MirIntegerType::I64,
+            i64::MIN as u64,
+        ),
+        (
+            0xc3df_ffff_ffff_ffff,
+            MirIntegerType::I64,
+            (i64::MIN + 1024) as u64,
+        ),
+        (
+            (-12_345.75_f64).to_bits(),
+            MirIntegerType::I64,
+            (-12_345_i64) as u64,
+        ),
+        ((-1.0_f64).to_bits(), MirIntegerType::I64, (-1_i64) as u64),
+        ((-0.5_f64).to_bits(), MirIntegerType::I64, 0),
+        (1, MirIntegerType::I64, 0),
+        ((-0.0_f64).to_bits(), MirIntegerType::I64, 0),
+        (0.0_f64.to_bits(), MirIntegerType::I64, 0),
+        (12_345.75_f64.to_bits(), MirIntegerType::I64, 12_345),
+        (
+            0x43df_ffff_ffff_ffff,
+            MirIntegerType::I64,
+            (i64::MAX - 1023) as u64,
+        ),
+        ((-0.5_f64).to_bits(), MirIntegerType::U64, 0),
+        (0xbfef_ffff_ffff_ffff, MirIntegerType::U64, 0),
+        (0x8000_0000_0000_0001, MirIntegerType::U64, 0),
+        ((-0.0_f64).to_bits(), MirIntegerType::U64, 0),
+        (0.0_f64.to_bits(), MirIntegerType::U64, 0),
+        (0x43e0_0000_0000_0000, MirIntegerType::U64, 1_u64 << 63),
+        (
+            0x43e0_0000_0000_0001,
+            MirIntegerType::U64,
+            (1_u64 << 63) + 2048,
+        ),
+        (0x43ef_ffff_ffff_ffff, MirIntegerType::U64, u64::MAX - 2047),
+        ((-0.5_f64).to_bits(), MirIntegerType::U8, 0),
+        (0xbfef_ffff_ffff_ffff, MirIntegerType::U8, 0),
+        (0.0_f64.to_bits(), MirIntegerType::U8, 0),
+        (255.0_f64.to_bits(), MirIntegerType::U8, 255),
+        (255.9_f64.to_bits(), MirIntegerType::U8, 255),
+        (0x406f_ffff_ffff_ffff, MirIntegerType::U8, 255),
+    ] {
+        assert_native_checked_cast(bits, target, expected);
+    }
+}
+
+#[test]
+fn checked_float_to_integer_failures_report_the_exact_frozen_message() {
+    for (bits, target) in [
+        (0xc3e0_0000_0000_0001, MirIntegerType::I64),
+        (0x43e0_0000_0000_0000, MirIntegerType::I64),
+        ((-1.0_f64).to_bits(), MirIntegerType::U64),
+        (0xbff0_0000_0000_0001, MirIntegerType::U64),
+        ((-1.0_f64).to_bits(), MirIntegerType::U8),
+        (0xbff0_0000_0000_0001, MirIntegerType::U8),
+        (256.0_f64.to_bits(), MirIntegerType::U8),
+        (0x43f0_0000_0000_0000, MirIntegerType::U64),
+        (f64::INFINITY.to_bits(), MirIntegerType::I64),
+        (f64::NEG_INFINITY.to_bits(), MirIntegerType::U64),
+        (0x7ff8_1234_5678_9abc, MirIntegerType::U8),
+        (0x7ff0_0000_0000_0001, MirIntegerType::I64),
+        (0xfff8_0000_0000_0042, MirIntegerType::U64),
+        (0xfff0_0000_0000_0001, MirIntegerType::U8),
+    ] {
+        assert_native_checked_cast_failure(bits, target);
+    }
+}
+
+#[test]
 fn f64_identity_preserves_every_tested_binary64_bit() {
     for bits in [
         0,
@@ -434,6 +545,18 @@ fn cast_function(source: PrimitiveValue, target: MirPrimitiveType) -> String {
     function_assembly(&output, CAST_FUNCTION).to_owned()
 }
 
+fn cast_block_assembly(function: &str, index: usize) -> &str {
+    let marker = format!(".Lska.fn.main.main.f0.block_{index}:");
+    let start = function
+        .find(&marker)
+        .expect("checked-cast block is emitted");
+    let remaining = &function[start..];
+    remaining
+        .find("\n.Lska.fn.main.main.f0.block_")
+        .map(|end| &remaining[..end])
+        .unwrap_or(remaining)
+}
+
 fn assert_native_cast(source: PrimitiveValue, target: MirPrimitiveType, expected_bits: u64) {
     let program = primitive_cast_program(source, target);
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
@@ -447,6 +570,31 @@ fn assert_native_cast(source: PrimitiveValue, target: MirPrimitiveType, expected
     );
     assert!(result.stdout.is_empty());
     assert!(result.stderr.is_empty());
+}
+
+fn assert_native_checked_cast(bits: u64, target: MirIntegerType, expected_bits: u64) {
+    let program = fixture_checked_primitive_cast_program(bits, target, expected_bits);
+    let mut assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assembly.push_str(native_panic_reporter());
+    let result = run_native_assembly_output(&assembly);
+    assert_eq!(
+        result.status.code(),
+        Some(0),
+        "f64 bits 0x{bits:016x} -> {target:?}, stderr {}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
+}
+
+fn assert_native_checked_cast_failure(bits: u64, target: MirIntegerType) {
+    let program = fixture_checked_primitive_cast_program(bits, target, 0);
+    let mut assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assembly.push_str(native_panic_reporter());
+    let result = run_native_assembly_output(&assembly);
+    assert_eq!(result.status.code(), Some(1));
+    assert!(result.stdout.is_empty());
+    assert_eq!(result.stderr, b"panic: floating-point cast out of range\n");
 }
 
 fn validator(target: MirPrimitiveType, expected_bits: u64) -> String {

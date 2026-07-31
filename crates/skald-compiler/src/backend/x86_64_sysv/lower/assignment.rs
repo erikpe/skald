@@ -103,8 +103,8 @@ impl InstructionSelector<'_, '_> {
             MirRvalueKind::PrimitiveCast { operation, operand } => {
                 self.select_primitive_cast(*operation, *operand, destination)
             }
-            MirRvalueKind::CheckedF64ToInteger { .. } => {
-                unreachable!("target legality rejects checked primitive casts")
+            MirRvalueKind::CheckedF64ToInteger { relation, operand } => {
+                self.select_checked_f64_to_integer(*relation, *operand, ty, destination)
             }
             MirRvalueKind::TypeTest { .. } => {
                 unreachable!("runtime type tests are selected before ordinary rvalues")
