@@ -26,12 +26,12 @@ public class Str {
         if (normalized_index < 0) {
             normalized_index = (i64) self._length + normalized_index;
         }
-        if (normalized_index >= 0) {
-            if ((u64) normalized_index < self._length) {
-                return self._storage->[self._start + normalized_index];
-            }
+
+        if (normalized_index < 0 || (u64) normalized_index > self._length) {
+            panic("array index out of bounds");
         }
-        panic("array index out of bounds");
+
+        return self._storage->[self._start + normalized_index];
     }
 
     fn slice(start: i64, end: i64) -> Str {
@@ -39,22 +39,17 @@ public class Str {
         if (normalized_start < 0) {
             normalized_start = normalized_start + (i64) self._length;
         }
+
         var normalized_end: i64 = end;
         if (normalized_end < 0) {
             normalized_end = normalized_end + (i64) self._length;
         }
-        if (normalized_start >= 0) {
-            if (normalized_start <= normalized_end) {
-                if ((u64) normalized_end <= self._length) {
-                    return Str(
-                        self._storage,
-                        self._start + normalized_start,
-                        (u64) (normalized_end - normalized_start)
-                    );
-                }
-            }
+
+        if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
+            panic("array index out of bounds");
         }
-        panic("array index out of bounds");
+
+        return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
     }
 
     static fn from_bytes(ref bytes: u8[]) -> Str {
