@@ -8,7 +8,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ### Complete primitive cast matrix
 
-Status: in progress; executing identity and boolean-boundary casts is next.
+Status: in progress; executing integer-to-floating casts is next.
 
 The [roadmap](PRIMITIVE_CAST_MATRIX_ROADMAP.md) implements the sixteen
 remaining cells of the frozen

@@ -149,8 +149,15 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
     Ok((data_layout, dispatch))
 }
 
-const fn primitive_cast_is_supported(operation: crate::mir::MirPrimitiveCast) -> bool {
-    operation.source.is_integer() && operation.target.is_integer()
+fn primitive_cast_is_supported(operation: crate::mir::MirPrimitiveCast) -> bool {
+    use crate::mir::{MirPrimitiveCastKind, MirPrimitiveType};
+
+    match operation.kind() {
+        MirPrimitiveCastKind::Identity | MirPrimitiveCastKind::IntegerBits => true,
+        MirPrimitiveCastKind::ToBool | MirPrimitiveCastKind::FromBool => true,
+        MirPrimitiveCastKind::ToF64 => operation.source == MirPrimitiveType::Bool,
+        MirPrimitiveCastKind::CheckedF64ToInteger => false,
+    }
 }
 
 fn check_member_target(

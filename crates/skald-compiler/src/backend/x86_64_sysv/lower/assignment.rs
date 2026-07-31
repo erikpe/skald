@@ -4,8 +4,8 @@ use crate::{
     backend::BackendError,
     mir::{
         MirAssignment, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
-        MirIntegerBitwiseOperation, MirIntegerType, MirPlace, MirPrimitiveCast,
-        MirPrimitiveComparison, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
+        MirIntegerBitwiseOperation, MirIntegerType, MirPlace, MirPrimitiveComparison,
+        MirRvalueKind, MirType, MirUnaryOperation, ValueId,
     },
 };
 
@@ -396,22 +396,6 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         value::store_canonical_rax(MirType::Bool, destination, self.output);
-    }
-
-    fn select_primitive_cast(
-        &mut self,
-        operation: MirPrimitiveCast,
-        operand: ValueId,
-        destination: Operand,
-    ) {
-        debug_assert!(operation.source.is_integer() && operation.target.is_integer());
-        // Currently executable primitive casts are integer-only. Verified
-        // integer values use canonical eight-byte homes. Loading the
-        // complete home preserves every i64/u64 bit and the canonical u8
-        // value. The target store is the only width-dependent operation:
-        // u8 keeps and zero-extends AL, while 64-bit targets preserve RAX.
-        value::load_rax(value::frame_value(self.frame, operand), self.output);
-        value::store_canonical_rax(operation.result_type(), destination, self.output);
     }
 
     fn select_float_binary(

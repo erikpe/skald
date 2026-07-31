@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST2 is next.
+Status: in progress; CAST3 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -78,7 +78,7 @@ clean checkout.
 
 - [x] CAST0 — Establish cohesive primitive-cast front-end vocabulary
 - [x] CAST1 — Establish verified pure primitive-cast MIR
-- [ ] CAST2 — Execute identity and boolean-boundary casts
+- [x] CAST2 — Execute identity and boolean-boundary casts
 - [ ] CAST3 — Execute integer-to-floating casts
 - [ ] CAST4 — Enable every non-failing cast from source
 - [ ] CAST5 — Establish verified checked floating-to-integer control flow
@@ -170,25 +170,25 @@ unchanged, and source availability has not outrun backend support.
 canonical constants, or explicit zero comparison before tackling integer
 rounding.
 
-- [ ] Extend backend legality and instruction selection for `f64` and `bool`
+- [x] Extend backend legality and instruction selection for `f64` and `bool`
       identity, all four numeric-to-`bool` casts, and all four
       `bool`-to-numeric casts.
-- [ ] Preserve complete `f64` identity bits through canonical scalar
+- [x] Preserve complete `f64` identity bits through canonical scalar
       load/store paths, including both zeros, infinities, and representative
       NaN payload/sign patterns.
-- [ ] Convert integer zero to `false` and every integer nonzero to `true`,
+- [x] Convert integer zero to `false` and every integer nonzero to `true`,
       using signedness-independent equality-to-zero and canonical boolean
       storage.
-- [ ] Convert both floating zeros to `false` and every other binary64 datum to
+- [x] Convert both floating zeros to `false` and every other binary64 datum to
       `true`. Make unordered handling explicit so every NaN becomes `true`
       rather than inheriting an ordered-comparison accident.
-- [ ] Convert `bool` to integer zero/one and exact binary64 `0.0`/`1.0`
+- [x] Convert `bool` to integer zero/one and exact binary64 `0.0`/`1.0`
       without a helper, branch-dependent uninitialized value, or noncanonical
       result.
-- [ ] Extend the private machine model only with reusable scalar operations
+- [x] Extend the private machine model only with reusable scalar operations
       justified by these responsibilities; keep semantic class names above
       the target layer.
-- [ ] Keep source selection of these cells disabled until their complete
+- [x] Keep source selection of these cells disabled until their complete
       downstream group and integration coverage are ready.
 
 **Tests:** Selector, legality, emission, assembly, and direct-MIR native tests

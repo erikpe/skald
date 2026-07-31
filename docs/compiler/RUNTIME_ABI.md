@@ -316,7 +316,9 @@ ABI representation, version transition, and focused tests.
 The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
 adds no public C symbol, runtime-managed value, or ABI-version change. The
-runtime marker remains `ska_rt_abi_v6` when this feature is implemented.
+implemented integer, identity, and boolean-boundary subset is generated inline
+and retains the existing `ska_rt_abi_v6` marker; the remaining conversions are
+required to preserve that boundary as they are implemented.
 
 Identity, integer, boolean, and integer-to-`f64` conversions are entirely
 compiler-generated. Checked `f64`-to-integer conversion also remains

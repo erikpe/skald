@@ -134,6 +134,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "movq {}, {}", destination.name(), source.name()).unwrap(),
+        Instruction::ConvertSignedIntegerToFloat64 {
+            source,
+            destination,
+        } => write!(output, "cvtsi2sd {}, {}", destination.name(), source.name()).unwrap(),
         Instruction::MoveFloat64 {
             source,
             destination,

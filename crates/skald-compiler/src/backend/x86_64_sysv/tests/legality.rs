@@ -226,41 +226,7 @@ fn malformed_integer_casts_are_rejected_at_the_verifier_boundary() {
 
 #[test]
 fn valid_pending_primitive_cast_is_rejected_at_target_legality() {
-    let mut program = lower_source_to_mir(concat!(
-        "fn cast() -> u8 { var value: u8 = (u8) 1u; return value; }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-    let function = program
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let (operand, operation) = function.body.blocks[0]
-        .instructions
-        .iter_mut()
-        .find_map(|instruction| match instruction {
-            MirInstruction::Assign(MirAssignment {
-                rvalue:
-                    MirRvalue {
-                        kind: MirRvalueKind::PrimitiveCast { operation, operand },
-                        ..
-                    },
-                ..
-            }) => Some((*operand, operation)),
-            _ => None,
-        })
-        .unwrap();
-    *operation = MirPrimitiveCast::new(MirPrimitiveType::Bool, MirPrimitiveType::U8);
-    let source = function.body.blocks[0]
-        .instructions
-        .iter_mut()
-        .find_map(|instruction| match instruction {
-            MirInstruction::Assign(assignment) if assignment.result == operand => Some(assignment),
-            _ => None,
-        })
-        .unwrap();
-    source.rvalue.kind = MirRvalueKind::ConstantBool(true);
-    source.rvalue.ty = MirType::Bool;
-    function.values[operand.index()].ty = MirType::Bool;
+    let program = primitive_cast_program(PrimitiveValue::I64(1), MirPrimitiveType::F64);
     verify_mir(&program).unwrap();
 
     let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
@@ -268,7 +234,7 @@ fn valid_pending_primitive_cast_is_rejected_at_target_legality() {
     assert_eq!(error.callable(), Some(FunctionId::new(0).into()));
     assert_eq!(
         error.message(),
-        "primitive cast `bool -> u8` is not yet supported by this target"
+        "primitive cast `i64 -> f64` is not yet supported by this target"
     );
 }
 

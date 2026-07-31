@@ -124,9 +124,9 @@ boundaries. The active
 [implementation roadmap](../roadmaps/PRIMITIVE_CAST_MATRIX_ROADMAP.md) has
 generalized syntax, resolution, typed HIR, and MIR to the cohesive
 primitive-cast vocabulary. All twenty-two non-failing cells can be represented
-and verified as pure MIR, while source admission and x86-64 execution remain at
-the nine integer cells. Identity and boolean-boundary target execution is the
-next implementation step.
+and verified as pure MIR. Source admission remains at the nine integer cells;
+x86-64 additionally executes `f64`/`bool` identity and every boolean-boundary
+cast from direct verified MIR. Integer-to-floating target execution is next.
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the

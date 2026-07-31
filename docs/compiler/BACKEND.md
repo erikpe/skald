@@ -244,11 +244,12 @@ remain private after these observable requirements are met.
 
 The frozen
 [primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
-defines legal target-independent MIR input without claiming current x86-64
-support beyond the implemented nine integer cells. MIR can now carry and
-verify all twenty-two pure cells. The x86-64 legality pass accepts only the
-nine executable integer cells and returns a structured unsupported-operation
-error for the other thirteen before instruction selection. A target consumes
+defines legal target-independent MIR input. MIR can carry and verify all
+twenty-two pure cells. The x86-64 backend executes nineteen of them: the nine
+integer cells, `f64` and `bool` identity, every numeric-to-`bool` cast, and
+every `bool`-to-numeric cast. Its legality pass returns a structured
+unsupported-operation error for the three pending integer-to-`f64` cells
+before instruction selection. A target consumes
 already selected source type, target type, semantic class, and pure or checked
 control-flow shape. It never derives signedness from source spelling or
 substitutes a host language's conversion rules.
@@ -275,6 +276,13 @@ branches, but no exact instruction sequence is frozen. In particular,
 without treating the operand as signed or delegating to an unversioned C cast.
 Floating unordered comparison must make every NaN true when converting to
 `bool`. Canonical `bool` and `u8` stores remain the ordinary scalar boundary.
+
+The implemented identity and boolean boundary uses scalar bit-preserving
+moves, explicit integer zero tests, and ordered-plus-unordered floating zero
+comparison. Both floating zeroes become `false`; every NaN becomes `true`.
+Boolean-to-integer results remain canonical zero or one, and boolean-to-`f64`
+produces exact binary64 zero or one inline. These operations add no helper
+call, failure edge, public symbol, or ABI category.
 
 Checked `f64`-to-integer input arrives as verified control flow with one
 secured source, a semantic range check, success-only conversion, result join,

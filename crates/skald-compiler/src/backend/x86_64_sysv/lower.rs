@@ -25,6 +25,7 @@ mod integer_division;
 mod object_abi;
 mod optional;
 mod ownership;
+mod primitive_cast;
 mod shift;
 mod strings;
 mod terminator;
