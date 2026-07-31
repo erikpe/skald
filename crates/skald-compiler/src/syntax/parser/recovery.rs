@@ -147,6 +147,7 @@ impl Parser<'_> {
                 | TokenKind::Minus
                 | TokenKind::Star
                 | TokenKind::Bang
+                | TokenKind::Tilde
                 | TokenKind::LeftParen
         )
     }

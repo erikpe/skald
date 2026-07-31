@@ -847,6 +847,7 @@ pub struct BooleanExpr {
 pub enum UnaryOperator {
     Negate,
     LogicalNot,
+    BitwiseComplement,
     Dereference,
 }
 
@@ -863,6 +864,9 @@ pub enum BinaryOperator {
     Add,
     Subtract,
     Multiply,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
     Equal,
     NotEqual,
     LessThan,

@@ -791,6 +791,7 @@ impl ResolvedDumper {
                 let operator = match unary.operator {
                     ResolvedUnaryOperator::Negate => "Negate",
                     ResolvedUnaryOperator::LogicalNot => "LogicalNot",
+                    ResolvedUnaryOperator::BitwiseComplement => "BitwiseComplement",
                 };
                 self.line(&format!("Unary {operator}"), unary.span);
                 self.indented(|dumper| dumper.expression(&unary.operand));
@@ -803,6 +804,9 @@ impl ResolvedDumper {
                     ResolvedBinaryOperator::Add => "Add",
                     ResolvedBinaryOperator::Subtract => "Subtract",
                     ResolvedBinaryOperator::Multiply => "Multiply",
+                    ResolvedBinaryOperator::BitwiseAnd => "BitwiseAnd",
+                    ResolvedBinaryOperator::BitwiseOr => "BitwiseOr",
+                    ResolvedBinaryOperator::BitwiseXor => "BitwiseXor",
                     ResolvedBinaryOperator::Equal => "Equal",
                     ResolvedBinaryOperator::NotEqual => "NotEqual",
                     ResolvedBinaryOperator::LessThan => "LessThan",

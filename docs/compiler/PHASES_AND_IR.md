@@ -187,44 +187,50 @@ boundary.
 
 ## Implemented primitive operator boundary
 
-Primitive integer comparisons and casts plus eager boolean negation and
-equality have a
+Primitive integer bitwise operations, comparisons, and casts plus eager
+boolean negation and equality have
 [source contract](../language/TYPES_AND_VALUES.md#implemented-primitive-comparisons-boolean-negation-and-integer-casts)
-and are current products through native x86-64 execution.
+and are current products through native x86-64 execution. Bitwise operations
+have their focused contract under
+[implemented integer bitwise operators](../language/TYPES_AND_VALUES.md#implemented-integer-bitwise-operators).
 The pipeline responsibilities are:
 
-- Lexing recognizes comparison punctuation by longest match and keeps prefix
-  `!` distinct from postfix unwrap by position. Syntax retains each predicate,
-  unary or binary operand shape and span, or one primitive cast target and
-  operand. It assigns no numeric meaning or target behavior.
-- Resolution preserves comparison and logical-negation shape. Primitive casts
-  preserve their primitive target without declaration lookup, while nominal
-  and shared object-cast targets continue through existing identity lookup;
-  lower phases never disambiguate cast kinds from source text.
+- Lexing recognizes eager bitwise, logical, and comparison punctuation by
+  longest match and keeps prefix `!` distinct from postfix unwrap by position.
+  Syntax retains each operator, unary or binary operand shape and span, or one
+  primitive cast target and operand. It assigns no numeric meaning or target
+  behavior.
+- Resolution preserves bitwise, comparison, and logical-negation shape.
+  Primitive casts preserve their primitive target without declaration lookup,
+  while nominal and shared object-cast targets continue through existing
+  identity lookup; lower phases never disambiguate cast kinds from source
+  text.
 - Type checking is the sole owner of operation selection. It requires matching
   `i64`, `u64`, or `u8` comparison operands, admits `bool` only for equality
-  and inequality, selects logical negation only for `bool`, or selects one of
+  and inequality, selects logical negation only for `bool`, selects exact-width
+  complement, AND, OR, or XOR only for matching integers, or selects one of
   the nine valid integer source/target cast pairs. Unsupported operations and
   implicit conversions are rejected before HIR.
 - Typed HIR records the selected primitive comparison predicate and operand
-  kind or the exact boolean logical-negation operation. Primitive casts record
-  both integer source and target types.
+  kind, exact-width bitwise operation, or exact boolean logical-negation
+  operation. Primitive casts record both integer source and target types.
   Neither representation retains a backend condition code, register width, or
   spelling-based signedness choice.
-- MIR lowering evaluates comparison operands left to right and every unary or
-  binary operand exactly once. Comparisons and negation become typed
-  boolean-producing rvalues; integer
+- MIR lowering evaluates eager operands left to right and every unary or
+  binary operand exactly once. Bitwise operations become same-type pure scalar
+  rvalues, comparisons and negation become typed boolean-producing rvalues; integer
   casts become ordinary pure rvalues with no trap, call, allocation, cleanup,
   or exceptional control-flow edge.
 - MIR verification proves matching comparison operand definitions and types,
   rejects boolean ordering, and requires exact boolean negation operands and
-  results. Cast verification proves the closed integer matrix with
+  results. Bitwise and cast verification prove their closed integer matrices with
   exact source and result types. Both operation families retain the existing
   block-local value, definition-before-use, and deterministic-error
   invariants.
 - Each backend receives already selected signedness and width through verified
-  MIR. The x86-64 target realizes signed `i64` ordering, unsigned `u64`/`u8`
-  ordering, and boolean negation/equality with canonical results. It realizes integer
+  MIR. The x86-64 target realizes exact-width complement, AND, OR, and XOR,
+  signed `i64` ordering, unsigned `u64`/`u8` ordering, and boolean
+  negation/equality with canonical results. It realizes integer
   casts through canonical scalar loads and stores: same-width bits are
   preserved, narrowing retains the low byte, and `u8` widening zero-extends.
   Selection does not infer semantics from source spelling or expose target
@@ -235,17 +241,6 @@ Floating comparisons, the remaining boolean/numeric operations, checked,
 saturating, implicit, mixed-type, and user-defined conversion remain outside
 this boundary. Implemented short-circuit logic uses the structured boundary
 below rather than this eager scalar boundary.
-
-The downstream-only pure integer bitwise path is also executable. Directly
-constructed typed HIR and verified MIR represent exact-width complement, AND,
-OR, and XOR for `i64`, `u64`, and `u8` as ordinary same-type scalar rvalues.
-Lowering preserves eager left-to-right evaluation and the existing scalar
-spill rule when the right operand affects control flow; it introduces no new
-block, failure edge, cleanup, or runtime capability. Verification enforces the
-exact operand/result type and ordinary block-local definition rules, while the
-x86-64 target preserves 64-bit patterns and canonicalizes `u8` results. Source
-syntax and type selection remain unavailable, so this internal boundary does
-not change the implemented language surface.
 
 ## Frozen primitive operator representation
 

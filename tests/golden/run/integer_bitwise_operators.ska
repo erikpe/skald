@@ -1,0 +1,84 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+class Probe {
+    sequence: i64;
+    bits: u8;
+
+    init(bits: u8) {
+        self.sequence = 0;
+        self.bits = bits;
+    }
+
+    mut fn observe(value: i64, digit: i64) -> i64 {
+        self.sequence = self.sequence * 10 + digit;
+        return value;
+    }
+
+    fn masked(mask: u8) -> u8 {
+        return ~self.bits & mask;
+    }
+}
+
+fn combine(left: u64, right: u64) -> u64 {
+    return ~left ^ right;
+}
+
+fn byte_identity(value: u8) -> u8 {
+    return ~~value;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(~0);
+    ska_rt_println_i64(~-1);
+    ska_rt_println_i64(-9223372036854775808 ^ 9223372036854775807);
+
+    ska_rt_println_u64(~0u);
+    ska_rt_println_u64(18446744073709551615u & 255u);
+    ska_rt_println_u64(9223372036854775808u | 255u);
+    ska_rt_println_u64(18446744073709551615u ^ 12297829382473034410u);
+    ska_rt_println_u64(combine(18446744073709551615u, 12297829382473034410u));
+
+    ska_rt_println_u8(~0u8);
+    ska_rt_println_u8(243u8 & 63u8);
+    ska_rt_println_u8(128u8 | 15u8);
+    ska_rt_println_u8(255u8 ^ 165u8);
+    ska_rt_println_u8(240u8 & 204u8 ^ 15u8 | 1u8);
+    ska_rt_println_u8(byte_identity(85u8));
+
+    var assigned: u64 = 0u;
+    assigned = 61680u | 3855u;
+    ska_rt_println_u64(assigned);
+
+    var optional: u8? = 170u8;
+    ska_rt_println_u8(~optional!);
+
+    var values: u8[] = u8[](2u);
+    values[0] = 240u8;
+    values[1] = 15u8;
+    ska_rt_println_u8(values[0] & values[1]);
+    values[1] = ~values[0];
+    ska_rt_println_u8(values[1]);
+
+    var probe: Probe = Probe(240u8);
+    ska_rt_println_u8(probe.masked(63u8));
+    probe.bits = ~probe.bits;
+    ska_rt_println_u8(probe.bits);
+
+    ska_rt_println_i64(
+        probe.observe(15, 1) & probe.observe(12, 2)
+        ^ probe.observe(3, 3) | probe.observe(1, 4)
+    );
+    ska_rt_println_i64(~probe.observe(0, 5));
+    ska_rt_println_i64(probe.sequence);
+
+    ska_rt_println_bool(
+        (1u & 1u) == 1u && (~0u == 18446744073709551615u)
+    );
+    if (((u8) (255u & 170u)) == 170u8) {
+        return 91;
+    }
+    return 1;
+}

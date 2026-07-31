@@ -89,8 +89,8 @@ verifier-boundary error.
 Verified pure integer bitwise rvalues also lower inline. Complement, AND, OR,
 and XOR preserve the complete `i64` or `u64` bit pattern and canonicalize the
 low byte for `u8`; they add no labels, failure edge, runtime call, symbol, or
-ABI surface. This is currently a direct-MIR backend capability: source syntax
-and type selection for these operations remain unavailable.
+ABI surface. The accepted source path uses this same representation across
+ordinary scalar consumers without a bitwise-specific calling convention.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -151,7 +151,7 @@ publication; ordinary dynamic publication writes count one.
 The
 [frozen operator representation](PHASES_AND_IR.md#frozen-primitive-operator-representation)
 defines the contract for remaining future operator input as well as the
-implemented direct-MIR pure bitwise subset described above. A target consumes
+implemented pure bitwise subset described above. A target consumes
 already selected operation flavor, type, width, signedness, failure
 capability, and control flow. It never reconstructs semantics from source
 spelling or host-language arithmetic.

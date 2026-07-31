@@ -156,6 +156,8 @@ The implemented arithmetic surface is deliberately exact-type:
 | binary `+`, `-`, `*` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | that same type |
 | unary `-` | `i64` or `f64` | the operand type |
 | prefix `!` | `bool` | `bool` |
+| prefix `~` | `i64`, `u64`, or `u8` | the operand type |
+| binary `&`, `|`, `^` | two operands of the same type among `i64`, `u64`, and `u8` | that same type |
 | `==`, `!=` | two operands of the same type among `i64`, `u64`, `u8`, and `bool` | `bool` |
 | `<`, `<=`, `>`, `>=` | two operands of the same type among `i64`, `u64`, and `u8` | `bool` |
 | `&&`, `||` | two `bool` operands | `bool` |
@@ -172,8 +174,8 @@ particular NaN payload.
 
 Integer equality and ordering plus boolean equality, inequality, logical
 negation, and short-circuit `&&` and `||` are implemented as specified below.
-Floating equality or ordering, division, remainder, bitwise, shift, and
-exponentiation are not implemented. Built-in array indexing and slicing
+Floating equality or ordering, division, remainder, shifts, and exponentiation
+are not implemented. Built-in array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
 and nested arrays on x86-64. The same element categories execute in shared
@@ -356,6 +358,31 @@ This frozen profile does not define:
 
 Each area requires a separate design. No deferred syntax is reserved.
 
+## Implemented integer bitwise operators
+
+Prefix `~` accepts exactly one `i64`, `u64`, or `u8` operand, complements every
+bit within that type's fixed width, and returns the same type. Binary `&`, `|`,
+and `^` accept exactly two operands of the same integer type and return that
+type. `bool`, `f64`, `unit`, optionals, arrays, class values, object views, and
+shared owners are not bitwise operands.
+
+No bitwise operation inserts an implicit cast, promotion, narrowing,
+signedness change, expected-type reinterpretation, or truthiness conversion.
+An explicit integer cast completes first and supplies its exact result type to
+surrounding operation selection. Every `u8` result is canonical in `0..=255`.
+
+A unary operand evaluates exactly once. Binary operands evaluate exactly once
+from left to right, including calls, fields, checked array accesses, and
+optional unwrap. Pure bitwise operations introduce no failure of their own,
+runtime call, allocation, cleanup rule, or control-flow edge; an operand's
+existing effects and failures remain unchanged.
+
+Postfix operations bind before prefix `~`, and prefix operators associate
+right to left. Additive expressions bind before the separate left-associative
+`&`, `^`, and `|` tiers. Those tiers bind before comparisons, contextual `is`,
+and short-circuit `&&` and `||`. The exact accepted ladder is in the
+[implemented grammar](GRAMMAR.md#expressions).
+
 ## Implemented primitive comparisons, boolean negation, and integer casts
 
 This section defines the implemented source-visible comparison, eager boolean,
@@ -463,9 +490,9 @@ implied by the total integer cast syntax.
 
 ## Other conversions and future value families
 
-The current compiler executes primitive integer comparisons and casts plus
-boolean negation and equality through the x86-64 backend. It performs no
-user-defined conversions. All other numeric
+The current compiler executes primitive integer bitwise operations,
+comparisons, and casts plus boolean negation and equality through the x86-64
+backend. It performs no user-defined conversions. All other numeric
 conversion behavior remains deferred. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form

@@ -1,0 +1,222 @@
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:8:12
+   |
+8 |     return ~value;
+   |            ^ operator cannot be applied to this operand
+   |
+8 |     return ~value;
+   |             ----- operand has type `bool`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:12:12
+    |
+12 |     return ~value;
+    |            ^ operator cannot be applied to this operand
+    |
+12 |     return ~value;
+    |             ----- operand has type `f64`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:16:12
+    |
+16 |     return ~value;
+    |            ^ operator cannot be applied to this operand
+    |
+16 |     return ~value;
+    |             ----- operand has type `i64?`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:20:12
+    |
+20 |     return ~value;
+    |            ^ operator cannot be applied to this operand
+    |
+20 |     return ~value;
+    |             ----- operand has type `array a0`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:24:12
+    |
+24 |     return ~value;
+    |            ^ operator cannot be applied to this operand
+    |
+24 |     return ~value;
+    |             ----- operand has type `class c0`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:28:12
+    |
+28 |     return ~value;
+    |            ^ operator cannot be applied to this operand
+    |
+28 |     return ~value;
+    |             ----- operand has type `shared class c0`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:32:12
+    |
+32 |     return ~value;
+    |            ^ operator cannot be applied to this operand
+    |
+32 |     return ~value;
+    |             ----- operand has type `Obj`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:36:12
+    |
+36 |     return ~notify();
+    |            ^ operator cannot be applied to this operand
+    |
+36 |     return ~notify();
+    |             -------- operand has type `unit`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:40:17
+    |
+40 |     return left & right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+40 |     return left & right;
+    |            ---- left operand has type `bool`
+    |
+40 |     return left & right;
+    |                   ----- right operand has type `bool`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:44:17
+    |
+44 |     return left | right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+44 |     return left | right;
+    |            ---- left operand has type `f64`
+    |
+44 |     return left | right;
+    |                   ----- right operand has type `f64`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `^` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:48:17
+    |
+48 |     return left ^ right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+48 |     return left ^ right;
+    |            ---- left operand has type `i64?`
+    |
+48 |     return left ^ right;
+    |                   ----- right operand has type `i64?`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:52:17
+    |
+52 |     return left & right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+52 |     return left & right;
+    |            ---- left operand has type `array a0`
+    |
+52 |     return left & right;
+    |                   ----- right operand has type `array a0`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:56:17
+    |
+56 |     return left | right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+56 |     return left | right;
+    |            ---- left operand has type `class c0`
+    |
+56 |     return left | right;
+    |                   ----- right operand has type `class c0`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `^` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:60:17
+    |
+60 |     return left ^ right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+60 |     return left ^ right;
+    |            ---- left operand has type `shared class c0`
+    |
+60 |     return left ^ right;
+    |                   ----- right operand has type `shared class c0`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:64:17
+    |
+64 |     return left & right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+64 |     return left & right;
+    |            ---- left operand has type `Obj`
+    |
+64 |     return left & right;
+    |                   ----- right operand has type `Obj`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:68:21
+    |
+68 |     return notify() | notify();
+    |                     ^ operator cannot be applied to these operand types
+    |
+68 |     return notify() | notify();
+    |            -------- left operand has type `unit`
+    |
+68 |     return notify() | notify();
+    |                       -------- right operand has type `unit`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:72:17
+    |
+72 |     return left & right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+72 |     return left & right;
+    |            ---- left operand has type `i64`
+    |
+72 |     return left & right;
+    |                   ----- right operand has type `u64`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:76:17
+    |
+76 |     return left | right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+76 |     return left | right;
+    |            ---- left operand has type `u64`
+    |
+76 |     return left | right;
+    |                   ----- right operand has type `u8`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: bitwise `^` requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_bitwise_operator_types.ska:80:17
+    |
+80 |     return left ^ right;
+    |                 ^ operator cannot be applied to these operand types
+    |
+80 |     return left ^ right;
+    |            ---- left operand has type `u8`
+    |
+80 |     return left ^ right;
+    |                   ----- right operand has type `i64`
+  = note: integer operand types are `i64`, `u64`, or `u8`

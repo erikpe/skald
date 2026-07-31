@@ -313,6 +313,9 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     operator: match unary.operator {
                         syntax::UnaryOperator::Negate => ResolvedUnaryOperator::Negate,
                         syntax::UnaryOperator::LogicalNot => ResolvedUnaryOperator::LogicalNot,
+                        syntax::UnaryOperator::BitwiseComplement => {
+                            ResolvedUnaryOperator::BitwiseComplement
+                        }
                         syntax::UnaryOperator::Dereference => {
                             unreachable!("dereference returned above")
                         }
@@ -336,6 +339,15 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                                 }
                                 syntax::BinaryOperator::Multiply => {
                                     ResolvedBinaryOperator::Multiply
+                                }
+                                syntax::BinaryOperator::BitwiseAnd => {
+                                    ResolvedBinaryOperator::BitwiseAnd
+                                }
+                                syntax::BinaryOperator::BitwiseOr => {
+                                    ResolvedBinaryOperator::BitwiseOr
+                                }
+                                syntax::BinaryOperator::BitwiseXor => {
+                                    ResolvedBinaryOperator::BitwiseXor
                                 }
                                 syntax::BinaryOperator::Equal => ResolvedBinaryOperator::Equal,
                                 syntax::BinaryOperator::NotEqual => {

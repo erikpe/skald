@@ -1,4 +1,5 @@
 use super::*;
+use crate::lexer::TokenKind;
 
 #[test]
 fn logical_tiers_preserve_frozen_precedence_and_associativity() {
@@ -175,7 +176,11 @@ fn longer_malformed_logical_runs_recover_without_hiding_later_statements() {
         );
         let source = sources.get(source_id).unwrap();
         let lexed = lex(source);
-        assert_eq!(lexed.diagnostics.len(), 1);
+        assert!(lexed.diagnostics.is_empty());
+        assert!(lexed
+            .tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::Ampersand | TokenKind::Pipe)));
         let output = parse(source, &lexed.tokens);
         assert!(output
             .diagnostics

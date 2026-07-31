@@ -16,6 +16,7 @@ use super::{
 };
 
 mod alias;
+mod bitwise;
 mod call;
 mod logical;
 mod object_view_relation;

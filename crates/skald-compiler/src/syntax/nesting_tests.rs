@@ -118,7 +118,7 @@ fn block_above_the_limit_is_omitted_and_reports_without_cascades() {
 }
 
 #[test]
-fn unary_and_postfix_recursion_use_the_same_nesting_budget() {
+fn unary_recursion_uses_the_common_expression_nesting_budget() {
     let unary = format!("{}1", "-".repeat(MAX_SYNTAX_NESTING));
     assert_single_nesting_error(&parse_text(source_with_return(&unary)));
 
@@ -127,20 +127,32 @@ fn unary_and_postfix_recursion_use_the_same_nesting_budget() {
 
     let dereferences = format!("{}owner", "*".repeat(MAX_SYNTAX_NESTING));
     assert_single_nesting_error(&parse_text(source_with_return(&dereferences)));
+}
 
+#[test]
+fn call_recursion_uses_the_common_expression_nesting_budget() {
     let calls = format!(
         "{}1{}",
         "callee(".repeat(MAX_SYNTAX_NESTING),
         ")".repeat(MAX_SYNTAX_NESTING)
     );
     assert_single_nesting_error(&parse_text(source_with_return(&calls)));
+}
 
+#[test]
+fn allocation_recursion_uses_the_common_expression_nesting_budget() {
     let allocations = format!(
         "{}1{}",
         "new Thing(".repeat(MAX_SYNTAX_NESTING),
         ")".repeat(MAX_SYNTAX_NESTING)
     );
     assert_single_nesting_error(&parse_text(source_with_return(&allocations)));
+}
+
+#[test]
+fn bitwise_complement_uses_the_common_expression_nesting_budget() {
+    let bitwise_complements = format!("{}1", "~".repeat(MAX_SYNTAX_NESTING));
+    assert_single_nesting_error(&parse_text(source_with_return(&bitwise_complements)));
 }
 
 #[test]

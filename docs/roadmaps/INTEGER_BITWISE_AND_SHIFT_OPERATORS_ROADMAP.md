@@ -1,6 +1,6 @@
 # Integer Bitwise Operators and Checked Shifts Roadmap
 
-Status: in progress; BW0 is complete and BW1 is next.
+Status: in progress; BW0 and BW1 are complete and BW2 is next.
 
 This roadmap implements the next frozen primitive-operator family: exact-width
 integer bitwise complement, conjunction, disjunction, and exclusive
@@ -115,7 +115,7 @@ than adding operator-specific C harnesses.
 ## Progress
 
 - [x] BW0 — Establish executable pure bitwise operations
-- [ ] BW1 — Enable bitwise source expressions end to end
+- [x] BW1 — Enable bitwise source expressions end to end
 - [ ] BW2 — Establish executable checked shifts
 - [ ] BW3 — Enable checked shift source expressions end to end
 - [ ] BW4 — Harden and promote the complete family
@@ -166,28 +166,28 @@ effect, while the accepted source language remains unchanged.
 **Purpose:** Connect the proven pure operations to their complete source
 syntax, precedence, exact selection, diagnostics, and native observations.
 
-- [ ] Lex `~`, `&`, `|`, and `^` while preserving longest-match `&&` and `||`,
+- [x] Lex `~`, `&`, `|`, and `^` while preserving longest-match `&&` and `||`,
       invalid-token recovery, exact spans, and existing punctuation behavior.
-- [ ] Add right-associative prefix `~` plus separate left-associative `&`, `^`,
+- [x] Add right-associative prefix `~` plus separate left-associative `&`, `^`,
       and `|` parser tiers between additive expressions and the unified
       comparison/`is` tier; preserve postfix priority, casts, logical
       precedence, non-associative comparisons, recovery, and nesting limits.
-- [ ] Preserve exact operator identity, operand shape, grouping, and spans in
+- [x] Preserve exact operator identity, operand shape, grouping, and spans in
       AST and resolved IR without selecting integer width or target behavior.
-- [ ] Select prefix complement for exactly one integer operand and each binary
+- [x] Select prefix complement for exactly one integer operand and each binary
       operation for two identical integer types. Check binary operands in
       source order and reject mixed integers, `bool`, `f64`, `unit`, optional,
       array, class, object-view, and shared-owner combinations before HIR.
-- [ ] Produce focused diagnostics that identify the operator and actual
+- [x] Produce focused diagnostics that identify the operator and actual
       operand types without suggesting truthiness, promotion, or an implicit
       cast.
-- [ ] Add deterministic token, AST, resolved, HIR, and MIR dumps for nesting,
+- [x] Add deterministic token, AST, resolved, HIR, and MIR dumps for nesting,
       grouping, calls, fields, casts, comparisons, and logical composition.
-- [ ] Add native and compile-failure goldens covering fixed-width value
+- [x] Add native and compile-failure goldens covering fixed-width value
       patterns, exactly-once left-to-right effects, locals, fields, parameters,
       calls, returns, assignments, conditions through comparisons, arrays,
       optional unwrap, and every currently valid eager-expression consumer.
-- [ ] Update the implemented grammar, operator surface, status matrix,
+- [x] Update the implemented grammar, operator surface, status matrix,
       compiler phase/backend contracts, and testing/debugging guidance when
       source support becomes active; continue to report shifts as frozen but
       unimplemented.

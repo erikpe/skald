@@ -140,6 +140,7 @@ fn source_place(source: &crate::hir::HirObjectSource) -> &crate::hir::HirObjectP
 
 mod alias_parameters;
 mod arrays;
+mod bitwise_operators;
 mod capabilities;
 mod comparisons;
 mod control_flow;

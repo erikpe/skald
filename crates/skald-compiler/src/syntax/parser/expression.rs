@@ -27,6 +27,11 @@ impl Parser<'_> {
 
     fn parse_expression_shape(&mut self) -> Option<Expression> {
         let source = self.parse_additive()?;
+        self.parse_expression_tail(source)
+    }
+
+    fn parse_expression_tail(&mut self, source: Expression) -> Option<Expression> {
+        let source = self.parse_bitwise_tail(source)?;
         let first = self.parse_expression_suffix(source)?;
         if !self.at_any(&[TokenKind::AndAnd, TokenKind::OrOr]) {
             return Some(first);
@@ -56,6 +61,7 @@ impl Parser<'_> {
             }
 
             let source = self.parse_additive()?;
+            let source = self.parse_bitwise_tail(source)?;
             let right = self.parse_expression_suffix(source)?;
             while operators.last().is_some_and(|(pending, _)| {
                 logical_precedence(*pending) >= logical_precedence(operator)
@@ -154,6 +160,7 @@ impl Parser<'_> {
             .expect("comparison suffix must start at a comparison operator");
         let operator_token = self.advance();
         let right = self.parse_additive()?;
+        let right = self.parse_bitwise_tail(right)?;
         let span = self.cover(left.span(), right.span());
         let expression = Expression::Binary(BinaryExpr {
             left: Box::new(left),
@@ -176,12 +183,59 @@ impl Parser<'_> {
 
         // Consume the rest of this chain so statement-level recovery resumes
         // after the complete invalid expression rather than at each operator.
-        let _ = self.parse_additive();
+        let _ = self
+            .parse_additive()
+            .and_then(|first| self.parse_bitwise_tail(first));
         while comparison_operator(self.peek().kind).is_some() {
             self.advance();
-            let _ = self.parse_additive();
+            let _ = self
+                .parse_additive()
+                .and_then(|first| self.parse_bitwise_tail(first));
         }
         None
+    }
+
+    fn parse_bitwise_tail(&mut self, first: Expression) -> Option<Expression> {
+        let mut operands = vec![first];
+        let mut operators = Vec::new();
+
+        while let Some(operator) = bitwise_operator(self.peek().kind) {
+            let token = self.advance();
+            let right = self.parse_additive()?;
+            while operators.last().is_some_and(|(pending, _)| {
+                bitwise_precedence(*pending) >= bitwise_precedence(operator)
+            }) {
+                self.reduce_bitwise_expression(&mut operands, operators.pop().unwrap());
+            }
+            operators.push((operator, token.span));
+            operands.push(right);
+        }
+
+        while let Some(operator) = operators.pop() {
+            self.reduce_bitwise_expression(&mut operands, operator);
+        }
+        operands.pop()
+    }
+
+    fn reduce_bitwise_expression(
+        &self,
+        operands: &mut Vec<Expression>,
+        (operator, operator_span): (BinaryOperator, Span),
+    ) {
+        let right = operands
+            .pop()
+            .expect("bitwise operator must have a right operand");
+        let left = operands
+            .pop()
+            .expect("bitwise operator must have a left operand");
+        let span = self.cover(left.span(), right.span());
+        operands.push(Expression::Binary(BinaryExpr {
+            left: Box::new(left),
+            operator,
+            operator_span,
+            right: Box::new(right),
+            span,
+        }));
     }
 
     fn parse_additive(&mut self) -> Option<Expression> {
@@ -229,7 +283,12 @@ impl Parser<'_> {
 
     fn parse_unary(&mut self) -> Option<Expression> {
         let mut prefixes = Vec::new();
-        while self.at_any(&[TokenKind::Minus, TokenKind::Bang, TokenKind::Star]) {
+        while self.at_any(&[
+            TokenKind::Minus,
+            TokenKind::Bang,
+            TokenKind::Tilde,
+            TokenKind::Star,
+        ]) {
             if self.nesting_depth + prefixes.len() >= MAX_SYNTAX_NESTING {
                 self.report_excessive_nesting(self.peek().span);
                 self.recover_from_excessive_nesting();
@@ -240,6 +299,7 @@ impl Parser<'_> {
                 match token.kind {
                     TokenKind::Minus => UnaryOperator::Negate,
                     TokenKind::Bang => UnaryOperator::LogicalNot,
+                    TokenKind::Tilde => UnaryOperator::BitwiseComplement,
                     TokenKind::Star => UnaryOperator::Dereference,
                     _ => unreachable!("unary parser accepted a non-unary operator"),
                 },
@@ -307,7 +367,7 @@ impl Parser<'_> {
         (allow_primitive_prefix
             && matches!(
                 self.peek_ahead(distance).kind,
-                TokenKind::Minus | TokenKind::Bang
+                TokenKind::Minus | TokenKind::Bang | TokenKind::Tilde
             ))
             || matches!(
                 self.peek_ahead(distance).kind,
@@ -689,5 +749,23 @@ const fn logical_precedence(operator: LogicalOperator) -> u8 {
     match operator {
         LogicalOperator::And => 2,
         LogicalOperator::Or => 1,
+    }
+}
+
+const fn bitwise_operator(kind: TokenKind) -> Option<BinaryOperator> {
+    match kind {
+        TokenKind::Ampersand => Some(BinaryOperator::BitwiseAnd),
+        TokenKind::Caret => Some(BinaryOperator::BitwiseXor),
+        TokenKind::Pipe => Some(BinaryOperator::BitwiseOr),
+        _ => None,
+    }
+}
+
+fn bitwise_precedence(operator: BinaryOperator) -> u8 {
+    match operator {
+        BinaryOperator::BitwiseAnd => 3,
+        BinaryOperator::BitwiseXor => 2,
+        BinaryOperator::BitwiseOr => 1,
+        _ => unreachable!("bitwise parser accepted a non-bitwise operator"),
     }
 }

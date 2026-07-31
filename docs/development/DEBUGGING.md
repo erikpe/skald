@@ -86,13 +86,12 @@ as `cast.u64.i64`. A cast has no failure edge. When a total cast feeds a signed
 array position, inspect the preceding source-level unsigned comparison and its
 control-flow branch rather than looking for a hidden checked conversion.
 
-For the downstream-only pure bitwise path, HIR prints exact forms such as
+For `~`, `&`, `^`, and `|`, AST and resolved dumps retain source operator
+identity and grouping. HIR prints exact forms such as
 `BitwiseComplement.u8` and `BitwiseXor.u64`; MIR prints `not.u8` and
 `xor.u64`. Each is an ordinary scalar rvalue with no operator-owned branch or
 failure edge. A scalar spill around control-affecting right-operand lowering is
 the existing eager binary evaluation rule, not a bitwise control effect.
-These forms currently arise only in direct HIR/MIR tests because source
-punctuation remains rejected.
 
 For `left && right` or `left || right`, AST and resolved dumps retain a
 distinct logical node and HIR prints `Logical And` or `Logical Or`. MIR should

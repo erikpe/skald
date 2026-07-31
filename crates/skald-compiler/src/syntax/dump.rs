@@ -540,6 +540,7 @@ impl AstDumper {
                 let operator = match unary.operator {
                     UnaryOperator::Negate => "Negate",
                     UnaryOperator::LogicalNot => "LogicalNot",
+                    UnaryOperator::BitwiseComplement => "BitwiseComplement",
                     UnaryOperator::Dereference => "Dereference",
                 };
                 self.line(&format!("Unary {operator}"), unary.span);
@@ -550,6 +551,9 @@ impl AstDumper {
                     BinaryOperator::Add => "Add",
                     BinaryOperator::Subtract => "Subtract",
                     BinaryOperator::Multiply => "Multiply",
+                    BinaryOperator::BitwiseAnd => "BitwiseAnd",
+                    BinaryOperator::BitwiseOr => "BitwiseOr",
+                    BinaryOperator::BitwiseXor => "BitwiseXor",
                     BinaryOperator::Equal => "Equal",
                     BinaryOperator::NotEqual => "NotEqual",
                     BinaryOperator::LessThan => "LessThan",

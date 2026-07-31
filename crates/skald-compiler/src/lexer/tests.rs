@@ -64,7 +64,7 @@ fn lexes_the_complete_supported_token_surface() {
 }
 
 #[test]
-fn comparison_punctuation_uses_longest_match_and_preserves_existing_tokens() {
+fn comparison_punctuation_uses_longest_match_and_preserves_bitwise_tokens() {
     let (sources, source_id, output) = lex_text("== = != ! < <= > >= -> :: &");
     let source = sources.get(source_id).unwrap();
 
@@ -85,7 +85,7 @@ fn comparison_punctuation_uses_longest_match_and_preserves_existing_tokens() {
             TokenKind::GreaterEqual,
             TokenKind::Arrow,
             TokenKind::DoubleColon,
-            TokenKind::Invalid,
+            TokenKind::Ampersand,
             TokenKind::Eof,
         ]
     );
@@ -97,11 +97,7 @@ fn comparison_punctuation_uses_longest_match_and_preserves_existing_tokens() {
             .collect::<Vec<_>>(),
         ["==", "=", "!=", "!", "<", "<=", ">", ">=", "->", "::", "&", ""]
     );
-    assert_eq!(output.diagnostics.len(), 1);
-    assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        UNEXPECTED_CHARACTER
-    );
+    assert!(output.diagnostics.is_empty());
     let dump = dump_tokens(source, &output.tokens);
     assert_eq!(dump, dump_tokens(source, &output.tokens));
     assert!(dump.contains("LESS_EQUAL"));
@@ -145,7 +141,7 @@ fn logical_punctuation_uses_longest_match_with_precise_utf8_spans() {
 }
 
 #[test]
-fn malformed_logical_and_unimplemented_bitwise_punctuation_is_split_deterministically() {
+fn eager_bitwise_and_logical_punctuation_is_split_deterministically() {
     let (sources, source_id, output) = lex_text("& | ^ ~ &&& |||");
     let source = sources.get(source_id).unwrap();
 
@@ -156,14 +152,14 @@ fn malformed_logical_and_unimplemented_bitwise_punctuation_is_split_deterministi
             .map(|token| token.kind)
             .collect::<Vec<_>>(),
         [
-            TokenKind::Invalid,
-            TokenKind::Invalid,
-            TokenKind::Invalid,
-            TokenKind::Invalid,
+            TokenKind::Ampersand,
+            TokenKind::Pipe,
+            TokenKind::Caret,
+            TokenKind::Tilde,
             TokenKind::AndAnd,
-            TokenKind::Invalid,
+            TokenKind::Ampersand,
             TokenKind::OrOr,
-            TokenKind::Invalid,
+            TokenKind::Pipe,
             TokenKind::Eof,
         ]
     );
@@ -175,11 +171,7 @@ fn malformed_logical_and_unimplemented_bitwise_punctuation_is_split_deterministi
             .collect::<Vec<_>>(),
         ["&", "|", "^", "~", "&&", "&", "||", "|", ""]
     );
-    assert_eq!(output.diagnostics.len(), 6);
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == UNEXPECTED_CHARACTER));
+    assert!(output.diagnostics.is_empty());
 }
 
 #[test]

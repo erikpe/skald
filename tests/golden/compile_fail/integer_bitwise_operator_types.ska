@@ -1,0 +1,85 @@
+class Item {
+    init() {}
+}
+
+fn notify() -> unit {}
+
+fn complement_bool(value: bool) -> i64 {
+    return ~value;
+}
+
+fn complement_float(value: f64) -> i64 {
+    return ~value;
+}
+
+fn complement_optional(value: i64?) -> i64 {
+    return ~value;
+}
+
+fn complement_array(value: i64[]) -> i64 {
+    return ~value;
+}
+
+fn complement_class(ref value: Item) -> i64 {
+    return ~value;
+}
+
+fn complement_shared(value: shared Item) -> i64 {
+    return ~value;
+}
+
+fn complement_object(ref value: Obj) -> i64 {
+    return ~value;
+}
+
+fn complement_unit() -> i64 {
+    return ~notify();
+}
+
+fn binary_bool(left: bool, right: bool) -> i64 {
+    return left & right;
+}
+
+fn binary_float(left: f64, right: f64) -> i64 {
+    return left | right;
+}
+
+fn binary_optional(left: i64?, right: i64?) -> i64 {
+    return left ^ right;
+}
+
+fn binary_array(left: i64[], right: i64[]) -> i64 {
+    return left & right;
+}
+
+fn binary_class(ref left: Item, ref right: Item) -> i64 {
+    return left | right;
+}
+
+fn binary_shared(left: shared Item, right: shared Item) -> i64 {
+    return left ^ right;
+}
+
+fn binary_object(ref left: Obj, ref right: Obj) -> i64 {
+    return left & right;
+}
+
+fn binary_unit() -> i64 {
+    return notify() | notify();
+}
+
+fn mixed_and(left: i64, right: u64) -> i64 {
+    return left & right;
+}
+
+fn mixed_or(left: u64, right: u8) -> u64 {
+    return left | right;
+}
+
+fn mixed_xor(left: u8, right: i64) -> u8 {
+    return left ^ right;
+}
+
+fn main() -> i64 {
+    return 0;
+}

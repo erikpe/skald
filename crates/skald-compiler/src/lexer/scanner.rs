@@ -283,6 +283,10 @@ impl<'source> Lexer<'source> {
             '.' => TokenKind::Dot,
             '?' => TokenKind::Question,
             '!' => TokenKind::Bang,
+            '~' => TokenKind::Tilde,
+            '&' => TokenKind::Ampersand,
+            '|' => TokenKind::Pipe,
+            '^' => TokenKind::Caret,
             _ => {
                 self.advance();
                 let span = self.span(start, self.offset);

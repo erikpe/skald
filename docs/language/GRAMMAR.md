@@ -110,21 +110,21 @@ All four spellings remain ordinary identifiers outside those positions.
 The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
-( ) { } [ ] , : :: ; . -> + - * = == != < <= > >= ? !
+( ) { } [ ] , : :: ; . -> + - * = == != < <= > >= ? ! ~ & | ^ && ||
 ```
 
 Double quotes delimit one string-literal token. There are no character or
 division tokens in the implemented grammar.
 
-The frozen primitive-operator extension additionally selects these tokens:
+The remaining frozen primitive-operator extension additionally selects these
+tokens:
 
 ```text
-/ % ~ & | ^ << >> && ||
+/ % << >>
 ```
 
-`&&` and `||` are accepted by the current compiler. The other tokens in this
-extension remain unavailable until their implementation roadmaps land. Power
-syntax is not frozen or reserved.
+These remaining tokens are unavailable until their implementation roadmaps
+land. Power syntax is not frozen or reserved.
 
 ## Literals
 
@@ -412,26 +412,37 @@ The corresponding semantics are owned by
 ## Expressions
 
 ```text
-expression       = comparison-expression
-                   ["is" (view-target | "some" | "none")]
-view-target      = declaration-path
+expression                = logical-or-expression
+view-target               = declaration-path
 
-comparison-expression
-                 = additive-expression
-                   [comparison-operator additive-expression]
+logical-or-expression     = logical-and-expression
+                            {"||" logical-and-expression}
+logical-and-expression    = comparison-expression
+                            {"&&" comparison-expression}
+
+comparison-expression     = bitwise-or-expression
+                            [comparison-operator bitwise-or-expression]
+                            ["is" (view-target | "some" | "none")]
 comparison-operator
-                 = "==" | "!=" | "<" | "<=" | ">" | ">="
+                          = "==" | "!=" | "<" | "<=" | ">" | ">="
+
+bitwise-or-expression     = bitwise-xor-expression
+                            {"|" bitwise-xor-expression}
+bitwise-xor-expression    = bitwise-and-expression
+                            {"^" bitwise-and-expression}
+bitwise-and-expression    = additive-expression
+                            {"&" additive-expression}
 
 additive-expression
-                 = multiplicative-expression
-                   {("+" | "-") multiplicative-expression}
+                          = multiplicative-expression
+                            {("+" | "-") multiplicative-expression}
 
 multiplicative-expression
-                 = unary-expression {"*" unary-expression}
+                          = unary-expression {"*" unary-expression}
 
-unary-expression = ("-" | "!" | "*") unary-expression
-                 | cast-expression
-                 | postfix-expression
+unary-expression          = ("-" | "!" | "~" | "*") unary-expression
+                          | cast-expression
+                          | postfix-expression
 
 cast-expression  = primitive-integer-cast-expression
                  | object-cast-expression
@@ -495,16 +506,22 @@ From tightest to loosest binding, precedence is:
 
 1. postfix unwrap, member access, dereferencing member access, calls, indexing,
    and slicing;
-2. prefix `-`, `!`, and `*`, and primitive or object casts;
+2. prefix `-`, `!`, `~`, and `*`, and primitive or object casts;
 3. binary `*`;
 4. binary `+` and `-`;
-5. primitive comparisons `==`, `!=`, `<`, `<=`, `>`, and `>=`;
-6. contextual `is`.
+5. `&`;
+6. `^`;
+7. `|`;
+8. primitive comparisons `==`, `!=`, `<`, `<=`, `>`, and `>=`;
+9. contextual `is`;
+10. `&&`;
+11. `||`.
 
-Postfix and arithmetic binary operators associate left to right. Prefix `-`,
-`!`, and `*` associate right to left. Comparisons and `is` are non-associative, so
-ungrouped chained comparisons or tests are syntax errors. Grouping overrides
-precedence and remains represented in the source-shaped syntax tree.
+Postfix, arithmetic, bitwise, and logical binary operators associate left to
+right. Prefix `-`, `!`, `~`, and `*` associate right to left. Comparisons and
+`is` are non-associative, so ungrouped chained comparisons or tests are syntax
+errors. Grouping overrides precedence and remains represented in the
+source-shaped syntax tree.
 `*owner.field` therefore means `*(owner.field)`; use `(*owner).field` or
 `owner->field` to select a member from `owner`'s pointee. Binary multiplication
 remains distinct by operator position, as in `value * *owner`. Allocation and
@@ -518,10 +535,11 @@ selected inline place, while `->` crosses exactly one shared edge. There is no
 implicit shared dereference.
 Declaration selection and call legality are semantic concerns.
 
-Postfix unwrap binds above prefix logical negation, so `!optional_flag!` means
-`!(optional_flag!)` and `!!flag` means `!(!flag)`. Operator position keeps the
-two uses distinct, while longest-match tokenization keeps `!=` as one
-comparison token.
+Postfix unwrap binds above prefix logical negation and bitwise complement, so
+`!optional_flag!` means `!(optional_flag!)`, `~optional_byte!` means
+`~(optional_byte!)`, and `!!flag` means `!(!flag)`. Operator position keeps the
+uses distinct, while longest-match tokenization keeps `!=`, `&&`, and `||` as
+single tokens.
 
 A primitive integer keyword in this position unambiguously selects an integer
 cast. A parenthesized identifier followed by an adjacent expression is an
@@ -544,8 +562,9 @@ cast matrix are defined by
 
 ### Frozen primitive-operator expression extension
 
-The frozen operator grammar replaces the implemented expression ladder above
-when the corresponding syntax is implemented:
+The complete frozen operator grammar extends the implemented expression ladder
+above with shifts, division, and remainder when those families are
+implemented:
 
 ```text
 expression                = logical-or-expression

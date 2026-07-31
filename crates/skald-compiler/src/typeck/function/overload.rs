@@ -276,7 +276,10 @@ impl CallableChecker<'_, '_> {
                 | crate::resolve::ResolvedBinaryOperator::GreaterEqual => Type::Bool,
                 crate::resolve::ResolvedBinaryOperator::Add
                 | crate::resolve::ResolvedBinaryOperator::Subtract
-                | crate::resolve::ResolvedBinaryOperator::Multiply => {
+                | crate::resolve::ResolvedBinaryOperator::Multiply
+                | crate::resolve::ResolvedBinaryOperator::BitwiseAnd
+                | crate::resolve::ResolvedBinaryOperator::BitwiseOr
+                | crate::resolve::ResolvedBinaryOperator::BitwiseXor => {
                     self.static_expression_type(&binary.left)
                 }
             },

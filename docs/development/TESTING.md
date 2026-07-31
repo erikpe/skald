@@ -283,14 +283,15 @@ malformed-MIR rejection. Golden cases own exact diagnostics, extrema and
 modulo observations, and range-check-before-cast composition with array
 positions.
 
-Pure bitwise downstream coverage uses direct typed-HIR and verified-MIR
-fixtures while its source punctuation remains disabled. The matrix covers
-complement, AND, OR, and XOR for `i64`, `u64`, and `u8`, including exact type
-queries, deterministic dumps, right-control-effect spilling, one-invariant
-verifier mutations, selector shape, `u8` canonicalization, assembler
-acceptance, and native edge-pattern results. Lexer rejection remains the
-source-boundary observation until the source-enablement task owns parser,
-type-checker, diagnostic, and golden coverage.
+Pure bitwise coverage keeps source and downstream responsibilities distinct.
+Lexer, syntax, resolution, and type-check tests own punctuation distinction,
+precedence, source shape, exact selection, mixed-type rejection, and focused
+actual-type diagnostics. Typed-HIR and verified-MIR tests cover the complete
+operation/type matrix, deterministic dumps, right-control-effect spilling,
+and one-invariant verifier mutations. Backend tests own selector shape, `u8`
+canonicalization, and assembler acceptance. Native and compile-failure
+goldens own edge patterns, left-to-right exactly-once effects, arbitrary eager
+consumers, and exact rendered diagnostics.
 
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and

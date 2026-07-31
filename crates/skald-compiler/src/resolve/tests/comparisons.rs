@@ -85,7 +85,10 @@ const fn operator_dump_name(operator: ResolvedBinaryOperator) -> &'static str {
         ResolvedBinaryOperator::GreaterEqual => "GreaterEqual",
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
-        | ResolvedBinaryOperator::Multiply => {
+        | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::BitwiseAnd
+        | ResolvedBinaryOperator::BitwiseOr
+        | ResolvedBinaryOperator::BitwiseXor => {
             panic!("comparison test received an arithmetic operator")
         }
     }

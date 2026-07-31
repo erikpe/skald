@@ -101,6 +101,9 @@ impl CallableChecker<'_, '_> {
         &mut self,
         unary: &crate::resolve::ResolvedUnaryExpr,
     ) -> Option<HirExpression> {
+        if unary.operator == ResolvedUnaryOperator::BitwiseComplement {
+            return self.check_bitwise_complement(unary);
+        }
         match unary.operator {
             ResolvedUnaryOperator::Negate => {
                 if let Some(literal) = i64_literal_through_groups(&unary.operand) {
@@ -143,6 +146,7 @@ impl CallableChecker<'_, '_> {
                     return None;
                 }
             }
+            ResolvedUnaryOperator::BitwiseComplement => unreachable!("returned above"),
         }
 
         let operand = self.check_expression(&unary.operand)?;
@@ -151,6 +155,7 @@ impl CallableChecker<'_, '_> {
                 debug_assert_eq!(operand.ty, Type::Bool);
                 HirUnaryOperation::LogicalNotBool
             }
+            ResolvedUnaryOperator::BitwiseComplement => unreachable!("returned above"),
             ResolvedUnaryOperator::Negate => match operand.ty {
                 Type::I64 => HirUnaryOperation::NegateI64,
                 Type::F64 => HirUnaryOperation::NegateF64,
@@ -189,6 +194,14 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirExpression> {
         if let Some(predicate) = comparison_predicate(binary.operator) {
             return self.check_primitive_comparison(binary, predicate);
+        }
+        if matches!(
+            binary.operator,
+            ResolvedBinaryOperator::BitwiseAnd
+                | ResolvedBinaryOperator::BitwiseOr
+                | ResolvedBinaryOperator::BitwiseXor
+        ) {
+            return self.check_integer_bitwise_expression(binary);
         }
 
         // Both operands are checked in source order so independent diagnostics accumulate.
@@ -375,7 +388,10 @@ const fn comparison_predicate(operator: ResolvedBinaryOperator) -> Option<HirCom
         ResolvedBinaryOperator::GreaterEqual => Some(HirComparisonPredicate::GreaterEqual),
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
-        | ResolvedBinaryOperator::Multiply => None,
+        | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::BitwiseAnd
+        | ResolvedBinaryOperator::BitwiseOr
+        | ResolvedBinaryOperator::BitwiseXor => None,
     }
 }
 
@@ -403,6 +419,12 @@ fn select_arithmetic_operation(
             | ResolvedBinaryOperator::LessEqual
             | ResolvedBinaryOperator::GreaterThan
             | ResolvedBinaryOperator::GreaterEqual,
+            _,
+        ) => None,
+        (
+            ResolvedBinaryOperator::BitwiseAnd
+            | ResolvedBinaryOperator::BitwiseOr
+            | ResolvedBinaryOperator::BitwiseXor,
             _,
         ) => None,
         (

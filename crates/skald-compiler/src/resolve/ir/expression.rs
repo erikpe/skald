@@ -335,6 +335,7 @@ pub struct ResolvedBooleanExpr {
 pub enum ResolvedUnaryOperator {
     Negate,
     LogicalNot,
+    BitwiseComplement,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -350,6 +351,9 @@ pub enum ResolvedBinaryOperator {
     Add,
     Subtract,
     Multiply,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
     Equal,
     NotEqual,
     LessThan,
