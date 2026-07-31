@@ -36,20 +36,28 @@ fn selects_both_shift_directions_for_every_integer_left_type() {
 
 #[test]
 fn rejects_every_non_u64_count_without_conversion() {
-    for (declarations, count, actual_type) in [
-        ("", "1", "i64"),
-        ("", "1u8", "u8"),
-        ("", "true", "bool"),
-        ("", "1.0", "f64"),
-        ("fn notify() -> unit {} ", "notify()", "unit"),
-        ("", "value", "i64?"),
-        ("", "values", "array a0"),
+    for (declarations, parameters, count, actual_type) in [
+        ("", "", "1", "i64"),
+        ("", "", "1u8", "u8"),
+        ("", "", "true", "bool"),
+        ("", "", "1.0", "f64"),
+        ("fn notify() -> unit {} ", "", "notify()", "unit"),
+        ("", "value: i64?", "value", "i64?"),
+        ("", "values: i64[]", "values", "array a0"),
+        (
+            "class Item { init() {} } ",
+            "ref value: Item",
+            "value",
+            "class c0",
+        ),
+        (
+            "class Item { init() {} } ",
+            "value: shared Item",
+            "value",
+            "shared class c0",
+        ),
+        ("", "ref value: Obj", "value", "Obj"),
     ] {
-        let parameters = match count {
-            "value" => "value: i64?",
-            "values" => "values: i64[]",
-            _ => "",
-        };
         for spelling in ["<<", ">>"] {
             let source = format!(
                 "{declarations}fn invalid({parameters}) -> i64 {{ return 1 {spelling} {count}; }} \
@@ -90,24 +98,26 @@ fn rejects_noninteger_left_families_with_actual_types() {
         ),
         ("", "ref value: Obj", "Obj"),
     ] {
-        let source = format!(
-            "{declaration}fn invalid({parameter}) -> i64 {{ return value << 1u; }} \
-             fn main() -> i64 {{ return 0; }}"
-        );
-        let output = check_text(&source);
-        assert!(output.hir.is_none(), "{source}");
-        let diagnostic = output
-            .diagnostics
-            .iter()
-            .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
-            .unwrap();
-        assert!(diagnostic.labels.iter().any(|label| label
-            .message
-            .contains(&format!("left operand has type `{actual_type}`"))));
-        assert!(diagnostic
-            .notes
-            .iter()
-            .any(|note| note.contains("count type is exactly `u64`")));
+        for spelling in ["<<", ">>"] {
+            let source = format!(
+                "{declaration}fn invalid({parameter}) -> i64 {{ return value {spelling} 1u; }} \
+                 fn main() -> i64 {{ return 0; }}"
+            );
+            let output = check_text(&source);
+            assert!(output.hir.is_none(), "{source}");
+            let diagnostic = output
+                .diagnostics
+                .iter()
+                .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+                .unwrap();
+            assert!(diagnostic.labels.iter().any(|label| label
+                .message
+                .contains(&format!("left operand has type `{actual_type}`"))));
+            assert!(diagnostic
+                .notes
+                .iter()
+                .any(|note| note.contains("count type is exactly `u64`")));
+        }
     }
 }
 

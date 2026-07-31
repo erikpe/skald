@@ -201,9 +201,10 @@ count.
 zero respectively. Integer wrapping overflow and floating division by zero
 also do not use panic. The
 [operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
-defines their value behavior, while the
-[status matrix](STATUS.md) records that these new operations and failure edges
-are not yet implemented.
+defines their value behavior. Checked shift failure is implemented through the
+common reporter; integer division, remainder, and their zero-divisor failure
+edges remain frozen but unimplemented as recorded by the
+[status matrix](STATUS.md).
 
 ## Cleanup and abrupt termination
 

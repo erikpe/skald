@@ -111,7 +111,15 @@ fn rejects_every_noninteger_family_with_focused_actual_type_diagnostics() {
         } else {
             ""
         };
-        for expression in [format!("~{operand}"), format!("{operand} & {operand}")] {
+        let mut expressions = vec![format!("~{operand}")];
+        for &(_, spelling) in BINARY_OPERATORS {
+            expressions.extend([
+                format!("{operand} {spelling} {operand}"),
+                format!("1 {spelling} {operand}"),
+                format!("{operand} {spelling} 1"),
+            ]);
+        }
+        for expression in expressions {
             let source = format!(
                 "{prefix}fn invalid({parameter}) -> i64 {{ var result: i64 = {expression}; return result; }} \
                  fn main() -> i64 {{ return 0; }}"
@@ -131,7 +139,15 @@ fn rejects_every_noninteger_family_with_focused_actual_type_diagnostics() {
         }
     }
 
-    for expression in ["~notify()", "notify() | notify()"] {
+    let mut unit_expressions = vec!["~notify()".to_owned()];
+    for &(_, spelling) in BINARY_OPERATORS {
+        unit_expressions.extend([
+            format!("notify() {spelling} notify()"),
+            format!("1 {spelling} notify()"),
+            format!("notify() {spelling} 1"),
+        ]);
+    }
+    for expression in unit_expressions {
         let source = format!(
             "fn notify() -> unit {{}} fn invalid() -> i64 {{ var result: i64 = {expression}; return result; }} \
              fn main() -> i64 {{ return 0; }}"

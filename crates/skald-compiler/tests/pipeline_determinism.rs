@@ -37,6 +37,13 @@ const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_pro
 const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINISM_OUTPUT";
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
+const INTEGER_BITWISE_SHIFT_HELPER_OUTPUT: &str = "SKALD_INTEGER_BITWISE_SHIFT_DETERMINISM_OUTPUT";
+const INTEGER_BITWISE_SHIFT_TEST_NAME: &str =
+    "integer_bitwise_and_shift_phase_products_are_deterministic_across_processes";
+const INTEGER_BITWISE_SHIFT_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_INTEGER_BITWISE_SHIFT_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const INTEGER_BITWISE_SHIFT_DIAGNOSTIC_TEST_NAME: &str =
+    "integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes";
 const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
@@ -122,6 +129,26 @@ fn integer_operation_phase_products_are_deterministic_across_processes() {
         INTEGER_OPERATION_HELPER_OUTPUT,
         INTEGER_OPERATION_TEST_NAME,
         integer_operation_phase_dump,
+    );
+}
+
+#[test]
+fn integer_bitwise_and_shift_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "integer-bitwise-shifts",
+        INTEGER_BITWISE_SHIFT_HELPER_OUTPUT,
+        INTEGER_BITWISE_SHIFT_TEST_NAME,
+        integer_bitwise_and_shift_phase_dump,
+    );
+}
+
+#[test]
+fn integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "integer-bitwise-shift-diagnostics",
+        INTEGER_BITWISE_SHIFT_DIAGNOSTIC_HELPER_OUTPUT,
+        INTEGER_BITWISE_SHIFT_DIAGNOSTIC_TEST_NAME,
+        integer_bitwise_and_shift_diagnostic_dump,
     );
 }
 
@@ -587,6 +614,40 @@ fn integer_operation_phase_dump() -> String {
     complete_phase_dump(include_str!(
         "../../../tests/golden/run/integer_string_range_guards.ska"
     ))
+}
+
+fn integer_bitwise_and_shift_phase_dump() -> String {
+    complete_phase_dump(concat!(
+        "class Bits { value: u8; count: u64; ",
+        "init(value: u8, count: u64) { self.value = value; self.count = count; } }\n",
+        "class Trace { value: u64; init(value: u64) { self.value = value; } ",
+        "fn read() -> u64 { return self.value; } destroy {} }\n",
+        "fn make(value: u64) -> shared Trace { return new Trace(value); }\n",
+        "fn mix(ref bits: Bits, optional: u8?, values: u8[]) -> bool { ",
+        "return (((~bits.value + 1u8 << bits.count) >> 1u) & values[0] ",
+        "^ optional! | 1u8) == 7u8 && true; }\n",
+        "fn cleanup() -> u64 { return make(16u)->read() >> make(2u)->read(); }\n",
+        "fn main() -> i64 { var bits: Bits = Bits(3u8, 2u); ",
+        "var optional: u8? = 4u8; var values: u8[] = u8[](1u); values[0] = 7u8; ",
+        "if (mix(bits, optional, values) || cleanup() == 4u) { return 0; } return 1; }\n",
+    ))
+}
+
+fn integer_bitwise_and_shift_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "integer-bitwise-shift-diagnostics.ska",
+        concat!(
+            "class Item { init() {} }\n",
+            "fn invalid(flag: bool, count: i64, owner: shared Item) -> i64 {\n",
+            "  var complement: i64 = ~flag;\n",
+            "  var bitwise: i64 = 1 | flag;\n",
+            "  var shifted: i64 = 1 << count;\n",
+            "  var owner_count: i64 = 1 >> owner;\n",
+            "  return complement + bitwise + shifted + owner_count;\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+    )
 }
 
 fn eager_boolean_phase_dump() -> String {

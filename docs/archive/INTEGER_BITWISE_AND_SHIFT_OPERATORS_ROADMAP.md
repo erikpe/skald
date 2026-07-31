@@ -1,6 +1,6 @@
 # Integer Bitwise Operators and Checked Shifts Roadmap
 
-Status: in progress; BW0 through BW3 are complete and BW4 is next.
+Status: complete; BW0 through BW4 are complete.
 
 This roadmap implements the next frozen primitive-operator family: exact-width
 integer bitwise complement, conjunction, disjunction, and exclusive
@@ -118,7 +118,7 @@ than adding operator-specific C harnesses.
 - [x] BW1 — Enable bitwise source expressions end to end
 - [x] BW2 — Establish executable checked shifts
 - [x] BW3 — Enable checked shift source expressions end to end
-- [ ] BW4 — Harden and promote the complete family
+- [x] BW4 — Harden and promote the complete family
 
 ## PR-sized implementation sequence
 
@@ -308,28 +308,28 @@ living documentation reports the complete family as implemented.
 observations, maintainable ownership, and no rollout-only structure before
 division and remainder introduce their own failure semantics.
 
-- [ ] Complete valid and invalid matrices across literals, grouped values,
+- [x] Complete valid and invalid matrices across literals, grouped values,
       bindings, parameters, fields, calls, casts, arrays, optional unwrap,
       assignments, comparisons, logical operands, conditions, and returns.
-- [ ] Prove all precedence and associativity boundaries, including nested
+- [x] Prove all precedence and associativity boundaries, including nested
       prefix `~`, prefix/postfix composition, additive-to-shift binding,
       `&`/`^`/`|`, comparison/`is`, and `&&`/`||`, plus deterministic rejection
       of malformed chains and incomplete operators.
-- [ ] Add independent-process determinism coverage for diagnostics and all
+- [x] Add independent-process determinism coverage for diagnostics and all
       phase dumps plus stable assembly, panic-message, and native observations
       where focused owner tests do not already provide it.
-- [ ] Audit touched lexer, syntax, resolution, type-check, HIR, MIR lowering,
+- [x] Audit touched lexer, syntax, resolution, type-check, HIR, MIR lowering,
       control-effect, verifier, termination, backend, facade, dump, and test
       owners by responsibility. Resolve high-priority hotspots and place any
       material out-of-scope findings in a separately indexed discoveries
       document.
-- [ ] Remove roadmap codes and rollout wording from living code, tests, and
+- [x] Remove roadmap codes and rollout wording from living code, tests, and
       general documentation; retain milestone vocabulary only in roadmap and
       archive documents.
-- [ ] Confirm the runtime ABI non-change, existing panic-message stability,
+- [x] Confirm the runtime ABI non-change, existing panic-message stability,
       documentation links, artifact cleanliness, and the boundary reserving
       division/remainder and floating operators for later roadmaps.
-- [ ] Mark this roadmap complete, move it to `docs/archive/`, update the active
+- [x] Mark this roadmap complete, move it to `docs/archive/`, update the active
       and archive indexes, and repair incoming relative links.
 
 **Tests:** Exhaustive source, HIR, MIR, verifier, backend, compile-failure,

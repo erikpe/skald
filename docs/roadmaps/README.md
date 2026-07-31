@@ -6,12 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Integer bitwise operators and checked shifts](INTEGER_BITWISE_AND_SHIFT_OPERATORS_ROADMAP.md)
-  — **In progress; BW0 through BW3 are complete and BW4 is next.** Implements exact-width
-  integer `~`, `&`, `|`, and `^` first, then eager `<<` and `>>` with verified
-  `u64` count checks and the existing common panic reporter. It depends on the
-  completed primitive integer, eager boolean, and short-circuit boolean
-  operator work plus the frozen primitive operator profile.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

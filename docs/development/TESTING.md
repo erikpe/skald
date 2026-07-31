@@ -302,7 +302,11 @@ unsigned width checks before `rcx`/`cl`, `shl`/`sar`/`shr` selection, `u8`
 canonicalization, stable static-message pooling, assembler acceptance, native
 edge results, and exact excessive-count stderr. Native goldens additionally
 own arbitrary operands, every consumer, evaluation and cleanup order, and
-failure-before-check behavior.
+failure-before-check behavior. A combined independent-process snapshot covers
+tokens, AST, resolved IR, typed HIR, verified MIR, assembly, and focused type
+diagnostics. The golden runner independently recompiles every case before
+comparing assembly and independently executes native cases twice before
+checking values, panic bytes, and process status.
 
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
