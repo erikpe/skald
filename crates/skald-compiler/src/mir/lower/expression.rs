@@ -54,8 +54,8 @@ impl BodyLowerer<'_> {
             HirExpressionKind::CheckedShift(shift) => {
                 Some(self.lower_checked_shift(expression, shift))
             }
-            HirExpressionKind::CheckedIntegerDivision(_) => {
-                unreachable!("checked integer division lowering is not implemented")
+            HirExpressionKind::CheckedIntegerDivision(division) => {
+                Some(self.lower_checked_integer_division(expression, division))
             }
             HirExpressionKind::Logical(logical) => Some(self.lower_logical(expression, logical)),
             HirExpressionKind::PrimitiveComparison {

@@ -851,6 +851,23 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::IntegerDivisorCheck {
+            check,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "integer-divisor-check {}.{} dividend={} divisor={} result={} -> {success_target} else {failure_target}",
+                check.operation.mnemonic(),
+                check.operation.operand.name(),
+                check.dividend,
+                check.divisor,
+                check.result,
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::CheckedCast {
             binding,
             success_target,

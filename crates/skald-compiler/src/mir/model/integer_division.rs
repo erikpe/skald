@@ -1,6 +1,6 @@
 //! Target-independent checked integer division and remainder semantics.
 
-use super::{MirIntegerType, MirTerminationReason, MirType};
+use super::{MirIntegerType, MirTerminationReason, MirType, StorageId};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct MirIntegerDivisionOperation {
@@ -73,6 +73,16 @@ pub enum MirSignedRemainderSign {
 pub enum MirSignedMinimumPairResult {
     Minimum,
     Zero,
+}
+
+/// Exact scalar carriers participating in one checked division/remainder
+/// diamond.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirIntegerDivisorCheck {
+    pub operation: MirIntegerDivisionOperation,
+    pub dividend: StorageId,
+    pub divisor: StorageId,
+    pub result: StorageId,
 }
 
 #[cfg(test)]

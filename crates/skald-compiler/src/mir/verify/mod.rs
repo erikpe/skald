@@ -21,6 +21,7 @@ mod declarations;
 mod dispatch;
 mod inheritance;
 mod instructions;
+mod integer_division;
 mod interfaces;
 mod lifetime;
 mod logical;

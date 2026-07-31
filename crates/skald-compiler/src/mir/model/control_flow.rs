@@ -63,6 +63,14 @@ pub enum MirTerminator {
         failure_target: BlockId,
         span: Span,
     },
+    /// Rejects a zero divisor before the success block performs its matching
+    /// quotient or remainder operation.
+    IntegerDivisorCheck {
+        check: super::integer_division::MirIntegerDivisorCheck,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
     /// Performs a metadata check and establishes one full-expression cast
     /// carrier only on success.
     CheckedCast {
@@ -193,6 +201,7 @@ impl MirTerminator {
             | Self::Goto { span, .. }
             | Self::Branch { span, .. }
             | Self::ShiftCountCheck { span, .. }
+            | Self::IntegerDivisorCheck { span, .. }
             | Self::CheckedCast { span, .. }
             | Self::SharedCast { span, .. }
             | Self::OptionalUnwrap { span, .. }
@@ -221,6 +230,11 @@ impl MirTerminator {
                 ..
             } => [Some(*true_target), Some(*false_target), None],
             Self::ShiftCountCheck {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::IntegerDivisorCheck {
                 success_target,
                 failure_target,
                 ..

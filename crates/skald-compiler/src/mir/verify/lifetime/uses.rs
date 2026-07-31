@@ -140,6 +140,11 @@ pub(super) fn visit_terminator_storage(
             visit(check.count);
             visit(check.result);
         }
+        MirTerminator::IntegerDivisorCheck { check, .. } => {
+            visit(check.dividend);
+            visit(check.divisor);
+            visit(check.result);
+        }
         MirTerminator::ReturnShared { owner, .. }
         | MirTerminator::ReturnOptionalShared { owner, .. } => visit(*owner),
         MirTerminator::Panic { message, .. } => visit_place(message, visit),

@@ -148,6 +148,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
                         failure_target,
                         ..
                     })
+                    | Some(MirTerminator::IntegerDivisorCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    })
                     | Some(MirTerminator::ArrayOperationCheck {
                         success_target,
                         failure_target,

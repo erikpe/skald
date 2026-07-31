@@ -43,8 +43,9 @@ pub use instruction::{
     MirObjectOrigin, MirObjectView, MirStorageDead, MirStorageLive, MirStore, MirViewTarget,
 };
 pub use integer_division::{
-    MirIntegerDivisionKind, MirIntegerDivisionOperation, MirSignedIntegerDivisionSemantics,
-    MirSignedMinimumPairResult, MirSignedQuotientRounding, MirSignedRemainderSign,
+    MirIntegerDivisionKind, MirIntegerDivisionOperation, MirIntegerDivisorCheck,
+    MirSignedIntegerDivisionSemantics, MirSignedMinimumPairResult, MirSignedQuotientRounding,
+    MirSignedRemainderSign,
 };
 pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,

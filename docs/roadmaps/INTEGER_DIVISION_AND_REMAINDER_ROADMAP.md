@@ -1,6 +1,6 @@
 # Integer Division and Remainder Roadmap
 
-Status: in progress; DR0 is complete and DR1 is next.
+Status: in progress; DR0 and DR1 are complete and DR2 is next.
 
 This roadmap implements the frozen integer `/` and `%` family for exact
 `i64`, `u64`, and `u8` operands. It delivers floor division and matching
@@ -116,7 +116,7 @@ than adding operator-specific C harnesses.
 ## Progress
 
 - [x] DR0 — Define checked integer division and remainder semantics
-- [ ] DR1 — Lower and verify the checked control-flow shape
+- [x] DR1 — Lower and verify the checked control-flow shape
 - [ ] DR2 — Execute verified operations on x86-64
 - [ ] DR3 — Enable the complete source family end to end
 - [ ] DR4 — Harden and promote the complete family
@@ -167,28 +167,28 @@ remain unchanged.
 **Purpose:** Prove evaluation order, failure control flow, result carriage, and
 cleanup boundaries before any target division instruction can be selected.
 
-- [ ] Lower the dividend exactly once, secure it, lower the divisor exactly
+- [x] Lower the dividend exactly once, secure it, lower the divisor exactly
       once, and secure it only after each operand has completed; emit the zero
       check after both operands and perform the semantic operation only on its
       success continuation.
-- [ ] Route the failure continuation directly to the matching division- or
+- [x] Route the failure continuation directly to the matching division- or
       remainder-by-zero termination reason, with no operation, cleanup, or
       ordinary successor after reporting begins.
-- [ ] Carry only the successful result through an exact typed scalar slot into
+- [x] Carry only the successful result through an exact typed scalar slot into
       the enclosing expression, preserving existing full-expression lifetime
       and reverse cleanup on every successful path.
-- [ ] Support nested control-affecting operands and enclosing expressions so a
+- [x] Support nested control-affecting operands and enclosing expressions so a
       division or remainder result can safely participate in another eager,
       checked, short-circuit, or cleanup-bearing expression.
-- [ ] Extend MIR verification to prove exact dividend/divisor/result types,
+- [x] Extend MIR verification to prove exact dividend/divisor/result types,
       secured-carrier storage, zero-check operands, check-before-operation
       dominance, exact success and failure targets, matching operation and
       termination reason, result initialization, block-local use, and no
       ordinary successor from failure.
-- [ ] Extend deterministic MIR dumps to expose the secured operands, zero
+- [x] Extend deterministic MIR dumps to expose the secured operands, zero
       check, success-only semantic operation, exact failure termination,
       result carrier, join, and enclosing cleanup without target details.
-- [ ] Keep source construction and x86-64 emission disabled; directly
+- [x] Keep source construction and x86-64 emission disabled; directly
       constructed HIR drives lowering and verifier coverage.
 
 **Tests:** Direct lowering for values, calls, nested checked shifts, nested

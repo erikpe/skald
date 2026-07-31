@@ -73,6 +73,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_path_conditions(function);
         self.verify_logical_expressions(function);
         self.verify_checked_shifts(function);
+        self.verify_checked_integer_divisions(function);
         self.verify_cleanup_liveness(function);
         self.verify_storage_lifetimes(function);
         self.verify_shared_ownership(function);
@@ -732,6 +733,18 @@ impl<'mir> Verifier<'mir> {
                 failure_target,
                 ..
             }) => self.verify_shift_count_check(
+                function,
+                block,
+                check,
+                *success_target,
+                *failure_target,
+            ),
+            Some(MirTerminator::IntegerDivisorCheck {
+                check,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_integer_divisor_check(
                 function,
                 block,
                 check,

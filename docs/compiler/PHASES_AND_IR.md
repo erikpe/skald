@@ -302,14 +302,17 @@ and `||` remain structured short-circuit operations in HIR so a skipped right
 operand is absent from abstract execution rather than marked as an eager value
 whose effects may later be discarded.
 
-The internal HIR and MIR models include inspection-only integer division and
-remainder operations for exact `i64`, `u64`, and `u8`. They retain quotient
-versus remainder, floor signed quotient, divisor-signed remainder, the defined
+The internal HIR and MIR models include checked integer division and remainder
+operations for exact `i64`, `u64`, and `u8`. They retain quotient versus
+remainder, floor signed quotient, divisor-signed remainder, the defined
 signed-minimum pair result, and the distinct zero-divisor reason. Both are
-classified as control-affecting. Source phases do not construct these
-operations yet, MIR verification rejects an operation until it has the
-matching explicit divisor-check shape, and targets reject the model-only
-operation and reasons rather than exposing a partial executable path.
+classified as control-affecting. HIR-to-MIR lowering evaluates and secures the
+dividend and divisor in source order, then emits an explicit divisor-check
+diamond whose success edge alone performs the operation and initializes its
+result carrier. MIR verification proves that relationship and its exact typed
+carriers before accepting the operation. Source phases do not construct these
+operations yet, and targets still reject them rather than exposing a partial
+executable path.
 
 MIR lowers eager primitive operations to target-independent scalar operations.
 It preserves:
@@ -434,11 +437,12 @@ MIR verification rejects:
 - a compiler-known failure edge with an ordinary successor.
 
 The static-termination representation includes the executable checked-shift
-reason plus distinct model reasons for integer division and remainder by zero.
-The integer reasons already have deterministic MIR vocabulary, but remain
-non-executable until checked lowering, verification, and instruction selection
-activate them together. Once executable, they select their exact messages from
-the [language panic catalog](../language/ERRORS.md#frozen-panic-design).
+reason plus distinct reasons for integer division and remainder by zero. The
+integer reasons have deterministic MIR vocabulary and participate in verified
+checked control flow, but remain non-executable until instruction selection and
+their static messages are enabled together. Once executable, they select their
+exact messages from the
+[language panic catalog](../language/ERRORS.md#frozen-panic-design).
 
 Constant folding and every later transformation use the same wrapping,
 division, remainder, shift, NaN, panic, evaluation, ownership, and

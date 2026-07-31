@@ -152,6 +152,11 @@ impl InstructionSelector<'_, '_> {
                 self.select_static_panic(message);
                 Ok(true)
             }
+            MirTerminator::IntegerDivisorCheck { .. } => Err(crate::backend::BackendError::new(
+                crate::backend::Target::X86_64SysV,
+                Some(self.function.callable()),
+                "checked integer division and remainder are not executable yet",
+            )),
             _ => Ok(false),
         }
     }
@@ -272,6 +277,7 @@ pub(super) fn select(
         }
         MirTerminator::CheckedCast { .. }
         | MirTerminator::ShiftCountCheck { .. }
+        | MirTerminator::IntegerDivisorCheck { .. }
         | MirTerminator::Panic { .. }
         | MirTerminator::SharedCast { .. }
         | MirTerminator::OptionalUnwrap { .. }
