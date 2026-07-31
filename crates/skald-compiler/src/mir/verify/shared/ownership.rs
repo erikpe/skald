@@ -92,9 +92,9 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 let Some(block) = self.function.block(block_id) else {
                     continue;
                 };
-                for state in states.states_mut() {
+                states.update_states(|state| {
                     self.apply_block(block, state);
-                }
+                });
                 self.end_conditions_at_storage_death(block, &activation_conditions, &mut states);
                 match &block.terminator {
                     Some(MirTerminator::Goto { target, .. }) => {
@@ -123,11 +123,11 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         ..
                     }) => {
                         let mut success = states.clone();
-                        for state in success.states_mut() {
+                        success.update_states(|state| {
                             self.require_live_pointee(block.id, state, &binding.view.source);
                             self.require_live_shared_origin(block.id, state, &binding.view.origin);
                             self.begin_checked_view(block.id, state, binding);
-                        }
+                        });
                         self.merge(block.id, *success_target, &success, &mut flow);
                         self.merge(block.id, *failure_target, &states, &mut flow);
                     }
@@ -138,10 +138,10 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         ..
                     }) => {
                         let mut success = states.clone();
-                        for state in success.states_mut() {
+                        success.update_states(|state| {
                             self.require_shared_cast_source(block.id, state, cast);
                             self.apply_shared_cast(block.id, state, cast);
-                        }
+                        });
                         self.merge(block.id, *success_target, &success, &mut flow);
                         self.merge(block.id, *failure_target, &states, &mut flow);
                     }
@@ -160,7 +160,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         ..
                     }) => {
                         let mut success = states.clone();
-                        for state in success.states_mut() {
+                        success.update_states(|state| {
                             if state.live_owners.contains(&unwrap.destination)
                                 || state.released_owners.contains(&unwrap.destination)
                             {
@@ -175,7 +175,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                                     .insert(unwrap.destination, unwrap.destination);
                                 state.pending_full_expression_boundary = true;
                             }
-                        }
+                        });
                         self.merge(block.id, *success_target, &success, &mut flow);
                         self.merge(block.id, *failure_target, &states, &mut flow);
                     }
@@ -219,19 +219,19 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         self.merge(block.id, *complete_target, &states, &mut flow);
                     }
                     Some(MirTerminator::Return { .. }) => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             self.check_return(block, state, None);
-                        }
+                        });
                     }
                     Some(MirTerminator::ReturnShared { owner, .. }) => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             self.check_return(block, state, Some(*owner));
-                        }
+                        });
                     }
                     Some(MirTerminator::ReturnOptionalShared { .. }) => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             self.check_return(block, state, None);
-                        }
+                        });
                     }
                     Some(MirTerminator::Panic { .. })
                     | Some(MirTerminator::Terminate { .. })

@@ -50,6 +50,14 @@ uniqueness, and failure isolation. Existing cleanup, optional, shared, array,
 view, and guard verifier modules continue to own their resource-specific
 mutations.
 
+The private path-state algebra has direct tests under
+`mir/verify/path_state/tests.rs`. They compact 256 equivalent selected
+conditions into one predicate cube, preserve selected-versus-missing and
+parent-active distinctions, retain genuinely different resource states,
+reopen a condition identity in a later loop epoch, recompact converged states,
+and split only the affected truth-table subset when a later merge overlaps an
+already compacted cube.
+
 `mir/tests/logical_stress.rs` exercises a mixed chain at the accepted logical
 depth boundary, right nesting, and effectful selected-path cleanup. It pins
 linear chain growth, the intended quadratic bound for ancestor-conditioned

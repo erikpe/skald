@@ -53,7 +53,7 @@ impl Verifier<'_> {
                     continue;
                 };
                 for instruction in &block.instructions {
-                    for state in states.states_mut() {
+                    states.update_states(|state| {
                         if let MirInstruction::Call(call) = instruction {
                             self.verify_array_alias_dependencies(
                                 function,
@@ -82,7 +82,7 @@ impl Verifier<'_> {
                             }
                         }
                         state.apply(self, function, block.id, instruction);
-                    }
+                    });
                     self.end_condition_at_storage_death(
                         function,
                         block.id,
@@ -116,10 +116,10 @@ impl Verifier<'_> {
                             ..
                         })) = block.instructions.last()
                         {
-                            for state in failure_states.states_mut() {
+                            failure_states.update_states(|state| {
                                 state.backings.remove(backing);
                                 state.completed_backings.remove(backing);
-                            }
+                            });
                         }
                         self.merge_array_owner_state(
                             function,
@@ -145,9 +145,9 @@ impl Verifier<'_> {
                             &mut reported_joins,
                         );
                         let mut complete_states = states.clone();
-                        for state in complete_states.states_mut() {
+                        complete_states.update_states(|state| {
                             state.completed_backings.insert(*backing);
-                        }
+                        });
                         self.merge_array_owner_state(
                             function,
                             block.id,
@@ -160,7 +160,7 @@ impl Verifier<'_> {
                     MirTerminator::Return { .. }
                     | MirTerminator::ReturnShared { .. }
                     | MirTerminator::ReturnOptionalShared { .. } => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             if !state.backings.is_empty()
                                 || !state.completed_backings.is_empty()
                                 || !state.produced.is_empty()
@@ -174,7 +174,7 @@ impl Verifier<'_> {
                                     "array owner state must be fully consumed at normal return",
                                 );
                             }
-                        }
+                        });
                     }
                     MirTerminator::Terminate { .. } => {}
                     MirTerminator::Branch {

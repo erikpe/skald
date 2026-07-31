@@ -35,9 +35,9 @@ impl Verifier<'_> {
                 let Some(block) = function.block(block_id) else {
                     continue;
                 };
-                for state in states.states_mut() {
+                states.update_states(|state| {
                     apply_initializations(self.program, function, block, state);
-                }
+                });
                 collapse_conditions_at_storage_death(&mut states, block, &activation_conditions);
                 if let Some(MirTerminator::Branch {
                     condition,
@@ -73,256 +73,250 @@ impl Verifier<'_> {
                 continue;
             };
             for instruction in &block.instructions {
-                for state in states.states_mut() {
-                    match instruction {
-                        MirInstruction::StorageLive(operation) => {
-                            reset_storage_places(state, operation.storage);
-                        }
-                        MirInstruction::StorageDead(operation) => {
-                            require_finished_owned_optional_storage(
-                                self,
-                                function,
-                                block,
-                                operation.storage,
-                                state,
-                            );
-                            reset_storage_places(state, operation.storage);
-                        }
-                        MirInstruction::OptionalInitialize(initialize) => {
-                            require_initialized_source(
-                                self,
-                                function,
-                                block,
-                                &initialize.source,
-                                state,
-                            );
-                            if !state.insert(initialize.destination.clone()) {
-                                self.block_error(
-                                    function.callable(),
-                                    block.id,
-                                    "optional storage is initialized more than once",
-                                );
-                            }
-                        }
-                        MirInstruction::OptionalAssign(assignment) => {
-                            require_initialized(
-                                self,
-                                function,
-                                block,
-                                &assignment.destination,
-                                state,
-                                "optional assignment destination",
-                            );
-                            require_initialized_source(
-                                self,
-                                function,
-                                block,
-                                &assignment.source,
-                                state,
-                            );
-                        }
-                        MirInstruction::OptionalSharedInitialize(initialize) => {
-                            require_initialized_optional_shared_source(
-                                self,
-                                function,
-                                block,
-                                &initialize.source,
-                                state,
-                            );
-                            consume_moved_optional_shared_source(&initialize.source, state);
-                            if !state.insert(initialize.destination.clone()) {
-                                self.block_error(
-                                    function.callable(),
-                                    block.id,
-                                    "optional shared storage is initialized more than once",
-                                );
-                            }
-                        }
-                        MirInstruction::OptionalSharedAssign(assignment) => {
-                            require_initialized(
-                                self,
-                                function,
-                                block,
-                                &assignment.destination,
-                                state,
-                                "optional shared assignment destination",
-                            );
-                            require_initialized_optional_shared_source(
-                                self,
-                                function,
-                                block,
-                                &assignment.source,
-                                state,
-                            );
-                            consume_moved_optional_shared_source(&assignment.source, state);
-                        }
-                        MirInstruction::OptionalSharedCleanup(cleanup) => {
-                            require_initialized(
-                                self,
-                                function,
-                                block,
-                                &cleanup.destination,
-                                state,
-                                "optional shared cleanup destination",
-                            );
-                            state.remove(&cleanup.destination);
-                        }
-                        MirInstruction::ClassOptionalInitialize(initialize) => {
-                            require_initialized_class_source(
-                                self,
-                                function,
-                                block,
-                                &initialize.source,
-                                state,
-                            );
-                            if !state.insert(initialize.destination.clone()) {
-                                self.block_error(
-                                    function.callable(),
-                                    block.id,
-                                    "class optional storage is initialized more than once",
-                                );
-                            }
-                        }
-                        MirInstruction::ClassOptionalAssign(assignment) => {
-                            require_initialized(
-                                self,
-                                function,
-                                block,
-                                &assignment.destination,
-                                state,
-                                "class optional assignment destination",
-                            );
-                            require_initialized_class_source(
-                                self,
-                                function,
-                                block,
-                                &assignment.source,
-                                state,
-                            );
-                        }
-                        MirInstruction::ClassOptionalCleanup(cleanup) => {
-                            require_initialized(
-                                self,
-                                function,
-                                block,
-                                &cleanup.destination,
-                                state,
-                                "class optional cleanup destination",
-                            );
-                            state.remove(&cleanup.destination);
-                        }
-                        MirInstruction::Assign(assignment) => {
-                            if let MirRvalueKind::OptionalPresence { source, .. } =
-                                &assignment.rvalue.kind
-                            {
-                                require_initialized(
-                                    self,
-                                    function,
-                                    block,
-                                    source,
-                                    state,
-                                    "optional presence-test source",
-                                );
-                            }
-                        }
-                        MirInstruction::Call(call) => {
-                            consume_class_optional_arguments(
-                                self,
-                                function,
-                                block,
-                                &call.arguments,
-                                state,
-                            );
-                            consume_optional_shared_arguments(
-                                self,
-                                function,
-                                block,
-                                &call.arguments,
-                                state,
-                            );
-                            if let Some(result) = call.shared_result {
-                                if function.storage(result).is_some_and(|storage| {
-                                    matches!(storage.ty, MirType::OptionalShared(_))
-                                }) {
-                                    state.insert(MirPlace::base(result));
-                                }
-                            }
-                            if let Some(destination) = &call.destination {
-                                if function.storage(destination.base.storage()).is_some_and(
-                                    |storage| {
-                                        matches!(
-                                            storage.ty,
-                                            MirType::OptionalPrimitive(_)
-                                                | MirType::OptionalClass(_)
-                                                | MirType::OptionalShared(_)
-                                        )
-                                    },
-                                ) && !state.insert(destination.clone())
-                                {
-                                    self.block_error(
-                                        function.callable(),
-                                        block.id,
-                                        "call destination is already initialized",
-                                    );
-                                } else if let Some(class) =
-                                    complete_class_storage(function, destination)
-                                {
-                                    initialize_optional_fields(
-                                        self.program,
-                                        class,
-                                        destination,
-                                        state,
-                                    );
-                                }
-                            }
-                        }
-                        MirInstruction::Initialize(initialize) => {
-                            consume_class_optional_arguments(
-                                self,
-                                function,
-                                block,
-                                &initialize.arguments,
-                                state,
-                            );
-                            consume_optional_shared_arguments(
-                                self,
-                                function,
-                                block,
-                                &initialize.arguments,
-                                state,
-                            );
-                            initialize_optional_fields(
-                                self.program,
-                                initialize.target.class(),
-                                &initialize.destination,
-                                state,
-                            );
-                        }
-                        MirInstruction::SharedInitialize(initialize) => {
-                            consume_class_optional_arguments(
-                                self,
-                                function,
-                                block,
-                                &initialize.arguments,
-                                state,
-                            );
-                            consume_optional_shared_arguments(
-                                self,
-                                function,
-                                block,
-                                &initialize.arguments,
-                                state,
-                            );
-                        }
-                        MirInstruction::CopyConstruct(copy) => initialize_optional_fields(
-                            self.program,
-                            copy.class,
-                            &copy.destination,
-                            state,
-                        ),
-                        _ => {}
+                states.update_states(|state| match instruction {
+                    MirInstruction::StorageLive(operation) => {
+                        reset_storage_places(state, operation.storage);
                     }
-                }
+                    MirInstruction::StorageDead(operation) => {
+                        require_finished_owned_optional_storage(
+                            self,
+                            function,
+                            block,
+                            operation.storage,
+                            state,
+                        );
+                        reset_storage_places(state, operation.storage);
+                    }
+                    MirInstruction::OptionalInitialize(initialize) => {
+                        require_initialized_source(
+                            self,
+                            function,
+                            block,
+                            &initialize.source,
+                            state,
+                        );
+                        if !state.insert(initialize.destination.clone()) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional storage is initialized more than once",
+                            );
+                        }
+                    }
+                    MirInstruction::OptionalAssign(assignment) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &assignment.destination,
+                            state,
+                            "optional assignment destination",
+                        );
+                        require_initialized_source(
+                            self,
+                            function,
+                            block,
+                            &assignment.source,
+                            state,
+                        );
+                    }
+                    MirInstruction::OptionalSharedInitialize(initialize) => {
+                        require_initialized_optional_shared_source(
+                            self,
+                            function,
+                            block,
+                            &initialize.source,
+                            state,
+                        );
+                        consume_moved_optional_shared_source(&initialize.source, state);
+                        if !state.insert(initialize.destination.clone()) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional shared storage is initialized more than once",
+                            );
+                        }
+                    }
+                    MirInstruction::OptionalSharedAssign(assignment) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &assignment.destination,
+                            state,
+                            "optional shared assignment destination",
+                        );
+                        require_initialized_optional_shared_source(
+                            self,
+                            function,
+                            block,
+                            &assignment.source,
+                            state,
+                        );
+                        consume_moved_optional_shared_source(&assignment.source, state);
+                    }
+                    MirInstruction::OptionalSharedCleanup(cleanup) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &cleanup.destination,
+                            state,
+                            "optional shared cleanup destination",
+                        );
+                        state.remove(&cleanup.destination);
+                    }
+                    MirInstruction::ClassOptionalInitialize(initialize) => {
+                        require_initialized_class_source(
+                            self,
+                            function,
+                            block,
+                            &initialize.source,
+                            state,
+                        );
+                        if !state.insert(initialize.destination.clone()) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "class optional storage is initialized more than once",
+                            );
+                        }
+                    }
+                    MirInstruction::ClassOptionalAssign(assignment) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &assignment.destination,
+                            state,
+                            "class optional assignment destination",
+                        );
+                        require_initialized_class_source(
+                            self,
+                            function,
+                            block,
+                            &assignment.source,
+                            state,
+                        );
+                    }
+                    MirInstruction::ClassOptionalCleanup(cleanup) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &cleanup.destination,
+                            state,
+                            "class optional cleanup destination",
+                        );
+                        state.remove(&cleanup.destination);
+                    }
+                    MirInstruction::Assign(assignment) => {
+                        if let MirRvalueKind::OptionalPresence { source, .. } =
+                            &assignment.rvalue.kind
+                        {
+                            require_initialized(
+                                self,
+                                function,
+                                block,
+                                source,
+                                state,
+                                "optional presence-test source",
+                            );
+                        }
+                    }
+                    MirInstruction::Call(call) => {
+                        consume_class_optional_arguments(
+                            self,
+                            function,
+                            block,
+                            &call.arguments,
+                            state,
+                        );
+                        consume_optional_shared_arguments(
+                            self,
+                            function,
+                            block,
+                            &call.arguments,
+                            state,
+                        );
+                        if let Some(result) = call.shared_result {
+                            if function.storage(result).is_some_and(|storage| {
+                                matches!(storage.ty, MirType::OptionalShared(_))
+                            }) {
+                                state.insert(MirPlace::base(result));
+                            }
+                        }
+                        if let Some(destination) = &call.destination {
+                            if function
+                                .storage(destination.base.storage())
+                                .is_some_and(|storage| {
+                                    matches!(
+                                        storage.ty,
+                                        MirType::OptionalPrimitive(_)
+                                            | MirType::OptionalClass(_)
+                                            | MirType::OptionalShared(_)
+                                    )
+                                })
+                                && !state.insert(destination.clone())
+                            {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "call destination is already initialized",
+                                );
+                            } else if let Some(class) =
+                                complete_class_storage(function, destination)
+                            {
+                                initialize_optional_fields(self.program, class, destination, state);
+                            }
+                        }
+                    }
+                    MirInstruction::Initialize(initialize) => {
+                        consume_class_optional_arguments(
+                            self,
+                            function,
+                            block,
+                            &initialize.arguments,
+                            state,
+                        );
+                        consume_optional_shared_arguments(
+                            self,
+                            function,
+                            block,
+                            &initialize.arguments,
+                            state,
+                        );
+                        initialize_optional_fields(
+                            self.program,
+                            initialize.target.class(),
+                            &initialize.destination,
+                            state,
+                        );
+                    }
+                    MirInstruction::SharedInitialize(initialize) => {
+                        consume_class_optional_arguments(
+                            self,
+                            function,
+                            block,
+                            &initialize.arguments,
+                            state,
+                        );
+                        consume_optional_shared_arguments(
+                            self,
+                            function,
+                            block,
+                            &initialize.arguments,
+                            state,
+                        );
+                    }
+                    MirInstruction::CopyConstruct(copy) => initialize_optional_fields(
+                        self.program,
+                        copy.class,
+                        &copy.destination,
+                        state,
+                    ),
+                    _ => {}
+                });
                 end_condition_at_storage_death(
                     self,
                     function,
@@ -332,7 +326,7 @@ impl Verifier<'_> {
                     &mut states,
                 );
             }
-            for state in states.states_mut() {
+            states.update_states(|state| {
                 if let Some(MirTerminator::OptionalUnwrap { source, .. }) = &block.terminator {
                     require_initialized(
                         self,
@@ -400,7 +394,7 @@ impl Verifier<'_> {
                         }
                     }
                 }
-            }
+            });
         }
     }
 }

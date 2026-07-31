@@ -644,9 +644,10 @@ postfix array dimensions use the same budget.
 Separately, one expression-tree path may contain at most 10 nested
 short-circuit operations. A flat left-associated chain can therefore contain
 up to 11 operands. Logical chains are parsed iteratively, but their selected
-path conditions remain live to a shared full-expression boundary; the smaller
-logical limit bounds path-sensitive verification and conditional-cleanup graph
-construction.
+path conditions remain live to a shared full-expression boundary. Equivalent
+verifier states are compacted, but effectful alternatives can carry genuinely
+different ownership and cleanup state; the smaller logical limit bounds that
+path-sensitive work and conditional-cleanup graph construction.
 
 Exceeding either limit reports `PAR005`, omits the affected declaration from
 the partial syntax tree, and resumes at a later top-level declaration when

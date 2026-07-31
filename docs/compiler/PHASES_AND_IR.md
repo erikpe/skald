@@ -308,6 +308,13 @@ Path-sensitive storage verification retains separate, explicitly selected
 alternatives across such a declared merge. A resource live only in one
 alternative cannot be used or ended on another. Branching on the matching
 path-condition value selects the corresponding verifier alternative.
+Alternatives with equal resource state are stored as one compact predicate
+cube: each selected condition may be active, inactive, or either selected
+value. "Either" remains distinct from a condition absent from the current
+epoch, so parent selection and missing-condition diagnostics retain their exact
+meaning. A later loop or malformed-CFG edge that changes only a concrete
+subset splits that subset, applies the verifier domain's ordinary conflict
+merge, and leaves unrelated dimensions compact.
 Ending the activation storage epoch requires all conditional storage state to
 have converged, ends the predicate fact, and permits the same static identity
 to begin a later loop epoch. Child conditions can be selected and read only

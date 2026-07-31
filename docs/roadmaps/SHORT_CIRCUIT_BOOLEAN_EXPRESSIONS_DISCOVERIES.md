@@ -2,25 +2,6 @@
 
 Status: pending follow-up after the completed short-circuit implementation.
 
-## Compact equivalent path-state alternatives
-
-- **Problem:** Path-sensitive verifier state currently stores one predicate map
-  per selected logical-path alternative. Mixed logical chains can create many
-  equivalent resource states distinguished only by predicates that remain live
-  to the shared full-expression boundary.
-- **Evidence:** Hardening stress tests showed that verifier time grows much
-  faster than the linear logical CFG. The parser therefore caps one
-  expression-tree path at 10 nested short-circuit operations so every accepted
-  expression remains within a practical verification bound.
-- **Likely owner:** Shared MIR path-state verification.
-- **Priority:** Medium; required before raising or removing the logical-depth
-  implementation limit.
-- **Useful boundary:** Preserve exact parent selection, conditional cleanup,
-  loop epochs, and existing verifier diagnostics while representing
-  alternatives with identical resource state compactly. Benchmark mixed flat
-  and right-nested chains and change the public limit only in a separately
-  reviewed language/compiler update.
-
 ## Split optional initialization verification by responsibility
 
 - **Problem:** `mir/verify/optional/initialization.rs` now owns path-sensitive

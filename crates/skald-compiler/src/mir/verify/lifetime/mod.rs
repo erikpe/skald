@@ -37,9 +37,9 @@ impl Verifier<'_> {
                 let Some(block) = function.block(block_id) else {
                     continue;
                 };
-                for live in states.states_mut() {
+                states.update_states(|live| {
                     self.apply_storage_lifetimes(function, block, live, &entry_state);
-                }
+                });
                 for instruction in &block.instructions {
                     let MirInstruction::StorageDead(operation) = instruction else {
                         continue;

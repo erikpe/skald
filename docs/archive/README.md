@@ -55,6 +55,7 @@ Archived plans:
 - [Cyclic module imports](CYCLIC_IMPORTS_ROADMAP.md)
 - [Eager boolean operators](EAGER_BOOLEAN_OPERATORS_ROADMAP.md)
 - [Short-circuit boolean expressions](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
+- [Equivalent path-state compaction](PATH_STATE_COMPACTION_ROADMAP.md)
 
 Resolved string-design inputs:
 

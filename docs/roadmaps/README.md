@@ -19,9 +19,8 @@ No design proposals are currently awaiting decisions or promotion.
 ## Pending discoveries
 
 - [Short-Circuit Boolean Expressions Discoveries](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_DISCOVERIES.md)
-  — compact equivalent path-state alternatives before raising the logical
-  expression-depth limit, then split propagation from transition and use
-  checks in the large optional-initialization and shared-ownership verifiers.
+  — split propagation from transition and use checks in the large
+  optional-initialization and shared-ownership verifiers.
 
 ## Implementation baseline
 

@@ -183,9 +183,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     continue;
                 };
                 for instruction in &block.instructions {
-                    for state in states.states_mut() {
+                    states.update_states(|state| {
                         self.apply_instruction(block, instruction, state);
-                    }
+                    });
                     let MirInstruction::StorageDead(operation) = instruction else {
                         continue;
                     };
@@ -244,7 +244,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         ..
                     }) => {
                         let mut success_states = states.clone();
-                        for state in success_states.states_mut() {
+                        success_states.update_states(|state| {
                             self.require_live_place(
                                 block,
                                 state,
@@ -260,7 +260,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                             state
                                 .live
                                 .insert(MirPlace::checked_view(binding.destination));
-                        }
+                        });
                         self.merge_state(block.id, *success_target, &success_states, &mut flow);
                         self.merge_state(block.id, *failure_target, &states, &mut flow);
                     }
@@ -270,7 +270,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         failure_target,
                         ..
                     }) => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             if let super::super::model::MirSharedCastSource::Field {
                                 place, ..
                             } = &cast.source
@@ -282,7 +282,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                                     "shared-cast field source",
                                 );
                             }
-                        }
+                        });
                         self.merge_state(block.id, *success_target, &states, &mut flow);
                         self.merge_state(block.id, *failure_target, &states, &mut flow);
                     }
@@ -344,14 +344,14 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     Some(MirTerminator::Return { .. })
                     | Some(MirTerminator::ReturnShared { .. })
                     | Some(MirTerminator::ReturnOptionalShared { .. }) => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             self.check_normal_return(block, state);
-                        }
+                        });
                     }
                     Some(MirTerminator::Panic { message, .. }) => {
-                        for state in states.states_mut() {
+                        states.update_states(|state| {
                             self.require_live_place(block, state, message, "panic message");
-                        }
+                        });
                     }
                     Some(MirTerminator::Terminate { .. }) => {}
                     None => {}
