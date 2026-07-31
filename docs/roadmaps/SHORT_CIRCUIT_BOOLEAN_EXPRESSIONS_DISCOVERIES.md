@@ -2,26 +2,6 @@
 
 Status: pending follow-up after the completed short-circuit implementation.
 
-## Split optional initialization verification by responsibility
-
-- **Problem:** `mir/verify/optional/initialization.rs` now owns path-sensitive
-  fixed-point propagation, instruction and terminator diagnostics,
-  exact-class optional ownership transfer, storage-epoch checks, and recursive
-  optional-field seeding in one large module.
-- **Evidence:** Path-dependent optional work required the same initialization
-  state to flow through declared alternatives and to be consumed by
-  class-optional and optional-shared cleanup, moved sources, and value-argument
-  transfer. The resulting owner is cohesive but exceeds 900 lines. Bounded
-  optional guards remained an immediate-consumer responsibility and did not
-  justify expanding this module further.
-- **Likely owner:** MIR optional verification.
-- **Priority:** Medium, after the short-circuit representation and verifier
-  contracts stabilize.
-- **Useful boundary:** Keep the existing `optional` verifier facade and exact
-  diagnostics. Separate path-state propagation and condition convergence from
-  instruction-local checks and recursive class-field initialization helpers;
-  keep the definite-initialization state private to those modules.
-
 ## Split shared ownership verification by state responsibility
 
 - **Problem:** `mir/verify/shared/ownership.rs` owns allocation publication,

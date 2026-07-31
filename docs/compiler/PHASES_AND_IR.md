@@ -138,6 +138,15 @@ container aliases use ordinary indirect MIR places plus exact optional types;
 reserved boxed, nested, and optional-reference shapes remain diagnosed before
 HIR.
 
+Optional definite-initialization verification keeps one private state model
+behind the existing optional-verifier facade. A propagation owner computes
+path-sensitive fixed-point entry states and condition convergence; a checking
+owner replays each block to emit instruction and terminator diagnostics; and a
+state owner encapsulates storage epochs, ownership transfer, entry seeding, and
+recursive initialization of optional fields in completed class storage. This
+division is internal: diagnostic text, ordering, MIR contracts, and the
+separate immediate-consumer guard analysis are unchanged.
+
 ## Primitive binding reassignment boundary
 
 The source contract for

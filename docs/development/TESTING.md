@@ -36,6 +36,11 @@ later enclosing consumers. Native destructor traces distinguish selected from
 skipped work and prove global reverse completion order. Optional verifier
 mutations additionally cover lost or duplicate conditional cleanup and
 initialization state that remains incompatible when a path condition ends.
+These source-to-MIR tests exercise the optional initialization facade across
+its private propagation, checking, and state-transition owners; the split
+deliberately exposes no new test API. Focused refactors should run the
+optional-value, logical object-lifetime, logical shared/array-lifetime, and
+general MIR verifier suites together.
 Optional shared-owner coverage additionally checks the one-word zero niche,
 copy/adopt/move and conditional release, field and callable ownership,
 self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,
