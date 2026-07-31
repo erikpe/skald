@@ -12,14 +12,20 @@ const PRIMITIVE_TYPES: &[(HirPrimitiveType, MirPrimitiveType, &str)] = &[
 ];
 
 #[test]
-fn lowers_and_verifies_the_complete_source_enabled_integer_matrix() {
-    for &(_, source_type, source_name) in &PRIMITIVE_TYPES[..3] {
-        for &(_, target_type, target_name) in &PRIMITIVE_TYPES[..3] {
+fn lowers_and_verifies_the_complete_source_enabled_pure_matrix() {
+    let mut implemented_pairs = 0;
+    for &(_, source_type, source_name) in PRIMITIVE_TYPES {
+        for &(_, target_type, target_name) in PRIMITIVE_TYPES {
+            if MirPrimitiveCast::new(source_type, target_type).may_terminate() {
+                continue;
+            }
+            implemented_pairs += 1;
             let operand = match source_type {
                 MirPrimitiveType::I64 => "-1",
                 MirPrimitiveType::U64 => "18446744073709551615u",
                 MirPrimitiveType::U8 => "255u8",
-                MirPrimitiveType::F64 | MirPrimitiveType::Bool => unreachable!(),
+                MirPrimitiveType::F64 => "-0.0",
+                MirPrimitiveType::Bool => "true",
             };
             let source = format!(
                 "fn cast() -> {target_name} {{ return ({target_name}) {operand}; }} \
@@ -46,6 +52,7 @@ fn lowers_and_verifies_the_complete_source_enabled_integer_matrix() {
             assert!(dump.contains(&format!("cast.{source_name}.{target_name}")));
         }
     }
+    assert_eq!(implemented_pairs, 22);
 }
 
 #[test]
@@ -118,7 +125,7 @@ fn directly_constructed_mir_verifies_all_twenty_two_pure_cast_cells() {
 fn pure_cast_operand_is_lowered_once_and_adds_no_control_effect() {
     let mir = lower_text(
         "fn source() -> u64 { return 7u; }\n\
-         fn cast() -> u8 { return (u8) source(); }\n\
+         fn cast() -> f64 { return (f64) source(); }\n\
          fn main() -> i64 { return 0; }\n",
     );
     verify_mir(&mir).unwrap();
@@ -162,13 +169,13 @@ fn pure_cast_operand_is_lowered_once_and_adds_no_control_effect() {
 #[test]
 fn cast_around_checked_array_access_remains_block_local() {
     let mir = lower_text(
-        "fn cast(values: u64[]) -> u8 { return (u8) values[0]; }\n\
+        "fn cast(values: u64[]) -> bool { return (bool) values[0]; }\n\
          fn main() -> i64 { return 0; }\n",
     );
     verify_mir(&mir).unwrap();
     let dump = dump_mir(&mir);
     assert_eq!(dump.matches("array-position-check").count(), 1);
-    assert_eq!(dump.matches("cast.u64.u8").count(), 1);
+    assert_eq!(dump.matches("cast.u64.bool").count(), 1);
     assert_eq!(dump, dump_mir(&mir));
 }
 

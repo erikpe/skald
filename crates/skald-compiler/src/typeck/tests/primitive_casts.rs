@@ -1,26 +1,24 @@
 use super::*;
 use crate::hir::{HirPrimitiveCast, HirPrimitiveType};
 
-const INTEGER_TYPES: &[(HirPrimitiveType, &str, &str)] = &[
+const PRIMITIVE_TYPES: &[(HirPrimitiveType, &str, &str)] = &[
     (HirPrimitiveType::I64, "i64", "-1"),
     (HirPrimitiveType::U64, "u64", "18446744073709551615u"),
     (HirPrimitiveType::U8, "u8", "255u8"),
+    (HirPrimitiveType::F64, "f64", "1.5"),
+    (HirPrimitiveType::Bool, "bool", "true"),
 ];
-
-const PRIMITIVE_SOURCES: &[(&str, &str)] = &[
-    ("i64", "-1"),
-    ("u64", "1u"),
-    ("u8", "1u8"),
-    ("f64", "1.5"),
-    ("bool", "true"),
-];
-
-const PRIMITIVE_TARGETS: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 
 #[test]
-fn checks_the_complete_implemented_integer_subset() {
-    for &(source_type, source_name, operand) in INTEGER_TYPES {
-        for &(target_type, target_name, _) in INTEGER_TYPES {
+fn checks_the_complete_non_failing_primitive_cast_matrix() {
+    let mut implemented_pairs = 0;
+    for &(source_type, source_name, operand) in PRIMITIVE_TYPES {
+        for &(target_type, target_name, _) in PRIMITIVE_TYPES {
+            let operation = HirPrimitiveCast::new(source_type, target_type);
+            if operation.may_terminate() {
+                continue;
+            }
+            implemented_pairs += 1;
             let source = format!(
                 "fn cast() -> {target_name} {{ return ({target_name}) {operand}; }} \
                  fn main() -> i64 {{ return 0; }}"
@@ -50,6 +48,7 @@ fn checks_the_complete_implemented_integer_subset() {
             )));
         }
     }
+    assert_eq!(implemented_pairs, 22);
 }
 
 #[test]
@@ -72,13 +71,11 @@ fn casts_do_not_change_literal_validity_and_enable_exact_type_comparisons() {
 }
 
 #[test]
-fn pending_primitive_cast_pairs_have_one_focused_temporary_diagnostic() {
+fn checked_primitive_cast_pairs_have_one_focused_temporary_diagnostic() {
     let mut pending_pairs = 0;
-    for &(source_name, operand) in PRIMITIVE_SOURCES {
-        for &target_name in PRIMITIVE_TARGETS {
-            if matches!(source_name, "i64" | "u64" | "u8")
-                && matches!(target_name, "i64" | "u64" | "u8")
-            {
+    for &(source_type, source_name, operand) in PRIMITIVE_TYPES {
+        for &(target_type, target_name, _) in PRIMITIVE_TYPES {
+            if !HirPrimitiveCast::new(source_type, target_type).may_terminate() {
                 continue;
             }
             pending_pairs += 1;
@@ -113,14 +110,12 @@ fn pending_primitive_cast_pairs_have_one_focused_temporary_diagnostic() {
             assert!(diagnostic.message.contains(target_name));
         }
     }
-    assert_eq!(pending_pairs, 16);
+    assert_eq!(pending_pairs, 3);
 }
 
 #[test]
 fn rejects_every_nonprimitive_source_family_for_each_primitive_target_before_hir() {
     const SOURCES: &[&str] = &[
-        "fn cast() -> {target} { return ({target}) 1.0; } fn main() -> i64 { return 0; }",
-        "fn cast() -> {target} { return ({target}) true; } fn main() -> i64 { return 0; }",
         "fn notify() -> unit {} fn cast() -> {target} { return ({target}) notify(); } fn main() -> i64 { return 0; }",
         "fn cast(value: i64?) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
         "fn cast(value: i64[]) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
@@ -128,7 +123,7 @@ fn rejects_every_nonprimitive_source_family_for_each_primitive_target_before_hir
         "fn cast(ref value: Obj) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
     ];
 
-    for &target in PRIMITIVE_TARGETS {
+    for &(_, target, _) in PRIMITIVE_TYPES {
         for template in SOURCES {
             let source = template.replace("{target}", target);
             let output = check_text(&source);
@@ -140,10 +135,23 @@ fn rejects_every_nonprimitive_source_family_for_each_primitive_target_before_hir
 
 #[test]
 fn casts_remain_required_at_exact_type_boundaries() {
-    let implicit =
-        check_text("fn cast(value: u64) -> i64 { return value; } fn main() -> i64 { return 0; }");
-    assert!(implicit.has_errors());
-    assert!(implicit.hir.is_none());
+    let mut implicit_pairs = 0;
+    for &(_, source, _) in PRIMITIVE_TYPES {
+        for &(_, target, _) in PRIMITIVE_TYPES {
+            if source == target {
+                continue;
+            }
+            implicit_pairs += 1;
+            let text = format!(
+                "fn cast(value: {source}) -> {target} {{ return value; }} \
+                 fn main() -> i64 {{ return 0; }}"
+            );
+            let output = check_text(&text);
+            assert!(output.has_errors(), "implicit {source}-to-{target}");
+            assert!(output.hir.is_none(), "implicit {source}-to-{target}");
+        }
+    }
+    assert_eq!(implicit_pairs, 20);
 
     let explicit = check_text(
         "fn cast(value: u64) -> i64 { return (i64) value; } fn main() -> i64 { return 0; }",
@@ -156,17 +164,28 @@ fn casts_remain_required_at_exact_type_boundaries() {
 fn explicit_casts_compose_with_value_boundaries_and_arithmetic() {
     let output = check_text(
         "class Holder {\n\
-           small: u8;\n\
-           init(value: u64) { self.small = (u8) value; }\n\
-           mut fn replace(value: u64) -> u8 {\n\
-             self.small = (u8) value;\n\
-             return self.small;\n\
+           enabled: bool;\n\
+           value: f64;\n\
+           init(value: u64) {\n\
+             self.enabled = (bool) value;\n\
+             self.value = (f64) value;\n\
+           }\n\
+           mut fn replace(value: bool) -> f64 {\n\
+             self.value = (f64) value;\n\
+             return self.value;\n\
            }\n\
          }\n\
-         fn consume(value: u8) -> u8 { return value; }\n\
-         fn cast(value: u64) -> u8 {\n\
-           var local: u8 = (u8) value;\n\
-           return consume((u8) value) + local;\n\
+         fn consume(value: f64) -> f64 { return value; }\n\
+         fn cast(value: u64) -> f64 {\n\
+           var local: f64 = (f64) value;\n\
+           local = (f64) (bool) value;\n\
+           var values: f64[] = f64[](1u);\n\
+           values[0] = (f64) value;\n\
+           var optional: f64? = (f64) value;\n\
+           if ((bool) value) {\n\
+             return consume(values[0] + optional! + local);\n\
+           }\n\
+           return (f64) (bool) false;\n\
          }\n\
          fn main() -> i64 { return 0; }\n",
     );

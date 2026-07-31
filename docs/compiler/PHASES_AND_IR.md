@@ -209,26 +209,27 @@ The pipeline responsibilities are:
   `i64`, `u64`, `u8`, or `f64` comparison operands, admits `bool` only for
   equality and inequality, selects logical negation only for `bool`, selects
   exact-width complement, AND, OR, or XOR only for matching integers, or
-  selects one of the nine implemented integer source/target cast pairs.
-  Syntactically valid pending primitive pairs receive a focused temporary
-  implementation diagnostic, while unsupported operations and implicit
-  conversions are rejected before HIR.
+  selects any of the twenty-two non-failing primitive cast pairs. The three
+  checked `f64`-to-integer pairs receive a focused temporary implementation
+  diagnostic, while unsupported operations and implicit conversions are
+  rejected before HIR.
 - Typed HIR records the selected primitive comparison predicate and operand
   kind, exact-width bitwise operation, or exact boolean logical-negation
   operation. Primitive casts use the cohesive primitive-wide HIR operation
   described below, carrying exact source, target, semantic class, and failure
-  capability even though type checking currently constructs it only for the
-  nine integer pairs. Neither representation retains a backend condition code,
-  register width, or spelling-based signedness choice.
+  capability. Type checking currently constructs every pure class and keeps
+  the checked class gated. Neither representation retains a backend condition
+  code, register width, or spelling-based signedness choice.
 - MIR lowering evaluates eager operands left to right and every unary or
   binary operand exactly once. Bitwise operations become same-type pure scalar
-  rvalues, comparisons and negation become typed boolean-producing rvalues; integer
-  casts become ordinary pure rvalues with no trap, call, allocation, cleanup,
-  or exceptional control-flow edge.
+  rvalues, comparisons and negation become typed boolean-producing rvalues;
+  non-failing casts become ordinary pure rvalues with no trap, call,
+  allocation, cleanup, or exceptional control-flow edge.
 - MIR verification proves matching comparison operand definitions and types,
   rejects boolean ordering, and requires exact boolean negation operands and
-  results. Bitwise and cast verification prove their closed integer matrices with
-  exact source and result types. Both operation families retain the existing
+  results. Bitwise verification proves its closed integer matrix, while
+  pure-cast verification proves all twenty-two non-failing pairs with exact
+  source and result types. Both operation families retain the existing
   block-local value, definition-before-use, and deterministic-error
   invariants.
 - Each backend receives already selected signedness and width through verified
@@ -480,13 +481,11 @@ beyond the existing common panic reporter.
 
 The
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
-now has a cohesive target-independent MIR representation for all twenty-two
-non-failing cells, but is not yet a complete source-to-native phase product.
-Type checking remains limited to the implemented nine integer-to-integer
-cells. Direct verified MIR execution additionally supports `f64`/`bool`
-identity, every boolean boundary cast, and every integer-to-`f64` cast. Thus
-the x86-64 backend executes all twenty-two pure cells while the source gate
-remains intentionally narrower.
+has a cohesive source-to-native path for all twenty-two non-failing cells.
+Type checking selects them into typed HIR, lowering represents them as pure
+MIR, verification proves their exact operation and types, and x86-64 executes
+them inline. Only the three checked `f64`-to-integer cells remain gated before
+HIR until their explicit failure control flow is executable.
 
 Lexing recognizes all five primitive type keywords. Syntax now uses one
 primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`
@@ -498,11 +497,11 @@ redisambiguate a cast from source text.
 
 Resolution preserves the primitive target and resolved operand without
 selecting conversion behavior. Typed HIR has the cohesive complete-matrix
-operation described below, but type checking constructs it only for the nine
-implemented integer pairs; the other sixteen pairs stop with a focused
-temporary implementation diagnostic. The completed type-checking boundary
-will accept exactly the complete twenty-five-pair matrix, insert no implicit
-use of a cast at another typed boundary, and construct typed HIR carrying:
+operation described below. Type checking constructs every non-failing class;
+the three checked pairs stop with a focused temporary implementation
+diagnostic. The completed type-checking boundary will accept exactly the
+complete twenty-five-pair matrix, insert no implicit use of a cast at another
+typed boundary, and construct typed HIR carrying:
 
 - exact source and target primitive types;
 - one target-independent semantic class: identity, integer bit conversion,
@@ -568,9 +567,9 @@ For ordinary primitive-cast rvalues, MIR verification now proves:
 HIR and MIR dumps expose exact source and target types without target registers
 or helper names. Syntax, resolution, HIR, and MIR public facades expose
 cohesive primitive types and casts with no parallel integer-only cast model.
-Direct HIR and MIR fixtures cover every pure cell while the source gate keeps
-the thirteen pending pure cells unavailable to ordinary programs. The x86-64
-backend executes all thirteen of those cells from direct verified MIR.
+Source, HIR, and MIR fixtures cover every pure cell through native execution.
+The source gate keeps only the three checked cells unavailable to ordinary
+programs.
 
 Focused implementation validation must cover all twenty-five pairs through
 syntax, resolution, type checking, HIR, MIR, verification, target legality,

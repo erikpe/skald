@@ -8,7 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ### Complete primitive cast matrix
 
-Status: in progress; enabling every non-failing cast from source is next.
+Status: in progress; establishing checked floating-to-integer MIR control flow
+is next.
 
 The [roadmap](PRIMITIVE_CAST_MATRIX_ROADMAP.md) implements the sixteen
 remaining cells of the frozen

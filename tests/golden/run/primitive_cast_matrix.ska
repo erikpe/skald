@@ -1,0 +1,104 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+
+class Holder {
+    enabled: bool;
+    value: f64;
+
+    init(raw: u64) {
+        self.enabled = (bool) raw;
+        self.value = (f64) raw;
+    }
+}
+
+class Trace {
+    marker: i64;
+    value: f64;
+
+    init(marker: i64, value: f64) {
+        self.marker = marker;
+        self.value = value;
+    }
+
+    fn read() -> f64 {
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(100 + self.marker);
+    }
+}
+
+fn make(marker: i64, value: f64) -> shared Trace {
+    return new Trace(marker, value);
+}
+
+fn mark(marker: i64, value: u64) -> u64 {
+    ska_rt_println_i64(marker);
+    return value;
+}
+
+fn as_f64(value: u64) -> f64 {
+    return (f64) value;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64((i64) -1);
+    ska_rt_println_u64((u64) -1);
+    ska_rt_println_u8((u8) -1);
+    ska_rt_println_f64_bits((f64) -1);
+    ska_rt_println_bool((bool) -1);
+
+    ska_rt_println_i64((i64) 18446744073709551615u);
+    ska_rt_println_u64((u64) 18446744073709551615u);
+    ska_rt_println_u8((u8) 18446744073709551615u);
+    ska_rt_println_f64_bits((f64) 18446744073709551615u);
+    ska_rt_println_bool((bool) 18446744073709551615u);
+
+    ska_rt_println_i64((i64) 255u8);
+    ska_rt_println_u64((u64) 255u8);
+    ska_rt_println_u8((u8) 255u8);
+    ska_rt_println_f64_bits((f64) 255u8);
+    ska_rt_println_bool((bool) 255u8);
+
+    ska_rt_println_f64_bits((f64) -0.0);
+    ska_rt_println_bool((bool) -0.0);
+    ska_rt_println_bool((bool) (0.0 / 0.0));
+    ska_rt_println_bool((bool) (1.0 / 0.0));
+    ska_rt_println_bool((bool) 4.9406564584124654e-324);
+
+    ska_rt_println_i64((i64) true);
+    ska_rt_println_u64((u64) true);
+    ska_rt_println_u8((u8) true);
+    ska_rt_println_f64_bits((f64) true);
+    ska_rt_println_bool((bool) true);
+
+    var local: f64 = (f64) 7u8;
+    local = (f64) false;
+    ska_rt_println_f64_bits(local);
+
+    var values: f64[] = f64[](1u);
+    values[0] = as_f64(9u);
+    ska_rt_println_f64_bits(values[0]);
+
+    var optional: f64? = (f64) true;
+    ska_rt_println_f64_bits(optional!);
+
+    var holder: Holder = Holder(10u);
+    ska_rt_println_bool(holder.enabled);
+    ska_rt_println_f64_bits(holder.value);
+
+    ska_rt_println_bool((bool) mark(30, 7u));
+    ska_rt_println_bool(false && (bool) mark(31, 7u));
+    ska_rt_println_bool(true && (bool) mark(32, 7u));
+    ska_rt_println_f64_bits((f64) (bool) 0u);
+    ska_rt_println_bool((bool) make(40, 2.0)->read());
+
+    if ((bool) values[0]) {
+        return 44;
+    }
+    return 1;
+}

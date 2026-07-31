@@ -245,9 +245,8 @@ remain private after these observable requirements are met.
 The frozen
 [primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
 defines legal target-independent MIR input. MIR can carry and verify all
-twenty-two pure cells, and the x86-64 backend executes all of them. Source
-admission remains a separate boundary and currently exposes only the nine
-integer cells. A target consumes
+twenty-two pure cells, source type checking admits all of them, and the x86-64
+backend executes all of them. A target consumes
 already selected source type, target type, semantic class, and pure or checked
 control-flow shape. It never derives signedness from source spelling or
 substitutes a host language's conversion rules.

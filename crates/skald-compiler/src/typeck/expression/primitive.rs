@@ -16,7 +16,6 @@ use crate::typeck::{
 };
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
-const INTEGER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8"];
 const PRIMITIVE_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
@@ -52,7 +51,7 @@ impl CallableChecker<'_, '_> {
             ResolvedPrimitiveType::Bool => HirPrimitiveType::Bool,
         };
         let operation = HirPrimitiveCast::new(source, target);
-        if !(source.is_integer() && target.is_integer()) {
+        if operation.may_terminate() {
             self.diagnostics.push(
                 Diagnostic::error(
                     TYPE_MISMATCH,
@@ -70,10 +69,7 @@ impl CallableChecker<'_, '_> {
                     cast.target_span,
                     format!("target is primitive type `{}`", target.name()),
                 )
-                .with_note(format!(
-                    "currently implemented primitive casts require source and target types from {}",
-                    format_type_list(INTEGER_TYPE_NAMES)
-                )),
+                .with_note("checked `f64`-to-integer primitive casts are not implemented yet"),
             );
             return None;
         }

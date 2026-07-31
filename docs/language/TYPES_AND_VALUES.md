@@ -554,9 +554,10 @@ external ABI. Integer arithmetic overflow is defined independently by the
 
 ## Frozen complete explicit primitive cast matrix
 
-The complete primitive cast design is frozen for implementation. MIR can
-represent and verify all twenty-two non-failing cells, but source programs are
-not yet accepted beyond the implemented integer-only subset above.
+The complete primitive cast design is frozen for implementation. Source
+programs, typed HIR, verified MIR, and x86-64 execution support all twenty-two
+non-failing cells. The three checked `f64`-to-integer cells remain temporarily
+unavailable while their explicit failure control flow is implemented.
 An explicit primitive cast retains unary syntax `(T) source`, where `T` and
 the source type are each exactly one of `i64`, `u64`, `u8`, `f64`, and `bool`.
 All twenty-five source/target pairs are valid, including every same-type
@@ -647,10 +648,9 @@ recoverable conversion family.
 The current compiler executes primitive integer division and remainder,
 floating division, bitwise and shift operations, comparisons, the nine
 integer casts, and boolean negation and equality through the x86-64 backend.
-All twenty-two non-failing cast cells have verified pure MIR representation;
-the x86-64 backend executes all of them from direct verified MIR. The remaining
-sixteen matrix cells are not yet accepted from source. The compiler performs
-no user-defined conversions. Object
+All twenty-two non-failing cast cells execute from source through verified pure
+MIR and the x86-64 backend. The three checked `f64`-to-integer cells are not yet
+accepted from source. The compiler performs no user-defined conversions. Object
 casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form

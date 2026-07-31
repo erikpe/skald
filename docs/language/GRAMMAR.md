@@ -550,9 +550,10 @@ right-associative operand shape. Each primitive keyword (`i64`, `u64`, `u8`,
 `f64`, or `bool`) unambiguously selects a primitive cast target, while a
 declaration path or `shared` declaration path selects the existing object-cast
 syntax. Postfix use of either cast still requires grouping. Syntax and
-resolution preserve all five primitive targets, but type checking currently
-accepts only the nine integer-to-integer pairs. That implemented subset and
-the frozen complete primitive cast matrix are defined by
+resolution preserve all five primitive targets. Type checking accepts all
+twenty-two non-failing pairs and temporarily rejects the three checked
+`f64`-to-integer pairs. The integer subset and complete primitive cast matrix
+are defined by
 [Types, Values, and Expressions](TYPES_AND_VALUES.md#explicit-integer-casts)
 and its
 [complete matrix](TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix).

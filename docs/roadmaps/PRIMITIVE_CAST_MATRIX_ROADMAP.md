@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST4 is next.
+Status: in progress; CAST5 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -80,7 +80,7 @@ clean checkout.
 - [x] CAST1 — Establish verified pure primitive-cast MIR
 - [x] CAST2 — Execute identity and boolean-boundary casts
 - [x] CAST3 — Execute integer-to-floating casts
-- [ ] CAST4 — Enable every non-failing cast from source
+- [x] CAST4 — Enable every non-failing cast from source
 - [ ] CAST5 — Establish verified checked floating-to-integer control flow
 - [ ] CAST6 — Execute checked floating-to-integer casts
 - [ ] CAST7 — Enable checked floating-to-integer casts from source
@@ -237,24 +237,24 @@ with correctly rounded bits for the complete source domain and no ABI change.
 language never advertises a partial semantic class or accepts source without a
 verified backend path.
 
-- [ ] Enable type-check selection of `f64`/`bool` identity, numeric-to-`bool`,
+- [x] Enable type-check selection of `f64`/`bool` identity, numeric-to-`bool`,
       `bool`-to-numeric, and integer-to-`f64` pairs, producing the semantic
       class already represented in HIR and MIR.
-- [ ] Remove the temporary pending-pair diagnostic for those thirteen cells;
+- [x] Remove the temporary pending-pair diagnostic for those thirteen cells;
       retain focused rejection for the three checked `f64`-to-integer cells
       until their control flow is executable.
-- [ ] Preserve exact source and target typing in every consumer. Do not add
+- [x] Preserve exact source and target typing in every consumer. Do not add
       expected-type inference, contextual literal retyping, or implicit casts.
-- [ ] Exercise binding initialization, reassignment, arguments, results,
+- [x] Exercise binding initialization, reassignment, arguments, results,
       fields, arrays, optionals, comparisons, arithmetic, conditions after an
       explicit cast to `bool`, and nested primitive casts.
-- [ ] Prove source evaluation exactly once and ordinary full-expression
+- [x] Prove source evaluation exactly once and ordinary full-expression
       cleanup when operands contain calls, checked operations, selected-path
       expressions, or ownership-bearing effects around the scalar cast.
-- [ ] Add source-to-native result coverage for all twenty-two now-implemented
+- [x] Add source-to-native result coverage for all twenty-two now-implemented
       non-failing cells and source diagnostics for nonprimitive sources,
       `unit`, invalid targets, and every implicit-conversion attempt.
-- [ ] Update grammar, language/compiler overviews, phase/backend descriptions,
+- [x] Update grammar, language/compiler overviews, phase/backend descriptions,
       and status wording to identify only checked `f64`-to-integer casts as
       still pending.
 

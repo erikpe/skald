@@ -19,17 +19,7 @@ error[TYP005]: primitive cast from `f64` to `i64` is not implemented yet
    |
 6 |     return (i64) 1.0;
    |             --- target is primitive type `i64`
-  = note: currently implemented primitive casts require source and target types from `i64`, `u64`, or `u8`
-
-error[TYP005]: primitive cast from `bool` to `u8` is not implemented yet
- --> tests/golden/compile_fail/integer_operation_types.ska:10:17
-    |
-10 |     return (u8) true;
-    |                 ^^^^ source has primitive type `bool`
-    |
-10 |     return (u8) true;
-    |             -- target is primitive type `u8`
-  = note: currently implemented primitive casts require source and target types from `i64`, `u64`, or `u8`
+  = note: checked `f64`-to-integer primitive casts are not implemented yet
 
 error[TYP005]: primitive cast requires a primitive value source
  --> tests/golden/compile_fail/integer_operation_types.ska:14:18

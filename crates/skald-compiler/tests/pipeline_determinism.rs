@@ -69,6 +69,9 @@ const PRIMITIVE_OPERATOR_PROFILE_HELPER_OUTPUT: &str =
     "SKALD_PRIMITIVE_OPERATOR_PROFILE_DETERMINISM_OUTPUT";
 const PRIMITIVE_OPERATOR_PROFILE_TEST_NAME: &str =
     "primitive_operator_profile_phase_products_are_deterministic_across_processes";
+const PRIMITIVE_CAST_HELPER_OUTPUT: &str = "SKALD_PRIMITIVE_CAST_DETERMINISM_OUTPUT";
+const PRIMITIVE_CAST_TEST_NAME: &str =
+    "primitive_cast_phase_products_are_deterministic_across_processes";
 const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
@@ -244,6 +247,16 @@ fn primitive_operator_profile_phase_products_are_deterministic_across_processes(
         PRIMITIVE_OPERATOR_PROFILE_HELPER_OUTPUT,
         PRIMITIVE_OPERATOR_PROFILE_TEST_NAME,
         primitive_operator_profile_phase_dump,
+    );
+}
+
+#[test]
+fn primitive_cast_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "primitive-casts",
+        PRIMITIVE_CAST_HELPER_OUTPUT,
+        PRIMITIVE_CAST_TEST_NAME,
+        primitive_cast_phase_dump,
     );
 }
 
@@ -802,6 +815,12 @@ fn floating_comparison_diagnostic_dump() -> String {
 fn primitive_operator_profile_phase_dump() -> String {
     complete_phase_dump(include_str!(
         "../../../tests/golden/run/primitive_operator_profile.ska"
+    ))
+}
+
+fn primitive_cast_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/primitive_cast_matrix.ska"
     ))
 }
 
