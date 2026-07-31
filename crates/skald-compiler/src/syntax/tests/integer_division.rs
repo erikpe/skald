@@ -11,8 +11,8 @@ fn expect_binary(expression: &Expression, operator: BinaryOperator) -> &BinaryEx
 #[test]
 fn multiplicative_family_is_left_associative_with_frozen_precedence() {
     let source = concat!(
-        "fn combine(a: i64, b: i64, c: i64, d: i64, e: i64, count: u64, mask: i64, flag: bool) -> bool {\n",
-        "  return -a * b / c % d + e << count & mask == 0 && flag || false;\n",
+        "fn combine(a: i64?, b: i64, c: i64, d: i64, e: i64, count: u64, mask: i64, x: i64, y: i64, z: i64, flag: bool) -> bool {\n",
+        "  return -a! * b / c % d + e << count & mask ^ x | y == z && flag || false;\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     );
@@ -26,13 +26,18 @@ fn multiplicative_family_is_left_associative_with_frozen_precedence() {
         panic!("expected logical AND");
     };
     let comparison = expect_binary(&and.left, BinaryOperator::Equal);
-    let bitwise = expect_binary(&comparison.left, BinaryOperator::BitwiseAnd);
-    let shift = expect_binary(&bitwise.left, BinaryOperator::ShiftLeft);
+    let bitwise_or = expect_binary(&comparison.left, BinaryOperator::BitwiseOr);
+    let bitwise_xor = expect_binary(&bitwise_or.left, BinaryOperator::BitwiseXor);
+    let bitwise_and = expect_binary(&bitwise_xor.left, BinaryOperator::BitwiseAnd);
+    let shift = expect_binary(&bitwise_and.left, BinaryOperator::ShiftLeft);
     let additive = expect_binary(&shift.left, BinaryOperator::Add);
     let remainder = expect_binary(&additive.left, BinaryOperator::Remainder);
     let division = expect_binary(&remainder.left, BinaryOperator::Divide);
     let multiplication = expect_binary(&division.left, BinaryOperator::Multiply);
-    assert!(matches!(multiplication.left.as_ref(), Expression::Unary(_)));
+    let Expression::Unary(prefix) = multiplication.left.as_ref() else {
+        panic!("expected prefix negation");
+    };
+    assert!(matches!(prefix.operand.as_ref(), Expression::Unwrap(_)));
     assert_eq!(&source[division.operator_span.range().as_range()], "/");
     assert_eq!(&source[remainder.operator_span.range().as_range()], "%");
 

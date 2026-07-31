@@ -1,18 +1,24 @@
 use super::*;
-use crate::{
-    hir::{
-        HirCheckedIntegerDivision, HirExpressionKind, HirIntegerDivisionKind,
-        HirIntegerDivisionOperation, HirIntegerType, HirReturnValue, HirStatement,
-    },
-    mir::{lower_hir, MirIntegerDivisionKind, MirIntegerDivisionOperation},
-    test_support::type_check_source,
-};
+use crate::mir::{MirIntegerDivisionKind, MirIntegerDivisionOperation};
 
 const fn operation(
     kind: MirIntegerDivisionKind,
     operand: MirIntegerType,
 ) -> MirIntegerDivisionOperation {
     MirIntegerDivisionOperation { kind, operand }
+}
+
+fn floor_div_rem(dividend: i64, divisor: i64) -> (i64, i64) {
+    if dividend == i64::MIN && divisor == -1 {
+        return (i64::MIN, 0);
+    }
+    let mut quotient = dividend / divisor;
+    let mut remainder = dividend % divisor;
+    if remainder != 0 && remainder.is_negative() != divisor.is_negative() {
+        quotient -= 1;
+        remainder += divisor;
+    }
+    (quotient, remainder)
 }
 
 fn division_assembly(
@@ -26,33 +32,6 @@ fn division_assembly(
         &fixture_checked_integer_division_program(operation, dividend, divisor, expected),
     )
     .unwrap()
-}
-
-fn selected_i64_division_source(source: &str, kind: HirIntegerDivisionKind) -> String {
-    let mut hir = type_check_source(source).hir.unwrap();
-    let definition = hir
-        .definitions
-        .get_mut_for_test(hir.entry_function)
-        .unwrap();
-    let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
-        panic!("expected main return");
-    };
-    let HirReturnValue::Scalar(expression) = statement.value.as_mut().unwrap() else {
-        panic!("expected scalar return");
-    };
-    let HirExpressionKind::Binary { left, right, .. } = &expression.kind else {
-        panic!("expected placeholder binary expression");
-    };
-    expression.kind =
-        HirExpressionKind::CheckedIntegerDivision(Box::new(HirCheckedIntegerDivision::new(
-            HirIntegerDivisionOperation {
-                kind,
-                operand: HirIntegerType::I64,
-            },
-            (**left).clone(),
-            (**right).clone(),
-        )));
-    emit_assembly(Target::X86_64SysV, &lower_hir(&hir)).unwrap()
 }
 
 #[test]
@@ -71,12 +50,10 @@ fn native_signed_division_and_remainder_follow_floor_semantics_without_traps() {
     ];
 
     for (dividend, divisor, quotient, remainder) in cases {
-        if let Some(reconstructed) = quotient
-            .checked_mul(divisor)
-            .and_then(|product| product.checked_add(remainder))
-        {
-            assert_eq!(reconstructed, dividend);
-        }
+        assert_eq!(
+            quotient.wrapping_mul(divisor).wrapping_add(remainder),
+            dividend
+        );
         for (kind, expected) in [
             (MirIntegerDivisionKind::Quotient, quotient),
             (MirIntegerDivisionKind::Remainder, remainder),
@@ -94,6 +71,37 @@ fn native_signed_division_and_remainder_follow_floor_semantics_without_traps() {
             );
         }
     }
+}
+
+#[test]
+fn native_signed_property_samples_match_the_floor_model() {
+    let dividends = [i64::MIN, i64::MIN + 1, -257, -1, 0, i64::MAX];
+    let divisors = [i64::MIN, -257, -3, -1, 1, i64::MAX];
+    let mut observations = Vec::new();
+
+    for dividend in dividends {
+        for divisor in divisors {
+            let (quotient, remainder) = floor_div_rem(dividend, divisor);
+            assert_eq!(
+                quotient.wrapping_mul(divisor).wrapping_add(remainder),
+                dividend,
+                "identity for {dividend} / {divisor}"
+            );
+            assert!(remainder == 0 || remainder.is_negative() == divisor.is_negative());
+            assert!(remainder.unsigned_abs() < divisor.unsigned_abs());
+            observations.push(format!(
+                "({dividend} / {divisor}) == {quotient} && ({dividend} % {divisor}) == {remainder}"
+            ));
+        }
+    }
+
+    let checks = observations
+        .iter()
+        .map(|observation| format!("if (!({observation})) {{ return 91; }}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let source = format!("fn main() -> i64 {{ {checks} return 0; }}");
+    assert_eq!(run_native_assembly(&assembly(&source)).code(), Some(0));
 }
 
 #[test]
@@ -225,13 +233,13 @@ fn zero_divisors_report_the_exact_operation_specific_panic() {
 #[test]
 fn literal_and_call_produced_zero_divisors_take_the_same_checked_failure_edge() {
     for source in [
-        "fn main() -> i64 { return 7 + 0; }",
+        "fn main() -> i64 { return 7 / 0; }",
         concat!(
             "fn produce_zero() -> i64 { return 0; }\n",
-            "fn main() -> i64 { return 7 + produce_zero(); }\n",
+            "fn main() -> i64 { return 7 / produce_zero(); }\n",
         ),
     ] {
-        let mut assembly = selected_i64_division_source(source, HirIntegerDivisionKind::Quotient);
+        let mut assembly = assembly(source);
         assert!(!assembly.contains("integer-divisor-check"));
         assert!(assembly.contains("test rax, rax"));
         assert!(assembly.contains(".ascii \"integer division by zero\""));

@@ -1,6 +1,6 @@
 # Integer Division and Remainder Roadmap
 
-Status: in progress; DR0 through DR3 are complete and DR4 is next.
+Status: complete; DR0 through DR4 are complete.
 
 This roadmap implements the frozen integer `/` and `%` family for exact
 `i64`, `u64`, and `u8` operands. It delivers floor division and matching
@@ -119,7 +119,7 @@ than adding operator-specific C harnesses.
 - [x] DR1 — Lower and verify the checked control-flow shape
 - [x] DR2 — Execute verified operations on x86-64
 - [x] DR3 — Enable the complete source family end to end
-- [ ] DR4 — Harden and promote the complete family
+- [x] DR4 — Harden and promote the complete family
 
 ## PR-sized implementation sequence
 
@@ -309,32 +309,32 @@ implemented integer family.
 **Purpose:** Close the family with exhaustive boundary coverage, stable
 observations, maintainable ownership, and no rollout-only structure.
 
-- [ ] Complete valid and invalid matrices across literals, grouped values,
+- [x] Complete valid and invalid matrices across literals, grouped values,
       bindings, parameters, fields, calls, casts, arrays, optional unwrap,
       assignments, comparisons, logical operands, conditions, and returns.
-- [ ] Prove all precedence and associativity boundaries, including mixed
+- [x] Prove all precedence and associativity boundaries, including mixed
       `*`/`/`/`%` chains, prefix/postfix composition, additive and shift
       boundaries, bitwise tiers, comparison/`is`, and `&&`/`||`, plus
       deterministic rejection of malformed chains and incomplete operators.
-- [ ] Complete native extrema and property-style coverage for floor quotient,
+- [x] Complete native extrema and property-style coverage for floor quotient,
       divisor-signed remainder, quotient/remainder identity, unsigned high-bit
       values, `u8` canonicality, both zero failures, and the signed overflow
       pair without relying on compile-time folding.
-- [ ] Add independent-process determinism coverage for diagnostics and all
+- [x] Add independent-process determinism coverage for diagnostics and all
       phase dumps plus stable assembly, panic-message, and native observations
       where focused owner tests do not already provide it.
-- [ ] Audit touched lexer, syntax, resolution, type-check, HIR, MIR lowering,
+- [x] Audit touched lexer, syntax, resolution, type-check, HIR, MIR lowering,
       control-effect, verifier, termination, backend, facade, dump, and test
       owners by responsibility. Resolve small high-value maintainability
       improvements and place material out-of-scope findings in a separately
       indexed discoveries document.
-- [ ] Remove roadmap codes and rollout wording from living code, tests, and
+- [x] Remove roadmap codes and rollout wording from living code, tests, and
       general documentation; retain milestone vocabulary only in roadmap and
       archive documents.
-- [ ] Confirm the runtime ABI non-change, existing panic-message stability,
+- [x] Confirm the runtime ABI non-change, existing panic-message stability,
       documentation links, artifact cleanliness, and the exclusion of
       floating operations and optimization.
-- [ ] Mark this roadmap complete, move it to `docs/archive/`, update the active
+- [x] Mark this roadmap complete, move it to `docs/archive/`, update the active
       and archive indexes, and repair incoming relative links.
 
 **Tests:** Exhaustive source, HIR, MIR, verifier, backend, compile-failure,

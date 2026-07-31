@@ -94,12 +94,13 @@ concatenation remain ordinary source in the canonical standard-library
 module. Its invalid byte and slice bounds call the canonical panic intrinsic
 through the ordinary `std::str` and `std::error` import cycle.
 
-Primitive integer comparisons and casts plus eager boolean negation and
-equality are complete source-to-native phase products. Type checking selects
-exact comparison operand kinds, boolean negation, or one of the nine explicit
-integer cast pairs; HIR and MIR retain that selection, verification checks it,
-and x86-64 realizes it without runtime support. The detailed ownership
-boundary is documented in
+Integer division and remainder, bitwise operations, checked shifts,
+comparisons and casts, eager boolean operators, and short-circuit boolean
+expressions are complete source-to-native phase products. Type checking
+selects their exact operand and result kinds; HIR and MIR retain semantic
+operations and explicit checked control flow where required, verification
+checks those contracts, and x86-64 realizes them without a new runtime ABI.
+The detailed ownership boundary is documented in
 [Phases and IR](PHASES_AND_IR.md#implemented-primitive-operator-boundary).
 
 The frozen complete primitive operator profile has a separately documented

@@ -59,6 +59,7 @@ Archived plans:
 - [Optional initialization responsibility split](OPTIONAL_INITIALIZATION_RESPONSIBILITY_ROADMAP.md)
 - [Shared ownership verifier responsibility split](SHARED_OWNERSHIP_VERIFIER_RESPONSIBILITY_ROADMAP.md)
 - [Integer bitwise operators and checked shifts](INTEGER_BITWISE_AND_SHIFT_OPERATORS_ROADMAP.md)
+- [Integer division and remainder](INTEGER_DIVISION_AND_REMAINDER_ROADMAP.md)
 
 Resolved string-design inputs:
 

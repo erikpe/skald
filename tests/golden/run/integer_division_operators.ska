@@ -75,9 +75,16 @@ fn main() -> i64 {
     ska_rt_println_i64(-7 % -3);
     ska_rt_println_i64(-9223372036854775808 / -1);
     ska_rt_println_i64(-9223372036854775808 % -1);
+    ska_rt_println_i64(9223372036854775807 / -1);
+    ska_rt_println_i64(-9223372036854775808 / 9223372036854775807);
+    ska_rt_println_i64(-9223372036854775808 % 9223372036854775807);
 
+    ska_rt_println_u64(9223372036854775808u / 3u);
+    ska_rt_println_u64(9223372036854775808u % 3u);
     ska_rt_println_u64(18446744073709551615u / 2u);
     ska_rt_println_u64(18446744073709551615u % 2u);
+    ska_rt_println_u8(0u8 / 1u8);
+    ska_rt_println_u8(255u8 / 1u8);
     ska_rt_println_u8(255u8 / 2u8);
     ska_rt_println_u8(255u8 % 2u8);
 

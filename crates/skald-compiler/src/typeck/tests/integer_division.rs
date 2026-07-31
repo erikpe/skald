@@ -38,7 +38,11 @@ fn selects_division_and_remainder_for_every_exact_integer_type() {
 fn rejects_mixed_and_noninteger_operands_with_focused_actual_types() {
     let cases = [
         ("1", "1u", "i64", "u64"),
+        ("1u", "1", "u64", "i64"),
+        ("1", "1u8", "i64", "u8"),
+        ("1u8", "1", "u8", "i64"),
         ("1u", "1u8", "u64", "u8"),
+        ("1u8", "1u", "u8", "u64"),
         ("true", "false", "bool", "bool"),
         ("1.0", "2.0", "f64", "f64"),
         ("notify()", "notify()", "unit", "unit"),

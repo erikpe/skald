@@ -64,33 +64,18 @@ fn integer_expression(
     HirExpression { kind, ty, span }
 }
 
-fn manually_selected_division_hir() -> crate::hir::HirProgram {
-    let source = concat!(
-        "fn div_i64() -> i64 { return 0; }\n",
-        "fn rem_i64() -> i64 { return 0; }\n",
-        "fn div_u64() -> u64 { return 0u; }\n",
-        "fn rem_u64() -> u64 { return 0u; }\n",
-        "fn div_u8() -> u8 { return 0u8; }\n",
-        "fn rem_u8() -> u8 { return 0u8; }\n",
+fn source_selected_division_hir() -> crate::hir::HirProgram {
+    type_check_source(concat!(
+        "fn div_i64() -> i64 { return 17 / 5; }\n",
+        "fn rem_i64() -> i64 { return 17 % 5; }\n",
+        "fn div_u64() -> u64 { return 17u / 5u; }\n",
+        "fn rem_u64() -> u64 { return 17u % 5u; }\n",
+        "fn div_u8() -> u8 { return 17u8 / 5u8; }\n",
+        "fn rem_u8() -> u8 { return 17u8 % 5u8; }\n",
         "fn main() -> i64 { return 0; }\n",
-    );
-    let mut hir = type_check_source(source).hir.unwrap();
-    for (index, (operation, _)) in DIVISION_OPERATIONS.into_iter().enumerate() {
-        let expression = returned_expression_mut(
-            hir.definitions
-                .get_mut_for_test(FunctionId::new(index))
-                .unwrap(),
-        );
-        let span = expression.span;
-        expression.kind =
-            HirExpressionKind::CheckedIntegerDivision(Box::new(HirCheckedIntegerDivision::new(
-                operation,
-                integer_expression(operation.operand, 17, span),
-                integer_expression(operation.operand, 5, span),
-            )));
-        expression.ty = operation.result_type();
-    }
-    hir
+    ))
+    .hir
+    .unwrap()
 }
 
 fn model_division_rvalue(kind: MirIntegerDivisionKind, operand: MirIntegerType) -> MirProgram {
@@ -148,7 +133,7 @@ fn dumps_model_only_integer_division_and_remainder_operations() {
 
 #[test]
 fn lowers_and_dumps_the_complete_checked_integer_division_matrix() {
-    let hir = manually_selected_division_hir();
+    let hir = source_selected_division_hir();
     assert_eq!(dump_hir(&hir), dump_hir(&hir));
     let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();
@@ -297,7 +282,7 @@ fn lowering_secures_operands_in_source_order_after_control_affecting_evaluation(
 
 #[test]
 fn nested_checked_operations_finish_before_their_enclosing_divisor_check() {
-    let mut hir = manually_selected_division_hir();
+    let mut hir = source_selected_division_hir();
     let expression = returned_expression_mut(
         hir.definitions
             .get_mut_for_test(FunctionId::new(2))
@@ -563,7 +548,7 @@ fn division_block_indices(
 
 #[test]
 fn verifier_rejects_broken_integer_division_relationships_deterministically() {
-    let valid = lower_hir(&manually_selected_division_hir());
+    let valid = lower_hir(&source_selected_division_hir());
     verify_mir(&valid).unwrap();
     let function = FunctionId::new(2);
 
