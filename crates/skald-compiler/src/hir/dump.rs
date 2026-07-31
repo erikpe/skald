@@ -896,6 +896,7 @@ impl HirDumper {
                     HirBinaryOperation::AddF64 => "AddF64".to_owned(),
                     HirBinaryOperation::SubtractF64 => "SubtractF64".to_owned(),
                     HirBinaryOperation::MultiplyF64 => "MultiplyF64".to_owned(),
+                    HirBinaryOperation::DivideF64 => "DivideF64".to_owned(),
                     HirBinaryOperation::IntegerBitwise { operation, operand } => {
                         format!("Bitwise{}.{}", bitwise_title(*operation), operand.name())
                     }

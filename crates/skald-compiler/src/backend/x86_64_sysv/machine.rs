@@ -246,6 +246,10 @@ pub(super) enum Instruction {
         source: XmmRegister,
         destination: XmmRegister,
     },
+    DivideFloat64 {
+        source: XmmRegister,
+        destination: XmmRegister,
+    },
     XorFloat128 {
         source: XmmRegister,
         destination: XmmRegister,

@@ -1,6 +1,6 @@
 # Remaining Floating-Point Operators Roadmap
 
-Status: planned; FP0 is next.
+Status: in progress; FP0 is complete and FP1 is next.
 
 This roadmap completes the remaining frozen primitive operators for `f64`:
 IEEE-754 binary64 division followed by unordered equality and ordering. The
@@ -123,7 +123,7 @@ the ABI remains unchanged rather than adding operator-specific C harnesses.
 
 ## Progress
 
-- [ ] FP0 — Establish executable IEEE floating division
+- [x] FP0 — Establish executable IEEE floating division
 - [ ] FP1 — Enable floating division from source end to end
 - [ ] FP2 — Establish executable unordered floating comparisons
 - [ ] FP3 — Enable floating comparisons from source end to end
@@ -136,29 +136,29 @@ the ABI remains unchanged rather than adding operator-specific C harnesses.
 **Purpose:** Complete the target-independent and x86-64 path for non-failing
 binary64 division before source selection can depend on it.
 
-- [ ] Add a cohesive floating division identity to HIR and MIR, including
+- [x] Add a cohesive floating division identity to HIR and MIR, including
       exact `f64` operand/result queries and a deterministic mnemonic, while
       reusing the established eager floating arithmetic representation.
-- [ ] Classify division as a pure, non-failing scalar operation. It must not
+- [x] Classify division as a pure, non-failing scalar operation. It must not
       acquire the integer division/remainder zero-check capability,
       control-affecting lowering, termination reason, or panic metadata.
-- [ ] Lower both operands exactly once from left to right and preserve the
+- [x] Lower both operands exactly once from left to right and preserve the
       existing spill/security behavior when the right operand contains control
       flow or either operand carries full-expression temporaries.
-- [ ] Extend MIR verification for exact `f64` operands and result,
+- [x] Extend MIR verification for exact `f64` operands and result,
       definition-before-use, block-local use, and operation identity, with
       deterministic one-invariant diagnostics for malformed programs.
-- [ ] Extend the private x86-64 machine model, legality checks, register-use
+- [x] Extend the private x86-64 machine model, legality checks, register-use
       model, instruction selection, emission, and dumps with scalar binary64
       division; keep target opcode and register details below MIR.
-- [ ] Exercise finite, signed-zero, subnormal, overflow, underflow, infinity,
+- [x] Exercise finite, signed-zero, subnormal, overflow, underflow, infinity,
       and representative NaN inputs and results. Assert exact raw bits only
       where the contract fixes them; classify NaN without pinning a payload,
       sign, or signaling state.
-- [ ] Keep source selection of `f64 / f64` disabled in this task. Direct HIR,
+- [x] Keep source selection of `f64 / f64` disabled in this task. Direct HIR,
       MIR, and backend fixtures establish the complete downstream path while
       the accepted source subset remains unchanged.
-- [ ] Preserve existing integer division/remainder checks and failures,
+- [x] Preserve existing integer division/remainder checks and failures,
       floating addition/subtraction/multiplication/negation, cleanup, runtime,
       and ABI observations.
 

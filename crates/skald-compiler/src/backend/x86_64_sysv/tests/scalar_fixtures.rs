@@ -383,6 +383,46 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     }
 }
 
+pub(super) fn f64_division_program(dividend_bits: u64, divisor_bits: u64) -> MirProgram {
+    let mut program = f64_arithmetic_program();
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let span = function.span;
+    let function_id = function.function;
+    let block = function.body.entry;
+    let value = |index| fixture_value(ValueId::new(function_id, index), MirType::F64, span);
+    let assignment =
+        |index, kind| fixture_assign(ValueId::new(function_id, index), kind, MirType::F64, span);
+
+    function.storage.clear();
+    function.values = (0..3).map(value).collect();
+    function.body.blocks = vec![fixture_block(
+        block,
+        vec![
+            assignment(0, MirRvalueKind::ConstantF64Bits(dividend_bits)),
+            assignment(1, MirRvalueKind::ConstantF64Bits(divisor_bits)),
+            assignment(
+                2,
+                MirRvalueKind::Binary {
+                    operation: MirBinaryOperation::DivideF64,
+                    left: ValueId::new(function_id, 0),
+                    right: ValueId::new(function_id, 1),
+                },
+            ),
+        ],
+        Some(MirTerminator::Return {
+            value: Some(ValueId::new(function_id, 2)),
+            span,
+        }),
+        span,
+    )];
+
+    verify_mir(&program).expect("floating division fixture must be valid");
+    program
+}
+
 pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     let span = test_span();
     let mixed_id = FunctionId::new(0);

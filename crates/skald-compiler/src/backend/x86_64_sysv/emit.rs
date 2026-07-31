@@ -211,6 +211,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "mulsd {}, {}", destination.name(), source.name()).unwrap(),
+        Instruction::DivideFloat64 {
+            source,
+            destination,
+        } => write!(output, "divsd {}, {}", destination.name(), source.name()).unwrap(),
         Instruction::XorFloat128 {
             source,
             destination,

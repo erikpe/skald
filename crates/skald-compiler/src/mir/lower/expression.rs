@@ -180,6 +180,7 @@ impl BodyLowerer<'_> {
                     HirBinaryOperation::AddF64 => MirBinaryOperation::AddF64,
                     HirBinaryOperation::SubtractF64 => MirBinaryOperation::SubtractF64,
                     HirBinaryOperation::MultiplyF64 => MirBinaryOperation::MultiplyF64,
+                    HirBinaryOperation::DivideF64 => MirBinaryOperation::DivideF64,
                     HirBinaryOperation::IntegerBitwise { operation, operand } => {
                         MirBinaryOperation::IntegerBitwise {
                             operation: match operation {

@@ -225,6 +225,33 @@ fn integer_bitwise_operations_retain_exact_types_and_dump_vocabulary() {
 }
 
 #[test]
+fn floating_division_retains_exact_type_and_dump_vocabulary() {
+    let operation = HirBinaryOperation::DivideF64;
+    assert_eq!(operation.operand_type(), Type::F64);
+    assert_eq!(operation.result_type(), Type::F64);
+
+    let mut hir = type_check_source(concat!(
+        "fn divide(left: f64, right: f64) -> f64 { return left * right; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    let expression = returned_expression_mut(
+        hir.definitions
+            .get_mut_for_test(FunctionId::new(0))
+            .unwrap(),
+    );
+    let HirExpressionKind::Binary { operation, .. } = &mut expression.kind else {
+        panic!("expected binary expression");
+    };
+    *operation = HirBinaryOperation::DivideF64;
+
+    let dump = dump_hir(&hir);
+    assert_eq!(dump, dump_hir(&hir));
+    assert!(dump.contains("Binary DivideF64 : f64"));
+}
+
+#[test]
 fn dumps_manually_constructed_integer_division_semantics_deterministically() {
     let mut hir = type_check_source(concat!(
         "fn quotient() -> i64 { return 7 + -3; }\n",

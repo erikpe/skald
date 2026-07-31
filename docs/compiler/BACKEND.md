@@ -119,6 +119,14 @@ and 11. This adds no public symbol, calling convention, frame category, or
 runtime ABI entry point. Source `/` and `%` select these operations through
 the ordinary frontend pipeline.
 
+Verified binary64 division rvalues use the existing two-register floating
+scalar path and emit `divsd` with source operand order preserved. Floating
+zero, infinity, subnormal values, underflow, overflow, and NaN remain ordinary
+binary64 outcomes: this path emits no zero guard, panic message, runtime call,
+or additional control-flow block. This target path is currently reachable from
+directly constructed verified HIR/MIR; source `f64 / f64` selection remains
+disabled until the corresponding end-to-end language milestone.
+
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering

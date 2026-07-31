@@ -29,6 +29,7 @@ enum FloatBinaryOperation {
     Add,
     Subtract,
     Multiply,
+    Divide,
 }
 
 impl InstructionSelector<'_, '_> {
@@ -266,6 +267,9 @@ impl InstructionSelector<'_, '_> {
             MirBinaryOperation::MultiplyF64 => {
                 self.select_float_binary(FloatBinaryOperation::Multiply, left, right, destination)
             }
+            MirBinaryOperation::DivideF64 => {
+                self.select_float_binary(FloatBinaryOperation::Divide, left, right, destination)
+            }
             MirBinaryOperation::IntegerBitwise { operation, .. } => self.select_integer_binary(
                 IntegerBinaryOperation::Bitwise(match operation {
                     MirIntegerBitwiseOperation::And => BitwiseOperation::And,
@@ -387,6 +391,10 @@ impl InstructionSelector<'_, '_> {
                 destination: XmmRegister::Xmm14,
             },
             FloatBinaryOperation::Multiply => Instruction::MultiplyFloat64 {
+                source: XmmRegister::Xmm15,
+                destination: XmmRegister::Xmm14,
+            },
+            FloatBinaryOperation::Divide => Instruction::DivideFloat64 {
                 source: XmmRegister::Xmm15,
                 destination: XmmRegister::Xmm14,
             },

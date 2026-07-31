@@ -304,6 +304,7 @@ pub enum MirBinaryOperation {
     AddF64,
     SubtractF64,
     MultiplyF64,
+    DivideF64,
     IntegerBitwise {
         operation: MirIntegerBitwiseOperation,
         operand: MirIntegerType,
@@ -316,7 +317,7 @@ impl MirBinaryOperation {
             Self::AddI64 | Self::SubtractI64 | Self::MultiplyI64 => MirType::I64,
             Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => MirType::U64,
             Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => MirType::U8,
-            Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => MirType::F64,
+            Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 | Self::DivideF64 => MirType::F64,
             Self::IntegerBitwise { operand, .. } => operand.operand_type(),
         }
     }

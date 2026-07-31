@@ -56,6 +56,7 @@ mod calls;
 mod control_flow;
 mod copy;
 mod destruction;
+mod floating_division;
 mod instruction_selection;
 mod integer_division;
 mod interface_dispatch;

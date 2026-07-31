@@ -31,6 +31,41 @@ fn malformed_f64_mir_is_a_structured_backend_error() {
 }
 
 #[test]
+fn malformed_floating_division_is_rejected_at_the_verifier_boundary() {
+    let mut program = f64_division_program(6.0_f64.to_bits(), 2.0_f64.to_bits());
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let assignment = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(
+                    assignment.rvalue.kind,
+                    MirRvalueKind::Binary {
+                        operation: MirBinaryOperation::DivideF64,
+                        ..
+                    }
+                ) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .expect("fixture must contain floating division");
+    assignment.rvalue.ty = MirType::I64;
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error
+        .message()
+        .contains("binary operation result type mismatch"));
+}
+
+#[test]
 fn malformed_integer_comparisons_are_rejected_at_the_verifier_boundary() {
     let mut program = lower_source_to_mir(
         "fn compare() -> bool { return 1u < 2u; } fn main() -> i64 { return 0; }",

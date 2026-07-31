@@ -6,16 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Remaining Floating-Point Operators Roadmap](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
+  — **in progress**; executable IEEE-754 `f64` division is complete, and exact
+  source division is next. Unordered floating comparisons remain a separate
+  later semantic milestone. The roadmap depends only on the completed
+  primitive-operator and `f64` scalar foundations.
 
 ## Planned
 
-- [Remaining Floating-Point Operators Roadmap](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
-  — **planned**; next establish executable IEEE-754 `f64` division, then
-  implement source division and unordered floating comparisons as separate
-  semantic milestones before promoting the complete primitive-operator
-  profile. It depends only on the completed primitive-operator and `f64`
-  scalar foundations.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

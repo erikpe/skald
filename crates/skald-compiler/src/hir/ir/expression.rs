@@ -411,6 +411,7 @@ pub enum HirBinaryOperation {
     AddF64,
     SubtractF64,
     MultiplyF64,
+    DivideF64,
     IntegerBitwise {
         operation: HirIntegerBitwiseOperation,
         operand: HirIntegerType,
@@ -423,7 +424,7 @@ impl HirBinaryOperation {
             Self::AddI64 | Self::SubtractI64 | Self::MultiplyI64 => Type::I64,
             Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => Type::U64,
             Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => Type::U8,
-            Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => Type::F64,
+            Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 | Self::DivideF64 => Type::F64,
             Self::IntegerBitwise { operand, .. } => operand.operand_type(),
         }
     }

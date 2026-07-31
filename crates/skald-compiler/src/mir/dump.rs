@@ -1141,6 +1141,7 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 MirBinaryOperation::AddF64 => "add.f64".to_owned(),
                 MirBinaryOperation::SubtractF64 => "sub.f64".to_owned(),
                 MirBinaryOperation::MultiplyF64 => "mul.f64".to_owned(),
+                MirBinaryOperation::DivideF64 => "div.f64".to_owned(),
                 MirBinaryOperation::IntegerBitwise { operation, operand } => {
                     format!("{}.{}", operation.mnemonic(), operand.name())
                 }

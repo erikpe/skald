@@ -262,8 +262,8 @@ mod tests {
     use super::*;
     use crate::{
         hir::{
-            HirCheckedIntegerDivision, HirIntegerDivisionKind, HirIntegerDivisionOperation,
-            HirIntegerType, HirReturnValue, HirStatement,
+            HirBinaryOperation, HirCheckedIntegerDivision, HirIntegerDivisionKind,
+            HirIntegerDivisionOperation, HirIntegerType, HirReturnValue, HirStatement,
         },
         test_support::type_check_source,
     };
@@ -297,5 +297,31 @@ mod tests {
             )));
 
         assert!(expression_contains_control_effect(expression));
+    }
+
+    #[test]
+    fn floating_division_is_not_control_affecting_with_pure_operands() {
+        let mut hir = type_check_source(concat!(
+            "fn divide() -> f64 { return 8.0 * 2.0; }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ))
+        .hir
+        .unwrap();
+        let definition = hir
+            .definitions
+            .get_mut_for_test(crate::identity::FunctionId::new(0))
+            .unwrap();
+        let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
+            panic!("expected return statement");
+        };
+        let HirReturnValue::Scalar(expression) = statement.value.as_mut().unwrap() else {
+            panic!("expected scalar return value");
+        };
+        let HirExpressionKind::Binary { operation, .. } = &mut expression.kind else {
+            panic!("expected binary expression");
+        };
+        *operation = HirBinaryOperation::DivideF64;
+
+        assert!(!expression_contains_control_effect(expression));
     }
 }
