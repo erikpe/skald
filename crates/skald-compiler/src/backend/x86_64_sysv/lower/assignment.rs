@@ -4,13 +4,15 @@ use crate::{
     backend::BackendError,
     mir::{
         MirAssignment, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
-        MirIntegerCast, MirIntegerType, MirPlace, MirPrimitiveComparison, MirRvalueKind, MirType,
-        MirUnaryOperation, ValueId,
+        MirIntegerBitwiseOperation, MirIntegerCast, MirIntegerType, MirPlace,
+        MirPrimitiveComparison, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
     },
 };
 
 use super::{
-    super::machine::{ByteRegister, ConditionCode, Instruction, Operand, Register, XmmRegister},
+    super::machine::{
+        BitwiseOperation, ByteRegister, ConditionCode, Instruction, Operand, Register, XmmRegister,
+    },
     value, InstructionSelector,
 };
 
@@ -19,6 +21,7 @@ enum IntegerBinaryOperation {
     Add,
     Subtract,
     Multiply,
+    Bitwise(BitwiseOperation),
 }
 
 #[derive(Clone, Copy)]
@@ -175,6 +178,11 @@ impl InstructionSelector<'_, '_> {
                 self.output.push(Instruction::Test(Register::Rax));
                 self.store_condition(ConditionCode::Equal, destination);
             }
+            MirUnaryOperation::BitwiseComplement(_) => {
+                value::load_rax(value::frame_value(self.frame, operand), self.output);
+                self.output.push(Instruction::BitwiseNot(Register::Rax));
+                value::store_canonical_rax(ty, destination, self.output);
+            }
         }
     }
 
@@ -248,6 +256,17 @@ impl InstructionSelector<'_, '_> {
             MirBinaryOperation::MultiplyF64 => {
                 self.select_float_binary(FloatBinaryOperation::Multiply, left, right, destination)
             }
+            MirBinaryOperation::IntegerBitwise { operation, .. } => self.select_integer_binary(
+                IntegerBinaryOperation::Bitwise(match operation {
+                    MirIntegerBitwiseOperation::And => BitwiseOperation::And,
+                    MirIntegerBitwiseOperation::Or => BitwiseOperation::Or,
+                    MirIntegerBitwiseOperation::Xor => BitwiseOperation::Xor,
+                }),
+                left,
+                right,
+                ty,
+                destination,
+            ),
         }
     }
 
@@ -274,6 +293,11 @@ impl InstructionSelector<'_, '_> {
                 destination: Register::Rax,
             },
             IntegerBinaryOperation::Multiply => Instruction::Multiply {
+                source: Register::Rcx,
+                destination: Register::Rax,
+            },
+            IntegerBinaryOperation::Bitwise(operation) => Instruction::Bitwise {
+                operation,
                 source: Register::Rcx,
                 destination: Register::Rax,
             },

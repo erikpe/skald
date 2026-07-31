@@ -171,6 +171,19 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             destination,
         } => write!(output, "imul {}, {}", destination.name(), source.name()).unwrap(),
         Instruction::Negate(register) => write!(output, "neg {}", register.name()).unwrap(),
+        Instruction::BitwiseNot(register) => write!(output, "not {}", register.name()).unwrap(),
+        Instruction::Bitwise {
+            operation,
+            source,
+            destination,
+        } => write!(
+            output,
+            "{} {}, {}",
+            operation.mnemonic(),
+            destination.name(),
+            source.name()
+        )
+        .unwrap(),
         Instruction::AddFloat64 {
             source,
             destination,

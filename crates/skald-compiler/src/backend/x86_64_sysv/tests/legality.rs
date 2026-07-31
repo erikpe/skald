@@ -97,6 +97,41 @@ fn malformed_boolean_ordering_is_rejected_at_the_verifier_boundary() {
 }
 
 #[test]
+fn malformed_integer_bitwise_types_are_rejected_at_the_verifier_boundary() {
+    let mut program = integer_bitwise_program();
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let operation = function
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(MirAssignment {
+                rvalue:
+                    MirRvalue {
+                        kind: MirRvalueKind::Binary { operation, .. },
+                        ..
+                    },
+                ..
+            }) => Some(operation),
+            _ => None,
+        })
+        .expect("fixture must contain a binary bitwise operation");
+    *operation = MirBinaryOperation::IntegerBitwise {
+        operation: MirIntegerBitwiseOperation::And,
+        operand: MirIntegerType::U8,
+    };
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains("binary operand is not `u8`"));
+}
+
+#[test]
 fn malformed_integer_casts_are_rejected_at_the_verifier_boundary() {
     let mut program =
         lower_source_to_mir("fn cast() -> u8 { return (u8) 258u; } fn main() -> i64 { return 0; }");

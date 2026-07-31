@@ -637,15 +637,15 @@ impl Verifier<'_> {
                 right,
             } => {
                 let expected = operation.operand_type();
-                if rvalue.ty != expected {
+                if rvalue.ty != operation.result_type() {
                     self.block_error(
                         function.callable(),
                         block.id,
                         "binary operation result type mismatch",
                     );
                 }
-                self.verify_arithmetic_operand(function, block, *left, expected, defined);
-                self.verify_arithmetic_operand(function, block, *right, expected, defined);
+                self.verify_binary_operand(function, block, *left, expected, defined);
+                self.verify_binary_operand(function, block, *right, expected, defined);
             }
             MirRvalueKind::PrimitiveComparison {
                 operation,
@@ -723,7 +723,7 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_arithmetic_operand(
+    fn verify_binary_operand(
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
@@ -736,7 +736,7 @@ impl Verifier<'_> {
                 self.block_error(
                     function.callable(),
                     block.id,
-                    format!("arithmetic operand is not `{expected}`"),
+                    format!("binary operand is not `{expected}`"),
                 );
             }
         }

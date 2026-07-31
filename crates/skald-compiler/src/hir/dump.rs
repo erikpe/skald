@@ -868,9 +868,12 @@ impl HirDumper {
             }
             HirExpressionKind::Unary { operation, operand } => {
                 let operation = match operation {
-                    HirUnaryOperation::NegateI64 => "NegateI64",
-                    HirUnaryOperation::NegateF64 => "NegateF64",
-                    HirUnaryOperation::LogicalNotBool => "LogicalNotBool",
+                    HirUnaryOperation::NegateI64 => "NegateI64".to_owned(),
+                    HirUnaryOperation::NegateF64 => "NegateF64".to_owned(),
+                    HirUnaryOperation::LogicalNotBool => "LogicalNotBool".to_owned(),
+                    HirUnaryOperation::BitwiseComplement(integer) => {
+                        format!("BitwiseComplement.{}", integer.name())
+                    }
                 };
                 self.typed_line(&format!("Unary {operation}"), expression);
                 self.indented(|dumper| dumper.expression(operand));
@@ -881,18 +884,21 @@ impl HirDumper {
                 right,
             } => {
                 let operation = match operation {
-                    HirBinaryOperation::AddI64 => "AddI64",
-                    HirBinaryOperation::SubtractI64 => "SubtractI64",
-                    HirBinaryOperation::MultiplyI64 => "MultiplyI64",
-                    HirBinaryOperation::AddU64 => "AddU64",
-                    HirBinaryOperation::SubtractU64 => "SubtractU64",
-                    HirBinaryOperation::MultiplyU64 => "MultiplyU64",
-                    HirBinaryOperation::AddU8 => "AddU8",
-                    HirBinaryOperation::SubtractU8 => "SubtractU8",
-                    HirBinaryOperation::MultiplyU8 => "MultiplyU8",
-                    HirBinaryOperation::AddF64 => "AddF64",
-                    HirBinaryOperation::SubtractF64 => "SubtractF64",
-                    HirBinaryOperation::MultiplyF64 => "MultiplyF64",
+                    HirBinaryOperation::AddI64 => "AddI64".to_owned(),
+                    HirBinaryOperation::SubtractI64 => "SubtractI64".to_owned(),
+                    HirBinaryOperation::MultiplyI64 => "MultiplyI64".to_owned(),
+                    HirBinaryOperation::AddU64 => "AddU64".to_owned(),
+                    HirBinaryOperation::SubtractU64 => "SubtractU64".to_owned(),
+                    HirBinaryOperation::MultiplyU64 => "MultiplyU64".to_owned(),
+                    HirBinaryOperation::AddU8 => "AddU8".to_owned(),
+                    HirBinaryOperation::SubtractU8 => "SubtractU8".to_owned(),
+                    HirBinaryOperation::MultiplyU8 => "MultiplyU8".to_owned(),
+                    HirBinaryOperation::AddF64 => "AddF64".to_owned(),
+                    HirBinaryOperation::SubtractF64 => "SubtractF64".to_owned(),
+                    HirBinaryOperation::MultiplyF64 => "MultiplyF64".to_owned(),
+                    HirBinaryOperation::IntegerBitwise { operation, operand } => {
+                        format!("Bitwise{}.{}", bitwise_title(*operation), operand.name())
+                    }
                 };
                 self.typed_line(&format!("Binary {operation}"), expression);
                 self.indented(|dumper| {
@@ -1923,6 +1929,14 @@ impl HirDumper {
         self.indentation += 1;
         write_contents(self);
         self.indentation -= 1;
+    }
+}
+
+const fn bitwise_title(operation: crate::hir::HirIntegerBitwiseOperation) -> &'static str {
+    match operation {
+        crate::hir::HirIntegerBitwiseOperation::And => "And",
+        crate::hir::HirIntegerBitwiseOperation::Or => "Or",
+        crate::hir::HirIntegerBitwiseOperation::Xor => "Xor",
     }
 }
 

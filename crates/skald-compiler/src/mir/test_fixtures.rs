@@ -11,12 +11,14 @@ use crate::{
 };
 
 use super::{
-    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall,
-    MirCallTarget, MirCleanup, MirEndFullExpression, MirFunctionDeclaration, MirFunctionDefinition,
-    MirFunctionLinkage, MirInitialize, MirInstruction, MirMemberDefinition, MirMethodReceiver,
-    MirParameter, MirParameterMode, MirPathCondition, MirPathConditionValue, MirPlace, MirProgram,
-    MirRvalue, MirRvalueKind, MirStorage, MirStorageDead, MirStorageKind, MirStorageLive, MirStore,
-    MirTerminator, MirType, MirValue, PathConditionId, StorageId, ValueId,
+    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBinaryOperation,
+    MirBody, MirCall, MirCallTarget, MirCleanup, MirComparisonOperand, MirComparisonPredicate,
+    MirEndFullExpression, MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage,
+    MirInitialize, MirInstruction, MirIntegerBitwiseOperation, MirIntegerType, MirMemberDefinition,
+    MirMethodReceiver, MirParameter, MirParameterMode, MirPathCondition, MirPathConditionValue,
+    MirPlace, MirPrimitiveComparison, MirProgram, MirRvalue, MirRvalueKind, MirStorage,
+    MirStorageDead, MirStorageKind, MirStorageLive, MirStore, MirTerminator, MirType,
+    MirUnaryOperation, MirValue, PathConditionId, StorageId, ValueId,
 };
 
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
@@ -206,6 +208,261 @@ pub(crate) fn assign(
         rvalue: MirRvalue { kind, ty },
         span,
     })
+}
+
+#[derive(Clone, Copy)]
+enum BitwiseFixtureOperation {
+    Complement,
+    Binary(MirIntegerBitwiseOperation),
+}
+
+#[derive(Clone, Copy)]
+struct BitwiseFixtureCase {
+    integer: MirIntegerType,
+    operation: BitwiseFixtureOperation,
+    left_bits: u64,
+    right_bits: u64,
+    expected_bits: u64,
+}
+
+const BITWISE_FIXTURE_CASES: [BitwiseFixtureCase; 12] = [
+    BitwiseFixtureCase {
+        integer: MirIntegerType::I64,
+        operation: BitwiseFixtureOperation::Complement,
+        left_bits: 0x5555_5555_5555_5555,
+        right_bits: 0,
+        expected_bits: 0xaaaa_aaaa_aaaa_aaaa,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::I64,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::And),
+        left_bits: u64::MAX,
+        right_bits: 0x00ff_00ff_00ff_00ff,
+        expected_bits: 0x00ff_00ff_00ff_00ff,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::I64,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::Or),
+        left_bits: 0x8000_0000_0000_0000,
+        right_bits: 0xff,
+        expected_bits: 0x8000_0000_0000_00ff,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::I64,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::Xor),
+        left_bits: u64::MAX,
+        right_bits: 0xaaaa_aaaa_aaaa_aaaa,
+        expected_bits: 0x5555_5555_5555_5555,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U64,
+        operation: BitwiseFixtureOperation::Complement,
+        left_bits: 0,
+        right_bits: 0,
+        expected_bits: u64::MAX,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U64,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::And),
+        left_bits: 0xaaaa_aaaa_aaaa_aaaa,
+        right_bits: 0xf0f0_f0f0_f0f0_f0f0,
+        expected_bits: 0xa0a0_a0a0_a0a0_a0a0,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U64,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::Or),
+        left_bits: 0x8000_0000_0000_0000,
+        right_bits: 0x7fff_ffff_ffff_ffff,
+        expected_bits: u64::MAX,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U64,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::Xor),
+        left_bits: u64::MAX,
+        right_bits: 0xaaaa_aaaa_aaaa_aaaa,
+        expected_bits: 0x5555_5555_5555_5555,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U8,
+        operation: BitwiseFixtureOperation::Complement,
+        left_bits: 0x55,
+        right_bits: 0,
+        expected_bits: 0xaa,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U8,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::And),
+        left_bits: 0xf3,
+        right_bits: 0x3f,
+        expected_bits: 0x33,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U8,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::Or),
+        left_bits: 0x80,
+        right_bits: 0x0f,
+        expected_bits: 0x8f,
+    },
+    BitwiseFixtureCase {
+        integer: MirIntegerType::U8,
+        operation: BitwiseFixtureOperation::Binary(MirIntegerBitwiseOperation::Xor),
+        left_bits: 0xff,
+        right_bits: 0xa5,
+        expected_bits: 0x5a,
+    },
+];
+
+fn fixture_integer_constant(integer: MirIntegerType, bits: u64) -> MirRvalueKind {
+    match integer {
+        MirIntegerType::I64 => MirRvalueKind::ConstantI64(bits as i64),
+        MirIntegerType::U64 => MirRvalueKind::ConstantU64(bits),
+        MirIntegerType::U8 => MirRvalueKind::ConstantU8(bits as u8),
+    }
+}
+
+fn next_fixture_value(
+    function: FunctionId,
+    values: &mut Vec<MirValue>,
+    ty: MirType,
+    span: Span,
+) -> ValueId {
+    let id = ValueId::new(function, values.len());
+    values.push(value(id, ty, span));
+    id
+}
+
+/// Hand-built verified MIR covering every pure integer bitwise operation and
+/// width without enabling its source syntax.
+pub(crate) fn integer_bitwise_program() -> MirProgram {
+    let mut program = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .expect("fixture entry function exists");
+    let function_id = function.function;
+    let span = function.span;
+    let success = BlockId::new(function_id, BITWISE_FIXTURE_CASES.len());
+    let failure = BlockId::new(function_id, BITWISE_FIXTURE_CASES.len() + 1);
+    let mut values = Vec::new();
+    let mut blocks = Vec::new();
+
+    for (index, case) in BITWISE_FIXTURE_CASES.into_iter().enumerate() {
+        let ty = case.integer.operand_type();
+        let left = next_fixture_value(function_id, &mut values, ty, span);
+        let mut instructions = vec![assign(
+            left,
+            fixture_integer_constant(case.integer, case.left_bits),
+            ty,
+            span,
+        )];
+        let result = match case.operation {
+            BitwiseFixtureOperation::Complement => {
+                let result = next_fixture_value(function_id, &mut values, ty, span);
+                instructions.push(assign(
+                    result,
+                    MirRvalueKind::Unary {
+                        operation: MirUnaryOperation::BitwiseComplement(case.integer),
+                        operand: left,
+                    },
+                    ty,
+                    span,
+                ));
+                result
+            }
+            BitwiseFixtureOperation::Binary(operation) => {
+                let right = next_fixture_value(function_id, &mut values, ty, span);
+                instructions.push(assign(
+                    right,
+                    fixture_integer_constant(case.integer, case.right_bits),
+                    ty,
+                    span,
+                ));
+                let result = next_fixture_value(function_id, &mut values, ty, span);
+                instructions.push(assign(
+                    result,
+                    MirRvalueKind::Binary {
+                        operation: MirBinaryOperation::IntegerBitwise {
+                            operation,
+                            operand: case.integer,
+                        },
+                        left,
+                        right,
+                    },
+                    ty,
+                    span,
+                ));
+                result
+            }
+        };
+        let expected = next_fixture_value(function_id, &mut values, ty, span);
+        instructions.push(assign(
+            expected,
+            fixture_integer_constant(case.integer, case.expected_bits),
+            ty,
+            span,
+        ));
+        let comparison = next_fixture_value(function_id, &mut values, MirType::Bool, span);
+        instructions.push(assign(
+            comparison,
+            MirRvalueKind::PrimitiveComparison {
+                operation: MirPrimitiveComparison {
+                    predicate: MirComparisonPredicate::Equal,
+                    operand: MirComparisonOperand::Integer(case.integer),
+                },
+                left: result,
+                right: expected,
+            },
+            MirType::Bool,
+            span,
+        ));
+
+        blocks.push(block(
+            BlockId::new(function_id, index),
+            instructions,
+            Some(MirTerminator::Branch {
+                condition: comparison,
+                true_target: if index + 1 == BITWISE_FIXTURE_CASES.len() {
+                    success
+                } else {
+                    BlockId::new(function_id, index + 1)
+                },
+                false_target: failure,
+                span,
+            }),
+            span,
+        ));
+    }
+
+    for (block_id, result) in [(success, 91), (failure, 1)] {
+        let value = next_fixture_value(function_id, &mut values, MirType::I64, span);
+        blocks.push(block(
+            block_id,
+            vec![assign(
+                value,
+                MirRvalueKind::ConstantI64(result),
+                MirType::I64,
+                span,
+            )],
+            Some(MirTerminator::Return {
+                value: Some(value),
+                span,
+            }),
+            span,
+        ));
+    }
+
+    function.values = values;
+    function.storage.clear();
+    function.parameters.clear();
+    function.body = MirBody {
+        entry: BlockId::new(function_id, 0),
+        blocks,
+        path_conditions: Vec::new(),
+        logical_expressions: Vec::new(),
+    };
+
+    super::verify_mir(&program).expect("integer bitwise fixture must be valid");
+    program
 }
 
 pub(crate) fn call(

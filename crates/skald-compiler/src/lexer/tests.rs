@@ -145,8 +145,8 @@ fn logical_punctuation_uses_longest_match_with_precise_utf8_spans() {
 }
 
 #[test]
-fn malformed_logical_punctuation_is_split_deterministically() {
-    let (sources, source_id, output) = lex_text("& | &&& |||");
+fn malformed_logical_and_unimplemented_bitwise_punctuation_is_split_deterministically() {
+    let (sources, source_id, output) = lex_text("& | ^ ~ &&& |||");
     let source = sources.get(source_id).unwrap();
 
     assert_eq!(
@@ -156,6 +156,8 @@ fn malformed_logical_punctuation_is_split_deterministically() {
             .map(|token| token.kind)
             .collect::<Vec<_>>(),
         [
+            TokenKind::Invalid,
+            TokenKind::Invalid,
             TokenKind::Invalid,
             TokenKind::Invalid,
             TokenKind::AndAnd,
@@ -171,9 +173,9 @@ fn malformed_logical_punctuation_is_split_deterministically() {
             .iter()
             .map(|token| source.slice(token.span.range()).unwrap())
             .collect::<Vec<_>>(),
-        ["&", "|", "&&", "&", "||", "|", ""]
+        ["&", "|", "^", "~", "&&", "&", "||", "|", ""]
     );
-    assert_eq!(output.diagnostics.len(), 4);
+    assert_eq!(output.diagnostics.len(), 6);
     assert!(output
         .diagnostics
         .iter()

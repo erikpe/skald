@@ -116,8 +116,8 @@ fn arithmetic_corruption_accumulates_errors_in_deterministic_order() {
             .collect::<Vec<_>>(),
         [
             "binary operation result type mismatch",
-            "arithmetic operand is not `i64`",
-            "arithmetic operand is not `i64`",
+            "binary operand is not `i64`",
+            "binary operand is not `i64`",
         ]
     );
 }

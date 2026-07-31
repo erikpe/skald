@@ -217,6 +217,12 @@ pub(super) enum Instruction {
         destination: Register,
     },
     Negate(Register),
+    BitwiseNot(Register),
+    Bitwise {
+        operation: BitwiseOperation,
+        source: Register,
+        destination: Register,
+    },
     AddFloat64 {
         source: XmmRegister,
         destination: XmmRegister,
@@ -255,6 +261,23 @@ pub(super) enum Instruction {
     Trap,
     Leave,
     Return,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum BitwiseOperation {
+    And,
+    Or,
+    Xor,
+}
+
+impl BitwiseOperation {
+    pub(super) const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::And => "and",
+            Self::Or => "or",
+            Self::Xor => "xor",
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

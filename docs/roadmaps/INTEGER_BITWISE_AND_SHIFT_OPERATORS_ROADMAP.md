@@ -1,6 +1,6 @@
 # Integer Bitwise Operators and Checked Shifts Roadmap
 
-Status: planned; BW0 is next.
+Status: in progress; BW0 is complete and BW1 is next.
 
 This roadmap implements the next frozen primitive-operator family: exact-width
 integer bitwise complement, conjunction, disjunction, and exclusive
@@ -114,7 +114,7 @@ than adding operator-specific C harnesses.
 
 ## Progress
 
-- [ ] BW0 — Establish executable pure bitwise operations
+- [x] BW0 — Establish executable pure bitwise operations
 - [ ] BW1 — Enable bitwise source expressions end to end
 - [ ] BW2 — Establish executable checked shifts
 - [ ] BW3 — Enable checked shift source expressions end to end
@@ -127,26 +127,26 @@ than adding operator-specific C harnesses.
 **Purpose:** Complete the target-independent and x86-64 path for the low-risk
 pure operations before source syntax can select them.
 
-- [ ] Add cohesive exact-width HIR and MIR operation carriers for integer
+- [x] Add cohesive exact-width HIR and MIR operation carriers for integer
       complement, conjunction, disjunction, and exclusive disjunction,
       including exact operand/result queries and deterministic mnemonic
       vocabulary.
-- [ ] Lower unary complement and eager binary bitwise operands exactly once;
+- [x] Lower unary complement and eager binary bitwise operands exactly once;
       retain the existing left-to-right spill behavior when a right operand
       contains control flow, and add no block, failure edge, cleanup action,
       runtime call, or exceptional capability.
-- [ ] Extend MIR verification for the closed `i64`/`u64`/`u8` matrix, matching
+- [x] Extend MIR verification for the closed `i64`/`u64`/`u8` matrix, matching
       value definitions, result types, block-local use, and canonical `u8`
       production, with deterministic one-invariant mutation diagnostics.
-- [ ] Extend the private x86-64 machine model, target legality, and instruction
+- [x] Extend the private x86-64 machine model, target legality, and instruction
       selection for complement, AND, OR, and XOR while preserving exact 64-bit
       patterns and canonicalizing the low byte of `u8` results.
-- [ ] Extend HIR/MIR facades and dumps only with the minimal semantic
+- [x] Extend HIR/MIR facades and dumps only with the minimal semantic
       vocabulary needed by downstream consumers; do not expose target
       register, opcode, or flag choices.
-- [ ] Keep source construction of `~`, `&`, `|`, and `^` disabled in this task;
+- [x] Keep source construction of `~`, `&`, `|`, and `^` disabled in this task;
       direct HIR/MIR and backend tests establish the complete downstream path.
-- [ ] Preserve all existing arithmetic, comparison, eager boolean,
+- [x] Preserve all existing arithmetic, comparison, eager boolean,
       short-circuit, label, frame, runtime, and ABI observations.
 
 **Tests:** Direct HIR/MIR truth-pattern matrices for all four operations and

@@ -120,7 +120,7 @@ fn verifier_rejects_u8_constant_and_operation_type_corruption() {
     *operation = MirBinaryOperation::AddU64;
     let errors = verify_mir(&operation_mismatch).unwrap_err().to_string();
     assert!(errors.contains("binary operation result type mismatch"));
-    assert!(errors.contains("arithmetic operand is not `u64`"));
+    assert!(errors.contains("binary operand is not `u64`"));
 }
 
 #[test]

@@ -9,6 +9,13 @@ fn eager_boolean_truth_tables_execute_with_canonical_results() {
 }
 
 #[test]
+fn integer_bitwise_edge_patterns_execute_for_every_width() {
+    let output = emit_assembly(Target::X86_64SysV, &integer_bitwise_program()).unwrap();
+
+    assert_eq!(run_native_assembly(&output).code(), Some(91));
+}
+
+#[test]
 fn integer_comparison_boundaries_store_canonical_booleans_and_branch_natively() {
     let output = assembly(concat!(
         "fn main() -> i64 {\n",

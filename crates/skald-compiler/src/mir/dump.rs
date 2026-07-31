@@ -1089,9 +1089,12 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         }
         MirRvalueKind::Unary { operation, operand } => {
             let operation = match operation {
-                MirUnaryOperation::NegateI64 => "neg.i64",
-                MirUnaryOperation::NegateF64 => "neg.f64",
-                MirUnaryOperation::LogicalNotBool => "not.bool",
+                MirUnaryOperation::NegateI64 => "neg.i64".to_owned(),
+                MirUnaryOperation::NegateF64 => "neg.f64".to_owned(),
+                MirUnaryOperation::LogicalNotBool => "not.bool".to_owned(),
+                MirUnaryOperation::BitwiseComplement(integer) => {
+                    format!("not.{}", integer.name())
+                }
             };
             let _ = write!(output, "{operation} {operand}");
         }
@@ -1101,18 +1104,21 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             right,
         } => {
             let operation = match operation {
-                MirBinaryOperation::AddI64 => "add.i64",
-                MirBinaryOperation::SubtractI64 => "sub.i64",
-                MirBinaryOperation::MultiplyI64 => "mul.i64",
-                MirBinaryOperation::AddU64 => "add.u64",
-                MirBinaryOperation::SubtractU64 => "sub.u64",
-                MirBinaryOperation::MultiplyU64 => "mul.u64",
-                MirBinaryOperation::AddU8 => "add.u8",
-                MirBinaryOperation::SubtractU8 => "sub.u8",
-                MirBinaryOperation::MultiplyU8 => "mul.u8",
-                MirBinaryOperation::AddF64 => "add.f64",
-                MirBinaryOperation::SubtractF64 => "sub.f64",
-                MirBinaryOperation::MultiplyF64 => "mul.f64",
+                MirBinaryOperation::AddI64 => "add.i64".to_owned(),
+                MirBinaryOperation::SubtractI64 => "sub.i64".to_owned(),
+                MirBinaryOperation::MultiplyI64 => "mul.i64".to_owned(),
+                MirBinaryOperation::AddU64 => "add.u64".to_owned(),
+                MirBinaryOperation::SubtractU64 => "sub.u64".to_owned(),
+                MirBinaryOperation::MultiplyU64 => "mul.u64".to_owned(),
+                MirBinaryOperation::AddU8 => "add.u8".to_owned(),
+                MirBinaryOperation::SubtractU8 => "sub.u8".to_owned(),
+                MirBinaryOperation::MultiplyU8 => "mul.u8".to_owned(),
+                MirBinaryOperation::AddF64 => "add.f64".to_owned(),
+                MirBinaryOperation::SubtractF64 => "sub.f64".to_owned(),
+                MirBinaryOperation::MultiplyF64 => "mul.f64".to_owned(),
+                MirBinaryOperation::IntegerBitwise { operation, operand } => {
+                    format!("{}.{}", operation.mnemonic(), operand.name())
+                }
             };
             let _ = write!(output, "{operation} {left}, {right}");
         }

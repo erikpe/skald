@@ -246,6 +246,7 @@ pub enum HirUnaryOperation {
     NegateI64,
     NegateF64,
     LogicalNotBool,
+    BitwiseComplement(HirIntegerType),
 }
 
 impl HirUnaryOperation {
@@ -254,6 +255,7 @@ impl HirUnaryOperation {
             Self::NegateI64 => Type::I64,
             Self::NegateF64 => Type::F64,
             Self::LogicalNotBool => Type::Bool,
+            Self::BitwiseComplement(integer) => integer.operand_type(),
         }
     }
 
@@ -407,6 +409,10 @@ pub enum HirBinaryOperation {
     AddF64,
     SubtractF64,
     MultiplyF64,
+    IntegerBitwise {
+        operation: HirIntegerBitwiseOperation,
+        operand: HirIntegerType,
+    },
 }
 
 impl HirBinaryOperation {
@@ -416,10 +422,28 @@ impl HirBinaryOperation {
             Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => Type::U64,
             Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => Type::U8,
             Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => Type::F64,
+            Self::IntegerBitwise { operand, .. } => operand.operand_type(),
         }
     }
 
     pub const fn result_type(self) -> Type {
         self.operand_type()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum HirIntegerBitwiseOperation {
+    And,
+    Or,
+    Xor,
+}
+
+impl HirIntegerBitwiseOperation {
+    pub const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::And => "and",
+            Self::Or => "or",
+            Self::Xor => "xor",
+        }
     }
 }

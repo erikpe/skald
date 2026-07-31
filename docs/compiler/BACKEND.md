@@ -86,6 +86,12 @@ temporaries, and later comparisons. Casts add no target labels, traps, runtime
 calls, allocations, symbols, or ABI surface; malformed cast MIR remains a
 verifier-boundary error.
 
+Verified pure integer bitwise rvalues also lower inline. Complement, AND, OR,
+and XOR preserve the complete `i64` or `u64` bit pattern and canonicalize the
+low byte for `u8`; they add no labels, failure edge, runtime call, symbol, or
+ABI surface. This is currently a direct-MIR backend capability: source syntax
+and type selection for these operations remain unavailable.
+
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
@@ -144,10 +150,11 @@ publication; ordinary dynamic publication writes count one.
 
 The
 [frozen operator representation](PHASES_AND_IR.md#frozen-primitive-operator-representation)
-defines future legal MIR input without making it current backend support. A
-target consumes already selected operation flavor, type, width, signedness,
-failure capability, and control flow. It never reconstructs semantics from
-source spelling or host-language arithmetic.
+defines the contract for remaining future operator input as well as the
+implemented direct-MIR pure bitwise subset described above. A target consumes
+already selected operation flavor, type, width, signedness, failure
+capability, and control flow. It never reconstructs semantics from source
+spelling or host-language arithmetic.
 
 Target realization must:
 

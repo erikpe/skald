@@ -5,6 +5,10 @@ use crate::{
     mir::{MirClassDeclarationTable, MirInterfaceDeclarationTable},
 };
 
+pub(super) fn integer_bitwise_program() -> MirProgram {
+    fixture_integer_bitwise_program()
+}
+
 pub(super) fn eager_boolean_program() -> MirProgram {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
     let function = mir

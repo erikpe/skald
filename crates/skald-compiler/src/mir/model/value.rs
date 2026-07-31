@@ -260,6 +260,7 @@ pub enum MirUnaryOperation {
     NegateI64,
     NegateF64,
     LogicalNotBool,
+    BitwiseComplement(MirIntegerType),
 }
 
 impl MirUnaryOperation {
@@ -268,6 +269,7 @@ impl MirUnaryOperation {
             Self::NegateI64 => MirType::I64,
             Self::NegateF64 => MirType::F64,
             Self::LogicalNotBool => MirType::Bool,
+            Self::BitwiseComplement(integer) => integer.operand_type(),
         }
     }
 
@@ -290,6 +292,10 @@ pub enum MirBinaryOperation {
     AddF64,
     SubtractF64,
     MultiplyF64,
+    IntegerBitwise {
+        operation: MirIntegerBitwiseOperation,
+        operand: MirIntegerType,
+    },
 }
 
 impl MirBinaryOperation {
@@ -299,6 +305,28 @@ impl MirBinaryOperation {
             Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => MirType::U64,
             Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => MirType::U8,
             Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => MirType::F64,
+            Self::IntegerBitwise { operand, .. } => operand.operand_type(),
+        }
+    }
+
+    pub const fn result_type(self) -> MirType {
+        self.operand_type()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirIntegerBitwiseOperation {
+    And,
+    Or,
+    Xor,
+}
+
+impl MirIntegerBitwiseOperation {
+    pub const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::And => "and",
+            Self::Or => "or",
+            Self::Xor => "xor",
         }
     }
 }

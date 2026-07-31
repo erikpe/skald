@@ -3,7 +3,8 @@
 use super::*;
 use crate::hir::{
     HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate, HirExpression,
-    HirExpressionKind, HirIntegerCast, HirIntegerType, HirPrimitiveComparison, HirUnaryOperation,
+    HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerCast, HirIntegerType,
+    HirPrimitiveComparison, HirUnaryOperation,
 };
 
 impl BodyLowerer<'_> {
@@ -134,6 +135,9 @@ impl BodyLowerer<'_> {
                     HirUnaryOperation::NegateI64 => MirUnaryOperation::NegateI64,
                     HirUnaryOperation::NegateF64 => MirUnaryOperation::NegateF64,
                     HirUnaryOperation::LogicalNotBool => MirUnaryOperation::LogicalNotBool,
+                    HirUnaryOperation::BitwiseComplement(integer) => {
+                        MirUnaryOperation::BitwiseComplement(lower_integer_type(integer))
+                    }
                 },
                 operand,
             },
@@ -170,6 +174,16 @@ impl BodyLowerer<'_> {
                     HirBinaryOperation::AddF64 => MirBinaryOperation::AddF64,
                     HirBinaryOperation::SubtractF64 => MirBinaryOperation::SubtractF64,
                     HirBinaryOperation::MultiplyF64 => MirBinaryOperation::MultiplyF64,
+                    HirBinaryOperation::IntegerBitwise { operation, operand } => {
+                        MirBinaryOperation::IntegerBitwise {
+                            operation: match operation {
+                                HirIntegerBitwiseOperation::And => MirIntegerBitwiseOperation::And,
+                                HirIntegerBitwiseOperation::Or => MirIntegerBitwiseOperation::Or,
+                                HirIntegerBitwiseOperation::Xor => MirIntegerBitwiseOperation::Xor,
+                            },
+                            operand: lower_integer_type(operand),
+                        }
+                    }
                 },
                 left,
                 right,

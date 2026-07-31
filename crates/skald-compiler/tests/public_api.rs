@@ -12,9 +12,11 @@ use skald_compiler::{
     },
     external::{ExternalLink, ExternalLinkTable},
     hir::{
-        dump_hir, HirComparisonOperand, HirComparisonPredicate, HirIntegerCast, HirIntegerType,
-        HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration, HirObjectSlice,
-        HirObjectView, HirPrimitiveComparison, HirProgram, HirViewTarget, ObjectProjection, Type,
+        dump_hir, HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate,
+        HirIntegerBitwiseOperation, HirIntegerCast, HirIntegerType, HirInterfaceCallTarget,
+        HirInterfaceConformance, HirInterfaceDeclaration, HirObjectSlice, HirObjectView,
+        HirPrimitiveComparison, HirProgram, HirUnaryOperation, HirViewTarget, ObjectProjection,
+        Type,
     },
     identity::{
         ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
@@ -24,10 +26,11 @@ use skald_compiler::{
     literal::NumericLiteralKind,
     mir::{
         dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
-        MirArrayTypeTable, MirBaseCopy, MirCallReceiver, MirComparisonOperand,
-        MirComparisonPredicate, MirDirectBase, MirIntegerCast, MirIntegerType,
-        MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
-        MirPlaceProjection, MirPrimitiveComparison, MirProgram, MirType, MirViewTarget,
+        MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirComparisonOperand,
+        MirComparisonPredicate, MirDirectBase, MirIntegerBitwiseOperation, MirIntegerCast,
+        MirIntegerType, MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration,
+        MirObjectView, MirPlaceProjection, MirPrimitiveComparison, MirProgram, MirType,
+        MirUnaryOperation, MirViewTarget,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -168,6 +171,16 @@ fn intentional_phase_and_dump_paths_compose() {
     };
     assert_eq!(hir_cast.source_type(), Type::U64);
     assert_eq!(hir_cast.result_type(), Type::U8);
+    let hir_bitwise = HirBinaryOperation::IntegerBitwise {
+        operation: HirIntegerBitwiseOperation::Xor,
+        operand: HirIntegerType::U8,
+    };
+    assert_eq!(hir_bitwise.operand_type(), Type::U8);
+    assert_eq!(hir_bitwise.result_type(), Type::U8);
+    assert_eq!(
+        HirUnaryOperation::BitwiseComplement(HirIntegerType::U64).result_type(),
+        Type::U64
+    );
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;
@@ -196,6 +209,16 @@ fn intentional_phase_and_dump_paths_compose() {
     };
     assert_eq!(mir_cast.source_type(), MirType::U64);
     assert_eq!(mir_cast.result_type(), MirType::U8);
+    let mir_bitwise = MirBinaryOperation::IntegerBitwise {
+        operation: MirIntegerBitwiseOperation::Xor,
+        operand: MirIntegerType::U8,
+    };
+    assert_eq!(mir_bitwise.operand_type(), MirType::U8);
+    assert_eq!(mir_bitwise.result_type(), MirType::U8);
+    assert_eq!(
+        MirUnaryOperation::BitwiseComplement(MirIntegerType::U64).result_type(),
+        MirType::U64
+    );
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);

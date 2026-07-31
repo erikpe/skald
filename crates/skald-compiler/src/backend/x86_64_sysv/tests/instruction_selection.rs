@@ -153,6 +153,39 @@ fn selects_eager_boolean_operations_with_canonical_results() {
 }
 
 #[test]
+fn selects_every_integer_bitwise_operation_and_canonicalizes_u8_results() {
+    let output = emit_assembly(Target::X86_64SysV, &integer_bitwise_program()).unwrap();
+    assert_eq!(
+        output,
+        emit_assembly(Target::X86_64SysV, &integer_bitwise_program()).unwrap()
+    );
+
+    let function = function_assembly(&output, ".Lska.fn.main.main.f0");
+    let lines: Vec<_> = function.lines().map(str::trim).collect();
+    for mnemonic in ["not rax", "and rax, rcx", "or rax, rcx", "xor rax, rcx"] {
+        assert_eq!(
+            lines.iter().filter(|line| **line == mnemonic).count(),
+            3,
+            "unexpected selection count for `{mnemonic}`"
+        );
+    }
+    let canonicalized_operations = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| {
+            matches!(
+                **line,
+                "not rax" | "and rax, rcx" | "or rax, rcx" | "xor rax, rcx"
+            )
+        })
+        .filter(|(index, _)| lines.get(index + 1) == Some(&"movzx rax, al"))
+        .count();
+    assert_eq!(canonicalized_operations, 4);
+    assert!(!function.contains("call "));
+    assert!(!output.contains("ska_rt_bitwise"));
+}
+
+#[test]
 fn selects_every_integer_cast_through_canonical_scalar_moves() {
     let mut source = String::new();
     let mut functions = Vec::new();

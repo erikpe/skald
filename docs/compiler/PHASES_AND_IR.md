@@ -236,6 +236,17 @@ saturating, implicit, mixed-type, and user-defined conversion remain outside
 this boundary. Implemented short-circuit logic uses the structured boundary
 below rather than this eager scalar boundary.
 
+The downstream-only pure integer bitwise path is also executable. Directly
+constructed typed HIR and verified MIR represent exact-width complement, AND,
+OR, and XOR for `i64`, `u64`, and `u8` as ordinary same-type scalar rvalues.
+Lowering preserves eager left-to-right evaluation and the existing scalar
+spill rule when the right operand affects control flow; it introduces no new
+block, failure edge, cleanup, or runtime capability. Verification enforces the
+exact operand/result type and ordinary block-local definition rules, while the
+x86-64 target preserves 64-bit patterns and canonicalizes `u8` results. Source
+syntax and type selection remain unavailable, so this internal boundary does
+not change the implemented language surface.
+
 ## Frozen primitive operator representation
 
 The

@@ -55,6 +55,7 @@ fn generated_text_is_accepted_by_the_system_assembler() {
         "fn main() -> i64 { if (compare_i64(-1, 0)) { return 1; } return 0; }\n",
     ));
     let eager_booleans = emit_assembly(Target::X86_64SysV, &eager_boolean_program()).unwrap();
+    let integer_bitwise = emit_assembly(Target::X86_64SysV, &integer_bitwise_program()).unwrap();
     let conditional_cleanup =
         emit_assembly(Target::X86_64SysV, &fixture_conditional_cleanup_program()).unwrap();
     let casts = assembly(concat!(
@@ -68,6 +69,7 @@ fn generated_text_is_accepted_by_the_system_assembler() {
     assert_system_assembler_accepts(&multi_block);
     assert_system_assembler_accepts(&comparisons);
     assert_system_assembler_accepts(&eager_booleans);
+    assert_system_assembler_accepts(&integer_bitwise);
     assert_system_assembler_accepts(&conditional_cleanup);
     assert_system_assembler_accepts(&casts);
 }

@@ -20,6 +20,7 @@ mod alias_fixtures;
 mod alias_lowering;
 mod aliases;
 mod arrays;
+mod bitwise;
 mod comparisons;
 mod conditional_cleanup;
 mod copy;
