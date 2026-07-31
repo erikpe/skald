@@ -8,8 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ### Complete primitive cast matrix
 
-Status: in progress; enabling the executable checked floating-to-integer casts
-from source is next.
+Status: in progress; hardening and promotion of the complete executable matrix
+is next.
 
 The [roadmap](PRIMITIVE_CAST_MATRIX_ROADMAP.md) implements the sixteen
 remaining cells of the frozen

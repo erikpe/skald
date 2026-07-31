@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST7 is next.
+Status: in progress; CAST8 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -83,7 +83,7 @@ clean checkout.
 - [x] CAST4 — Enable every non-failing cast from source
 - [x] CAST5 — Establish verified checked floating-to-integer control flow
 - [x] CAST6 — Execute checked floating-to-integer casts
-- [ ] CAST7 — Enable checked floating-to-integer casts from source
+- [x] CAST7 — Enable checked floating-to-integer casts from source
 - [ ] CAST8 — Harden and promote the complete matrix
 
 ## PR-sized implementation sequence
@@ -350,25 +350,25 @@ without runtime ABI expansion.
 **Purpose:** Complete source availability only after the checked semantic
 diamond and all target observations are independently proven.
 
-- [ ] Enable type-check selection of `f64` to `i64`, `u64`, and `u8`; remove
+- [x] Enable type-check selection of `f64` to `i64`, `u64`, and `u8`; remove
       the final temporary implementation diagnostic and accept the complete
       twenty-five-pair matrix.
-- [ ] Keep nonprimitive sources and targets invalid with focused actual/target
+- [x] Keep nonprimitive sources and targets invalid with focused actual/target
       diagnostics, and keep valid but failing floating constants as runtime
       failures rather than compile-time range errors.
-- [ ] Exercise each checked result in locals, assignment, arguments, results,
+- [x] Exercise each checked result in locals, assignment, arguments, results,
       fields, arrays, optionals, arithmetic, comparisons, nested casts,
       conditions after explicit conversion, loops, and selected-path
       expressions.
-- [ ] Prove source evaluation exactly once, success-path continuation,
+- [x] Prove source evaluation exactly once, success-path continuation,
       enclosing-expression ordering, and failure precedence relative to
       operand effects and preexisting checked operations.
-- [ ] Prove failure does not run later operand effects or promise remaining
+- [x] Prove failure does not run later operand effects or promise remaining
       cleanup after the reporter begins, while successful casts retain
       ordinary full-expression cleanup.
-- [ ] Add source-to-native boundary and failure goldens for all three targets,
+- [x] Add source-to-native boundary and failure goldens for all three targets,
       including dynamic values and the representative frozen examples.
-- [ ] Update living grammar, language/compiler overviews, phase/backend/error
+- [x] Update living grammar, language/compiler overviews, phase/backend/error
       documents, debugging/testing guidance, and status matrix to describe the
       full matrix as implemented without rollout task codes.
 

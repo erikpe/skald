@@ -51,28 +51,6 @@ impl CallableChecker<'_, '_> {
             ResolvedPrimitiveType::Bool => HirPrimitiveType::Bool,
         };
         let operation = HirPrimitiveCast::new(source, target);
-        if operation.may_terminate() {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    TYPE_MISMATCH,
-                    format!(
-                        "primitive cast from `{}` to `{}` is not implemented yet",
-                        source.name(),
-                        target.name()
-                    ),
-                )
-                .with_primary_label(
-                    operand.span,
-                    format!("source has primitive type `{}`", source.name()),
-                )
-                .with_secondary_label(
-                    cast.target_span,
-                    format!("target is primitive type `{}`", target.name()),
-                )
-                .with_note("checked `f64`-to-integer primitive casts are not implemented yet"),
-            );
-            return None;
-        }
         Some(HirExpression {
             kind: HirExpressionKind::PrimitiveCast {
                 operation,

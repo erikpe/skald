@@ -1,0 +1,31 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    value: f64;
+
+    init(value: f64) {
+        self.value = value;
+    }
+
+    fn read() -> f64 {
+        ska_rt_println_i64(1);
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(2);
+    }
+}
+
+fn make() -> shared Trace {
+    return new Trace(9223372036854775808.0);
+}
+
+fn later() -> i64 {
+    ska_rt_println_i64(3);
+    return 0;
+}
+
+fn main() -> i64 {
+    return (i64) make()->read() + later();
+}

@@ -1,7 +1,7 @@
 use super::*;
 use crate::hir::{
-    dump_hir, HirBinaryOperation, HirExpressionKind, HirLocalInitializer, HirPrimitiveCast,
-    HirPrimitiveType, HirStatement, Type,
+    dump_hir, HirExpressionKind, HirLocalInitializer, HirPrimitiveCast, HirPrimitiveType,
+    HirStatement,
 };
 
 const PRIMITIVE_TYPES: &[(HirPrimitiveType, MirPrimitiveType, &str)] = &[
@@ -13,13 +13,10 @@ const PRIMITIVE_TYPES: &[(HirPrimitiveType, MirPrimitiveType, &str)] = &[
 ];
 
 #[test]
-fn lowers_and_verifies_the_complete_source_enabled_pure_matrix() {
+fn lowers_and_verifies_the_complete_source_enabled_matrix() {
     let mut implemented_pairs = 0;
     for &(_, source_type, source_name) in PRIMITIVE_TYPES {
         for &(_, target_type, target_name) in PRIMITIVE_TYPES {
-            if MirPrimitiveCast::new(source_type, target_type).may_terminate() {
-                continue;
-            }
             implemented_pairs += 1;
             let operand = match source_type {
                 MirPrimitiveType::I64 => "-1",
@@ -34,26 +31,42 @@ fn lowers_and_verifies_the_complete_source_enabled_pure_matrix() {
             );
             let mir = lower_text(&source);
             verify_mir(&mir).unwrap();
-            let cast = primitive_cast(&mir);
-
-            assert_eq!(cast.0, MirPrimitiveCast::new(source_type, target_type));
-            assert_eq!(cast.0.source_type(), source_type.value_type());
-            assert_eq!(cast.0.result_type(), target_type.value_type());
-            assert_eq!(cast.2, target_type.value_type());
-            assert!(mir
-                .definitions
-                .get(FunctionId::new(0))
-                .unwrap()
-                .values
-                .iter()
-                .any(|value| value.id == cast.1 && value.ty == source_type.value_type()));
+            let operation = MirPrimitiveCast::new(source_type, target_type);
+            if operation.may_terminate() {
+                let definition = mir.definitions.get(FunctionId::new(0)).unwrap();
+                let relation = definition
+                    .body
+                    .blocks
+                    .iter()
+                    .find_map(|block| match block.terminator {
+                        Some(MirTerminator::PrimitiveCastRangeCheck { check, .. }) => {
+                            Some(check.relation)
+                        }
+                        _ => None,
+                    })
+                    .expect("checked source cast must lower to its range diamond");
+                assert_eq!(relation.operation(), operation);
+            } else {
+                let cast = primitive_cast(&mir);
+                assert_eq!(cast.0, operation);
+                assert_eq!(cast.0.source_type(), source_type.value_type());
+                assert_eq!(cast.0.result_type(), target_type.value_type());
+                assert_eq!(cast.2, target_type.value_type());
+                assert!(mir
+                    .definitions
+                    .get(FunctionId::new(0))
+                    .unwrap()
+                    .values
+                    .iter()
+                    .any(|value| value.id == cast.1 && value.ty == source_type.value_type()));
+            }
 
             let dump = dump_mir(&mir);
             assert_eq!(dump, dump_mir(&mir));
             assert!(dump.contains(&format!("cast.{source_name}.{target_name}")));
         }
     }
-    assert_eq!(implemented_pairs, 22);
+    assert_eq!(implemented_pairs, 25);
 }
 
 #[test]
@@ -190,45 +203,13 @@ fn primitive_cast_hir() -> crate::hir::HirProgram {
 }
 
 fn checked_primitive_cast_hir(target: HirPrimitiveType) -> crate::hir::HirProgram {
-    let mut hir = primitive_cast_hir();
-    let definition = hir
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let HirStatement::Local(local) = &mut definition.body.statements[0] else {
-        unreachable!()
-    };
-    let HirLocalInitializer::Value(expression) = &mut local.initializer else {
-        unreachable!()
-    };
-    let HirExpressionKind::PrimitiveCast { operand, .. } = &mut expression.kind else {
-        unreachable!()
-    };
-    operand.kind = HirExpressionKind::F64Bits(1.5f64.to_bits());
-    operand.ty = Type::F64;
-    select_checked_local_cast(&mut hir, FunctionId::new(0), target);
-    hir
-}
-
-fn select_checked_local_cast(
-    hir: &mut crate::hir::HirProgram,
-    function: FunctionId,
-    target: HirPrimitiveType,
-) {
-    let definition = hir.definitions.get_mut_for_test(function).unwrap();
-    definition.locals[0].ty = target.value_type();
-    let HirStatement::Local(local) = &mut definition.body.statements[0] else {
-        panic!("fixture must start with a local declaration");
-    };
-    let HirLocalInitializer::Value(expression) = &mut local.initializer else {
-        panic!("fixture local must have a scalar initializer");
-    };
-    let HirExpressionKind::PrimitiveCast { operation, operand } = &mut expression.kind else {
-        panic!("fixture initializer must be a primitive cast");
-    };
-    *operation = HirPrimitiveCast::new(HirPrimitiveType::F64, target);
-    assert_eq!(operand.ty, Type::F64);
-    expression.ty = target.value_type();
+    type_check_source(format!(
+        "fn exercise() -> unit {{ var value: {0} = ({0}) 1.5; }}\n\
+         fn main() -> i64 {{ return 0; }}\n",
+        target.name()
+    ))
+    .hir
+    .unwrap()
 }
 
 fn checked_primitive_cast_mir(target: HirPrimitiveType) -> MirProgram {
@@ -314,41 +295,13 @@ fn lowers_and_verifies_all_checked_primitive_cast_diamonds() {
 
 #[test]
 fn checked_cast_is_control_affecting_and_spills_an_enclosing_eager_operand() {
-    let checked = {
-        let hir = checked_primitive_cast_hir(HirPrimitiveType::I64);
-        let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
-        let HirStatement::Local(local) = &definition.body.statements[0] else {
-            unreachable!()
-        };
-        let HirLocalInitializer::Value(expression) = &local.initializer else {
-            unreachable!()
-        };
-        expression.clone()
-    };
-    let mut hir = type_check_source(concat!(
-        "fn exercise() -> i64 { return 1 + 2; }\n",
+    let hir = type_check_source(concat!(
+        "fn source() -> f64 { return 2.5; }\n",
+        "fn exercise() -> i64 { return 1 + (i64) source(); }\n",
         "fn main() -> i64 { return 0; }\n",
     ))
     .hir
     .unwrap();
-    let definition = hir
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
-        unreachable!()
-    };
-    let crate::hir::HirReturnValue::Scalar(expression) = statement.value.as_mut().unwrap() else {
-        unreachable!()
-    };
-    let HirExpressionKind::Binary {
-        operation, right, ..
-    } = &mut expression.kind
-    else {
-        unreachable!()
-    };
-    *operation = HirBinaryOperation::AddI64;
-    **right = checked;
 
     let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();
@@ -356,48 +309,23 @@ fn checked_cast_is_control_affecting_and_spills_an_enclosing_eager_operand() {
     let check = dump.find("primitive-cast-range-check f64.i64").unwrap();
     let addition = dump.find("add.i64").unwrap();
     assert!(check < addition);
-    let definition = mir.definitions.get(FunctionId::new(0)).unwrap();
+    let definition = mir.definitions.get(FunctionId::new(1)).unwrap();
     assert!(definition.storage.iter().any(|storage| {
         storage.kind == MirStorageKind::ScalarSpill
             && storage.ty == MirType::I64
             && storage.name.starts_with("spill")
     }));
-    assert!(dump.find("add.i64").unwrap() < dump.find("return").unwrap());
+    assert!(dump.find("add.i64").unwrap() < dump.rfind("return").unwrap());
 }
 
 #[test]
 fn checked_cast_stays_on_the_selected_path_of_a_loop_condition() {
-    let checked = {
-        let hir = checked_primitive_cast_hir(HirPrimitiveType::I64);
-        let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
-        let HirStatement::Local(local) = &definition.body.statements[0] else {
-            unreachable!()
-        };
-        let HirLocalInitializer::Value(expression) = &local.initializer else {
-            unreachable!()
-        };
-        expression.clone()
-    };
-    let mut hir = type_check_source(concat!(
-        "fn exercise() -> i64 { while (false && (bool) 1) {} return 0; }\n",
+    let hir = type_check_source(concat!(
+        "fn exercise() -> i64 { while (false && (bool) (i64) 1.5) {} return 0; }\n",
         "fn main() -> i64 { return 0; }\n",
     ))
     .hir
     .unwrap();
-    let definition = hir
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let HirStatement::While(statement) = &mut definition.body.statements[0] else {
-        unreachable!()
-    };
-    let HirExpressionKind::Logical(logical) = &mut statement.condition.kind else {
-        unreachable!()
-    };
-    let HirExpressionKind::PrimitiveCast { operand, .. } = &mut logical.right.kind else {
-        unreachable!()
-    };
-    **operand = checked;
 
     let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();
@@ -423,7 +351,7 @@ fn checked_cast_stays_on_the_selected_path_of_a_loop_condition() {
 
 #[test]
 fn effectful_checked_cast_operands_are_evaluated_once_and_cleanup_after_the_join() {
-    let mut hir = type_check_source(concat!(
+    let hir = type_check_source(concat!(
         "class Trace {\n",
         "  value: f64;\n",
         "  init(value: f64) { self.value = value; }\n",
@@ -431,12 +359,11 @@ fn effectful_checked_cast_operands_are_evaluated_once_and_cleanup_after_the_join
         "  destroy {}\n",
         "}\n",
         "fn make(value: f64) -> shared Trace { return new Trace(value); }\n",
-        "fn exercise() -> unit { var value: bool = (bool) make(7.5)->read(); }\n",
+        "fn exercise() -> unit { var value: u64 = (u64) make(7.5)->read(); }\n",
         "fn main() -> i64 { return 0; }\n",
     ))
     .hir
     .unwrap();
-    select_checked_local_cast(&mut hir, FunctionId::new(1), HirPrimitiveType::U64);
 
     let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();
@@ -488,15 +415,14 @@ fn effectful_checked_cast_operands_are_evaluated_once_and_cleanup_after_the_join
 
 #[test]
 fn checked_cast_secures_a_checked_operand_before_its_own_range_check() {
-    let mut hir = type_check_source(concat!(
+    let hir = type_check_source(concat!(
         "fn exercise(values: f64[]) -> unit {\n",
-        "  var value: bool = (bool) values[0];\n",
+        "  var value: u8 = (u8) values[0];\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     ))
     .hir
     .unwrap();
-    select_checked_local_cast(&mut hir, FunctionId::new(0), HirPrimitiveType::U8);
 
     let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();

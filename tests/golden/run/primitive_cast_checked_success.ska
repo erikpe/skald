@@ -1,0 +1,87 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+class Converted {
+    signed: i64;
+    unsigned: u64;
+    byte: u8;
+
+    init(value: f64) {
+        self.signed = (i64) value;
+        self.unsigned = (u64) value;
+        self.byte = (u8) value;
+    }
+}
+
+class Trace {
+    marker: i64;
+    value: f64;
+
+    init(marker: i64, value: f64) {
+        self.marker = marker;
+        self.value = value;
+    }
+
+    fn read() -> f64 {
+        ska_rt_println_i64(self.marker);
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(100 + self.marker);
+    }
+}
+
+fn make(marker: i64, value: f64) -> shared Trace {
+    return new Trace(marker, value);
+}
+
+fn source(marker: i64, value: f64) -> f64 {
+    ska_rt_println_i64(marker);
+    return value;
+}
+
+fn consume(value: u64) -> u64 {
+    return value;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64((i64) -7.9);
+    ska_rt_println_u64((u64) -0.5);
+    ska_rt_println_u8((u8) 255.9);
+
+    var local: i64 = (i64) source(1, 7.9);
+    ska_rt_println_i64(local);
+    local = (i64) source(2, -7.9);
+    ska_rt_println_i64(local);
+    ska_rt_println_u64(consume((u64) source(3, 42.9)));
+
+    var values: u8[] = u8[](1u);
+    values[0] = (u8) source(4, 255.9);
+    ska_rt_println_u8(values[0]);
+    var optional: i64? = (i64) source(5, 12.9);
+    ska_rt_println_i64(optional!);
+
+    var converted: Converted = Converted(8.9);
+    ska_rt_println_i64(converted.signed);
+    ska_rt_println_u64(converted.unsigned);
+    ska_rt_println_u8(converted.byte);
+
+    ska_rt_println_i64((i64) source(6, 4.9) + 1);
+    ska_rt_println_bool((u64) source(7, 7.9) == 7u);
+    ska_rt_println_i64((i64) (f64) (u8) 12.9);
+
+    ska_rt_println_bool(false && (bool) (u8) source(8, 1.0));
+    ska_rt_println_bool(true && (bool) (u8) source(9, 1.0));
+
+    var loop_value: f64 = 1.9;
+    while ((bool) (u8) loop_value) {
+        ska_rt_println_i64(10);
+        loop_value = 0.0;
+    }
+
+    ska_rt_println_i64((i64) make(11, 8.9)->read());
+    return 0;
+}

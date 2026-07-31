@@ -117,6 +117,14 @@ binding-storage selection, source-before-store ordering, and post-store
 temporary cleanup; backend and native goldens exercise canonical integer,
 byte, boolean, and floating storage plus exact rendered failures.
 
+Primitive-cast coverage starts with the complete twenty-five-cell type-check,
+HIR, and MIR matrix. Pure-cell backend tests own exact conversion results and
+the absence of helper calls; checked-cell MIR tests own range diamonds,
+evaluation order, success joins, and failure isolation. Native goldens cover
+all three checked targets with dynamic and representative literal values,
+exact panic output and status, selected-path behavior, later-effect
+suppression, and successful full-expression cleanup.
+
 ## Focused commands
 
 `make help` is the complete command inventory. Useful focused forms include:

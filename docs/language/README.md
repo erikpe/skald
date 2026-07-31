@@ -124,15 +124,14 @@ makes a result source-observable.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, operator availability, and the
-  complete implemented primitive operator profile, plus the frozen complete
-  explicit primitive cast matrix. Integer division and remainder, floating
+  complete implemented primitive operator profile and complete explicit
+  primitive cast matrix. Integer division and remainder, floating
   division, bitwise operations, checked shifts, integer and floating
-  comparisons, the nine total integer casts, eager boolean operators, and
+  comparisons, all twenty-five primitive casts, eager boolean operators, and
   short-circuit boolean expressions execute through verified MIR and the
-  x86-64 backend. MIR can represent and verify all twenty-two non-failing
-  primitive cast cells, all of which are accepted from source and execute on
-  x86-64. The active roadmap is implementing the remaining three checked
-  `f64`-to-integer cells.
+  x86-64 backend. The twenty-two non-failing primitive cast cells use pure
+  MIR; the three checked `f64`-to-integer cells use explicit verified control
+  flow. Every cell is accepted from source and executes inline on x86-64.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.

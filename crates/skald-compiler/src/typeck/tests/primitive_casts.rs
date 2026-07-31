@@ -10,14 +10,10 @@ const PRIMITIVE_TYPES: &[(HirPrimitiveType, &str, &str)] = &[
 ];
 
 #[test]
-fn checks_the_complete_non_failing_primitive_cast_matrix() {
+fn checks_the_complete_primitive_cast_matrix() {
     let mut implemented_pairs = 0;
     for &(source_type, source_name, operand) in PRIMITIVE_TYPES {
         for &(target_type, target_name, _) in PRIMITIVE_TYPES {
-            let operation = HirPrimitiveCast::new(source_type, target_type);
-            if operation.may_terminate() {
-                continue;
-            }
             implemented_pairs += 1;
             let source = format!(
                 "fn cast() -> {target_name} {{ return ({target_name}) {operand}; }} \
@@ -42,13 +38,18 @@ fn checks_the_complete_non_failing_primitive_cast_matrix() {
 
             let dump = dump_hir(&hir);
             assert_eq!(dump, dump_hir(&hir));
+            let failure = if operation.may_terminate() {
+                " failure=primitive-cast-out-of-range"
+            } else {
+                ""
+            };
             assert!(dump.contains(&format!(
-                "PrimitiveCast {} {source_name}.{target_name} : {target_name}",
-                operation.kind().mnemonic()
+                "PrimitiveCast {} {source_name}.{target_name}{failure} : {target_name}",
+                operation.kind().mnemonic(),
             )));
         }
     }
-    assert_eq!(implemented_pairs, 22);
+    assert_eq!(implemented_pairs, 25);
 }
 
 #[test]
@@ -71,46 +72,26 @@ fn casts_do_not_change_literal_validity_and_enable_exact_type_comparisons() {
 }
 
 #[test]
-fn checked_primitive_cast_pairs_have_one_focused_temporary_diagnostic() {
-    let mut pending_pairs = 0;
-    for &(source_type, source_name, operand) in PRIMITIVE_TYPES {
-        for &(target_type, target_name, _) in PRIMITIVE_TYPES {
-            if !HirPrimitiveCast::new(source_type, target_type).may_terminate() {
-                continue;
-            }
-            pending_pairs += 1;
-            let source = format!(
-                "fn cast() -> {target_name} {{ return ({target_name}) {operand}; }} \
-                 fn main() -> i64 {{ return 0; }}"
-            );
-            let output = check_text(&source);
-            assert!(output.has_errors(), "{source_name}-to-{target_name}");
-            assert!(output.hir.is_none(), "{source_name}-to-{target_name}");
-            assert_eq!(
-                output.diagnostics.len(),
-                1,
-                "{source_name}-to-{target_name}: {:?}",
-                output.diagnostics
-            );
-            let diagnostic = output
-                .diagnostics
-                .iter()
-                .find(|diagnostic| {
-                    diagnostic.message.contains("primitive cast")
-                        && diagnostic.message.contains("not implemented yet")
-                })
-                .unwrap_or_else(|| {
-                    panic!(
-                        "missing pending-pair diagnostic for {source_name}-to-{target_name}: {:?}",
-                        output.diagnostics
-                    )
-                });
-            assert_eq!(diagnostic.code, TYPE_MISMATCH);
-            assert!(diagnostic.message.contains(source_name));
-            assert!(diagnostic.message.contains(target_name));
-        }
+fn checked_cast_constants_remain_runtime_operations_after_type_checking() {
+    for (target, source) in [
+        ("i64", "9223372036854775808.0"),
+        ("u64", "-1.0"),
+        ("u8", "256.0"),
+    ] {
+        let text = format!(
+            "fn cast() -> {target} {{ return ({target}) {source}; }} \
+             fn main() -> i64 {{ return 0; }}"
+        );
+        let output = check_text(&text);
+        assert!(!output.has_errors(), "{target}: {:?}", output.diagnostics);
+        let hir = output.hir.expect("valid failing cast remains typed HIR");
+        let expression = returned_expression(hir.definitions.get(FunctionId::new(0)).unwrap());
+        assert!(matches!(
+            expression.kind,
+            HirExpressionKind::PrimitiveCast { operation, .. }
+                if operation.may_terminate()
+        ));
     }
-    assert_eq!(pending_pairs, 3);
 }
 
 #[test]
@@ -192,4 +173,43 @@ fn explicit_casts_compose_with_value_boundaries_and_arithmetic() {
 
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     assert!(output.hir.is_some());
+}
+
+#[test]
+fn checked_casts_compose_with_every_scalar_consumer_boundary() {
+    let output = check_text(
+        "class Converted {\n\
+           signed: i64;\n\
+           unsigned: u64;\n\
+           byte: u8;\n\
+           init(value: f64) {\n\
+             self.signed = (i64) value;\n\
+             self.unsigned = (u64) value;\n\
+             self.byte = (u8) value;\n\
+           }\n\
+         }\n\
+         fn consume(value: i64) -> i64 { return value; }\n\
+         fn convert(value: f64) -> i64 {\n\
+           var local: i64 = (i64) value;\n\
+           local = (i64) value;\n\
+           var values: i64[] = i64[](1u);\n\
+           values[0] = (i64) value;\n\
+           var optional: i64? = (i64) value;\n\
+           var converted: Converted = Converted(value);\n\
+           var selected: bool = false && (bool) (u8) value;\n\
+           while ((bool) (u8) value) {\n\
+             return consume((i64) (f64) (u8) value)\n\
+               + values[0] + optional! + converted.signed;\n\
+           }\n\
+           if ((u64) value == 0u || selected) { return local + (i64) value; }\n\
+           return consume((i64) value);\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("checked_f64_to_integer").count(), 14);
+    assert!(dump.contains("failure=primitive-cast-out-of-range"));
 }

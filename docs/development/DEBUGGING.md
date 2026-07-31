@@ -80,11 +80,14 @@ HIR records the exact integer or boolean operand kind, and MIR prints an
 operation such as `lt.u64` or `eq.bool` with a `bool` result. Prefix logical
 negation remains `LogicalNot` until type checking selects `LogicalNotBool`;
 MIR prints `not.bool`. Signed versus unsigned target conditions first appear
-in backend selection. For `(T) source` integer casts,
-HIR and MIR record both source and target integer types; MIR prints forms such
-as `cast.u64.i64`. A cast has no failure edge. When a total cast feeds a signed
-array position, inspect the preceding source-level unsigned comparison and its
-control-flow branch rather than looking for a hidden checked conversion.
+in backend selection. For `(T) source` primitive casts, HIR and MIR record both
+source and target types; pure MIR prints forms such as `cast.u64.i64`. A
+checked `f64`-to-integer cast instead prints
+`primitive-cast-range-check f64.T`, a success-only `checked-cast.f64.T`, one
+result join, and a failure block ending in `primitive-cast-out-of-range`. When
+a total cast feeds a signed array position, inspect the preceding source-level
+unsigned comparison and its control-flow branch rather than looking for a
+hidden checked conversion.
 
 For `~`, `&`, `^`, and `|`, AST and resolved dumps retain source operator
 identity and grouping. HIR prints exact forms such as

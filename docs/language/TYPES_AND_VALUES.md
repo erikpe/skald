@@ -554,11 +554,10 @@ external ABI. Integer arithmetic overflow is defined independently by the
 
 ## Frozen complete explicit primitive cast matrix
 
-The complete primitive cast design is frozen for implementation. Source
-programs, typed HIR, verified MIR, and x86-64 execution support all twenty-two
-non-failing cells. The three checked `f64`-to-integer cells have explicit
-verified MIR control flow but remain temporarily unavailable from source until
-source selection is enabled.
+The complete primitive cast design is implemented. Source programs, typed
+HIR, verified MIR, and x86-64 execution support all twenty-five cells. The
+three checked `f64`-to-integer cells use explicit verified success/failure
+control flow; the other twenty-two cells are pure value operations.
 An explicit primitive cast retains unary syntax `(T) source`, where `T` and
 the source type are each exactly one of `i64`, `u64`, `u8`, `f64`, and `bool`.
 All twenty-five source/target pairs are valid, including every same-type
@@ -647,12 +646,11 @@ recoverable conversion family.
 ## Other conversions and future value families
 
 The current compiler executes primitive integer division and remainder,
-floating division, bitwise and shift operations, comparisons, the nine
-integer casts, and boolean negation and equality through the x86-64 backend.
-All twenty-two non-failing cast cells execute from source through verified pure
-MIR and the x86-64 backend. The three checked `f64`-to-integer cells are not yet
-accepted from source. The compiler performs no user-defined conversions. Object
-casts are defined separately in
+floating division, bitwise and shift operations, comparisons, all twenty-five
+primitive casts, and boolean negation and equality through the x86-64 backend.
+The twenty-two non-failing cast cells use verified pure MIR; the three checked
+`f64`-to-integer cells use verified success/failure control flow. The compiler
+performs no user-defined conversions. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.

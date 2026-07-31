@@ -244,10 +244,9 @@ remain private after these observable requirements are met.
 
 The frozen
 [primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
-defines legal target-independent MIR input. MIR can carry and verify all
-twenty-two pure cells, source type checking admits all of them, and the x86-64
-backend executes all of them. MIR also carries and verifies the three checked
-diamonds, which x86-64 executes inline with ordered finite/range checks,
+defines legal target-independent MIR input. Source type checking admits all
+twenty-five cells. MIR carries and verifies the twenty-two pure cells and the
+three checked diamonds, which x86-64 executes inline with ordered finite/range checks,
 success-only conversion, and the common static-message failure path. A target consumes
 already selected source type, target type, semantic class, and pure or checked
 control-flow shape. It never derives signedness from source spelling or

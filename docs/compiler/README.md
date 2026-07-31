@@ -123,12 +123,10 @@ has separately selected
 boundaries. The active
 [implementation roadmap](../roadmaps/PRIMITIVE_CAST_MATRIX_ROADMAP.md) has
 generalized syntax, resolution, typed HIR, and MIR to the cohesive
-primitive-cast vocabulary. All twenty-two non-failing cells can be represented
-and verified as pure MIR, accepted from source, and executed by x86-64. Only
-the three checked `f64`-to-integer cells remain behind a focused temporary
-type-checking diagnostic. Direct typed HIR already lowers them to explicit,
-verified success/failure control flow, and x86-64 executes that flow inline.
-Source enablement is the next roadmap step.
+primitive-cast vocabulary. All twenty-five cells are accepted from source and
+execute inline on x86-64. The twenty-two non-failing cells use pure MIR; the
+three checked `f64`-to-integer cells lower to explicit, verified
+success/failure control flow.
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
