@@ -225,20 +225,6 @@ fn malformed_integer_casts_are_rejected_at_the_verifier_boundary() {
 }
 
 #[test]
-fn valid_pending_primitive_cast_is_rejected_at_target_legality() {
-    let program = primitive_cast_program(PrimitiveValue::I64(1), MirPrimitiveType::F64);
-    verify_mir(&program).unwrap();
-
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert_eq!(error.target(), Target::X86_64SysV);
-    assert_eq!(error.callable(), Some(FunctionId::new(0).into()));
-    assert_eq!(
-        error.message(),
-        "primitive cast `i64 -> f64` is not yet supported by this target"
-    );
-}
-
-#[test]
 fn uses_no_unpreserved_callee_saved_scratch_registers() {
     let output = assembly("fn main() -> i64 { return (2 + 3) * 4; }");
 

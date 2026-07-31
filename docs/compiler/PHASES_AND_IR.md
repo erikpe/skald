@@ -484,8 +484,9 @@ now has a cohesive target-independent MIR representation for all twenty-two
 non-failing cells, but is not yet a complete source-to-native phase product.
 Type checking remains limited to the implemented nine integer-to-integer
 cells. Direct verified MIR execution additionally supports `f64`/`bool`
-identity and every boolean boundary cast; only the three integer-to-`f64`
-pure cells still await target realization.
+identity, every boolean boundary cast, and every integer-to-`f64` cast. Thus
+the x86-64 backend executes all twenty-two pure cells while the source gate
+remains intentionally narrower.
 
 Lexing recognizes all five primitive type keywords. Syntax now uses one
 primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`
@@ -569,8 +570,7 @@ or helper names. Syntax, resolution, HIR, and MIR public facades expose
 cohesive primitive types and casts with no parallel integer-only cast model.
 Direct HIR and MIR fixtures cover every pure cell while the source gate keeps
 the thirteen pending pure cells unavailable to ordinary programs. The x86-64
-backend executes ten of those cells from direct verified MIR and rejects the
-three pending integer-to-`f64` casts before instruction selection.
+backend executes all thirteen of those cells from direct verified MIR.
 
 Focused implementation validation must cover all twenty-five pairs through
 syntax, resolution, type checking, HIR, MIR, verification, target legality,

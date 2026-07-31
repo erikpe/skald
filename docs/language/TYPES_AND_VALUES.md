@@ -648,9 +648,9 @@ The current compiler executes primitive integer division and remainder,
 floating division, bitwise and shift operations, comparisons, the nine
 integer casts, and boolean negation and equality through the x86-64 backend.
 All twenty-two non-failing cast cells have verified pure MIR representation;
-direct verified MIR also executes `f64`/`bool` identity and every
-boolean-boundary cast. The remaining sixteen matrix cells are not yet accepted
-from source. The compiler performs no user-defined conversions. Object
+the x86-64 backend executes all of them from direct verified MIR. The remaining
+sixteen matrix cells are not yet accepted from source. The compiler performs
+no user-defined conversions. Object
 casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form

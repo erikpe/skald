@@ -11,6 +11,21 @@ fn legality_accepts_all_ten_identity_and_boolean_boundary_cells() {
 }
 
 #[test]
+fn legality_accepts_all_three_integer_to_f64_cells() {
+    for source in [
+        PrimitiveValue::I64(-1),
+        PrimitiveValue::U64(u64::MAX),
+        PrimitiveValue::U8(u8::MAX),
+    ] {
+        emit_assembly(
+            Target::X86_64SysV,
+            &primitive_cast_program(source, MirPrimitiveType::F64),
+        )
+        .unwrap_or_else(|error| panic!("{source:?} -> f64: {error}"));
+    }
+}
+
+#[test]
 fn selector_uses_explicit_reusable_scalar_operations() {
     let f64_identity = cast_function(
         PrimitiveValue::F64Bits(0x7ff8_1234_5678_9abc),
@@ -71,6 +86,33 @@ fn selector_uses_explicit_reusable_scalar_operations() {
 }
 
 #[test]
+fn selector_distinguishes_signed_byte_and_full_domain_unsigned_conversion() {
+    for source in [PrimitiveValue::I64(i64::MIN), PrimitiveValue::U8(u8::MAX)] {
+        let function = cast_function(source, MirPrimitiveType::F64);
+        assert!(function.contains("cvtsi2sd xmm14, rax"));
+        assert!(!function.contains("jns "));
+        assert!(!function.contains("shr "));
+        assert!(!function.contains("addsd "));
+        assert!(!function.contains("call "));
+    }
+
+    let function = cast_function(PrimitiveValue::U64(u64::MAX), MirPrimitiveType::F64);
+    for instruction in [
+        "test rax, rax",
+        "jns .Lska.fn.main.cast.f0.primitive_cast_0_0_u64_signed_domain",
+        "shr rax, cl",
+        "and rdx, rcx",
+        "or rax, rdx",
+        "cvtsi2sd xmm14, rax",
+        "addsd xmm14, xmm14",
+        "jmp .Lska.fn.main.cast.f0.primitive_cast_0_1_u64_result_ready",
+    ] {
+        assert!(function.contains(instruction), "missing `{instruction}`");
+    }
+    assert!(!function.contains("call "));
+}
+
+#[test]
 fn emitted_identity_and_boolean_boundary_casts_are_deterministic_and_assemble() {
     for (source, target) in executable_cases() {
         let program = primitive_cast_program(source, target);
@@ -78,6 +120,22 @@ fn emitted_identity_and_boolean_boundary_casts_are_deterministic_and_assemble() 
         assert_eq!(output, emit_assembly(Target::X86_64SysV, &program).unwrap());
         assert_system_assembler_accepts(&output);
         assert!(!output.contains("ska_rt_primitive_cast"));
+    }
+}
+
+#[test]
+fn emitted_integer_to_f64_casts_are_deterministic_and_assemble_without_helpers() {
+    for source in [
+        PrimitiveValue::I64(i64::MIN),
+        PrimitiveValue::U64(u64::MAX),
+        PrimitiveValue::U8(u8::MAX),
+    ] {
+        let program = primitive_cast_program(source, MirPrimitiveType::F64);
+        let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+        assert_eq!(output, emit_assembly(Target::X86_64SysV, &program).unwrap());
+        assert_system_assembler_accepts(&output);
+        assert!(!output.contains("ska_rt_primitive_cast"));
+        assert!(!function_assembly(&output, CAST_FUNCTION).contains("call "));
     }
 }
 
@@ -241,6 +299,120 @@ fn cast_results_feed_boolean_control_flow_and_exact_numeric_comparisons() {
     );
 }
 
+#[test]
+fn signed_integer_to_f64_matches_an_exact_integer_oracle() {
+    for value in [
+        i64::MIN,
+        i64::MIN + 1,
+        -(1_i64 << 62) - 1,
+        -(1_i64 << 62),
+        -(1_i64 << 53) - 3,
+        -(1_i64 << 53) - 2,
+        -(1_i64 << 53) - 1,
+        -(1_i64 << 53),
+        -(1_i64 << 53) + 1,
+        -257,
+        -256,
+        -255,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        255,
+        256,
+        257,
+        (1_i64 << 52) - 1,
+        1_i64 << 52,
+        (1_i64 << 53) - 1,
+        1_i64 << 53,
+        (1_i64 << 53) + 1,
+        (1_i64 << 53) + 2,
+        (1_i64 << 53) + 3,
+        (1_i64 << 54) + 2,
+        (1_i64 << 54) + 6,
+        i64::MAX - 1,
+        i64::MAX,
+    ] {
+        assert_native_cast(
+            PrimitiveValue::I64(value),
+            MirPrimitiveType::F64,
+            signed_integer_to_f64_bits(value),
+        );
+    }
+}
+
+#[test]
+fn every_u8_converts_exactly_to_f64() {
+    for value in u8::MIN..=u8::MAX {
+        assert_native_cast(
+            PrimitiveValue::U8(value),
+            MirPrimitiveType::F64,
+            unsigned_integer_to_f64_bits(u64::from(value)),
+        );
+    }
+}
+
+#[test]
+fn full_domain_u64_to_f64_matches_an_exact_integer_oracle() {
+    for value in [
+        0,
+        1,
+        2,
+        255,
+        256,
+        257,
+        (1_u64 << 52) - 1,
+        1_u64 << 52,
+        (1_u64 << 53) - 1,
+        1_u64 << 53,
+        (1_u64 << 53) + 1,
+        (1_u64 << 53) + 2,
+        (1_u64 << 53) + 3,
+        (1_u64 << 54) + 1,
+        (1_u64 << 54) + 2,
+        (1_u64 << 54) + 3,
+        (1_u64 << 54) + 5,
+        (1_u64 << 54) + 6,
+        (1_u64 << 54) + 7,
+        (1_u64 << 62) - 1,
+        1_u64 << 62,
+        (1_u64 << 63) - 2,
+        (1_u64 << 63) - 1,
+        1_u64 << 63,
+        (1_u64 << 63) + 1,
+        (1_u64 << 63) + 2,
+        u64::MAX - 2,
+        u64::MAX - 1,
+        u64::MAX,
+    ] {
+        assert_native_cast(
+            PrimitiveValue::U64(value),
+            MirPrimitiveType::F64,
+            unsigned_integer_to_f64_bits(value),
+        );
+    }
+}
+
+#[test]
+fn exact_integer_oracle_has_known_ties_and_exponent_carries() {
+    assert_eq!(unsigned_integer_to_f64_bits(1), 0x3ff0_0000_0000_0000);
+    assert_eq!(
+        unsigned_integer_to_f64_bits((1_u64 << 53) + 1),
+        0x4340_0000_0000_0000
+    );
+    assert_eq!(
+        unsigned_integer_to_f64_bits((1_u64 << 53) + 3),
+        0x4340_0000_0000_0002
+    );
+    assert_eq!(
+        unsigned_integer_to_f64_bits(u64::MAX),
+        0x43f0_0000_0000_0000
+    );
+    assert_eq!(signed_integer_to_f64_bits(i64::MIN), 0xc3e0_0000_0000_0000);
+    assert_eq!(signed_integer_to_f64_bits(i64::MAX), 0x43e0_0000_0000_0000);
+}
+
 fn executable_cases() -> [(PrimitiveValue, MirPrimitiveType); 10] {
     [
         (PrimitiveValue::F64Bits(0), MirPrimitiveType::F64),
@@ -300,4 +472,39 @@ fn validator(target: MirPrimitiveType, expected_bits: u64) -> String {
         load_actual = load_actual,
         expected_bits = expected_bits,
     )
+}
+
+fn signed_integer_to_f64_bits(value: i64) -> u64 {
+    let sign = if value.is_negative() { 1_u64 << 63 } else { 0 };
+    sign | unsigned_integer_to_f64_bits(value.unsigned_abs())
+}
+
+fn unsigned_integer_to_f64_bits(value: u64) -> u64 {
+    if value == 0 {
+        return 0;
+    }
+
+    const FRACTION_BITS: u32 = 52;
+    const FRACTION_MASK: u64 = (1_u64 << FRACTION_BITS) - 1;
+    const EXPONENT_BIAS: u32 = 1023;
+
+    let mut exponent = u64::BITS - 1 - value.leading_zeros();
+    let significand = if exponent <= FRACTION_BITS {
+        value << (FRACTION_BITS - exponent)
+    } else {
+        let discarded_bits = exponent - FRACTION_BITS;
+        let mut retained = value >> discarded_bits;
+        let remainder = value & ((1_u64 << discarded_bits) - 1);
+        let halfway = 1_u64 << (discarded_bits - 1);
+        if remainder > halfway || (remainder == halfway && retained & 1 != 0) {
+            retained += 1;
+        }
+        if retained == 1_u64 << (FRACTION_BITS + 1) {
+            exponent += 1;
+            retained >>= 1;
+        }
+        retained
+    };
+
+    (u64::from(exponent + EXPONENT_BIAS) << FRACTION_BITS) | (significand & FRACTION_MASK)
 }

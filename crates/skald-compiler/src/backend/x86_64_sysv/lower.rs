@@ -173,6 +173,7 @@ struct InstructionSelector<'program, 'output> {
     optional_sequence: usize,
     array_sequence: usize,
     integer_division_sequence: usize,
+    primitive_cast_sequence: usize,
     output: &'output mut Vec<Instruction>,
 }
 
@@ -195,6 +196,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             optional_sequence: 0,
             array_sequence: 0,
             integer_division_sequence: 0,
+            primitive_cast_sequence: 0,
             output,
         }
     }

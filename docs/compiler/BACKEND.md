@@ -245,11 +245,9 @@ remain private after these observable requirements are met.
 The frozen
 [primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
 defines legal target-independent MIR input. MIR can carry and verify all
-twenty-two pure cells. The x86-64 backend executes nineteen of them: the nine
-integer cells, `f64` and `bool` identity, every numeric-to-`bool` cast, and
-every `bool`-to-numeric cast. Its legality pass returns a structured
-unsupported-operation error for the three pending integer-to-`f64` cells
-before instruction selection. A target consumes
+twenty-two pure cells, and the x86-64 backend executes all of them. Source
+admission remains a separate boundary and currently exposes only the nine
+integer cells. A target consumes
 already selected source type, target type, semantic class, and pure or checked
 control-flow shape. It never derives signedness from source spelling or
 substitutes a host language's conversion rules.
@@ -283,6 +281,15 @@ comparison. Both floating zeroes become `false`; every NaN becomes `true`.
 Boolean-to-integer results remain canonical zero or one, and boolean-to-`f64`
 produces exact binary64 zero or one inline. These operations add no helper
 call, failure edge, public symbol, or ABI category.
+
+Integer-to-`f64` conversion is also inline. Signed `i64` and canonical `u8`
+use scalar signed conversion after the ordinary canonical integer load; every
+`u8` value is therefore exact. Unsigned `u64` values through `i64::MAX` use
+the same direct conversion. For the upper half of the `u64` domain, generated
+code converts the half-sized sticky-bit value
+`(value >> 1) | (value & 1)` and doubles the result. This avoids signed
+reinterpretation while preserving round-to-nearest, ties-to-even results
+through `u64::MAX`, without a helper call or ABI addition.
 
 Checked `f64`-to-integer input arrives as verified control flow with one
 secured source, a semantic range check, success-only conversion, result join,

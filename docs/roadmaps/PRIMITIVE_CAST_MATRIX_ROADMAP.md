@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST3 is next.
+Status: in progress; CAST4 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -79,7 +79,7 @@ clean checkout.
 - [x] CAST0 — Establish cohesive primitive-cast front-end vocabulary
 - [x] CAST1 — Establish verified pure primitive-cast MIR
 - [x] CAST2 — Execute identity and boolean-boundary casts
-- [ ] CAST3 — Execute integer-to-floating casts
+- [x] CAST3 — Execute integer-to-floating casts
 - [ ] CAST4 — Enable every non-failing cast from source
 - [ ] CAST5 — Establish verified checked floating-to-integer control flow
 - [ ] CAST6 — Execute checked floating-to-integer casts
@@ -207,19 +207,19 @@ or ABI change.
 especially the full `u64` domain, behind the already verified pure MIR
 boundary.
 
-- [ ] Select signed `i64`-to-`f64` conversion with round-to-nearest,
+- [x] Select signed `i64`-to-`f64` conversion with round-to-nearest,
       ties-to-even behavior in the supported floating environment.
-- [ ] Convert every canonical `u8` exactly without adding a special runtime
+- [x] Convert every canonical `u8` exactly without adding a special runtime
       path or weakening its canonical storage invariant.
-- [ ] Implement full-domain `u64`-to-`f64` inline. Values above `i64::MAX`
+- [x] Implement full-domain `u64`-to-`f64` inline. Values above `i64::MAX`
       must be converted numerically rather than reinterpreted as negative;
       preserve correct rounding at the high end.
-- [ ] Extend machine legality, register-use modeling, selection, emission, and
+- [x] Extend machine legality, register-use modeling, selection, emission, and
       dumps only as required for the cohesive conversion path.
-- [ ] Prove the selected algorithm against an independent exact-integer to
+- [x] Prove the selected algorithm against an independent exact-integer to
       binary64 oracle in tests, including adjacent values around every
       rounding boundary chosen for focused coverage.
-- [ ] Keep source selection disabled and preserve the unchanged runtime header,
+- [x] Keep source selection disabled and preserve the unchanged runtime header,
       ABI marker, and reporter surface.
 
 **Tests:** Direct-MIR selector and native matrices for zero, one, signed
