@@ -1,6 +1,6 @@
 # Integer Division and Remainder Roadmap
 
-Status: planned; DR0 is next.
+Status: in progress; DR0 is complete and DR1 is next.
 
 This roadmap implements the frozen integer `/` and `%` family for exact
 `i64`, `u64`, and `u8` operands. It delivers floor division and matching
@@ -115,7 +115,7 @@ than adding operator-specific C harnesses.
 
 ## Progress
 
-- [ ] DR0 — Define checked integer division and remainder semantics
+- [x] DR0 — Define checked integer division and remainder semantics
 - [ ] DR1 — Lower and verify the checked control-flow shape
 - [ ] DR2 — Execute verified operations on x86-64
 - [ ] DR3 — Enable the complete source family end to end
@@ -129,25 +129,25 @@ than adding operator-specific C harnesses.
 inspection vocabulary before lowering, native instructions, or source syntax
 can depend on it.
 
-- [ ] Add cohesive HIR and MIR semantic operation carriers for division and
+- [x] Add cohesive HIR and MIR semantic operation carriers for division and
       remainder, including exact integer kind, operand/result queries,
       deterministic mnemonics, and compiler-known zero-divisor capability.
-- [ ] Classify both operations as control-affecting so enclosing eager
+- [x] Classify both operations as control-affecting so enclosing eager
       expressions secure earlier block-local scalars before later lowering can
       introduce a divisor-check edge.
-- [ ] Add distinct target-independent termination reasons for integer division
+- [x] Add distinct target-independent termination reasons for integer division
       by zero and integer remainder by zero without changing existing reason
       identity or message ordering.
-- [ ] Record floor quotient, divisor-signed remainder, and the successful
+- [x] Record floor quotient, divisor-signed remainder, and the successful
       `i64::MIN / -1` pair in operation-level APIs and tests without exposing a
       target opcode or treating overflow as failure.
-- [ ] Extend HIR/MIR facades and deterministic dumps only with the semantic
+- [x] Extend HIR/MIR facades and deterministic dumps only with the semantic
       vocabulary downstream consumers require; keep substantial
       implementation in responsibility-focused private modules.
-- [ ] Keep source construction and executable MIR lowering disabled in this
+- [x] Keep source construction and executable MIR lowering disabled in this
       task. Directly constructed model tests establish the closed semantic
       matrix and prevent incomplete syntax activation.
-- [ ] Preserve all existing arithmetic, bitwise, shift, comparison, logical,
+- [x] Preserve all existing arithmetic, bitwise, shift, comparison, logical,
       cleanup, failure, runtime, and ABI observations.
 
 **Tests:** Direct HIR/MIR operation matrices for `/` and `%` across

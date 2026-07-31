@@ -10,6 +10,7 @@ mod body;
 mod control_flow;
 mod declarations;
 mod expression;
+mod integer_division;
 mod object;
 mod optional;
 mod shared;
@@ -50,6 +51,11 @@ pub use expression::{
     HirIntegerType, HirInterfaceCallTarget, HirInterfaceReceiver, HirLogicalExpression,
     HirLogicalOperation, HirMethodCallTarget, HirPrimitiveComparison, HirTypeTest, HirTypeTestKind,
     HirUnaryOperation,
+};
+pub use integer_division::{
+    HirCheckedIntegerDivision, HirIntegerDivisionFailure, HirIntegerDivisionKind,
+    HirIntegerDivisionOperation, HirSignedIntegerDivisionSemantics, HirSignedMinimumPairResult,
+    HirSignedQuotientRounding, HirSignedRemainderSign,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,

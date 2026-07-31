@@ -4,10 +4,11 @@ use crate::{
 };
 
 use super::{
-    dump_hir, HirBinaryOperation, HirBlock, HirComparisonOperand, HirControlEffects, HirExpression,
-    HirExpressionKind, HirFunctionDefinition, HirIntegerBitwiseOperation, HirIntegerType,
-    HirLogicalExpression, HirLogicalOperation, HirPrimitiveComparison, HirReturnValue,
-    HirStatement, HirUnaryOperation, HirWhile, Type,
+    dump_hir, HirBinaryOperation, HirBlock, HirCheckedIntegerDivision, HirComparisonOperand,
+    HirControlEffects, HirExpression, HirExpressionKind, HirFunctionDefinition,
+    HirIntegerBitwiseOperation, HirIntegerDivisionKind, HirIntegerDivisionOperation,
+    HirIntegerType, HirLogicalExpression, HirLogicalOperation, HirPrimitiveComparison,
+    HirReturnValue, HirStatement, HirUnaryOperation, HirWhile, Type,
 };
 
 fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {
@@ -221,4 +222,50 @@ fn integer_bitwise_operations_retain_exact_types_and_dump_vocabulary() {
     assert_eq!(dump, dump_hir(&hir));
     assert!(dump.contains("Unary BitwiseComplement.u8 : u8"));
     assert!(dump.contains("Binary BitwiseOr.u8 : u8"));
+}
+
+#[test]
+fn dumps_manually_constructed_integer_division_semantics_deterministically() {
+    let mut hir = type_check_source(concat!(
+        "fn quotient() -> i64 { return 7 + -3; }\n",
+        "fn remainder() -> u8 { return 7u8 + 3u8; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+
+    for (function, kind, operand) in [
+        (
+            FunctionId::new(0),
+            HirIntegerDivisionKind::Quotient,
+            HirIntegerType::I64,
+        ),
+        (
+            FunctionId::new(1),
+            HirIntegerDivisionKind::Remainder,
+            HirIntegerType::U8,
+        ),
+    ] {
+        let expression =
+            returned_expression_mut(hir.definitions.get_mut_for_test(function).unwrap());
+        let HirExpressionKind::Binary { left, right, .. } = &expression.kind else {
+            panic!("expected source binary expression");
+        };
+        let operation = HirIntegerDivisionOperation { kind, operand };
+        expression.kind = HirExpressionKind::CheckedIntegerDivision(Box::new(
+            HirCheckedIntegerDivision::new(operation, (**left).clone(), (**right).clone()),
+        ));
+        expression.ty = operation.result_type();
+    }
+
+    let dump = dump_hir(&hir);
+    assert_eq!(dump, dump_hir(&hir));
+    assert!(dump.contains(concat!(
+        "CheckedIntegerDivision div.i64 signed-quotient=floor ",
+        "signed-remainder-sign=divisor minimum-pair=minimum ",
+        "failure=integer-division-by-zero : i64"
+    )));
+    assert!(dump.contains("CheckedIntegerDivision rem.u8 failure=integer-remainder-by-zero : u8"));
+    assert!(dump.contains("Dividend\n"));
+    assert!(dump.contains("Divisor\n"));
 }

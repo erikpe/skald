@@ -6,6 +6,7 @@ mod declarations;
 mod definition;
 mod ids;
 mod instruction;
+mod integer_division;
 mod interface;
 mod logical;
 mod optional;
@@ -40,6 +41,10 @@ pub use instruction::{
     MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction, MirEndFullExpression,
     MirInitialize, MirInstruction, MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver,
     MirObjectOrigin, MirObjectView, MirStorageDead, MirStorageLive, MirStore, MirViewTarget,
+};
+pub use integer_division::{
+    MirIntegerDivisionKind, MirIntegerDivisionOperation, MirSignedIntegerDivisionSemantics,
+    MirSignedMinimumPairResult, MirSignedQuotientRounding, MirSignedRemainderSign,
 };
 pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,

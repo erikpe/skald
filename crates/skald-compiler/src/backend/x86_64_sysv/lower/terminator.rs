@@ -38,17 +38,19 @@ impl PanicMessage {
         Self::ShiftCountOutOfRange,
     ];
 
-    const fn for_reason(reason: MirTerminationReason) -> Self {
+    const fn for_reason(reason: MirTerminationReason) -> Option<Self> {
         match reason {
-            MirTerminationReason::ObjectCastFailure => Self::ObjectCastFailure,
-            MirTerminationReason::OptionalAccessFailure => Self::OptionalAccessFailure,
-            MirTerminationReason::OptionalGuardOverflow => Self::OptionalGuardOverflow,
-            MirTerminationReason::OptionalPinnedMutation => Self::OptionalPinnedMutation,
-            MirTerminationReason::ArrayAllocationFailure => Self::ArrayAllocationFailure,
-            MirTerminationReason::ArrayIndexOutOfBounds => Self::ArrayIndexOutOfBounds,
-            MirTerminationReason::ArrayInvalidSliceBounds => Self::ArrayInvalidSliceBounds,
-            MirTerminationReason::ArraySliceLengthMismatch => Self::ArraySliceLengthMismatch,
-            MirTerminationReason::ShiftCountOutOfRange => Self::ShiftCountOutOfRange,
+            MirTerminationReason::ObjectCastFailure => Some(Self::ObjectCastFailure),
+            MirTerminationReason::OptionalAccessFailure => Some(Self::OptionalAccessFailure),
+            MirTerminationReason::OptionalGuardOverflow => Some(Self::OptionalGuardOverflow),
+            MirTerminationReason::OptionalPinnedMutation => Some(Self::OptionalPinnedMutation),
+            MirTerminationReason::ArrayAllocationFailure => Some(Self::ArrayAllocationFailure),
+            MirTerminationReason::ArrayIndexOutOfBounds => Some(Self::ArrayIndexOutOfBounds),
+            MirTerminationReason::ArrayInvalidSliceBounds => Some(Self::ArrayInvalidSliceBounds),
+            MirTerminationReason::ArraySliceLengthMismatch => Some(Self::ArraySliceLengthMismatch),
+            MirTerminationReason::ShiftCountOutOfRange => Some(Self::ShiftCountOutOfRange),
+            MirTerminationReason::IntegerDivisionByZero
+            | MirTerminationReason::IntegerRemainderByZero => None,
         }
     }
 
@@ -137,7 +139,17 @@ impl InstructionSelector<'_, '_> {
                 Ok(true)
             }
             MirTerminator::Terminate { reason, .. } => {
-                self.select_static_panic(PanicMessage::for_reason(*reason));
+                let Some(message) = PanicMessage::for_reason(*reason) else {
+                    return Err(crate::backend::BackendError::new(
+                        crate::backend::Target::X86_64SysV,
+                        Some(self.function.callable()),
+                        format!(
+                            "termination reason `{}` is not executable yet",
+                            reason.mnemonic()
+                        ),
+                    ));
+                };
+                self.select_static_panic(message);
                 Ok(true)
             }
             _ => Ok(false),

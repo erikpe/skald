@@ -26,6 +26,7 @@ mod conditional_cleanup;
 mod copy;
 mod cycles;
 mod integer_casts;
+mod integer_division;
 mod interface_dispatch;
 mod interface_fixtures;
 mod logical_boundaries;

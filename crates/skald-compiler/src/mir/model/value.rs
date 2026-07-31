@@ -225,6 +225,13 @@ pub enum MirRvalueKind {
         left: ValueId,
         right: ValueId,
     },
+    /// A semantic integer quotient or remainder. Verification rejects this
+    /// rvalue until it participates in the matching explicit divisor check.
+    IntegerDivision {
+        operation: super::integer_division::MirIntegerDivisionOperation,
+        dividend: ValueId,
+        divisor: ValueId,
+    },
     Shift {
         operation: super::shift::MirShiftOperation,
         left: ValueId,

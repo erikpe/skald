@@ -272,10 +272,13 @@ invalid lifetime state.
 ## Panic and hard-trap boundary
 
 The version-6 runtime reporter and explicit source-panic lowering are
-implemented. Compiler-known optional, array, cast, and checked-shift failures use the same
-reporter while retaining distinct target-independent MIR reasons. Legal
-ownership-count exhaustion enters the same static-message pool from its
+implemented. Compiler-known optional, array, cast, and checked-shift failures
+use the same reporter while retaining distinct target-independent MIR reasons.
+Legal ownership-count exhaustion enters the same static-message pool from its
 backend retain edge; corrupted ownership state remains a separate hard trap.
+The MIR model also names integer division and remainder by zero, but the
+x86-64 backend deliberately rejects those reasons until their verified
+checked operation and exact static-message entries are executable together.
 
 Instruction selection centrally lowers the explicit-panic and static
 termination forms described in

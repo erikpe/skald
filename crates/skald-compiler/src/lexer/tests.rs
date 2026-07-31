@@ -64,6 +64,33 @@ fn lexes_the_complete_supported_token_surface() {
 }
 
 #[test]
+fn division_and_remainder_tokens_remain_outside_the_source_surface() {
+    for operator in ["/", "%"] {
+        let (_, _, output) = lex_text(operator);
+        assert!(
+            output.has_errors(),
+            "operator {operator} unexpectedly lexed"
+        );
+        assert_eq!(output.diagnostics.iter().count(), 1);
+        assert_eq!(
+            output.diagnostics.iter().next().unwrap().code,
+            UNEXPECTED_CHARACTER
+        );
+    }
+
+    let (_, _, comment) = lex_text("// still a comment\n");
+    assert!(!comment.has_errors());
+    assert_eq!(
+        comment
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [TokenKind::Eof]
+    );
+}
+
+#[test]
 fn comparison_and_shift_punctuation_use_longest_match() {
     let (sources, source_id, output) = lex_text("== = != ! < <= << > >= >> -> :: &");
     let source = sources.get(source_id).unwrap();

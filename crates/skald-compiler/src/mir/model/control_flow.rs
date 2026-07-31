@@ -147,10 +147,12 @@ pub enum MirTerminationReason {
     ArrayInvalidSliceBounds,
     ArraySliceLengthMismatch,
     ShiftCountOutOfRange,
+    IntegerDivisionByZero,
+    IntegerRemainderByZero,
 }
 
 impl MirTerminationReason {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 11] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -160,7 +162,25 @@ impl MirTerminationReason {
         Self::ArrayInvalidSliceBounds,
         Self::ArraySliceLengthMismatch,
         Self::ShiftCountOutOfRange,
+        Self::IntegerDivisionByZero,
+        Self::IntegerRemainderByZero,
     ];
+
+    pub const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::ObjectCastFailure => "object-cast-failure",
+            Self::OptionalAccessFailure => "optional-access-failure",
+            Self::OptionalGuardOverflow => "optional-guard-overflow",
+            Self::OptionalPinnedMutation => "optional-pinned-mutation",
+            Self::ArrayAllocationFailure => "array-allocation-failure",
+            Self::ArrayIndexOutOfBounds => "array-index-out-of-bounds",
+            Self::ArrayInvalidSliceBounds => "array-invalid-slice-bounds",
+            Self::ArraySliceLengthMismatch => "array-slice-length-mismatch",
+            Self::ShiftCountOutOfRange => "shift-count-out-of-range",
+            Self::IntegerDivisionByZero => "integer-division-by-zero",
+            Self::IntegerRemainderByZero => "integer-remainder-by-zero",
+        }
+    }
 }
 
 impl MirTerminator {

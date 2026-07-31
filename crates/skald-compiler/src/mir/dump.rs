@@ -979,18 +979,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             write_span(output, *span);
         }
         Some(MirTerminator::Terminate { reason, span }) => {
-            let reason = match reason {
-                MirTerminationReason::ObjectCastFailure => "object-cast-failure",
-                MirTerminationReason::OptionalAccessFailure => "optional-access-failure",
-                MirTerminationReason::OptionalGuardOverflow => "optional-guard-overflow",
-                MirTerminationReason::OptionalPinnedMutation => "optional-pinned-mutation",
-                MirTerminationReason::ArrayAllocationFailure => "array-allocation-failure",
-                MirTerminationReason::ArrayIndexOutOfBounds => "array-index-out-of-bounds",
-                MirTerminationReason::ArrayInvalidSliceBounds => "array-invalid-slice-bounds",
-                MirTerminationReason::ArraySliceLengthMismatch => "array-slice-length-mismatch",
-                MirTerminationReason::ShiftCountOutOfRange => "shift-count-out-of-range",
-            };
-            let _ = write!(output, "terminate {reason}");
+            let _ = write!(output, "terminate {}", reason.mnemonic());
             write_span(output, *span);
         }
         Some(MirTerminator::Panic { message, span }) => {
@@ -1140,6 +1129,18 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 }
             };
             let _ = write!(output, "{operation} {left}, {right}");
+        }
+        MirRvalueKind::IntegerDivision {
+            operation,
+            dividend,
+            divisor,
+        } => {
+            let _ = write!(
+                output,
+                "{}.{} {dividend}, {divisor}",
+                operation.mnemonic(),
+                operation.operand.name()
+            );
         }
         MirRvalueKind::Shift {
             operation,

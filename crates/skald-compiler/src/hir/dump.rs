@@ -923,6 +923,38 @@ impl HirDumper {
                     dumper.indented(|dumper| dumper.expression(&shift.count));
                 });
             }
+            HirExpressionKind::CheckedIntegerDivision(division) => {
+                division.validate(expression.ty);
+                let signed_semantics = division
+                    .operation
+                    .signed_semantics()
+                    .map(|semantics| {
+                        let minimum_pair_result = match semantics.minimum_pair_result {
+                            crate::hir::HirSignedMinimumPairResult::Minimum => "minimum",
+                            crate::hir::HirSignedMinimumPairResult::Zero => "zero",
+                        };
+                        format!(
+                            " signed-quotient=floor signed-remainder-sign=divisor minimum-pair={minimum_pair_result}"
+                        )
+                    })
+                    .unwrap_or_default();
+                self.typed_line(
+                    &format!(
+                        "CheckedIntegerDivision {}.{}{} failure={}",
+                        division.operation.mnemonic(),
+                        division.operation.operand.name(),
+                        signed_semantics,
+                        division.operation.failure().mnemonic(),
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| {
+                    dumper.heading("Dividend");
+                    dumper.indented(|dumper| dumper.expression(&division.dividend));
+                    dumper.heading("Divisor");
+                    dumper.indented(|dumper| dumper.expression(&division.divisor));
+                });
+            }
             HirExpressionKind::Logical(logical) => {
                 let operation = match logical.operation {
                     crate::hir::HirLogicalOperation::And => "And",

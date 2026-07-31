@@ -6,14 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Integer Division and Remainder Roadmap](INTEGER_DIVISION_AND_REMAINDER_ROADMAP.md)
+  — in progress; DR0 is complete and DR1 is next. Implements checked `/` and
+  `%` for exact `i64`, `u64`, and `u8`, including floor semantics,
+  zero-divisor failures, and the defined signed-overflow edge case.
 
 ## Planned
 
-- [Integer Division and Remainder Roadmap](INTEGER_DIVISION_AND_REMAINDER_ROADMAP.md)
-  — planned; DR0 is next. Implements checked `/` and `%` for exact `i64`,
-  `u64`, and `u8`, including floor semantics, zero-divisor failures, and the
-  defined signed-overflow edge case.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

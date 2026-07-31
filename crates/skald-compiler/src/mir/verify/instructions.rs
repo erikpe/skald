@@ -647,6 +647,27 @@ impl Verifier<'_> {
                 self.verify_binary_operand(function, block, *left, expected, defined);
                 self.verify_binary_operand(function, block, *right, expected, defined);
             }
+            MirRvalueKind::IntegerDivision {
+                operation,
+                dividend,
+                divisor,
+            } => {
+                let expected = operation.operand_type();
+                if rvalue.ty != operation.result_type() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "integer division or remainder result type mismatch",
+                    );
+                }
+                self.verify_binary_operand(function, block, *dividend, expected, defined);
+                self.verify_binary_operand(function, block, *divisor, expected, defined);
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "integer division or remainder requires a verified divisor check",
+                );
+            }
             MirRvalueKind::Shift {
                 operation,
                 left,

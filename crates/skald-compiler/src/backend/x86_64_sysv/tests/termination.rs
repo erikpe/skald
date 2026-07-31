@@ -1,5 +1,17 @@
 use super::*;
 
+const EXECUTABLE_MIR_TERMINATION_REASONS: [MirTerminationReason; 9] = [
+    MirTerminationReason::ObjectCastFailure,
+    MirTerminationReason::OptionalAccessFailure,
+    MirTerminationReason::OptionalGuardOverflow,
+    MirTerminationReason::OptionalPinnedMutation,
+    MirTerminationReason::ArrayAllocationFailure,
+    MirTerminationReason::ArrayIndexOutOfBounds,
+    MirTerminationReason::ArrayInvalidSliceBounds,
+    MirTerminationReason::ArraySliceLengthMismatch,
+    MirTerminationReason::ShiftCountOutOfRange,
+];
+
 #[test]
 fn pools_and_reports_every_static_termination_reason_in_stable_order() {
     let mut program = lower_text("fn main() -> i64 { return 0; }");
@@ -9,7 +21,7 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
         .unwrap();
     let span = definition.span;
     definition.values.clear();
-    definition.body.blocks = MirTerminationReason::ALL
+    definition.body.blocks = EXECUTABLE_MIR_TERMINATION_REASONS
         .into_iter()
         .enumerate()
         .map(|(index, reason)| MirBasicBlock {
@@ -57,7 +69,7 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
 
 #[test]
 fn every_static_termination_reason_reports_exact_native_stderr() {
-    for (reason, message) in MirTerminationReason::ALL.into_iter().zip([
+    for (reason, message) in EXECUTABLE_MIR_TERMINATION_REASONS.into_iter().zip([
         "checked object cast failed",
         "optional value is absent",
         "optional presence guard overflow",
@@ -90,6 +102,36 @@ fn every_static_termination_reason_reports_exact_native_stderr() {
             result.stderr,
             format!("panic: {message}\n").as_bytes(),
             "{reason:?}"
+        );
+    }
+}
+
+#[test]
+fn model_only_integer_zero_divisor_reasons_do_not_change_the_message_pool() {
+    for reason in [
+        MirTerminationReason::IntegerDivisionByZero,
+        MirTerminationReason::IntegerRemainderByZero,
+    ] {
+        let mut program = lower_text("fn main() -> i64 { return 0; }");
+        let definition = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        definition.values.clear();
+        definition.body.blocks[0].instructions.clear();
+        definition.body.blocks[0].terminator = Some(MirTerminator::Terminate {
+            reason,
+            span: definition.span,
+        });
+
+        verify_mir(&program).unwrap();
+        let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+        assert_eq!(
+            error.message(),
+            format!(
+                "termination reason `{}` is not executable yet",
+                reason.mnemonic()
+            )
         );
     }
 }

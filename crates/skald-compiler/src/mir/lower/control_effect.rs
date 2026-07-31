@@ -15,9 +15,9 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::PrimitiveComparison { left, right, .. } => {
             expression_contains_control_effect(left) || expression_contains_control_effect(right)
         }
-        // A checked shift always introduces a range-check diamond, regardless
-        // of whether its operands are otherwise pure.
-        HirExpressionKind::CheckedShift(_) => true,
+        // Checked arithmetic always introduces a semantic-check diamond,
+        // regardless of whether its operands are otherwise pure.
+        HirExpressionKind::CheckedIntegerDivision(_) | HirExpressionKind::CheckedShift(_) => true,
         // Logical expressions always select blocks even when both operands
         // are otherwise pure.
         HirExpressionKind::Logical(_) => true,
@@ -254,5 +254,48 @@ fn interface_receiver_contains_control_effect(receiver: &HirInterfaceReceiver) -
     match receiver {
         HirInterfaceReceiver::View(view) => view_source_contains_control_effect(&view.source),
         HirInterfaceReceiver::Checked(view) => checked_view_contains_control_effect(view),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        hir::{
+            HirCheckedIntegerDivision, HirIntegerDivisionKind, HirIntegerDivisionOperation,
+            HirIntegerType, HirReturnValue, HirStatement,
+        },
+        test_support::type_check_source,
+    };
+
+    #[test]
+    fn checked_integer_division_is_control_affecting_with_pure_operands() {
+        let mut hir = type_check_source("fn main() -> i64 { return 8 + 3; }\n")
+            .hir
+            .unwrap();
+        let definition = hir
+            .definitions
+            .get_mut_for_test(hir.entry_function)
+            .unwrap();
+        let HirStatement::Return(statement) = definition.body.statements.last_mut().unwrap() else {
+            panic!("expected return statement");
+        };
+        let HirReturnValue::Scalar(expression) = statement.value.as_mut().unwrap() else {
+            panic!("expected scalar return value");
+        };
+        let HirExpressionKind::Binary { left, right, .. } = &expression.kind else {
+            panic!("expected binary expression");
+        };
+        expression.kind =
+            HirExpressionKind::CheckedIntegerDivision(Box::new(HirCheckedIntegerDivision::new(
+                HirIntegerDivisionOperation {
+                    kind: HirIntegerDivisionKind::Quotient,
+                    operand: HirIntegerType::I64,
+                },
+                (**left).clone(),
+                (**right).clone(),
+            )));
+
+        assert!(expression_contains_control_effect(expression));
     }
 }
