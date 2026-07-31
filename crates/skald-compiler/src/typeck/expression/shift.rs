@@ -79,6 +79,8 @@ const fn shift_selection(
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
         | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::Divide
+        | ResolvedBinaryOperator::Remainder
         | ResolvedBinaryOperator::BitwiseAnd
         | ResolvedBinaryOperator::BitwiseOr
         | ResolvedBinaryOperator::BitwiseXor

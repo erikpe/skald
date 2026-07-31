@@ -49,8 +49,9 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         HirExpressionKind::CheckedShift(_) => {
             panic!("i64 typing helper does not accept checked shifts")
         }
-        HirExpressionKind::CheckedIntegerDivision(_) => {
-            panic!("i64 typing helper does not accept checked integer division")
+        HirExpressionKind::CheckedIntegerDivision(division) => {
+            assert_expression_is_fully_typed(&division.dividend);
+            assert_expression_is_fully_typed(&division.divisor);
         }
         HirExpressionKind::IntegerCast { operation, operand } => {
             assert_eq!(operand.ty, operation.source_type());
@@ -158,6 +159,7 @@ mod eager_boolean_operators;
 mod expressions;
 mod inline_fields;
 mod integer_casts;
+mod integer_division;
 mod interfaces;
 mod literals;
 mod object_results;

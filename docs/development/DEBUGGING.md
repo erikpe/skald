@@ -102,6 +102,16 @@ and its failure block must terminate with `shift-count-out-of-range`. In
 assembly, the unsigned compare and valid-count branch must precede both the
 first `rcx` count load and the `..., cl` instruction.
 
+For source `/` and `%`, AST and resolved dumps retain operation identity,
+grouping, and spans. HIR prints a checked integer-division operation with its
+exact integer kind and operation-specific zero failure. MIR must show secured
+dividend and divisor spills followed by an explicit zero check; only the
+success block may perform `div` or `rem`, initialize the result carrier, and
+join the enclosing expression. The failure block must terminate with
+`integer-division-by-zero` or `integer-remainder-by-zero`. In signed assembly,
+the zero and `i64::MIN / -1` guards must precede `idiv`; ordinary non-exact
+results then pass through the floor-quotient correction.
+
 For `left && right` or `left || right`, AST and resolved dumps retain a
 distinct logical node and HIR prints `Logical And` or `Logical Or`. MIR should
 contain a `LogicalExpressions` row, a split branch, separate short and right

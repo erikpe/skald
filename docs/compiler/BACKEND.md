@@ -116,7 +116,8 @@ divisor to the remainder, producing floor quotient and divisor-sign remainder.
 Failure selects the exact operation-specific static message. Existing message
 symbols retain indices 0 through 9; division and remainder append indices 10
 and 11. This adds no public symbol, calling convention, frame category, or
-runtime ABI entry point. Source syntax does not select these operations yet.
+runtime ABI entry point. Source `/` and `%` select these operations through
+the ordinary frontend pipeline.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

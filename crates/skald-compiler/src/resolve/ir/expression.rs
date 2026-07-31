@@ -351,6 +351,8 @@ pub enum ResolvedBinaryOperator {
     Add,
     Subtract,
     Multiply,
+    Divide,
+    Remainder,
     ShiftLeft,
     ShiftRight,
     BitwiseAnd,

@@ -139,6 +139,8 @@ const fn bitwise_selection(operator: ResolvedBinaryOperator) -> Option<BitwiseSe
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
         | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::Divide
+        | ResolvedBinaryOperator::Remainder
         | ResolvedBinaryOperator::ShiftLeft
         | ResolvedBinaryOperator::ShiftRight
         | ResolvedBinaryOperator::Equal

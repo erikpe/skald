@@ -44,6 +44,13 @@ const INTEGER_BITWISE_SHIFT_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_INTEGER_BITWISE_SHIFT_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const INTEGER_BITWISE_SHIFT_DIAGNOSTIC_TEST_NAME: &str =
     "integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes";
+const INTEGER_DIVISION_HELPER_OUTPUT: &str = "SKALD_INTEGER_DIVISION_DETERMINISM_OUTPUT";
+const INTEGER_DIVISION_TEST_NAME: &str =
+    "integer_division_phase_products_are_deterministic_across_processes";
+const INTEGER_DIVISION_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_INTEGER_DIVISION_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const INTEGER_DIVISION_DIAGNOSTIC_TEST_NAME: &str =
+    "integer_division_diagnostics_are_deterministic_across_processes";
 const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
@@ -149,6 +156,26 @@ fn integer_bitwise_and_shift_diagnostics_are_deterministic_across_processes() {
         INTEGER_BITWISE_SHIFT_DIAGNOSTIC_HELPER_OUTPUT,
         INTEGER_BITWISE_SHIFT_DIAGNOSTIC_TEST_NAME,
         integer_bitwise_and_shift_diagnostic_dump,
+    );
+}
+
+#[test]
+fn integer_division_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "integer-division",
+        INTEGER_DIVISION_HELPER_OUTPUT,
+        INTEGER_DIVISION_TEST_NAME,
+        integer_division_phase_dump,
+    );
+}
+
+#[test]
+fn integer_division_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "integer-division-diagnostics",
+        INTEGER_DIVISION_DIAGNOSTIC_HELPER_OUTPUT,
+        INTEGER_DIVISION_DIAGNOSTIC_TEST_NAME,
+        integer_division_diagnostic_dump,
     );
 }
 
@@ -647,6 +674,19 @@ fn integer_bitwise_and_shift_diagnostic_dump() -> String {
             "}\n",
             "fn main() -> i64 { return 0; }\n",
         ),
+    )
+}
+
+fn integer_division_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/integer_division_operators.ska"
+    ))
+}
+
+fn integer_division_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "integer-division-diagnostics.ska",
+        include_str!("../../../tests/golden/compile_fail/integer_division_operator_types.ska"),
     )
 }
 

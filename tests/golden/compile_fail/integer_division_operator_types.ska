@@ -1,0 +1,19 @@
+class Value {
+    bits: u64;
+
+    init() {
+        self.bits = 1u;
+    }
+}
+
+fn notify() -> unit {}
+
+fn main() -> i64 {
+    1 / 1u;
+    1u % 1u8;
+    true / false;
+    1.0 % 2.0;
+    notify() / notify();
+    Value() % Value();
+    return 0;
+}

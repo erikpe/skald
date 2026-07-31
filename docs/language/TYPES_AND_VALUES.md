@@ -154,6 +154,7 @@ The implemented arithmetic surface is deliberately exact-type:
 | Operator | Accepted operand types | Result |
 |---|---|---|
 | binary `+`, `-`, `*` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | that same type |
+| binary `/`, `%` | two operands of the same type among `i64`, `u64`, and `u8` | that same type |
 | unary `-` | `i64` or `f64` | the operand type |
 | prefix `!` | `bool` | `bool` |
 | prefix `~` | `i64`, `u64`, or `u8` | the operand type |
@@ -175,8 +176,8 @@ particular NaN payload.
 
 Integer equality and ordering plus boolean equality, inequality, logical
 negation, and short-circuit `&&` and `||` are implemented as specified below.
-Floating equality or ordering, division, remainder, and exponentiation
-are not implemented. Built-in array indexing and slicing
+Floating equality or ordering, floating division or remainder, and
+exponentiation are not implemented. Built-in array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
 and nested arrays on x86-64. The same element categories execute in shared
@@ -395,6 +396,34 @@ Those tiers bind before comparisons, contextual `is`,
 and short-circuit `&&` and `||`. The exact accepted ladder is in the
 [implemented grammar](GRAMMAR.md#expressions).
 
+## Implemented integer division and remainder
+
+Binary `/` and `%` accept exactly two operands of the same type among `i64`,
+`u64`, and `u8`, and return that identical type. They do not insert an
+implicit cast, promotion, narrowing, signedness change, expected-type
+reinterpretation, or truthiness conversion. Floating division and remainder
+remain unavailable.
+
+Unsigned division and remainder use the ordinary nonnegative quotient and
+remainder. Signed `i64` division rounds toward negative infinity; its
+remainder is zero or has the divisor's sign and satisfies
+`remainder = dividend - quotient * divisor` under wrapping arithmetic. The
+defined `i64::MIN / -1` and `i64::MIN % -1` results are `i64::MIN` and zero,
+not failures.
+
+Operands evaluate exactly once from left to right. Both complete before the
+divisor check, so an earlier operand failure occurs first. A zero divisor
+terminates through the operation-specific `integer division by zero` or
+`integer remainder by zero` panic reason; a literal zero follows the same
+runtime path as a dynamic zero. Successful temporaries retain the ordinary
+full-expression cleanup boundary.
+
+`*`, `/`, and `%` form one left-associative multiplicative tier above `+` and
+`-`. The operations compose with arbitrary valid operands and all ordinary
+expression consumers. Their typed representation, explicit checked MIR
+diamond, and x86-64 realization are described by the compiler phase and
+backend contracts.
+
 ## Implemented primitive comparisons, boolean negation, and integer casts
 
 This section defines the implemented source-visible comparison, eager boolean,
@@ -502,9 +531,10 @@ implied by the total integer cast syntax.
 
 ## Other conversions and future value families
 
-The current compiler executes primitive integer bitwise and shift operations,
-comparisons, and casts plus boolean negation and equality through the x86-64
-backend. It performs no user-defined conversions. All other numeric
+The current compiler executes primitive integer division and remainder,
+bitwise and shift operations, comparisons, and casts plus boolean negation and
+equality through the x86-64 backend. It performs no user-defined conversions.
+All other numeric
 conversion behavior remains deferred. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form

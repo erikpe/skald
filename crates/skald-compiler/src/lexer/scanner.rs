@@ -279,6 +279,8 @@ impl<'source> Lexer<'source> {
             '+' => TokenKind::Plus,
             '-' => TokenKind::Minus,
             '*' => TokenKind::Star,
+            '/' => TokenKind::Slash,
+            '%' => TokenKind::Percent,
             '=' => TokenKind::Equal,
             '<' => TokenKind::Less,
             '>' => TokenKind::Greater,

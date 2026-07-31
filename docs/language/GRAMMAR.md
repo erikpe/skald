@@ -110,21 +110,12 @@ All four spellings remain ordinary identifiers outside those positions.
 The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
-( ) { } [ ] , : :: ; . -> + - * = == != < <= > >= ? ! ~ & | ^ << >> && ||
+( ) { } [ ] , : :: ; . -> + - * / % = == != < <= > >= ? ! ~ & | ^ << >> && ||
 ```
 
 Double quotes delimit one string-literal token. There are no character or
-division tokens in the implemented grammar.
-
-The remaining frozen primitive-operator extension additionally selects these
-tokens:
-
-```text
-/ %
-```
-
-These remaining tokens are unavailable until their implementation roadmaps
-land. Power syntax is not frozen or reserved.
+power tokens in the implemented grammar. Power syntax is not frozen or
+reserved.
 
 ## Literals
 
@@ -441,7 +432,8 @@ additive-expression
                             {("+" | "-") multiplicative-expression}
 
 multiplicative-expression
-                          = unary-expression {"*" unary-expression}
+                          = unary-expression
+                            {("*" | "/" | "%") unary-expression}
 
 unary-expression          = ("-" | "!" | "~" | "*") unary-expression
                           | cast-expression
@@ -565,8 +557,8 @@ cast matrix are defined by
 
 ### Frozen primitive-operator expression extension
 
-The complete frozen operator grammar extends the implemented expression ladder
-above with division and remainder when that family is implemented:
+The complete frozen operator grammar and the implemented expression ladder
+currently have the following shared shape:
 
 ```text
 expression                = logical-or-expression

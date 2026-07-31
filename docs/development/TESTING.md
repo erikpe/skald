@@ -308,6 +308,19 @@ diagnostics. The golden runner independently recompiles every case before
 comparing assembly and independently executes native cases twice before
 checking values, panic bytes, and process status.
 
+Checked integer-division coverage follows the same source-to-control-flow
+boundary. Lexer tests distinguish `/`, `%`, `//`, and spaced `/ /`; parser and
+resolution tests own the shared multiplicative tier, source identity, spans,
+grouping, and recovery. Type-check tests enumerate exact same-type
+`i64`/`u64`/`u8` selection, noninteger and mixed-type rejection, source-order
+diagnostics, and arbitrary control-affecting operands. HIR/MIR tests own the
+secured operands, explicit zero-check diamond, operation-specific failure,
+successful result carrier, and verifier mutations. Backend tests own unsigned
+and signed instruction shape, floor correction, the signed-minimum guard,
+`u8` canonicalization, and static-message stability. Native and
+compile-failure goldens own sign and boundary results, exact zero failures,
+failure-before-check, every consumer, evaluation order, and cleanup.
+
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
 recovery. Resolution and type-check tests own source-shaped negation, exact

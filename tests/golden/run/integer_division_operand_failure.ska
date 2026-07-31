@@ -1,0 +1,4 @@
+fn main() -> i64 {
+    var absent: i64? = none;
+    return absent! / 0;
+}

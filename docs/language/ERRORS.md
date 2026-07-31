@@ -202,9 +202,8 @@ count.
 zero respectively. Integer wrapping overflow and floating division by zero
 also do not use panic. The
 [operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
-defines their value behavior. Checked shift and internally constructed checked
-integer division/remainder failures use the common reporter. Source `/` and
-`%` remain disabled as recorded by the [status matrix](STATUS.md).
+defines their value behavior. Source checked shifts and integer division or
+remainder use the common reporter through their verified failure edges.
 
 ## Cleanup and abrupt termination
 

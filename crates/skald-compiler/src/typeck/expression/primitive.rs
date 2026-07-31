@@ -209,6 +209,12 @@ impl CallableChecker<'_, '_> {
         ) {
             return self.check_integer_bitwise_expression(binary);
         }
+        if matches!(
+            binary.operator,
+            ResolvedBinaryOperator::Divide | ResolvedBinaryOperator::Remainder
+        ) {
+            return self.check_integer_division_expression(binary);
+        }
 
         // Both operands are checked in source order so independent diagnostics accumulate.
         let left = self.check_expression(&binary.left);
@@ -395,6 +401,8 @@ const fn comparison_predicate(operator: ResolvedBinaryOperator) -> Option<HirCom
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
         | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::Divide
+        | ResolvedBinaryOperator::Remainder
         | ResolvedBinaryOperator::ShiftLeft
         | ResolvedBinaryOperator::ShiftRight
         | ResolvedBinaryOperator::BitwiseAnd
@@ -434,7 +442,9 @@ fn select_arithmetic_operation(
             | ResolvedBinaryOperator::BitwiseOr
             | ResolvedBinaryOperator::BitwiseXor
             | ResolvedBinaryOperator::ShiftLeft
-            | ResolvedBinaryOperator::ShiftRight,
+            | ResolvedBinaryOperator::ShiftRight
+            | ResolvedBinaryOperator::Divide
+            | ResolvedBinaryOperator::Remainder,
             _,
         ) => None,
         (

@@ -1,6 +1,6 @@
 # Integer Division and Remainder Roadmap
 
-Status: in progress; DR0 through DR2 are complete and DR3 is next.
+Status: in progress; DR0 through DR3 are complete and DR4 is next.
 
 This roadmap implements the frozen integer `/` and `%` family for exact
 `i64`, `u64`, and `u8` operands. It delivers floor division and matching
@@ -118,7 +118,7 @@ than adding operator-specific C harnesses.
 - [x] DR0 — Define checked integer division and remainder semantics
 - [x] DR1 — Lower and verify the checked control-flow shape
 - [x] DR2 — Execute verified operations on x86-64
-- [ ] DR3 — Enable the complete source family end to end
+- [x] DR3 — Enable the complete source family end to end
 - [ ] DR4 — Harden and promote the complete family
 
 ## PR-sized implementation sequence
@@ -253,38 +253,38 @@ unchanged.
 **Purpose:** Activate `/` and `%` only after every selected source expression
 has a verified, executable downstream path.
 
-- [ ] Lex `/` and `%` with exact spans while preserving `//` comments,
+- [x] Lex `/` and `%` with exact spans while preserving `//` comments,
       whitespace distinctions such as `/ /`, invalid-token recovery, and all
       existing punctuation behavior.
-- [ ] Extend the left-associative multiplicative parser tier from `*` to
+- [x] Extend the left-associative multiplicative parser tier from `*` to
       `*`, `/`, and `%`; preserve prefix and postfix priority, additive and
       later tiers, comparison non-associativity, nesting limits, grouping, and
       deterministic recovery.
-- [ ] Preserve division versus remainder identity, operand shape, grouping,
+- [x] Preserve division versus remainder identity, operand shape, grouping,
       and spans in AST and resolved IR without selecting an integer kind,
       failure edge, or target instruction early.
-- [ ] Select each operation only for two identical `i64`, `u64`, or `u8`
+- [x] Select each operation only for two identical `i64`, `u64`, or `u8`
       operands, returning that type. Check operands in source order and reject
       mixed integers, `bool`, `f64`, `unit`, optional, array, class,
       object-view, and shared-owner combinations before HIR.
-- [ ] Keep primitive operator selection cohesive in a focused private module
+- [x] Keep primitive operator selection cohesive in a focused private module
       rather than expanding the general primitive checker with target or
       control-flow knowledge.
-- [ ] Produce focused diagnostics that identify the operator and actual
+- [x] Produce focused diagnostics that identify the operator and actual
       operand types without suggesting promotion, an implicit cast, or
       floating-point support.
-- [ ] Exercise arbitrary currently valid operands, including calls, fields,
+- [x] Exercise arbitrary currently valid operands, including calls, fields,
       array access, optional unwrap, casts, assignments used by later
       expressions, nested checked shifts, nested division/remainder,
       short-circuit expressions, allocation-backed effects, and operands that
       fail before the divisor check.
-- [ ] Cover every current expression consumer: locals, assignments, call
+- [x] Cover every current expression consumer: locals, assignments, call
       arguments, returns, fields, arrays, optional injection, comparisons,
       logical operands, and conditions.
-- [ ] Add deterministic token, AST, resolved, HIR, MIR, and assembly dumps plus
+- [x] Add deterministic token, AST, resolved, HIR, MIR, and assembly dumps plus
       source-to-native and compile-failure goldens for the complete valid,
       invalid, result, failure, precedence, effect, and cleanup matrices.
-- [ ] Update the living grammar, operator/type surface, status matrix,
+- [x] Update the living grammar, operator/type surface, status matrix,
       compiler phase/backend contracts, error catalog wording, and
       testing/debugging guidance when source support becomes active. Continue
       to report floating division/remainder and optimization as unimplemented.

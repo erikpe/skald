@@ -804,6 +804,8 @@ impl ResolvedDumper {
                     ResolvedBinaryOperator::Add => "Add",
                     ResolvedBinaryOperator::Subtract => "Subtract",
                     ResolvedBinaryOperator::Multiply => "Multiply",
+                    ResolvedBinaryOperator::Divide => "Divide",
+                    ResolvedBinaryOperator::Remainder => "Remainder",
                     ResolvedBinaryOperator::ShiftLeft => "ShiftLeft",
                     ResolvedBinaryOperator::ShiftRight => "ShiftRight",
                     ResolvedBinaryOperator::BitwiseAnd => "BitwiseAnd",

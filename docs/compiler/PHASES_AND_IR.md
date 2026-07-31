@@ -310,8 +310,9 @@ classified as control-affecting. HIR-to-MIR lowering evaluates and secures the
 dividend and divisor in source order, then emits an explicit divisor-check
 diamond whose success edge alone performs the operation and initializes its
 result carrier. MIR verification proves that relationship and its exact typed
-carriers before accepting the operation. Source phases do not construct these
-operations yet. The x86-64 target executes verified operations with explicit
+carriers before accepting the operation. Source `/` and `%` construct these
+operations after exact same-integer type selection. The x86-64 target executes
+verified operations with explicit
 zero and signed-overflow guards, native unsigned or signed division, and the
 required signed floor correction.
 

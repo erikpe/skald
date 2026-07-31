@@ -44,6 +44,7 @@ mod dumps;
 mod expressions;
 mod external_links;
 mod integer_casts;
+mod integer_division;
 mod interfaces;
 mod intrinsics;
 mod modules;

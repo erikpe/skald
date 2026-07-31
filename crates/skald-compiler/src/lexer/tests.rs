@@ -64,30 +64,45 @@ fn lexes_the_complete_supported_token_surface() {
 }
 
 #[test]
-fn division_and_remainder_tokens_remain_outside_the_source_surface() {
-    for operator in ["/", "%"] {
-        let (_, _, output) = lex_text(operator);
-        assert!(
-            output.has_errors(),
-            "operator {operator} unexpectedly lexed"
-        );
-        assert_eq!(output.diagnostics.iter().count(), 1);
-        assert_eq!(
-            output.diagnostics.iter().next().unwrap().code,
-            UNEXPECTED_CHARACTER
-        );
-    }
-
-    let (_, _, comment) = lex_text("// still a comment\n");
-    assert!(!comment.has_errors());
+fn division_remainder_and_comments_have_distinct_exact_tokens() {
+    let text = "/ % // ignored / %\n/ / %% 1/2// tail\n3%2";
+    let (sources, source_id, output) = lex_text(text);
+    let source = sources.get(source_id).unwrap();
+    assert!(!output.has_errors());
     assert_eq!(
-        comment
+        output
             .tokens
             .iter()
             .map(|token| token.kind)
             .collect::<Vec<_>>(),
-        [TokenKind::Eof]
+        [
+            TokenKind::Slash,
+            TokenKind::Percent,
+            TokenKind::Slash,
+            TokenKind::Slash,
+            TokenKind::Percent,
+            TokenKind::Percent,
+            I64_LITERAL,
+            TokenKind::Slash,
+            I64_LITERAL,
+            I64_LITERAL,
+            TokenKind::Percent,
+            I64_LITERAL,
+            TokenKind::Eof,
+        ]
     );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["/", "%", "/", "/", "%", "%", "1", "/", "2", "3", "%", "2", ""]
+    );
+    let dump = dump_tokens(source, &output.tokens);
+    assert_eq!(dump, dump_tokens(source, &output.tokens));
+    assert!(dump.contains("SLASH"));
+    assert!(dump.contains("PERCENT"));
 }
 
 #[test]

@@ -551,6 +551,8 @@ impl AstDumper {
                     BinaryOperator::Add => "Add",
                     BinaryOperator::Subtract => "Subtract",
                     BinaryOperator::Multiply => "Multiply",
+                    BinaryOperator::Divide => "Divide",
+                    BinaryOperator::Remainder => "Remainder",
                     BinaryOperator::ShiftLeft => "ShiftLeft",
                     BinaryOperator::ShiftRight => "ShiftRight",
                     BinaryOperator::BitwiseAnd => "BitwiseAnd",

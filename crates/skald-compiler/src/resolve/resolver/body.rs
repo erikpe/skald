@@ -340,6 +340,10 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                                 syntax::BinaryOperator::Multiply => {
                                     ResolvedBinaryOperator::Multiply
                                 }
+                                syntax::BinaryOperator::Divide => ResolvedBinaryOperator::Divide,
+                                syntax::BinaryOperator::Remainder => {
+                                    ResolvedBinaryOperator::Remainder
+                                }
                                 syntax::BinaryOperator::ShiftLeft => {
                                     ResolvedBinaryOperator::ShiftLeft
                                 }

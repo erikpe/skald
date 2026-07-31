@@ -307,13 +307,19 @@ impl Parser<'_> {
     fn parse_multiplicative(&mut self) -> Option<Expression> {
         let mut expression = self.parse_unary()?;
 
-        while self.at(TokenKind::Star) {
+        while self.at_any(&[TokenKind::Star, TokenKind::Slash, TokenKind::Percent]) {
             let operator = self.advance();
             let right = self.parse_unary()?;
+            let kind = match operator.kind {
+                TokenKind::Star => BinaryOperator::Multiply,
+                TokenKind::Slash => BinaryOperator::Divide,
+                TokenKind::Percent => BinaryOperator::Remainder,
+                _ => unreachable!("multiplicative parser accepted another operator"),
+            };
             let span = self.cover(expression.span(), right.span());
             expression = Expression::Binary(BinaryExpr {
                 left: Box::new(expression),
-                operator: BinaryOperator::Multiply,
+                operator: kind,
                 operator_span: operator.span,
                 right: Box::new(right),
                 span,

@@ -7,7 +7,7 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Integer Division and Remainder Roadmap](INTEGER_DIVISION_AND_REMAINDER_ROADMAP.md)
-  — in progress; DR0 through DR2 are complete and DR3 is next. Implements
+  — in progress; DR0 through DR3 are complete and DR4 is next. Implements
   checked `/` and `%` for exact `i64`, `u64`, and `u8`, including floor semantics,
   zero-divisor failures, and the defined signed-overflow edge case.
 

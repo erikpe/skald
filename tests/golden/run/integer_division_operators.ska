@@ -1,0 +1,124 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+class Holder {
+    quotient: u64;
+    remainder: u64;
+
+    init(quotient: u64, remainder: u64) {
+        self.quotient = quotient;
+        self.remainder = remainder;
+    }
+}
+
+class Probe {
+    sequence: i64;
+
+    init() {
+        self.sequence = 0;
+    }
+
+    mut fn observe(value: u64, digit: i64) -> u64 {
+        self.sequence = self.sequence * 10 + digit;
+        return value;
+    }
+}
+
+class Trace {
+    marker: i64;
+    value: u64;
+
+    init(marker: i64, value: u64) {
+        self.marker = marker;
+        self.value = value;
+    }
+
+    fn read() -> u64 {
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn divide(left: u64, right: u64) -> u64 {
+    return left / right;
+}
+
+fn consume(value: u64) -> unit {
+    ska_rt_println_u64(value);
+}
+
+fn produce_trace(marker: i64, value: u64) -> Trace {
+    return Trace(marker, value);
+}
+
+fn read_trace(value: Trace) -> u64 {
+    return value.value;
+}
+
+fn make_trace(marker: i64, value: u64) -> shared Trace {
+    return new Trace(marker, value);
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(7 / 3);
+    ska_rt_println_i64(-7 / 3);
+    ska_rt_println_i64(7 / -3);
+    ska_rt_println_i64(-7 / -3);
+    ska_rt_println_i64(7 % 3);
+    ska_rt_println_i64(-7 % 3);
+    ska_rt_println_i64(7 % -3);
+    ska_rt_println_i64(-7 % -3);
+    ska_rt_println_i64(-9223372036854775808 / -1);
+    ska_rt_println_i64(-9223372036854775808 % -1);
+
+    ska_rt_println_u64(18446744073709551615u / 2u);
+    ska_rt_println_u64(18446744073709551615u % 2u);
+    ska_rt_println_u8(255u8 / 2u8);
+    ska_rt_println_u8(255u8 % 2u8);
+
+    var assigned: u64 = 0u;
+    assigned = divide(100u, 7u);
+    consume(assigned);
+
+    var holder: Holder = Holder(20u / 3u, 20u % 3u);
+    ska_rt_println_u64(holder.quotient);
+    ska_rt_println_u64(holder.remainder);
+    holder.quotient = 81u / 9u;
+    ska_rt_println_u64(holder.quotient);
+
+    var optional: u64? = 20u / 3u;
+    ska_rt_println_u64(optional!);
+    optional = 20u % 3u;
+    ska_rt_println_u64(optional!);
+
+    var values: u64[] = u64[](2u);
+    values[0] = 100u / 9u;
+    values[1] = values[0] % 4u;
+    ska_rt_println_u64(values[0]);
+    ska_rt_println_u64(values[1]);
+
+    ska_rt_println_u64((100u / 7u) % 5u);
+    ska_rt_println_u64(128u / (32u >> 3u));
+    ska_rt_println_i64(((i64) 20u) / ((i64) 3u));
+
+    var probe: Probe = Probe();
+    ska_rt_println_u64(probe.observe(20u, 1) / probe.observe(3u, 2));
+    ska_rt_println_i64(probe.sequence);
+
+    ska_rt_println_bool((20u / 3u) == 6u && (20u % 3u) == 2u);
+    if ((255u8 / 2u8) == 127u8 && (255u8 % 2u8) == 1u8) {
+        ska_rt_println_u64(
+            read_trace(produce_trace(41, 20u)) / read_trace(produce_trace(42, 3u))
+        );
+        ska_rt_println_u64(
+            make_trace(51, 20u)->read() % make_trace(52, 3u)->read()
+        );
+        return 0;
+    }
+    return 91;
+}
