@@ -548,12 +548,17 @@ identifier and allocation argument list; `new()` remains an ordinary call to
 a binding named `new`.
 
 Primitive and object casts retain the existing unary precedence and
-right-associative operand shape. A primitive keyword unambiguously selects a
-primitive cast target, while a declaration path or `shared` declaration path
-selects the existing object-cast syntax. Postfix use of either cast still
-requires grouping. The exact-type comparison semantics and closed primitive
-cast matrix are defined by
-[Types, Values, and Expressions](TYPES_AND_VALUES.md#implemented-primitive-comparisons-boolean-negation-and-integer-casts).
+right-associative operand shape. An implemented primitive integer keyword
+(`i64`, `u64`, or `u8`) unambiguously selects a primitive cast target, while a
+declaration path or `shared` declaration path selects the existing object-cast
+syntax. Postfix use of either cast still requires grouping. The current
+integer subset and the frozen complete primitive cast matrix are defined by
+[Types, Values, and Expressions](TYPES_AND_VALUES.md#explicit-integer-casts)
+and its
+[complete matrix](TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix).
+The frozen design will extend primitive cast-target position to `f64` and
+`bool` without changing precedence or nominal-cast disambiguation; those two
+targets are not accepted by the current implemented grammar.
 
 ### Implemented primitive-operator expressions
 

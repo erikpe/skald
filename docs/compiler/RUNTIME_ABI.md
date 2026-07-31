@@ -307,9 +307,34 @@ Operator verification belongs to compiler, backend, assembler, and native
 tests. Direct runtime tests continue covering the generic reporter rather than
 gaining operator-specific ABI harnesses.
 
-Any other future addition must first have a source-language contract, then
-define its runtime ownership, failure behavior, ABI representation, version
-transition, and focused tests.
+Any future addition outside a separately frozen boundary must first have a
+source-language contract, then define its runtime ownership, failure behavior,
+ABI representation, version transition, and focused tests.
+
+## Frozen complete primitive cast ABI boundary
+
+The frozen
+[complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
+adds no public C symbol, runtime-managed value, or ABI-version change. The
+runtime marker remains `ska_rt_abi_v6` when this feature is implemented.
+
+Identity, integer, boolean, and integer-to-`f64` conversions are entirely
+compiler-generated. Checked `f64`-to-integer conversion also remains
+compiler-generated: verified MIR and target lowering own its finite and range
+checks, truncation, result carriage, and failure edge. No `u64`-to-floating or
+floating-to-integer conversion helper is part of the Skald runtime surface.
+
+An invalid `f64`-to-integer cast reuses the existing
+`_Noreturn ska_rt_panic(bytes, length)` entry point with the exact static bytes
+`floating-point cast out of range`. The reporter receives neither operand nor
+source/target type identity and performs no conversion or classification.
+Adding this compiler-generated caller does not change the reporter signature,
+output record, termination behavior, or compatibility marker.
+
+Primitive-cast verification belongs to compiler, backend, assembler, and
+native tests. Direct runtime tests continue covering the generic reporter and
+unchanged symbol/version surface rather than gaining conversion-specific C
+harnesses.
 
 ## Verification
 

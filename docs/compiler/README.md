@@ -114,6 +114,16 @@ cleanup, verified compiler-known failures, and mechanical target realization.
 They do not claim support for the explicitly deferred operator and conversion
 work in the [status matrix](../language/STATUS.md#not-implemented).
 
+The frozen
+[complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
+has separately selected
+[phase and IR](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation),
+[target](BACKEND.md#frozen-complete-primitive-cast-target-boundary), and
+[unchanged runtime ABI](RUNTIME_ABI.md#frozen-complete-primitive-cast-abi-boundary)
+boundaries. Those contracts are implementation-ready but do not expand the
+current compiler beyond the nine integer cast cells. The next planning action
+is an implementation roadmap rather than further semantic design.
+
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat

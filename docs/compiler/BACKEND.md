@@ -240,6 +240,58 @@ symbol, metadata object, or runtime entry point. Exact instruction sequences,
 register choices, flag use, branch shapes, and constant-folding algorithms
 remain private after these observable requirements are met.
 
+## Frozen complete primitive cast target boundary
+
+The frozen
+[primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
+defines future legal target input without claiming current backend support
+beyond the implemented nine integer cells. A target consumes already selected
+source type, target type, semantic class, and pure or checked control-flow
+shape. It never derives signedness from source spelling or substitutes a host
+language's conversion rules.
+
+Target realization must preserve these results:
+
+- identity conversions return the unchanged value, with `f64` identity
+  preserving every binary64 bit;
+- integer-to-integer conversions retain the implemented modulo and target
+  signedness behavior;
+- `bool` converts exactly to integer zero or one and floating zero or one;
+- integer-to-`bool` produces false exactly for zero;
+- `f64`-to-`bool` produces false for positive and negative zero and true for
+  every other value, including unordered NaNs;
+- integer-to-`f64` uses source signedness and correctly rounds to nearest with
+  ties to even; and
+- checked `f64`-to-integer conversion truncates toward zero only on its
+  verified success edge and produces the exact canonical target value.
+
+The x86-64 implementation performs these operations in generated code. It may
+use scalar moves, comparisons, SSE2 conversions, integer adjustment, or
+branches, but no exact instruction sequence is frozen. In particular,
+`u64`-to-`f64` and `f64`-to-`u64` must handle values on both sides of `2^63`
+without treating the operand as signed or delegating to an unversioned C cast.
+Floating unordered comparison must make every NaN true when converting to
+`bool`. Canonical `bool` and `u8` stores remain the ordinary scalar boundary.
+
+Checked `f64`-to-integer input arrives as verified control flow with one
+secured source, a semantic range check, success-only conversion, result join,
+and a terminal failure edge. The backend must reject NaN, infinities, and a
+mathematical truncated result outside the exact target range before executing
+any target conversion whose out-of-range result is undefined, indefinite, or
+target-specific. It must accept negative finite fractions whose truncation is
+unsigned zero. A target conversion sentinel, hardware exception, ambient C
+undefined behavior, saturation, or modulo wrapping is not a legal substitute.
+
+Failure selects the exact `floating-point cast out of range` static message
+through the existing `ska_rt_panic` entry point. The feature adds no conversion
+helper, public symbol, calling-convention category, metadata object, allocation,
+or runtime ABI version. Pure casts add no failure edge or reporter reference.
+
+Constant folding and target peepholes may replace a cast only with an exactly
+equivalent canonical value or terminal reason. Assembly and behavior must be
+identical in meaning across optimization settings, including at every
+representability boundary and for negative fractions near zero.
+
 ## While-loop target boundary
 
 The

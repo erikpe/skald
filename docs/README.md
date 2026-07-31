@@ -16,7 +16,8 @@ Use the authority closest to the behavior:
 - exact accepted syntax belongs in the
   [implemented grammar](language/GRAMMAR.md);
 - type, value, literal, and expression semantics, including the frozen complete
-  primitive operator profile and implemented integer operator families, belong in
+  primitive operator profile, implemented integer operator families, and
+  frozen complete explicit primitive cast matrix, belong in
   [types and values](language/TYPES_AND_VALUES.md);
 - the implemented raw-byte `std::str::Str` value, literals, and library
   boundary belong in

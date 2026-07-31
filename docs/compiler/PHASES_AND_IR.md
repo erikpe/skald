@@ -291,8 +291,9 @@ Type checking is the sole owner of primitive operation selection. It:
 - retains `is` as the existing specialized type or presence test rather than
   an equality operation.
 
-Future explicit casts remain separate HIR operations that complete before
-operator selection. Operator HIR cannot observe cast provenance.
+The frozen additional explicit primitive casts remain separate HIR operations
+that complete before operator selection. Operator HIR cannot observe cast
+provenance.
 
 Typed HIR represents eager unary and binary operations as exact typed values.
 Each operation retains its operand type, result type, semantic flavor, source
@@ -470,6 +471,105 @@ names, module organization, basic-block numbering, temporary-storage
 selection, branch shape, instruction sequence, and optimization algorithm
 remain private. The operator profile adds no public runtime ABI entry point
 beyond the existing common panic reporter.
+
+## Frozen complete primitive cast representation
+
+The
+[complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
+has a frozen target-independent representation boundary but is not yet a
+complete compiler phase product. The implemented nine integer-to-integer cells
+remain the current compiler boundary until the whole selected representation
+reaches its documented implementation stage.
+
+Lexing already recognizes all five primitive type keywords. Syntax must
+generalize the existing integer-cast node into one primitive-cast node that
+retains the exact `i64`, `u64`, `u8`, `f64`, or `bool` target, target span,
+right-associative unary operand, complete span, grouping, and common nesting
+budget. Every primitive keyword in cast-target position selects this form
+without declaration lookup. Nominal and `shared` object-cast targets remain
+separate syntax and resolution paths; lower phases never redisambiguate a cast
+from source text.
+
+Resolution preserves the primitive target and resolved operand without
+selecting conversion behavior. Type checking is the sole owner of primitive
+cast selection. It requires both actual source and explicit target to be one
+of the five primitive value types, accepts exactly the complete twenty-five
+pair matrix, inserts no implicit use of a cast at another typed boundary, and
+constructs typed HIR carrying:
+
+- exact source and target primitive types;
+- one target-independent semantic class: identity, integer bit conversion,
+  conversion to `bool`, conversion to `f64`, or checked `f64`-to-integer;
+- whether conversion may terminate; and
+- the source span needed by deterministic diagnostics and failure lowering.
+
+The semantic class is derived once during type checking. HIR does not encode
+an x86 instruction, register class, host-language conversion, runtime helper,
+or constant-folding decision. Same-type casts remain represented semantic
+operations rather than being erased before typed inspection. Identity `f64`
+casts preserve the complete binary64 datum; other conversions preserve the
+exact source-visible rules rather than storage coincidences.
+
+HIR-to-MIR lowering evaluates every operand exactly once. Identity,
+integer-to-integer, boolean/numeric, numeric/boolean, and integer-to-`f64`
+casts become ordinary pure primitive-cast rvalues carrying exact source,
+target, and selected semantics. They add no block, call, failure edge,
+allocation, ownership action, or cleanup obligation.
+
+The three checked `f64`-to-integer cells are structurally different. Lowering
+secures the evaluated `f64` operand in canonical scalar storage, then emits an
+explicit primitive-cast range-check diamond. The check's success edge alone
+performs truncation toward zero, initializes one exact target-typed result
+carrier, and reaches the join. Its failure edge terminates with the distinct
+primitive-cast-out-of-range reason from the
+[language catalog](../language/ERRORS.md#frozen-panic-design). The join reloads
+the result as an ordinary block-local scalar value. No conversion rvalue may
+be reachable except through its matching successful check.
+
+The range check is defined over the mathematical truncated result, not merely
+the original floating value or a target instruction's sentinel result. It
+rejects NaN and infinities before conversion and accepts a finite negative
+fraction greater than `-1.0` for an unsigned target because truncation produces
+zero. A valid constant source follows the same path semantics as a runtime
+value: optimization may replace a successful conversion with its exact
+constant result or replace a known failure with the same terminal reason, but
+must not change it into a literal-range diagnostic, remove an observable
+failure, or make behavior depend on optimization settings.
+
+Control-effect discovery classifies checked `f64`-to-integer conversion as
+control-affecting regardless of operand purity. Earlier scalar values that
+must survive its block change are spilled through the existing canonical
+storage boundary. Full-expression temporaries, optional guards, checked
+views, shared anchors, and other ownership state established before the check
+retain the ordinary rule for unrecoverable termination: success reaches their
+normal cleanup boundary, while failure does not return and guarantees no
+remaining source-level cleanup.
+
+MIR verification proves:
+
+- a legal source/target pair and selected semantic class;
+- exact operand, result-carrier, and rvalue types;
+- canonical `bool` and `u8` results where applicable;
+- block-local definition-before-use for every pure cast;
+- one secured `f64` source, matching check, success-only conversion, unique
+  result initialization, result join, and terminal catalog reason for every
+  checked cast; and
+- deterministic error accumulation and dumps under malformed-MIR mutations.
+
+HIR and MIR dumps expose exact source and target types plus pure versus checked
+semantics without target registers or helper names. Public facades expose only
+the cohesive primitive type, cast operation, checked range relation, and
+termination vocabulary required to inspect or construct supported phase
+products. Existing integer-specific public vocabulary migrates atomically
+rather than remaining as a parallel second cast model.
+
+Focused implementation validation must cover all twenty-five pairs through
+syntax, resolution, type checking, HIR, MIR, verification, target legality,
+assembly, and native observation. Boundary coverage includes integer extrema,
+values around `2^53`, both floating zeroes, subnormals, infinities, multiple
+NaNs, every integer target boundary and adjacent binary64 value, negative
+fractions near zero, exactly-once evaluation, nested checked casts, surrounding
+control effects, deterministic phase products, and optimization parity.
 
 ## Sources and diagnostics
 

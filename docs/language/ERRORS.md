@@ -2,8 +2,9 @@
 
 Status: authoritative for current language-level compile-time rejection and
 runtime-failure boundaries, the frozen panic design, implemented
-primitive-operator failures, normal-flow cleanup obligations, and the maturity
-of recoverable exceptions. The
+primitive-operator failures, the frozen floating-point cast failure,
+normal-flow cleanup obligations, and the maturity of recoverable exceptions.
+The
 [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Compile-time rejection
@@ -140,6 +141,7 @@ authoritative catalog:
 | Integer division by zero | `integer division by zero` |
 | Integer remainder by zero | `integer remainder by zero` |
 | Shift count at or above operand width | `shift count out of range` |
+| Invalid `f64`-to-integer cast | `floating-point cast out of range` |
 
 This catalog is closed for the frozen profile. A new compiler-known
 source-reachable failure requires a deliberate language-contract revision, a
@@ -204,6 +206,24 @@ also do not use panic. The
 [operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 defines their value behavior. Source checked shifts and integer division or
 remainder use the common reporter through their verified failure edges.
+
+## Frozen primitive cast failure
+
+The frozen
+[complete explicit primitive cast matrix](TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
+adds one compiler-known source-reachable failure, which is not yet implemented.
+An explicit `f64`-to-`i64`, `f64`-to-`u64`, or `f64`-to-`u8` cast evaluates its
+source exactly once, truncates a finite value toward zero, and succeeds only
+when that truncated mathematical integer is representable by the target. NaN,
+infinity, and an out-of-range truncated result select the distinct
+target-independent primitive-cast failure reason and exact catalog message
+`floating-point cast out of range`.
+
+Failure occurs before a result value exists, does not return to Skald, and
+guarantees no remaining source-level cleanup after reporting begins. The
+other twenty-two primitive cast pairs cannot fail. This boundary is not a
+catchable exception, optional conversion result, target instruction fault, or
+runtime-library conversion policy.
 
 ## Cleanup and abrupt termination
 

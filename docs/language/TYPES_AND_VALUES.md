@@ -1,10 +1,11 @@
 # Skald Types, Values, and Expressions
 
 Status: authoritative for implemented type, value, literal, and expression
-semantics, the implemented primitive operator profile, the primitive integer
-cast contract, and the exact type rule for primitive binding reassignment. The
-[status matrix](STATUS.md) is authoritative for feature maturity, and the
-[implemented grammar](GRAMMAR.md) defines accepted source syntax.
+semantics, the implemented primitive operator profile, the implemented
+primitive integer casts, the frozen complete explicit primitive cast matrix,
+and the exact type rule for primitive binding reassignment. The [status
+matrix](STATUS.md) is authoritative for feature maturity, and the [implemented
+grammar](GRAMMAR.md) defines accepted source syntax.
 
 ## Type model
 
@@ -238,9 +239,9 @@ static types and cannot observe whether a value came from a literal, binding,
 call, cast, or another expression. An operator never inserts or requests a
 cast.
 
-Adding a future explicit source/target cast pair may make more operand
-expressions constructible, but does not add a mixed-type operator case or
-change an existing result or operation:
+Adding an explicit source/target cast pair may make more operand expressions
+constructible, but does not add a mixed-type operator case or change an
+existing result or operation:
 
 ```ska
 1 + 1u                   // invalid: i64 and u64
@@ -250,9 +251,11 @@ change an existing result or operation:
 1u8 << 3u8               // invalid; count must be u64
 ```
 
-The explicit cast matrix may expand independently after this design. Implicit
-conversion, mixed-type operator resolution, or contextual literal typing
-would revise this boundary rather than merely add a cast.
+The [complete explicit primitive cast matrix](#frozen-complete-explicit-primitive-cast-matrix)
+is frozen independently of this operator design. Its implementation does not
+revise this boundary. Implicit conversion, mixed-type operator resolution, or
+contextual literal typing would revise the boundary and requires a separate
+design.
 
 An unsupported operator/type combination is a compile-time error. Diagnostics
 identify the operator and incompatible operand types, but the language does
@@ -549,26 +552,103 @@ meaning, not a promise about memory layout, endianness, registers, or the
 external ABI. Integer arithmetic overflow is defined independently by the
 [implemented primitive operator profile](#implemented-primitive-operator-profile).
 
-### Deferred conversion work
+## Frozen complete explicit primitive cast matrix
 
-This contract does not define:
+The complete primitive cast design is frozen for implementation but is not
+yet accepted by the compiler beyond the implemented integer-only subset above.
+An explicit primitive cast retains unary syntax `(T) source`, where `T` and
+the source type are each exactly one of `i64`, `u64`, `u8`, `f64`, and `bool`.
+All twenty-five source/target pairs are valid, including every same-type
+identity cast. `unit` is not a value type and never participates.
 
-- casts between floating and integer types;
-- conversions between `bool` and numeric types;
-- implicit numeric conversions;
-- checked, saturating, or user-defined conversions;
-- object, optional, array, `Obj`, or `unit` conversion through primitive casts.
+The complete matrix is:
 
-Those areas require separate design. In particular, no checked variant is
-implied by the total integer cast syntax.
+| Source | `i64` target | `u64` target | `u8` target | `f64` target | `bool` target |
+|---|---|---|---|---|---|
+| `i64` | identity | preserve all 64 bits | retain the low 8 bits | signed numeric conversion | false only for zero |
+| `u64` | preserve all 64 bits and interpret the sign bit | identity | retain the low 8 bits | unsigned numeric conversion | false only for zero |
+| `u8` | zero-extend | zero-extend | identity | exact numeric conversion | false only for zero |
+| `f64` | checked truncation toward zero | checked truncation toward zero | checked truncation toward zero | identity | false only for positive or negative zero |
+| `bool` | false/true become 0/1 | false/true become 0/1 | false/true become 0/1 | false/true become 0.0/1.0 | identity |
+
+The already implemented integer-to-integer cells retain their exact
+[two's-complement and modulo contract](#explicit-integer-casts). They remain
+total and cannot fail.
+
+Integer-to-`f64` conversion uses the source integer's signedness and produces
+the correctly rounded nearest IEEE-754 binary64 value, with ties to an even
+significand. Precision loss is allowed. Every `u8` value is represented
+exactly; larger `i64` and `u64` values need not be. Boolean-to-`f64` conversion
+is exact.
+
+Conversion to `bool` is a value comparison, not implicit truthiness. Integer
+zero becomes `false` and every nonzero integer becomes `true`. Positive and
+negative floating zero become `false`; every other binary64 value becomes
+`true`, including subnormals, infinities, and every NaN. These rules do not
+allow a numeric, optional, owner, array, class, interface, `Obj`, or `unit`
+expression directly as a condition: the explicit cast must first produce a
+`bool` value.
+
+An `f64`-to-integer cast first requires a finite source, then truncates its
+mathematical value toward zero, and finally checks that truncated integer
+against the target range. The accepted result ranges are `-2^63..=2^63-1`
+for `i64`, `0..=2^64-1` for `u64`, and `0..=255` for `u8`. A finite negative
+fraction greater than `-1.0` therefore truncates to zero and is valid for an
+unsigned target. NaN, either infinity, or a truncated value outside the target
+range terminates through the common unrecoverable-failure boundary with the
+exact catalog message `floating-point cast out of range`; it never produces a
+value or resumes Skald execution.
+
+A floating literal must first be valid under its ordinary literal contract.
+After that, a known failing cast remains the same source-reachable runtime
+failure as a cast of a dynamically produced value; it is not a new literal
+range diagnostic. Representative results are:
+
+```ska
+(u64) -0.5  // 0u
+(u8) 255.9  // 255u8
+(i64) -7.9  // -7
+(bool) -0.0 // false
+```
+
+Identity casts return the unchanged value. In particular, an `f64` identity
+cast preserves its complete binary64 datum, including signed zero, infinity,
+and NaN payload and sign. All primitive casts evaluate their source exactly
+once before conversion. Non-failing casts are pure value operations. A
+potentially failing `f64`-to-integer cast is control-affecting even when its
+source is otherwise pure; its failure is non-catchable and guarantees no
+remaining source-level cleanup after reporting begins.
+
+Primitive casts remain explicit at initialization, assignment, argument,
+return, arithmetic, comparison, condition, and every other typed boundary. A
+cast completes before a surrounding operator is selected, and the operator
+observes only the cast's exact result type. No cast allocates, changes
+ownership, or creates a runtime-managed value.
+
+## Deferred conversion work
+
+The complete primitive matrix does not define:
+
+- implicit numeric conversion, promotion, or contextual literal typing;
+- saturating, wrapping floating-to-integer, optional-result, or otherwise
+  recoverable primitive conversion;
+- user-defined conversion declarations;
+- object, optional, array, `Obj`, shared-owner, or `unit` conversion through
+  primitive casts; or
+- conversion syntax or semantics for future primitive types.
+
+Those areas require separate designs. The checked failure built into the three
+`f64`-to-integer cells does not imply a general checked-cast syntax or a
+recoverable conversion family.
 
 ## Other conversions and future value families
 
 The current compiler executes primitive integer division and remainder,
-floating division, bitwise and shift operations, comparisons, and casts plus
-boolean negation and equality through the x86-64 backend. It performs no
-user-defined conversions. All other numeric conversion behavior remains
-deferred. Object casts are defined separately in
+floating division, bitwise and shift operations, comparisons, the nine
+integer casts, and boolean negation and equality through the x86-64 backend.
+The remaining sixteen cells of the frozen complete primitive cast matrix are
+not yet accepted. The compiler performs no user-defined conversions. Object
+casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.
