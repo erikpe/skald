@@ -10,22 +10,22 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+### Complete primitive cast matrix
+
+Status: planned; establishing cohesive primitive-cast front-end vocabulary is
+next.
+
+The [roadmap](PRIMITIVE_CAST_MATRIX_ROADMAP.md) implements the sixteen
+remaining cells of the frozen
+[complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix),
+migrates the nine existing integer cells into the same phase vocabulary, and
+then hardens the full source-to-x86-64 behavior. It depends only on the already
+implemented integer casts, primitive scalar backend, checked-control-flow
+infrastructure, and common panic reporter; no other roadmap is a prerequisite.
 
 ## Design proposals
 
 No design proposals are currently awaiting decisions or promotion.
-
-## Ready for roadmap drafting
-
-The
-[complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
-is a frozen design. All twenty-five source/target semantics, the sole checked
-failure, target-independent representation, x86-64 realization boundary,
-unchanged runtime ABI, and required validation matrix are settled. Only the
-nine integer-to-integer cells are implemented. The next action is to write the
-implementation roadmap; no further design proposal or semantic decision is a
-prerequisite.
 
 ## Pending discoveries
 
