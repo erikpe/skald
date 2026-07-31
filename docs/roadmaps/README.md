@@ -10,7 +10,12 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+- [Remaining Floating-Point Operators Roadmap](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
+  — **planned**; next establish executable IEEE-754 `f64` division, then
+  implement source division and unordered floating comparisons as separate
+  semantic milestones before promoting the complete primitive-operator
+  profile. It depends only on the completed primitive-operator and `f64`
+  scalar foundations.
 
 ## Design proposals
 
