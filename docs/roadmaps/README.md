@@ -18,9 +18,7 @@ No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
-- [Short-Circuit Boolean Expressions Discoveries](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_DISCOVERIES.md)
-  — split path-sensitive propagation from transitions and use checks in the
-  large shared-ownership verifier.
+No implementation discoveries are currently pending.
 
 ## Implementation baseline
 

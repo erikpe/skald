@@ -567,10 +567,11 @@ and remove roadmap-only scaffolding.
 - [x] Audit touched lexer, syntax, AST, resolution, type checking, HIR, MIR,
       full-expression tracking, each verifier domain, passes, backend, dumps,
       facades, tests, and documentation by responsibility.
-- [x] Resolve small maintainability findings directly. Record material
-      out-of-scope findings in
-      `docs/roadmaps/SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_DISCOVERIES.md` and
-      index that file under pending discoveries.
+- [x] Resolve small maintainability findings directly and record material
+      out-of-scope findings as indexed discoveries. Those findings were later
+      resolved by [path-state compaction](PATH_STATE_COMPACTION_ROADMAP.md),
+      the [optional-initialization split](OPTIONAL_INITIALIZATION_RESPONSIBILITY_ROADMAP.md),
+      and the [shared-verifier split](SHARED_OWNERSHIP_VERIFIER_RESPONSIBILITY_ROADMAP.md).
 - [x] Remove the temporary completion gate, rollout-only flags, task codes,
       and roadmap terminology from living code, diagnostics, fixtures, and
       general documentation.

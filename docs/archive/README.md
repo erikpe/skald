@@ -57,6 +57,7 @@ Archived plans:
 - [Short-circuit boolean expressions](SHORT_CIRCUIT_BOOLEAN_EXPRESSIONS_ROADMAP.md)
 - [Equivalent path-state compaction](PATH_STATE_COMPACTION_ROADMAP.md)
 - [Optional initialization responsibility split](OPTIONAL_INITIALIZATION_RESPONSIBILITY_ROADMAP.md)
+- [Shared ownership verifier responsibility split](SHARED_OWNERSHIP_VERIFIER_RESPONSIBILITY_ROADMAP.md)
 
 Resolved string-design inputs:
 

@@ -46,6 +46,12 @@ copy/adopt/move and conditional release, field and callable ownership,
 self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,
 ABI register/stack pressure, absent-access failure, and exactly-once
 last-owner finalization.
+Shared-verifier tests exercise its private propagation, transition,
+use-validation, and state owners through the unchanged MIR verification
+facade. Focused structural refactors should run the complete `mir::tests::shared`
+module, logical shared/array lifetime mutations, general MIR verifier tests,
+and shared-ownership process-determinism case; the split exposes no additional
+test API.
 
 Logical MIR verification mutations live in
 `mir/tests/logical_verification.rs`. They independently corrupt exact boolean

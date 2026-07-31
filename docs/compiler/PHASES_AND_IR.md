@@ -1134,6 +1134,16 @@ their structural ownership invariants before a backend realizes them. Exact
 future requirements are owned by
 [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#target-independent-phase-contract).
 
+The path-sensitive shared verifier retains one private ownership state behind
+its existing facade. A propagation owner schedules CFG alternatives, selects
+conditional successors, converges path conditions, and reports incompatible
+joins. A transition owner applies allocation, publication, adoption, transfer,
+field, cast, call, return, and full-expression rules. A use-validation owner
+checks shared pointees, dynamic provenance, static backing, and checked-view
+dependencies. The state owner supplies entry state, storage-epoch reset, and
+compatible-live-state comparison. This internal split changes neither MIR nor
+diagnostic text, ordering, or suppression.
+
 ## Deterministic inspection
 
 Every major phase product has one phase-owned textual renderer:
