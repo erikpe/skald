@@ -82,6 +82,17 @@ mod tests {
     }
 
     #[test]
+    fn pipeline_preserves_pure_and_checked_primitive_casts_exactly() {
+        let mir = lower_source_to_mir(
+            "fn source() -> f64 { return 7.9; }
+             fn main() -> i64 { return (i64) source() + (i64) (f64) 1u; }",
+        );
+        let expected = mir.clone();
+
+        assert_eq!(run_mir_pipeline(mir).unwrap(), expected);
+    }
+
+    #[test]
     fn pipeline_rejects_invalid_mir_before_a_backend_sees_it() {
         let mut mir = lowered_program();
         mir.definitions

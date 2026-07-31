@@ -2,8 +2,8 @@
 
 Status: authoritative for implemented type, value, literal, and expression
 semantics, the implemented primitive operator profile, the implemented
-primitive integer casts, the frozen complete explicit primitive cast matrix,
-and the exact type rule for primitive binding reassignment. The [status
+complete explicit primitive cast matrix, and the exact type rule for primitive
+binding reassignment. The [status
 matrix](STATUS.md) is authoritative for feature maturity, and the [implemented
 grammar](GRAMMAR.md) defines accepted source syntax.
 

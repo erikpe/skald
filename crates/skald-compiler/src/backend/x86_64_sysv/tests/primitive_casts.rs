@@ -1,4 +1,13 @@
+use super::primitive_cast_oracle::{
+    checked_cast_samples, expected_checked_cast, expected_pure_cast, pure_cast_samples,
+    signed_integer_to_f64_bits, unsigned_integer_to_f64_bits,
+};
 use super::*;
+use crate::test_support::TemporaryFile;
+use std::{
+    io::Write,
+    process::{Command, Stdio},
+};
 
 const CAST_FUNCTION: &str = ".Lska.fn.main.cast.f0";
 
@@ -248,6 +257,103 @@ fn checked_float_to_integer_failures_report_the_exact_frozen_message() {
     ] {
         assert_native_checked_cast_failure(bits, target);
     }
+}
+
+#[test]
+fn every_pure_cast_matches_an_independent_oracle_for_boundary_and_random_inputs() {
+    for source in pure_cast_samples() {
+        for target in [
+            MirPrimitiveType::I64,
+            MirPrimitiveType::U64,
+            MirPrimitiveType::U8,
+            MirPrimitiveType::F64,
+            MirPrimitiveType::Bool,
+        ] {
+            let Some(expected) = expected_pure_cast(source, target) else {
+                continue;
+            };
+            assert_native_cast(source, target, expected);
+        }
+    }
+}
+
+#[test]
+fn every_checked_cast_matches_an_independent_post_truncation_oracle() {
+    for bits in checked_cast_samples() {
+        for target in [MirIntegerType::I64, MirIntegerType::U64, MirIntegerType::U8] {
+            match expected_checked_cast(bits, target) {
+                Some(expected) => assert_native_checked_cast(bits, target, expected),
+                None => assert_native_checked_cast_failure(bits, target),
+            }
+        }
+    }
+}
+
+#[test]
+fn literal_and_dynamically_produced_checked_casts_have_identical_behavior() {
+    for (target, value, expected_status) in
+        [("i64", "7.9", 7), ("u64", "42.9", 42), ("u8", "255.9", 255)]
+    {
+        let direct = run_checked_source(&format!(
+            "fn main() -> i64 {{ return (i64) ({target}) {value}; }}\n"
+        ));
+        let dynamic = run_checked_source(&format!(
+            "fn source() -> f64 {{ return {value}; }}\n\
+             fn main() -> i64 {{ return (i64) ({target}) source(); }}\n"
+        ));
+        assert_eq!(direct.status.code(), Some(expected_status));
+        assert_eq!(dynamic.status.code(), Some(expected_status));
+        assert_eq!(direct.stdout, dynamic.stdout);
+        assert_eq!(direct.stderr, dynamic.stderr);
+    }
+
+    for (target, value) in [
+        ("i64", "9223372036854775808.0"),
+        ("u64", "-1.0"),
+        ("u8", "256.0"),
+    ] {
+        let direct = run_checked_source(&format!(
+            "fn main() -> i64 {{ return (i64) ({target}) {value}; }}\n"
+        ));
+        let dynamic = run_checked_source(&format!(
+            "fn source() -> f64 {{ return {value}; }}\n\
+             fn main() -> i64 {{ return (i64) ({target}) source(); }}\n"
+        ));
+        assert_eq!(direct.status.code(), Some(1));
+        assert_eq!(dynamic.status.code(), Some(1));
+        assert_eq!(direct.stdout, dynamic.stdout);
+        assert_eq!(direct.stderr, dynamic.stderr);
+        assert_eq!(direct.stderr, b"panic: floating-point cast out of range\n");
+    }
+}
+
+#[test]
+fn complete_cast_object_uses_only_the_existing_runtime_abi_surface() {
+    let source = concat!(
+        "fn bits(value: i64) -> u8 { return (u8) value; }\n",
+        "fn truth(value: f64) -> bool { return (bool) value; }\n",
+        "fn number(value: bool) -> f64 { return (f64) value; }\n",
+        "fn rounded(value: u64) -> f64 { return (f64) value; }\n",
+        "fn signed(value: f64) -> i64 { return (i64) value; }\n",
+        "fn unsigned(value: f64) -> u64 { return (u64) value; }\n",
+        "fn byte(value: f64) -> u8 { return (u8) value; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = assembly(source);
+    let undefined = undefined_object_symbols(&output);
+
+    assert!(undefined
+        .lines()
+        .any(|line| line.ends_with(" ska_rt_abi_v6")));
+    assert!(undefined
+        .lines()
+        .any(|line| line.ends_with(" ska_rt_panic")));
+    assert!(!undefined.lines().any(|line| line.contains("cast")));
+
+    let header = include_str!("../../../../../../runtime/include/skald_runtime.h");
+    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v6"));
+    assert!(header.contains("_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);"));
+    assert!(!header.contains("primitive_cast"));
 }
 
 #[test]
@@ -505,25 +611,6 @@ fn full_domain_u64_to_f64_matches_an_exact_integer_oracle() {
     }
 }
 
-#[test]
-fn exact_integer_oracle_has_known_ties_and_exponent_carries() {
-    assert_eq!(unsigned_integer_to_f64_bits(1), 0x3ff0_0000_0000_0000);
-    assert_eq!(
-        unsigned_integer_to_f64_bits((1_u64 << 53) + 1),
-        0x4340_0000_0000_0000
-    );
-    assert_eq!(
-        unsigned_integer_to_f64_bits((1_u64 << 53) + 3),
-        0x4340_0000_0000_0002
-    );
-    assert_eq!(
-        unsigned_integer_to_f64_bits(u64::MAX),
-        0x43f0_0000_0000_0000
-    );
-    assert_eq!(signed_integer_to_f64_bits(i64::MIN), 0xc3e0_0000_0000_0000);
-    assert_eq!(signed_integer_to_f64_bits(i64::MAX), 0x43e0_0000_0000_0000);
-}
-
 fn executable_cases() -> [(PrimitiveValue, MirPrimitiveType); 10] {
     [
         (PrimitiveValue::F64Bits(0), MirPrimitiveType::F64),
@@ -597,6 +684,45 @@ fn assert_native_checked_cast_failure(bits: u64, target: MirIntegerType) {
     assert_eq!(result.stderr, b"panic: floating-point cast out of range\n");
 }
 
+fn run_checked_source(source: &str) -> std::process::Output {
+    let mut output = assembly(source);
+    output.push_str(native_panic_reporter());
+    run_native_assembly_output(&output)
+}
+
+fn undefined_object_symbols(assembly: &str) -> String {
+    let object = TemporaryFile::new("primitive-cast-object").unwrap();
+    let mut assembler = Command::new("cc")
+        .args(["-x", "assembler", "-c", "-o"])
+        .arg(object.path())
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("primitive-cast object inspection requires the Linux `cc` toolchain");
+    assembler
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(assembly.as_bytes())
+        .unwrap();
+    let assembled = assembler.wait_with_output().unwrap();
+    assert!(
+        assembled.status.success(),
+        "assembler rejected primitive-cast object:\n{}",
+        String::from_utf8_lossy(&assembled.stderr)
+    );
+
+    let symbols = Command::new("nm")
+        .arg("--undefined-only")
+        .arg(object.path())
+        .output()
+        .expect("primitive-cast object inspection requires `nm`");
+    assert!(symbols.status.success());
+    String::from_utf8(symbols.stdout).unwrap()
+}
+
 fn validator(target: MirPrimitiveType, expected_bits: u64) -> String {
     let load_actual = if target == MirPrimitiveType::F64 {
         "    movq rdi, xmm0\n"
@@ -620,39 +746,4 @@ fn validator(target: MirPrimitiveType, expected_bits: u64) -> String {
         load_actual = load_actual,
         expected_bits = expected_bits,
     )
-}
-
-fn signed_integer_to_f64_bits(value: i64) -> u64 {
-    let sign = if value.is_negative() { 1_u64 << 63 } else { 0 };
-    sign | unsigned_integer_to_f64_bits(value.unsigned_abs())
-}
-
-fn unsigned_integer_to_f64_bits(value: u64) -> u64 {
-    if value == 0 {
-        return 0;
-    }
-
-    const FRACTION_BITS: u32 = 52;
-    const FRACTION_MASK: u64 = (1_u64 << FRACTION_BITS) - 1;
-    const EXPONENT_BIAS: u32 = 1023;
-
-    let mut exponent = u64::BITS - 1 - value.leading_zeros();
-    let significand = if exponent <= FRACTION_BITS {
-        value << (FRACTION_BITS - exponent)
-    } else {
-        let discarded_bits = exponent - FRACTION_BITS;
-        let mut retained = value >> discarded_bits;
-        let remainder = value & ((1_u64 << discarded_bits) - 1);
-        let halfway = 1_u64 << (discarded_bits - 1);
-        if remainder > halfway || (remainder == halfway && retained & 1 != 0) {
-            retained += 1;
-        }
-        if retained == 1_u64 << (FRACTION_BITS + 1) {
-            exponent += 1;
-            retained >>= 1;
-        }
-        retained
-    };
-
-    (u64::from(exponent + EXPONENT_BIAS) << FRACTION_BITS) | (significand & FRACTION_MASK)
 }

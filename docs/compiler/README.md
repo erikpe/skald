@@ -95,7 +95,7 @@ module. Its invalid byte and slice bounds call the canonical panic intrinsic
 through the ordinary `std::str` and `std::error` import cycle.
 
 Integer division and remainder, floating division, bitwise operations, checked
-shifts, integer and floating comparisons, integer casts, eager boolean
+shifts, integer and floating comparisons, primitive casts, eager boolean
 operators, and short-circuit boolean expressions are complete source-to-native
 phase products. Type checking selects their exact operand and result kinds;
 HIR and MIR retain semantic
@@ -120,13 +120,13 @@ has separately selected
 [phase and IR](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation),
 [target](BACKEND.md#frozen-complete-primitive-cast-target-boundary), and
 [unchanged runtime ABI](RUNTIME_ABI.md#frozen-complete-primitive-cast-abi-boundary)
-boundaries. The active
-[implementation roadmap](../roadmaps/PRIMITIVE_CAST_MATRIX_ROADMAP.md) has
-generalized syntax, resolution, typed HIR, and MIR to the cohesive
-primitive-cast vocabulary. All twenty-five cells are accepted from source and
-execute inline on x86-64. The twenty-two non-failing cells use pure MIR; the
-three checked `f64`-to-integer cells lower to explicit, verified
-success/failure control flow.
+boundaries. The archived
+[implementation roadmap](../archive/PRIMITIVE_CAST_MATRIX_ROADMAP.md) records
+the completed migration to a cohesive primitive-cast vocabulary. All
+twenty-five cells are accepted from source and execute inline on x86-64. The
+twenty-two non-failing cells use pure MIR; the three checked
+`f64`-to-integer cells lower to explicit, verified success/failure control
+flow.
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the

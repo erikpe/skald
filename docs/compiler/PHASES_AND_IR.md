@@ -296,9 +296,8 @@ Type checking is the sole owner of primitive operation selection. It:
 - retains `is` as the existing specialized type or presence test rather than
   an equality operation.
 
-The frozen additional explicit primitive casts remain separate HIR operations
-that complete before operator selection. Operator HIR cannot observe cast
-provenance.
+Explicit primitive casts remain separate HIR operations that complete before
+operator selection. Operator HIR cannot observe cast provenance.
 
 Typed HIR represents eager unary and binary operations as exact typed values.
 Each operation retains its operand type, result type, semantic flavor, source
@@ -486,7 +485,7 @@ selects them into typed HIR. Lowering represents twenty-two as pure MIR and
 the three checked `f64`-to-integer cells as the verified control flow described
 below; x86-64 executes every form inline.
 
-Lexing recognizes all five primitive type keywords. Syntax now uses one
+Lexing recognizes all five primitive type keywords. Syntax uses one
 primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`
 target, target span, right-associative unary operand, complete span, grouping,
 and common nesting budget. Every primitive keyword in cast-target position
@@ -514,7 +513,7 @@ operations rather than being erased before typed inspection. Identity `f64`
 casts preserve the complete binary64 datum; other conversions preserve the
 exact source-visible rules rather than storage coincidences.
 
-HIR-to-MIR lowering now evaluates every pure cast operand exactly once. Identity,
+HIR-to-MIR lowering evaluates every pure cast operand exactly once. Identity,
 integer-to-integer, boolean/numeric, numeric/boolean, and integer-to-`f64`
 casts become ordinary pure primitive-cast rvalues carrying exact source,
 target, and selected semantics. They add no block, call, failure edge,
@@ -549,7 +548,7 @@ retain the ordinary rule for unrecoverable termination: success reaches their
 normal cleanup boundary, while failure does not return and guarantees no
 remaining source-level cleanup.
 
-For ordinary primitive-cast rvalues, MIR verification now proves:
+For ordinary primitive-cast rvalues, MIR verification proves:
 
 - a legal source/target pair and selected semantic class;
 - exact operand, result-carrier, and rvalue types;
@@ -567,13 +566,15 @@ cohesive primitive types and casts with no parallel integer-only cast model.
 Source, HIR, and MIR fixtures cover the complete matrix through native
 execution, including checked success and failure paths.
 
-Focused implementation validation must cover all twenty-five pairs through
+Focused validation covers all twenty-five pairs through
 syntax, resolution, type checking, HIR, MIR, verification, target legality,
 assembly, and native observation. Boundary coverage includes integer extrema,
 values around `2^53`, both floating zeroes, subnormals, infinities, multiple
 NaNs, every integer target boundary and adjacent binary64 value, negative
 fractions near zero, exactly-once evaluation, nested checked casts, surrounding
-control effects, deterministic phase products, and optimization parity.
+control effects, deterministic phase products, and optimization parity. The
+current MIR pass pipeline performs verification without transformations and
+is tested to preserve both pure and checked casts exactly.
 
 ## Sources and diagnostics
 

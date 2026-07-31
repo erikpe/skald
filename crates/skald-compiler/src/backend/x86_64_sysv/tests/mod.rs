@@ -46,6 +46,7 @@ use scalar_fixtures::*;
 mod primitive_cast_fixtures;
 use primitive_cast_fixtures::*;
 mod control_flow_fixtures;
+mod primitive_cast_oracle;
 use control_flow_fixtures::*;
 mod object_fixtures;
 use object_fixtures::*;

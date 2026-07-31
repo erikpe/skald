@@ -72,6 +72,10 @@ const PRIMITIVE_OPERATOR_PROFILE_TEST_NAME: &str =
 const PRIMITIVE_CAST_HELPER_OUTPUT: &str = "SKALD_PRIMITIVE_CAST_DETERMINISM_OUTPUT";
 const PRIMITIVE_CAST_TEST_NAME: &str =
     "primitive_cast_phase_products_are_deterministic_across_processes";
+const PRIMITIVE_CAST_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_PRIMITIVE_CAST_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const PRIMITIVE_CAST_DIAGNOSTIC_TEST_NAME: &str =
+    "primitive_cast_diagnostics_are_deterministic_across_processes";
 const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
@@ -257,6 +261,16 @@ fn primitive_cast_phase_products_are_deterministic_across_processes() {
         PRIMITIVE_CAST_HELPER_OUTPUT,
         PRIMITIVE_CAST_TEST_NAME,
         primitive_cast_phase_dump,
+    );
+}
+
+#[test]
+fn primitive_cast_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "primitive-cast-diagnostics",
+        PRIMITIVE_CAST_DIAGNOSTIC_HELPER_OUTPUT,
+        PRIMITIVE_CAST_DIAGNOSTIC_TEST_NAME,
+        primitive_cast_diagnostic_dump,
     );
 }
 
@@ -822,6 +836,17 @@ fn primitive_cast_phase_dump() -> String {
     complete_phase_dump(include_str!(
         "../../../tests/golden/run/primitive_cast_matrix.ska"
     ))
+}
+
+fn primitive_cast_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "primitive-cast-diagnostics.ska",
+        concat!(
+            "fn invalid(values: i64[]) -> u64 { return (u64) values; }\n",
+            "fn implicit(value: f64) -> i64 { return value; }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+    )
 }
 
 fn eager_boolean_phase_dump() -> String {

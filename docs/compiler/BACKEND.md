@@ -246,11 +246,11 @@ The frozen
 [primitive cast representation](PHASES_AND_IR.md#frozen-complete-primitive-cast-representation)
 defines legal target-independent MIR input. Source type checking admits all
 twenty-five cells. MIR carries and verifies the twenty-two pure cells and the
-three checked diamonds, which x86-64 executes inline with ordered finite/range checks,
-success-only conversion, and the common static-message failure path. A target consumes
-already selected source type, target type, semantic class, and pure or checked
-control-flow shape. It never derives signedness from source spelling or
-substitutes a host language's conversion rules.
+three checked diamonds, which x86-64 executes inline with ordered finite/range
+checks, success-only conversion, and the common static-message failure path. A
+target consumes already selected source type, target type, semantic class, and
+pure or checked control-flow shape. It never derives signedness from source
+spelling or substitutes a host language's conversion rules.
 
 Target realization must preserve these results:
 
@@ -308,7 +308,9 @@ or runtime ABI version. Pure casts add no failure edge or reporter reference.
 Constant folding and target peepholes may replace a cast only with an exactly
 equivalent canonical value or terminal reason. Assembly and behavior must be
 identical in meaning across optimization settings, including at every
-representability boundary and for negative fractions near zero.
+representability boundary and for negative fractions near zero. The current
+pipeline has no transforming optimization or peephole pass; its explicit pass
+boundary preserves primitive-cast MIR byte-for-byte after verification.
 
 ## While-loop target boundary
 

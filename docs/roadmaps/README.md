@@ -6,18 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-### Complete primitive cast matrix
-
-Status: in progress; hardening and promotion of the complete executable matrix
-is next.
-
-The [roadmap](PRIMITIVE_CAST_MATRIX_ROADMAP.md) implements the sixteen
-remaining cells of the frozen
-[complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix),
-migrates the nine existing integer cells into the same phase vocabulary, and
-then hardens the full source-to-x86-64 behavior. It depends only on the already
-implemented integer casts, primitive scalar backend, checked-control-flow
-infrastructure, and common panic reporter; no other roadmap is a prerequisite.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

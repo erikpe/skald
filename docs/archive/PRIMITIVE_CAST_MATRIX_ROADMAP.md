@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: in progress; CAST8 is next.
+Status: complete; CAST0 through CAST8 are complete.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -84,7 +84,7 @@ clean checkout.
 - [x] CAST5 — Establish verified checked floating-to-integer control flow
 - [x] CAST6 — Execute checked floating-to-integer casts
 - [x] CAST7 — Enable checked floating-to-integer casts from source
-- [ ] CAST8 — Harden and promote the complete matrix
+- [x] CAST8 — Harden and promote the complete matrix
 
 ## PR-sized implementation sequence
 
@@ -387,27 +387,27 @@ availability, and no temporary rollout diagnostic remains.
 **Purpose:** Close the implementation with independent semantic oracles,
 optimization parity, current documentation, and no migration-only structure.
 
-- [ ] Audit the complete matrix across syntax, resolution, type checking, HIR,
+- [x] Audit the complete matrix across syntax, resolution, type checking, HIR,
       MIR, verification, control-effect analysis, backend legality, machine
       selection, facade, dump, golden, and documentation owners. Resolve
       high-priority responsibility problems and index lower-priority findings
       separately.
-- [ ] Add table-driven independent-oracle coverage for all pure conversions
+- [x] Add table-driven independent-oracle coverage for all pure conversions
       and checked success/failure decisions, with dense boundary sampling and
       deterministic randomized raw integer/binary64 inputs.
-- [ ] Confirm constant and dynamically produced operands have identical
+- [x] Confirm constant and dynamically produced operands have identical
       success, result bits, and failure behavior. Exercise both ordinary and
       any optimization/peephole paths so no fold removes effects, changes NaN
       handling, or changes checked-cast success.
-- [ ] Complete independent-process determinism for diagnostics, AST/resolved/
+- [x] Complete independent-process determinism for diagnostics, AST/resolved/
       HIR/MIR dumps, assembly, stdout, stderr, and process status.
-- [ ] Confirm generated objects reference no primitive-conversion helper,
+- [x] Confirm generated objects reference no primitive-conversion helper,
       runtime headers and symbols are unchanged, and every artifact retains
       the `ska_rt_abi_v6` marker.
-- [ ] Remove obsolete integer-only cast names, staging diagnostics, rollout
+- [x] Remove obsolete integer-only cast names, staging diagnostics, rollout
       comments, and stale pending wording from living code, tests, and
       documentation. Preserve task codes only in roadmap history.
-- [ ] Mark this roadmap complete, move it to `docs/archive/`, update active and
+- [x] Mark this roadmap complete, move it to `docs/archive/`, update active and
       archive indexes and incoming links, and leave only separately actionable
       discoveries under `docs/roadmaps/`.
 

@@ -118,12 +118,18 @@ temporary cleanup; backend and native goldens exercise canonical integer,
 byte, boolean, and floating storage plus exact rendered failures.
 
 Primitive-cast coverage starts with the complete twenty-five-cell type-check,
-HIR, and MIR matrix. Pure-cell backend tests own exact conversion results and
-the absence of helper calls; checked-cell MIR tests own range diamonds,
-evaluation order, success joins, and failure isolation. Native goldens cover
-all three checked targets with dynamic and representative literal values,
-exact panic output and status, selected-path behavior, later-effect
-suppression, and successful full-expression cleanup.
+HIR, and MIR matrix. A test-only oracle independently derives pure results and
+checked post-truncation validity for dense boundaries and deterministic raw-bit
+samples; backend tests compare those expectations with native execution.
+Checked-cell MIR tests own range diamonds, evaluation order, success joins,
+and failure isolation. Literal/dynamic parity and the non-transforming pass
+boundary are pinned separately. Native goldens cover all three checked targets
+with exact panic output and status, selected-path behavior, later-effect
+suppression, and successful full-expression cleanup. Cross-process tests cover
+token, AST, resolved, HIR, MIR, diagnostic, and assembly products; the golden
+runner repeats compilation and execution to compare stdout, stderr, and
+status. Generated-object inspection owns the unchanged runtime marker,
+reporter, and absence of conversion helpers.
 
 ## Focused commands
 
