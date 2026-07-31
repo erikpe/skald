@@ -95,23 +95,24 @@ module. Its invalid byte and slice bounds call the canonical panic intrinsic
 through the ordinary `std::str` and `std::error` import cycle.
 
 Integer division and remainder, floating division, bitwise operations, checked
-shifts, integer and floating comparisons and casts, eager boolean operators, and short-circuit
-boolean expressions are complete source-to-native phase products. Type checking
-selects their exact operand and result kinds; HIR and MIR retain semantic
+shifts, integer and floating comparisons, integer casts, eager boolean
+operators, and short-circuit boolean expressions are complete source-to-native
+phase products. Type checking selects their exact operand and result kinds;
+HIR and MIR retain semantic
 operations and explicit checked control flow where required, verification
 checks those contracts, and x86-64 realizes them without a new runtime ABI.
 The detailed ownership boundary is documented in
 [Phases and IR](PHASES_AND_IR.md#implemented-primitive-operator-boundary).
 
-The frozen complete primitive operator profile has a separately documented
-[phase and IR boundary](PHASES_AND_IR.md#frozen-primitive-operator-representation),
-[target boundary](BACKEND.md#frozen-primitive-operator-target-boundary), and
-[unchanged runtime ABI boundary](RUNTIME_ABI.md#frozen-primitive-operator-abi-boundary).
+The complete implemented primitive operator profile has separately documented
+[phase and IR boundary](PHASES_AND_IR.md#implemented-primitive-operator-representation),
+[target boundary](BACKEND.md#implemented-primitive-operator-target-boundary), and
+[unchanged runtime ABI boundary](RUNTIME_ABI.md#implemented-primitive-operator-abi-boundary).
 Those contracts select exact typed operations, structured short-circuit HIR,
 ordinary MIR CFG with canonical result carriage, path-correct full-expression
 cleanup, verified compiler-known failures, and mechanical target realization.
-They do not claim support beyond the implemented subset in the
-[status matrix](../language/STATUS.md#frozen-language-designs).
+They do not claim support for the explicitly deferred operator and conversion
+work in the [status matrix](../language/STATUS.md#not-implemented).
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the

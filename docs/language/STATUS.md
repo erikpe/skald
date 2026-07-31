@@ -32,6 +32,7 @@ does not imply support beyond that boundary.
 | [Source and declarations](MODULES_AND_INTEROP.md#compilation-units-and-modules) | **Implemented contract** | UTF-8 `.ska` source modules; ASCII identifiers; line comments; top-level functions, exact-symbol external functions, nominal classes, and interfaces. |
 | [Primitive types and literals](TYPES_AND_VALUES.md#literal-types-and-ranges) | **Implemented contract** | `i64`, `u64`, `u8`, `f64`, and `bool`; payload-free `unit` results; spelling-selected numeric types with checked literal ranges. |
 | [Primitive expressions](TYPES_AND_VALUES.md#expressions) | **Implemented contract** | Exact-type `+`, `-`, and binary `*` with fixed-width wrapping integer semantics; unary `-` for `i64` and `f64`; grouping, direct calls, field selection, and explicit shared dereference; no implicit conversions or truthiness. |
+| [Primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile) | **Implemented contract** | Complete exact primitive unary and binary matrices; no implicit conversion; implemented precedence with non-associative comparison/`is`; wrapping integer arithmetic; floor signed division and divisor-sign remainder; checked `u64` shift counts; IEEE binary64 division and unordered comparison; exact boolean equality and mandatory short-circuit `&&`/`||`; selected-path full-expression cleanup; and three compiler-known panic reasons. Every operation executes through typed HIR, verified MIR, and native x86-64. |
 | [Integer division and remainder](TYPES_AND_VALUES.md#implemented-integer-division-and-remainder) | **Implemented contract** | Binary `/` and `%` accept two identical `i64`, `u64`, or `u8` operands. Signed division floors and remainder has the divisor's sign; the signed-minimum pair is defined. Both evaluate eagerly through checked verified MIR, and zero divisors use distinct common-reporter panic reasons. |
 | [Floating division](TYPES_AND_VALUES.md#implemented-floating-division) | **Implemented contract** | Binary `/` accepts two exact `f64` operands and follows IEEE-754 binary64 behavior through verified non-failing MIR and x86-64. Signed zero, infinity, subnormal, overflow, underflow, and NaN remain ordinary results; zero divisors never enter a panic path. |
 | [Integer bitwise and shift operators](TYPES_AND_VALUES.md#implemented-integer-bitwise-and-shift-operators) | **Implemented contract** | Prefix `~` and binary `&`, `|`, and `^` accept exact integer operands. `<<` and `>>` accept an exact `i64`, `u64`, or `u8` left operand and `u64` count, check the count before shifting, and preserve signed or unsigned fixed-width meaning. All evaluate eagerly left to right, canonicalize `u8`, and execute through verified MIR and native x86-64; excessive counts use the common panic reporter. |
@@ -69,17 +70,6 @@ The [implemented grammar](GRAMMAR.md) is the precise accepted syntax authority.
 Focused semantic documents own the corresponding language rules; this matrix
 changes only when feature maturity or compiler support changes.
 
-## Frozen language designs
-
-| Area | Maturity | Current compiler boundary |
-|---|---|---|
-| [Primitive operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile) | **Frozen design** | Exact primitive unary and binary matrices; no implicit conversion; frozen precedence with non-associative comparison/`is`; wrapping integer arithmetic; floor signed division and divisor-sign remainder; checked `u64` shift counts; IEEE binary64 division and unordered comparison; exact boolean equality and mandatory short-circuit `&&`/`||`; selected-path full-expression cleanup; and three compiler-known panic reasons. Every operation in this frozen matrix is source-executable through verified MIR and x86-64. The cohesive profile remains frozen pending its final cross-family hardening and promotion milestone. |
-
-Frozen operator behavior remains authoritative while final cross-family
-hardening is in progress. Implementation roadmaps may divide delivery by
-operator family but must not redefine the shared source, cleanup, panic, or
-representation contracts.
-
 ## Compiler availability
 
 | Surface | Status | Current boundary |
@@ -105,7 +95,7 @@ guarantees.
 | [`break`](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits) | **Implemented contract** | Value-free statement targeting the nearest enclosing loop by stable identity, with deterministic cleanup of every exited body scope and preservation of enclosing state. |
 | [`continue`](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits) | **Implemented contract** | Value-free statement targeting the nearest enclosing loop, with deterministic cleanup of exited body scopes before a fresh condition evaluation. |
 | [Other loops and iteration](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability) | **Open question** | `for`, `for ... in`, `do while`, unconditional loops, iterator protocols, loop expressions and values, loop `else`, and labels are unspecified. |
-| [Deferred operator and conversion work](TYPES_AND_VALUES.md#deferred-operator-and-conversion-work) | **Open question** | Power, floating remainder, object and user-defined operators, implicit promotion, expanded explicit casts, total floating ordering, selectable overflow modes, compound assignment, and other explicitly excluded operations require separate designs. Frozen but unimplemented primitive operators are tracked above rather than treated as open questions. |
+| [Deferred operator and conversion work](TYPES_AND_VALUES.md#deferred-operator-and-conversion-work) | **Open question** | Power, floating remainder, object and user-defined operators, implicit promotion, expanded explicit casts, total floating ordering, selectable overflow modes, compound assignment, and other explicitly excluded operations require separate designs. |
 | [Function values](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability), closures, and generics | **Open question** | Direct named calls are implemented; callable values, capture, generic declarations, inference, and specialization are not specified for Skald. |
 | Static state and broader class features | **Open question** | Static fields and state, abstract/final forms, method/function overloads, reflection, and user-defined conversions are not current language contracts. Declaring-class privacy, static methods, and ordinary initializer overloading are implemented separately above. |
 | Broader standard library | **Open question** | The canonical string module is implemented in Skald source. Collection, I/O, formatting, parsing, and broader library organization remain open; current scalar output is bootstrap runtime interoperation. |

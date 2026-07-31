@@ -266,12 +266,12 @@ success block is malformed MIR. Deterministic dumps expose
 `shift-count-check`, `shl`, `sar`, or `shr` with exact types and width; they do
 not expose target registers.
 
-## Frozen primitive operator representation
+## Implemented primitive operator representation
 
 The
-[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
-selects a complete target-independent representation boundary without claiming
-that the corresponding phase products are implemented.
+[implemented primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
+uses one complete target-independent representation boundary across every
+source-to-native phase product.
 
 Lexing and syntax retain exact operator spellings, source order, operand
 shapes, grouping, and operator/operand spans. Longest-match tokenization keeps
@@ -441,7 +441,7 @@ continuation.
 
 MIR verification rejects:
 
-- operand or result types outside the frozen matrix;
+- operand or result types outside the operator matrix;
 - a non-`u64` shift count;
 - operation flavors inconsistent with signedness or width;
 - noncanonical `bool` or `u8` production;
@@ -468,7 +468,7 @@ alter temporary completion and cleanup.
 Generated target code mechanically realizes verified MIR. Exact Rust enum
 names, module organization, basic-block numbering, temporary-storage
 selection, branch shape, instruction sequence, and optimization algorithm
-remain private. The frozen profile adds no public runtime ABI entry point
+remain private. The operator profile adds no public runtime ABI entry point
 beyond the existing common panic reporter.
 
 ## Sources and diagnostics

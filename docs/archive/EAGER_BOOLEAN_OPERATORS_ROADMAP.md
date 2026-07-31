@@ -19,7 +19,7 @@ left != right
 
 with the precedence, exact-type selection, evaluation order, and canonical
 boolean results required by the frozen
-[primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile).
+[primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
 
 ## Scope and invariants
 

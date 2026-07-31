@@ -16,9 +16,9 @@ feature and must not be advertised as support for `&&` or `||`.
 The governing language contract is
 [Short-circuit logical expressions](../language/FUNCTIONS_AND_CONTROL_FLOW.md#short-circuit-logical-expressions).
 The target-independent representation contract is the
-[frozen primitive operator representation](../compiler/PHASES_AND_IR.md#frozen-primitive-operator-representation),
+[frozen primitive operator representation](../compiler/PHASES_AND_IR.md#implemented-primitive-operator-representation),
 and the source precedence is the
-[frozen primitive operator expression extension](../language/GRAMMAR.md#frozen-primitive-operator-expression-extension).
+[frozen primitive operator expression extension](../language/GRAMMAR.md#implemented-primitive-operator-expressions).
 
 ## Scope and invariants
 

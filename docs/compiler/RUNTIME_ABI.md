@@ -282,10 +282,10 @@ version marker. Loop behavior, backward branches, and per-iteration cleanup
 belong to compiler, backend, assembler, and native golden tests rather than a
 new runtime harness.
 
-## Frozen primitive operator ABI boundary
+## Implemented primitive operator ABI boundary
 
 The
-[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
+[implemented primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 adds no public C symbol, runtime-managed value, or ABI-version change. The
 runtime marker remains `ska_rt_abi_v6`.
 

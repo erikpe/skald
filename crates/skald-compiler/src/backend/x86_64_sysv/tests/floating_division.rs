@@ -54,6 +54,7 @@ fn nan_validator() -> &'static str {
 fn run_division(dividend: u64, divisor: u64, expected: ExpectedFloat) {
     let program = f64_division_program(dividend, divisor);
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert_eq!(output, emit_assembly(Target::X86_64SysV, &program).unwrap());
     match expected {
         ExpectedFloat::ExactBits(bits) => output.push_str(&exact_bits_validator(bits)),
         ExpectedFloat::NaN => output.push_str(nan_validator()),

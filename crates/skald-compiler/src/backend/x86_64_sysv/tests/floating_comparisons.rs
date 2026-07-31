@@ -25,6 +25,37 @@ fn expected_comparison(predicate: MirComparisonPredicate, left_bits: u64, right_
     }
 }
 
+fn expected_truth_row(left_bits: u64, right_bits: u64) -> [bool; 6] {
+    PREDICATES.map(|predicate| expected_comparison(predicate, left_bits, right_bits))
+}
+
+#[test]
+fn ordered_floating_rows_obey_trichotomy_and_valid_predicate_duals() {
+    let pairs = [
+        ((-3.0_f64).to_bits(), 2.0_f64.to_bits()),
+        (2.0_f64.to_bits(), 2.0_f64.to_bits()),
+        (3.0_f64.to_bits(), 2.0_f64.to_bits()),
+        (0.0_f64.to_bits(), (-0.0_f64).to_bits()),
+        (f64::NEG_INFINITY.to_bits(), f64::INFINITY.to_bits()),
+        (f64::INFINITY.to_bits(), f64::INFINITY.to_bits()),
+    ];
+
+    for (left, right) in pairs {
+        let [equal, not_equal, less, less_equal, greater, greater_equal] =
+            expected_truth_row(left, right);
+        let reversed = expected_truth_row(right, left);
+
+        assert_eq!(equal, !not_equal);
+        assert_eq!(u8::from(less) + u8::from(equal) + u8::from(greater), 1);
+        assert_eq!(less_equal, less || equal);
+        assert_eq!(greater_equal, greater || equal);
+        assert_eq!(less, reversed[4]);
+        assert_eq!(less_equal, reversed[5]);
+        assert_eq!(greater, reversed[2]);
+        assert_eq!(greater_equal, reversed[3]);
+    }
+}
+
 #[test]
 fn emits_explicit_unordered_gating_for_every_floating_predicate() {
     let cases = [
@@ -114,11 +145,14 @@ fn executes_the_complete_unordered_floating_truth_table() {
     for predicate in PREDICATES {
         for (left, right) in pairs {
             let expected = expected_comparison(predicate, left, right);
-            let output = emit_assembly(
-                Target::X86_64SysV,
-                &f64_comparison_program(predicate, left, right, expected),
-            )
-            .unwrap();
+            let program = f64_comparison_program(predicate, left, right, expected);
+            let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+            assert_eq!(
+                output,
+                emit_assembly(Target::X86_64SysV, &program).unwrap(),
+                "{} assembly changed for 0x{left:016x} and 0x{right:016x}",
+                predicate.mnemonic(),
+            );
             let result = run_native_assembly_output(&output);
             assert!(
                 result.status.success(),

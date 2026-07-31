@@ -65,6 +65,10 @@ const FLOATING_COMPARISON_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_FLOATING_COMPARISON_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const FLOATING_COMPARISON_DIAGNOSTIC_TEST_NAME: &str =
     "floating_comparison_diagnostics_are_deterministic_across_processes";
+const PRIMITIVE_OPERATOR_PROFILE_HELPER_OUTPUT: &str =
+    "SKALD_PRIMITIVE_OPERATOR_PROFILE_DETERMINISM_OUTPUT";
+const PRIMITIVE_OPERATOR_PROFILE_TEST_NAME: &str =
+    "primitive_operator_profile_phase_products_are_deterministic_across_processes";
 const EAGER_BOOLEAN_HELPER_OUTPUT: &str = "SKALD_EAGER_BOOLEAN_DETERMINISM_OUTPUT";
 const EAGER_BOOLEAN_TEST_NAME: &str =
     "eager_boolean_phase_products_are_deterministic_across_processes";
@@ -230,6 +234,16 @@ fn floating_comparison_diagnostics_are_deterministic_across_processes() {
         FLOATING_COMPARISON_DIAGNOSTIC_HELPER_OUTPUT,
         FLOATING_COMPARISON_DIAGNOSTIC_TEST_NAME,
         floating_comparison_diagnostic_dump,
+    );
+}
+
+#[test]
+fn primitive_operator_profile_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "primitive-operator-profile",
+        PRIMITIVE_OPERATOR_PROFILE_HELPER_OUTPUT,
+        PRIMITIVE_OPERATOR_PROFILE_TEST_NAME,
+        primitive_operator_profile_phase_dump,
     );
 }
 
@@ -783,6 +797,12 @@ fn floating_comparison_diagnostic_dump() -> String {
             "fn main() -> i64 { return 0; }\n",
         ),
     )
+}
+
+fn primitive_operator_profile_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/primitive_operator_profile.ska"
+    ))
 }
 
 fn eager_boolean_phase_dump() -> String {

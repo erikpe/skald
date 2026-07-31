@@ -1,9 +1,9 @@
 # Errors and Exceptional Control Flow
 
 Status: authoritative for current language-level compile-time rejection and
-runtime-failure boundaries, the frozen panic and primitive-operator failure
-design, normal-flow cleanup obligations, and the maturity of recoverable
-exceptions. The
+runtime-failure boundaries, the frozen panic design, implemented
+primitive-operator failures, normal-flow cleanup obligations, and the maturity
+of recoverable exceptions. The
 [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Compile-time rejection
@@ -182,9 +182,9 @@ changing guarded presence, does not return to Skald, and does not guarantee
 remaining source-level cleanup. Each reason remains distinct through MIR and
 selects its message from the [common panic reporter and catalog](#frozen-panic-design).
 
-## Frozen operator failures
+## Implemented operator failures
 
-The frozen primitive operator profile adds three compiler-known,
+The implemented primitive operator profile includes three compiler-known,
 source-reachable failures:
 
 - integer `/` with a zero divisor;
@@ -201,7 +201,7 @@ count.
 `i64::MIN / -1` and `i64::MIN % -1` do not fail: they produce `i64::MIN` and
 zero respectively. Integer wrapping overflow and floating division by zero
 also do not use panic. The
-[operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
+[operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 defines their value behavior. Source checked shifts and integer division or
 remainder use the common reporter through their verified failure edges.
 

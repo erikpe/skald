@@ -344,6 +344,17 @@ zero, both infinities, NaN in either operand position, source order, cleanup,
 and short-circuit skipping. Cross-process snapshots cover source phase
 products and focused diagnostics.
 
+The complete primitive-operator profile has an additional cross-family
+closure layer. A compact backend property table checks exact floating-division
+bits, unordered NaN rows, ordered trichotomy, signed-zero equality, valid
+predicate duals, canonical booleans, and repeated assembly emission across
+multiple NaN encodings. One source-native golden composes floating division
+and comparison with wrapping arithmetic, checked integer operations, bitwise
+and shifts, optional unwrap, arrays, calls, inline and shared object receivers,
+allocation, assignment, conditions, loops, skipped failures, and reverse
+full-expression cleanup. Its complete token-through-assembly products are
+also compared across independent compiler processes.
+
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
 recovery. Resolution and type-check tests own source-shaped negation, exact

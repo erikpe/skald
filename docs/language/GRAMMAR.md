@@ -555,10 +555,9 @@ requires grouping. The exact-type comparison semantics and closed primitive
 cast matrix are defined by
 [Types, Values, and Expressions](TYPES_AND_VALUES.md#implemented-primitive-comparisons-boolean-negation-and-integer-casts).
 
-### Frozen primitive-operator expression extension
+### Implemented primitive-operator expressions
 
-The complete frozen operator grammar and the implemented expression ladder
-currently have the following shared shape:
+The complete primitive-operator grammar has the following implemented shape:
 
 ```text
 expression                = logical-or-expression
@@ -595,7 +594,7 @@ unary-expression          = ("-" | "!" | "~" | "*") unary-expression
 ```
 
 The cast and postfix productions retain their implemented definitions. From
-tightest to loosest binding, the frozen precedence is:
+tightest to loosest binding, the precedence is:
 
 1. postfix unwrap, member access, dereferencing member access, calls, indexing,
    and slicing;
@@ -636,9 +635,8 @@ Existing `//` line-comment recognition remains distinct from division: adjacent
 `//` begins a comment, while `/ /` is two division tokens separated by trivia.
 
 The source semantics and exact operand matrix are defined by the
-[frozen primitive operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile).
-The [status matrix](STATUS.md) remains authoritative for acceptance by the
-current compiler.
+[implemented primitive operator profile](TYPES_AND_VALUES.md#implemented-primitive-operator-profile).
+The [status matrix](STATUS.md) remains authoritative for compiler support.
 
 ## Syntax errors and nesting
 

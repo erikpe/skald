@@ -10,9 +10,9 @@ keeping pure bitwise operations separate from shifts' source-reachable failure
 control flow.
 
 The governing language contract is the
-[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile),
+[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile),
 the source shape is the
-[frozen primitive-operator expression extension](../language/GRAMMAR.md#frozen-primitive-operator-expression-extension),
+[frozen primitive-operator expression extension](../language/GRAMMAR.md#implemented-primitive-operator-expressions),
 and checked failure uses the existing
 [panic catalog](../language/ERRORS.md#frozen-panic-design).
 

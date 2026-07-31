@@ -123,13 +123,13 @@ makes a result source-observable.
   current compiler support.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
-  type model, literals, exact-type rules, operator availability, and the frozen
-  complete primitive operator profile. Integer division and remainder,
+  type model, literals, exact-type rules, operator availability, and the
+  complete implemented primitive operator profile. Integer division and remainder,
   floating division, bitwise operations, checked shifts, integer and floating
   comparisons, explicit total integer casts, eager boolean operators, and
   short-circuit boolean expressions execute through verified MIR and the
-  x86-64 backend. The status matrix tracks the complete primitive profile's
-  remaining hardening before promotion from frozen design.
+  x86-64 backend. The status matrix records the cohesive profile as an
+  implemented contract and keeps only explicitly deferred operator work open.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.

@@ -6,11 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Remaining Floating-Point Operators Roadmap](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
-  — **in progress**; floating division and all six unordered floating
-  comparisons are complete source-to-native products, and FP4 cross-family
-  hardening and profile promotion are next. The roadmap depends only on the
-  completed primitive-operator and `f64` scalar foundations.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

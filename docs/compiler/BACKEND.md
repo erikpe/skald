@@ -189,14 +189,12 @@ with the sentinel. MIR
 verification remains the trust boundary that restricts static sentinel
 publication; ordinary dynamic publication writes count one.
 
-## Frozen primitive operator target boundary
+## Implemented primitive operator target boundary
 
 The
-[frozen operator representation](PHASES_AND_IR.md#frozen-primitive-operator-representation)
-defines the contract for current and future operator input, including the
-implemented bitwise, checked-shift, checked integer-division, and floating
-division subsets described above. A target consumes
-already selected operation flavor, type, width, signedness, failure
+[implemented operator representation](PHASES_AND_IR.md#implemented-primitive-operator-representation)
+defines the contract for the complete primitive-operator input. A target
+consumes already selected operation flavor, type, width, signedness, failure
 capability, and control flow. It never reconstructs semantics from source
 spelling or host-language arithmetic.
 
@@ -237,7 +235,7 @@ undefined or build-mode-dependent host overflow are not valid lowering
 strategies. Wrapping overflow, the signed-minimum division pair, and floating
 division by zero do not report panic.
 
-The frozen operator profile adds no target calling-convention rule, public
+The implemented operator profile adds no target calling-convention rule, public
 symbol, metadata object, or runtime entry point. Exact instruction sequences,
 register choices, flag use, branch shapes, and constant-folding algorithms
 remain private after these observable requirements are met.

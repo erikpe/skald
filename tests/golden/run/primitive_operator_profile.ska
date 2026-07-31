@@ -1,0 +1,108 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+
+fn floor_quotient(dividend: i64, divisor: i64) -> i64 {
+    return dividend / divisor;
+}
+
+fn mark(marker: i64, value: f64) -> f64 {
+    ska_rt_println_i64(marker);
+    return value;
+}
+
+class Probe {
+    marker: i64;
+    value: f64;
+    flag: bool;
+
+    init(marker: i64, value: f64) {
+        self.marker = marker;
+        self.value = value;
+        self.flag = false;
+    }
+
+    fn scaled(divisor: f64) -> f64 {
+        return (self.value + 2.0) / divisor;
+    }
+
+    mut fn record(value: bool) -> bool {
+        self.flag = value;
+        return self.flag;
+    }
+
+    destroy {
+        ska_rt_println_i64(100 + self.marker);
+    }
+}
+
+fn make(marker: i64, value: f64) -> shared Probe {
+    return new Probe(marker, value);
+}
+
+fn main() -> i64 {
+    var values: f64[] = f64[](2u);
+    values[0] = 6.0;
+    values[1] = 3.0;
+    var optional: f64? = 2.0;
+    var flags: bool[] = bool[](1u);
+    var byte: u8 = ((~1u8 & 15u8) | (16u8 ^ 2u8)) >> 2u;
+
+    var selected: bool = values[0] / optional! + values[1] * 2.0 - 1.0 == 8.0
+        && floor_quotient(-7, 3) == -3
+        && -7 % 3 == 2
+        && byte == 7u8
+        && -8 >> 2u == -2
+        && 1u << 63u > 0u
+        && optional is some
+        && !false == true;
+    ska_rt_println_bool(selected);
+
+    var probe: Probe = Probe(0, 8.0);
+    flags[0] = probe.record(selected && probe.value / 4.0 == 2.0);
+    ska_rt_println_bool(flags[0]);
+
+    if (flags[0]) {
+        ska_rt_println_i64(1);
+    }
+    elif (probe.value == 0.0) {
+        ska_rt_println_i64(-1);
+    }
+
+    var rounds: i64 = 0;
+    while (flags[0] && rounds < 2) {
+        rounds = rounds + 1;
+    }
+    ska_rt_println_i64(rounds);
+
+    var nan: f64 = 0.0 / 0.0;
+    ska_rt_println_bool(nan == nan);
+    ska_rt_println_bool(nan != nan);
+    ska_rt_println_bool(nan < nan);
+    ska_rt_println_bool(nan <= nan);
+    ska_rt_println_bool(nan > nan);
+    ska_rt_println_bool(nan >= nan);
+
+    var positive_zero: f64 = 0.0 / 1.0;
+    var negative_zero: f64 = 0.0 / -1.0;
+    ska_rt_println_bool(positive_zero == negative_zero);
+
+    var positive_infinity: f64 = 1.0 / 0.0;
+    var negative_infinity: f64 = -1.0 / 0.0;
+    ska_rt_println_bool(
+        negative_infinity < -1.0
+        && positive_infinity > 1.0
+        && negative_infinity < positive_infinity
+    );
+    ska_rt_println_f64_bits(positive_infinity);
+
+    selected = mark(10, 8.0) / mark(11, 2.0) == 4.0
+        && make(1, 8.0)->scaled(2.0) > make(2, 4.0)->scaled(2.0)
+        && floor_quotient(7, -3) == -3
+        && 7 % -3 == -2;
+    ska_rt_println_bool(selected);
+
+    ska_rt_println_bool(true || floor_quotient(1, 0) == 0);
+    ska_rt_println_bool(false && 1u8 << 8u == 0u8);
+    return 0;
+}

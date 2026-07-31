@@ -1,6 +1,6 @@
 # Remaining Floating-Point Operators Roadmap
 
-Status: in progress; FP0 through FP3 are complete, and FP4 is next.
+Status: complete; FP0 through FP4 are complete.
 
 This roadmap completes the remaining frozen primitive operators for `f64`:
 IEEE-754 binary64 division followed by unordered equality and ordering. The
@@ -11,11 +11,11 @@ comparisons must classify those values without accidentally imposing a total
 order.
 
 The governing language contract is the
-[frozen primitive operator profile](../language/TYPES_AND_VALUES.md#frozen-primitive-operator-profile),
+[implemented primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile),
 the source shape is the
-[frozen primitive-operator expression extension](../language/GRAMMAR.md#frozen-primitive-operator-expression-extension),
+[implemented primitive-operator expressions](../language/GRAMMAR.md#implemented-primitive-operator-expressions),
 and feature maturity is owned by the
-[language status matrix](../language/STATUS.md#frozen-language-designs).
+[language status matrix](../language/STATUS.md#implemented-language).
 
 ## Scope and invariants
 
@@ -127,7 +127,7 @@ the ABI remains unchanged rather than adding operator-specific C harnesses.
 - [x] FP1 — Enable floating division from source end to end
 - [x] FP2 — Establish executable unordered floating comparisons
 - [x] FP3 — Enable floating comparisons from source end to end
-- [ ] FP4 — Harden and promote the complete primitive-operator profile
+- [x] FP4 — Harden and promote the complete primitive-operator profile
 
 ## PR-sized implementation sequence
 
@@ -319,38 +319,38 @@ and the entire frozen primitive operator matrix is source-executable.
 the previously implemented operator families remain correct together at every
 phase boundary.
 
-- [ ] Audit the complete primitive operator matrix against the frozen design,
+- [x] Audit the complete primitive operator matrix against the frozen design,
       grammar, status matrix, HIR/MIR representations, verifier, x86-64 target,
       diagnostics, dumps, and golden corpus; close every mismatch rather than
       leaving rollout exceptions.
-- [ ] Add compact table-driven and property coverage: exact division raw-bit
+- [x] Add compact table-driven and property coverage: exact division raw-bit
       cases; the complete unordered comparison truth row; trichotomy for
       ordered unequal/equal finite values and infinities; signed-zero equality;
       predicate duals only where IEEE unordered semantics makes them valid;
       and canonical boolean results in all consumers.
-- [ ] Stress nested compositions of floating division and comparison with
+- [x] Stress nested compositions of floating division and comparison with
       eager arithmetic, checked integer operations, short-circuit logic,
       optional unwrap, arrays, calls, object/shared receivers, allocation,
       return, assignment, conditions, loops, and full-expression cleanup.
-- [ ] Confirm deterministic diagnostics and phase dumps under repeated and
+- [x] Confirm deterministic diagnostics and phase dumps under repeated and
       cross-process compilation, including multiple NaN bit patterns without
       promising result payload preservation.
-- [ ] Audit facade-oriented Rust module ownership. Perform small local cleanup
+- [x] Audit facade-oriented Rust module ownership. Perform small local cleanup
       directly; record only genuinely larger, out-of-scope maintainability
       work in a focused discoveries file with evidence, impact, and a
       post-roadmap recommendation.
-- [ ] Update the implemented operator table and prose, grammar availability,
+- [x] Update the implemented operator table and prose, grammar availability,
       compiler/backend documentation, status matrix, language overview, and
       roadmap index so the complete primitive operator profile is an
       implemented contract and only explicitly deferred operator work remains
       open.
-- [ ] Verify the runtime ABI version, public header, symbol inventory, panic
+- [x] Verify the runtime ABI version, public header, symbol inventory, panic
       catalog, and message ordering are byte-for-byte unchanged by the
       floating families.
-- [ ] Remove temporary rollout-only fixture rewriting, comments, exclusions,
+- [x] Remove temporary rollout-only fixture rewriting, comments, exclusions,
       and task-code references that no longer describe the finished compiler;
       keep permanent semantic tests and documentation task-code-free.
-- [ ] Run focused suites, `make check`, `make msrv-check`,
+- [x] Run focused suites, `make check`, `make msrv-check`,
       `make robustness-long`, `git diff --check`, and the full gates from an
       artifact-free snapshot or clean checkout; archive this roadmap only
       after all checks pass and no pending discovery blocks the contract.

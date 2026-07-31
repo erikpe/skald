@@ -1,8 +1,8 @@
 # Skald Types, Values, and Expressions
 
 Status: authoritative for implemented type, value, literal, and expression
-semantics, the frozen primitive operator profile, the primitive integer cast
-contract, and the exact type rule for primitive binding reassignment. The
+semantics, the implemented primitive operator profile, the primitive integer
+cast contract, and the exact type rule for primitive binding reassignment. The
 [status matrix](STATUS.md) is authoritative for feature maturity, and the
 [implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
@@ -167,7 +167,7 @@ The implemented arithmetic surface is deliberately exact-type:
 
 Integer arithmetic wraps modulo its width: `i64` and `u64` retain the low
 64 bits, while `u8` retains the low 8 bits and remains in `0..=255`. The
-complete overflow contract is stated in the frozen profile below.
+complete overflow contract is stated in the operator profile below.
 
 `f64` arithmetic follows IEEE-754 binary64 addition, subtraction,
 multiplication, division, and negation in the default round-to-nearest,
@@ -187,13 +187,12 @@ execute for inline, shared, and optional-shared receivers. Call-scoped
 whole-array and exact class or nested-array element aliases execute with their
 declared read-only or mutable access.
 
-### Frozen primitive operator profile
+### Implemented primitive operator profile
 
-The complete primitive operator design below is frozen independently of
-compiler availability. The [status matrix](STATUS.md) identifies the currently
-implemented subset, and the
-[grammar](GRAMMAR.md#frozen-primitive-operator-expression-extension) records
-the frozen syntax and precedence.
+The complete primitive operator profile below is an implemented language
+contract. The [status matrix](STATUS.md) records its maturity, and the
+[grammar](GRAMMAR.md#implemented-primitive-operator-expressions) records its
+accepted syntax and precedence.
 
 The unary matrix is:
 
@@ -253,7 +252,7 @@ change an existing result or operation:
 
 The explicit cast matrix may expand independently after this design. Implicit
 conversion, mixed-type operator resolution, or contextual literal typing
-would revise this frozen boundary rather than merely add a cast.
+would revise this boundary rather than merely add a cast.
 
 An unsupported operator/type combination is a compile-time error. Diagnostics
 identify the operator and incompatible operand types, but the language does
@@ -339,11 +338,11 @@ Logical evaluation, source order, skipped effects, and temporary lifetime are
 defined by
 [Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#short-circuit-logical-expressions).
 Integer zero-divisor and excessive-shift failure are defined by
-[Errors and Exceptional Control Flow](ERRORS.md#frozen-operator-failures).
+[Errors and Exceptional Control Flow](ERRORS.md#implemented-operator-failures).
 
 #### Deferred operator and conversion work
 
-This frozen profile does not define:
+This profile does not define:
 
 - power or exponentiation;
 - floating remainder;
@@ -471,10 +470,9 @@ must cast one operand explicitly before comparing different integer types.
 
 The two operands evaluate exactly once from left to right. In the implemented
 grammar all six operators share one non-associative level above contextual
-`is`; the frozen operator grammar places both forms in one non-associative
+`is`; the implemented operator grammar places both forms in one non-associative
 comparison tier. Both reject an ungrouped chain such as `a < b < c`. The
-[grammar](GRAMMAR.md#expressions) distinguishes accepted and frozen source
-shape.
+[grammar](GRAMMAR.md#expressions) defines the accepted source shape.
 
 ### Floating comparisons
 
@@ -549,7 +547,7 @@ first be valid for the type selected by its spelling; applying an explicit
 cast adds no further range check. The conversion rule is portable language
 meaning, not a promise about memory layout, endianness, registers, or the
 external ABI. Integer arithmetic overflow is defined independently by the
-[frozen primitive operator profile](#frozen-primitive-operator-profile).
+[implemented primitive operator profile](#implemented-primitive-operator-profile).
 
 ### Deferred conversion work
 
