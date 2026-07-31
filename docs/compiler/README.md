@@ -121,8 +121,11 @@ has separately selected
 [target](BACKEND.md#frozen-complete-primitive-cast-target-boundary), and
 [unchanged runtime ABI](RUNTIME_ABI.md#frozen-complete-primitive-cast-abi-boundary)
 boundaries. Those contracts are implementation-ready but do not expand the
-current compiler beyond the nine integer cast cells. The next planning action
-is an implementation roadmap rather than further semantic design.
+current compiler beyond the nine integer cast cells. The active
+[implementation roadmap](../roadmaps/PRIMITIVE_CAST_MATRIX_ROADMAP.md) has
+generalized syntax, resolution, and typed HIR to the cohesive primitive-cast
+vocabulary. Establishing the verified pure primitive-cast MIR boundary is the
+next implementation step.
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the

@@ -53,7 +53,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             assert_expression_is_fully_typed(&division.dividend);
             assert_expression_is_fully_typed(&division.divisor);
         }
-        HirExpressionKind::IntegerCast { operation, operand } => {
+        HirExpressionKind::PrimitiveCast { operation, operand } => {
             assert_eq!(operand.ty, operation.source_type());
             assert_eq!(expression.ty, operation.result_type());
         }
@@ -159,7 +159,6 @@ mod eager_boolean_operators;
 mod expressions;
 mod floating_division;
 mod inline_fields;
-mod integer_casts;
 mod integer_division;
 mod interfaces;
 mod literals;
@@ -167,6 +166,7 @@ mod object_results;
 mod objects;
 mod optional_values;
 mod primitive_binding_assignment;
+mod primitive_casts;
 mod shared_ownership;
 mod shifts;
 mod short_circuit_boolean;

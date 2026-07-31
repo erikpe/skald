@@ -6,40 +6,9 @@ use crate::{
 };
 
 use super::{
-    HirAccess, HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation,
-    HirSharedSource, HirSharedTarget,
+    HirAccess, HirExpression, HirFieldPlace, HirObjectSource, HirPrimitiveType,
+    HirSelectedCopyOperation, HirSharedSource, HirSharedTarget,
 };
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum HirPrimitiveType {
-    I64,
-    U64,
-    U8,
-    F64,
-    Bool,
-}
-
-impl HirPrimitiveType {
-    pub const fn payload_type(self) -> super::Type {
-        match self {
-            Self::I64 => super::Type::I64,
-            Self::U64 => super::Type::U64,
-            Self::U8 => super::Type::U8,
-            Self::F64 => super::Type::F64,
-            Self::Bool => super::Type::Bool,
-        }
-    }
-
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::I64 => "i64",
-            Self::U64 => "u64",
-            Self::U8 => "u8",
-            Self::F64 => "f64",
-            Self::Bool => "bool",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirOptionalPlace {

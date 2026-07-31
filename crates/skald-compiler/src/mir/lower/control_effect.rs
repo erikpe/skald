@@ -8,9 +8,12 @@ use crate::hir::{
 
 pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> bool {
     match &expression.kind {
-        HirExpressionKind::Unary { operand, .. }
-        | HirExpressionKind::IntegerCast { operand, .. }
-        | HirExpressionKind::Grouped(operand) => expression_contains_control_effect(operand),
+        HirExpressionKind::Unary { operand, .. } | HirExpressionKind::Grouped(operand) => {
+            expression_contains_control_effect(operand)
+        }
+        HirExpressionKind::PrimitiveCast { operation, operand } => {
+            operation.may_terminate() || expression_contains_control_effect(operand)
+        }
         HirExpressionKind::Binary { left, right, .. }
         | HirExpressionKind::PrimitiveComparison { left, right, .. } => {
             expression_contains_control_effect(left) || expression_contains_control_effect(right)

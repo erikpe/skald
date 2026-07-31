@@ -25,7 +25,7 @@ pub enum ResolvedExpression {
     TypeTest(ResolvedTypeTestExpr),
     PresenceTest(ResolvedPresenceTestExpr),
     Unwrap(ResolvedUnwrapExpr),
-    IntegerCast(ResolvedIntegerCastExpr),
+    PrimitiveCast(ResolvedPrimitiveCastExpr),
     ObjectCast(ResolvedObjectCastExpr),
     Allocation(ResolvedAllocationExpr),
     ArrayConstruction(Box<ResolvedArrayConstructionExpr>),
@@ -55,7 +55,7 @@ impl ResolvedExpression {
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
-            Self::IntegerCast(expression) => expression.span,
+            Self::PrimitiveCast(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
             Self::ArrayConstruction(expression) => expression.span,
@@ -212,26 +212,30 @@ pub struct ResolvedObjectCastExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedIntegerCastExpr {
-    pub target: ResolvedIntegerType,
+pub struct ResolvedPrimitiveCastExpr {
+    pub target: ResolvedPrimitiveType,
     pub target_span: Span,
     pub source: Box<ResolvedExpression>,
     pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ResolvedIntegerType {
+pub enum ResolvedPrimitiveType {
     I64,
     U64,
     U8,
+    F64,
+    Bool,
 }
 
-impl ResolvedIntegerType {
+impl ResolvedPrimitiveType {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
             Self::U64 => "u64",
             Self::U8 => "u8",
+            Self::F64 => "f64",
+            Self::Bool => "bool",
         }
     }
 }

@@ -612,9 +612,9 @@ impl AstDumper {
                     dumper.line("Bang", unwrap.bang_span);
                 });
             }
-            Expression::IntegerCast(cast) => {
+            Expression::PrimitiveCast(cast) => {
                 self.line(
-                    &format!("IntegerCast target {}", cast.target.name()),
+                    &format!("PrimitiveCast target {}", cast.target.name()),
                     cast.span,
                 );
                 self.indented(|dumper| {

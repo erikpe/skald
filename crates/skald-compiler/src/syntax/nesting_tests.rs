@@ -62,7 +62,7 @@ fn grouped_comparisons_use_the_common_expression_nesting_budget() {
 }
 
 #[test]
-fn primitive_integer_casts_use_the_common_expression_nesting_budget() {
+fn primitive_casts_use_the_common_expression_nesting_budget() {
     let allowed = format!("{}1", "(i64) ".repeat(MAX_SYNTAX_NESTING - 2));
     assert!(parse_text(source_with_return(&allowed))
         .diagnostics

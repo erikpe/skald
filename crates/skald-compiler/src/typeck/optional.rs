@@ -383,7 +383,7 @@ impl CallableChecker<'_, '_> {
         if value.ty == Type::OptionalPrimitive(payload) {
             return Some(HirOptionalSource::Produced(Box::new(value)));
         }
-        if value.ty != payload.payload_type() {
+        if value.ty != payload.value_type() {
             self.diagnostics.push(
                 Diagnostic::error(
                     TYPE_MISMATCH,
@@ -446,7 +446,7 @@ impl CallableChecker<'_, '_> {
         let payload = source.payload();
         Some(HirExpression {
             kind: HirExpressionKind::Unwrap(source),
-            ty: payload.payload_type(),
+            ty: payload.value_type(),
             span: unwrap.span,
         })
     }

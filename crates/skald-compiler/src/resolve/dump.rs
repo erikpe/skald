@@ -861,9 +861,9 @@ impl ResolvedDumper {
                     dumper.line("Bang", unwrap.bang_span);
                 });
             }
-            ResolvedExpression::IntegerCast(cast) => {
+            ResolvedExpression::PrimitiveCast(cast) => {
                 self.line(
-                    &format!("IntegerCast target {}", cast.target.name()),
+                    &format!("PrimitiveCast target {}", cast.target.name()),
                     cast.span,
                 );
                 self.indented(|dumper| dumper.expression(&cast.source));

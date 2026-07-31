@@ -7,8 +7,9 @@ use super::{
     dump_hir, HirBinaryOperation, HirBlock, HirCheckedIntegerDivision, HirComparisonOperand,
     HirControlEffects, HirExpression, HirExpressionKind, HirFunctionDefinition,
     HirIntegerBitwiseOperation, HirIntegerDivisionKind, HirIntegerDivisionOperation,
-    HirIntegerType, HirLogicalExpression, HirLogicalOperation, HirPrimitiveComparison,
-    HirReturnValue, HirStatement, HirUnaryOperation, HirWhile, Type,
+    HirIntegerType, HirLogicalExpression, HirLogicalOperation, HirPrimitiveCast,
+    HirPrimitiveCastKind, HirPrimitiveComparison, HirPrimitiveType, HirReturnValue, HirStatement,
+    HirUnaryOperation, HirWhile, Type,
 };
 
 fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {
@@ -267,6 +268,46 @@ fn integer_bitwise_operations_retain_exact_types_and_dump_vocabulary() {
     assert_eq!(dump, dump_hir(&hir));
     assert!(dump.contains("Unary BitwiseComplement.u8 : u8"));
     assert!(dump.contains("Binary BitwiseOr.u8 : u8"));
+}
+
+#[test]
+fn primitive_casts_classify_the_complete_frozen_matrix() {
+    use HirPrimitiveCastKind::{
+        CheckedF64ToInteger as Checked, FromBool, Identity, IntegerBits, ToBool, ToF64,
+    };
+
+    let types = [
+        HirPrimitiveType::I64,
+        HirPrimitiveType::U64,
+        HirPrimitiveType::U8,
+        HirPrimitiveType::F64,
+        HirPrimitiveType::Bool,
+    ];
+    let expected = [
+        [Identity, IntegerBits, IntegerBits, ToF64, ToBool],
+        [IntegerBits, Identity, IntegerBits, ToF64, ToBool],
+        [IntegerBits, IntegerBits, Identity, ToF64, ToBool],
+        [Checked, Checked, Checked, Identity, ToBool],
+        [FromBool, FromBool, FromBool, ToF64, Identity],
+    ];
+
+    for (source_index, source) in types.into_iter().enumerate() {
+        for (target_index, target) in types.into_iter().enumerate() {
+            let operation = HirPrimitiveCast::new(source, target);
+            let expected = expected[source_index][target_index];
+
+            assert_eq!(
+                operation.kind(),
+                expected,
+                "{} to {}",
+                source.name(),
+                target.name()
+            );
+            assert_eq!(operation.source_type(), source.value_type());
+            assert_eq!(operation.result_type(), target.value_type());
+            assert_eq!(operation.may_terminate(), expected == Checked);
+        }
+    }
 }
 
 #[test]

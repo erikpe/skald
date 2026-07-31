@@ -1,6 +1,6 @@
 # Complete Primitive Cast Matrix Roadmap
 
-Status: planned; CAST0 is next.
+Status: in progress; CAST1 is next.
 
 This roadmap implements the sixteen remaining cells of Skald's frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
@@ -76,7 +76,7 @@ clean checkout.
 
 ## Progress
 
-- [ ] CAST0 — Establish cohesive primitive-cast front-end vocabulary
+- [x] CAST0 — Establish cohesive primitive-cast front-end vocabulary
 - [ ] CAST1 — Establish verified pure primitive-cast MIR
 - [ ] CAST2 — Execute identity and boolean-boundary casts
 - [ ] CAST3 — Execute integer-to-floating casts
@@ -94,28 +94,28 @@ clean checkout.
 before additional semantics create a second cast hierarchy, while preserving
 the current nine-cell source availability.
 
-- [ ] Generalize primitive cast-target recognition to `i64`, `u64`, `u8`,
+- [x] Generalize primitive cast-target recognition to `i64`, `u64`, `u8`,
       `f64`, and `bool` without disturbing unary precedence, right-associative
       nesting, postfix binding, grouping, recovery, or the common nesting
       budget.
-- [ ] Keep primitive-keyword casts distinct from nominal and `shared` object
+- [x] Keep primitive-keyword casts distinct from nominal and `shared` object
       casts in syntax and resolution. Primitive targets bypass declaration
       lookup; object targets retain their existing lookup and diagnostics.
-- [ ] Replace public AST and resolved integer-cast nodes and target types with
+- [x] Replace public AST and resolved integer-cast nodes and target types with
       cohesive primitive-cast vocabulary, preserving exact target/source/full
       spans and deterministic dumps.
-- [ ] Replace typed HIR integer-cast vocabulary with an exact primitive source,
+- [x] Replace typed HIR integer-cast vocabulary with an exact primitive source,
       target, and semantic class: identity, integer bits, to `bool`, to `f64`,
-      or checked `f64`-to-integer. Record whether the selected class may
-      terminate without encoding backend details.
-- [ ] Keep type checking as the selection owner and continue constructing HIR
+      from `bool` to an integer, or checked `f64`-to-integer. Record whether
+      the selected class may terminate without encoding backend details.
+- [x] Keep type checking as the selection owner and continue constructing HIR
       only for the already implemented nine integer cells. Give syntactically
       valid pending pairs a focused temporary implementation diagnostic so no
       accepted program reaches incomplete MIR.
-- [ ] Migrate facade exports, public API compile tests, syntax/resolution/HIR
+- [x] Migrate facade exports, public API compile tests, syntax/resolution/HIR
       fixtures, and dump vocabulary in the same change; leave no parallel
       integer-cast public model.
-- [ ] Update implemented grammar and phase documentation to describe the
+- [x] Update implemented grammar and phase documentation to describe the
       generalized recognized target shape and the still-limited accepted
       matrix without claiming executable new cells.
 

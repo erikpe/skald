@@ -77,8 +77,8 @@ fn logical_not_participates_in_comparison_and_cast_precedence() {
     };
     assert!(matches!(grouped.operand.as_ref(), Expression::Grouped(_)));
 
-    let Expression::IntegerCast(cast) = return_value(function(&output.ast, 3)) else {
-        panic!("expected integer cast");
+    let Expression::PrimitiveCast(cast) = return_value(function(&output.ast, 3)) else {
+        panic!("expected primitive cast");
     };
     assert!(matches!(
         cast.source.as_ref(),

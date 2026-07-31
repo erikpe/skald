@@ -4,9 +4,10 @@ use super::{comparison::comparison_predicate, *};
 use crate::{
     diagnostics::format_type_list,
     hir::{
-        HirBinaryOperation, HirExpressionKind, HirIntegerCast, HirIntegerType, HirUnaryOperation,
+        HirBinaryOperation, HirExpressionKind, HirPrimitiveCast, HirPrimitiveType,
+        HirUnaryOperation,
     },
-    resolve::{ResolvedBinaryOperator, ResolvedIntegerType, ResolvedUnaryOperator},
+    resolve::{ResolvedBinaryOperator, ResolvedPrimitiveType, ResolvedUnaryOperator},
 };
 
 use crate::typeck::{
@@ -16,40 +17,68 @@ use crate::typeck::{
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
 const INTEGER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8"];
+const PRIMITIVE_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
 impl CallableChecker<'_, '_> {
-    pub(super) fn check_integer_cast(
+    pub(super) fn check_primitive_cast(
         &mut self,
-        cast: &crate::resolve::ResolvedIntegerCastExpr,
+        cast: &crate::resolve::ResolvedPrimitiveCastExpr,
     ) -> Option<HirExpression> {
         let operand = self.check_expression(&cast.source)?;
-        let Some(source) = HirIntegerType::from_type(operand.ty) else {
+        let Some(source) = HirPrimitiveType::from_type(operand.ty) else {
             self.diagnostics.push(
                 Diagnostic::error(
                     TYPE_MISMATCH,
-                    "integer cast requires a primitive integer source",
+                    "primitive cast requires a primitive value source",
                 )
                 .with_primary_label(
                     operand.span,
                     format!("source has type `{}`", operand.ty.name()),
                 )
-                .with_secondary_label(cast.target_span, "primitive integer cast target")
+                .with_secondary_label(cast.target_span, "primitive cast target")
                 .with_note(format!(
-                    "integer source types are {}",
-                    format_type_list(INTEGER_TYPE_NAMES)
+                    "primitive value types are {}",
+                    format_type_list(PRIMITIVE_TYPE_NAMES)
                 )),
             );
             return None;
         };
         let target = match cast.target {
-            ResolvedIntegerType::I64 => HirIntegerType::I64,
-            ResolvedIntegerType::U64 => HirIntegerType::U64,
-            ResolvedIntegerType::U8 => HirIntegerType::U8,
+            ResolvedPrimitiveType::I64 => HirPrimitiveType::I64,
+            ResolvedPrimitiveType::U64 => HirPrimitiveType::U64,
+            ResolvedPrimitiveType::U8 => HirPrimitiveType::U8,
+            ResolvedPrimitiveType::F64 => HirPrimitiveType::F64,
+            ResolvedPrimitiveType::Bool => HirPrimitiveType::Bool,
         };
-        let operation = HirIntegerCast { source, target };
+        let operation = HirPrimitiveCast::new(source, target);
+        if !(source.is_integer() && target.is_integer()) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!(
+                        "primitive cast from `{}` to `{}` is not implemented yet",
+                        source.name(),
+                        target.name()
+                    ),
+                )
+                .with_primary_label(
+                    operand.span,
+                    format!("source has primitive type `{}`", source.name()),
+                )
+                .with_secondary_label(
+                    cast.target_span,
+                    format!("target is primitive type `{}`", target.name()),
+                )
+                .with_note(format!(
+                    "currently implemented primitive casts require source and target types from {}",
+                    format_type_list(INTEGER_TYPE_NAMES)
+                )),
+            );
+            return None;
+        }
         Some(HirExpression {
-            kind: HirExpressionKind::IntegerCast {
+            kind: HirExpressionKind::PrimitiveCast {
                 operation,
                 operand: Box::new(operand),
             },

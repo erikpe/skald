@@ -51,8 +51,8 @@ pub enum HirExpressionKind {
         left: Box<HirExpression>,
         right: Box<HirExpression>,
     },
-    IntegerCast {
-        operation: HirIntegerCast,
+    PrimitiveCast {
+        operation: super::HirPrimitiveCast,
         operand: Box<HirExpression>,
     },
     DirectCall {
@@ -368,22 +368,6 @@ impl From<HirIntegerType> for HirComparisonOperand {
 pub struct HirPrimitiveComparison {
     pub predicate: HirComparisonPredicate,
     pub operand: HirComparisonOperand,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct HirIntegerCast {
-    pub source: HirIntegerType,
-    pub target: HirIntegerType,
-}
-
-impl HirIntegerCast {
-    pub const fn source_type(self) -> Type {
-        self.source.operand_type()
-    }
-
-    pub const fn result_type(self) -> Type {
-        self.target.operand_type()
-    }
 }
 
 impl HirPrimitiveComparison {

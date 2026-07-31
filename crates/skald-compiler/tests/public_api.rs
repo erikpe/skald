@@ -13,10 +13,10 @@ use skald_compiler::{
     external::{ExternalLink, ExternalLinkTable},
     hir::{
         dump_hir, HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate,
-        HirIntegerBitwiseOperation, HirIntegerCast, HirIntegerType, HirInterfaceCallTarget,
+        HirIntegerBitwiseOperation, HirIntegerType, HirInterfaceCallTarget,
         HirInterfaceConformance, HirInterfaceDeclaration, HirObjectSlice, HirObjectView,
-        HirPrimitiveComparison, HirProgram, HirUnaryOperation, HirViewTarget, ObjectProjection,
-        Type,
+        HirPrimitiveCast, HirPrimitiveCastKind, HirPrimitiveComparison, HirPrimitiveType,
+        HirProgram, HirUnaryOperation, HirViewTarget, ObjectProjection, Type,
     },
     identity::{
         ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
@@ -42,16 +42,14 @@ use skald_compiler::{
     passes::run_mir_pipeline,
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
-        ResolvedClassMember, ResolvedIntegerCastExpr, ResolvedIntegerType, ResolvedModuleBinding,
-        ResolvedModuleBindingTable, ResolvedModuleBindings, ResolvedModuleDeclaration,
-        ResolvedModuleDeclarationTable, ResolvedModuleDeclarations, ResolvedOrdinaryBinding,
-        ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings, ResolvedProgram,
-        ResolvedTopLevelId, ResolvedVisibility,
+        ResolvedClassMember, ResolvedModuleBinding, ResolvedModuleBindingTable,
+        ResolvedModuleBindings, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
+        ResolvedModuleDeclarations, ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable,
+        ResolvedOrdinaryBindings, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType,
+        ResolvedProgram, ResolvedTopLevelId, ResolvedVisibility,
     },
     source::SourceDatabase,
-    syntax::{
-        dump_ast, parse, CompilationUnit, IntegerCastExpr, ParseOutput, PrimitiveIntegerType,
-    },
+    syntax::{dump_ast, parse, CompilationUnit, ParseOutput, PrimitiveCastExpr, PrimitiveType},
     typeck::{type_check, TypeCheckOutput},
 };
 
@@ -143,10 +141,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let class = resolved_program.classes.iter().next().unwrap().id;
     let _base_chain = hierarchy.base_chain(class);
     let _member: Option<ResolvedClassMember> = hierarchy.member(class, "member");
-    let _syntax_integer_cast: Option<IntegerCastExpr> = None;
-    let _syntax_integer_type: Option<PrimitiveIntegerType> = None;
-    let _resolved_integer_cast: Option<ResolvedIntegerCastExpr> = None;
-    let _resolved_integer_type: Option<ResolvedIntegerType> = None;
+    let _syntax_primitive_cast: Option<PrimitiveCastExpr> = None;
+    let _syntax_primitive_type: Option<PrimitiveType> = None;
+    let _resolved_primitive_cast: Option<ResolvedPrimitiveCastExpr> = None;
+    let _resolved_primitive_type: Option<ResolvedPrimitiveType> = None;
     let _resolved_dump = dump_resolved(resolved_program);
     let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();
@@ -165,10 +163,9 @@ fn intentional_phase_and_dump_paths_compose() {
     };
     assert_eq!(hir_comparison.operand_type(), Type::U64);
     assert_eq!(hir_comparison.result_type(), Type::Bool);
-    let hir_cast = HirIntegerCast {
-        source: HirIntegerType::U64,
-        target: HirIntegerType::U8,
-    };
+    let hir_cast = HirPrimitiveCast::new(HirPrimitiveType::U64, HirPrimitiveType::U8);
+    assert_eq!(hir_cast.kind(), HirPrimitiveCastKind::IntegerBits);
+    assert_eq!(HirPrimitiveType::Bool.payload_type(), Type::Bool);
     assert_eq!(hir_cast.source_type(), Type::U64);
     assert_eq!(hir_cast.result_type(), Type::U8);
     let hir_bitwise = HirBinaryOperation::IntegerBitwise {

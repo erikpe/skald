@@ -40,7 +40,7 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
             Expression::Unwrap(expression) => {
                 pending.push((&expression.source, depth));
             }
-            Expression::IntegerCast(expression) => {
+            Expression::PrimitiveCast(expression) => {
                 pending.push((&expression.source, depth));
             }
             Expression::ObjectCast(expression) => {

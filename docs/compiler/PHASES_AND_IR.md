@@ -209,13 +209,17 @@ The pipeline responsibilities are:
   `i64`, `u64`, `u8`, or `f64` comparison operands, admits `bool` only for
   equality and inequality, selects logical negation only for `bool`, selects
   exact-width complement, AND, OR, or XOR only for matching integers, or
-  selects one of the nine valid integer source/target cast pairs. Unsupported
-  operations and implicit conversions are rejected before HIR.
+  selects one of the nine implemented integer source/target cast pairs.
+  Syntactically valid pending primitive pairs receive a focused temporary
+  implementation diagnostic, while unsupported operations and implicit
+  conversions are rejected before HIR.
 - Typed HIR records the selected primitive comparison predicate and operand
   kind, exact-width bitwise operation, or exact boolean logical-negation
-  operation. Primitive casts record both integer source and target types.
-  Neither representation retains a backend condition code, register width, or
-  spelling-based signedness choice.
+  operation. Primitive casts use the cohesive primitive-wide HIR operation
+  described below, carrying exact source, target, semantic class, and failure
+  capability even though type checking currently constructs it only for the
+  nine integer pairs. Neither representation retains a backend condition code,
+  register width, or spelling-based signedness choice.
 - MIR lowering evaluates eager operands left to right and every unary or
   binary operand exactly once. Bitwise operations become same-type pure scalar
   rvalues, comparisons and negation become typed boolean-producing rvalues; integer
@@ -481,31 +485,32 @@ complete compiler phase product. The implemented nine integer-to-integer cells
 remain the current compiler boundary until the whole selected representation
 reaches its documented implementation stage.
 
-Lexing already recognizes all five primitive type keywords. Syntax must
-generalize the existing integer-cast node into one primitive-cast node that
-retains the exact `i64`, `u64`, `u8`, `f64`, or `bool` target, target span,
-right-associative unary operand, complete span, grouping, and common nesting
-budget. Every primitive keyword in cast-target position selects this form
-without declaration lookup. Nominal and `shared` object-cast targets remain
-separate syntax and resolution paths; lower phases never redisambiguate a cast
-from source text.
+Lexing recognizes all five primitive type keywords. Syntax now uses one
+primitive-cast node retaining the exact `i64`, `u64`, `u8`, `f64`, or `bool`
+target, target span, right-associative unary operand, complete span, grouping,
+and common nesting budget. Every primitive keyword in cast-target position
+selects this form without declaration lookup. Nominal and `shared` object-cast
+targets remain separate syntax and resolution paths; lower phases never
+redisambiguate a cast from source text.
 
 Resolution preserves the primitive target and resolved operand without
-selecting conversion behavior. Type checking is the sole owner of primitive
-cast selection. It requires both actual source and explicit target to be one
-of the five primitive value types, accepts exactly the complete twenty-five
-pair matrix, inserts no implicit use of a cast at another typed boundary, and
-constructs typed HIR carrying:
+selecting conversion behavior. Typed HIR now has the cohesive complete-matrix
+operation described below, but type checking constructs it only for the nine
+implemented integer pairs; the other sixteen pairs stop with a focused
+temporary implementation diagnostic. The completed type-checking boundary
+will accept exactly the complete twenty-five-pair matrix, insert no implicit
+use of a cast at another typed boundary, and construct typed HIR carrying:
 
 - exact source and target primitive types;
 - one target-independent semantic class: identity, integer bit conversion,
-  conversion to `bool`, conversion to `f64`, or checked `f64`-to-integer;
+  conversion to `bool`, conversion to `f64`, conversion from `bool` to an
+  integer, or checked `f64`-to-integer;
 - whether conversion may terminate; and
 - the source span needed by deterministic diagnostics and failure lowering.
 
-The semantic class is derived once during type checking. HIR does not encode
-an x86 instruction, register class, host-language conversion, runtime helper,
-or constant-folding decision. Same-type casts remain represented semantic
+The semantic class is derived once when typed HIR is constructed. HIR does not
+encode an x86 instruction, register class, host-language conversion, runtime
+helper, or constant-folding decision. Same-type casts remain represented semantic
 operations rather than being erased before typed inspection. Identity `f64`
 casts preserve the complete binary64 datum; other conversions preserve the
 exact source-visible rules rather than storage coincidences.
@@ -557,11 +562,12 @@ MIR verification proves:
 - deterministic error accumulation and dumps under malformed-MIR mutations.
 
 HIR and MIR dumps expose exact source and target types plus pure versus checked
-semantics without target registers or helper names. Public facades expose only
-the cohesive primitive type, cast operation, checked range relation, and
-termination vocabulary required to inspect or construct supported phase
-products. Existing integer-specific public vocabulary migrates atomically
-rather than remaining as a parallel second cast model.
+semantics without target registers or helper names. The syntax, resolution,
+and HIR public facades now expose cohesive primitive types and casts with no
+parallel integer-only front-end model. MIR deliberately remains on its
+implemented integer-cast vocabulary until the next representation stage
+replaces that phase atomically with the cohesive primitive operation, checked
+range relation, and termination vocabulary.
 
 Focused implementation validation must cover all twenty-five pairs through
 syntax, resolution, type checking, HIR, MIR, verification, target legality,

@@ -6,14 +6,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
-
-## Planned
-
 ### Complete primitive cast matrix
 
-Status: planned; establishing cohesive primitive-cast front-end vocabulary is
-next.
+Status: in progress; establishing verified pure primitive-cast MIR is next.
 
 The [roadmap](PRIMITIVE_CAST_MATRIX_ROADMAP.md) implements the sixteen
 remaining cells of the frozen
@@ -22,6 +17,10 @@ migrates the nine existing integer cells into the same phase vocabulary, and
 then hardens the full source-to-x86-64 behavior. It depends only on the already
 implemented integer casts, primitive scalar backend, checked-control-flow
 infrastructure, and common panic reporter; no other roadmap is a prerequisite.
+
+## Planned
+
+No additional implementation roadmaps are currently planned.
 
 ## Design proposals
 

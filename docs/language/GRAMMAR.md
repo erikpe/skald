@@ -439,12 +439,10 @@ unary-expression          = ("-" | "!" | "~" | "*") unary-expression
                           | cast-expression
                           | postfix-expression
 
-cast-expression  = primitive-integer-cast-expression
+cast-expression  = primitive-cast-expression
                  | object-cast-expression
-primitive-integer-cast-expression
-                 = "(" primitive-integer-type ")" unary-expression
-primitive-integer-type
-                 = "i64" | "u64" | "u8"
+primitive-cast-expression
+                 = "(" primitive-type ")" unary-expression
 object-cast-expression
                  = "(" object-cast-target ")" unary-expression
 object-cast-target
@@ -536,8 +534,8 @@ Postfix unwrap binds above prefix logical negation and bitwise complement, so
 uses distinct, while longest-match tokenization keeps `!=`, `&&`, and `||` as
 single tokens.
 
-A primitive integer keyword in this position unambiguously selects an integer
-cast. A parenthesized identifier followed by an adjacent expression is an
+A primitive keyword in this position unambiguously selects a primitive cast.
+A parenthesized identifier followed by an adjacent expression is an
 object-cast candidate. Cast syntax deliberately wins over grouped callable
 spelling: `(f)(argument)` is resolved as a cast candidate, while direct calls
 use `f(argument)`. Empty `()` is not an expression operand, and
@@ -548,17 +546,16 @@ identifier and allocation argument list; `new()` remains an ordinary call to
 a binding named `new`.
 
 Primitive and object casts retain the existing unary precedence and
-right-associative operand shape. An implemented primitive integer keyword
-(`i64`, `u64`, or `u8`) unambiguously selects a primitive cast target, while a
+right-associative operand shape. Each primitive keyword (`i64`, `u64`, `u8`,
+`f64`, or `bool`) unambiguously selects a primitive cast target, while a
 declaration path or `shared` declaration path selects the existing object-cast
-syntax. Postfix use of either cast still requires grouping. The current
-integer subset and the frozen complete primitive cast matrix are defined by
+syntax. Postfix use of either cast still requires grouping. Syntax and
+resolution preserve all five primitive targets, but type checking currently
+accepts only the nine integer-to-integer pairs. That implemented subset and
+the frozen complete primitive cast matrix are defined by
 [Types, Values, and Expressions](TYPES_AND_VALUES.md#explicit-integer-casts)
 and its
 [complete matrix](TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix).
-The frozen design will extend primitive cast-target position to `f64` and
-`bool` without changing precedence or nominal-cast disambiguation; those two
-targets are not accepted by the current implemented grammar.
 
 ### Implemented primitive-operator expressions
 

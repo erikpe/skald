@@ -13,6 +13,7 @@ mod expression;
 mod integer_division;
 mod object;
 mod optional;
+mod primitive;
 mod shared;
 mod shift;
 mod strings;
@@ -47,10 +48,9 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirComparisonOperand, HirComparisonPredicate,
-    HirCopyArgument, HirExpression, HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerCast,
-    HirIntegerType, HirInterfaceCallTarget, HirInterfaceReceiver, HirLogicalExpression,
-    HirLogicalOperation, HirMethodCallTarget, HirPrimitiveComparison, HirTypeTest, HirTypeTestKind,
-    HirUnaryOperation,
+    HirCopyArgument, HirExpression, HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerType,
+    HirInterfaceCallTarget, HirInterfaceReceiver, HirLogicalExpression, HirLogicalOperation,
+    HirMethodCallTarget, HirPrimitiveComparison, HirTypeTest, HirTypeTestKind, HirUnaryOperation,
 };
 pub use integer_division::{
     HirCheckedIntegerDivision, HirIntegerDivisionFailure, HirIntegerDivisionKind,
@@ -71,8 +71,9 @@ pub use optional::{
     HirClassOptionalPlace, HirClassOptionalSource, HirOptionalAliasPlace, HirOptionalAssignment,
     HirOptionalOperand, HirOptionalPlace, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
     HirOptionalSharedPlace, HirOptionalSharedSource, HirOptionalSource, HirOptionalStorage,
-    HirOptionalWriteKind, HirPresenceTestKind, HirPrimitiveType,
+    HirOptionalWriteKind, HirPresenceTestKind,
 };
+pub use primitive::{HirPrimitiveCast, HirPrimitiveCastKind, HirPrimitiveType};
 pub use shared::{
     HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,
     HirSharedCast, HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,

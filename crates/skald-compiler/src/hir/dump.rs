@@ -992,10 +992,11 @@ impl HirDumper {
                     dumper.expression(right);
                 });
             }
-            HirExpressionKind::IntegerCast { operation, operand } => {
+            HirExpressionKind::PrimitiveCast { operation, operand } => {
                 self.typed_line(
                     &format!(
-                        "IntegerCast {}.{}",
+                        "PrimitiveCast {} {}.{}",
+                        operation.kind().mnemonic(),
                         operation.source.name(),
                         operation.target.name()
                     ),

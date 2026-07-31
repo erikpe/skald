@@ -439,18 +439,22 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     span: unwrap.span,
                 }))
             }
-            syntax::Expression::IntegerCast(cast) => {
+            syntax::Expression::PrimitiveCast(cast) => {
                 let source = self.resolve_expression(&cast.source)?;
-                Some(ResolvedExpression::IntegerCast(ResolvedIntegerCastExpr {
-                    target: match cast.target {
-                        syntax::PrimitiveIntegerType::I64 => ResolvedIntegerType::I64,
-                        syntax::PrimitiveIntegerType::U64 => ResolvedIntegerType::U64,
-                        syntax::PrimitiveIntegerType::U8 => ResolvedIntegerType::U8,
+                Some(ResolvedExpression::PrimitiveCast(
+                    ResolvedPrimitiveCastExpr {
+                        target: match cast.target {
+                            syntax::PrimitiveType::I64 => ResolvedPrimitiveType::I64,
+                            syntax::PrimitiveType::U64 => ResolvedPrimitiveType::U64,
+                            syntax::PrimitiveType::U8 => ResolvedPrimitiveType::U8,
+                            syntax::PrimitiveType::F64 => ResolvedPrimitiveType::F64,
+                            syntax::PrimitiveType::Bool => ResolvedPrimitiveType::Bool,
+                        },
+                        target_span: cast.target_span,
+                        source: Box::new(source),
+                        span: cast.span,
                     },
-                    target_span: cast.target_span,
-                    source: Box::new(source),
-                    span: cast.span,
-                }))
+                ))
             }
             syntax::Expression::ObjectCast(cast) => {
                 let source = self.resolve_expression(&cast.source);

@@ -244,7 +244,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::PresenceTest(_) => Type::Bool,
             ResolvedExpression::Unwrap(unwrap) => {
                 match self.static_expression_type(&unwrap.source) {
-                    Type::OptionalPrimitive(payload) => payload.payload_type(),
+                    Type::OptionalPrimitive(payload) => payload.value_type(),
                     Type::OptionalClass(class) => Type::Class(class),
                     _ => Type::Unit,
                 }
@@ -288,10 +288,12 @@ impl CallableChecker<'_, '_> {
                 }
             },
             ResolvedExpression::Logical(_) => Type::Bool,
-            ResolvedExpression::IntegerCast(cast) => match cast.target {
-                crate::resolve::ResolvedIntegerType::I64 => Type::I64,
-                crate::resolve::ResolvedIntegerType::U64 => Type::U64,
-                crate::resolve::ResolvedIntegerType::U8 => Type::U8,
+            ResolvedExpression::PrimitiveCast(cast) => match cast.target {
+                crate::resolve::ResolvedPrimitiveType::I64 => Type::I64,
+                crate::resolve::ResolvedPrimitiveType::U64 => Type::U64,
+                crate::resolve::ResolvedPrimitiveType::U8 => Type::U8,
+                crate::resolve::ResolvedPrimitiveType::F64 => Type::F64,
+                crate::resolve::ResolvedPrimitiveType::Bool => Type::Bool,
             },
             ResolvedExpression::ObjectCast(cast) => lower_type(&cast.target),
             ResolvedExpression::DirectCall(call) => self
@@ -476,7 +478,7 @@ impl CallableChecker<'_, '_> {
                 Type::OptionalPrimitive(payload) => {
                     argument.absent
                         || argument.ty == Type::OptionalPrimitive(payload)
-                        || argument.ty == payload.payload_type()
+                        || argument.ty == payload.value_type()
                 }
                 Type::OptionalClass(class) => {
                     argument.absent
@@ -589,7 +591,7 @@ impl CallableChecker<'_, '_> {
                     || matches!(
                         (candidate, other),
                         (candidate, Type::OptionalPrimitive(payload))
-                            if candidate == payload.payload_type()
+                            if candidate == payload.value_type()
                     )
                     || matches!(
                         (candidate, other),

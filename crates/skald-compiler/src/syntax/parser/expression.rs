@@ -356,8 +356,8 @@ impl Parser<'_> {
         }
 
         self.nesting_depth += prefixes.len();
-        let operand = if self.starts_integer_cast() {
-            self.parse_integer_cast()
+        let operand = if self.starts_primitive_cast() {
+            self.parse_primitive_cast()
         } else if self.starts_object_cast() {
             self.parse_object_cast()
         } else {
@@ -378,11 +378,11 @@ impl Parser<'_> {
         Some(expression)
     }
 
-    fn starts_integer_cast(&self) -> bool {
+    fn starts_primitive_cast(&self) -> bool {
         self.at(TokenKind::LeftParen)
             && matches!(
                 self.peek_ahead(1).kind,
-                TokenKind::I64 | TokenKind::U64 | TokenKind::U8
+                TokenKind::I64 | TokenKind::U64 | TokenKind::U8 | TokenKind::F64 | TokenKind::Bool
             )
             && self.peek_ahead(2).kind == TokenKind::RightParen
             && self.starts_cast_operand(3, true)
@@ -431,19 +431,21 @@ impl Parser<'_> {
             )
     }
 
-    fn parse_integer_cast(&mut self) -> Option<Expression> {
+    fn parse_primitive_cast(&mut self) -> Option<Expression> {
         let left_paren = self.advance();
         let target = self.advance();
         let target_kind = match target.kind {
-            TokenKind::I64 => PrimitiveIntegerType::I64,
-            TokenKind::U64 => PrimitiveIntegerType::U64,
-            TokenKind::U8 => PrimitiveIntegerType::U8,
-            _ => unreachable!("integer-cast parser accepted a non-integer target"),
+            TokenKind::I64 => PrimitiveType::I64,
+            TokenKind::U64 => PrimitiveType::U64,
+            TokenKind::U8 => PrimitiveType::U8,
+            TokenKind::F64 => PrimitiveType::F64,
+            TokenKind::Bool => PrimitiveType::Bool,
+            _ => unreachable!("primitive-cast parser accepted a non-primitive target"),
         };
         let _right_paren = self.expect(TokenKind::RightParen, "`)` after the cast target")?;
         let source = self.with_syntax_nesting(left_paren.span, |parser| parser.parse_unary())?;
         let span = self.cover(left_paren.span, source.span());
-        Some(Expression::IntegerCast(IntegerCastExpr {
+        Some(Expression::PrimitiveCast(PrimitiveCastExpr {
             target: target_kind,
             target_span: target.span,
             source: Box::new(source),

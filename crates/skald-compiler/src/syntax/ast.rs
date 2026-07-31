@@ -611,7 +611,7 @@ pub enum Expression {
     TypeTest(TypeTestExpr),
     PresenceTest(PresenceTestExpr),
     Unwrap(UnwrapExpr),
-    IntegerCast(IntegerCastExpr),
+    PrimitiveCast(PrimitiveCastExpr),
     ObjectCast(ObjectCastExpr),
     Allocation(Box<AllocationExpr>),
     ArrayConstruction(Box<ArrayConstructionExpr>),
@@ -636,7 +636,7 @@ impl Expression {
             Self::TypeTest(expression) => expression.span,
             Self::PresenceTest(expression) => expression.span,
             Self::Unwrap(expression) => expression.span,
-            Self::IntegerCast(expression) => expression.span,
+            Self::PrimitiveCast(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
             Self::ArrayConstruction(expression) => expression.span,
@@ -720,26 +720,30 @@ pub struct ObjectCastExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct IntegerCastExpr {
-    pub target: PrimitiveIntegerType,
+pub struct PrimitiveCastExpr {
+    pub target: PrimitiveType,
     pub target_span: Span,
     pub source: Box<Expression>,
     pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PrimitiveIntegerType {
+pub enum PrimitiveType {
     I64,
     U64,
     U8,
+    F64,
+    Bool,
 }
 
-impl PrimitiveIntegerType {
+impl PrimitiveType {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
             Self::U64 => "u64",
             Self::U8 => "u8",
+            Self::F64 => "f64",
+            Self::Bool => "bool",
         }
     }
 }

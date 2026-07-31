@@ -88,7 +88,10 @@ fn bitwise_prefix_is_right_associative_and_each_binary_tier_is_left_associative(
     let Expression::Unary(outer) = return_value(function(&output.ast, 4)) else {
         panic!("expected complement around cast");
     };
-    assert!(matches!(outer.operand.as_ref(), Expression::IntegerCast(_)));
+    assert!(matches!(
+        outer.operand.as_ref(),
+        Expression::PrimitiveCast(_)
+    ));
 }
 
 #[test]

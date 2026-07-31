@@ -3,8 +3,8 @@
 use super::*;
 use crate::hir::{
     HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate, HirExpression,
-    HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerCast, HirIntegerType,
-    HirPrimitiveComparison, HirUnaryOperation,
+    HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerType, HirPrimitiveCast,
+    HirPrimitiveCastKind, HirPrimitiveComparison, HirUnaryOperation,
 };
 
 impl BodyLowerer<'_> {
@@ -63,8 +63,8 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             } => self.lower_primitive_comparison(expression, *operation, left, right),
-            HirExpressionKind::IntegerCast { operation, operand } => {
-                self.lower_integer_cast(expression, *operation, operand)
+            HirExpressionKind::PrimitiveCast { operation, operand } => {
+                self.lower_primitive_cast(expression, *operation, operand)
             }
             HirExpressionKind::DirectCall {
                 function,
@@ -237,18 +237,36 @@ impl BodyLowerer<'_> {
         ))
     }
 
-    fn lower_integer_cast(
+    fn lower_primitive_cast(
         &mut self,
         expression: &HirExpression,
-        operation: HirIntegerCast,
+        operation: HirPrimitiveCast,
         operand: &HirExpression,
     ) -> Option<ValueId> {
+        assert!(
+            matches!(
+                operation.kind(),
+                HirPrimitiveCastKind::Identity | HirPrimitiveCastKind::IntegerBits
+            ) && operation.source.is_integer()
+                && operation.target.is_integer(),
+            "only implemented integer primitive casts may reach MIR lowering"
+        );
         let operand = self
             .lower_expression(operand)
-            .expect("typed integer-cast operand must produce a value");
+            .expect("typed primitive-cast operand must produce a value");
         let operation = MirIntegerCast {
-            source: lower_integer_type(operation.source),
-            target: lower_integer_type(operation.target),
+            source: lower_integer_type(
+                operation
+                    .source
+                    .integer_type()
+                    .expect("implemented primitive-cast source must be integer"),
+            ),
+            target: lower_integer_type(
+                operation
+                    .target
+                    .integer_type()
+                    .expect("implemented primitive-cast target must be integer"),
+            ),
         };
         Some(self.assign(
             MirRvalueKind::IntegerCast { operation, operand },
