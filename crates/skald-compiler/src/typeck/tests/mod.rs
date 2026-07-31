@@ -157,6 +157,7 @@ mod diagnostics;
 mod dumps;
 mod eager_boolean_operators;
 mod expressions;
+mod floating_division;
 mod inline_fields;
 mod integer_casts;
 mod integer_division;

@@ -119,13 +119,11 @@ and 11. This adds no public symbol, calling convention, frame category, or
 runtime ABI entry point. Source `/` and `%` select these operations through
 the ordinary frontend pipeline.
 
-Verified binary64 division rvalues use the existing two-register floating
-scalar path and emit `divsd` with source operand order preserved. Floating
-zero, infinity, subnormal values, underflow, overflow, and NaN remain ordinary
-binary64 outcomes: this path emits no zero guard, panic message, runtime call,
-or additional control-flow block. This target path is currently reachable from
-directly constructed verified HIR/MIR; source `f64 / f64` selection remains
-disabled until the corresponding end-to-end language milestone.
+Source-selected, verified binary64 division rvalues use the existing
+two-register floating scalar path and emit `divsd` with source operand order
+preserved. Floating zero, infinity, subnormal values, underflow, overflow, and
+NaN remain ordinary binary64 outcomes: this path emits no zero guard, panic
+message, runtime call, or additional control-flow block.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -186,8 +184,8 @@ publication; ordinary dynamic publication writes count one.
 The
 [frozen operator representation](PHASES_AND_IR.md#frozen-primitive-operator-representation)
 defines the contract for current and future operator input, including the
-implemented bitwise, checked-shift, and checked integer-division subsets
-described above. A target consumes
+implemented bitwise, checked-shift, checked integer-division, and floating
+division subsets described above. A target consumes
 already selected operation flavor, type, width, signedness, failure
 capability, and control flow. It never reconstructs semantics from source
 spelling or host-language arithmetic.

@@ -112,6 +112,12 @@ join the enclosing expression. The failure block must terminate with
 the zero and `i64::MIN / -1` guards must precede `idiv`; ordinary non-exact
 results then pass through the floor-quotient correction.
 
+For exact source `f64 / f64`, HIR and MIR print the portable `div.f64`
+operation. There is no divisor check, failure block, or panic reason; assembly
+uses scalar binary64 division. A floating zero divisor is therefore an
+ordinary input whose infinity or NaN result can be inspected through raw-bit
+runtime observation where the contract fixes those bits.
+
 For `left && right` or `left || right`, AST and resolved dumps retain a
 distinct logical node and HIR prints `Logical And` or `Logical Or`. MIR should
 contain a `LogicalExpressions` row, a split branch, separate short and right

@@ -321,6 +321,17 @@ and signed instruction shape, floor correction, the signed-minimum guard,
 compile-failure goldens own sign and boundary results, exact zero failures,
 failure-before-check, every consumer, evaluation order, and cleanup.
 
+Floating-division coverage keeps its non-failing boundary explicit. Type-check
+tests own exact `f64 / f64` selection, mixed and nonnumeric rejection,
+source-order diagnostics, and arbitrary operands and consumers. HIR/MIR and
+backend tests own the portable `div.f64` identity, exact operand/result types,
+ordinary eager lowering, `divsd` realization, and absence of an integer
+zero-check path. Native goldens observe contract-fixed raw bits for signed
+zero, infinity, subnormal, overflow, and underflow, execute NaN production
+without freezing its payload, and trace exactly-once evaluation plus reverse
+full-expression cleanup. Cross-process snapshots cover phase products and
+focused diagnostics.
+
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
 recovery. Resolution and type-check tests own source-shaped negation, exact

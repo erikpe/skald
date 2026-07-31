@@ -125,10 +125,11 @@ makes a result source-observable.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, operator availability, and the frozen
   complete primitive operator profile. Integer division and remainder,
-  bitwise operations, checked shifts, comparisons, explicit total integer
-  casts, eager boolean operators, and short-circuit boolean expressions execute
-  through verified MIR and the x86-64 backend; the status matrix distinguishes
-  that implemented surface from the remaining frozen floating operations.
+  floating division, bitwise operations, checked shifts, comparisons, explicit
+  total integer casts, eager boolean operators, and short-circuit boolean
+  expressions execute through verified MIR and the x86-64 backend; the status
+  matrix distinguishes that implemented surface from the remaining frozen
+  floating comparisons.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.

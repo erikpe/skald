@@ -1,4 +1,4 @@
-error[TYP005]: integer `/` requires operands of the same primitive integer type
+error[TYP005]: binary `/` requires operands of the same numeric type
  --> tests/golden/compile_fail/integer_division_operator_types.ska:12:7
     |
 12 |     1 / 1u;
@@ -9,7 +9,7 @@ error[TYP005]: integer `/` requires operands of the same primitive integer type
     |
 12 |     1 / 1u;
     |         -- right operand has type `u64`
-  = note: integer operand types are `i64`, `u64`, or `u8`
+  = note: numeric operand types are `i64`, `u64`, `u8`, or `f64`
 
 error[TYP005]: integer `%` requires operands of the same primitive integer type
  --> tests/golden/compile_fail/integer_division_operator_types.ska:13:8
@@ -24,7 +24,7 @@ error[TYP005]: integer `%` requires operands of the same primitive integer type
     |          --- right operand has type `u8`
   = note: integer operand types are `i64`, `u64`, or `u8`
 
-error[TYP005]: integer `/` requires operands of the same primitive integer type
+error[TYP005]: binary `/` requires operands of the same numeric type
  --> tests/golden/compile_fail/integer_division_operator_types.ska:14:10
     |
 14 |     true / false;
@@ -35,7 +35,7 @@ error[TYP005]: integer `/` requires operands of the same primitive integer type
     |
 14 |     true / false;
     |            ----- right operand has type `bool`
-  = note: integer operand types are `i64`, `u64`, or `u8`
+  = note: numeric operand types are `i64`, `u64`, `u8`, or `f64`
 
 error[TYP005]: integer `%` requires operands of the same primitive integer type
  --> tests/golden/compile_fail/integer_division_operator_types.ska:15:9
@@ -50,7 +50,7 @@ error[TYP005]: integer `%` requires operands of the same primitive integer type
     |           --- right operand has type `f64`
   = note: integer operand types are `i64`, `u64`, or `u8`
 
-error[TYP005]: integer `/` requires operands of the same primitive integer type
+error[TYP005]: binary `/` requires operands of the same numeric type
  --> tests/golden/compile_fail/integer_division_operator_types.ska:16:14
     |
 16 |     notify() / notify();
@@ -61,7 +61,7 @@ error[TYP005]: integer `/` requires operands of the same primitive integer type
     |
 16 |     notify() / notify();
     |                -------- right operand has type `unit`
-  = note: integer operand types are `i64`, `u64`, or `u8`
+  = note: numeric operand types are `i64`, `u64`, `u8`, or `f64`
 
 error[TYP005]: integer `%` requires operands of the same primitive integer type
  --> tests/golden/compile_fail/integer_division_operator_types.ska:17:13

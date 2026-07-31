@@ -316,14 +316,12 @@ verified operations with explicit
 zero and signed-overflow guards, native unsigned or signed division, and the
 required signed floor correction.
 
-The internal HIR and MIR scalar models also represent non-failing binary64
-division as an exact `f64` operation. It reuses ordinary eager binary operand
-lowering, including securing the left value when a control-affecting right
-operand changes blocks, and introduces no semantic check, failure edge, or
-termination reason. MIR verification requires exact `f64` operands and result
-before the x86-64 backend may consume it. Source type checking does not yet
-select this operation; source `f64 / f64` remains outside the implemented
-language subset until its end-to-end activation milestone.
+Source type checking selects exact `f64 / f64` as an ordinary non-failing
+binary64 HIR operation while preserving the separate checked integer family.
+It reuses ordinary eager binary operand lowering, including securing the left
+value when a control-affecting right operand changes blocks, and introduces no
+semantic check, failure edge, or termination reason. MIR verification requires
+exact `f64` operands and result before the x86-64 backend may consume it.
 
 MIR lowers eager primitive operations to target-independent scalar operations.
 It preserves:

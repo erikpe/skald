@@ -1,6 +1,6 @@
 # Remaining Floating-Point Operators Roadmap
 
-Status: in progress; FP0 is complete and FP1 is next.
+Status: in progress; FP0 and FP1 are complete, and FP2 is next.
 
 This roadmap completes the remaining frozen primitive operators for `f64`:
 IEEE-754 binary64 division followed by unordered equality and ordering. The
@@ -124,7 +124,7 @@ the ABI remains unchanged rather than adding operator-specific C harnesses.
 ## Progress
 
 - [x] FP0 — Establish executable IEEE floating division
-- [ ] FP1 — Enable floating division from source end to end
+- [x] FP1 — Enable floating division from source end to end
 - [ ] FP2 — Establish executable unordered floating comparisons
 - [ ] FP3 — Enable floating comparisons from source end to end
 - [ ] FP4 — Harden and promote the complete primitive-operator profile
@@ -180,30 +180,30 @@ failure edge, while source availability remains unchanged.
 **Purpose:** Activate exact `f64 / f64` only after every selected source
 expression has a verified and executable downstream path.
 
-- [ ] Route `/` selection cleanly between exact floating division and the
+- [x] Route `/` selection cleanly between exact floating division and the
       existing exact integer family. Admit only `f64 / f64`; preserve the
       integer checked semantics and reject every mixed or nonnumeric pair.
-- [ ] Check operands in source order and produce focused diagnostics that name
+- [x] Check operands in source order and produce focused diagnostics that name
       `/` and both actual operand types without suggesting implicit promotion,
       a cast, integer semantics, or a zero-divisor failure.
-- [ ] Preserve existing tokens, comment recognition, multiplicative
+- [x] Preserve existing tokens, comment recognition, multiplicative
       associativity, precedence, grouping, comparison-chain rejection, source
       operator identity, and exact spans; add focused regression tests rather
       than changing the already-active grammar.
-- [ ] Carry selected division through deterministic HIR and MIR dumps using
+- [x] Carry selected division through deterministic HIR and MIR dumps using
       portable floating vocabulary and no target instruction details.
-- [ ] Exercise arbitrary valid operands and consumers, including bindings,
+- [x] Exercise arbitrary valid operands and consumers, including bindings,
       calls, fields, array access, primitive optional unwrap, nested
       arithmetic, arguments, returns, assignments, comparison inputs once
       available, and cleanup-bearing receivers or allocation-backed effects.
-- [ ] Prove left-to-right exactly-once evaluation and existing
+- [x] Prove left-to-right exactly-once evaluation and existing
       full-expression cleanup when a division operand contains a call,
       selected-path control flow, a checked operation, or an owning temporary.
-- [ ] Add source-native exact-bit golden coverage for positive and negative
+- [x] Add source-native exact-bit golden coverage for positive and negative
       infinity, signed zero, subnormal, overflow, and underflow. Exercise NaN
       production without pinning its bits, and prove literal and dynamic zero
       divisors complete without panic output or abnormal process status.
-- [ ] Update living language and compiler documentation to advertise floating
+- [x] Update living language and compiler documentation to advertise floating
       division as implemented while leaving floating comparisons explicitly
       frozen and pending.
 

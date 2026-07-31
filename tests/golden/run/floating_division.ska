@@ -1,0 +1,72 @@
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn mark(marker: i64, value: f64) -> f64 {
+    ska_rt_println_i64(marker);
+    return value;
+}
+
+fn zero() -> f64 {
+    return 0.0;
+}
+
+fn negative_zero() -> f64 {
+    return -0.0;
+}
+
+fn consume(value: f64) -> unit {}
+
+class Trace {
+    marker: i64;
+    value: f64;
+
+    init(marker: i64, value: f64) {
+        self.marker = marker;
+        self.value = value;
+    }
+
+    fn read() -> f64 {
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(100 + self.marker);
+    }
+}
+
+fn make(marker: i64, value: f64) -> shared Trace {
+    return new Trace(marker, value);
+}
+
+fn divide_array(values: f64[], divisor: f64?) -> f64 {
+    return values[0] / divisor!;
+}
+
+fn main() -> i64 {
+    ska_rt_println_f64_bits(6.0 / 2.0);
+    ska_rt_println_f64_bits(1.0 / 3.0);
+    ska_rt_println_f64_bits(1.0 / zero());
+    ska_rt_println_f64_bits(1.0 / negative_zero());
+    ska_rt_println_f64_bits(-1.0 / zero());
+    ska_rt_println_f64_bits(0.0 / -2.0);
+    ska_rt_println_f64_bits(-0.0 / -2.0);
+    ska_rt_println_f64_bits(2.2250738585072014e-308 / 2.0);
+    ska_rt_println_f64_bits(4.9406564584124654e-324 / 2.0);
+    ska_rt_println_f64_bits(-4.9406564584124654e-324 / 2.0);
+    ska_rt_println_f64_bits(1.7976931348623157e308 / 0.5);
+
+    consume(1.0 / 0.0);
+    consume(0.0 / 0.0);
+    consume(0.0 / zero());
+
+    var values: f64[] = f64[](2u);
+    values[0] = 8.0;
+    var divisor: f64? = 2.0;
+    var result: f64 = divide_array(values, divisor);
+    result = result / 2.0;
+    ska_rt_println_f64_bits(result);
+
+    ska_rt_println_f64_bits(mark(1, 8.0) / mark(2, 2.0));
+    ska_rt_println_f64_bits(make(3, 9.0)->read() / make(4, 3.0)->read());
+    return 0;
+}

@@ -59,6 +59,9 @@ fn rejects_mixed_and_noninteger_operands_with_focused_actual_types() {
     ];
     for (left, right, left_type, right_type) in cases {
         for spelling in ["/", "%"] {
+            if spelling == "/" && left_type == "f64" && right_type == "f64" {
+                continue;
+            }
             let source = format!(
                 "class Item {{ init() {{}} }} \
                  fn notify() -> unit {{}} \
@@ -76,9 +79,11 @@ fn rejects_mixed_and_noninteger_operands_with_focused_actual_types() {
                 .unwrap();
             assert_eq!(
                 diagnostic.message,
-                format!(
-                    "integer `{spelling}` requires operands of the same primitive integer type"
-                )
+                if spelling == "/" {
+                    "binary `/` requires operands of the same numeric type"
+                } else {
+                    "integer `%` requires operands of the same primitive integer type"
+                }
             );
             assert!(diagnostic.labels.iter().any(|label| label
                 .message
@@ -86,10 +91,15 @@ fn rejects_mixed_and_noninteger_operands_with_focused_actual_types() {
             assert!(diagnostic.labels.iter().any(|label| label
                 .message
                 .contains(&format!("right operand has type `{right_type}`"))));
+            let supported_types = if spelling == "/" {
+                "`i64`, `u64`, `u8`, or `f64`"
+            } else {
+                "`i64`, `u64`, or `u8`"
+            };
             assert!(diagnostic
                 .notes
                 .iter()
-                .any(|note| note.contains("`i64`, `u64`, or `u8`")));
+                .any(|note| note.contains(supported_types)));
         }
     }
 }

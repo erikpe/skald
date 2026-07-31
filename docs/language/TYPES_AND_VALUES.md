@@ -154,7 +154,8 @@ The implemented arithmetic surface is deliberately exact-type:
 | Operator | Accepted operand types | Result |
 |---|---|---|
 | binary `+`, `-`, `*` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | that same type |
-| binary `/`, `%` | two operands of the same type among `i64`, `u64`, and `u8` | that same type |
+| binary `/` | two operands of the same type among `i64`, `u64`, `u8`, and `f64` | that same type |
+| binary `%` | two operands of the same type among `i64`, `u64`, and `u8` | that same type |
 | unary `-` | `i64` or `f64` | the operand type |
 | prefix `!` | `bool` | `bool` |
 | prefix `~` | `i64`, `u64`, or `u8` | the operand type |
@@ -169,15 +170,15 @@ Integer arithmetic wraps modulo its width: `i64` and `u64` retain the low
 complete overflow contract is stated in the frozen profile below.
 
 `f64` arithmetic follows IEEE-754 binary64 addition, subtraction,
-multiplication, and negation in the default round-to-nearest, ties-to-even
-environment. Signed zeroes, subnormals, infinities, and NaNs can result. An
+multiplication, division, and negation in the default round-to-nearest,
+ties-to-even environment. Signed zeroes, subnormals, infinities, and NaNs can result. An
 unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
 Integer equality and ordering plus boolean equality, inequality, logical
 negation, and short-circuit `&&` and `||` are implemented as specified below.
-Floating equality or ordering, floating division or remainder, and
-exponentiation are not implemented. Built-in array indexing and slicing
+Floating equality or ordering, floating remainder, and exponentiation are not
+implemented. Built-in array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
 and nested arrays on x86-64. The same element categories execute in shared
@@ -402,7 +403,8 @@ Binary `/` and `%` accept exactly two operands of the same type among `i64`,
 `u64`, and `u8`, and return that identical type. They do not insert an
 implicit cast, promotion, narrowing, signedness change, expected-type
 reinterpretation, or truthiness conversion. Floating division and remainder
-remain unavailable.
+are specified separately: floating division is implemented below, while
+floating remainder remains unavailable.
 
 Unsigned division and remainder use the ordinary nonnegative quotient and
 remainder. Signed `i64` division rounds toward negative infinity; its
@@ -423,6 +425,25 @@ full-expression cleanup boundary.
 expression consumers. Their typed representation, explicit checked MIR
 diamond, and x86-64 realization are described by the compiler phase and
 backend contracts.
+
+## Implemented floating division
+
+Binary `/` accepts exactly two `f64` operands and returns `f64`. It inserts no
+implicit conversion or promotion and does not weaken the exact integer
+division rules above. Operands evaluate exactly once from left to right, and
+their temporaries retain the ordinary full-expression cleanup boundary.
+
+Division follows IEEE-754 binary64 behavior in the default round-to-nearest,
+ties-to-even environment. Overflow, gradual underflow, subnormal results,
+signed zero, infinity, and NaN are ordinary results. A positive or negative
+zero divisor does not panic: a nonzero numerator produces the appropriately
+signed infinity, while zero divided by zero produces NaN. No particular NaN
+payload, sign, or signaling state is promised.
+
+Floating division shares the left-associative multiplicative tier with `*`
+and `%` and composes with every ordinary expression consumer. Its typed HIR,
+verified non-failing MIR operation, and x86-64 realization introduce no
+runtime call, failure edge, or ABI change.
 
 ## Implemented primitive comparisons, boolean negation, and integer casts
 
@@ -532,10 +553,10 @@ implied by the total integer cast syntax.
 ## Other conversions and future value families
 
 The current compiler executes primitive integer division and remainder,
-bitwise and shift operations, comparisons, and casts plus boolean negation and
-equality through the x86-64 backend. It performs no user-defined conversions.
-All other numeric
-conversion behavior remains deferred. Object casts are defined separately in
+floating division, bitwise and shift operations, comparisons, and casts plus
+boolean negation and equality through the x86-64 backend. It performs no
+user-defined conversions. All other numeric conversion behavior remains
+deferred. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.

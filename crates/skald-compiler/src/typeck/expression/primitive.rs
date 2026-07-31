@@ -213,7 +213,7 @@ impl CallableChecker<'_, '_> {
             binary.operator,
             ResolvedBinaryOperator::Divide | ResolvedBinaryOperator::Remainder
         ) {
-            return self.check_integer_division_expression(binary);
+            return self.check_division_expression(binary);
         }
 
         // Both operands are checked in source order so independent diagnostics accumulate.
