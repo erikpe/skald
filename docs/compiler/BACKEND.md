@@ -92,6 +92,18 @@ low byte for `u8`; they add no labels, failure edge, runtime call, symbol, or
 ABI surface. The accepted source path uses this same representation across
 ordinary scalar consumers without a bitwise-specific calling convention.
 
+Verified checked shifts lower from their explicit MIR diamond. The check path
+loads the `u64` count, compares it unsigned against 64 or 8, and branches
+before any target shift or load into the variable-count register. Only the
+verified success block loads the count into `rcx` and emits `shl rax, cl`,
+`sar rax, cl`, or `shr rax, cl`; `u8` results immediately pass through the
+ordinary low-byte canonicalization boundary. The failure block selects the
+exact `shift count out of range` static message through `ska_rt_panic`.
+Existing message symbols keep their indices and the new message is appended at
+target-private pool index 9. This adds no public symbol, calling convention,
+frame category, or runtime ABI entry point. Source `<<` and `>>` remain
+disabled until their frontend task is complete.
+
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
@@ -260,7 +272,7 @@ invalid lifetime state.
 ## Panic and hard-trap boundary
 
 The version-6 runtime reporter and explicit source-panic lowering are
-implemented. Compiler-known optional, array, and cast failures use the same
+implemented. Compiler-known optional, array, cast, and checked-shift failures use the same
 reporter while retaining distinct target-independent MIR reasons. Legal
 ownership-count exhaustion enters the same static-message pool from its
 backend retain edge; corrupted ownership state remains a separate hard trap.
@@ -275,7 +287,7 @@ emitted once in stable catalog order. The pool is derived from final selected
 instructions so backend-owned ownership-overflow edges and MIR termination
 reasons share one exact mechanism. Both call the sole public
 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry point. Array,
-optional, cast, string, and ownership lowering must not grow private reporter
+optional, cast, checked-shift, string, and ownership lowering must not grow private reporter
 calls or duplicate the authoritative
 [message catalog](../language/ERRORS.md#frozen-panic-design).
 

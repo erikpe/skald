@@ -55,6 +55,14 @@ pub enum MirTerminator {
         false_target: BlockId,
         span: Span,
     },
+    /// Rejects a count at or above the selected left operand width before the
+    /// success block performs its corresponding shift.
+    ShiftCountCheck {
+        check: super::shift::MirShiftCountCheck,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
     /// Performs a metadata check and establishes one full-expression cast
     /// carrier only on success.
     CheckedCast {
@@ -138,10 +146,11 @@ pub enum MirTerminationReason {
     ArrayIndexOutOfBounds,
     ArrayInvalidSliceBounds,
     ArraySliceLengthMismatch,
+    ShiftCountOutOfRange,
 }
 
 impl MirTerminationReason {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -150,6 +159,7 @@ impl MirTerminationReason {
         Self::ArrayIndexOutOfBounds,
         Self::ArrayInvalidSliceBounds,
         Self::ArraySliceLengthMismatch,
+        Self::ShiftCountOutOfRange,
     ];
 }
 
@@ -162,6 +172,7 @@ impl MirTerminator {
             | Self::Panic { span, .. }
             | Self::Goto { span, .. }
             | Self::Branch { span, .. }
+            | Self::ShiftCountCheck { span, .. }
             | Self::CheckedCast { span, .. }
             | Self::SharedCast { span, .. }
             | Self::OptionalUnwrap { span, .. }
@@ -189,6 +200,11 @@ impl MirTerminator {
                 false_target,
                 ..
             } => [Some(*true_target), Some(*false_target), None],
+            Self::ShiftCountCheck {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
             Self::CheckedCast {
                 success_target,
                 failure_target,

@@ -906,6 +906,23 @@ impl HirDumper {
                     dumper.expression(right);
                 });
             }
+            HirExpressionKind::CheckedShift(shift) => {
+                self.typed_line(
+                    &format!(
+                        "CheckedShift {}.{} count=u64 width={} failure=shift-count-out-of-range",
+                        shift.operation.mnemonic(),
+                        shift.operation.left.name(),
+                        shift.operation.width()
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| {
+                    dumper.heading("Left");
+                    dumper.indented(|dumper| dumper.expression(&shift.left));
+                    dumper.heading("Count");
+                    dumper.indented(|dumper| dumper.expression(&shift.count));
+                });
+            }
             HirExpressionKind::Logical(logical) => {
                 let operation = match logical.operation {
                     crate::hir::HirLogicalOperation::And => "And",

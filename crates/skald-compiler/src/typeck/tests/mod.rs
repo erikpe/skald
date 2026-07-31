@@ -46,6 +46,9 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         HirExpressionKind::Logical(_) => {
             panic!("i64 typing helper does not accept boolean logical expressions")
         }
+        HirExpressionKind::CheckedShift(_) => {
+            panic!("i64 typing helper does not accept checked shifts")
+        }
         HirExpressionKind::IntegerCast { operation, operand } => {
             assert_eq!(operand.ty, operation.source_type());
             assert_eq!(expression.ty, operation.result_type());

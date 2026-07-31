@@ -21,10 +21,11 @@ enum PanicMessage {
     ArrayInvalidSliceBounds,
     ArraySliceLengthMismatch,
     OwnershipCountOverflow,
+    ShiftCountOutOfRange,
 }
 
 impl PanicMessage {
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -34,6 +35,7 @@ impl PanicMessage {
         Self::ArrayInvalidSliceBounds,
         Self::ArraySliceLengthMismatch,
         Self::OwnershipCountOverflow,
+        Self::ShiftCountOutOfRange,
     ];
 
     const fn for_reason(reason: MirTerminationReason) -> Self {
@@ -46,6 +48,7 @@ impl PanicMessage {
             MirTerminationReason::ArrayIndexOutOfBounds => Self::ArrayIndexOutOfBounds,
             MirTerminationReason::ArrayInvalidSliceBounds => Self::ArrayInvalidSliceBounds,
             MirTerminationReason::ArraySliceLengthMismatch => Self::ArraySliceLengthMismatch,
+            MirTerminationReason::ShiftCountOutOfRange => Self::ShiftCountOutOfRange,
         }
     }
 
@@ -64,6 +67,7 @@ impl PanicMessage {
             Self::ArrayInvalidSliceBounds => b"array slice bounds are invalid",
             Self::ArraySliceLengthMismatch => b"array slice length mismatch",
             Self::OwnershipCountOverflow => b"ownership count overflow",
+            Self::ShiftCountOutOfRange => b"shift count out of range",
         }
     }
 
@@ -78,6 +82,7 @@ impl PanicMessage {
             Self::ArrayInvalidSliceBounds => ".Lska_panic_message_6",
             Self::ArraySliceLengthMismatch => ".Lska_panic_message_7",
             Self::OwnershipCountOverflow => ".Lska_panic_message_8",
+            Self::ShiftCountOutOfRange => ".Lska_panic_message_9",
         }
     }
 }
@@ -254,6 +259,7 @@ pub(super) fn select(
             output.push(Instruction::Jump(block_label(program, *false_target)));
         }
         MirTerminator::CheckedCast { .. }
+        | MirTerminator::ShiftCountCheck { .. }
         | MirTerminator::Panic { .. }
         | MirTerminator::SharedCast { .. }
         | MirTerminator::OptionalUnwrap { .. }

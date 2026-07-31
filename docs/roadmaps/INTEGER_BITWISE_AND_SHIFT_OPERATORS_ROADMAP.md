@@ -1,6 +1,6 @@
 # Integer Bitwise Operators and Checked Shifts Roadmap
 
-Status: in progress; BW0 and BW1 are complete and BW2 is next.
+Status: in progress; BW0, BW1, and BW2 are complete and BW3 is next.
 
 This roadmap implements the next frozen primitive-operator family: exact-width
 integer bitwise complement, conjunction, disjunction, and exclusive
@@ -116,7 +116,7 @@ than adding operator-specific C harnesses.
 
 - [x] BW0 — Establish executable pure bitwise operations
 - [x] BW1 — Enable bitwise source expressions end to end
-- [ ] BW2 — Establish executable checked shifts
+- [x] BW2 — Establish executable checked shifts
 - [ ] BW3 — Enable checked shift source expressions end to end
 - [ ] BW4 — Harden and promote the complete family
 
@@ -210,34 +210,34 @@ bitwise subset.
 **Purpose:** Settle and verify the fallible eager-expression representation
 before source syntax can depend on target count checks or failure control flow.
 
-- [ ] Add exact HIR and MIR shift operations carrying direction, left integer
+- [x] Add exact HIR and MIR shift operations carrying direction, left integer
       kind, fixed `u64` count type, result type, right-shift flavor, left width,
       and compiler-known failure capability without encoding an x86 opcode.
-- [ ] Classify shift HIR as control-affecting so an enclosing eager expression
+- [x] Classify shift HIR as control-affecting so an enclosing eager expression
       secures an earlier block-local scalar before shift lowering introduces a
       count-check edge.
-- [ ] Lower the left operand once, then the right operand once, securing both
+- [x] Lower the left operand once, then the right operand once, securing both
       values across blocks only after each operand has completed; emit the
       explicit count check after both operands and perform the shift only on
       its success continuation.
-- [ ] Route the failure continuation directly to a new distinct MIR
+- [x] Route the failure continuation directly to a new distinct MIR
       `shift count out of range` termination reason. Preserve successful-path
       full-expression lifetime and the existing rule that panic guarantees no
       remaining cleanup after reporting begins.
-- [ ] Extend MIR verification to prove exact left/count/result types, width and
+- [x] Extend MIR verification to prove exact left/count/result types, width and
       signedness flavor, secured-carrier storage, check-before-operation
       dominance, exact success and failure targets, matching termination
       reason, block-local value use, and no ordinary successor from failure.
-- [ ] Extend deterministic MIR dumps and the static termination pool with the
+- [x] Extend deterministic MIR dumps and the static termination pool with the
       exact catalog message without renumbering or otherwise changing existing
       panic-message observations.
-- [ ] Extend the x86-64 machine model and instruction selection to compare the
+- [x] Extend the x86-64 machine model and instruction selection to compare the
       unsigned count with 64 or 8 before any target shift, use the required
       variable-count register only after success, select left, arithmetic
       right, or logical right shift mechanically, and canonicalize `u8`.
-- [ ] Keep source construction of `<<` and `>>` disabled in this task. Direct
+- [x] Keep source construction of `<<` and `>>` disabled in this task. Direct
       HIR/MIR tests exercise valid results and the exact native panic path.
-- [ ] Keep the public runtime header, `ska_rt_abi_v6`, reporter signature,
+- [x] Keep the public runtime header, `ska_rt_abi_v6`, reporter signature,
       frame contract, and public symbol set unchanged.
 
 **Tests:** Direct operation matrices for both directions and all three left

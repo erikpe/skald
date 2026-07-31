@@ -1,7 +1,7 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::test_fixtures::{
     add_body_storage_lifetimes as fixture_add_body_storage_lifetimes, assign as fixture_assign,
-    block as fixture_block,
+    block as fixture_block, checked_shift_program as fixture_checked_shift_program,
     conditional_full_expression_cleanup_program as fixture_conditional_cleanup_program,
     empty_member_definition as fixture_empty_member_definition, storage as fixture_storage,
     storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
@@ -45,6 +45,7 @@ mod path_conditions;
 mod primitive_binding_assignment;
 mod robustness;
 mod shared;
+mod shifts;
 mod static_inheritance;
 mod static_methods;
 mod storage_lifetimes;

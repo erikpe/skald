@@ -225,6 +225,11 @@ pub enum MirRvalueKind {
         left: ValueId,
         right: ValueId,
     },
+    Shift {
+        operation: super::shift::MirShiftOperation,
+        left: ValueId,
+        count: ValueId,
+    },
     PrimitiveComparison {
         operation: MirPrimitiveComparison,
         left: ValueId,

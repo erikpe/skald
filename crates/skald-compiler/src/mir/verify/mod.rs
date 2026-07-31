@@ -29,6 +29,7 @@ mod path_conditions;
 mod path_state;
 mod place;
 mod shared;
+mod shift;
 mod sink;
 mod strings;
 mod type_operations;

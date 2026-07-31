@@ -84,6 +84,11 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
+            MirRvalueKind::Shift {
+                operation,
+                left,
+                count,
+            } => self.select_shift(*operation, *left, *count, ty, destination),
             MirRvalueKind::PrimitiveComparison {
                 operation,
                 left,

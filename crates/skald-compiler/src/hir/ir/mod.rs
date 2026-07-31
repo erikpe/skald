@@ -13,6 +13,7 @@ mod expression;
 mod object;
 mod optional;
 mod shared;
+mod shift;
 mod strings;
 
 pub use array::{
@@ -70,6 +71,9 @@ pub use shared::{
     HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,
     HirSharedCast, HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,
     HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer,
+};
+pub use shift::{
+    HirCheckedShift, HirRightShiftFlavor, HirShiftDirection, HirShiftFailure, HirShiftOperation,
 };
 pub use strings::{HirLiteralData, HirLiteralDataTable, HirStringLanguageItem, HirStringLiteral};
 

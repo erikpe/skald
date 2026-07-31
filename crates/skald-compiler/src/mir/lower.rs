@@ -25,6 +25,7 @@ mod optional;
 mod places;
 mod program;
 mod shared;
+mod shift;
 mod statement;
 mod type_operations;
 

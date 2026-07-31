@@ -833,6 +833,24 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::ShiftCountCheck {
+            check,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "shift-count-check {}.{} left {} count {} result {} width {} -> {success_target} else {failure_target}",
+                check.operation.mnemonic(),
+                check.operation.left.name(),
+                check.left,
+                check.count,
+                check.result,
+                check.operation.width(),
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::CheckedCast {
             binding,
             success_target,
@@ -970,6 +988,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 MirTerminationReason::ArrayIndexOutOfBounds => "array-index-out-of-bounds",
                 MirTerminationReason::ArrayInvalidSliceBounds => "array-invalid-slice-bounds",
                 MirTerminationReason::ArraySliceLengthMismatch => "array-slice-length-mismatch",
+                MirTerminationReason::ShiftCountOutOfRange => "shift-count-out-of-range",
             };
             let _ = write!(output, "terminate {reason}");
             write_span(output, *span);
@@ -1121,6 +1140,18 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 }
             };
             let _ = write!(output, "{operation} {left}, {right}");
+        }
+        MirRvalueKind::Shift {
+            operation,
+            left,
+            count,
+        } => {
+            let _ = write!(
+                output,
+                "{}.{} {left}, {count}",
+                operation.mnemonic(),
+                operation.left.name()
+            );
         }
         MirRvalueKind::PrimitiveComparison {
             operation,

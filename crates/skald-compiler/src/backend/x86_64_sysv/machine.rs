@@ -18,6 +18,7 @@ pub(super) enum Register {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ByteRegister {
     Al,
+    Cl,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -56,6 +57,7 @@ impl ByteRegister {
     pub(super) const fn name(self) -> &'static str {
         match self {
             Self::Al => "al",
+            Self::Cl => "cl",
         }
     }
 }
@@ -223,6 +225,10 @@ pub(super) enum Instruction {
         source: Register,
         destination: Register,
     },
+    Shift {
+        operation: ShiftOperation,
+        destination: Register,
+    },
     AddFloat64 {
         source: XmmRegister,
         destination: XmmRegister,
@@ -268,6 +274,23 @@ pub(super) enum BitwiseOperation {
     And,
     Or,
     Xor,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ShiftOperation {
+    Left,
+    ArithmeticRight,
+    LogicalRight,
+}
+
+impl ShiftOperation {
+    pub(super) const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::Left => "shl",
+            Self::ArithmeticRight => "sar",
+            Self::LogicalRight => "shr",
+        }
+    }
 }
 
 impl BitwiseOperation {

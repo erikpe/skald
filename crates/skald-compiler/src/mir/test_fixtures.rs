@@ -21,6 +21,9 @@ use super::{
     MirUnaryOperation, MirValue, PathConditionId, StorageId, ValueId,
 };
 
+mod shifts;
+pub(crate) use shifts::checked_shift_program;
+
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
     MirParameter { mode, ty }
 }

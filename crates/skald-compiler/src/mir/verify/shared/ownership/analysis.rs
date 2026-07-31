@@ -143,6 +143,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
                         failure_target,
                         ..
                     })
+                    | Some(MirTerminator::ShiftCountCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    })
                     | Some(MirTerminator::ArrayOperationCheck {
                         success_target,
                         failure_target,

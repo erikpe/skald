@@ -15,6 +15,9 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::PrimitiveComparison { left, right, .. } => {
             expression_contains_control_effect(left) || expression_contains_control_effect(right)
         }
+        // A checked shift always introduces a range-check diamond, regardless
+        // of whether its operands are otherwise pure.
+        HirExpressionKind::CheckedShift(_) => true,
         // Logical expressions always select blocks even when both operands
         // are otherwise pure.
         HirExpressionKind::Logical(_) => true,

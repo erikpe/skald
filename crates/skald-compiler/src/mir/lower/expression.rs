@@ -51,6 +51,9 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             } => self.lower_binary(expression, *operation, left, right),
+            HirExpressionKind::CheckedShift(shift) => {
+                Some(self.lower_checked_shift(expression, shift))
+            }
             HirExpressionKind::Logical(logical) => Some(self.lower_logical(expression, logical)),
             HirExpressionKind::PrimitiveComparison {
                 operation,
@@ -314,7 +317,7 @@ impl BodyLowerer<'_> {
     }
 }
 
-const fn lower_integer_type(ty: HirIntegerType) -> MirIntegerType {
+pub(super) const fn lower_integer_type(ty: HirIntegerType) -> MirIntegerType {
     match ty {
         HirIntegerType::I64 => MirIntegerType::I64,
         HirIntegerType::U64 => MirIntegerType::U64,

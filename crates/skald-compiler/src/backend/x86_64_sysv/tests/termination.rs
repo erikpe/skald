@@ -28,18 +28,17 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
         "static message pooling must be deterministic"
     );
     for (index, message) in [
-        "checked object cast failed",
-        "optional value is absent",
-        "optional presence guard overflow",
-        "cannot mutate a guarded optional value",
-        "array allocation failed",
-        "array index out of bounds",
-        "array slice bounds are invalid",
-        "array slice length mismatch",
-    ]
-    .into_iter()
-    .enumerate()
-    {
+        (0, "checked object cast failed"),
+        (1, "optional value is absent"),
+        (2, "optional presence guard overflow"),
+        (3, "cannot mutate a guarded optional value"),
+        (4, "array allocation failed"),
+        (5, "array index out of bounds"),
+        (6, "array slice bounds are invalid"),
+        (7, "array slice length mismatch"),
+        // Index 8 remains the pre-existing ownership-overflow message.
+        (9, "shift count out of range"),
+    ] {
         let symbol = format!(".Lska_panic_message_{index}");
         assert_eq!(
             output.matches(&format!(".type {symbol}, @object")).count(),
@@ -51,7 +50,7 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
         assert!(output.contains(&format!("lea rdi, [rip + {symbol}]")));
         assert!(output.contains(&format!("mov rsi, {}", message.len())));
     }
-    assert_eq!(output.matches("call ska_rt_panic").count(), 8);
+    assert_eq!(output.matches("call ska_rt_panic").count(), 9);
     assert!(!output.contains("ud2"));
     assert_system_assembler_accepts(&output);
 }
@@ -67,6 +66,7 @@ fn every_static_termination_reason_reports_exact_native_stderr() {
         "array index out of bounds",
         "array slice bounds are invalid",
         "array slice length mismatch",
+        "shift count out of range",
     ]) {
         let mut program = lower_text("fn main() -> i64 { return 0; }");
         let definition = program

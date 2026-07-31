@@ -184,6 +184,17 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source.name()
         )
         .unwrap(),
+        Instruction::Shift {
+            operation,
+            destination,
+        } => write!(
+            output,
+            "{} {}, {}",
+            operation.mnemonic(),
+            destination.name(),
+            super::machine::ByteRegister::Cl.name()
+        )
+        .unwrap(),
         Instruction::AddFloat64 {
             source,
             destination,

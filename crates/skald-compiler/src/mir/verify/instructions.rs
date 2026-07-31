@@ -647,6 +647,35 @@ impl Verifier<'_> {
                 self.verify_binary_operand(function, block, *left, expected, defined);
                 self.verify_binary_operand(function, block, *right, expected, defined);
             }
+            MirRvalueKind::Shift {
+                operation,
+                left,
+                count,
+            } => {
+                if rvalue.ty != operation.result_type() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "shift operation result type mismatch",
+                    );
+                }
+                self.verify_shift_operand(
+                    function,
+                    block,
+                    *left,
+                    operation.left_type(),
+                    "left",
+                    defined,
+                );
+                self.verify_shift_operand(
+                    function,
+                    block,
+                    *count,
+                    operation.count_type(),
+                    "count",
+                    defined,
+                );
+            }
             MirRvalueKind::PrimitiveComparison {
                 operation,
                 left,
@@ -739,6 +768,24 @@ impl Verifier<'_> {
                     format!("binary operand is not `{expected}`"),
                 );
             }
+        }
+    }
+
+    fn verify_shift_operand(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        value: ValueId,
+        expected: MirType,
+        name: &str,
+        defined: &HashSet<ValueId>,
+    ) {
+        if self.verify_value_use(function, block, value, defined) != Some(expected) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!("shift {name} operand is not `{expected}`"),
+            );
         }
     }
 

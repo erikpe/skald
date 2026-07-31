@@ -293,6 +293,15 @@ canonicalization, and assembler acceptance. Native and compile-failure
 goldens own edge patterns, left-to-right exactly-once effects, arbitrary eager
 consumers, and exact rendered diagnostics.
 
+Checked-shift downstream tests deliberately avoid source construction until
+the frontend task. Direct HIR/MIR tests own direction plus exact left kind,
+the fixed `u64` count, secured-carrier order, deterministic dumps, the checked
+diamond, and malformed correspondence/dominance mutations. Backend tests own
+unsigned width checks before `rcx`/`cl`, `shl`/`sar`/`shr` selection, `u8`
+canonicalization, stable static-message pooling, assembler acceptance, native
+edge results, and exact excessive-count stderr. Parser rejection tests keep
+`<<` and `>>` unavailable during this stage.
+
 Eager boolean operator coverage follows the same phase boundary. Lexer and
 syntax tests own `!`/`!=`, prefix/postfix position, precedence, nesting, and
 recovery. Resolution and type-check tests own source-shaped negation, exact

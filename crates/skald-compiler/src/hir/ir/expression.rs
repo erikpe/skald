@@ -41,6 +41,7 @@ pub enum HirExpressionKind {
         left: Box<HirExpression>,
         right: Box<HirExpression>,
     },
+    CheckedShift(Box<super::HirCheckedShift>),
     /// Structured short-circuit selection, deliberately distinct from eager
     /// scalar binary operations.
     Logical(Box<HirLogicalExpression>),

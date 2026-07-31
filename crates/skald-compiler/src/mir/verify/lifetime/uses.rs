@@ -135,6 +135,11 @@ pub(super) fn visit_terminator_storage(
         | MirTerminator::Branch { .. }
         | MirTerminator::ArrayOperationCheck { .. }
         | MirTerminator::Terminate { .. } => {}
+        MirTerminator::ShiftCountCheck { check, .. } => {
+            visit(check.left);
+            visit(check.count);
+            visit(check.result);
+        }
         MirTerminator::ReturnShared { owner, .. }
         | MirTerminator::ReturnOptionalShared { owner, .. } => visit(*owner),
         MirTerminator::Panic { message, .. } => visit_place(message, visit),
@@ -185,6 +190,7 @@ fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
         | MirRvalueKind::ConstantBool(_)
         | MirRvalueKind::Unary { .. }
         | MirRvalueKind::Binary { .. }
+        | MirRvalueKind::Shift { .. }
         | MirRvalueKind::PrimitiveComparison { .. }
         | MirRvalueKind::IntegerCast { .. } => {}
     }

@@ -242,6 +242,31 @@ saturating, implicit, mixed-type, and user-defined conversion remain outside
 this boundary. Implemented short-circuit logic uses the structured boundary
 below rather than this eager scalar boundary.
 
+## Executable checked-shift downstream boundary
+
+Checked integer shifts are executable from directly constructed typed HIR
+through verified MIR and native x86-64, while `<<` and `>>` remain unavailable
+to source programs. HIR records direction and the exact `i64`, `u64`, or `u8`
+left kind; the count is exactly `u64`, the result is the left type, and right
+shift flavor is derived target-independently.
+
+Lowering evaluates and secures the left operand, then evaluates and secures
+the count. A dedicated MIR terminator compares the secured count with the
+operation width. Its success block alone reloads both carriers, performs the
+matching shift, stores the result carrier, and joins; its failure block
+directly terminates with `shift count out of range`. The result reload starts
+the join. Successful full-expression cleanup remains at its ordinary enclosing
+boundary, while the non-returning failure edge retains the existing
+non-unwinding panic rule.
+
+MIR verification ties the exact scalar-spill carriers, operation flavor,
+success-only shift, result join, dominance, and terminal failure reason into
+one checked diamond. An unchecked shift or an alternate predecessor into its
+success block is malformed MIR. Deterministic dumps expose
+`shift-count-check`, `shl`, `sar`, or `shr` with exact types and width; they do
+not expose target registers. This internal executable boundary does not make
+shift syntax part of the accepted language.
+
 ## Frozen primitive operator representation
 
 The
@@ -399,10 +424,10 @@ MIR verification rejects:
   reason; and
 - a compiler-known failure edge with an ordinary successor.
 
-The existing static-termination representation gains three distinct reasons:
-integer division by zero, integer remainder by zero, and shift count out of
-range. They remain distinct through verification and instruction selection and
-select exact messages from the
+The static-termination representation already includes the executable checked
+shift reason and reserves two further distinct reasons for integer division
+and remainder by zero. They remain distinct through verification and
+instruction selection and select exact messages from the
 [language panic catalog](../language/ERRORS.md#frozen-panic-design).
 
 Constant folding and every later transformation use the same wrapping,

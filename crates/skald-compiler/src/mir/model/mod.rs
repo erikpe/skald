@@ -11,6 +11,7 @@ mod logical;
 mod optional;
 mod path_condition;
 mod shared;
+mod shift;
 mod strings;
 mod value;
 
@@ -59,6 +60,7 @@ pub use shared::{
     MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize, MirSharedMove,
     MirSharedPublish, MirSharedRelease, MirSharedStatic, MirSharedTarget,
 };
+pub use shift::{MirRightShiftFlavor, MirShiftCountCheck, MirShiftDirection, MirShiftOperation};
 pub use strings::{
     MirLiteralData, MirLiteralDataTable, MirStaticAllocationOrigin, MirStaticDataMutability,
     MirStringInitialize, MirStringLanguageItem,
