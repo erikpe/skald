@@ -218,6 +218,11 @@ pub(super) enum Instruction {
         source: Register,
         destination: Register,
     },
+    SignExtendDividend,
+    IntegerDivide {
+        flavor: IntegerDivideFlavor,
+        divisor: Register,
+    },
     Negate(Register),
     BitwiseNot(Register),
     Bitwise {
@@ -267,6 +272,21 @@ pub(super) enum Instruction {
     Trap,
     Leave,
     Return,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum IntegerDivideFlavor {
+    Signed,
+    Unsigned,
+}
+
+impl IntegerDivideFlavor {
+    pub(super) const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::Signed => "idiv",
+            Self::Unsigned => "div",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

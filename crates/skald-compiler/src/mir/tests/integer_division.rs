@@ -205,11 +205,11 @@ fn lowers_and_dumps_the_complete_checked_integer_division_matrix() {
         )));
     }
 
-    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
-    assert_eq!(
-        error.message(),
-        "checked integer division and remainder are not executable yet"
-    );
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    assert!(assembly.contains("idiv rcx"));
+    assert!(assembly.contains("div rcx"));
+    assert!(assembly.contains("integer division by zero"));
+    assert!(assembly.contains("integer remainder by zero"));
 }
 
 #[test]

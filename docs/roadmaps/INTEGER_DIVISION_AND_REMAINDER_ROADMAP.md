@@ -1,6 +1,6 @@
 # Integer Division and Remainder Roadmap
 
-Status: in progress; DR0 and DR1 are complete and DR2 is next.
+Status: in progress; DR0 through DR2 are complete and DR3 is next.
 
 This roadmap implements the frozen integer `/` and `%` family for exact
 `i64`, `u64`, and `u8` operands. It delivers floor division and matching
@@ -117,7 +117,7 @@ than adding operator-specific C harnesses.
 
 - [x] DR0 — Define checked integer division and remainder semantics
 - [x] DR1 — Lower and verify the checked control-flow shape
-- [ ] DR2 — Execute verified operations on x86-64
+- [x] DR2 — Execute verified operations on x86-64
 - [ ] DR3 — Enable the complete source family end to end
 - [ ] DR4 — Harden and promote the complete family
 
@@ -210,27 +210,27 @@ still cannot select the feature.
 exposing hardware traps, truncating signed semantics, or target count/width
 accidents.
 
-- [ ] Extend the private x86-64 machine model, legality checks, register-use
+- [x] Extend the private x86-64 machine model, legality checks, register-use
       model, instruction selection, emission, and dumps with the minimal
       signed and unsigned divide machinery required by verified MIR.
-- [ ] Append the exact `integer division by zero` and
+- [x] Append the exact `integer division by zero` and
       `integer remainder by zero` bytes to the static termination pool without
       renumbering any existing message, and route both verified failure
       reasons through the existing common panic reporter.
-- [ ] For `u64` and `u8`, zero-extend the high dividend half before unsigned
+- [x] For `u64` and `u8`, zero-extend the high dividend half before unsigned
       `div`, select quotient or remainder as requested, and canonicalize every
       `u8` result.
-- [ ] For `i64`, test the `i64::MIN` and `-1` pair before `idiv`; synthesize
+- [x] For `i64`, test the `i64::MIN` and `-1` pair before `idiv`; synthesize
       `i64::MIN` for division and zero for remainder on that successful path so
       no raw processor exception is possible.
-- [ ] For all other `i64` inputs, use signed division and correct a nonzero
+- [x] For all other `i64` inputs, use signed division and correct a nonzero
       truncating remainder whose sign differs from the divisor by decrementing
       the quotient and adding the divisor to the remainder.
-- [ ] Preserve divisor-check dominance in selected machine control flow and
+- [x] Preserve divisor-check dominance in selected machine control flow and
       reject any backend request that lacks the verified semantic/check shape.
-- [ ] Keep source syntax disabled; direct HIR/MIR integration tests and native
+- [x] Keep source syntax disabled; direct HIR/MIR integration tests and native
       harnesses execute the complete result and failure matrix.
-- [ ] Keep the public runtime header, `ska_rt_abi_v6`, reporter signature,
+- [x] Keep the public runtime header, `ska_rt_abi_v6`, reporter signature,
       frame contract, and public symbol set unchanged.
 
 **Tests:** Native quotient/remainder matrices for all four `i64` sign

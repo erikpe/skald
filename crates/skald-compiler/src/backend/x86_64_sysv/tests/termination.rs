@@ -1,6 +1,6 @@
 use super::*;
 
-const EXECUTABLE_MIR_TERMINATION_REASONS: [MirTerminationReason; 9] = [
+const EXECUTABLE_MIR_TERMINATION_REASONS: [MirTerminationReason; 11] = [
     MirTerminationReason::ObjectCastFailure,
     MirTerminationReason::OptionalAccessFailure,
     MirTerminationReason::OptionalGuardOverflow,
@@ -10,6 +10,8 @@ const EXECUTABLE_MIR_TERMINATION_REASONS: [MirTerminationReason; 9] = [
     MirTerminationReason::ArrayInvalidSliceBounds,
     MirTerminationReason::ArraySliceLengthMismatch,
     MirTerminationReason::ShiftCountOutOfRange,
+    MirTerminationReason::IntegerDivisionByZero,
+    MirTerminationReason::IntegerRemainderByZero,
 ];
 
 #[test]
@@ -50,6 +52,8 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
         (7, "array slice length mismatch"),
         // Index 8 remains the pre-existing ownership-overflow message.
         (9, "shift count out of range"),
+        (10, "integer division by zero"),
+        (11, "integer remainder by zero"),
     ] {
         let symbol = format!(".Lska_panic_message_{index}");
         assert_eq!(
@@ -62,7 +66,7 @@ fn pools_and_reports_every_static_termination_reason_in_stable_order() {
         assert!(output.contains(&format!("lea rdi, [rip + {symbol}]")));
         assert!(output.contains(&format!("mov rsi, {}", message.len())));
     }
-    assert_eq!(output.matches("call ska_rt_panic").count(), 9);
+    assert_eq!(output.matches("call ska_rt_panic").count(), 11);
     assert!(!output.contains("ud2"));
     assert_system_assembler_accepts(&output);
 }
@@ -79,6 +83,8 @@ fn every_static_termination_reason_reports_exact_native_stderr() {
         "array slice bounds are invalid",
         "array slice length mismatch",
         "shift count out of range",
+        "integer division by zero",
+        "integer remainder by zero",
     ]) {
         let mut program = lower_text("fn main() -> i64 { return 0; }");
         let definition = program
@@ -107,7 +113,7 @@ fn every_static_termination_reason_reports_exact_native_stderr() {
 }
 
 #[test]
-fn model_only_integer_zero_divisor_reasons_do_not_change_the_message_pool() {
+fn integer_zero_divisor_reasons_append_to_the_stable_message_pool() {
     for reason in [
         MirTerminationReason::IntegerDivisionByZero,
         MirTerminationReason::IntegerRemainderByZero,
@@ -125,14 +131,18 @@ fn model_only_integer_zero_divisor_reasons_do_not_change_the_message_pool() {
         });
 
         verify_mir(&program).unwrap();
-        let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-        assert_eq!(
-            error.message(),
-            format!(
-                "termination reason `{}` is not executable yet",
-                reason.mnemonic()
-            )
-        );
+        let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+        let (symbol, message) = match reason {
+            MirTerminationReason::IntegerDivisionByZero => {
+                (".Lska_panic_message_10", "integer division by zero")
+            }
+            MirTerminationReason::IntegerRemainderByZero => {
+                (".Lska_panic_message_11", "integer remainder by zero")
+            }
+            _ => unreachable!(),
+        };
+        assert!(output.contains(&format!(".type {symbol}, @object")));
+        assert!(output.contains(&format!(".ascii \"{message}\"")));
     }
 }
 

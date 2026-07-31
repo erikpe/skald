@@ -23,6 +23,8 @@ use super::{
 
 mod shifts;
 pub(crate) use shifts::checked_shift_program;
+mod integer_division;
+pub(crate) use integer_division::checked_integer_division_program;
 
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
     MirParameter { mode, ty }

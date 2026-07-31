@@ -21,6 +21,7 @@ mod call;
 mod cleanup;
 mod copy;
 mod finalize;
+mod integer_division;
 mod object_abi;
 mod optional;
 mod ownership;
@@ -113,6 +114,7 @@ fn lower_definition(
             .expect("verified block is terminated");
         if !selector.select_termination(block_terminator)?
             && !selector.select_shift_terminator(block_terminator)
+            && !selector.select_integer_division_terminator(block_terminator)
             && !selector.select_array_terminator(block_terminator)?
             && !selector.select_optional_terminator(block_terminator)?
             && !selector.select_type_operation_terminator(block_terminator, block.id)?
@@ -169,6 +171,7 @@ struct InstructionSelector<'program, 'output> {
     block: BlockId,
     optional_sequence: usize,
     array_sequence: usize,
+    integer_division_sequence: usize,
     output: &'output mut Vec<Instruction>,
 }
 
@@ -190,6 +193,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             block,
             optional_sequence: 0,
             array_sequence: 0,
+            integer_division_sequence: 0,
             output,
         }
     }

@@ -1,7 +1,7 @@
 //! Assignment and rvalue instruction selection.
 
 use crate::{
-    backend::{BackendError, Target},
+    backend::BackendError,
     mir::{
         MirAssignment, MirBinaryOperation, MirComparisonOperand, MirComparisonPredicate,
         MirIntegerBitwiseOperation, MirIntegerCast, MirIntegerType, MirPlace,
@@ -84,13 +84,11 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
-            MirRvalueKind::IntegerDivision { .. } => {
-                return Err(BackendError::new(
-                    Target::X86_64SysV,
-                    Some(self.function.callable()),
-                    "integer division and remainder are not executable yet",
-                ));
-            }
+            MirRvalueKind::IntegerDivision {
+                operation,
+                dividend,
+                divisor,
+            } => self.select_integer_division(*operation, *dividend, *divisor, ty, destination),
             MirRvalueKind::Shift {
                 operation,
                 left,

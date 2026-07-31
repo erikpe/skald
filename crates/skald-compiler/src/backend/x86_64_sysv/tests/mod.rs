@@ -1,6 +1,7 @@
 use crate::mir::test_fixtures::{
     add_body_storage_lifetimes as fixture_add_body_storage_lifetimes, assign as fixture_assign,
     block as fixture_block, call as fixture_call,
+    checked_integer_division_program as fixture_checked_integer_division_program,
     checked_shift_program as fixture_checked_shift_program,
     conditional_full_expression_cleanup_program as fixture_conditional_cleanup_program,
     function_declaration as fixture_function_declaration,
@@ -56,6 +57,7 @@ mod control_flow;
 mod copy;
 mod destruction;
 mod instruction_selection;
+mod integer_division;
 mod interface_dispatch;
 mod legality;
 mod native_execution;

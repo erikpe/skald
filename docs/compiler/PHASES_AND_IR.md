@@ -311,8 +311,9 @@ dividend and divisor in source order, then emits an explicit divisor-check
 diamond whose success edge alone performs the operation and initializes its
 result carrier. MIR verification proves that relationship and its exact typed
 carriers before accepting the operation. Source phases do not construct these
-operations yet, and targets still reject them rather than exposing a partial
-executable path.
+operations yet. The x86-64 target executes verified operations with explicit
+zero and signed-overflow guards, native unsigned or signed division, and the
+required signed floor correction.
 
 MIR lowers eager primitive operations to target-independent scalar operations.
 It preserves:
@@ -436,12 +437,10 @@ MIR verification rejects:
   reason; and
 - a compiler-known failure edge with an ordinary successor.
 
-The static-termination representation includes the executable checked-shift
-reason plus distinct reasons for integer division and remainder by zero. The
-integer reasons have deterministic MIR vocabulary and participate in verified
-checked control flow, but remain non-executable until instruction selection and
-their static messages are enabled together. Once executable, they select their
-exact messages from the
+The static-termination representation includes the executable checked-shift,
+integer-division-by-zero, and integer-remainder-by-zero reasons. Each has
+deterministic MIR vocabulary, participates in verified checked control flow,
+and selects its exact static message from the
 [language panic catalog](../language/ERRORS.md#frozen-panic-design).
 
 Constant folding and every later transformation use the same wrapping,

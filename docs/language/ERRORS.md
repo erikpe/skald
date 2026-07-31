@@ -32,9 +32,10 @@ than source-language exceptions.
 
 The compiler implements executable `std::error::panic` call statements and
 routes checked object casts, optional failures, array failures, checked shift
-counts, and valid host-allocation exhaustion through the common reporter
-below. Source shifts and verified checked-shift MIR route excessive counts
-through the exact catalog reason. Legal shared
+counts, checked integer zero divisors, and valid host-allocation exhaustion
+through the common reporter below. Source shifts and verified checked-shift or
+checked integer-division MIR route failures through the exact catalog reason.
+Legal shared
 and inline-backing ownership-count exhaustion uses that same reporter, while
 invalid ownership state remains a hard compiler-defect trap. Skald has no
 `throw`, `try`, `catch`, or other recoverable runtime-failure construct.
@@ -201,10 +202,9 @@ count.
 zero respectively. Integer wrapping overflow and floating division by zero
 also do not use panic. The
 [operator profile](TYPES_AND_VALUES.md#frozen-primitive-operator-profile)
-defines their value behavior. Checked shift failure is implemented through the
-common reporter; integer division, remainder, and their zero-divisor failure
-edges remain frozen but unimplemented as recorded by the
-[status matrix](STATUS.md).
+defines their value behavior. Checked shift and internally constructed checked
+integer division/remainder failures use the common reporter. Source `/` and
+`%` remain disabled as recorded by the [status matrix](STATUS.md).
 
 ## Cleanup and abrupt termination
 

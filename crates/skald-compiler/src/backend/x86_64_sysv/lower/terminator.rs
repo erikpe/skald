@@ -22,10 +22,12 @@ enum PanicMessage {
     ArraySliceLengthMismatch,
     OwnershipCountOverflow,
     ShiftCountOutOfRange,
+    IntegerDivisionByZero,
+    IntegerRemainderByZero,
 }
 
 impl PanicMessage {
-    const ALL: [Self; 10] = [
+    const ALL: [Self; 12] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -36,6 +38,8 @@ impl PanicMessage {
         Self::ArraySliceLengthMismatch,
         Self::OwnershipCountOverflow,
         Self::ShiftCountOutOfRange,
+        Self::IntegerDivisionByZero,
+        Self::IntegerRemainderByZero,
     ];
 
     const fn for_reason(reason: MirTerminationReason) -> Option<Self> {
@@ -49,8 +53,8 @@ impl PanicMessage {
             MirTerminationReason::ArrayInvalidSliceBounds => Some(Self::ArrayInvalidSliceBounds),
             MirTerminationReason::ArraySliceLengthMismatch => Some(Self::ArraySliceLengthMismatch),
             MirTerminationReason::ShiftCountOutOfRange => Some(Self::ShiftCountOutOfRange),
-            MirTerminationReason::IntegerDivisionByZero
-            | MirTerminationReason::IntegerRemainderByZero => None,
+            MirTerminationReason::IntegerDivisionByZero => Some(Self::IntegerDivisionByZero),
+            MirTerminationReason::IntegerRemainderByZero => Some(Self::IntegerRemainderByZero),
         }
     }
 
@@ -70,6 +74,8 @@ impl PanicMessage {
             Self::ArraySliceLengthMismatch => b"array slice length mismatch",
             Self::OwnershipCountOverflow => b"ownership count overflow",
             Self::ShiftCountOutOfRange => b"shift count out of range",
+            Self::IntegerDivisionByZero => b"integer division by zero",
+            Self::IntegerRemainderByZero => b"integer remainder by zero",
         }
     }
 
@@ -85,6 +91,8 @@ impl PanicMessage {
             Self::ArraySliceLengthMismatch => ".Lska_panic_message_7",
             Self::OwnershipCountOverflow => ".Lska_panic_message_8",
             Self::ShiftCountOutOfRange => ".Lska_panic_message_9",
+            Self::IntegerDivisionByZero => ".Lska_panic_message_10",
+            Self::IntegerRemainderByZero => ".Lska_panic_message_11",
         }
     }
 }
@@ -152,11 +160,6 @@ impl InstructionSelector<'_, '_> {
                 self.select_static_panic(message);
                 Ok(true)
             }
-            MirTerminator::IntegerDivisorCheck { .. } => Err(crate::backend::BackendError::new(
-                crate::backend::Target::X86_64SysV,
-                Some(self.function.callable()),
-                "checked integer division and remainder are not executable yet",
-            )),
             _ => Ok(false),
         }
     }

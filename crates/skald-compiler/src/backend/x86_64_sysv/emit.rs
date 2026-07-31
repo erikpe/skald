@@ -170,6 +170,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "imul {}, {}", destination.name(), source.name()).unwrap(),
+        Instruction::SignExtendDividend => output.push_str("cqo"),
+        Instruction::IntegerDivide { flavor, divisor } => {
+            write!(output, "{} {}", flavor.mnemonic(), divisor.name()).unwrap()
+        }
         Instruction::Negate(register) => write!(output, "neg {}", register.name()).unwrap(),
         Instruction::BitwiseNot(register) => write!(output, "not {}", register.name()).unwrap(),
         Instruction::Bitwise {

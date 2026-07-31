@@ -104,6 +104,20 @@ target-private pool index 9. This adds no public symbol, calling convention,
 frame category, or runtime ABI entry point. Source `<<` and `>>` select this
 same verified representation through the ordinary frontend pipeline.
 
+Verified checked integer division and remainder also lower from their explicit
+MIR diamond. The check block branches on the secured divisor before the
+success block places the dividend in `rax`, clears or sign-extends `rdx`, and
+places the divisor in `rcx`. Unsigned operations use `div`; byte results pass
+through the ordinary low-byte canonicalization boundary. Signed operations
+guard `i64::MIN` with divisor `-1` before `idiv`, synthesize the defined result
+for that pair, and otherwise correct a nonzero truncating remainder whose sign
+differs from the divisor. The correction decrements the quotient and adds the
+divisor to the remainder, producing floor quotient and divisor-sign remainder.
+Failure selects the exact operation-specific static message. Existing message
+symbols retain indices 0 through 9; division and remainder append indices 10
+and 11. This adds no public symbol, calling convention, frame category, or
+runtime ABI entry point. Source syntax does not select these operations yet.
+
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
@@ -162,8 +176,9 @@ publication; ordinary dynamic publication writes count one.
 
 The
 [frozen operator representation](PHASES_AND_IR.md#frozen-primitive-operator-representation)
-defines the contract for remaining future operator input as well as the
-implemented pure bitwise subset described above. A target consumes
+defines the contract for current and future operator input, including the
+implemented bitwise, checked-shift, and checked integer-division subsets
+described above. A target consumes
 already selected operation flavor, type, width, signedness, failure
 capability, and control flow. It never reconstructs semantics from source
 spelling or host-language arithmetic.
@@ -272,13 +287,11 @@ invalid lifetime state.
 ## Panic and hard-trap boundary
 
 The version-6 runtime reporter and explicit source-panic lowering are
-implemented. Compiler-known optional, array, cast, and checked-shift failures
-use the same reporter while retaining distinct target-independent MIR reasons.
+implemented. Compiler-known optional, array, cast, checked-shift, and checked
+integer-division failures use the same reporter while retaining distinct
+target-independent MIR reasons.
 Legal ownership-count exhaustion enters the same static-message pool from its
 backend retain edge; corrupted ownership state remains a separate hard trap.
-The MIR model also names integer division and remainder by zero, but the
-x86-64 backend deliberately rejects those reasons until their verified
-checked operation and exact static-message entries are executable together.
 
 Instruction selection centrally lowers the explicit-panic and static
 termination forms described in
@@ -290,8 +303,8 @@ emitted once in stable catalog order. The pool is derived from final selected
 instructions so backend-owned ownership-overflow edges and MIR termination
 reasons share one exact mechanism. Both call the sole public
 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry point. Array,
-optional, cast, checked-shift, string, and ownership lowering must not grow private reporter
-calls or duplicate the authoritative
+optional, cast, checked-shift, checked integer-division, string, and ownership
+lowering must not grow private reporter calls or duplicate the authoritative
 [message catalog](../language/ERRORS.md#frozen-panic-design).
 
 The reporter is only for explicit source panic and compiler-known,
