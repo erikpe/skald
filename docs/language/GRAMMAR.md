@@ -110,7 +110,7 @@ All four spellings remain ordinary identifiers outside those positions.
 The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
-( ) { } [ ] , : :: ; . -> + - * = == != < <= > >= ? ! ~ & | ^ && ||
+( ) { } [ ] , : :: ; . -> + - * = == != < <= > >= ? ! ~ & | ^ << >> && ||
 ```
 
 Double quotes delimit one string-literal token. There are no character or
@@ -120,7 +120,7 @@ The remaining frozen primitive-operator extension additionally selects these
 tokens:
 
 ```text
-/ % << >>
+/ %
 ```
 
 These remaining tokens are unavailable until their implementation roadmaps
@@ -430,8 +430,11 @@ bitwise-or-expression     = bitwise-xor-expression
                             {"|" bitwise-xor-expression}
 bitwise-xor-expression    = bitwise-and-expression
                             {"^" bitwise-and-expression}
-bitwise-and-expression    = additive-expression
-                            {"&" additive-expression}
+bitwise-and-expression    = shift-expression
+                            {"&" shift-expression}
+
+shift-expression          = additive-expression
+                            {("<<" | ">>") additive-expression}
 
 additive-expression
                           = multiplicative-expression
@@ -517,7 +520,7 @@ From tightest to loosest binding, precedence is:
 10. `&&`;
 11. `||`.
 
-Postfix, arithmetic, bitwise, and logical binary operators associate left to
+Postfix, arithmetic, shift, bitwise, and logical binary operators associate left to
 right. Prefix `-`, `!`, `~`, and `*` associate right to left. Comparisons and
 `is` are non-associative, so ungrouped chained comparisons or tests are syntax
 errors. Grouping overrides precedence and remains represented in the
@@ -563,8 +566,7 @@ cast matrix are defined by
 ### Frozen primitive-operator expression extension
 
 The complete frozen operator grammar extends the implemented expression ladder
-above with shifts, division, and remainder when those families are
-implemented:
+above with division and remainder when that family is implemented:
 
 ```text
 expression                = logical-or-expression

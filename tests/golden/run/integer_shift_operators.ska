@@ -1,0 +1,130 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+class Holder {
+    bits: u64;
+    count: u64;
+
+    init(bits: u64, count: u64) {
+        self.bits = bits;
+        self.count = count;
+    }
+}
+
+class Probe {
+    sequence: i64;
+
+    init() {
+        self.sequence = 0;
+    }
+
+    mut fn observe(value: u64, digit: i64) -> u64 {
+        self.sequence = self.sequence * 10 + digit;
+        return value;
+    }
+}
+
+class Trace {
+    marker: i64;
+    value: u64;
+
+    init(marker: i64, value: u64) {
+        self.marker = marker;
+        self.value = value;
+    }
+
+    fn read() -> u64 {
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn shift_parameter(left: u64, count: u64) -> u64 {
+    return left << count;
+}
+
+fn shift_return(value: u8) -> u8 {
+    return value >> 1u;
+}
+
+fn consume(value: u64) -> unit {
+    ska_rt_println_u64(value);
+}
+
+fn produce_trace(marker: i64, value: u64) -> Trace {
+    return Trace(marker, value);
+}
+
+fn read_trace(value: Trace) -> u64 {
+    return value.value;
+}
+
+fn make_trace(marker: i64, value: u64) -> shared Trace {
+    return new Trace(marker, value);
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(1 << 0u);
+    ska_rt_println_i64(1 << 63u);
+    ska_rt_println_i64(-8 >> 1u);
+    ska_rt_println_i64(-1 >> 63u);
+
+    ska_rt_println_u64(1u << 63u);
+    ska_rt_println_u64(18446744073709551615u >> 63u);
+    ska_rt_println_u64(9223372036854775808u << 1u);
+
+    ska_rt_println_u8(1u8 << 7u);
+    ska_rt_println_u8(129u8 >> 7u);
+    ska_rt_println_u8(129u8 << 1u);
+    ska_rt_println_u8(shift_return(240u8));
+
+    var assigned: u64 = 0u;
+    assigned = shift_parameter(3u, 4u);
+    consume(assigned);
+
+    var holder: Holder = Holder(128u, 3u);
+    ska_rt_println_u64(holder.bits >> holder.count);
+    holder.bits = holder.bits << 1u;
+    ska_rt_println_u64(holder.bits);
+
+    var optional: u64? = 5u;
+    ska_rt_println_u64(optional! << ((u64) 2));
+    optional = 3u << 5u;
+    ska_rt_println_u64(optional!);
+
+    var values: u64[] = u64[](2u);
+    values[0] = 9u;
+    values[1] = 1u;
+    ska_rt_println_u64(values[0] << values[1]);
+    values[1] = values[0] >> 2u;
+    ska_rt_println_u64(values[1]);
+
+    ska_rt_println_u64(256u >> 1u >> 2u);
+    ska_rt_println_u64(1u << (2u + 3u) & 63u);
+
+    var probe: Probe = Probe();
+    ska_rt_println_u64(probe.observe(8u, 1) >> probe.observe(1u, 2));
+    ska_rt_println_i64(probe.sequence);
+    ska_rt_println_bool(
+        (probe.observe(3u, 3) << probe.observe(2u, 4)) == 12u
+        && (probe.observe(32u, 5) >> 5u) == 1u
+    );
+    ska_rt_println_i64(probe.sequence);
+
+    ska_rt_println_u64(
+        read_trace(produce_trace(41, 1u)) << read_trace(produce_trace(42, 3u))
+    );
+    ska_rt_println_u64(
+        make_trace(51, 16u)->read() >> make_trace(52, 2u)->read()
+    );
+
+    if ((1u8 << 7u) == 128u8 && (255u8 >> 7u) == 1u8) {
+        return 93;
+    }
+    return 1;
+}

@@ -17,7 +17,9 @@ const COMPOUND_PUNCTUATION: &[(&str, TokenKind)] = &[
     ("==", TokenKind::EqualEqual),
     ("!=", TokenKind::BangEqual),
     ("<=", TokenKind::LessEqual),
+    ("<<", TokenKind::ShiftLeft),
     (">=", TokenKind::GreaterEqual),
+    (">>", TokenKind::ShiftRight),
     ("&&", TokenKind::AndAnd),
     ("||", TokenKind::OrOr),
 ];

@@ -162,6 +162,7 @@ mod objects;
 mod optional_values;
 mod primitive_binding_assignment;
 mod shared_ownership;
+mod shifts;
 mod short_circuit_boolean;
 mod static_methods;
 mod type_operations;

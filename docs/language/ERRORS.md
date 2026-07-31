@@ -31,10 +31,10 @@ than source-language exceptions.
 ## Current runtime failures
 
 The compiler implements executable `std::error::panic` call statements and
-routes checked object casts, optional failures, array failures, and valid
-host-allocation exhaustion through the common reporter below. Verified
-compiler-internal checked-shift MIR also routes excessive counts through the
-exact catalog reason, although shift source syntax is not accepted yet. Legal shared
+routes checked object casts, optional failures, array failures, checked shift
+counts, and valid host-allocation exhaustion through the common reporter
+below. Source shifts and verified checked-shift MIR route excessive counts
+through the exact catalog reason. Legal shared
 and inline-backing ownership-count exhaustion uses that same reporter, while
 invalid ownership state remains a hard compiler-defect trap. Skald has no
 `throw`, `try`, `catch`, or other recoverable runtime-failure construct.

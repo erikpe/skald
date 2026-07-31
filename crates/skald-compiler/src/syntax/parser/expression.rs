@@ -6,7 +6,9 @@ impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expression> {
         let outermost = self.expression_parse_depth == 0;
         self.expression_parse_depth += 1;
-        let expression = self.parse_expression_shape();
+        let expression = self
+            .parse_shift()
+            .and_then(|source| self.parse_expression_tail(source));
         self.expression_parse_depth -= 1;
 
         if outermost
@@ -23,11 +25,6 @@ impl Parser<'_> {
             return None;
         }
         expression
-    }
-
-    fn parse_expression_shape(&mut self) -> Option<Expression> {
-        let source = self.parse_additive()?;
-        self.parse_expression_tail(source)
     }
 
     fn parse_expression_tail(&mut self, source: Expression) -> Option<Expression> {
@@ -60,7 +57,7 @@ impl Parser<'_> {
                 return None;
             }
 
-            let source = self.parse_additive()?;
+            let source = self.parse_shift()?;
             let source = self.parse_bitwise_tail(source)?;
             let right = self.parse_expression_suffix(source)?;
             while operators.last().is_some_and(|(pending, _)| {
@@ -159,7 +156,7 @@ impl Parser<'_> {
         let operator = comparison_operator(self.peek().kind)
             .expect("comparison suffix must start at a comparison operator");
         let operator_token = self.advance();
-        let right = self.parse_additive()?;
+        let right = self.parse_shift()?;
         let right = self.parse_bitwise_tail(right)?;
         let span = self.cover(left.span(), right.span());
         let expression = Expression::Binary(BinaryExpr {
@@ -184,12 +181,12 @@ impl Parser<'_> {
         // Consume the rest of this chain so statement-level recovery resumes
         // after the complete invalid expression rather than at each operator.
         let _ = self
-            .parse_additive()
+            .parse_shift()
             .and_then(|first| self.parse_bitwise_tail(first));
         while comparison_operator(self.peek().kind).is_some() {
             self.advance();
             let _ = self
-                .parse_additive()
+                .parse_shift()
                 .and_then(|first| self.parse_bitwise_tail(first));
         }
         None
@@ -201,7 +198,7 @@ impl Parser<'_> {
 
         while let Some(operator) = bitwise_operator(self.peek().kind) {
             let token = self.advance();
-            let right = self.parse_additive()?;
+            let right = self.parse_shift()?;
             while operators.last().is_some_and(|(pending, _)| {
                 bitwise_precedence(*pending) >= bitwise_precedence(operator)
             }) {
@@ -236,6 +233,51 @@ impl Parser<'_> {
             right: Box::new(right),
             span,
         }));
+    }
+
+    fn parse_shift(&mut self) -> Option<Expression> {
+        // Parse the first additive operand here instead of entering another
+        // wrapper frame. Deep primary-expression recursion shares a fixed
+        // syntax budget, so adding a precedence tier must not reduce the
+        // amount of source nesting that budget can safely accept.
+        let mut expression = self.parse_multiplicative()?;
+        while self.at_any(&[TokenKind::Plus, TokenKind::Minus]) {
+            let operator = self.advance();
+            let right = self.parse_multiplicative()?;
+            let kind = match operator.kind {
+                TokenKind::Plus => BinaryOperator::Add,
+                TokenKind::Minus => BinaryOperator::Subtract,
+                _ => unreachable!("additive parser accepted a non-additive operator"),
+            };
+            let span = self.cover(expression.span(), right.span());
+            expression = Expression::Binary(BinaryExpr {
+                left: Box::new(expression),
+                operator: kind,
+                operator_span: operator.span,
+                right: Box::new(right),
+                span,
+            });
+        }
+
+        while self.at_any(&[TokenKind::ShiftLeft, TokenKind::ShiftRight]) {
+            let operator = self.advance();
+            let right = self.parse_additive()?;
+            let kind = match operator.kind {
+                TokenKind::ShiftLeft => BinaryOperator::ShiftLeft,
+                TokenKind::ShiftRight => BinaryOperator::ShiftRight,
+                _ => unreachable!("shift parser accepted a non-shift operator"),
+            };
+            let span = self.cover(expression.span(), right.span());
+            expression = Expression::Binary(BinaryExpr {
+                left: Box::new(expression),
+                operator: kind,
+                operator_span: operator.span,
+                right: Box::new(right),
+                span,
+            });
+        }
+
+        Some(expression)
     }
 
     fn parse_additive(&mut self) -> Option<Expression> {

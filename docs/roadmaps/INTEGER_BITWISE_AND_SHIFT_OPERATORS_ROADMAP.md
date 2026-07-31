@@ -1,6 +1,6 @@
 # Integer Bitwise Operators and Checked Shifts Roadmap
 
-Status: in progress; BW0, BW1, and BW2 are complete and BW3 is next.
+Status: in progress; BW0 through BW3 are complete and BW4 is next.
 
 This roadmap implements the next frozen primitive-operator family: exact-width
 integer bitwise complement, conjunction, disjunction, and exclusive
@@ -117,7 +117,7 @@ than adding operator-specific C harnesses.
 - [x] BW0 — Establish executable pure bitwise operations
 - [x] BW1 — Enable bitwise source expressions end to end
 - [x] BW2 — Establish executable checked shifts
-- [ ] BW3 — Enable checked shift source expressions end to end
+- [x] BW3 — Enable checked shift source expressions end to end
 - [ ] BW4 — Harden and promote the complete family
 
 ## PR-sized implementation sequence
@@ -260,31 +260,31 @@ no shift source expression is accepted yet.
 **Purpose:** Activate the complete checked-shift language feature only after
 every selected operation has a verified executable downstream path.
 
-- [ ] Lex `<<` and `>>` by longest match without disturbing `<`, `<=`, `>`,
+- [x] Lex `<<` and `>>` by longest match without disturbing `<`, `<=`, `>`,
       `>=`, comparison-chain recovery, or existing logical punctuation.
-- [ ] Insert one left-associative shift parser tier between additive and `&`;
+- [x] Insert one left-associative shift parser tier between additive and `&`;
       preserve the complete frozen precedence ladder, source spans, grouping,
       nesting limits, and deterministic recovery.
-- [ ] Preserve left/right shift identity in AST and resolved IR without
+- [x] Preserve left/right shift identity in AST and resolved IR without
       selecting a width, signedness, result type, failure edge, or target
       instruction early.
-- [ ] Select shifts only for an integer left operand and exact `u64` right
+- [x] Select shifts only for an integer left operand and exact `u64` right
       operand, returning the left type. Check operands in source order and
       reject every other left or count type before HIR with focused actual-type
       diagnostics and no implicit conversion suggestion.
-- [ ] Exercise arbitrary currently valid operands, including calls, fields,
+- [x] Exercise arbitrary currently valid operands, including calls, fields,
       array access, optional unwrap, casts, assignments used by later
       expressions, nested short-circuit expressions, allocation-backed
       effects, and operands that can fail before the count check.
-- [ ] Add deterministic phase dumps showing source direction, exact selected
+- [x] Add deterministic phase dumps showing source direction, exact selected
       shift flavor, secured operands, count-check CFG, success-only shift,
       failure termination, result carriage, and enclosing cleanup.
-- [ ] Add source-to-native goldens for all widths, directions, boundary counts,
+- [x] Add source-to-native goldens for all widths, directions, boundary counts,
       signed arithmetic right shift, high-bit discard, `u8` canonicalization,
       every expression consumer, left-to-right effects, successful cleanup,
       and exact excessive-count panic output. Literal excessive counts must
       compile and fail through the same runtime path as dynamic counts.
-- [ ] Update living grammar, language/compiler status, phase/backend contracts,
+- [x] Update living grammar, language/compiler status, phase/backend contracts,
       errors wording, debugging/testing guidance, and links to describe the
       now implemented complete bitwise-and-shift family without claiming
       division, remainder, floating operations, or constant folding.

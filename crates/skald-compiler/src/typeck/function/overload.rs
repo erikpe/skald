@@ -277,6 +277,8 @@ impl CallableChecker<'_, '_> {
                 crate::resolve::ResolvedBinaryOperator::Add
                 | crate::resolve::ResolvedBinaryOperator::Subtract
                 | crate::resolve::ResolvedBinaryOperator::Multiply
+                | crate::resolve::ResolvedBinaryOperator::ShiftLeft
+                | crate::resolve::ResolvedBinaryOperator::ShiftRight
                 | crate::resolve::ResolvedBinaryOperator::BitwiseAnd
                 | crate::resolve::ResolvedBinaryOperator::BitwiseOr
                 | crate::resolve::ResolvedBinaryOperator::BitwiseXor => {

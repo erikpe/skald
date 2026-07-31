@@ -1,0 +1,18 @@
+class Value {
+    bits: u64;
+
+    init() {
+        self.bits = 1u;
+    }
+}
+
+fn main() -> i64 {
+    1 << 1;
+    1u >> 1u8;
+    1u8 << true;
+    true << 1u;
+    1.0 >> 1u;
+    none << 1u;
+    Value() >> 1u;
+    return 0;
+}

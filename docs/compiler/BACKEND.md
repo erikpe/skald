@@ -101,8 +101,8 @@ ordinary low-byte canonicalization boundary. The failure block selects the
 exact `shift count out of range` static message through `ska_rt_panic`.
 Existing message symbols keep their indices and the new message is appended at
 target-private pool index 9. This adds no public symbol, calling convention,
-frame category, or runtime ABI entry point. Source `<<` and `>>` remain
-disabled until their frontend task is complete.
+frame category, or runtime ABI entry point. Source `<<` and `>>` select this
+same verified representation through the ordinary frontend pipeline.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

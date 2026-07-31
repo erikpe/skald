@@ -348,12 +348,50 @@ fn verifier_rejects_every_broken_checked_shift_relationship_deterministically() 
 }
 
 #[test]
-fn source_shift_tokens_remain_disabled_until_bw3() {
+fn source_shifts_reach_the_verified_checked_cfg() {
     for source in [
         "fn main() -> i64 { return 1 << 1u; }",
         "fn main() -> i64 { return 1 >> 1u; }",
     ] {
-        let (_, output) = crate::test_support::parse_source(source);
-        assert!(output.has_errors());
+        let hir = type_check_source(source).hir.unwrap();
+        let mir = lower_hir(&hir);
+        verify_mir(&mir).unwrap();
+        assert!(mir
+            .definitions
+            .get(mir.entry_function)
+            .unwrap()
+            .body
+            .blocks
+            .iter()
+            .any(|block| matches!(
+                block.terminator,
+                Some(MirTerminator::ShiftCountCheck { .. })
+            )));
     }
+}
+
+#[test]
+fn source_shift_dump_retains_allocation_backed_cleanup() {
+    let hir = type_check_source(concat!(
+        "class Trace {\n",
+        "  value: u64;\n",
+        "  init(value: u64) { self.value = value; }\n",
+        "  fn read() -> u64 { return self.value; }\n",
+        "  destroy {}\n",
+        "}\n",
+        "fn make(value: u64) -> shared Trace { return new Trace(value); }\n",
+        "fn shift() -> u64 { return make(8u)->read() >> make(1u)->read(); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+    .hir
+    .unwrap();
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+
+    let dump = dump_mir(&mir);
+    assert_eq!(dump, dump_mir(&mir));
+    assert!(dump.contains("shift-count-check shr.u64"));
+    assert!(dump.contains("shr.u64"));
+    assert!(dump.contains("terminate shift-count-out-of-range"));
+    assert!(dump.matches("shared-release").count() >= 2, "{dump}");
 }

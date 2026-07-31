@@ -1,0 +1,7 @@
+fn excessive_count() -> u64 {
+    return 18446744073709551615u;
+}
+
+fn main() -> i64 {
+    return 1 >> excessive_count();
+}

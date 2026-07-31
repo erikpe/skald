@@ -197,6 +197,12 @@ impl CallableChecker<'_, '_> {
         }
         if matches!(
             binary.operator,
+            ResolvedBinaryOperator::ShiftLeft | ResolvedBinaryOperator::ShiftRight
+        ) {
+            return self.check_shift_expression(binary);
+        }
+        if matches!(
+            binary.operator,
             ResolvedBinaryOperator::BitwiseAnd
                 | ResolvedBinaryOperator::BitwiseOr
                 | ResolvedBinaryOperator::BitwiseXor
@@ -389,6 +395,8 @@ const fn comparison_predicate(operator: ResolvedBinaryOperator) -> Option<HirCom
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
         | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::ShiftLeft
+        | ResolvedBinaryOperator::ShiftRight
         | ResolvedBinaryOperator::BitwiseAnd
         | ResolvedBinaryOperator::BitwiseOr
         | ResolvedBinaryOperator::BitwiseXor => None,
@@ -424,7 +432,9 @@ fn select_arithmetic_operation(
         (
             ResolvedBinaryOperator::BitwiseAnd
             | ResolvedBinaryOperator::BitwiseOr
-            | ResolvedBinaryOperator::BitwiseXor,
+            | ResolvedBinaryOperator::BitwiseXor
+            | ResolvedBinaryOperator::ShiftLeft
+            | ResolvedBinaryOperator::ShiftRight,
             _,
         ) => None,
         (

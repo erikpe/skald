@@ -93,8 +93,8 @@ identity and grouping. HIR prints exact forms such as
 failure edge. A scalar spill around control-affecting right-operand lowering is
 the existing eager binary evaluation rule, not a bitwise control effect.
 
-Checked shifts currently begin at direct HIR construction because source
-`<<` and `>>` are intentionally disabled. HIR prints `CheckedShift` with
+For source `<<` and `>>`, AST and resolved dumps retain direction, grouping,
+and spans. HIR prints `CheckedShift` with
 `shl`, `sar`, or `shr`, the exact left type, `u64` count, width, and failure
 capability. MIR must show secured left and count scalar spills, then a
 `shift-count-check`; only its success block may contain the matching shift,

@@ -64,8 +64,8 @@ fn lexes_the_complete_supported_token_surface() {
 }
 
 #[test]
-fn comparison_punctuation_uses_longest_match_and_preserves_bitwise_tokens() {
-    let (sources, source_id, output) = lex_text("== = != ! < <= > >= -> :: &");
+fn comparison_and_shift_punctuation_use_longest_match() {
+    let (sources, source_id, output) = lex_text("== = != ! < <= << > >= >> -> :: &");
     let source = sources.get(source_id).unwrap();
 
     assert_eq!(
@@ -81,8 +81,10 @@ fn comparison_punctuation_uses_longest_match_and_preserves_bitwise_tokens() {
             TokenKind::Bang,
             TokenKind::Less,
             TokenKind::LessEqual,
+            TokenKind::ShiftLeft,
             TokenKind::Greater,
             TokenKind::GreaterEqual,
+            TokenKind::ShiftRight,
             TokenKind::Arrow,
             TokenKind::DoubleColon,
             TokenKind::Ampersand,
@@ -95,13 +97,48 @@ fn comparison_punctuation_uses_longest_match_and_preserves_bitwise_tokens() {
             .iter()
             .map(|token| source.slice(token.span.range()).unwrap())
             .collect::<Vec<_>>(),
-        ["==", "=", "!=", "!", "<", "<=", ">", ">=", "->", "::", "&", ""]
+        ["==", "=", "!=", "!", "<", "<=", "<<", ">", ">=", ">>", "->", "::", "&", "",]
     );
     assert!(output.diagnostics.is_empty());
     let dump = dump_tokens(source, &output.tokens);
     assert_eq!(dump, dump_tokens(source, &output.tokens));
     assert!(dump.contains("LESS_EQUAL"));
+    assert!(dump.contains("SHIFT_LEFT"));
     assert!(dump.contains("GREATER_EQUAL"));
+    assert!(dump.contains("SHIFT_RIGHT"));
+}
+
+#[test]
+fn repeated_angle_punctuation_splits_deterministically() {
+    let (sources, source_id, output) = lex_text("<<< >>> <<<= >>>=");
+    let source = sources.get(source_id).unwrap();
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::ShiftLeft,
+            TokenKind::Less,
+            TokenKind::ShiftRight,
+            TokenKind::Greater,
+            TokenKind::ShiftLeft,
+            TokenKind::LessEqual,
+            TokenKind::ShiftRight,
+            TokenKind::GreaterEqual,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["<<", "<", ">>", ">", "<<", "<=", ">>", ">=", ""]
+    );
+    assert!(output.diagnostics.is_empty());
 }
 
 #[test]

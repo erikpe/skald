@@ -864,6 +864,8 @@ pub enum BinaryOperator {
     Add,
     Subtract,
     Multiply,
+    ShiftLeft,
+    ShiftRight,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,

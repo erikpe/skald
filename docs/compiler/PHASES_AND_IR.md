@@ -187,12 +187,12 @@ boundary.
 
 ## Implemented primitive operator boundary
 
-Primitive integer bitwise operations, comparisons, and casts plus eager
+Primitive integer bitwise and shift operations, comparisons, and casts plus eager
 boolean negation and equality have
 [source contract](../language/TYPES_AND_VALUES.md#implemented-primitive-comparisons-boolean-negation-and-integer-casts)
 and are current products through native x86-64 execution. Bitwise operations
 have their focused contract under
-[implemented integer bitwise operators](../language/TYPES_AND_VALUES.md#implemented-integer-bitwise-operators).
+[implemented integer bitwise and shift operators](../language/TYPES_AND_VALUES.md#implemented-integer-bitwise-and-shift-operators).
 The pipeline responsibilities are:
 
 - Lexing recognizes eager bitwise, logical, and comparison punctuation by
@@ -242,13 +242,14 @@ saturating, implicit, mixed-type, and user-defined conversion remain outside
 this boundary. Implemented short-circuit logic uses the structured boundary
 below rather than this eager scalar boundary.
 
-## Executable checked-shift downstream boundary
+## Implemented checked-shift source boundary
 
-Checked integer shifts are executable from directly constructed typed HIR
-through verified MIR and native x86-64, while `<<` and `>>` remain unavailable
-to source programs. HIR records direction and the exact `i64`, `u64`, or `u8`
-left kind; the count is exactly `u64`, the result is the left type, and right
-shift flavor is derived target-independently.
+Lexing and parsing recognize longest-match `<<` and `>>` in one
+left-associative tier between additive expressions and `&`. Resolution retains
+source direction and spans. Type checking alone requires an exact integer left
+operand and exact `u64` count, then constructs typed HIR with the selected
+direction and `i64`, `u64`, or `u8` left kind. The result is the left type and
+right-shift flavor is derived target-independently.
 
 Lowering evaluates and secures the left operand, then evaluates and secures
 the count. A dedicated MIR terminator compares the secured count with the
@@ -264,8 +265,7 @@ success-only shift, result join, dominance, and terminal failure reason into
 one checked diamond. An unchecked shift or an alternate predecessor into its
 success block is malformed MIR. Deterministic dumps expose
 `shift-count-check`, `shl`, `sar`, or `shr` with exact types and width; they do
-not expose target registers. This internal executable boundary does not make
-shift syntax part of the accepted language.
+not expose target registers.
 
 ## Frozen primitive operator representation
 

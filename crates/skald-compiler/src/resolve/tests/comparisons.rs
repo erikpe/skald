@@ -86,6 +86,8 @@ const fn operator_dump_name(operator: ResolvedBinaryOperator) -> &'static str {
         ResolvedBinaryOperator::Add
         | ResolvedBinaryOperator::Subtract
         | ResolvedBinaryOperator::Multiply
+        | ResolvedBinaryOperator::ShiftLeft
+        | ResolvedBinaryOperator::ShiftRight
         | ResolvedBinaryOperator::BitwiseAnd
         | ResolvedBinaryOperator::BitwiseOr
         | ResolvedBinaryOperator::BitwiseXor => {

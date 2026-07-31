@@ -158,6 +158,7 @@ The implemented arithmetic surface is deliberately exact-type:
 | prefix `!` | `bool` | `bool` |
 | prefix `~` | `i64`, `u64`, or `u8` | the operand type |
 | binary `&`, `|`, `^` | two operands of the same type among `i64`, `u64`, and `u8` | that same type |
+| `<<`, `>>` | left operand of `i64`, `u64`, or `u8`; right operand exactly `u64` | the left type |
 | `==`, `!=` | two operands of the same type among `i64`, `u64`, `u8`, and `bool` | `bool` |
 | `<`, `<=`, `>`, `>=` | two operands of the same type among `i64`, `u64`, and `u8` | `bool` |
 | `&&`, `||` | two `bool` operands | `bool` |
@@ -174,7 +175,7 @@ particular NaN payload.
 
 Integer equality and ordering plus boolean equality, inequality, logical
 negation, and short-circuit `&&` and `||` are implemented as specified below.
-Floating equality or ordering, division, remainder, shifts, and exponentiation
+Floating equality or ordering, division, remainder, and exponentiation
 are not implemented. Built-in array indexing and slicing
 are intrinsic operations rather than general operators; non-shared inline
 element access currently executes for primitives, optionals, exact classes,
@@ -358,13 +359,20 @@ This frozen profile does not define:
 
 Each area requires a separate design. No deferred syntax is reserved.
 
-## Implemented integer bitwise operators
+## Implemented integer bitwise and shift operators
 
 Prefix `~` accepts exactly one `i64`, `u64`, or `u8` operand, complements every
 bit within that type's fixed width, and returns the same type. Binary `&`, `|`,
 and `^` accept exactly two operands of the same integer type and return that
 type. `bool`, `f64`, `unit`, optionals, arrays, class values, object views, and
 shared owners are not bitwise operands.
+
+`<<` and `>>` accept an `i64`, `u64`, or `u8` left operand and exactly `u64`
+on the right, and return the left type. Left shift inserts zero low bits and
+discards high bits. Right shift is arithmetic for `i64` and logical for `u64`
+and `u8`. Counts at or above the left width terminate with
+`shift count out of range`; constants use the same runtime path as dynamic
+counts and are never masked to a target instruction's count width.
 
 No bitwise operation inserts an implicit cast, promotion, narrowing,
 signedness change, expected-type reinterpretation, or truthiness conversion.
@@ -373,13 +381,17 @@ surrounding operation selection. Every `u8` result is canonical in `0..=255`.
 
 A unary operand evaluates exactly once. Binary operands evaluate exactly once
 from left to right, including calls, fields, checked array accesses, and
-optional unwrap. Pure bitwise operations introduce no failure of their own,
+optional unwrap. Both shift operands complete before the count check. Pure
+bitwise operations introduce no failure of their own,
 runtime call, allocation, cleanup rule, or control-flow edge; an operand's
-existing effects and failures remain unchanged.
+existing effects and failures remain unchanged. Successful shifts retain the
+ordinary full-expression cleanup boundary; their non-returning failure path
+uses the language's existing non-unwinding panic contract.
 
 Postfix operations bind before prefix `~`, and prefix operators associate
-right to left. Additive expressions bind before the separate left-associative
-`&`, `^`, and `|` tiers. Those tiers bind before comparisons, contextual `is`,
+right to left. Additive expressions bind before the left-associative shift
+tier, followed by the separate left-associative `&`, `^`, and `|` tiers.
+Those tiers bind before comparisons, contextual `is`,
 and short-circuit `&&` and `||`. The exact accepted ladder is in the
 [implemented grammar](GRAMMAR.md#expressions).
 
@@ -490,7 +502,7 @@ implied by the total integer cast syntax.
 
 ## Other conversions and future value families
 
-The current compiler executes primitive integer bitwise operations,
+The current compiler executes primitive integer bitwise and shift operations,
 comparisons, and casts plus boolean negation and equality through the x86-64
 backend. It performs no user-defined conversions. All other numeric
 conversion behavior remains deferred. Object casts are defined separately in

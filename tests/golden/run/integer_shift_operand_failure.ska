@@ -1,0 +1,12 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn left() -> u64 {
+    ska_rt_println_i64(1);
+    return 8u;
+}
+
+fn main() -> i64 {
+    var missing: u64? = none;
+    var result: u64 = left() >> missing!;
+    return (i64) result;
+}
