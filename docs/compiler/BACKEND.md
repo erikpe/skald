@@ -374,24 +374,23 @@ acceptance, and observable per-iteration cleanup. Those tests prove mechanical
 realization of verified MIR; they do not establish source legality or repair
 invalid lifetime state.
 
-## Frozen standard I/O target boundary
+## Implemented standard I/O target boundary
 
-Standard I/O now has five dedicated verified MIR operations. They are not yet
-legal for x86-64 execution: target legality rejects them structurally before
-instruction selection. IO4 will lower array operands to a data pointer at the
-checked offset plus the remaining byte count, retain their backing anchors
-across the call, and use the scalar System V classifications already defined
-below. It will call only the exact version-7 symbols specified by the
-[I/O contract](IO.md#implemented-runtime-abi-version-7); it will not pass an array
-descriptor or a `Str` value to C.
+Standard I/O has five dedicated verified MIR operations which the x86-64
+target lowers directly to the five exact version-7 symbols specified by the
+[I/O contract](IO.md#implemented-runtime-abi-version-7). Array operands become
+a backing byte address at the checked offset plus the remaining byte count;
+neither an array descriptor, owner, nor `Str` value crosses into C. The
+frame-resident backing anchor remains live through the call and ordinary
+full-expression cleanup releases it afterward.
 
 Offset validity must be established before pointer arithmetic and the call.
 The runtime's signed `i64` result returns through the ordinary integer result
-register and remains unaltered for standard-library validation. These are
-frozen target requirements; the current backend recognizes and structurally
-rejects I/O MIR rather than selecting it, and targets runtime ABI version 7
-only through its process-entry compatibility marker. Target-independent
-operation selection never depends on source names.
+register and is stored canonically without interpretation. Empty descriptors
+produce a null pointer and zero length without a header access; an offset equal
+to length produces a valid zero-length end pointer. All calls fit the existing
+integer argument registers, preserve the fixed frame's call alignment, and
+select symbols from the MIR operation rather than source names.
 
 ## Panic and hard-trap boundary
 

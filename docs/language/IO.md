@@ -5,10 +5,10 @@
 This document defines the source-level contract for Skald's first standard I/O
 module. The installed module currently contains only the five private
 byte-array intrinsic declarations, and the compiler resolves and types their
-calls into dedicated I/O HIR. Runtime ABI version 7 provides the narrow host
-byte operations they will eventually target. The four public functions and
-lowering are not implemented yet, so the existing scalar print helpers remain
-the only source-callable bootstrap output facility.
+calls into dedicated I/O HIR and verified MIR, and x86-64 lowers them to the
+narrow host byte operations provided by runtime ABI version 7. The four public
+functions are not implemented yet, so the existing scalar print helpers remain
+the only generally source-callable bootstrap output facility.
 
 The compiler and runtime contract behind this API is specified in
 [Standard I/O compiler and runtime contract](../compiler/IO.md). Current

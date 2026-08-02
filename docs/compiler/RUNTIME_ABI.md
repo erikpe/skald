@@ -61,10 +61,10 @@ and call them through the ordinary restricted external-function mechanism.
 ABI version 7 implements the five host operations over handles, scalars, and
 byte pointer/length pairs shown in the public surface above. They form the
 runtime half of the [standard I/O compiler and runtime contract](IO.md). The
-compiler's canonical intrinsic identities and typed I/O HIR are implemented;
-verified target-independent I/O MIR is also implemented. Target lowering is
-not implemented yet and rejects the operation family before instruction
-selection.
+compiler's canonical intrinsic identities, typed I/O HIR, verified
+target-independent MIR, and x86-64 lowering are implemented. Generated calls
+pass only fixed-width scalars and checked byte pointer/length pairs; array
+descriptors and owners remain compiler-private.
 
 `ska_rt_io_standard_handle` accepts selector `0` for stdin, `1` for stdout, or
 `2` for stderr and returns the corresponding raw POSIX descriptor. Mode `0`
@@ -416,6 +416,7 @@ eight directly linked C harnesses:
 
 [Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that a stale
 version-6 archive fails the version-7 link guard without replacing an existing
-output artifact. Native golden programs then exercise the established public symbols through
-source declarations, backend call lowering, the real archive, and exact stdout
+output artifact. Native golden programs exercise both ordinary external calls
+and private standard-I/O intrinsic lowering through the real archive,
+including checked ranges, ordinary negative host failures, and exact stdout
 expectations.

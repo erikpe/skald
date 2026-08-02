@@ -1,0 +1,87 @@
+import std::str;
+from std::error import panic;
+
+intrinsic fn _io_standard_handle(stream: u8) -> i64;
+intrinsic fn _io_open(ref path: u8[], mode: u8) -> i64;
+intrinsic fn _io_read(handle: i64, mut ref destination: u8[], offset: u64) -> i64;
+intrinsic fn _io_write(handle: i64, ref source: u8[], offset: u64) -> i64;
+intrinsic fn _io_close(handle: i64) -> i64;
+
+fn dynamic_offset() -> u64 {
+    return 2u;
+}
+
+public fn compiler_probe() -> i64 {
+    var output: i64 = _io_standard_handle(1u8);
+    if (output != 1) {
+        return 1;
+    }
+
+    var error: i64 = _io_standard_handle(2u8);
+    if (error != 2) {
+        return 2;
+    }
+
+    var text: u8[] = u8[](5u);
+    text[0] = 88u8;
+    text[1] = 88u8;
+    text[2] = 79u8;
+    text[3] = 75u8;
+    text[4] = 10u8;
+    if (_io_write(output, text, dynamic_offset()) != 3) {
+        return 3;
+    }
+
+    var empty: u8[] = u8[]();
+    if (_io_write(error, empty, 0u) != 0) {
+        return 4;
+    }
+
+    var missing: u8[] = u8[](11u);
+    missing[0] = 109u8;
+    missing[1] = 105u8;
+    missing[2] = 115u8;
+    missing[3] = 115u8;
+    missing[4] = 105u8;
+    missing[5] = 110u8;
+    missing[6] = 103u8;
+    missing[7] = 46u8;
+    missing[8] = 116u8;
+    missing[9] = 120u8;
+    missing[10] = 116u8;
+    if (_io_open(missing, 0u8) >= 0) {
+        return 5;
+    }
+
+    var path: u8[] = u8[](8u);
+    path[0] = 100u8;
+    path[1] = 97u8;
+    path[2] = 116u8;
+    path[3] = 97u8;
+    path[4] = 46u8;
+    path[5] = 116u8;
+    path[6] = 120u8;
+    path[7] = 116u8;
+    var handle: i64 = _io_open(path, 0u8);
+    if (handle < 0) {
+        return 6;
+    }
+
+    var destination: u8[] = u8[](6u);
+    if (_io_read(handle, destination, 2u) != 4) {
+        return 7;
+    }
+    if (destination[2] != 97u8 || destination[3] != 98u8 || destination[4] != 99u8 || destination[5] != 10u8) {
+        return 8;
+    }
+    if (_io_close(handle) != 0) {
+        return 9;
+    }
+    if (_io_read(handle, destination, 0u) >= 0) {
+        return 10;
+    }
+    if (_io_close(handle) >= 0) {
+        return 11;
+    }
+    return 0;
+}

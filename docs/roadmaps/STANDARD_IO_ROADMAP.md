@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 through IO3 are complete, and IO4 is next.
+Status: in progress; IO0 through IO4 are complete, and IO5 is next.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -124,7 +124,7 @@ lengths.
 - [x] IO1 — Publish the byte-oriented runtime ABI
 - [x] IO2 — Resolve and type private standard I/O intrinsics
 - [x] IO3 — Represent and verify target-independent I/O operations
-- [ ] IO4 — Lower verified I/O to the x86-64 runtime ABI
+- [x] IO4 — Lower verified I/O to the x86-64 runtime ABI
 - [ ] IO5 — Implement exact standard-stream writes
 - [ ] IO6 — Implement whole stdin and file reads
 - [ ] IO7 — Harden integration and reconcile living documentation
@@ -295,24 +295,24 @@ are rejected before instruction selection.
 **Purpose:** Realize the verified pointer/length boundary mechanically on the
 current target and connect it to the independently tested version-7 runtime.
 
-- [ ] Add x86-64 System V instruction selection for the five MIR operations,
+- [x] Add x86-64 System V instruction selection for the five MIR operations,
       using the verified array descriptor and offset to compute a backing byte
       address and remaining length without passing the descriptor or owner.
-- [ ] Marshal selectors, modes, handles, pointers, lengths, and signed `i64`
+- [x] Marshal selectors, modes, handles, pointers, lengths, and signed `i64`
       results under the existing target call machinery and preserve live
       array-backing anchors across each C call.
-- [ ] Reference only the exact `ska_rt_io_*` symbol selected by the MIR
+- [x] Reference only the exact `ska_rt_io_*` symbol selected by the MIR
       operation and retain name-independent target-independent IR.
-- [ ] Preserve zero-length ranges without dereferencing their data pointer,
+- [x] Preserve zero-length ranges without dereferencing their data pointer,
       canonical scalar result storage, stack alignment, caller-saved state,
       and existing full-expression cleanup around the host call.
-- [ ] Add backend legality and assembly tests for each operation, offset zero,
+- [x] Add backend legality and assembly tests for each operation, offset zero,
       dynamic offsets, empty remaining ranges, bounds failure before C,
       register pressure, alias backing anchors, and exact runtime symbols.
-- [ ] Add native compiler tests with small private standard-library fixtures
+- [x] Add native compiler tests with small private standard-library fixtures
       that exercise successful scalar results and host failures without yet
       claiming the four public `std::io` functions.
-- [ ] Update backend, phases/IR, compiler I/O, debugging, and runtime ABI
+- [x] Update backend, phases/IR, compiler I/O, debugging, and runtime ABI
       documentation from frozen representation direction to implemented
       compiler/runtime intrinsic support while keeping the public standard
       library status planned.

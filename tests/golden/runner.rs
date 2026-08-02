@@ -184,8 +184,8 @@ fn run_native_case(
         .map_err(|error| format!("could not start skac: {error}"))?;
     require_successful_compilation(&compilation)?;
 
-    let execution = run_executable(&executable)?;
-    let repeated = run_executable(&executable)?;
+    let execution = run_executable(&executable, &case.working_directory)?;
+    let repeated = run_executable(&executable, &case.working_directory)?;
     if (
         execution.status.code(),
         &execution.stdout,
@@ -202,8 +202,9 @@ fn run_native_case(
     )
 }
 
-fn run_executable(executable: &Path) -> Result<Output, String> {
+fn run_executable(executable: &Path, working_directory: &Path) -> Result<Output, String> {
     Command::new(executable)
+        .current_dir(working_directory)
         .output()
         .map_err(|error| format!("could not run generated executable: {error}"))
 }

@@ -49,7 +49,9 @@ line feeds, and non-UTF-8 stream bytes are not normalized. Compile failures
 must produce no stdout and exit with compiler status 1.
 
 The root Makefile builds the runtime before the runner invokes the real `skac`
-binary from the repository root. The runner compiles each run case to assembly
+binary. Single-file cases compile and run from the repository root; multi-file
+cases compile and run from the directory containing `case.args`, so relative
+fixture resources have one deterministic base. The runner compiles each run case to assembly
 in two independent processes and compares the bytes before linking and
 execution. It likewise compiles each failure twice and compares stderr before
 checking its snapshot. Each native executable runs twice; both status and

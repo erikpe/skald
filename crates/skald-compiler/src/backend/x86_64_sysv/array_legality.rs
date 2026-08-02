@@ -185,6 +185,9 @@ fn check_instruction(
             } => {
                 require_executable_array_place(program, definition, owner)?;
             }
+            MirArrayInstruction::Offset { owner, .. } => {
+                require_executable_array_place(program, definition, owner)?;
+            }
             MirArrayInstruction::Boundary { owner, .. } => {
                 require_executable_array_place(program, definition, owner)?;
             }
@@ -228,7 +231,10 @@ fn check_terminator(
             ..
         }
         | MirTerminator::ArrayPositionCheck {
-            kind: MirArrayPositionKind::Element | MirArrayPositionKind::SliceBound,
+            kind:
+                MirArrayPositionKind::Element
+                | MirArrayPositionKind::SliceBound
+                | MirArrayPositionKind::RangeOffset,
             ..
         }
         | MirTerminator::ArrayLoop { .. }
@@ -293,7 +299,9 @@ fn require_executable_array_place(
     let direct_owner = place.projections.is_empty()
         && matches!(
             place.base,
-            MirPlaceBase::Storage(_) | MirPlaceBase::AliasParameter(_)
+            MirPlaceBase::Storage(_)
+                | MirPlaceBase::AliasParameter(_)
+                | MirPlaceBase::ArrayAlias(_)
         )
         && matches!(
             storage.kind,
@@ -304,6 +312,7 @@ fn require_executable_array_place(
                 | MirStorageKind::ArrayProduced
                 | MirStorageKind::ArraySlice
                 | MirStorageKind::ArrayAnchor(_)
+                | MirStorageKind::ArrayAlias(_)
                 | MirStorageKind::AliasParameter(_)
         )
         && matches!(storage.ty, MirType::Array(_));

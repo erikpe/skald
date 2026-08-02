@@ -169,12 +169,14 @@ Top-level corpus and sidecar formats are documented locally:
 - [golden discovery and sidecars](../../tests/golden/README.md); and
 - [runtime harnesses](../../tests/runtime/README.md).
 
-The frozen [standard I/O compiler contract](../compiler/IO.md#verification-obligations)
+The implemented [standard I/O compiler contract](../compiler/IO.md#verification-obligations)
 assigns coverage across these same layers. Direct runtime harnesses now own
-the version-7 handle and one-transfer byte boundary. Phase tests will own
-canonical identities, types, access modes, anchors, and deterministic dumps;
-backend tests will own pointer/length lowering; native goldens will own exact bytes, EOF, stable
-panic messages, and whole-operation behavior. The golden harness currently has
+the version-7 handle and one-transfer byte boundary. Phase tests own canonical
+identities, types, access modes, anchors, and deterministic dumps; backend
+tests own pointer/length lowering and exact symbols; private-standard-library
+native goldens own checked calls and host failures. IO5 through IO7 will add
+exact public bytes, EOF, stable panic messages, and whole-operation behavior.
+The golden harness currently has
 stdout, stderr, and exit sidecars but no stdin fixture. Adding an explicit
 stdin sidecar is an implementation prerequisite, not current harness support.
 

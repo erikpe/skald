@@ -1,0 +1,13 @@
+import std::str;
+from std::error import panic;
+
+intrinsic fn _io_standard_handle(stream: u8) -> i64;
+intrinsic fn _io_open(ref path: u8[], mode: u8) -> i64;
+intrinsic fn _io_read(handle: i64, mut ref destination: u8[], offset: u64) -> i64;
+intrinsic fn _io_write(handle: i64, ref source: u8[], offset: u64) -> i64;
+intrinsic fn _io_close(handle: i64) -> i64;
+
+public fn bounds_probe() -> i64 {
+    var bytes: u8[] = u8[](1u);
+    return _io_write(_io_standard_handle(1u8), bytes, 2u);
+}

@@ -127,9 +127,10 @@ intrinsics under `std::io`. The closed registry, exact declaration checks,
 array-alias checking, dedicated typed HIR, and verified target-independent MIR
 are implemented. MIR preserves exact byte-array places, access, backing
 anchors, length-inclusive checked range offsets, and one exact `i64` result.
-The x86-64 target rejects these operations structurally until IO4 implements
-their runtime ABI lowering; operation selection never depends on source
-spelling after resolution.
+The x86-64 target mechanically extracts verified byte pointers and lengths,
+marshals scalar arguments and signed results, and calls the exact version-7
+runtime symbol selected by the MIR operation. Operation selection never
+depends on source spelling after resolution.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
@@ -997,20 +998,21 @@ instead composes a target-directed checked source with explicit source `new`,
 exact-class allocation, and the selected copy-constructor operation after the
 check succeeds.
 
-### Frozen standard I/O representation
+### Implemented standard I/O representation
 
-The planned [standard I/O compiler contract](IO.md) assigns canonical
+The [standard I/O compiler contract](IO.md) assigns canonical
 intrinsic validation to resolution and type checking, semantic access and
 offset information to typed HIR, and executable read, write, open, close, and
 standard-handle operations to MIR. MIR verification will own exact scalar and
 array types, read-only versus mutable access, offset validity structure, and
 the backing anchor that keeps each array range live across its host call.
 
-These are frozen phase responsibilities, not current IR variants. Lowering
-will preserve left-to-right, exactly-once argument evaluation and will expose
-neither a Skald array descriptor nor `Str` representation to a target. The
-x86-64 backend will instead receive verified operations from which it can pass
-one data pointer and remaining byte count to runtime ABI version 7.
+These phase responsibilities and IR variants are implemented. Lowering
+preserves left-to-right, exactly-once argument evaluation and exposes neither
+a Skald array descriptor nor `Str` representation to the runtime. The x86-64
+backend consumes the verified operations, checks each unsigned offset against
+the array length, and passes one data pointer and remaining byte count to
+runtime ABI version 7.
 
 ### Frozen panic and termination representation
 

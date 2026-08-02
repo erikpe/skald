@@ -11,8 +11,9 @@ progress. Completed roadmaps and resolved discovery records move to
   small versioned handle/read/write/open/close runtime boundary while retaining
   the bootstrap observability helpers. IO0 froze the contracts and IO1
   published the independently tested runtime ABI, IO2 implemented the closed
-  private-intrinsic registry and typed I/O HIR, and IO3 added verified
-  target-independent I/O MIR; IO4 x86-64 lowering is next.
+  private-intrinsic registry and typed I/O HIR, IO3 added verified
+  target-independent I/O MIR, and IO4 connected it to the version-7 runtime on
+  x86-64; IO5 exact standard-stream writes are next.
 
 ## Planned
 

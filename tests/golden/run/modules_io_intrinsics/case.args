@@ -1,0 +1,6 @@
+--entry
+app::main
+--module-root
+application
+--stdlib-root
+replacement-sdk

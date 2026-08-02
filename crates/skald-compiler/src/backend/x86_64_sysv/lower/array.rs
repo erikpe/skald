@@ -377,12 +377,17 @@ impl InstructionSelector<'_, '_> {
             MirArrayInstruction::Normalize {
                 kind: MirArrayPositionKind::RangeOffset,
                 ..
-            }
-            | MirArrayInstruction::Offset { .. } => Err(BackendError::new(
+            } => Err(BackendError::new(
                 crate::backend::Target::X86_64SysV,
                 Some(self.function.callable()),
-                "standard-I/O range offsets reached array instruction selection",
+                "range offsets must use the unsigned offset instruction",
             )),
+            MirArrayInstruction::Offset {
+                destination,
+                owner,
+                offset,
+                ..
+            } => self.select_array_range_offset(*destination, owner, *offset),
             MirArrayInstruction::Boundary {
                 destination,
                 owner,
@@ -491,7 +496,10 @@ impl InstructionSelector<'_, '_> {
             }
             MirTerminator::ArrayPositionCheck {
                 position,
-                kind: MirArrayPositionKind::Element | MirArrayPositionKind::SliceBound,
+                kind:
+                    MirArrayPositionKind::Element
+                    | MirArrayPositionKind::SliceBound
+                    | MirArrayPositionKind::RangeOffset,
                 success_target,
                 failure_target,
                 ..
@@ -515,14 +523,6 @@ impl InstructionSelector<'_, '_> {
                 )));
                 Ok(true)
             }
-            MirTerminator::ArrayPositionCheck {
-                kind: MirArrayPositionKind::RangeOffset,
-                ..
-            } => Err(BackendError::new(
-                crate::backend::Target::X86_64SysV,
-                Some(self.function.callable()),
-                "standard-I/O range check reached array instruction selection",
-            )),
             _ => Ok(false),
         }
     }
@@ -878,7 +878,7 @@ impl InstructionSelector<'_, '_> {
     /// Loads an executable array backing into `rax` and reports whether its
     /// outer allocation uses the shared header. Nested array elements remain
     /// inline descriptors even when their containing outer array is shared.
-    fn load_array_owner(&mut self, owner: &MirPlace) -> Result<bool, BackendError> {
+    pub(super) fn load_array_owner(&mut self, owner: &MirPlace) -> Result<bool, BackendError> {
         let shared = owner.projections.is_empty()
             && (matches!(owner.base, crate::mir::MirPlaceBase::SharedPointee(_))
                 || matches!(owner.base, crate::mir::MirPlaceBase::Storage(storage)

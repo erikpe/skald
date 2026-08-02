@@ -27,6 +27,38 @@ const SLICE_ASSIGN_HOME_SIZE: u32 = 16;
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
 
 impl InstructionSelector<'_, '_> {
+    pub(super) fn select_array_range_offset(
+        &mut self,
+        destination: StorageId,
+        owner: &MirPlace,
+        offset: crate::mir::ValueId,
+    ) -> Result<(), BackendError> {
+        self.load_array_length(owner)?;
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdx.into(),
+        });
+        value::load_rax(value::frame_value(self.frame, offset), self.output);
+
+        let valid = self.next_array_label("range_offset_valid");
+        let complete = self.next_array_label("range_offset_complete");
+        self.output.push(Instruction::Compare {
+            source: Register::Rdx,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::JumpIfBelow(valid.clone()));
+        self.output.push(Instruction::JumpIfEqual(valid.clone()));
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: u64::MAX,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::Jump(complete.clone()));
+        self.output.push(Instruction::Label(valid));
+        self.output.push(Instruction::Label(complete));
+        value::store_rax(value::frame_storage(self.frame, destination), self.output);
+        Ok(())
+    }
+
     pub(super) fn load_array_length(&mut self, owner: &MirPlace) -> Result<(), BackendError> {
         let shared = self.load_array_owner(owner)?;
         let empty = self.next_array_label("length_empty");

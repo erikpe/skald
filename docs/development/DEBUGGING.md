@@ -282,6 +282,14 @@ rendered text. For a native-only failure, reproduce at the narrowest available
 layer: backend native unit test, golden executable, or direct C runtime harness.
 The [testing guide](TESTING.md) explains where the resulting regression belongs.
 
+For private standard-I/O intrinsics, inspect the MIR range-offset check and
+backing anchor before reading assembly. On x86-64, open passes pointer and
+length in `rdi`/`rsi`; read and write pass handle, pointer, and remaining length
+in `rdi`/`rsi`/`rdx`. A larger offset must branch to array-bounds termination
+before any `ska_rt_io_*` call. If those are correct, reproduce host-result
+behavior with the private-standard-library golden or direct runtime I/O
+harness.
+
 ## String pipeline inspection
 
 For a string literal, start with the token and AST dumps to confirm decoded

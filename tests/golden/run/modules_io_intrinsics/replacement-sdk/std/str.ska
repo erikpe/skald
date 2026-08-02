@@ -1,0 +1,66 @@
+from std::error import panic;
+
+public class Str {
+    private _storage: shared u8[];
+    private _start: i64;
+    private _length: u64;
+
+    init() {
+        self._storage = new u8[]();
+        self._start = 0;
+        self._length = 0u;
+    }
+
+    private init(storage: shared u8[], start: i64, length: u64) {
+        self._storage = storage;
+        self._start = start;
+        self._length = length;
+    }
+
+    fn len() -> u64 {
+        return self._length;
+    }
+
+    fn byte(index: i64) -> u8 {
+        var normalized_index: i64 = index;
+        if (normalized_index < 0) {
+            normalized_index = (i64) self._length + normalized_index;
+        }
+        if (normalized_index < 0 || (u64) normalized_index > self._length) {
+            panic("array index out of bounds");
+        }
+        return self._storage->[self._start + normalized_index];
+    }
+
+    fn slice(start: i64, end: i64) -> Str {
+        var normalized_start: i64 = start;
+        if (normalized_start < 0) {
+            normalized_start = normalized_start + (i64) self._length;
+        }
+        var normalized_end: i64 = end;
+        if (normalized_end < 0) {
+            normalized_end = normalized_end + (i64) self._length;
+        }
+        if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
+            panic("array index out of bounds");
+        }
+        return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
+    }
+
+    static fn from_bytes(ref bytes: u8[]) -> Str {
+        return Str(new u8[](copy bytes), 0, bytes.len());
+    }
+
+    fn to_bytes() -> u8[] {
+        return self._storage->[self._start:(self._start + (i64) self._length)];
+    }
+
+    fn concat(ref other: Str) -> Str {
+        var combined_length: u64 = self._length + other._length;
+        var result: shared u8[] = new u8[](combined_length);
+        var middle: i64 = (i64) self._length;
+        result->[:middle] = self._storage->[self._start:(self._start + (i64) self._length)];
+        result->[middle:] = other._storage->[other._start:(other._start + (i64) other._length)];
+        return Str(result, 0, combined_length);
+    }
+}

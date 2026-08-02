@@ -1,7 +1,7 @@
 //! Instruction selection and ABI lowering into the target assembly model.
 
 use crate::{
-    backend::{BackendError, Target, RUNTIME_ABI_MARKER_SYMBOL},
+    backend::{BackendError, RUNTIME_ABI_MARKER_SYMBOL},
     identity::CallableId,
     mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
 };
@@ -22,6 +22,7 @@ mod cleanup;
 mod copy;
 mod finalize;
 mod integer_division;
+mod io;
 mod object_abi;
 mod optional;
 mod ownership;
@@ -174,6 +175,7 @@ struct InstructionSelector<'program, 'output> {
     optional_sequence: usize,
     array_sequence: usize,
     integer_division_sequence: usize,
+    io_sequence: usize,
     primitive_cast_sequence: usize,
     output: &'output mut Vec<Instruction>,
 }
@@ -197,6 +199,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             optional_sequence: 0,
             array_sequence: 0,
             integer_division_sequence: 0,
+            io_sequence: 0,
             primitive_cast_sequence: 0,
             output,
         }
@@ -271,13 +274,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             }
             MirInstruction::EndOptionalView(end) => self.select_optional_view_end(end)?,
             MirInstruction::Array(array) => self.select_array_instruction(array)?,
-            MirInstruction::Io(_) => {
-                return Err(BackendError::new(
-                    Target::X86_64SysV,
-                    Some(self.function.callable()),
-                    "standard-I/O MIR reached instruction selection without target support",
-                ));
-            }
+            MirInstruction::Io(io) => self.select_io_instruction(io)?,
         }
         Ok(())
     }

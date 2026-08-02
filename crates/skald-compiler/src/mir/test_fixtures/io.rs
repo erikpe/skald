@@ -12,6 +12,13 @@ pub(crate) fn io_program() -> MirProgram {
 }
 
 pub(crate) fn io_program_with_additional_bodies(additional: &str) -> MirProgram {
+    io_program_with_app_and_additional_bodies(
+        "import std::io;\nfn main() -> i64 { return 0; }\n",
+        additional,
+    )
+}
+
+pub(crate) fn io_program_with_app_and_additional_bodies(app: &str, additional: &str) -> MirProgram {
     let io = format!(
         "{CANONICAL_IO_SOURCE}\n{}{additional}",
         concat!(
@@ -29,10 +36,7 @@ pub(crate) fn io_program_with_additional_bodies(additional: &str) -> MirProgram 
     let (_workspace, graph) = load_module_sources(
         "app",
         &[
-            (
-                "app.ska",
-                "import std::io;\nfn main() -> i64 { return 0; }\n",
-            ),
+            ("app.ska", app),
             ("std/io.ska", &io),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),

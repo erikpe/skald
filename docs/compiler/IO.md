@@ -1,7 +1,7 @@
 # Standard I/O Compiler and Runtime Contract
 
-**Status:** runtime ABI and target-independent compiler representation implemented;
-x86-64 lowering and public library functions planned.
+**Status:** runtime ABI and private compiler intrinsic pipeline implemented;
+public library functions planned.
 
 This document defines the compiler/runtime boundary for the source API in
 [Standard I/O](../language/IO.md). Runtime ABI version 7 implements the five
@@ -86,9 +86,9 @@ Argument evaluation remains left-to-right and exactly once. Empty remaining
 ranges use the language's established empty-array pointer convention; the
 runtime must not dereference a pointer when its accompanying length is zero.
 
-The runtime never receives a Skald array descriptor. Dedicated lowering extracts
-the data pointer and remaining length while retaining the source-level alias and
-lifetime semantics in the compiler.
+The runtime never receives a Skald array descriptor. Implemented x86-64
+lowering extracts the data pointer and remaining length while retaining the
+source-level alias and lifetime semantics in the compiler.
 
 ## Compiler phase contract
 
@@ -114,9 +114,11 @@ Verification checks exact scalar and byte-array types, access compatibility,
 live matching anchors (including an enclosing anchor for nested array aliases),
 exact buffer-to-offset ownership, dominated successful bounds checks, balanced
 storage lifetimes, unique initialized results, and the absence of residual
-ordinary intrinsic calls. The x86-64 legality boundary currently rejects this
-verified family structurally before instruction selection; native lowering
-remains IO4 work.
+ordinary intrinsic calls. The x86-64 backend accepts this verified family and
+selects only the corresponding `ska_rt_io_*` call. It materializes a null/zero
+range for an empty descriptor without a header access, forms an end pointer for
+`offset == length`, preserves call alignment and backing anchors, and stores
+the returned signed `i64` in its ordinary value home.
 
 The lowered offset check must occur before pointer arithmetic or the host call.
 The returned count remains `i64` until generated standard-library code has
@@ -160,12 +162,14 @@ remain a separate bootstrap surface in this ABI version.
 Focused compiler tests cover all five HIR-to-MIR operations, deterministic MIR
 forms, left-to-right single evaluation, byte-array aliases and backing-anchor
 lifetimes, exact result carriage, malformed types/access/anchors/checks/results,
-residual intrinsic calls, and structural backend rejection.
+residual intrinsic calls, exact runtime-symbol selection, pointer/remaining-
+length formation, empty ranges, assembler acceptance, and native version-7
+archive linkage. Private replacement-standard-library goldens cover successful
+results, host failures, dynamic offsets, and bounds failure before C.
 
-Remaining compiler and standard-library work must cover:
-
-- x86-64 lowering, offset boundaries, empty arrays, and partial transfers;
-- end-to-end stdin, file, stdout, stderr, exact bytes, and stable panic messages.
+Remaining standard-library work must cover whole stdin and file reads,
+completed stdout/stderr writes, exact bytes, partial transfers, and stable
+public panic messages.
 
 Direct C harnesses already cover runtime standard handles, open, close-on-exec,
 empty and binary transfers, partial progress, EOF, negative host failures,
