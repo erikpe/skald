@@ -15,8 +15,12 @@ and runtime ABI version 7 provides independently tested host byte operations.
 All four public functions are ordinary Skald library code over those private
 `u8[]` intrinsics. Reads own geometric buffering, EOF loops, exact-length
 trimming, normal file close, and the existing final `Str.from_bytes` copy.
-This module neither replaces the observability helpers nor adds formatting,
-parsing, or new string conversions.
+This module does not yet replace the observability helpers or implement the
+frozen primitive formatting and optional parsing methods. Their exact future
+surface and text contract are documented in
+[Skald Strings](../docs/language/STRINGS.md#frozen-primitive-textual-conversions)
+and scheduled by the active
+[primitive string conversions roadmap](../docs/roadmaps/PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md).
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`

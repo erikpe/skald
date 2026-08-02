@@ -55,6 +55,13 @@ These output functions are bootstrap observability facilities. They are not a
 general formatting API, recoverable I/O API, or the standard I/O API.
 The compiler does not recognize their names specially: Skald programs declare
 and call them through the ordinary restricted external-function mechanism.
+The frozen
+[primitive string conversion contract](../language/STRINGS.md#frozen-primitive-textual-conversions)
+replaces their repository observability role only after its ordinary
+standard-library methods are implemented. Their eventual removal and the
+required ABI-version transition are ordered by the active
+[primitive string conversions roadmap](../roadmaps/PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md);
+they remain part of the current version-7 surface until that transition.
 
 ## Byte I/O ABI
 

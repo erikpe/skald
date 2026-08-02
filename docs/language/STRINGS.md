@@ -224,6 +224,135 @@ The required asymptotic behavior is:
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 
+## Frozen primitive textual conversions
+
+Status: **frozen design; not yet implemented**. This section settles the
+standard-library API and portable text contract for conversion between `Str`
+and every primitive value type. It adds no language syntax, compiler-known
+method, intrinsic, or runtime ABI. The implementation belongs in ordinary
+`std::str::Str` source and composes the existing primitive operators, arrays,
+loops, static methods, and optional results.
+
+The public surface is exactly:
+
+```ska
+static fn from_bool(value: bool) -> Str;
+static fn from_i64(value: i64) -> Str;
+static fn from_u64(value: u64) -> Str;
+static fn from_u8(value: u8) -> Str;
+static fn from_f64(value: f64) -> Str;
+
+fn to_bool() -> bool?;
+fn to_i64() -> i64?;
+fn to_u64() -> u64?;
+fn to_u8() -> u8?;
+fn to_f64() -> f64?;
+```
+
+The primitive type is explicit in every method name. There is no overloaded
+`from`, generic `parse`, expected-result-type selection, implicit conversion,
+or compiler rewrite. In particular, `from_u8` formats the numeric byte value;
+it does not create a one-byte string. `from_bytes` and `to_bytes` retain their
+existing distinct meanings.
+
+Every `from_<type>` method is total over its primitive input, subject only to
+ordinary allocation failure, and returns a logically immutable `Str`.
+Every `to_<type>` method examines the receiver's complete byte sequence and
+returns a present optional exactly when that sequence satisfies the grammar
+and range below. Empty input, malformed input, trailing input, and an
+out-of-range mathematical value return `none`. Input content never causes a
+panic. The methods do not trim whitespace or accept a prefix, suffix, digit
+separator, embedded zero, or locale-specific spelling unless it is explicitly
+listed below.
+
+All produced text is ASCII, deterministic, locale-independent, and contains no
+line ending. Formatting never emits Skald source suffixes such as `u` or `u8`.
+Parsing consumes the entire raw byte string and is independent of source-code
+literal tokenization.
+
+### Boolean text
+
+`from_bool(false)` returns `"false"` and `from_bool(true)` returns `"true"`.
+`to_bool` accepts exactly those two lowercase spellings. Case variants,
+numeric spellings, and surrounding whitespace return `none`.
+
+### Integer text
+
+Integer formatting uses ordinary base-ten notation:
+
+- zero is `"0"`;
+- a positive value has no sign and no leading zero;
+- a negative `i64` has one leading `-` followed by its magnitude, including
+  `"-9223372036854775808"` for `i64` minimum; and
+- `u64` and `u8` never have a sign.
+
+Integer parsing accepts one or more ASCII decimal digits. `to_i64` additionally
+accepts one leading `-`; `to_u64` and `to_u8` accept no sign. Leading zeroes are
+valid, and `"-0"` produces present `i64` zero. A leading `+`, a bare `-`, and
+any non-digit byte return `none`. Accumulation is range-checked before an
+operation could wrap: `to_i64` accepts exactly the mathematical interval
+`[-9223372036854775808, 9223372036854775807]`, `to_u64` accepts
+`[0, 18446744073709551615]`, and `to_u8` accepts `[0, 255]`.
+
+### Floating-point text
+
+`from_f64` preserves the distinctions that are portable in the current
+binary64 value model and uses these special spellings:
+
+| Value category | Result |
+|---|---|
+| positive zero | `"0.0"` |
+| negative zero | `"-0.0"` |
+| positive infinity | `"Infinity"` |
+| negative infinity | `"-Infinity"` |
+| any NaN | `"NaN"` |
+
+For a finite nonzero value, `from_f64` emits the shortest decimal significand
+that parses, under the rule below, to the same IEEE-754 binary64 value. If
+several shortest significands round to that value, it selects the one nearest
+the exact mathematical value; an exact tie selects an even final digit. This
+choice is deterministic and independent of the host formatting library.
+
+Let `e` be the scientific decimal exponent of that selected significand. For
+`-3 <= e < 7`, formatting uses ordinary decimal notation. Otherwise it uses
+scientific notation with one digit before the point, an uppercase `E`, and a
+base-ten exponent with a leading `-` only when negative and no leading zeroes.
+Both forms always contain a decimal point and at least one digit after it;
+zeroes needed to place the point are retained, while no other insignificant
+zero is added. Examples of the shape are `"1.0"`, `"0.001"`, `"9999999.0"`,
+`"1.0E7"`, and `"1.25E-4"`.
+
+`to_f64` accepts the exact special spellings `"NaN"`, `"Infinity"`, and
+`"-Infinity"`. It otherwise accepts this ASCII decimal grammar, where `digit`
+is `0` through `9` and `digits` is one or more digits:
+
+```text
+decimal = ["-"] (digits ["." [digits]] | "." digits)
+          [("e" | "E") [("+" | "-")] digits]
+```
+
+Thus the parser accepts useful noncanonical forms such as `"1"`, `"01.0"`,
+`".5"`, `"1."`, and `"1e+2"`, but accepts no leading `+`, whitespace, source
+suffix, hexadecimal form, or case variant of a special spelling. A decimal is
+rounded once to nearest binary64 with ties to an even significand. Finite
+decimal text that rounds to an infinity returns `none`; gradual underflow to a
+subnormal or signed zero is a present result. Exponent accumulation must not
+wrap regardless of input length.
+
+The following round trips are guaranteed:
+
+- `Str.from_bool(value).to_bool()! == value` for every `bool`;
+- the corresponding format-then-parse equality for every integer value;
+- bit-identical format-then-parse results for every finite `f64`, including
+  the sign of zero, and the same infinity for either infinity; and
+- a NaN result from parsing the formatter's `"NaN"`, without a promise about
+  NaN sign, payload, or signaling state.
+
+Parsing does not expose an error category or stopping offset. A later broader
+parsing API may add diagnostics or configurable grammars under different
+names, but it must not change these methods' accepted language or optional
+failure behavior.
+
 The implemented [standard I/O API](IO.md) deliberately composes these existing
 operations. Its implemented reads accumulate an ordinary `u8[]` and call
 `Str.from_bytes`, while its implemented writes call `to_bytes` before crossing
@@ -236,7 +365,9 @@ are implemented.
 The broader public method and builder APIs remain standard-library design.
 Indexing,
 slicing, equality, comparison, hashing, concatenation, formatting, and parsing
-are not string-specific operators in this contract. In particular, `+` is not
+are not string-specific operators in this contract. The frozen primitive
+conversion methods above are ordinary methods rather than operators or
+compiler conversions. In particular, `+` is not
 lowered by searching for a method named `concat`. Public checked byte/range
 methods implement their array-compatible normalization through ordinary
 general primitive comparison, arithmetic, and total conversion operations.
@@ -253,7 +384,7 @@ This frozen profile does not define:
 - mutable strings or mutable views through `Str`;
 - adjacent literals, interpolation, formatting syntax, or string operators;
 - compile-time concatenation or general constant evaluation;
-- a complete `Str`/builder API;
+- a complete `Str`/builder API beyond the frozen primitive conversions;
 - `final` fields, immutable classes, or frozen shared-owner types;
 - source-visible static fields, globals, or module initialization/shutdown;
 - weak ownership, atomic counts, or threading;

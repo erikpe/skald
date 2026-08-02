@@ -19,8 +19,8 @@ Use the authority closest to the behavior:
   primitive operator profile, implemented integer operator families, and
   implemented complete explicit primitive cast matrix, belong in
   [types and values](language/TYPES_AND_VALUES.md);
-- the implemented raw-byte `std::str::Str` value, literals, and library
-  boundary belong in
+- the implemented raw-byte `std::str::Str` value, literals, library boundary,
+  and frozen primitive textual conversions belong in
   [strings](language/STRINGS.md);
 - the implemented four-function whole-stream `std::io` source contract belongs in
   [standard I/O](language/IO.md);
