@@ -27,22 +27,22 @@ impl CallableChecker<'_, '_> {
             .declarations
             .get(call.function)
             .expect("resolved direct-call target must exist");
-        if matches!(
-            target.linkage,
-            crate::resolve::ResolvedFunctionLinkage::Intrinsic { .. }
-        ) {
-            self.diagnostics.push(
-                crate::diagnostics::Diagnostic::error(
-                    PANIC_REQUIRES_CALL_STATEMENT,
-                    "`std::error::panic` can only be used as a call statement",
-                )
-                .with_primary_label(
-                    call.span,
-                    "panic cannot be used as a value-producing expression",
-                )
-                .with_note("write `panic(message);` as a standalone statement"),
-            );
-            return None;
+        if let crate::resolve::ResolvedFunctionLinkage::Intrinsic { intrinsic } = target.linkage {
+            if intrinsic == crate::intrinsic::Intrinsic::Panic {
+                self.diagnostics.push(
+                    crate::diagnostics::Diagnostic::error(
+                        PANIC_REQUIRES_CALL_STATEMENT,
+                        "`std::error::panic` can only be used as a call statement",
+                    )
+                    .with_primary_label(
+                        call.span,
+                        "panic cannot be used as a value-producing expression",
+                    )
+                    .with_note("write `panic(message);` as a standalone statement"),
+                );
+                return None;
+            }
+            return self.check_io_intrinsic_call(call, target, intrinsic);
         }
         let arguments = self.check_arguments(
             &call.arguments,

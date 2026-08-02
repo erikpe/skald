@@ -1010,6 +1010,7 @@ impl HirDumper {
                 );
                 self.indented(|dumper| dumper.expression(operand));
             }
+            HirExpressionKind::Io(operation) => self.io_operation(expression, operation),
             HirExpressionKind::DirectCall {
                 function,
                 arguments,
@@ -1107,6 +1108,43 @@ impl HirDumper {
                 self.indented(|dumper| dumper.array_slice(slice));
             }
         }
+    }
+
+    fn io_operation(&mut self, expression: &HirExpression, operation: &HirIoOperation) {
+        let name = match operation {
+            HirIoOperation::StandardHandle { .. } => "StandardHandle",
+            HirIoOperation::Open { .. } => "Open",
+            HirIoOperation::Read { .. } => "Read",
+            HirIoOperation::Write { .. } => "Write",
+            HirIoOperation::Close { .. } => "Close",
+        };
+        self.typed_line(&format!("Io {name}"), expression);
+        self.indented(|dumper| match operation {
+            HirIoOperation::StandardHandle { stream } => dumper.expression(stream),
+            HirIoOperation::Open { path, mode } => {
+                dumper.call_argument(&HirCallArgument::ArrayAlias(path.clone()));
+                dumper.expression(mode);
+            }
+            HirIoOperation::Read {
+                handle,
+                destination,
+                offset,
+            } => {
+                dumper.expression(handle);
+                dumper.call_argument(&HirCallArgument::ArrayAlias(destination.clone()));
+                dumper.expression(offset);
+            }
+            HirIoOperation::Write {
+                handle,
+                source,
+                offset,
+            } => {
+                dumper.expression(handle);
+                dumper.call_argument(&HirCallArgument::ArrayAlias(source.clone()));
+                dumper.expression(offset);
+            }
+            HirIoOperation::Close { handle } => dumper.expression(handle),
+        });
     }
 
     fn array_receiver(&mut self, receiver: &crate::hir::HirArrayReceiver) {

@@ -222,10 +222,11 @@ impl<'ast> ProgramResolver<'ast> {
         let (class_declarations, class_symbols, class_work) =
             self.collect_class_declarations(lookups);
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
-        validate_panic_intrinsic(
+        validate_intrinsic_declarations(
             &self.modules,
             &module_declarations,
             &function_declarations,
+            &self.array_types,
             &mut self.diagnostics,
         );
         let mut class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
@@ -532,6 +533,13 @@ impl<'ast> ProgramResolver<'ast> {
                         }
                     }
                     syntax::TopLevelDeclaration::IntrinsicFunction(function) => {
+                        let linkage = intrinsic_for_declaration(
+                            &self.modules,
+                            unit.module,
+                            function.name.text.as_str(),
+                        )
+                        .map(|intrinsic| ResolvedFunctionLinkage::Intrinsic { intrinsic })
+                        .unwrap_or(ResolvedFunctionLinkage::UnrecognizedIntrinsic);
                         ResolvedFunctionDeclaration {
                             id: item.id,
                             module: unit.module,
@@ -551,9 +559,7 @@ impl<'ast> ProgramResolver<'ast> {
                                 &mut self.array_types,
                                 &mut self.diagnostics,
                             ),
-                            linkage: ResolvedFunctionLinkage::Intrinsic {
-                                intrinsic: crate::intrinsic::Intrinsic::Panic,
-                            },
+                            linkage,
                             span: function.span,
                         }
                     }

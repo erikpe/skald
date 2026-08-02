@@ -21,6 +21,9 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         // Checked arithmetic always introduces a semantic-check diamond,
         // regardless of whether its operands are otherwise pure.
         HirExpressionKind::CheckedIntegerDivision(_) | HirExpressionKind::CheckedShift(_) => true,
+        // IO3 lowers these operations into explicit control-flow and runtime
+        // calls. Treat them conservatively until that lowering owns them.
+        HirExpressionKind::Io(_) => true,
         // Logical expressions always select blocks even when both operands
         // are otherwise pure.
         HirExpressionKind::Logical(_) => true,

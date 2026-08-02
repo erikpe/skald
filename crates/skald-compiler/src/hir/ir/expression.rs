@@ -55,6 +55,7 @@ pub enum HirExpressionKind {
         operation: super::HirPrimitiveCast,
         operand: Box<HirExpression>,
     },
+    Io(Box<super::HirIoOperation>),
     DirectCall {
         function: FunctionId,
         arguments: Vec<HirCallArgument>,

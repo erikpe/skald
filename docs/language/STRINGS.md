@@ -230,7 +230,8 @@ operations. Its planned reads accumulate an ordinary `u8[]` and call
 byte-array intrinsic boundary. It adds no borrowed byte view, owned-backing
 adoption, builder, primitive conversion, or string-specific runtime ABI. The
 extra `O(n)` copies are therefore part of the initial I/O cost model. The
-module and intrinsics are not implemented yet.
+private intrinsic module and typed HIR are implemented; public functions and
+lower-phase execution are not implemented yet.
 
 The broader public method and builder APIs remain standard-library design.
 Indexing,

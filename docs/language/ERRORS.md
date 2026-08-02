@@ -267,8 +267,9 @@ Those messages carry neither paths nor host error numbers. They are ordinary
 explicit panic messages selected by library code, not new compiler-known
 termination reasons in the catalog above. Standard I/O adds no recoverable
 value or exception edge, and a failed operation does not create a new cleanup
-guarantee. The compiler, runtime intrinsics, and `std::io` module are not
-implemented yet; this section freezes only their integration with the existing
+guarantee. The runtime byte operations and private `std::io` compiler
+intrinsics are implemented; MIR/backend lowering and the public functions are
+not implemented yet. This section defines their integration with the existing
 uncatchable panic policy.
 
 ## Recoverable and checked exceptions

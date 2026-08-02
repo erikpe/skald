@@ -4,4 +4,9 @@
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Intrinsic {
     Panic,
+    IoStandardHandle,
+    IoOpen,
+    IoRead,
+    IoWrite,
+    IoClose,
 }

@@ -1,13 +1,14 @@
 # Standard I/O
 
-**Status:** frozen design; runtime ABI implemented, public API planned.
+**Status:** private compiler/runtime foundation implemented; public API planned.
 
 This document defines the source-level contract for Skald's first standard I/O
-module. The module is not installed yet, and the compiler does not yet
-implement its private intrinsics. Runtime ABI version 7 provides the narrow
-host byte operations they will target. The existing scalar print helpers
-remain the only source-callable bootstrap output facility until this design is
-implemented.
+module. The installed module currently contains only the five private
+byte-array intrinsic declarations, and the compiler resolves and types their
+calls into dedicated I/O HIR. Runtime ABI version 7 provides the narrow host
+byte operations they will eventually target. The four public functions and
+lowering are not implemented yet, so the existing scalar print helpers remain
+the only source-callable bootstrap output facility.
 
 The compiler and runtime contract behind this API is specified in
 [Standard I/O compiler and runtime contract](../compiler/IO.md). Current

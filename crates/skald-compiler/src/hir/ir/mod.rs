@@ -11,6 +11,7 @@ mod control_flow;
 mod declarations;
 mod expression;
 mod integer_division;
+mod io;
 mod object;
 mod optional;
 mod primitive;
@@ -57,6 +58,7 @@ pub use integer_division::{
     HirIntegerDivisionOperation, HirSignedIntegerDivisionSemantics, HirSignedMinimumPairResult,
     HirSignedQuotientRounding, HirSignedRemainderSign,
 };
+pub use io::HirIoOperation;
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,
     HirConstruction, HirConstructionMode, HirCopyAssignment, HirCopyCapability,

@@ -528,8 +528,18 @@ impl ResolvedFunctionDeclaration {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedFunctionLinkage {
     Internal,
-    External { link: ExternalLinkId },
-    Intrinsic { intrinsic: Intrinsic },
+    External {
+        link: ExternalLinkId,
+    },
+    Intrinsic {
+        intrinsic: Intrinsic,
+    },
+    /// An `intrinsic fn` outside the compiler's closed registry.
+    ///
+    /// Resolution diagnoses this state before HIR construction. Keeping it
+    /// explicit avoids assigning a valid semantic identity to malformed
+    /// source while diagnostics are collected.
+    UnrecognizedIntrinsic,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

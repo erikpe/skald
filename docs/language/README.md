@@ -137,7 +137,8 @@ makes a result source-observable.
   operations, and compiler/library boundary.
 - [Standard I/O](IO.md) freezes the planned four-function `std::io` surface,
   raw-byte whole-input and exact-output behavior, stable failures, costs, and
-  deliberate exclusions. It is not current compiler or runtime support.
+  deliberate exclusions. Its private compiler/runtime foundation is
+  implemented; MIR/backend lowering and the public functions remain planned.
 - [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
   construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
   and failure contract.

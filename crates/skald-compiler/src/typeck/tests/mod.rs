@@ -57,6 +57,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             assert_eq!(operand.ty, operation.source_type());
             assert_eq!(expression.ty, operation.result_type());
         }
+        HirExpressionKind::Io(_) => {}
         HirExpressionKind::DirectCall { arguments, .. }
         | HirExpressionKind::StaticCall { arguments, .. } => {
             for argument in arguments {

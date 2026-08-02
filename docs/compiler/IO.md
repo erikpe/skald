@@ -1,11 +1,13 @@
 # Standard I/O Compiler and Runtime Contract
 
-**Status:** frozen design; runtime ABI implemented, compiler and library support planned.
+**Status:** runtime ABI, intrinsic resolution/type checking, and I/O HIR implemented;
+MIR, backend, and public library functions planned.
 
 This document defines the compiler/runtime boundary for the source API in
 [Standard I/O](../language/IO.md). Runtime ABI version 7 implements the five
-host operations below. The compiler intrinsic registry still contains only
-`std::error::panic`, and `std::io` is not installed.
+host operations below. The closed compiler registry recognizes the five
+private declarations installed in `std::io`; the module does not yet expose
+its four public functions.
 
 ## Ownership boundary
 
@@ -93,12 +95,12 @@ lifetime semantics in the compiler.
 No grammar change is needed. Existing module declarations, intrinsic function
 declarations, calls, arrays, aliases, loops, and conditionals are sufficient.
 
-Resolution and type checking recognize the five canonical declarations and
-enforce their exact signatures and access modes. HIR and MIR use dedicated I/O
-operations rather than generic symbol-name calls. MIR verification checks operand
-types, mutability, result types, and required anchors. The native backend lowers
-those operations to the exact ABI below and preserves the ordinary call-clobber
-and return-value rules.
+Resolution and type checking now recognize the five canonical declarations,
+enforce their exact signatures and access modes, and select dedicated I/O HIR
+rather than generic direct calls. HIR contains semantic scalar values and
+checked array aliases only; it contains no runtime symbol, target pointer, or
+array layout. IO3 will add dedicated MIR operations and verification. Native
+backend lowering remains planned.
 
 The lowered offset check must occur before pointer arithmetic or the host call.
 The returned count remains `i64` until generated standard-library code has
@@ -142,8 +144,7 @@ remain a separate bootstrap surface in this ABI version.
 Remaining compiler and standard-library implementation must add focused
 coverage for:
 
-- canonical identity and exact-signature diagnostics;
-- HIR and MIR dump forms for all five operations;
+- MIR dump forms for all five operations;
 - MIR verifier rejection of invalid types, access modes, and anchors;
 - x86-64 lowering, offset boundaries, empty arrays, and partial transfers;
 - end-to-end stdin, file, stdout, stderr, exact bytes, and stable panic messages.
@@ -152,6 +153,10 @@ Direct C harnesses already cover runtime standard handles, open, close-on-exec,
 empty and binary transfers, partial progress, EOF, negative host failures,
 normal and repeated close, and hard contract defects independently of compiler
 lowering.
+
+Resolver and type-check tests already cover canonical identity,
+exact-signature and private-access diagnostics, array-alias eligibility,
+dedicated HIR, replacement providers, and deterministic resolved/HIR products.
 
 The golden harness will need an explicit stdin fixture before stdin behavior can
 be tested end to end. That harness capability is part of implementation, not a

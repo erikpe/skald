@@ -122,11 +122,11 @@ no-successor `MirTerminator::Panic`; using it in expression position emits
 `TYP041`. MIR verification independently rejects any residual direct call to
 intrinsic metadata.
 
-The frozen [standard I/O compiler contract](IO.md) reserves five additional
-canonical intrinsics under `std::io`, but they are not in the current registry
-and do not yet cross any compiler phase. Their implementation will use the
-existing declaration syntax and dedicated typed HIR and MIR operations rather
-than generic calls selected by source spelling.
+The [standard I/O compiler contract](IO.md) reserves five additional canonical
+intrinsics under `std::io`. The closed registry, exact declaration checks,
+array-alias checking, and dedicated typed HIR are implemented. MIR and target
+lowering remain planned; operation selection never depends on source spelling
+after resolution.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional

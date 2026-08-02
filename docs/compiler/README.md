@@ -151,14 +151,13 @@ whole-array and exact element aliases execute with detached-backing and
 shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
-The [standard I/O compiler and runtime contract](IO.md) freezes a future
+The [standard I/O compiler and runtime contract](IO.md) freezes a
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64
 pointer/length lowering, and runtime ABI version 7. It deliberately leaves
 buffering, completion loops, `Str` conversion, and public failures in Skald
 standard-library code. Runtime ABI version 7 implements the independently
-tested host byte operations before compiler lowering depends on them; the
-intrinsic registry, dedicated IR, target lowering, and public library remain
-planned.
+tested host byte operations. The closed intrinsic registry and dedicated HIR
+are implemented; MIR, target lowering, and the public library remain planned.
 
 ## Pipeline
 

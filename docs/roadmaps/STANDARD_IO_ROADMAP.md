@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 and IO1 are complete, and IO2 is next.
+Status: in progress; IO0 through IO2 are complete, and IO3 is next.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -122,7 +122,7 @@ lengths.
 
 - [x] IO0 — Freeze standard I/O language and compiler contracts
 - [x] IO1 — Publish the byte-oriented runtime ABI
-- [ ] IO2 — Resolve and type private standard I/O intrinsics
+- [x] IO2 — Resolve and type private standard I/O intrinsics
 - [ ] IO3 — Represent and verify target-independent I/O operations
 - [ ] IO4 — Lower verified I/O to the x86-64 runtime ABI
 - [ ] IO5 — Implement exact standard-stream writes
@@ -212,29 +212,29 @@ interoperation contract.
 checked source call shape without widening foreign interoperation or relying
 on lower-phase name lookup.
 
-- [ ] Refactor the singleton panic-intrinsic validator into a cohesive closed
+- [x] Refactor the singleton panic-intrinsic validator into a cohesive closed
       intrinsic registry that preserves panic behavior and recognizes only the
       five exact private declarations in logical module `std::io` with the
       signatures above.
-- [ ] Extend intrinsic linkage identities with the five I/O operations and
+- [x] Extend intrinsic linkage identities with the five I/O operations and
       preserve deterministic module, function, parameter, and intrinsic
       identities through resolved IR and declaration dumps.
-- [ ] Add a canonical `std/std/io.ska` module containing its imports and the
+- [x] Add a canonical `std/std/io.ska` module containing its imports and the
       five private bodyless intrinsic declarations; public function bodies
       remain for the later standard-library tasks.
-- [ ] Diagnose wrong module paths, visibility, names, parameter names, modes,
+- [x] Diagnose wrong module paths, visibility, names, parameter names, modes,
       array element types, alias access, arity, result types, ordinary
       definitions, external declarations, and any unrecognized intrinsic
       declaration without weakening the exact panic diagnostic.
-- [ ] Type intrinsic calls into dedicated I/O HIR rather than leaving them as
+- [x] Type intrinsic calls into dedicated I/O HIR rather than leaving them as
       ordinary direct calls. Reuse existing array-alias capability checking so
       open/write require read access, read requires mutable access, produced
       arrays and copied slices remain ineligible aliases, and scalar arguments
       retain exact types and left-to-right evaluation.
-- [ ] Permit every `i64`-returning intrinsic only in ordinary expression
+- [x] Permit every `i64`-returning intrinsic only in ordinary expression
       consumers and keep the declarations definition-free and symbol-free in
       target-independent declaration metadata.
-- [ ] Add focused resolver/type-check tests and deterministic resolved/HIR
+- [x] Add focused resolver/type-check tests and deterministic resolved/HIR
       dumps for valid calls, invalid declarations, invalid alias sources,
       inaccessible private imports, replacement standard libraries, and an
       unrelated source module attempting to manufacture an intrinsic.

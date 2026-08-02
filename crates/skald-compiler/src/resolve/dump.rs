@@ -475,6 +475,9 @@ impl ResolvedDumper {
             ResolvedFunctionLinkage::Intrinsic { intrinsic } => {
                 let _ = write!(self.output, " intrinsic {intrinsic:?}");
             }
+            ResolvedFunctionLinkage::UnrecognizedIntrinsic => {
+                self.output.push_str(" intrinsic Unrecognized");
+            }
         }
         write_span(&mut self.output, declaration.span);
         self.output.push('\n');

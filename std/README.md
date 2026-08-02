@@ -6,11 +6,12 @@ safe byte-copying construction, checked observation and slicing, independent
 array conversion, and concatenation. Current output operations remain
 bootstrap C runtime functions rather than the final I/O API.
 
-The planned `std::io` module has a frozen
+The `std::io` module has a frozen
 [whole-stream source contract](../docs/language/IO.md) and a separate
-[compiler/runtime contract](../docs/compiler/IO.md). It is not installed yet.
-Runtime ABI version 7 provides its independently tested host byte operations,
-while the compiler intrinsics and library source remain planned.
+[compiler/runtime contract](../docs/compiler/IO.md). Its five private
+byte-array declarations and compiler HIR are implemented, and runtime ABI
+version 7 provides independently tested host byte operations. MIR/backend
+lowering and the public library functions remain planned.
 Its four public `Str` functions will be ordinary Skald library code over
 private `u8[]` intrinsics; it neither replaces the observability helpers nor
 adds formatting, parsing, or new string conversions.

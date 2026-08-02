@@ -91,6 +91,10 @@ const STRING_TEST_NAME: &str = "string_phase_products_are_deterministic_across_p
 const STRING_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_STRING_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STRING_DIAGNOSTIC_TEST_NAME: &str =
     "string_language_item_diagnostics_are_deterministic_across_processes";
+const IO_HELPER_OUTPUT: &str = "SKALD_IO_DETERMINISM_OUTPUT";
+const IO_TEST_NAME: &str = "io_phase_products_are_deterministic_across_processes";
+const IO_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_IO_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const IO_DIAGNOSTIC_TEST_NAME: &str = "io_provider_diagnostics_are_deterministic_across_processes";
 const PRIVATE_INITIALIZER_HELPER_OUTPUT: &str = "SKALD_PRIVATE_INITIALIZER_DETERMINISM_OUTPUT";
 const PRIVATE_INITIALIZER_TEST_NAME: &str =
     "private_initializer_phase_products_are_deterministic_across_processes";
@@ -338,6 +342,42 @@ fn string_language_item_diagnostics_are_deterministic_across_processes() {
         "string-diagnostics",
         STRING_DIAGNOSTIC_HELPER_OUTPUT,
         STRING_DIAGNOSTIC_TEST_NAME,
+        PERMUTATION_HELPER_VARIANT,
+    );
+}
+
+#[test]
+fn io_phase_products_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(IO_HELPER_OUTPUT) {
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
+        fs::write(output, io_phase_dump(variant, false)).unwrap();
+        return;
+    }
+    assert_cross_process_variants(
+        "io",
+        IO_HELPER_OUTPUT,
+        IO_TEST_NAME,
+        PERMUTATION_HELPER_VARIANT,
+    );
+}
+
+#[test]
+fn io_provider_diagnostics_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(IO_DIAGNOSTIC_HELPER_OUTPUT) {
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
+        fs::write(output, io_phase_dump(variant, true)).unwrap();
+        return;
+    }
+    assert_cross_process_variants(
+        "io-diagnostics",
+        IO_DIAGNOSTIC_HELPER_OUTPUT,
+        IO_DIAGNOSTIC_TEST_NAME,
         PERMUTATION_HELPER_VARIANT,
     );
 }
@@ -971,6 +1011,92 @@ fn string_phase_dump(variant: usize) -> String {
             assembly,
         ),
     )
+}
+
+fn io_phase_dump(variant: usize, malformed: bool) -> String {
+    let fixture = ModuleFixture::new("io-products", variant);
+    let application = fixture.path.join("application");
+    let standard_library = fixture.path.join("standard-library");
+    let mut io_source = include_str!("../../../std/std/io.ska").to_owned();
+    if malformed {
+        io_source = io_source.replace("intrinsic fn _io_close", "public intrinsic fn _io_close");
+    } else {
+        io_source.push_str(concat!(
+            "\npublic fn open(ref path: u8[], mode: u8) -> i64 {\n",
+            "  return _io_open(path, mode);\n",
+            "}\n",
+            "public fn write(handle: i64, ref source: u8[], offset: u64) -> i64 {\n",
+            "  return _io_write(handle, source, offset);\n",
+            "}\n",
+        ));
+    }
+    let sources = [
+        (
+            application.join("app.ska"),
+            "import std::io;\nfn main() -> i64 { return 0; }\n",
+        ),
+        (
+            standard_library.join("std/str.ska"),
+            include_str!("../../../std/std/str.ska"),
+        ),
+        (
+            standard_library.join("std/error.ska"),
+            include_str!("../../../std/std/error.ska"),
+        ),
+        (standard_library.join("std/io.ska"), io_source.as_str()),
+    ];
+    for index in if variant == 0 {
+        [0, 1, 2, 3]
+    } else {
+        [3, 2, 1, 0]
+    } {
+        write_source(&sources[index].0, sources[index].1);
+    }
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::standard_library(standard_library),
+            ProviderRootConfiguration::module_root(application),
+        ]
+    } else {
+        vec![
+            ProviderRootConfiguration::module_root(application),
+            ProviderRootConfiguration::standard_library(standard_library),
+        ]
+    };
+    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let graph = load_module_graph(
+        &EntrySelector::Module("app".parse().unwrap()),
+        &fixture.path,
+        &providers,
+    )
+    .unwrap();
+    let resolved = resolve_module_graph(&graph);
+
+    let phases = if malformed {
+        assert!(resolved.diagnostics.has_errors());
+        format!(
+            "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}",
+            dump_module_graph(&graph),
+            render_diagnostics(graph.sources(), &resolved.diagnostics),
+            dump_resolved(&resolved.program),
+        )
+    } else {
+        assert!(
+            resolved.diagnostics.is_empty(),
+            "{:?}",
+            resolved.diagnostics
+        );
+        let checked = type_check(&resolved.program);
+        assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+        let hir = checked.hir.unwrap();
+        format!(
+            "GRAPH\n{}RESOLVED\n{}HIR\n{}",
+            dump_module_graph(&graph),
+            dump_resolved(&resolved.program),
+            dump_hir(&hir),
+        )
+    };
+    normalize_fixture_paths(&fixture.path, phases)
 }
 
 fn string_diagnostic_dump(variant: usize) -> String {

@@ -414,6 +414,9 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
             ResolvedFunctionLinkage::Intrinsic { intrinsic } => HirFunctionLinkage::Intrinsic {
                 intrinsic: *intrinsic,
             },
+            ResolvedFunctionLinkage::UnrecognizedIntrinsic => {
+                unreachable!("unrecognized intrinsic declarations fail during resolution")
+            }
         },
         span: function.span,
     }
