@@ -9,7 +9,8 @@ use crate::{
     diagnostics::render_diagnostics,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
     test_support::{
-        TemporaryDirectory, CANONICAL_ERROR_SOURCE, CANONICAL_IO_SOURCE, CANONICAL_STR_SOURCE,
+        TemporaryDirectory, CANONICAL_ERROR_SOURCE, CANONICAL_IO_SOURCE,
+        CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_SOURCE,
     },
 };
 

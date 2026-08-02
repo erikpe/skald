@@ -1,0 +1,61 @@
+import std::io;
+from std::str import Str;
+import std::str::parse_f64 as parse_f64;
+
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+
+fn write_line(text: Str) -> unit {
+    var newline: Str = "\n";
+    std::io::write_stdout(text);
+    std::io::write_stdout(newline);
+    return;
+}
+
+fn observe_parsed(parsed: f64?) -> unit {
+    if (parsed is none) {
+        write_line("none");
+        return;
+    }
+
+    var value: f64 = parsed!;
+    if (value != value) {
+        write_line("nan");
+        return;
+    }
+    ska_rt_println_f64_bits(value);
+    return;
+}
+
+fn observe(text: Str) -> unit {
+    observe_parsed(text.to_f64());
+    return;
+}
+
+fn main() -> i64 {
+    var corpus: Str = std::io::read_stdin();
+    var start: u64 = 0u;
+    var index: u64 = 0u;
+    while (index < corpus.len()) {
+        if (corpus.byte((i64) index) == 10u8) {
+            observe(corpus.slice((i64) start, (i64) index));
+            start = index + 1u;
+        }
+        index = index + 1u;
+    }
+    if (start < corpus.len()) {
+        observe(corpus.slice((i64) start, (i64) corpus.len()));
+    }
+
+    // A zero byte is ordinary string content but never part of decimal text.
+    observe("1\0");
+
+    // The implementation helper accepts validated regions without exposing a
+    // string's private backing storage. Invalid public inputs fail normally.
+    var storage_text: Str = "x1.5y";
+    var storage: u8[] = storage_text.to_bytes();
+    observe_parsed(parse_f64::parse(storage, 1, 3u));
+    observe_parsed(parse_f64::parse(storage, -1, 3u));
+    observe_parsed(parse_f64::parse(storage, 6, 0u));
+    observe_parsed(parse_f64::parse(storage, 4, 2u));
+    return 0;
+}

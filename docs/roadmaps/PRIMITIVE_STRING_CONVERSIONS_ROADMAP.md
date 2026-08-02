@@ -1,6 +1,6 @@
 # Primitive String Conversions Roadmap
 
-Status: in progress; TXT3 is next.
+Status: in progress; TXT4 is next.
 
 This roadmap moves portable primitive formatting and parsing into the Skald
 standard library. The durable result is one explicit type-named `Str` method
@@ -38,17 +38,18 @@ This roadmap owns implementation order and does not redefine that contract.
 - Preserve the five bootstrap scalar observation helpers until repository
   programs and tests no longer depend on them; remove them only in the final
   focused compatibility slice.
-- New substantial conversion algorithms belong in cohesive private methods
-  or companion standard-library implementation classes if class size and
-  repeated responsibilities justify that boundary. The public surface remains
-  owned by `Str`.
+- New substantial conversion algorithms belong in cohesive private methods or
+  companion standard-library modules, with classes reserved for stateful
+  responsibilities. The supported conversion surface remains owned by `Str`;
+  narrow implementation entry points may be publicly callable where current
+  module visibility requires it.
 
 ## Progress
 
 - [x] TXT0 — Freeze the API and textual contract
 - [x] TXT1 — Implement boolean and integer formatting
 - [x] TXT2 — Implement optional boolean and integer parsing
-- [ ] TXT3 — Implement correctly rounded binary64 parsing
+- [x] TXT3 — Implement correctly rounded binary64 parsing
 - [ ] TXT4 — Implement shortest round-tripping binary64 formatting
 - [ ] TXT5 — Adopt string I/O and retire scalar runtime observation
 
@@ -139,19 +140,29 @@ cannot wrap or panic because of content, and failures are observable as
 formatter so formatter verification and final round-trip tests rest on an
 implemented parser contract.
 
-- [ ] Recognize only the three exact special spellings and frozen decimal
-      grammar, preserving a leading negative sign through zero underflow.
-- [ ] Parse arbitrary-length significands and exponents without integer wrap,
+- [x] Recognize only the three exact special spellings in `Str` through its
+      generic byte-equality method, and recognize only the frozen decimal
+      grammar in the companion parser, preserving a leading negative sign
+      through zero underflow.
+- [x] Parse arbitrary-length significands and exponents without integer wrap,
       and round decimal values once to nearest binary64 with ties to even.
-- [ ] Return `none` for malformed text or a finite decimal that rounds to
+- [x] Return `none` for malformed text or a finite decimal that rounds to
       infinity; return present subnormal or signed zero for valid underflow.
-- [ ] Keep any wide-integer or decimal-scaling machinery private, bounded, and
+- [x] Keep any wide-integer or decimal-scaling machinery private, bounded, and
       reusable by formatting only when it has the same proven responsibility.
-- [ ] Add an independently generated oracle corpus covering exact halfway
+- [x] Keep common values allocation-free by scanning at most 19 significant
+      digits into `u64`, using only proven integer and exact-power conversions,
+      and retaining the exact wide fallback for every other finite value.
+- [x] Extract the substantial parser into private functions in the
+      `std::str::parse_f64` companion module. Keep `Str.to_f64` as the
+      conversion facade and pass only a validated, call-scoped backing-array
+      range through the public implementation entry point.
+- [x] Add an independently generated oracle corpus covering exact halfway
       cases, adjacent decimal strings, normal/subnormal transitions, extrema,
       signed zero, and excessive exponents.
 
-**Tests:** Focused parser tests, checked-in oracle corpus, deterministic native
+**Tests:** Focused parser tests, checked-in oracle corpus, allocation-free
+conversion boundaries and adjacent fallback cases, deterministic native
 goldens, malformed and long-input robustness tests, `make check`, and
 `make msrv-check`.
 

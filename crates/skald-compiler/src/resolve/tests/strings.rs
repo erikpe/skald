@@ -49,6 +49,8 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
                 "  var parsed_signed: i64? = signed.to_i64();\n",
                 "  var parsed_unsigned: u64? = unsigned.to_u64();\n",
                 "  var parsed_byte: u8? = byte.to_u8();\n",
+                "  var float_text: Str = \"1.25e2\";\n",
+                "  var parsed_float: f64? = float_text.to_f64();\n",
                 "  return (i64) (\n",
                 "    combined.len() + flag.len() + signed.len() + unsigned.len() + byte.len()\n",
                 "  );\n",
@@ -98,6 +100,18 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         .expect("canonical library must expose byte access");
     assert_eq!(byte.parameters.len(), 1);
     assert_eq!(byte.parameters[0].type_syntax.kind, ResolvedTypeKind::I64);
+    let equals = class
+        .methods
+        .iter()
+        .find(|method| method.name == "equals")
+        .expect("canonical library must expose generic string equality");
+    assert_eq!(equals.return_type.kind, ResolvedTypeKind::Bool);
+    assert_eq!(equals.parameters.len(), 1);
+    assert_eq!(equals.parameters[0].type_syntax.kind, ResolvedTypeKind::Obj);
+    assert!(matches!(
+        equals.parameters[0].binding_mode,
+        ResolvedParameterBindingMode::ReadOnlyAlias { .. }
+    ));
     let slice = class
         .methods
         .iter()

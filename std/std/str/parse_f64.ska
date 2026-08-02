@@ -1,0 +1,725 @@
+public fn parse(
+    ref storage: u8[],
+    start: i64,
+    length: u64
+) -> f64? {
+    if (!_is_valid_range(storage, start, length)) {
+        return none;
+    }
+
+    return _parse_decimal_f64(storage, start, length);
+}
+
+fn _is_valid_range(ref storage: u8[], start: i64, length: u64) -> bool {
+    if (start < 0) {
+        return false;
+    }
+
+    var storage_length: u64 = storage.len();
+    var unsigned_start: u64 = (u64) start;
+    if (unsigned_start > storage_length) {
+        return false;
+    }
+    return length <= storage_length - unsigned_start;
+}
+
+fn _parse_decimal_f64(
+    ref storage: u8[],
+    start: i64,
+    length: u64
+) -> f64? {
+    if (length == 0u) {
+        return none;
+    }
+
+    var negative: bool = false;
+    var index: u64 = 0u;
+    if (storage[start] == 45u8) {
+        negative = true;
+        index = 1u;
+    }
+    if (index == length) {
+        return none;
+    }
+
+    var saw_digit: bool = false;
+    var saw_nonzero: bool = false;
+    var saw_point: bool = false;
+    var digit_index: u64 = 0u;
+    var digits_before_point: u64 = 0u;
+    var first_nonzero_index: u64 = 0u;
+    var small_significand: u64 = 0u;
+    var small_digit_count: u64 = 0u;
+    var small_significand_complete: bool = true;
+
+    while (index < length) {
+        var byte_value: u8 = storage[start + (i64) index];
+        if (byte_value >= 48u8 && byte_value <= 57u8) {
+            saw_digit = true;
+            if (!saw_point) {
+                digits_before_point = digits_before_point + 1u;
+            }
+
+            var digit: u64 = (u64) (byte_value - 48u8);
+            if (!saw_nonzero && digit != 0u) {
+                saw_nonzero = true;
+                first_nonzero_index = digit_index;
+            }
+            if (saw_nonzero && small_significand_complete) {
+                if (small_digit_count < 19u) {
+                    // Every 19-digit decimal is below u64 maximum, so the
+                    // multiply-add cannot wrap while this guard holds.
+                    small_significand = small_significand * 10u + digit;
+                    small_digit_count = small_digit_count + 1u;
+                } else {
+                    small_significand_complete = false;
+                }
+            }
+
+            digit_index = digit_index + 1u;
+            index = index + 1u;
+            continue;
+        }
+        if (byte_value == 46u8 && !saw_point) {
+            saw_point = true;
+            index = index + 1u;
+            continue;
+        }
+        break;
+    }
+
+    if (!saw_digit) {
+        return none;
+    }
+
+    var exponent_negative: bool = false;
+    var exponent_magnitude: u64 = 0u;
+    if (index < length) {
+        var exponent_marker: u8 = storage[start + (i64) index];
+        if (exponent_marker != 101u8 && exponent_marker != 69u8) {
+            return none;
+        }
+        index = index + 1u;
+        if (index == length) {
+            return none;
+        }
+
+        var exponent_sign: u8 = storage[start + (i64) index];
+        if (exponent_sign == 43u8 || exponent_sign == 45u8) {
+            exponent_negative = exponent_sign == 45u8;
+            index = index + 1u;
+        }
+        if (index == length) {
+            return none;
+        }
+
+        var exponent_cap: u64 = length;
+        if (exponent_cap <= 18446744073709547519u) {
+            exponent_cap = exponent_cap + 4096u;
+        } else {
+            exponent_cap = 18446744073709551615u;
+        }
+        var cap_quotient: u64 = exponent_cap / 10u;
+        var cap_remainder: u64 = exponent_cap % 10u;
+        while (index < length) {
+            var exponent_byte: u8 = storage[start + (i64) index];
+            if (exponent_byte < 48u8 || exponent_byte > 57u8) {
+                return none;
+            }
+
+            var exponent_digit: u64 = (u64) (exponent_byte - 48u8);
+            if (exponent_magnitude < exponent_cap) {
+                if (
+                    exponent_magnitude > cap_quotient
+                    || (
+                        exponent_magnitude == cap_quotient
+                        && exponent_digit > cap_remainder
+                    )
+                ) {
+                    exponent_magnitude = exponent_cap;
+                } else {
+                    exponent_magnitude = exponent_magnitude * 10u + exponent_digit;
+                }
+            }
+            index = index + 1u;
+        }
+    }
+
+    if (!saw_nonzero) {
+        if (negative) {
+            return -0.0;
+        }
+        return 0.0;
+    }
+
+    var position_negative: bool = false;
+    var position_magnitude: u64 = 0u;
+    if (digits_before_point > first_nonzero_index) {
+        position_magnitude = digits_before_point - first_nonzero_index - 1u;
+    } else {
+        position_negative = true;
+        var distance: u64 = first_nonzero_index - digits_before_point;
+        if (distance == 18446744073709551615u) {
+            position_magnitude = distance;
+        } else {
+            position_magnitude = distance + 1u;
+        }
+    }
+
+    var decimal_exponent: i64 = _bounded_signed_sum(
+        position_negative,
+        position_magnitude,
+        exponent_negative,
+        exponent_magnitude
+    );
+    if (decimal_exponent > 308) {
+        return none;
+    }
+    if (decimal_exponent < -324) {
+        if (negative) {
+            return -0.0;
+        }
+        return 0.0;
+    }
+
+    if (small_significand_complete) {
+        var significand_exponent: i64 = decimal_exponent - ((i64) small_digit_count - 1);
+        var fast_value: f64? = _try_small_decimal_f64(
+            small_significand,
+            significand_exponent,
+            negative
+        );
+        if (fast_value is none) {
+            return _parse_decimal_f64_exact(
+                storage,
+                start,
+                length,
+                decimal_exponent,
+                negative
+            );
+        }
+        return fast_value!;
+    }
+
+    return _parse_decimal_f64_exact(
+        storage,
+        start,
+        length,
+        decimal_exponent,
+        negative
+    );
+}
+
+fn _try_small_decimal_f64(
+    significand: u64,
+    power10_exponent: i64,
+    negative: bool
+) -> f64? {
+    // Integer-valued decimals that still fit in u64 need only the total,
+    // correctly rounded primitive cast. This includes all unscaled
+    // significands retained by the 19-digit scanner.
+    if (power10_exponent >= 0) {
+        var integer_significand: u64 = significand;
+        var integer_exponent: i64 = power10_exponent;
+        var integer_complete: bool = true;
+        while (integer_exponent > 0 && integer_complete) {
+            if (integer_significand > 1844674407370955161u) {
+                integer_complete = false;
+            } else {
+                integer_significand = integer_significand * 10u;
+                integer_exponent = integer_exponent - 1;
+            }
+        }
+        if (integer_complete) {
+            var integer_value: f64 = (f64) integer_significand;
+            if (negative) {
+                integer_value = -integer_value;
+            }
+            return integer_value;
+        }
+    }
+
+    // A binary64 represents every integer through 2^53 exactly. Powers of
+    // ten through 10^22 are also exact binary64 values, so one final
+    // multiply or divide produces the correctly rounded decimal value.
+    var adjusted_significand: u64 = significand;
+    var adjusted_exponent: i64 = power10_exponent;
+    while (adjusted_exponent > 22) {
+        if (adjusted_significand > 900719925474099u) {
+            return none;
+        }
+        adjusted_significand = adjusted_significand * 10u;
+        adjusted_exponent = adjusted_exponent - 1;
+    }
+    if (
+        adjusted_exponent < -22
+        || adjusted_significand > 9007199254740992u
+    ) {
+        return none;
+    }
+
+    var power: f64 = 1.0;
+    var remaining: i64 = adjusted_exponent;
+    if (remaining < 0) {
+        remaining = -remaining;
+    }
+    while (remaining > 0) {
+        power = power * 10.0;
+        remaining = remaining - 1;
+    }
+
+    var value: f64 = (f64) adjusted_significand;
+    if (adjusted_exponent < 0) {
+        value = value / power;
+    } else {
+        value = value * power;
+    }
+    if (negative) {
+        value = -value;
+    }
+    return value;
+}
+
+fn _parse_decimal_f64_exact(
+    ref storage: u8[],
+    start: i64,
+    length: u64,
+    decimal_exponent: i64,
+    negative: bool
+) -> f64? {
+    var significand: _BigUnsigned = _BigUnsigned();
+    var saw_nonzero: bool = false;
+    var sticky: bool = false;
+    var kept_digits: u64 = 0u;
+    var index: u64 = 0u;
+    if (negative) {
+        index = 1u;
+    }
+
+    while (index < length) {
+        var byte_value: u8 = storage[start + (i64) index];
+        if (byte_value == 101u8 || byte_value == 69u8) {
+            break;
+        }
+        if (byte_value >= 48u8 && byte_value <= 57u8) {
+            var digit: u64 = (u64) (byte_value - 48u8);
+            if (!saw_nonzero && digit != 0u) {
+                saw_nonzero = true;
+            }
+            if (saw_nonzero) {
+                // Every binary64 rounding midpoint has a terminating
+                // decimal with at most 768 significant digits. Keeping
+                // 800 digits plus one nonzero-tail bit therefore makes
+                // midpoint direction and exact ties unambiguous while
+                // bounding all wide arithmetic below 4096 bits.
+                if (kept_digits < 800u) {
+                    if (!significand.multiply_add(10u, digit)) {
+                        return none;
+                    }
+                    kept_digits = kept_digits + 1u;
+                } elif (digit != 0u) {
+                    sticky = true;
+                }
+            }
+        }
+        index = index + 1u;
+    }
+
+    var significand_exponent: i64 = decimal_exponent - ((i64) kept_digits - 1);
+    return _round_decimal_f64(
+        significand,
+        significand_exponent,
+        sticky,
+        negative
+    );
+}
+
+fn _bounded_signed_sum(
+    left_negative: bool,
+    left_magnitude: u64,
+    right_negative: bool,
+    right_magnitude: u64
+) -> i64 {
+    var negative: bool = left_negative;
+    var magnitude: u64 = 0u;
+    if (left_negative == right_negative) {
+        if (left_magnitude >= 4096u || right_magnitude >= 4096u) {
+            magnitude = 4096u;
+        } elif (left_magnitude > 4096u - right_magnitude) {
+            magnitude = 4096u;
+        } else {
+            magnitude = left_magnitude + right_magnitude;
+        }
+    } elif (left_magnitude >= right_magnitude) {
+        magnitude = left_magnitude - right_magnitude;
+    } else {
+        negative = right_negative;
+        magnitude = right_magnitude - left_magnitude;
+    }
+
+    if (magnitude > 4096u) {
+        magnitude = 4096u;
+    }
+    if (negative) {
+        return -((i64) magnitude);
+    }
+    return (i64) magnitude;
+}
+
+fn _round_decimal_f64(
+    ref significand: _BigUnsigned,
+    decimal_exponent: i64,
+    sticky: bool,
+    negative: bool
+) -> f64? {
+    var numerator: _BigUnsigned = _BigUnsigned(copy significand);
+    var denominator: _BigUnsigned = _BigUnsigned();
+    if (!denominator.set(1u)) {
+        return none;
+    }
+
+    if (decimal_exponent >= 0) {
+        var power: i64 = decimal_exponent;
+        while (power > 0) {
+            if (!numerator.multiply_add(5u, 0u)) {
+                return none;
+            }
+            power = power - 1;
+        }
+        if (!numerator.shift_left((u64) decimal_exponent)) {
+            return none;
+        }
+    } else {
+        var power: i64 = -decimal_exponent;
+        while (power > 0) {
+            if (!denominator.multiply_add(5u, 0u)) {
+                return none;
+            }
+            power = power - 1;
+        }
+        if (!denominator.shift_left((u64) (-decimal_exponent))) {
+            return none;
+        }
+    }
+
+    var binary_exponent: i64 = _floor_binary_exponent(numerator, denominator);
+    if (binary_exponent > 1023) {
+        return none;
+    }
+
+    var unit_exponent: i64 = -1074;
+    if (binary_exponent >= -1022) {
+        unit_exponent = binary_exponent - 52;
+    }
+
+    var remainder: _BigUnsigned = _BigUnsigned(copy numerator);
+    var divisor: _BigUnsigned = _BigUnsigned(copy denominator);
+    if (unit_exponent < 0) {
+        if (!remainder.shift_left((u64) (-unit_exponent))) {
+            return none;
+        }
+    } elif (unit_exponent > 0) {
+        if (!divisor.shift_left((u64) unit_exponent)) {
+            return none;
+        }
+    }
+
+    var quotient: u64 = 0u;
+    var quotient_shift: i64 = (i64) remainder.bit_length() - (i64) divisor.bit_length();
+    if (quotient_shift > 63) {
+        return none;
+    }
+    while (quotient_shift >= 0) {
+        var shift: u64 = (u64) quotient_shift;
+        if (remainder.compare_shifted(divisor, shift) >= 0) {
+            if (!remainder.subtract_shifted(divisor, shift)) {
+                return none;
+            }
+            quotient = quotient | (1u << shift);
+        }
+        quotient_shift = quotient_shift - 1;
+    }
+
+    if (!remainder.shift_left(1u)) {
+        return none;
+    }
+    var halfway_comparison: i64 = remainder.compare(divisor);
+    if (
+        halfway_comparison > 0
+        || (
+            halfway_comparison == 0
+            && (sticky || quotient % 2u == 1u)
+        )
+    ) {
+        quotient = quotient + 1u;
+    }
+
+    if (quotient == 9007199254740992u) {
+        if (binary_exponent == 1023) {
+            return none;
+        }
+        quotient = 4503599627370496u;
+        unit_exponent = unit_exponent + 1;
+    }
+
+    var value: f64 = _compose_binary_f64(quotient, unit_exponent);
+    if (negative) {
+        return -value;
+    }
+    return value;
+}
+
+fn _floor_binary_exponent(
+    ref numerator: _BigUnsigned,
+    ref denominator: _BigUnsigned
+) -> i64 {
+    var difference: i64 = (i64) numerator.bit_length() - (i64) denominator.bit_length();
+    if (difference >= 0) {
+        if (numerator.compare_shifted(denominator, (u64) difference) < 0) {
+            return difference - 1;
+        }
+        return difference;
+    }
+
+    if (denominator.compare_shifted(numerator, (u64) (-difference)) > 0) {
+        return difference - 1;
+    }
+    return difference;
+}
+
+fn _compose_binary_f64(
+    significand: u64,
+    exponent: i64
+) -> f64 {
+    var value: f64 = (f64) significand;
+    var remaining: i64 = exponent;
+    while (remaining < 0) {
+        value = value / 2.0;
+        remaining = remaining + 1;
+    }
+    while (remaining > 0) {
+        value = value * 2.0;
+        remaining = remaining - 1;
+    }
+    return value;
+}
+
+class _BigUnsigned {
+    private _limbs: u64[];
+    private _length: u64;
+
+    init() {
+        // The decimal parser retains at most 800 digits. Its largest required
+        // denominator is below 2^3732, so 128 base-2^32 limbs leave a proven
+        // bound for rounding shifts without input-sized numeric storage.
+        self._limbs = u64[](128u);
+        self._length = 0u;
+    }
+
+    mut fn set(value: u64) -> bool {
+        self._length = 0u;
+        var remaining: u64 = value;
+        while (remaining != 0u) {
+            if (self._length == self._limbs.len()) {
+                return false;
+            }
+            self._limbs[(i64) self._length] = remaining & 4294967295u;
+            self._length = self._length + 1u;
+            remaining = remaining >> 32u;
+        }
+        return true;
+    }
+
+    mut fn multiply_add(multiplier: u64, addend: u64) -> bool {
+        if (multiplier > 10u || addend > 9u) {
+            return false;
+        }
+        var carry: u64 = addend;
+        var index: u64 = 0u;
+        while (index < self._length) {
+            var product: u64 = self._limbs[(i64) index] * multiplier + carry;
+            self._limbs[(i64) index] = product & 4294967295u;
+            carry = product >> 32u;
+            index = index + 1u;
+        }
+
+        while (carry != 0u) {
+            if (self._length == self._limbs.len()) {
+                return false;
+            }
+            self._limbs[(i64) self._length] = carry & 4294967295u;
+            self._length = self._length + 1u;
+            carry = carry >> 32u;
+        }
+        return true;
+    }
+
+    mut fn shift_left(count: u64) -> bool {
+        if (self._length == 0u || count == 0u) {
+            return true;
+        }
+
+        var word_shift: u64 = count / 32u;
+        var bit_shift: u64 = count % 32u;
+        var required: u64 = self._length + word_shift;
+        if (required < self._length) {
+            return false;
+        }
+        if (bit_shift != 0u) {
+            if (required == 18446744073709551615u) {
+                return false;
+            }
+            required = required + 1u;
+        }
+        if (required > self._limbs.len()) {
+            return false;
+        }
+
+        var source: u64 = self._length;
+        while (source > 0u) {
+            source = source - 1u;
+            self._limbs[(i64) (source + word_shift)] = self._limbs[(i64) source];
+        }
+        var clear: u64 = 0u;
+        while (clear < word_shift) {
+            self._limbs[(i64) clear] = 0u;
+            clear = clear + 1u;
+        }
+        self._length = self._length + word_shift;
+
+        if (bit_shift != 0u) {
+            var carry: u64 = 0u;
+            var index: u64 = word_shift;
+            while (index < self._length) {
+                var value: u64 = self._limbs[(i64) index];
+                self._limbs[(i64) index] = ((value << bit_shift) & 4294967295u) | carry;
+                carry = value >> (32u - bit_shift);
+                index = index + 1u;
+            }
+            if (carry != 0u) {
+                self._limbs[(i64) self._length] = carry;
+                self._length = self._length + 1u;
+            }
+        }
+        return true;
+    }
+
+    fn bit_length() -> u64 {
+        if (self._length == 0u) {
+            return 0u;
+        }
+
+        var top: u64 = self._limbs[(i64) (self._length - 1u)];
+        var top_bits: u64 = 0u;
+        while (top != 0u) {
+            top = top >> 1u;
+            top_bits = top_bits + 1u;
+        }
+        return (self._length - 1u) * 32u + top_bits;
+    }
+
+    fn compare(ref other: _BigUnsigned) -> i64 {
+        return self.compare_shifted(other, 0u);
+    }
+
+    fn compare_shifted(ref other: _BigUnsigned, shift: u64) -> i64 {
+        var self_bits: u64 = self.bit_length();
+        var other_bits: u64 = other.bit_length();
+        if (other_bits > 18446744073709551615u - shift) {
+            return -1;
+        }
+        other_bits = other_bits + shift;
+        if (self_bits < other_bits) {
+            return -1;
+        }
+        if (self_bits > other_bits) {
+            return 1;
+        }
+        if (self_bits == 0u) {
+            return 0;
+        }
+
+        var index: u64 = (self_bits - 1u) / 32u + 1u;
+        while (index > 0u) {
+            index = index - 1u;
+            var left: u64 = self._limbs[(i64) index];
+            var right: u64 = other._shifted_limb(index, shift);
+            if (left < right) {
+                return -1;
+            }
+            if (left > right) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    mut fn subtract_shifted(ref other: _BigUnsigned, shift: u64) -> bool {
+        if (self.compare_shifted(other, shift) < 0) {
+            return false;
+        }
+
+        var other_bits: u64 = other.bit_length();
+        if (other_bits > 18446744073709551615u - shift) {
+            return false;
+        }
+        var shifted_bits: u64 = other_bits + shift;
+        var shifted_length: u64 = 0u;
+        if (shifted_bits != 0u) {
+            shifted_length = (shifted_bits - 1u) / 32u + 1u;
+        }
+        var borrow: u64 = 0u;
+        var index: u64 = 0u;
+        while (index < shifted_length) {
+            var subtrahend: u64 = other._shifted_limb(index, shift) + borrow;
+            var current: u64 = self._limbs[(i64) index];
+            if (current >= subtrahend) {
+                self._limbs[(i64) index] = current - subtrahend;
+                borrow = 0u;
+            } else {
+                self._limbs[(i64) index] = 4294967296u + current - subtrahend;
+                borrow = 1u;
+            }
+            index = index + 1u;
+        }
+        while (borrow != 0u && index < self._length) {
+            var current: u64 = self._limbs[(i64) index];
+            if (current != 0u) {
+                self._limbs[(i64) index] = current - 1u;
+                borrow = 0u;
+            } else {
+                self._limbs[(i64) index] = 4294967295u;
+            }
+            index = index + 1u;
+        }
+        if (borrow != 0u) {
+            return false;
+        }
+
+        while (
+            self._length > 0u
+            && self._limbs[(i64) (self._length - 1u)] == 0u
+        ) {
+            self._length = self._length - 1u;
+        }
+        return true;
+    }
+
+    private fn _shifted_limb(index: u64, shift: u64) -> u64 {
+        var word_shift: u64 = shift / 32u;
+        if (index < word_shift) {
+            return 0u;
+        }
+
+        var bit_shift: u64 = shift % 32u;
+        var source: u64 = index - word_shift;
+        var result: u64 = 0u;
+        if (source < self._length) {
+            result = (self._limbs[(i64) source] << bit_shift) & 4294967295u;
+        }
+        if (bit_shift != 0u && source > 0u && source - 1u < self._length) {
+            result = result | (self._limbs[(i64) (source - 1u)] >> (32u - bit_shift));
+        }
+        return result;
+    }
+}

@@ -50,6 +50,11 @@ Sidecars are byte-for-byte inputs or expectations. Whitespace, line endings,
 trailing line feeds, zero bytes, and non-UTF-8 stream bytes are not normalized.
 Compile failures must produce no stdout and exit with compiler status 1.
 
+`oracles/` contains non-discovered, rerunnable generators for checked-in golden
+corpora whose expected values need an implementation independent of the code
+under test. Generators print labelled fixture sections and never participate
+in ordinary golden discovery.
+
 The root Makefile builds the runtime before the runner invokes the real `skac`
 binary. Single-file cases compile and run from the repository root; multi-file
 cases compile and run from the directory containing `case.args`, so relative

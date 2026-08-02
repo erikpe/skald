@@ -460,7 +460,8 @@ String coverage follows the
   zero/high bytes, canonical boolean and integer formatting through
   `std::io`, every integer width boundary, powers of ten, exact optional
   boolean and integer parsing, exhaustive `u8` round trips, malformed and
-  arbitrary-length input, and repeated execution; and
+  arbitrary-length input, correctly rounded binary64 parsing against a
+  checked-in exact-fraction midpoint oracle, and repeated execution; and
 - `pipeline_determinism` compares canonical graph, diagnostics, resolved HIR,
   verified MIR, and assembly across independent processes and provider/source
   permutations.

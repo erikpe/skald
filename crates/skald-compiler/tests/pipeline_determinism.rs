@@ -966,11 +966,19 @@ fn string_phase_dump(variant: usize) -> String {
             include_str!("../../../std/std/str.ska"),
         ),
         (
+            standard_library.join("std/str/parse_f64.ska"),
+            include_str!("../../../std/std/str/parse_f64.ska"),
+        ),
+        (
             standard_library.join("std/error.ska"),
             include_str!("../../../std/std/error.ska"),
         ),
     ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
+    for index in if variant == 0 {
+        [0, 1, 2, 3]
+    } else {
+        [3, 2, 1, 0]
+    } {
         write_source(&sources[index].0, sources[index].1);
     }
     let configurations = if variant == 0 {
@@ -1042,15 +1050,19 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
             include_str!("../../../std/std/str.ska"),
         ),
         (
+            standard_library.join("std/str/parse_f64.ska"),
+            include_str!("../../../std/std/str/parse_f64.ska"),
+        ),
+        (
             standard_library.join("std/error.ska"),
             include_str!("../../../std/std/error.ska"),
         ),
         (standard_library.join("std/io.ska"), io_source.as_str()),
     ];
     for index in if variant == 0 {
-        [0, 1, 2, 3]
+        [0, 1, 2, 3, 4]
     } else {
-        [3, 2, 1, 0]
+        [4, 3, 2, 1, 0]
     } {
         write_source(&sources[index].0, sources[index].1);
     }

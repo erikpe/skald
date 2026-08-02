@@ -134,9 +134,10 @@ makes a result source-observable.
   flow. Every cell is accepted from source and executes inline on x86-64.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
-  operations including canonical boolean and integer formatting and exact
-  optional parsing, the compiler/library boundary, and the remaining frozen
-  binary64 conversion contract.
+  operations including canonical boolean and integer formatting, exact
+  optional boolean and integer parsing, and correctly rounded binary64
+  parsing, the compiler/library boundary, and the remaining frozen binary64
+  formatting contract.
 - [Standard I/O](IO.md) defines the implemented four-function `std::io` surface,
   raw-byte whole-input and exact-output behavior, stable failures, costs, and
   deliberate exclusions. Its private compiler/runtime foundation, x86-64

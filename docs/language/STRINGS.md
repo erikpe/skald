@@ -178,6 +178,7 @@ The installed representative public surface is:
 | `static fn from_bytes(ref bytes: u8[]) -> Str` | Copy caller bytes into fresh shared storage. |
 | `fn len() -> u64` | Return the descriptor length. |
 | `fn byte(index: i64) -> u8` | Return one checked byte using array index semantics. |
+| `fn equals(ref other: Obj) -> bool` | Return whether `other` is a `Str` with an identical byte sequence. |
 | `fn slice(start: i64, end: i64) -> Str` | Return an `O(1)` shared-backing half-open slice using array bound semantics. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
@@ -189,6 +190,7 @@ The installed representative public surface is:
 | `fn to_i64() -> i64?` | Parse complete signed decimal text, returning `none` on failure. |
 | `fn to_u64() -> u64?` | Parse complete unsigned decimal text, returning `none` on failure. |
 | `fn to_u8() -> u8?` | Parse complete unsigned numeric byte text, returning `none` on failure. |
+| `fn to_f64() -> f64?` | Parse complete decimal or exact special-value text with correct binary64 rounding, returning `none` on failure. |
 
 Byte indices and slice bounds use the same one-time negative normalization as
 array indices and explicit array slice bounds, relative to the current
@@ -227,6 +229,7 @@ The required asymptotic behavior is:
 | Destruction | `O(1)` shared release, possibly reclaiming dynamic backing |
 | Length | `O(1)` descriptor read |
 | Byte access | `O(1)` checked range access |
+| Equality | `O(n)` dynamic `Str` check, length check, and byte comparison; no byte copy |
 | Slice | `O(1)` owner copy plus adjusted bounds; no byte copy |
 | Convert from caller-owned bytes | `O(n)` fresh allocation and byte copy |
 | Convert to independent `u8[]` | `O(n)` byte copy |
@@ -235,18 +238,34 @@ The required asymptotic behavior is:
 | Format an integer | `O(d)` final-backing allocation and decimal digit emission |
 | Parse a boolean | `O(1)` exact byte comparison with no allocation |
 | Parse an integer | `O(n)` checked decimal accumulation with no allocation |
+| Parse a binary64 value | `O(n)` allocation-free scan and small-value conversion when provably safe; otherwise one `O(n)` significand rescan plus bounded 4096-bit exact rounding storage and work |
 
 ## Frozen primitive textual conversions
 
-Status: **frozen design with boolean and integer conversions implemented**.
+Status: **frozen design with boolean, integer, and binary64 parsing implemented**.
 This section settles the
 standard-library API and portable text contract for conversion between `Str`
 and every primitive value type. It adds no language syntax, compiler-known
 method, intrinsic, or runtime ABI. The implementation belongs in ordinary
-`std::str::Str` source and composes the existing primitive operators, arrays,
-loops, static methods, and optional results.
+standard-library source and composes the existing primitive operators, arrays,
+loops, static methods, and optional results. `Str` owns the user-facing
+conversion surface; substantial implementation code may live in a companion
+module. `Str.to_f64` recognizes the three exact special spellings through
+`Str.equals`, then borrows its private backing array into the decimal parser's
+public implementation helper
+`std::str::parse_f64::parse(ref storage: u8[], start: i64, length: u64) ->
+f64?`. The helper validates the requested range and returns `none` for invalid
+bounds or non-decimal text. Its call-scoped read-only alias neither copies the
+bytes nor exposes a string's private backing to the caller.
 
-The public surface is exactly:
+Binary64 parsing first retains at most 19 significant decimal digits in a
+`u64`. Integer-valued inputs that can be scaled without unsigned overflow, and
+values whose significand and power of ten are both exactly representable in
+binary64, convert without allocating numeric storage. Other finite values are
+rescanned into the bounded exact-rounding representation; the fast path does
+not approximate or replace that fallback.
+
+The supported primitive conversion surface on `Str` is exactly:
 
 ```ska
 static fn from_bool(value: bool) -> Str;
@@ -263,7 +282,8 @@ fn to_f64() -> f64?;
 ```
 
 The installed library currently implements the four boolean and integer
-formatter/parser pairs. `from_f64` and `to_f64` remain frozen but unavailable.
+formatter/parser pairs plus `to_f64`. `from_f64` remains frozen but
+unavailable.
 
 The primitive type is explicit in every method name. There is no overloaded
 `from`, generic `parse`, expected-result-type selection, implicit conversion,

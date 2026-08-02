@@ -2,6 +2,11 @@ from std::str import Str;
 
 extern fn ska_rt_println_u64(value: u64) -> unit;
 extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+class Other {
+    init() {}
+}
 
 fn observe(value: Str) -> unit {
     ska_rt_println_u64(value.len());
@@ -56,5 +61,13 @@ fn main() -> i64 {
         -1
     );
     ska_rt_println_u8(temporary);
+
+    var same_bytes: Str = "a\0\x80\xff";
+    var middle_bytes: Str = "\0\x80";
+    var other: Other = Other();
+    ska_rt_println_bool(literal.equals(same_bytes));
+    ska_rt_println_bool(middle.equals(middle_bytes));
+    ska_rt_println_bool(literal.equals(middle));
+    ska_rt_println_bool(literal.equals(other));
     return 0;
 }

@@ -1,4 +1,5 @@
 from std::error import panic;
+import std::str::parse_f64 as parse_f64;
 
 public class Str {
     private _storage: shared u8[];
@@ -32,6 +33,13 @@ public class Str {
         }
 
         return self._storage->[self._start + normalized_index];
+    }
+
+    fn equals(ref other: Obj) -> bool {
+        if (!(other is Str)) {
+            return false;
+        }
+        return self._equals_str((Str) other);
     }
 
     fn slice(start: i64, end: i64) -> Str {
@@ -145,6 +153,43 @@ public class Str {
             return none;
         }
         return (u8) parsed!;
+    }
+
+    fn to_f64() -> f64? {
+        var nan: Str = "NaN";
+        if (self.equals(nan)) {
+            return 0.0 / 0.0;
+        }
+        var infinity: Str = "Infinity";
+        if (self.equals(infinity)) {
+            return 1.0 / 0.0;
+        }
+        var negative_infinity: Str = "-Infinity";
+        if (self.equals(negative_infinity)) {
+            return -(1.0 / 0.0);
+        }
+        return parse_f64::parse(*self._storage, self._start, self._length);
+    }
+
+    private fn _equals_str(ref other: Str) -> bool {
+        if (self._length != other._length) {
+            return false;
+        }
+
+        var self_storage: shared u8[] = self._storage;
+        var other_storage: shared u8[] = other._storage;
+        var index: u64 = 0u;
+        while (index < self._length) {
+            var offset: i64 = (i64) index;
+            if (
+                self_storage->[self._start + offset]
+                != other_storage->[other._start + offset]
+            ) {
+                return false;
+            }
+            index = index + 1u;
+        }
+        return true;
     }
 
     private static fn _decimal_digit_count(value: u64) -> u64 {

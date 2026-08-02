@@ -8,9 +8,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md) —
   move explicit primitive formatting and optional parsing into
-  `std::str::Str`; TXT3 (correctly rounded binary64 parsing) is next. It
-  depends on the implemented primitive operator, optional-value, string, loop,
-  and standard-I/O contracts.
+  `std::str::Str`; TXT4 (shortest round-tripping binary64 formatting) is next.
+  It depends on the implemented primitive operator, optional-value, string,
+  loop, and standard-I/O contracts.
 
 ## Planned
 
