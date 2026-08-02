@@ -27,7 +27,7 @@ public class Str {
             normalized_index = (i64) self._length + normalized_index;
         }
 
-        if (normalized_index < 0 || (u64) normalized_index > self._length) {
+        if (normalized_index < 0 || (u64) normalized_index >= self._length) {
             panic("array index out of bounds");
         }
 
@@ -83,6 +83,70 @@ public class Str {
         return Str._from_decimal_magnitude((u64) value, false);
     }
 
+    fn to_bool() -> bool? {
+        if (
+            self._length == 4u
+            && self.byte(0) == 116u8
+            && self.byte(1) == 114u8
+            && self.byte(2) == 117u8
+            && self.byte(3) == 101u8
+        ) {
+            return true;
+        }
+        if (
+            self._length == 5u
+            && self.byte(0) == 102u8
+            && self.byte(1) == 97u8
+            && self.byte(2) == 108u8
+            && self.byte(3) == 115u8
+            && self.byte(4) == 101u8
+        ) {
+            return false;
+        }
+        return none;
+    }
+
+    fn to_i64() -> i64? {
+        if (self._length == 0u) {
+            return none;
+        }
+
+        var negative: bool = false;
+        var start: u64 = 0u;
+        var limit: u64 = 9223372036854775807u;
+        if (self.byte(0) == 45u8) {
+            negative = true;
+            start = 1u;
+            limit = 9223372036854775808u;
+        }
+
+        var parsed: u64? = self._parse_decimal_magnitude(start, limit);
+        if (parsed is none) {
+            return none;
+        }
+
+        var magnitude: u64 = parsed!;
+        if (negative) {
+            if (magnitude == 9223372036854775808u) {
+                return -9223372036854775808;
+            }
+            return -((i64) magnitude);
+        }
+        return (i64) magnitude;
+    }
+
+    fn to_u64() -> u64? {
+        return self._parse_decimal_magnitude(0u, 18446744073709551615u);
+    }
+
+    fn to_u8() -> u8? {
+        var parsed: u64? = self._parse_decimal_magnitude(0u, 255u);
+        if (parsed is none) {
+            return none;
+        }
+        return (u8) parsed!;
+    }
+
     private static fn _decimal_digit_count(value: u64) -> u64 {
         var remaining: u64 = value;
         var count: u64 = 1u;
@@ -119,6 +183,38 @@ public class Str {
             storage->[0] = 45u8;
         }
         return Str(storage, 0, text_length);
+    }
+
+    private fn _parse_decimal_magnitude(
+        start: u64,
+        limit: u64
+    ) -> u64? {
+        if (start >= self._length) {
+            return none;
+        }
+
+        var limit_quotient: u64 = limit / 10u;
+        var limit_remainder: u64 = limit % 10u;
+        var value: u64 = 0u;
+        var index: u64 = start;
+        while (index < self._length) {
+            var byte_value: u8 = self.byte((i64) index);
+            if (byte_value < 48u8 || byte_value > 57u8) {
+                return none;
+            }
+
+            var digit: u64 = (u64) (byte_value - 48u8);
+            if (
+                value > limit_quotient
+                || (value == limit_quotient && digit > limit_remainder)
+            ) {
+                return none;
+            }
+
+            value = value * 10u + digit;
+            index = index + 1u;
+        }
+        return value;
     }
 
     fn to_bytes() -> u8[] {

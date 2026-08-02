@@ -1,6 +1,6 @@
 # Primitive String Conversions Roadmap
 
-Status: in progress; TXT2 is next.
+Status: in progress; TXT3 is next.
 
 This roadmap moves portable primitive formatting and parsing into the Skald
 standard library. The durable result is one explicit type-named `Str` method
@@ -47,7 +47,7 @@ This roadmap owns implementation order and does not redefine that contract.
 
 - [x] TXT0 — Freeze the API and textual contract
 - [x] TXT1 — Implement boolean and integer formatting
-- [ ] TXT2 — Implement optional boolean and integer parsing
+- [x] TXT2 — Implement optional boolean and integer parsing
 - [ ] TXT3 — Implement correctly rounded binary64 parsing
 - [ ] TXT4 — Implement shortest round-tripping binary64 formatting
 - [ ] TXT5 — Adopt string I/O and retire scalar runtime observation
@@ -112,15 +112,15 @@ formatting service is selected.
 **Purpose:** Establish one reusable complete-input and optional-failure parser
 discipline before the more demanding binary64 grammar.
 
-- [ ] Implement exact lowercase boolean parsing and the three integer decimal
+- [x] Implement exact lowercase boolean parsing and the three integer decimal
       parsers with their frozen sign rules.
-- [ ] Return `none` for empty, malformed, trailing, or out-of-range content;
+- [x] Return `none` for empty, malformed, trailing, or out-of-range content;
       never call panic because of input content.
-- [ ] Check multiplication/addition thresholds before they can wrap and handle
+- [x] Check multiplication/addition thresholds before they can wrap and handle
       the asymmetric `i64` minimum magnitude directly.
-- [ ] Share digit classification and checked unsigned accumulation only where
+- [x] Share digit classification and checked unsigned accumulation only where
       it keeps each target's range and sign policy explicit.
-- [ ] Test present and absent optionals without using unchecked unwrap on an
+- [x] Test present and absent optionals without using unchecked unwrap on an
       expected failure path.
 
 **Tests:** Exhaustive `u8` round trips; integer extrema and one-step overflow;

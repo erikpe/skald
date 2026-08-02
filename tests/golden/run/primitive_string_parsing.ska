@@ -1,0 +1,141 @@
+import std::io;
+from std::str import Str;
+
+fn write_line(text: Str) -> unit {
+    var newline: Str = "\n";
+    std::io::write_stdout(text);
+    std::io::write_stdout(newline);
+    return;
+}
+
+fn observe_bool(text: Str) -> unit {
+    var parsed: bool? = text.to_bool();
+    if (parsed is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_bool(parsed!));
+    return;
+}
+
+fn observe_i64(text: Str) -> unit {
+    var parsed: i64? = text.to_i64();
+    if (parsed is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_i64(parsed!));
+    return;
+}
+
+fn observe_u64(text: Str) -> unit {
+    var parsed: u64? = text.to_u64();
+    if (parsed is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_u64(parsed!));
+    return;
+}
+
+fn observe_u8(text: Str) -> unit {
+    var parsed: u8? = text.to_u8();
+    if (parsed is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_u8(parsed!));
+    return;
+}
+
+fn check_all_u8_round_trips() -> i64 {
+    var value: u64 = 0u;
+    while (value <= 255u) {
+        var text: Str = Str.from_u8((u8) value);
+        var parsed: u8? = text.to_u8();
+        if (parsed is none) {
+            return 1;
+        }
+        if ((u64) parsed! != value) {
+            return 2;
+        }
+        value = value + 1u;
+    }
+    return 0;
+}
+
+fn main() -> i64 {
+    write_line("bool");
+    observe_bool("true");
+    observe_bool("false");
+    observe_bool("");
+    observe_bool("True");
+    observe_bool("FALSE");
+    observe_bool("1");
+    observe_bool(" true");
+    observe_bool("true ");
+    observe_bool("true\0");
+    observe_bool("falsex");
+    observe_bool("\xff");
+
+    write_line("i64");
+    observe_i64("0");
+    observe_i64("-0");
+    observe_i64("000");
+    observe_i64("-000");
+    observe_i64("1");
+    observe_i64("-1");
+    observe_i64("9223372036854775807");
+    observe_i64("-9223372036854775808");
+    observe_i64("0009223372036854775807");
+    observe_i64("-0009223372036854775808");
+    observe_i64("9223372036854775808");
+    observe_i64("-9223372036854775809");
+    observe_i64("");
+    observe_i64("-");
+    observe_i64("+1");
+    observe_i64(" 1");
+    observe_i64("1 ");
+    observe_i64("1u");
+    observe_i64("1.0");
+    observe_i64("12\0");
+    observe_i64("12x");
+    observe_i64("0000000000000000000000000000000000000000000000000000000000000000");
+    observe_i64("9999999999999999999999999999999999999999999999999999999999999999");
+
+    write_line("u64");
+    observe_u64("0");
+    observe_u64("000");
+    observe_u64("18446744073709551615");
+    observe_u64("00018446744073709551615");
+    observe_u64("18446744073709551616");
+    observe_u64("");
+    observe_u64("+1");
+    observe_u64("-1");
+    observe_u64(" 1");
+    observe_u64("1 ");
+    observe_u64("1u");
+    observe_u64("12\0");
+    observe_u64("12x");
+    observe_u64("0000000000000000000000000000000000000000000000000000000000000000");
+    observe_u64("9999999999999999999999999999999999999999999999999999999999999999");
+
+    write_line("u8");
+    observe_u8("0");
+    observe_u8("000");
+    observe_u8("255");
+    observe_u8("000255");
+    observe_u8("256");
+    observe_u8("");
+    observe_u8("+1");
+    observe_u8("-1");
+    observe_u8(" 1");
+    observe_u8("1 ");
+    observe_u8("1u8");
+    observe_u8("12\0");
+    observe_u8("12x");
+    observe_u8("0000000000000000000000000000000000000000000000000000000000000000");
+    observe_u8("9999999999999999999999999999999999999999999999999999999999999999");
+
+    return check_all_u8_round_trips();
+}

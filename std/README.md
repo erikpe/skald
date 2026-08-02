@@ -3,9 +3,10 @@
 This directory contains the installed Skald standard-library source. The
 canonical `std::str::Str` module provides the frozen byte-string descriptor,
 safe byte-copying construction, checked observation and slicing, independent
-array conversion, concatenation, and canonical boolean and integer formatting.
-The exact standard-stream output API is implemented in Skald; bootstrap C
-runtime print functions remain available for observability.
+array conversion, concatenation, canonical boolean and integer formatting, and
+exact optional boolean and integer parsing. The exact standard-stream output
+API is implemented in Skald; bootstrap C runtime print functions remain
+available for observability.
 
 The `std::io` module has an implemented
 [whole-stream source contract](../docs/language/IO.md) and a separate
@@ -16,8 +17,8 @@ All four public functions are ordinary Skald library code over those private
 `u8[]` intrinsics. Reads own geometric buffering, EOF loops, exact-length
 trimming, normal file close, and the existing final `Str.from_bytes` copy.
 This module does not yet replace the observability helpers. Boolean and integer
-formatting are implemented, while optional parsing and floating formatting
-remain frozen. Their exact surface and text contract are documented in
+formatting and optional parsing are implemented, while binary64 parsing and
+formatting remain frozen. Their exact surface and text contract are documented in
 [Skald Strings](../docs/language/STRINGS.md#frozen-primitive-textual-conversions)
 and scheduled by the active
 [primitive string conversions roadmap](../docs/roadmaps/PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md).

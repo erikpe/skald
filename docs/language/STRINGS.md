@@ -185,6 +185,10 @@ The installed representative public surface is:
 | `static fn from_i64(value: i64) -> Str` | Return canonical signed decimal text. |
 | `static fn from_u64(value: u64) -> Str` | Return canonical unsigned decimal text. |
 | `static fn from_u8(value: u8) -> Str` | Return canonical unsigned numeric byte text. |
+| `fn to_bool() -> bool?` | Parse exact lowercase boolean text, returning `none` on failure. |
+| `fn to_i64() -> i64?` | Parse complete signed decimal text, returning `none` on failure. |
+| `fn to_u64() -> u64?` | Parse complete unsigned decimal text, returning `none` on failure. |
+| `fn to_u8() -> u8?` | Parse complete unsigned numeric byte text, returning `none` on failure. |
 
 Byte indices and slice bounds use the same one-time negative normalization as
 array indices and explicit array slice bounds, relative to the current
@@ -229,10 +233,12 @@ The required asymptotic behavior is:
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 | Format a boolean | `O(1)` literal-backed result |
 | Format an integer | `O(d)` final-backing allocation and decimal digit emission |
+| Parse a boolean | `O(1)` exact byte comparison with no allocation |
+| Parse an integer | `O(n)` checked decimal accumulation with no allocation |
 
 ## Frozen primitive textual conversions
 
-Status: **frozen design with boolean and integer formatting implemented**.
+Status: **frozen design with boolean and integer conversions implemented**.
 This section settles the
 standard-library API and portable text contract for conversion between `Str`
 and every primitive value type. It adds no language syntax, compiler-known
@@ -256,9 +262,8 @@ fn to_u8() -> u8?;
 fn to_f64() -> f64?;
 ```
 
-The installed library currently implements `from_bool`, `from_i64`,
-`from_u64`, and `from_u8`. The five optional parsers and `from_f64` remain
-frozen but unavailable.
+The installed library currently implements the four boolean and integer
+formatter/parser pairs. `from_f64` and `to_f64` remain frozen but unavailable.
 
 The primitive type is explicit in every method name. There is no overloaded
 `from`, generic `parse`, expected-result-type selection, implicit conversion,

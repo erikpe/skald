@@ -471,13 +471,25 @@ fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
         stop.body.statements[0],
         crate::hir::HirStatement::Panic(_)
     ));
+    let stop_function = stop.function;
     let hir_dump = crate::hir::dump_hir(&hir);
     assert!(hir_dump.contains("Panic"));
     let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();
     let mir_dump = crate::mir::dump_mir(&mir);
     assert!(mir_dump.contains("panic "));
-    assert!(!mir_dump.contains("call direct"));
+    let stop = mir
+        .definitions
+        .get(stop_function)
+        .expect("stop must have a MIR definition");
+    assert!(stop.body.blocks.iter().any(|block| matches!(
+        block.terminator,
+        Some(crate::mir::MirTerminator::Panic { .. })
+    )));
+    assert!(stop.body.blocks.iter().all(|block| block
+        .instructions
+        .iter()
+        .all(|instruction| !matches!(instruction, crate::mir::MirInstruction::Call(_)))));
 }
 
 #[test]
