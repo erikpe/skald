@@ -41,7 +41,13 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
                 "  var part: Str = value.slice(0, 2);\n",
                 "  var copy: u8[] = part.to_bytes();\n",
                 "  var combined: Str = value.concat(part);\n",
-                "  return (i64) combined.len();\n",
+                "  var flag: Str = Str.from_bool(true);\n",
+                "  var signed: Str = Str.from_i64(-1);\n",
+                "  var unsigned: Str = Str.from_u64(2u);\n",
+                "  var byte: Str = Str.from_u8(3u8);\n",
+                "  return (i64) (\n",
+                "    combined.len() + flag.len() + signed.len() + unsigned.len() + byte.len()\n",
+                "  );\n",
                 "}\n",
             ),
         )],
@@ -139,7 +145,9 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
             class.id
         ))
         .count(),
-        3,
+        // from_bytes, slice, the decimal builder, and concat each install a
+        // trusted descriptor through the private initializer.
+        4,
         "{dump}"
     );
 }

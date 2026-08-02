@@ -181,6 +181,10 @@ The installed representative public surface is:
 | `fn slice(start: i64, end: i64) -> Str` | Return an `O(1)` shared-backing half-open slice using array bound semantics. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
+| `static fn from_bool(value: bool) -> Str` | Return canonical lowercase boolean text. |
+| `static fn from_i64(value: i64) -> Str` | Return canonical signed decimal text. |
+| `static fn from_u64(value: u64) -> Str` | Return canonical unsigned decimal text. |
+| `static fn from_u8(value: u8) -> Str` | Return canonical unsigned numeric byte text. |
 
 Byte indices and slice bounds use the same one-time negative normalization as
 array indices and explicit array slice bounds, relative to the current
@@ -223,10 +227,13 @@ The required asymptotic behavior is:
 | Convert from caller-owned bytes | `O(n)` fresh allocation and byte copy |
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
+| Format a boolean | `O(1)` literal-backed result |
+| Format an integer | `O(d)` final-backing allocation and decimal digit emission |
 
 ## Frozen primitive textual conversions
 
-Status: **frozen design; not yet implemented**. This section settles the
+Status: **frozen design with boolean and integer formatting implemented**.
+This section settles the
 standard-library API and portable text contract for conversion between `Str`
 and every primitive value type. It adds no language syntax, compiler-known
 method, intrinsic, or runtime ABI. The implementation belongs in ordinary
@@ -248,6 +255,10 @@ fn to_u64() -> u64?;
 fn to_u8() -> u8?;
 fn to_f64() -> f64?;
 ```
+
+The installed library currently implements `from_bool`, `from_i64`,
+`from_u64`, and `from_u8`. The five optional parsers and `from_f64` remain
+frozen but unavailable.
 
 The primitive type is explicit in every method name. There is no overloaded
 `from`, generic `parse`, expected-result-type selection, implicit conversion,

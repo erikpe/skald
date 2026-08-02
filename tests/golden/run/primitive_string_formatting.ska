@@ -1,0 +1,52 @@
+import std::io;
+from std::str import Str;
+
+fn write_line(text: Str) -> unit {
+    var newline: Str = "\n";
+    std::io::write_stdout(text);
+    std::io::write_stdout(newline);
+    return;
+}
+
+fn main() -> i64 {
+    write_line(Str.from_bool(false));
+    write_line(Str.from_bool(true));
+
+    write_line(Str.from_i64(-9223372036854775808));
+    write_line(Str.from_i64(-9223372036854775807));
+    write_line(Str.from_i64(-1000));
+    write_line(Str.from_i64(-100));
+    write_line(Str.from_i64(-10));
+    write_line(Str.from_i64(-1));
+    write_line(Str.from_i64(0));
+    write_line(Str.from_i64(1));
+    write_line(Str.from_i64(9));
+    write_line(Str.from_i64(10));
+    write_line(Str.from_i64(99));
+    write_line(Str.from_i64(100));
+    write_line(Str.from_i64(999));
+    write_line(Str.from_i64(1000));
+    write_line(Str.from_i64(9223372036854775807));
+
+    var power: u64 = 1u;
+    var exponent: u64 = 0u;
+    while (exponent < 20u) {
+        write_line(Str.from_u64(power));
+        if (exponent < 19u) {
+            power = power * 10u;
+        }
+        exponent = exponent + 1u;
+    }
+    write_line(Str.from_u64(18446744073709551615u));
+
+    write_line(Str.from_u8(0u8));
+    write_line(Str.from_u8(1u8));
+    write_line(Str.from_u8(9u8));
+    write_line(Str.from_u8(10u8));
+    write_line(Str.from_u8(65u8));
+    write_line(Str.from_u8(99u8));
+    write_line(Str.from_u8(100u8));
+    write_line(Str.from_u8(254u8));
+    write_line(Str.from_u8(255u8));
+    return 0;
+}

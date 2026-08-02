@@ -56,6 +56,71 @@ public class Str {
         return Str(new u8[](copy bytes), 0, bytes.len());
     }
 
+    static fn from_bool(value: bool) -> Str {
+        if (value) {
+            return "true";
+        }
+        return "false";
+    }
+
+    static fn from_i64(value: i64) -> Str {
+        var negative: bool = value < 0;
+        var magnitude: u64 = (u64) value;
+        if (negative) {
+            // The total cast preserves the two's-complement bits. Wrapping
+            // subtraction therefore forms the magnitude without negating
+            // i64 minimum.
+            magnitude = 0u - magnitude;
+        }
+        return Str._from_decimal_magnitude(magnitude, negative);
+    }
+
+    static fn from_u64(value: u64) -> Str {
+        return Str._from_decimal_magnitude(value, false);
+    }
+
+    static fn from_u8(value: u8) -> Str {
+        return Str._from_decimal_magnitude((u64) value, false);
+    }
+
+    private static fn _decimal_digit_count(value: u64) -> u64 {
+        var remaining: u64 = value;
+        var count: u64 = 1u;
+        while (remaining >= 10u) {
+            remaining = remaining / 10u;
+            count = count + 1u;
+        }
+        return count;
+    }
+
+    private static fn _from_decimal_magnitude(
+        magnitude: u64,
+        negative: bool
+    ) -> Str {
+        var digit_count: u64 = Str._decimal_digit_count(magnitude);
+        var sign_length: u64 = 0u;
+        if (negative) {
+            sign_length = 1u;
+        }
+
+        var text_length: u64 = sign_length + digit_count;
+        var storage: shared u8[] = new u8[](text_length);
+        var remaining: u64 = magnitude;
+        var index: i64 = (i64) text_length - 1;
+
+        while (digit_count > 0u) {
+            storage->[index] = (u8) (remaining % 10u + 48u);
+            remaining = remaining / 10u;
+            digit_count = digit_count - 1u;
+            index = index - 1;
+        }
+
+        if (negative) {
+            storage->[0] = 45u8;
+        }
+        return Str(storage, 0, text_length);
+    }
+
     fn to_bytes() -> u8[] {
         return self._storage->[self._start:(self._start + (i64) self._length)];
     }

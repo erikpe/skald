@@ -8,9 +8,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md) —
   move explicit primitive formatting and optional parsing into
-  `std::str::Str`; TXT1 (boolean and integer formatting) is next. It depends on
-  the implemented primitive operator, optional-value, string, loop, and
-  standard-I/O contracts.
+  `std::str::Str`; TXT2 (optional boolean and integer parsing) is next. It
+  depends on the implemented primitive operator, optional-value, string, loop,
+  and standard-I/O contracts.
 
 ## Planned
 

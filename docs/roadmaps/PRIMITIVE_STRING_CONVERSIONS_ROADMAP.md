@@ -1,6 +1,6 @@
 # Primitive String Conversions Roadmap
 
-Status: in progress; TXT1 is next.
+Status: in progress; TXT2 is next.
 
 This roadmap moves portable primitive formatting and parsing into the Skald
 standard library. The durable result is one explicit type-named `Str` method
@@ -46,7 +46,7 @@ This roadmap owns implementation order and does not redefine that contract.
 ## Progress
 
 - [x] TXT0 — Freeze the API and textual contract
-- [ ] TXT1 — Implement boolean and integer formatting
+- [x] TXT1 — Implement boolean and integer formatting
 - [ ] TXT2 — Implement optional boolean and integer parsing
 - [ ] TXT3 — Implement correctly rounded binary64 parsing
 - [ ] TXT4 — Implement shortest round-tripping binary64 formatting
@@ -89,15 +89,15 @@ executable source, compiler, or runtime behavior has changed.
 primitive families before parsing or floating conversion adds larger
 algorithms.
 
-- [ ] Implement `from_bool`, `from_i64`, `from_u64`, and `from_u8` in
+- [x] Implement `from_bool`, `from_i64`, `from_u64`, and `from_u8` in
       `std::str::Str` with exact canonical spellings and valid immutable
       descriptors.
-- [ ] Factor shared unsigned magnitude digit emission without conflating byte
+- [x] Factor shared unsigned magnitude digit emission without conflating byte
       formatting with one-byte string construction.
-- [ ] Handle `i64` minimum without overflowing during magnitude formation.
-- [ ] Preserve ordinary allocation failure and descriptor lifecycle behavior;
+- [x] Handle `i64` minimum without overflowing during magnitude formation.
+- [x] Preserve ordinary allocation failure and descriptor lifecycle behavior;
       add no intrinsic or runtime call.
-- [ ] Add source-to-native tests for every boolean, zero, sign transition,
+- [x] Add source-to-native tests for every boolean, zero, sign transition,
       powers of ten, and all integer extrema through `std::io::write_stdout`.
 
 **Tests:** Focused standard-library/module/type-check tests; native boundary
