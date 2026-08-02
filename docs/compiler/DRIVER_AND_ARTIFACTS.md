@@ -180,7 +180,8 @@ Driver tests are divided by responsibility:
 - artifact tests cover assembly output, source alias rejection, preservation,
   and temporary cleanup;
 - toolchain tests cover missing archives, process failures, unresolved
-  externals, ABI mismatch, captured status, and executable preservation; and
+  externals, version-6/version-7 ABI mismatch, captured status, and executable
+  preservation; and
 - `crates/skac` integration tests exercise both entry forms, repeated roots,
   standard-library selection, relative and non-UTF-8 paths, and output
   publication through the real binary entry point.

@@ -155,8 +155,10 @@ The [standard I/O compiler and runtime contract](IO.md) freezes a future
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64
 pointer/length lowering, and runtime ABI version 7. It deliberately leaves
 buffering, completion loops, `Str` conversion, and public failures in Skald
-standard-library code. None of that boundary is implemented yet: the current
-intrinsic registry and runtime ABI remain unchanged.
+standard-library code. Runtime ABI version 7 implements the independently
+tested host byte operations before compiler lowering depends on them; the
+intrinsic registry, dedicated IR, target lowering, and public library remain
+planned.
 
 ## Pipeline
 

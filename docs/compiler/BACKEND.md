@@ -381,18 +381,19 @@ legal on x86-64. The backend will lower array operands to a data pointer at the
 checked offset plus the remaining byte count, retain their backing anchors
 across the call, and use the scalar System V classifications already defined
 below. It will call only the exact version-7 symbols specified by the
-[I/O contract](IO.md#runtime-abi-version-7); it will not pass an array
+[I/O contract](IO.md#implemented-runtime-abi-version-7); it will not pass an array
 descriptor or a `Str` value to C.
 
 Offset validity must be established before pointer arithmetic and the call.
 The runtime's signed `i64` result returns through the ordinary integer result
 register and remains unaltered for standard-library validation. These are
 frozen target requirements; the current backend has no I/O MIR operations and
-still targets runtime ABI version 6.
+targets runtime ABI version 7 only through its process-entry compatibility
+marker.
 
 ## Panic and hard-trap boundary
 
-The version-6 runtime reporter and explicit source-panic lowering are
+The version-7 runtime reporter and explicit source-panic lowering are
 implemented. Compiler-known optional, array, cast, checked-shift, and checked
 integer-division failures use the same reporter while retaining distinct
 target-independent MIR reasons.

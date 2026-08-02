@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use super::*;
 
 #[test]
@@ -87,12 +89,29 @@ fn unresolved_source_external_is_reported_as_a_toolchain_failure() {
 }
 
 #[test]
-fn runtime_archive_without_current_abi_marker_is_a_toolchain_failure() {
+fn runtime_version_6_archive_is_a_toolchain_failure() {
     let directory = TemporaryDirectory::new("driver-runtime-abi-mismatch").unwrap();
     let output = directory.join("program");
     fs::write(&output, "previous executable").unwrap();
     let incompatible_archive = directory.join("libskald_runtime.a");
-    fs::write(&incompatible_archive, b"!<arch>\n").unwrap();
+    let stale_source = directory.join("runtime_v6.c");
+    let stale_object = directory.join("runtime_v6.o");
+    fs::write(&stale_source, "void ska_rt_abi_v6(void) {}\n").unwrap();
+    assert!(Command::new("cc")
+        .args(["-std=c11", "-c"])
+        .arg(&stale_source)
+        .arg("-o")
+        .arg(&stale_object)
+        .status()
+        .unwrap()
+        .success());
+    assert!(Command::new("ar")
+        .arg("rcs")
+        .arg(&incompatible_archive)
+        .arg(&stale_object)
+        .status()
+        .unwrap()
+        .success());
     let assembly = compile_source_to_assembly(
         "compatible-source.ska",
         "fn main() -> i64 { return 0; }",
@@ -116,7 +135,7 @@ fn runtime_archive_without_current_abi_marker_is_a_toolchain_failure() {
     assert_eq!(tool, OsString::from("cc"));
     assert!(exit_code.is_some());
     assert!(
-        details.contains("ska_rt_abi_v6"),
+        details.contains("ska_rt_abi_v7"),
         "linker did not identify the missing ABI marker: {details}"
     );
     assert_eq!(fs::read_to_string(output).unwrap(), "previous executable");

@@ -9,9 +9,9 @@ progress. Completed roadmaps and resolved discovery records move to
 - [Standard I/O](STANDARD_IO_ROADMAP.md) — **in progress**. Add four
   whole-stream `std::io` functions backed by private `u8[]` intrinsics and a
   small versioned handle/read/write/open/close runtime boundary while retaining
-  the bootstrap observability helpers. IO0 froze the language and
-  compiler/runtime contracts; IO1, publishing the byte-oriented runtime ABI,
-  is next.
+  the bootstrap observability helpers. IO0 froze the contracts and IO1
+  published the independently tested runtime ABI; IO2, resolving and typing
+  the private standard I/O intrinsics, is next.
 
 ## Planned
 

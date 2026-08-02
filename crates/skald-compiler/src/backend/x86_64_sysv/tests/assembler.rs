@@ -28,7 +28,7 @@ fn emits_a_deterministic_minimal_function() {
         "main:\n",
         "    push rbp\n",
         "    mov rbp, rsp\n",
-        "    call ska_rt_abi_v6\n",
+        "    call ska_rt_abi_v7\n",
         "    call .Lska.fn.main.main.f0\n",
         "    leave\n",
         "    ret\n",
@@ -37,8 +37,11 @@ fn emits_a_deterministic_minimal_function() {
         ".section .note.GNU-stack,\"\",@progbits\n",
     );
 
-    assert_eq!(assembly(source), expected);
-    assert_eq!(assembly(source), assembly(source));
+    let first = assembly(source);
+
+    assert_eq!(first, expected);
+    assert_eq!(first, assembly(source));
+    assert!(!first.contains("ska_rt_io_"));
 }
 
 #[test]

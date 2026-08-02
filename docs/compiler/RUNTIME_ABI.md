@@ -27,8 +27,8 @@ The current public surface is:
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(6)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v6
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(7)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v7
 
 void SKALD_RUNTIME_ABI_MARKER(void);
 uint64_t ska_rt_abi_version(void);
@@ -37,6 +37,12 @@ void *ska_rt_alloc(uint64_t byte_count);
 void ska_rt_free(void *allocation);
 
 _Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
+
+int64_t ska_rt_io_standard_handle(uint8_t stream);
+int64_t ska_rt_io_open(const uint8_t* path, uint64_t path_length, uint8_t mode);
+int64_t ska_rt_io_read(int64_t handle, uint8_t* destination, uint64_t capacity);
+int64_t ska_rt_io_write(int64_t handle, const uint8_t* source, uint64_t length);
+int64_t ska_rt_io_close(int64_t handle);
 
 void ska_rt_println_i64(int64_t value);
 void ska_rt_println_u64(uint64_t value);
@@ -50,35 +56,49 @@ general formatting API, recoverable I/O API, or final standard-library design.
 The compiler does not recognize their names specially: Skald programs declare
 and call them through the ordinary restricted external-function mechanism.
 
-## Frozen byte I/O ABI addition
+## Byte I/O ABI
 
-The [standard I/O compiler and runtime contract](IO.md) freezes five future
-host operations over handles, scalars, and byte pointer/length pairs. Landing
-them is an incompatible public-surface change and will advance the numeric
-version and link marker together from ABI version 6 to version 7.
+ABI version 7 implements the five host operations over handles, scalars, and
+byte pointer/length pairs shown in the public surface above. They form the
+runtime half of the [standard I/O compiler and runtime contract](IO.md). The
+compiler's canonical intrinsics and lowering are not implemented yet.
 
-The planned C declarations are:
+`ska_rt_io_standard_handle` accepts selector `0` for stdin, `1` for stdout, or
+`2` for stderr and returns the corresponding raw POSIX descriptor. Mode `0`
+to `ska_rt_io_open` opens an existing raw byte path read-only and requests
+close-on-exec. Open copies and terminates the counted path for the host call,
+rejects embedded zero, frees the adaptation before returning, and retains no
+path object.
 
-```c
-int64_t ska_rt_io_standard_handle(uint8_t stream);
-int64_t ska_rt_io_open(const uint8_t* path, uint64_t path_length, uint8_t mode);
-int64_t ska_rt_io_read(int64_t handle, uint8_t* destination, uint64_t capacity);
-int64_t ska_rt_io_write(int64_t handle, const uint8_t* source, uint64_t length);
-int64_t ska_rt_io_close(int64_t handle);
-```
+Read and write perform at most one successful POSIX transfer. They retry
+`EINTR` before progress, may return partial progress, and cap a request to
+`SSIZE_MAX`. A zero-length transfer returns zero without dereferencing its
+pointer or entering the host call. Close makes exactly one attempt and is not
+blindly retried after `EINTR` because the descriptor state may already have
+changed.
 
-These declarations are not in the current header. Version 6 exports none of
-them. The frozen boundary keeps arrays, strings, buffer growth, whole-input
-loops, partial-write completion, and public error selection outside C while
-giving the runtime ownership of one Linux host transfer at a time. The exact
-selectors, result convention, interruption behavior, path adaptation, and
-contract defects are defined only in the focused I/O contract.
+Non-negative open and standard-handle results are handles; non-negative read
+and write results are transferred byte counts; read zero is EOF; and close
+zero is success. An ordinary host failure is returned as negative `errno`.
+Embedded-zero paths return `-EINVAL`, paths whose terminated representation
+cannot be sized return `-ENAMETOOLONG`, and host allocation failure while
+adapting a path returns `-ENOMEM`.
+
+Invalid selectors, modes, negative or `int`-unrepresentable handles, and null
+pointers paired with nonzero lengths are runtime contract defects and do not
+return a host-style error. A nonnegative representable descriptor that the
+host has closed or never assigned is structurally valid and ordinarily
+returns `-EBADF` from read, write, or close.
+
+This boundary exposes no `Str`, Skald array descriptor, shared owner, buffer
+growth, whole-input loop, partial-write completion, public error message,
+`FILE *` buffering, flushing, or standard-handle closure.
 
 ## Version and link compatibility
 
-ABI version 6 uses the exported no-op marker `ska_rt_abi_v6`. Every generated
+ABI version 7 uses the exported no-op marker `ska_rt_abi_v7`. Every generated
 process entry wrapper calls that exact symbol before entering Skald code. A
-runtime archive with an older or otherwise incompatible marker therefore fails
+version-6 or otherwise incompatible runtime archive therefore fails
 normal linking with an undefined-symbol error rather than producing an
 executable with mismatched compiler/runtime assumptions.
 
@@ -101,8 +121,9 @@ incompatible runtime would defeat the link guard.
 The current runtime implementation requires:
 
 - C11 compilation;
-- POSIX `write` and the standard-error file descriptor for allocation-free
-  panic records;
+- POSIX descriptors, `open`, `read`, `write`, and `close`, including
+  close-on-exec support;
+- the standard-error descriptor for allocation-free panic records;
 - eight-bit bytes (`CHAR_BIT == 8`);
 - IEC 60559 / IEEE-754 floating-point semantics;
 - a binary C `double` with 64-bit storage, 53-bit significand, and the
@@ -174,7 +195,7 @@ stable contract is unsuccessful termination without a normal return.
 
 ## Panic-reporting ABI
 
-ABI version 6 exports this reporting entry point:
+ABI version 7 exports this reporting entry point:
 
 ```c
 _Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
@@ -220,21 +241,19 @@ not carried by this ABI and remain deferred.
 
 ## Responsibility boundary
 
-The current version-6 runtime owns its version/link guard, checked byte
-allocation/deallocation, the panic reporter, and the five output operations
-above. It has no public ABI for:
+The current version-7 runtime owns its version/link guard, checked byte
+allocation/deallocation, panic reporter, five bootstrap output operations, and
+five narrow handle/byte I/O operations above. It has no public ABI for:
 
 - shared ownership or reference counting;
 - object, class, interface, or dynamic-type metadata;
 - garbage collection, roots, tracing, safepoints, or write barriers;
-- strings, arrays, files, or general I/O;
+- strings, array descriptors, source-level files/streams, or broader I/O;
 - runtime traces;
 - recoverable or checked exceptions.
 
-The frozen I/O addition above deliberately selects a small future exception to
-the files/general-I/O exclusion; it is not current behavior. Other future
-language designs may require more of these responsibilities, but they do not
-exist merely because a runtime library is present.
+Future language designs may require more of these responsibilities, but they
+do not exist merely because a runtime library is present.
 
 The implemented
 [array compiler contract](ARRAYS.md#internal-abi-and-runtime-boundary) requires
@@ -265,12 +284,12 @@ runtime symbol.
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,
 descriptor materialization, and immortal retain/release behavior are generated
-compiler responsibilities; the runtime marker remains version 6.
+compiler responsibilities; the runtime marker remains version 7.
 
 Primitive integer comparisons likewise add no public C symbol or ABI revision.
 The x86-64 backend selects signed or unsigned target conditions and
 materializes canonical boolean results entirely in generated code; the runtime
-marker remains version 6.
+marker remains version 7.
 
 ## Loop ABI boundary
 
@@ -278,7 +297,7 @@ The implemented `while`, `break`, and `continue`
 [source contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits)
 and [phase representation](PHASES_AND_IR.md#while-loop-representation)
 add no public C symbol, runtime state, or ABI-version change. The runtime marker
-remains `ska_rt_abi_v6`.
+remains `ska_rt_abi_v7`.
 
 Loop execution is generated control flow. The runtime never receives or
 interprets:
@@ -313,7 +332,7 @@ new runtime harness.
 The
 [implemented primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 adds no public C symbol, runtime-managed value, or ABI-version change. The
-runtime marker remains `ska_rt_abi_v6`.
+runtime marker remains `ska_rt_abi_v7`.
 
 Wrapping arithmetic, division and remainder, bitwise operations, shifts,
 floating operations and comparisons, boolean operations, short-circuit
@@ -343,7 +362,7 @@ The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
 adds no public C symbol, runtime-managed value, or ABI-version change. All
 twenty-two pure cells are generated inline and retain the existing
-`ska_rt_abi_v6` marker. The compiler catalogs the checked conversion's
+`ska_rt_abi_v7` marker. The compiler catalogs the checked conversion's
 distinct termination reason and exact static message while preserving that
 marker. x86-64 executes the checked diamond and reaches the existing
 reporter on failure without adding a runtime symbol or conversion helper.
@@ -369,7 +388,7 @@ harnesses.
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds
-six directly linked C harnesses:
+eight directly linked C harnesses:
 
 - the contract harness checks the marker, numeric version, and platform
   requirements;
@@ -378,16 +397,22 @@ six directly linked C harnesses:
 - the allocation-failure harness uses child processes to require unsuccessful
   termination for zero, host-unrepresentable sizes when applicable, and
   allocator failure;
+- the successful I/O harness uses temporary files and pipes to check exact
+  standard handles, close-on-exec read-only open, empty and binary transfers,
+  partial progress, EOF, ordinary negative failures, normal close, and
+  post-close failure;
+- the I/O-defect harness uses child processes to keep invalid selectors,
+  modes, handles, and pointer/length pairs on the private hard-failure path;
 - the output harness compares successful records byte for byte, including
-  range boundaries and exact binary64 patterns; and
-- the failure harness closes child-process stdout and requires every output
-  function to terminate unsuccessfully; and
+  range boundaries and exact binary64 patterns;
+- the output-failure harness closes child-process stdout and requires every
+  output function to terminate unsuccessfully; and
 - the panic harness captures exact stderr for empty, ordinary, embedded-zero,
   and embedded-newline messages, verifies reporter-output failure, and keeps
   invalid reporter input on a silent private hard-failure path.
 
-[Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that an archive
-without the current marker fails linking without replacing an existing output
-artifact. Native golden programs then exercise the same public symbols through
+[Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that a stale
+version-6 archive fails the version-7 link guard without replacing an existing
+output artifact. Native golden programs then exercise the established public symbols through
 source declarations, backend call lowering, the real archive, and exact stdout
 expectations.

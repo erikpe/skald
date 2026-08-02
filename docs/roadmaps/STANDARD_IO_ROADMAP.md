@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 is complete and IO1 is next.
+Status: in progress; IO0 and IO1 are complete, and IO2 is next.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -121,7 +121,7 @@ lengths.
 ## Progress
 
 - [x] IO0 — Freeze standard I/O language and compiler contracts
-- [ ] IO1 — Publish the byte-oriented runtime ABI
+- [x] IO1 — Publish the byte-oriented runtime ABI
 - [ ] IO2 — Resolve and type private standard I/O intrinsics
 - [ ] IO3 — Represent and verify target-independent I/O operations
 - [ ] IO4 — Lower verified I/O to the x86-64 runtime ABI
@@ -169,31 +169,31 @@ passes, and no executable behavior has changed.
 compiler-generated calls depend on it, without removing or changing bootstrap
 observability.
 
-- [ ] Advance the public runtime ABI, version-specific marker, generated entry
+- [x] Advance the public runtime ABI, version-specific marker, generated entry
       reference, inspection hook, direct contract tests, backend expectations,
       and stale-runtime link-mismatch tests from version 6 to version 7.
-- [ ] Add scalar/pointer C declarations for
+- [x] Add scalar/pointer C declarations for
       `ska_rt_io_standard_handle`, `ska_rt_io_open`, `ska_rt_io_read`,
       `ska_rt_io_write`, and `ska_rt_io_close` without exposing a Skald array
       descriptor or string layout.
-- [ ] Implement standard-handle selection and read-only open using raw POSIX
+- [x] Implement standard-handle selection and read-only open using raw POSIX
       descriptors. Copy and terminate a checked length-delimited pathname,
       reject embedded zero and unrepresentable length, request close-on-exec,
       and leave pathname allocation as host-adaptation rather than a retained
       runtime object.
-- [ ] Implement one-transfer read/write wrappers with zero-length behavior,
+- [x] Implement one-transfer read/write wrappers with zero-length behavior,
       partial progress, `EINTR` retry, `SSIZE_MAX` request capping, null/length
       contract checks, negative `errno` host failures, EOF, and no `FILE *` buffering
       or flushing.
-- [ ] Implement one-attempt close and keep selector, mode, handle, pointer, and
+- [x] Implement one-attempt close and keep selector, mode, handle, pointer, and
       length contract defects separate from ordinary negative host failures.
-- [ ] Add focused direct C harnesses using pipes and temporary files for exact
+- [x] Add focused direct C harnesses using pipes and temporary files for exact
       standard handles, empty/binary reads and writes, EOF, partial progress,
       invalid paths/modes/descriptors, normal close, and post-close failure.
-- [ ] Keep all five `ska_rt_println_*` implementations, declarations, exact
+- [x] Keep all five `ska_rt_println_*` implementations, declarations, exact
       record tests, failure tests, and documentation intact under ABI version
       7.
-- [ ] Update the runtime Makefile, runtime test guide, and ABI authority with
+- [x] Update the runtime Makefile, runtime test guide, and ABI authority with
       the new harness ownership and exact current surface.
 
 **Tests:** `make runtime-test`, focused driver link-mismatch tests, backend

@@ -1,11 +1,11 @@
 # Standard I/O Compiler and Runtime Contract
 
-**Status:** frozen design; implementation planned.
+**Status:** frozen design; runtime ABI implemented, compiler and library support planned.
 
 This document defines the compiler/runtime boundary for the source API in
-[Standard I/O](../language/IO.md). It is a forward contract, not a description
-of current compiler support: the current runtime ABI is version 6, the intrinsic
-registry contains only `std::error::panic`, and `std::io` is not installed.
+[Standard I/O](../language/IO.md). Runtime ABI version 7 implements the five
+host operations below. The compiler intrinsic registry still contains only
+`std::error::panic`, and `std::io` is not installed.
 
 ## Ownership boundary
 
@@ -106,10 +106,9 @@ validated it. A count greater than the supplied remaining length, or zero
 progress from a write with non-empty remaining input, is an invalid runtime
 result and must not silently loop or truncate.
 
-## Runtime ABI version 7
+## Implemented runtime ABI version 7
 
-Implementing this contract adds these functions and bumps the runtime ABI from
-version 6 to version 7:
+The runtime exports these functions under ABI version 7:
 
 ```c
 int64_t ska_rt_io_standard_handle(uint8_t stream);
@@ -140,14 +139,19 @@ remain a separate bootstrap surface in this ABI version.
 
 ## Verification obligations
 
-Implementation must add focused coverage for:
+Remaining compiler and standard-library implementation must add focused
+coverage for:
 
 - canonical identity and exact-signature diagnostics;
 - HIR and MIR dump forms for all five operations;
 - MIR verifier rejection of invalid types, access modes, and anchors;
 - x86-64 lowering, offset boundaries, empty arrays, and partial transfers;
-- runtime success, EOF, interruption, partial progress, and negative failures;
 - end-to-end stdin, file, stdout, stderr, exact bytes, and stable panic messages.
+
+Direct C harnesses already cover runtime standard handles, open, close-on-exec,
+empty and binary transfers, partial progress, EOF, negative host failures,
+normal and repeated close, and hard contract defects independently of compiler
+lowering.
 
 The golden harness will need an explicit stdin fixture before stdin behavior can
 be tested end to end. That harness capability is part of implementation, not a
