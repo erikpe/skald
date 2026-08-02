@@ -797,6 +797,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 write_span(output, end.span);
             }
             MirInstruction::Array(instruction) => dump_array_instruction(output, instruction),
+            MirInstruction::Io(instruction) => dump_io_instruction(output, instruction),
         }
         output.push('\n');
     }
@@ -1380,10 +1381,67 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             let _ = write!(output, " from {source} as {array}");
             write_span(output, *span);
         }
+        MirArrayInstruction::Offset {
+            destination,
+            owner,
+            offset,
+            array,
+            span,
+        } => {
+            let _ = write!(output, "array-range-offset {destination} = {offset} in ");
+            dump_place(output, owner);
+            let _ = write!(output, " : {array}");
+            write_span(output, *span);
+        }
         other => {
             let _ = write!(output, "array-op {other:?}");
         }
     }
+}
+
+fn dump_io_instruction(output: &mut String, instruction: &MirIoInstruction) {
+    let _ = write!(output, "{} = io ", instruction.result);
+    match &instruction.operation {
+        MirIoOperation::StandardHandle { stream } => {
+            let _ = write!(output, "standard-handle stream {stream}");
+        }
+        MirIoOperation::Open { path, mode } => {
+            output.push_str("open path ");
+            dump_io_buffer(output, path);
+            let _ = write!(output, " mode {mode}");
+        }
+        MirIoOperation::Read {
+            handle,
+            destination,
+            offset,
+        } => {
+            let _ = write!(output, "read handle {handle} destination ");
+            dump_io_buffer(output, destination);
+            let _ = write!(output, " offset {offset}");
+        }
+        MirIoOperation::Write {
+            handle,
+            source,
+            offset,
+        } => {
+            let _ = write!(output, "write handle {handle} source ");
+            dump_io_buffer(output, source);
+            let _ = write!(output, " offset {offset}");
+        }
+        MirIoOperation::Close { handle } => {
+            let _ = write!(output, "close handle {handle}");
+        }
+    }
+    write_span(output, instruction.span);
+}
+
+fn dump_io_buffer(output: &mut String, buffer: &MirIoBuffer) {
+    dump_place(output, &buffer.place);
+    let _ = write!(
+        output,
+        " : {} {} anchor {}",
+        buffer.array, buffer.access, buffer.anchor
+    );
 }
 
 fn dump_argument(output: &mut String, argument: &MirArgument) {

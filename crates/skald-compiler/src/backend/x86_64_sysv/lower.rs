@@ -1,7 +1,7 @@
 //! Instruction selection and ABI lowering into the target assembly model.
 
 use crate::{
-    backend::{BackendError, RUNTIME_ABI_MARKER_SYMBOL},
+    backend::{BackendError, Target, RUNTIME_ABI_MARKER_SYMBOL},
     identity::CallableId,
     mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
 };
@@ -271,6 +271,13 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             }
             MirInstruction::EndOptionalView(end) => self.select_optional_view_end(end)?,
             MirInstruction::Array(array) => self.select_array_instruction(array)?,
+            MirInstruction::Io(_) => {
+                return Err(BackendError::new(
+                    Target::X86_64SysV,
+                    Some(self.function.callable()),
+                    "standard-I/O MIR reached instruction selection without target support",
+                ));
+            }
         }
         Ok(())
     }

@@ -124,9 +124,12 @@ intrinsic metadata.
 
 The [standard I/O compiler contract](IO.md) reserves five additional canonical
 intrinsics under `std::io`. The closed registry, exact declaration checks,
-array-alias checking, and dedicated typed HIR are implemented. MIR and target
-lowering remain planned; operation selection never depends on source spelling
-after resolution.
+array-alias checking, dedicated typed HIR, and verified target-independent MIR
+are implemented. MIR preserves exact byte-array places, access, backing
+anchors, length-inclusive checked range offsets, and one exact `i64` result.
+The x86-64 target rejects these operations structurally until IO4 implements
+their runtime ABI lowering; operation selection never depends on source
+spelling after resolution.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional

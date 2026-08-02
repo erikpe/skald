@@ -146,6 +146,8 @@ pub enum MirArrayAnchorKind {
 pub enum MirArrayPositionKind {
     Element,
     SliceBound,
+    /// A `u64` byte-range offset, valid through and including array length.
+    RangeOffset,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -252,6 +254,14 @@ pub enum MirArrayInstruction {
         kind: MirArrayPositionKind,
         span: Span,
     },
+    /// Materializes an already-unsigned range offset for an array owner.
+    Offset {
+        destination: StorageId,
+        owner: MirPlace,
+        offset: ValueId,
+        array: ArrayTypeId,
+        span: Span,
+    },
     Boundary {
         destination: StorageId,
         owner: MirPlace,
@@ -308,6 +318,7 @@ impl MirArrayInstruction {
             | Self::AnchorEnd { span, .. }
             | Self::AliasBind { span, .. }
             | Self::Normalize { span, .. }
+            | Self::Offset { span, .. }
             | Self::Boundary { span, .. }
             | Self::SliceCopy { span, .. }
             | Self::SliceLengthCheck { span, .. }

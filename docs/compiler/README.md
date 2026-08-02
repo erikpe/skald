@@ -157,7 +157,10 @@ pointer/length lowering, and runtime ABI version 7. It deliberately leaves
 buffering, completion loops, `Str` conversion, and public failures in Skald
 standard-library code. Runtime ABI version 7 implements the independently
 tested host byte operations. The closed intrinsic registry and dedicated HIR
-are implemented; MIR, target lowering, and the public library remain planned.
+are implemented together with semantic MIR operations, checked range offsets,
+backing-anchor verification, and exact scalar results. The x86-64 target
+currently rejects the verified family structurally; target lowering and the
+public library remain planned.
 
 ## Pipeline
 

@@ -5,6 +5,17 @@ use crate::{
 };
 
 #[test]
+fn verified_standard_io_is_rejected_before_instruction_selection() {
+    let program = fixture_io_program();
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert_eq!(
+        error.message(),
+        "standard-I/O MIR is not yet supported by the x86-64 target"
+    );
+}
+
+#[test]
 fn malformed_f64_mir_is_a_structured_backend_error() {
     let mut program = f64_arithmetic_program();
     let function = program

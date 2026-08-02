@@ -867,6 +867,9 @@ impl<'mir> Verifier<'mir> {
                     crate::mir::MirArrayPositionKind::SliceBound => {
                         crate::mir::MirTerminationReason::ArrayInvalidSliceBounds
                     }
+                    crate::mir::MirArrayPositionKind::RangeOffset => {
+                        crate::mir::MirTerminationReason::ArrayIndexOutOfBounds
+                    }
                 };
                 if !matches!(
                     function.block(*failure_target).and_then(|block| block.terminator.as_ref()),

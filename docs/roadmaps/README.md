@@ -10,9 +10,9 @@ progress. Completed roadmaps and resolved discovery records move to
   whole-stream `std::io` functions backed by private `u8[]` intrinsics and a
   small versioned handle/read/write/open/close runtime boundary while retaining
   the bootstrap observability helpers. IO0 froze the contracts and IO1
-  published the independently tested runtime ABI and implemented IO2's closed
-  private-intrinsic registry and typed I/O HIR; IO3 MIR representation and
-  verification is next.
+  published the independently tested runtime ABI, IO2 implemented the closed
+  private-intrinsic registry and typed I/O HIR, and IO3 added verified
+  target-independent I/O MIR; IO4 x86-64 lowering is next.
 
 ## Planned
 

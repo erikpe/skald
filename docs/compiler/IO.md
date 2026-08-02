@@ -1,7 +1,7 @@
 # Standard I/O Compiler and Runtime Contract
 
-**Status:** runtime ABI, intrinsic resolution/type checking, and I/O HIR implemented;
-MIR, backend, and public library functions planned.
+**Status:** runtime ABI and target-independent compiler representation implemented;
+x86-64 lowering and public library functions planned.
 
 This document defines the compiler/runtime boundary for the source API in
 [Standard I/O](../language/IO.md). Runtime ABI version 7 implements the five
@@ -95,12 +95,28 @@ lifetime semantics in the compiler.
 No grammar change is needed. Existing module declarations, intrinsic function
 declarations, calls, arrays, aliases, loops, and conditionals are sufficient.
 
-Resolution and type checking now recognize the five canonical declarations,
+Resolution and type checking recognize the five canonical declarations,
 enforce their exact signatures and access modes, and select dedicated I/O HIR
 rather than generic direct calls. HIR contains semantic scalar values and
 checked array aliases only; it contains no runtime symbol, target pointer, or
-array layout. IO3 will add dedicated MIR operations and verification. Native
-backend lowering remains planned.
+array layout.
+
+MIR lowers those nodes to five dedicated semantic operations. Each operation
+defines one exact `i64` value. Array operands retain an exact byte-array place,
+required access, and a live backing anchor. Read and write materialize their
+`u64` offset as an array range position and can reach the I/O operation only
+through the successful `offset <= length` edge; equality therefore represents
+an empty remaining range. The ordinary array index failure terminates the
+larger-offset path. MIR contains no runtime symbol, descriptor layout, target
+pointer, host `errno`, or implicit descriptor position.
+
+Verification checks exact scalar and byte-array types, access compatibility,
+live matching anchors (including an enclosing anchor for nested array aliases),
+exact buffer-to-offset ownership, dominated successful bounds checks, balanced
+storage lifetimes, unique initialized results, and the absence of residual
+ordinary intrinsic calls. The x86-64 legality boundary currently rejects this
+verified family structurally before instruction selection; native lowering
+remains IO4 work.
 
 The lowered offset check must occur before pointer arithmetic or the host call.
 The returned count remains `i64` until generated standard-library code has
@@ -141,11 +157,13 @@ remain a separate bootstrap surface in this ABI version.
 
 ## Verification obligations
 
-Remaining compiler and standard-library implementation must add focused
-coverage for:
+Focused compiler tests cover all five HIR-to-MIR operations, deterministic MIR
+forms, left-to-right single evaluation, byte-array aliases and backing-anchor
+lifetimes, exact result carriage, malformed types/access/anchors/checks/results,
+residual intrinsic calls, and structural backend rejection.
 
-- MIR dump forms for all five operations;
-- MIR verifier rejection of invalid types, access modes, and anchors;
+Remaining compiler and standard-library work must cover:
+
 - x86-64 lowering, offset boundaries, empty arrays, and partial transfers;
 - end-to-end stdin, file, stdout, stderr, exact bytes, and stable panic messages.
 

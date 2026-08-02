@@ -374,6 +374,15 @@ impl InstructionSelector<'_, '_> {
                 kind: MirArrayPositionKind::SliceBound,
                 ..
             } => self.select_array_slice_normalize(*destination, owner, *index),
+            MirArrayInstruction::Normalize {
+                kind: MirArrayPositionKind::RangeOffset,
+                ..
+            }
+            | MirArrayInstruction::Offset { .. } => Err(BackendError::new(
+                crate::backend::Target::X86_64SysV,
+                Some(self.function.callable()),
+                "standard-I/O range offsets reached array instruction selection",
+            )),
             MirArrayInstruction::Boundary {
                 destination,
                 owner,
@@ -506,6 +515,14 @@ impl InstructionSelector<'_, '_> {
                 )));
                 Ok(true)
             }
+            MirTerminator::ArrayPositionCheck {
+                kind: MirArrayPositionKind::RangeOffset,
+                ..
+            } => Err(BackendError::new(
+                crate::backend::Target::X86_64SysV,
+                Some(self.function.callable()),
+                "standard-I/O range check reached array instruction selection",
+            )),
             _ => Ok(false),
         }
     }

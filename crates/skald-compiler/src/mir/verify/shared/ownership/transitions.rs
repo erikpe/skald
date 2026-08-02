@@ -331,7 +331,8 @@ impl SharedOwnershipAnalysis<'_, '_> {
                 | MirInstruction::ClassOptionalAssign(_)
                 | MirInstruction::ClassOptionalPublish(_)
                 | MirInstruction::ClassOptionalCleanup(_)
-                | MirInstruction::EndOptionalView(_) => {}
+                | MirInstruction::EndOptionalView(_)
+                | MirInstruction::Io(_) => {}
                 MirInstruction::Array(MirArrayInstruction::PublishShared {
                     destination, ..
                 }) => {

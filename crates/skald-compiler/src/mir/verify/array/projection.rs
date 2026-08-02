@@ -52,5 +52,31 @@ impl Verifier<'_> {
                 );
             }
         }
+        if let MirArrayInstruction::Offset {
+            owner,
+            offset,
+            array,
+            ..
+        } = instruction
+        {
+            if self
+                .verify_place(function, block, owner)
+                .map(|place| place.ty)
+                != Some(MirType::Array(*array))
+            {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "array range-offset owner has the wrong exact type",
+                );
+            }
+            if self.verify_value_use(function, block, *offset, defined) != Some(MirType::U64) {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "array range offset must be a block-local `u64` value",
+                );
+            }
+        }
     }
 }

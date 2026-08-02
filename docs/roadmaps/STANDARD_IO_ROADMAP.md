@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 through IO2 are complete, and IO3 is next.
+Status: in progress; IO0 through IO3 are complete, and IO4 is next.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -123,7 +123,7 @@ lengths.
 - [x] IO0 — Freeze standard I/O language and compiler contracts
 - [x] IO1 — Publish the byte-oriented runtime ABI
 - [x] IO2 — Resolve and type private standard I/O intrinsics
-- [ ] IO3 — Represent and verify target-independent I/O operations
+- [x] IO3 — Represent and verify target-independent I/O operations
 - [ ] IO4 — Lower verified I/O to the x86-64 runtime ABI
 - [ ] IO5 — Implement exact standard-stream writes
 - [ ] IO6 — Implement whole stdin and file reads
@@ -254,31 +254,31 @@ symbol or array layout has entered HIR.
 carriage, and runtime-call intent explicit and independently verifiable before
 target lowering.
 
-- [ ] Add a cohesive MIR I/O instruction family for standard-handle, open,
+- [x] Add a cohesive MIR I/O instruction family for standard-handle, open,
       read, write, and close operations with explicit scalar inputs, exact
       `u8[]` places, offsets, access modes, results, and spans.
-- [ ] Lower HIR arguments exactly once from left to right, retain the array
+- [x] Lower HIR arguments exactly once from left to right, retain the array
       backing through the complete operation using existing array-alias anchor
       machinery, and end temporary/alias lifetimes in normal full-expression
       order.
-- [ ] Lower open against the complete read-only array range. Lower read/write
+- [x] Lower open against the complete read-only array range. Lower read/write
       offsets through the ordinary checked array-position boundary, permit an
       offset equal to length for an empty remaining range, and take the
       existing array-bounds failure edge before any runtime call when the
       offset is larger.
-- [ ] Represent the intrinsic result as one initialized exact `i64` value and
+- [x] Represent the intrinsic result as one initialized exact `i64` value and
       preserve the private negative-error convention without embedding POSIX
       `errno`, target pointers, descriptor offsets, or symbol names in MIR.
-- [ ] Extend MIR dumps and verification for exact operation/input/result
+- [x] Extend MIR dumps and verification for exact operation/input/result
       types, compatible read-only versus mutable array access, live initialized
       descriptors and backing anchors, dominated bounds checks, one result
       definition, and absence of residual ordinary calls to intrinsic
       declarations.
-- [ ] Add malformed-MIR mutations for wrong operation types, non-`u8` arrays,
+- [x] Add malformed-MIR mutations for wrong operation types, non-`u8` arrays,
       access escalation, dead/detached backing, missing anchors/checks,
       out-of-order lifetimes, duplicate or absent results, and calls through
       intrinsic declaration metadata.
-- [ ] Require every backend to support the verified I/O family or reject it
+- [x] Require every backend to support the verified I/O family or reject it
       structurally; do not let a target infer operation kind from source names.
 
 **Tests:** Focused HIR-to-MIR lowering, exact MIR dumps, array alias/anchor and

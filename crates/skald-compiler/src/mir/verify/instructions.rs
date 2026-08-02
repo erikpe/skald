@@ -253,6 +253,13 @@ impl Verifier<'_> {
             MirInstruction::Array(instruction) => {
                 self.verify_array_instruction(function, block, instruction, defined_in_block)
             }
+            MirInstruction::Io(instruction) => self.verify_io_instruction(
+                function,
+                block,
+                instruction,
+                defined_values,
+                defined_in_block,
+            ),
         }
     }
 

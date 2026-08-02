@@ -8,6 +8,7 @@ mod ids;
 mod instruction;
 mod integer_division;
 mod interface;
+mod io;
 mod logical;
 mod optional;
 mod path_condition;
@@ -52,6 +53,7 @@ pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,
     MirInterfaceRequirement, MirRequirementImplementation,
 };
+pub use io::{MirIoBuffer, MirIoInstruction, MirIoOperation};
 pub use logical::{MirLogicalExpression, MirLogicalOperation};
 pub use optional::{
     MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,

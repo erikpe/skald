@@ -119,6 +119,7 @@ impl Verifier<'_> {
                 }
             }
             MirArrayInstruction::Normalize { destination, .. }
+            | MirArrayInstruction::Offset { destination, .. }
             | MirArrayInstruction::Boundary { destination, .. } => {
                 if function.storage(*destination).map(|s| (s.kind, s.ty))
                     != Some((MirStorageKind::ArrayPosition, MirType::U64))

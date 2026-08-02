@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use super::super::{
     super::model::{
-        BlockId, MirArgument, MirArrayFailure, MirArrayInstruction, MirCall, MirCallReceiver,
-        MirDefinitionRef, MirInstruction, MirPlace, MirPlaceProjection, MirStorageKind,
-        MirTerminator, MirType, StorageId,
+        BlockId, MirArgument, MirArrayFailure, MirArrayInstruction, MirArrayPositionKind, MirCall,
+        MirCallReceiver, MirDefinitionRef, MirInstruction, MirIoBuffer, MirIoOperation, MirPlace,
+        MirPlaceProjection, MirStorageKind, MirTerminator, MirType, StorageId,
     },
     context::Verifier,
     dataflow::ForwardDataflow,
@@ -63,6 +63,15 @@ impl Verifier<'_> {
                                 &anchor_owners,
                             );
                         }
+                        if let MirInstruction::Io(io) = instruction {
+                            self.verify_io_array_dependencies(
+                                function,
+                                block.id,
+                                &io.operation,
+                                state,
+                                &anchor_owners,
+                            );
+                        }
                         if let MirInstruction::Array(MirArrayInstruction::AliasBind {
                             anchor,
                             source,
@@ -96,6 +105,34 @@ impl Verifier<'_> {
                     continue;
                 };
                 match terminator {
+                    MirTerminator::ArrayPositionCheck {
+                        position,
+                        kind: MirArrayPositionKind::RangeOffset,
+                        success_target,
+                        failure_target,
+                        ..
+                    } => {
+                        let mut success_states = states.clone();
+                        success_states.update_states(|state| {
+                            state.checked_range_offsets.insert(*position);
+                        });
+                        self.merge_array_owner_state(
+                            function,
+                            block.id,
+                            *success_target,
+                            &success_states,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                        self.merge_array_owner_state(
+                            function,
+                            block.id,
+                            *failure_target,
+                            &states,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                    }
                     MirTerminator::ArrayOperationCheck {
                         failure: MirArrayFailure::AllocationSize,
                         success_target,
@@ -167,6 +204,8 @@ impl Verifier<'_> {
                                 || !state.anchors.is_empty()
                                 || !state.aliases.is_empty()
                                 || !state.slice_checks.is_empty()
+                                || !state.checked_range_offsets.is_empty()
+                                || !state.range_offset_owners.is_empty()
                             {
                                 self.block_error(
                                     function.callable(),
@@ -259,6 +298,46 @@ impl Verifier<'_> {
                     "array alias call requires one compatible live descriptor, backing, or owner anchor",
                 );
             }
+        }
+    }
+
+    fn verify_io_array_dependencies(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: crate::mir::BlockId,
+        operation: &MirIoOperation,
+        state: &ArrayOwnerState,
+        anchor_owners: &HashMap<StorageId, MirPlace>,
+    ) {
+        let (buffer, offset) = match operation {
+            MirIoOperation::Open { path, .. } => (Some(path), None),
+            MirIoOperation::Read {
+                destination,
+                offset,
+                ..
+            } => (Some(destination), Some(*offset)),
+            MirIoOperation::Write { source, offset, .. } => (Some(source), Some(*offset)),
+            MirIoOperation::StandardHandle { .. } | MirIoOperation::Close { .. } => (None, None),
+        };
+        let Some(buffer) = buffer else {
+            return;
+        };
+        if !io_buffer_is_anchored(buffer, state, anchor_owners) {
+            self.block_error(
+                function.callable(),
+                block,
+                "standard-I/O buffer requires its exact compatible backing anchor to be live",
+            );
+        }
+        if offset.is_some_and(|offset| {
+            !state.checked_range_offsets.contains(&offset)
+                || state.range_offset_owners.get(&offset) != Some(&buffer.place)
+        }) {
+            self.block_error(
+                function.callable(),
+                block,
+                "standard-I/O byte range must be dominated by its successful offset bounds check",
+            );
         }
     }
 
@@ -363,6 +442,8 @@ struct ArrayOwnerState {
     anchors: HashSet<StorageId>,
     aliases: HashMap<StorageId, StorageId>,
     slice_checks: HashSet<(StorageId, StorageId)>,
+    checked_range_offsets: HashSet<StorageId>,
+    range_offset_owners: HashMap<StorageId, MirPlace>,
 }
 
 impl ArrayOwnerState {
@@ -425,6 +506,13 @@ impl ArrayOwnerState {
                 return;
             }
             _ => {}
+        }
+        if let MirInstruction::Array(MirArrayInstruction::Offset {
+            destination, owner, ..
+        }) = instruction
+        {
+            self.checked_range_offsets.remove(destination);
+            self.range_offset_owners.insert(*destination, owner.clone());
         }
         let MirInstruction::Array(instruction) = instruction else {
             return;
@@ -560,5 +648,25 @@ impl ArrayOwnerState {
             .retain(|alias, anchor| *alias != storage && *anchor != storage);
         self.slice_checks
             .retain(|(start, end)| *start != storage && *end != storage);
+        self.checked_range_offsets.remove(&storage);
+        self.range_offset_owners.remove(&storage);
+    }
+}
+
+fn io_buffer_is_anchored(
+    buffer: &MirIoBuffer,
+    state: &ArrayOwnerState,
+    anchor_owners: &HashMap<StorageId, MirPlace>,
+) -> bool {
+    if !state.anchors.contains(&buffer.anchor) {
+        return false;
+    }
+    match buffer.place.base {
+        crate::mir::MirPlaceBase::ArrayAlias(alias) => {
+            state.aliases.get(&alias) == Some(&buffer.anchor)
+        }
+        _ => anchor_owners
+            .get(&buffer.anchor)
+            .is_some_and(|owner| array_anchor_covers(buffer.anchor, owner, &buffer.place)),
     }
 }

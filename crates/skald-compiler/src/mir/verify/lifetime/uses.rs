@@ -122,6 +122,22 @@ pub(super) fn visit_instruction_storage(
         }
         MirInstruction::OptionalSharedCleanup(cleanup) => visit_place(&cleanup.destination, visit),
         MirInstruction::Array(array) => visit_array_instruction(array, visit),
+        MirInstruction::Io(io) => match &io.operation {
+            MirIoOperation::StandardHandle { .. } | MirIoOperation::Close { .. } => {}
+            MirIoOperation::Open { path, .. } => visit_io_buffer(path, visit),
+            MirIoOperation::Read {
+                destination,
+                offset,
+                ..
+            } => {
+                visit_io_buffer(destination, visit);
+                visit(*offset);
+            }
+            MirIoOperation::Write { source, offset, .. } => {
+                visit_io_buffer(source, visit);
+                visit(*offset);
+            }
+        },
     }
 }
 
@@ -361,6 +377,9 @@ fn visit_array_instruction(instruction: &MirArrayInstruction, visit: &mut impl F
         MirArrayInstruction::Normalize {
             destination, owner, ..
         }
+        | MirArrayInstruction::Offset {
+            destination, owner, ..
+        }
         | MirArrayInstruction::Boundary {
             destination, owner, ..
         } => {
@@ -406,4 +425,9 @@ fn visit_array_instruction(instruction: &MirArrayInstruction, visit: &mut impl F
             visit(*source_index);
         }
     }
+}
+
+fn visit_io_buffer(buffer: &MirIoBuffer, visit: &mut impl FnMut(StorageId)) {
+    visit_place(&buffer.place, visit);
+    visit(buffer.anchor);
 }

@@ -19,6 +19,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+    reject_unimplemented_standard_io(program)?;
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
@@ -142,11 +143,37 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::ClassOptionalCleanup(_)
                     | MirInstruction::EndOptionalView(_) => {}
                     MirInstruction::Array(_) => {}
+                    MirInstruction::Io(_) => {
+                        return Err(BackendError::new(
+                            Target::X86_64SysV,
+                            Some(function.callable()),
+                            "standard-I/O MIR is not yet supported by the x86-64 target",
+                        ));
+                    }
                 }
             }
         }
     }
     Ok((data_layout, dispatch))
+}
+
+fn reject_unimplemented_standard_io(program: &MirProgram) -> Result<(), BackendError> {
+    for function in program.executable_definitions() {
+        if function
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .any(|instruction| matches!(instruction, MirInstruction::Io(_)))
+        {
+            return Err(BackendError::new(
+                Target::X86_64SysV,
+                Some(function.callable()),
+                "standard-I/O MIR is not yet supported by the x86-64 target",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn primitive_cast_is_supported(operation: crate::mir::MirPrimitiveCast) -> bool {

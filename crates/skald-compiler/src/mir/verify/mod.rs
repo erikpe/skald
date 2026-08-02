@@ -24,6 +24,7 @@ mod inheritance;
 mod instructions;
 mod integer_division;
 mod interfaces;
+mod io;
 mod lifetime;
 mod logical;
 mod optional;

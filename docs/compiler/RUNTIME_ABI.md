@@ -62,7 +62,9 @@ ABI version 7 implements the five host operations over handles, scalars, and
 byte pointer/length pairs shown in the public surface above. They form the
 runtime half of the [standard I/O compiler and runtime contract](IO.md). The
 compiler's canonical intrinsic identities and typed I/O HIR are implemented;
-MIR and target lowering are not implemented yet.
+verified target-independent I/O MIR is also implemented. Target lowering is
+not implemented yet and rejects the operation family before instruction
+selection.
 
 `ska_rt_io_standard_handle` accepts selector `0` for stdin, `1` for stdout, or
 `2` for stderr and returns the corresponding raw POSIX descriptor. Mode `0`

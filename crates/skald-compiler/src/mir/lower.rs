@@ -17,6 +17,7 @@ mod control_flow;
 mod expression;
 mod full_expression;
 mod integer_division;
+mod io;
 mod logical;
 #[allow(dead_code)]
 mod loop_context;

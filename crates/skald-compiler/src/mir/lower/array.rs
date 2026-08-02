@@ -199,6 +199,15 @@ impl BodyLowerer<'_> {
         element: &HirArrayElementPlace,
         access: crate::hir::HirAccess,
     ) -> MirPlace {
+        self.lower_array_alias_element_place_with_anchor(element, access)
+            .0
+    }
+
+    pub(super) fn lower_array_alias_element_place_with_anchor(
+        &mut self,
+        element: &HirArrayElementPlace,
+        access: crate::hir::HirAccess,
+    ) -> (MirPlace, StorageId) {
         let (source, anchor) = self.lower_array_element_place_with_anchor(element);
         let alias = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
@@ -216,7 +225,7 @@ impl BodyLowerer<'_> {
             anchor,
             span: element.span,
         }));
-        MirPlace::array_alias(alias)
+        (MirPlace::array_alias(alias), anchor)
     }
 
     fn lower_array_element_place_with_anchor(
@@ -291,7 +300,7 @@ impl BodyLowerer<'_> {
         }
     }
 
-    fn lower_array_receiver_with_anchor(
+    pub(super) fn lower_array_receiver_with_anchor(
         &mut self,
         receiver: &HirArrayReceiver,
     ) -> (MirPlace, StorageId) {
@@ -629,6 +638,33 @@ impl BodyLowerer<'_> {
         position
     }
 
+    pub(super) fn lower_array_range_offset(
+        &mut self,
+        owner: MirPlace,
+        array: crate::identity::ArrayTypeId,
+        offset: &HirExpression,
+    ) -> StorageId {
+        let value = self
+            .lower_expression(offset)
+            .expect("typed I/O offset must produce `u64`");
+        let position = self.new_array_storage(
+            array,
+            MirStorageKind::ArrayPosition,
+            "range-offset",
+            offset.span,
+        );
+        self.storage[position.index()].ty = MirType::U64;
+        self.emit(MirInstruction::Array(MirArrayInstruction::Offset {
+            destination: position,
+            owner,
+            offset: value,
+            array,
+            span: offset.span,
+        }));
+        self.emit_array_position_check(position, MirArrayPositionKind::RangeOffset, offset.span);
+        position
+    }
+
     fn lower_array_bounds(
         &mut self,
         owner: MirPlace,
@@ -719,6 +755,7 @@ impl BodyLowerer<'_> {
             reason: match kind {
                 MirArrayPositionKind::Element => MirTerminationReason::ArrayIndexOutOfBounds,
                 MirArrayPositionKind::SliceBound => MirTerminationReason::ArrayInvalidSliceBounds,
+                MirArrayPositionKind::RangeOffset => MirTerminationReason::ArrayIndexOutOfBounds,
             },
             span,
         });

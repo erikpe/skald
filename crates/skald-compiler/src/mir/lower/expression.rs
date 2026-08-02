@@ -66,9 +66,7 @@ impl BodyLowerer<'_> {
             HirExpressionKind::PrimitiveCast { operation, operand } => {
                 self.lower_primitive_cast(expression, *operation, operand)
             }
-            HirExpressionKind::Io(_) => {
-                unreachable!("standard-I/O HIR lowering belongs to roadmap task IO3")
-            }
+            HirExpressionKind::Io(operation) => Some(self.lower_io(operation, expression.span)),
             HirExpressionKind::DirectCall {
                 function,
                 arguments,

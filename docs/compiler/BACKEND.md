@@ -376,8 +376,9 @@ invalid lifetime state.
 
 ## Frozen standard I/O target boundary
 
-Standard I/O implementation will make five dedicated verified MIR operations
-legal on x86-64. The backend will lower array operands to a data pointer at the
+Standard I/O now has five dedicated verified MIR operations. They are not yet
+legal for x86-64 execution: target legality rejects them structurally before
+instruction selection. IO4 will lower array operands to a data pointer at the
 checked offset plus the remaining byte count, retain their backing anchors
 across the call, and use the scalar System V classifications already defined
 below. It will call only the exact version-7 symbols specified by the
@@ -387,9 +388,10 @@ descriptor or a `Str` value to C.
 Offset validity must be established before pointer arithmetic and the call.
 The runtime's signed `i64` result returns through the ordinary integer result
 register and remains unaltered for standard-library validation. These are
-frozen target requirements; the current backend has no I/O MIR operations and
-targets runtime ABI version 7 only through its process-entry compatibility
-marker.
+frozen target requirements; the current backend recognizes and structurally
+rejects I/O MIR rather than selecting it, and targets runtime ABI version 7
+only through its process-entry compatibility marker. Target-independent
+operation selection never depends on source names.
 
 ## Panic and hard-trap boundary
 
