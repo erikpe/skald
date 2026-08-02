@@ -256,7 +256,7 @@ behavior.
 
 ## Frozen standard I/O failures
 
-The planned [standard I/O API](IO.md) is all-or-panic. Its standard-library
+The [standard I/O API](IO.md) is all-or-panic. Its standard-library
 implementation translates private negative host results into stable
 operation-specific messages for open, file read, stdin read, stdout write,
 stderr write, and file close failures. It also uses `io: input too large` for
@@ -268,8 +268,9 @@ explicit panic messages selected by library code, not new compiler-known
 termination reasons in the catalog above. Standard I/O adds no recoverable
 value or exception edge, and a failed operation does not create a new cleanup
 guarantee. The runtime byte operations and private `std::io` compiler
-intrinsics are implemented; MIR/backend lowering and the public functions are
-not implemented yet. This section defines their integration with the existing
+intrinsics and MIR/backend lowering are implemented. The public writes select
+their stable failures now; the public reads remain planned. This section
+defines their integration with the existing
 uncatchable panic policy.
 
 ## Recoverable and checked exceptions

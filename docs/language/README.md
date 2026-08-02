@@ -135,11 +135,11 @@ makes a result source-observable.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.
-- [Standard I/O](IO.md) freezes the planned four-function `std::io` surface,
+- [Standard I/O](IO.md) freezes the four-function `std::io` surface,
   raw-byte whole-input and exact-output behavior, stable failures, costs, and
-  deliberate exclusions. Its private compiler/runtime foundation is
-  implemented through verified target-independent MIR; x86-64 lowering and
-  the public functions remain planned.
+  deliberate exclusions. Its private compiler/runtime foundation and x86-64
+  lowering are implemented; both exact standard-stream writes execute as
+  ordinary Skald library code, while the two whole-input reads remain planned.
 - [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
   construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
   and failure contract.

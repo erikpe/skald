@@ -16,9 +16,9 @@ exact-class optional local, field, parameter, result, and temporary MIR is
 legal backend input, including checked class payload views and optional shared
 owners. Inline optional-container aliases are indirect optional places with
 one address component and no object-origin metadata.
-The frozen [standard I/O compiler and runtime contract](IO.md) separately owns
-the planned byte-array operation and runtime-call boundary. It does not
-describe current backend input.
+The [standard I/O compiler and runtime contract](IO.md) separately owns the
+implemented byte-array operations and runtime-call boundary, including current
+x86-64 backend input.
 
 ## Backend interface and target registry
 

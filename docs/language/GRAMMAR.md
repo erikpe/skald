@@ -714,8 +714,9 @@ The frozen [standard I/O API](IO.md) composes existing modules, functions,
 calls, loops, arrays, aliases, and intrinsic declarations. It adds no token,
 precedence level, expression shape, statement shape, or declaration form.
 This grammar therefore already describes its source shapes. The `std::io`
-module currently installs only its private canonical intrinsic declarations;
-its public functions and lower-phase implementation are not yet implemented.
+module currently installs its private canonical intrinsic declarations and
+implements both public writes using existing language forms; its two public
+reads are not yet implemented.
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

@@ -160,7 +160,8 @@ tested host byte operations. The closed intrinsic registry and dedicated HIR
 are implemented together with semantic MIR operations, checked range offsets,
 backing-anchor verification, and exact scalar results. The x86-64 target now
 forms checked byte pointer/remaining-length pairs and calls the exact version-7
-runtime operations. The public library remains planned.
+runtime operations. The public write loops are implemented in Skald; the two
+whole-input reads remain planned.
 
 ## Pipeline
 

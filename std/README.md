@@ -3,18 +3,19 @@
 This directory contains the installed Skald standard-library source. The
 canonical `std::str::Str` module provides the frozen byte-string descriptor,
 safe byte-copying construction, checked observation and slicing, independent
-array conversion, and concatenation. Current output operations remain
-bootstrap C runtime functions rather than the final I/O API.
+array conversion, and concatenation. The exact standard-stream output API is
+implemented in Skald; bootstrap C runtime print functions remain available
+for observability.
 
 The `std::io` module has a frozen
 [whole-stream source contract](../docs/language/IO.md) and a separate
 [compiler/runtime contract](../docs/compiler/IO.md). Its five private
-byte-array declarations and compiler HIR are implemented, and runtime ABI
-version 7 provides independently tested host byte operations. MIR/backend
-lowering and the public library functions remain planned.
-Its four public `Str` functions will be ordinary Skald library code over
-private `u8[]` intrinsics; it neither replaces the observability helpers nor
-adds formatting, parsing, or new string conversions.
+byte-array declarations, compiler HIR/MIR, and x86-64 lowering are implemented,
+and runtime ABI version 7 provides independently tested host byte operations.
+`write_stdout` and `write_stderr` are ordinary Skald library loops over those
+private `u8[]` intrinsics; `read_stdin` and `read_file` remain planned. This
+module neither replaces the observability helpers nor adds formatting,
+parsing, or new string conversions.
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`

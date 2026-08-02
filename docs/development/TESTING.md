@@ -174,8 +174,9 @@ assigns coverage across these same layers. Direct runtime harnesses now own
 the version-7 handle and one-transfer byte boundary. Phase tests own canonical
 identities, types, access modes, anchors, and deterministic dumps; backend
 tests own pointer/length lowering and exact symbols; private-standard-library
-native goldens own checked calls and host failures. IO5 through IO7 will add
-exact public bytes, EOF, stable panic messages, and whole-operation behavior.
+native goldens own checked calls and host failures. IO5 adds public write
+goldens plus forced-partial, binary, invalid-progress, and closed-descriptor
+native coverage. IO6 and IO7 will add EOF and whole-input behavior.
 The golden harness currently has
 stdout, stderr, and exit sidecars but no stdin fixture. Adding an explicit
 stdin sidecar is an implementation prerequisite, not current harness support.

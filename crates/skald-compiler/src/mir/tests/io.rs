@@ -106,6 +106,61 @@ fn io_intrinsics_lower_to_verified_semantic_mir() {
 }
 
 #[test]
+fn canonical_standard_io_writes_use_one_verified_partial_progress_loop() {
+    let program = fixture_standard_io_program(concat!(
+        "import std::io;\n",
+        "import std::str;\n",
+        "fn main() -> i64 {\n",
+        "  var out: std::str::Str = \"out\";\n",
+        "  var err: std::str::Str = \"err\";\n",
+        "  std::io::write_stdout(out);\n",
+        "  std::io::write_stderr(err);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    verify_mir(&program).unwrap();
+
+    let operations = io_instructions(&program);
+    assert_eq!(operations.len(), 2);
+    assert!(matches!(
+        operations[0].operation,
+        MirIoOperation::StandardHandle { .. }
+    ));
+    assert!(matches!(
+        operations[1].operation,
+        MirIoOperation::Write { .. }
+    ));
+
+    let write_all = program
+        .definitions
+        .iter()
+        .find(|definition| {
+            program
+                .declarations
+                .get(definition.function)
+                .is_some_and(|declaration| declaration.name == "_write_all")
+        })
+        .expect("canonical standard library defines one write-all helper");
+    assert!(write_all.body.blocks.iter().any(|block| {
+        block.terminator.as_ref().is_some_and(|terminator| {
+            terminator
+                .successors()
+                .any(|target| target.index() <= block.id.index())
+        })
+    }));
+
+    assert_eq!(
+        write_all
+            .body
+            .blocks
+            .iter()
+            .filter(|block| matches!(block.terminator, Some(MirTerminator::Panic { .. })))
+            .count(),
+        3
+    );
+}
+
+#[test]
 fn io_dump_exposes_exact_semantic_inputs_and_checked_offsets() {
     let dump = dump_mir(&io_program());
     let relevant = dump

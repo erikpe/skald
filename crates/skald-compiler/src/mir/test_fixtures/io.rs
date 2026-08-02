@@ -7,6 +7,17 @@ use crate::{
     typeck::type_check,
 };
 
+const IO_INTRINSIC_DECLARATIONS: &str = concat!(
+    "import std::str;\n",
+    "from std::error import panic;\n",
+    "\n",
+    "intrinsic fn _io_standard_handle(stream: u8) -> i64;\n",
+    "intrinsic fn _io_open(ref path: u8[], mode: u8) -> i64;\n",
+    "intrinsic fn _io_read(handle: i64, mut ref destination: u8[], offset: u64) -> i64;\n",
+    "intrinsic fn _io_write(handle: i64, ref source: u8[], offset: u64) -> i64;\n",
+    "intrinsic fn _io_close(handle: i64) -> i64;\n",
+);
+
 pub(crate) fn io_program() -> MirProgram {
     io_program_with_additional_bodies("")
 }
@@ -20,7 +31,7 @@ pub(crate) fn io_program_with_additional_bodies(additional: &str) -> MirProgram 
 
 pub(crate) fn io_program_with_app_and_additional_bodies(app: &str, additional: &str) -> MirProgram {
     let io = format!(
-        "{CANONICAL_IO_SOURCE}\n{}{additional}",
+        "{IO_INTRINSIC_DECLARATIONS}\n{}{additional}",
         concat!(
             "public fn standard(stream: u8) -> i64 { return _io_standard_handle(stream); }\n",
             "public fn open(ref path: u8[], mode: u8) -> i64 { return _io_open(path, mode); }\n",
@@ -33,11 +44,19 @@ pub(crate) fn io_program_with_app_and_additional_bodies(app: &str, additional: &
             "public fn close(handle: i64) -> i64 { return _io_close(handle); }\n",
         )
     );
+    lower_io_program(app, &io)
+}
+
+pub(crate) fn standard_io_program(app: &str) -> MirProgram {
+    lower_io_program(app, CANONICAL_IO_SOURCE)
+}
+
+fn lower_io_program(app: &str, io: &str) -> MirProgram {
     let (_workspace, graph) = load_module_sources(
         "app",
         &[
             ("app.ska", app),
-            ("std/io.ska", &io),
+            ("std/io.ska", io),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
         ],

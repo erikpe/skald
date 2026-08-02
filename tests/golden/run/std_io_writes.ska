@@ -1,0 +1,18 @@
+import std::io;
+import std::str;
+
+fn main() -> i64 {
+    var empty: std::str::Str = "";
+    var stdout_first: std::str::Str = "alpha";
+    var stdout_second: std::str::Str = "omega\n";
+    var stderr_first: std::str::Str = "beta";
+    var stderr_second: std::str::Str = "gamma\n";
+
+    std::io::write_stdout(empty);
+    std::io::write_stderr(empty);
+    std::io::write_stdout(stdout_first);
+    std::io::write_stdout(stdout_second);
+    std::io::write_stderr(stderr_first);
+    std::io::write_stderr(stderr_second);
+    return 0;
+}

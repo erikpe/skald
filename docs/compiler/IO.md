@@ -1,13 +1,13 @@
 # Standard I/O Compiler and Runtime Contract
 
-**Status:** runtime ABI and private compiler intrinsic pipeline implemented;
-public library functions planned.
+**Status:** runtime ABI, private compiler intrinsic pipeline, and public writes
+implemented; public reads planned.
 
 This document defines the compiler/runtime boundary for the source API in
 [Standard I/O](../language/IO.md). Runtime ABI version 7 implements the five
 host operations below. The closed compiler registry recognizes the five
-private declarations installed in `std::io`; the module does not yet expose
-its four public functions.
+private declarations installed in `std::io`; the module exposes its two public
+writes while its two whole-input reads remain planned.
 
 ## Ownership boundary
 
@@ -167,9 +167,10 @@ length formation, empty ranges, assembler acceptance, and native version-7
 archive linkage. Private replacement-standard-library goldens cover successful
 results, host failures, dynamic offsets, and bounds failure before C.
 
-Remaining standard-library work must cover whole stdin and file reads,
-completed stdout/stderr writes, exact bytes, partial transfers, and stable
-public panic messages.
+Standard-library and native tests cover completed stdout/stderr writes, exact
+binary bytes, forced partial transfers, invalid progress, and stable selected
+panic messages. Remaining standard-library work must cover whole stdin and
+file reads.
 
 Direct C harnesses already cover runtime standard handles, open, close-on-exec,
 empty and binary transfers, partial progress, EOF, negative host failures,

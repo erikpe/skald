@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 through IO4 are complete, and IO5 is next.
+Status: in progress; IO0 through IO5 are complete, and IO6 is next.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -125,7 +125,7 @@ lengths.
 - [x] IO2 — Resolve and type private standard I/O intrinsics
 - [x] IO3 — Represent and verify target-independent I/O operations
 - [x] IO4 — Lower verified I/O to the x86-64 runtime ABI
-- [ ] IO5 — Implement exact standard-stream writes
+- [x] IO5 — Implement exact standard-stream writes
 - [ ] IO6 — Implement whole stdin and file reads
 - [ ] IO7 — Harden integration and reconcile living documentation
 
@@ -331,25 +331,26 @@ remaining feature work.
 **Purpose:** Publish the two output functions as ordinary Skald loops over the
 generic byte-array write intrinsic while retaining the bootstrap print API.
 
-- [ ] Implement `write_stdout(ref text: Str) -> unit` and
+- [x] Implement `write_stdout(ref text: Str) -> unit` and
       `write_stderr(ref text: Str) -> unit` in `std/std/io.ska`, using the
       existing `Str.to_bytes()` copy and one private `_write_all` helper over a
       selected standard handle.
-- [ ] Skip the intrinsic for an empty array; otherwise loop over partial
+- [x] Skip the intrinsic for an empty array; otherwise loop over partial
       results by advancing an offset until all bytes are written.
-- [ ] Panic with the exact stream-specific failure on a negative result and
+- [x] Panic with the exact stream-specific failure on a negative result and
       with `io: invalid runtime result` on zero progress or a count larger than
       the remaining range. Do not append LF, flush, close, or retry in Skald
       after the runtime has reported failure.
-- [ ] Preserve array anchoring and cleanup across repeated calls and ensure
+- [x] Preserve array anchoring and cleanup across repeated calls and ensure
       output completes before the temporary byte array is destroyed.
-- [ ] Add native goldens for empty, ordinary, embedded-zero, embedded-newline,
-      non-UTF-8, repeated, and capacity-crossing output to each standard
-      stream, plus focused failure tests with closed descriptors.
-- [ ] Keep the five observability helpers and all existing sources, runtime
+- [x] Add a native golden for empty, ordinary, embedded-newline, and repeated
+      output to each standard stream. Add focused native probes for
+      embedded-zero/non-UTF-8 and forced capacity-crossing partial output to
+      both streams, invalid progress, and failures with closed descriptors.
+- [x] Keep the five observability helpers and all existing sources, runtime
       harnesses, native goldens, stdout records, and failure behavior intact;
       do not migrate samples or compiler tests to `std::io` in this task.
-- [ ] Update the standard-library guide and focused I/O/status/testing
+- [x] Update the standard-library guide and focused I/O/status/testing
       documentation to mark only the two write functions implemented.
 
 **Tests:** Focused type/HIR/MIR/backend tests for the canonical module,

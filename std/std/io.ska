@@ -6,3 +6,44 @@ intrinsic fn _io_open(ref path: u8[], mode: u8) -> i64;
 intrinsic fn _io_read(handle: i64, mut ref destination: u8[], offset: u64) -> i64;
 intrinsic fn _io_write(handle: i64, ref source: u8[], offset: u64) -> i64;
 intrinsic fn _io_close(handle: i64) -> i64;
+
+fn _write_all(ref bytes: u8[], stream: u8) -> unit {
+    var handle: i64 = _io_standard_handle(stream);
+    var offset: u64 = 0u;
+
+    while (offset < bytes.len()) {
+        var result: i64 = _io_write(handle, bytes, offset);
+        if (result < 0) {
+            if (stream == 1u8) {
+                panic("io: failed to write stdout");
+            }
+            panic("io: failed to write stderr");
+        }
+
+        var written: u64 = (u64) result;
+        var remaining: u64 = bytes.len() - offset;
+        if (written == 0u || written > remaining) {
+            panic("io: invalid runtime result");
+        }
+        offset = offset + written;
+    }
+    return;
+}
+
+public fn write_stdout(ref text: std::str::Str) -> unit {
+    var bytes: u8[] = text.to_bytes();
+    if (bytes.len() == 0u) {
+        return;
+    }
+    _write_all(bytes, 1u8);
+    return;
+}
+
+public fn write_stderr(ref text: std::str::Str) -> unit {
+    var bytes: u8[] = text.to_bytes();
+    if (bytes.len() == 0u) {
+        return;
+    }
+    _write_all(bytes, 2u8);
+    return;
+}

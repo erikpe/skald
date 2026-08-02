@@ -226,12 +226,12 @@ The required asymptotic behavior is:
 
 The frozen [standard I/O API](IO.md) deliberately composes these existing
 operations. Its planned reads accumulate an ordinary `u8[]` and call
-`Str.from_bytes`, while its writes call `to_bytes` before crossing a private
-byte-array intrinsic boundary. It adds no borrowed byte view, owned-backing
+`Str.from_bytes`, while its implemented writes call `to_bytes` before crossing
+a private byte-array intrinsic boundary. It adds no borrowed byte view, owned-backing
 adoption, builder, primitive conversion, or string-specific runtime ABI. The
 extra `O(n)` copies are therefore part of the initial I/O cost model. The
-private intrinsic module and typed HIR are implemented; public functions and
-lower-phase execution are not implemented yet.
+private intrinsic pipeline and lower-phase execution are implemented. The two
+public writes are available; the two public reads remain planned.
 
 The broader public method and builder APIs remain standard-library design.
 Indexing,

@@ -9,7 +9,8 @@ use crate::mir::test_fixtures::{
     function_definition as fixture_function_definition,
     integer_bitwise_program as fixture_integer_bitwise_program, io_program as fixture_io_program,
     member_definition as fixture_member_definition, parameter as fixture_parameter,
-    receiver_storage as fixture_receiver_storage, storage as fixture_storage,
+    receiver_storage as fixture_receiver_storage,
+    standard_io_program as fixture_standard_io_program, storage as fixture_storage,
     storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
     store as fixture_store, value as fixture_value, OneBlockDefinition,
 };
