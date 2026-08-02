@@ -254,7 +254,7 @@ minimum, its design must specify:
 These are constraints on a future design, not implemented exceptional-cleanup
 behavior.
 
-## Frozen standard I/O failures
+## Standard I/O failures
 
 The [standard I/O API](IO.md) is all-or-panic. Its standard-library
 implementation translates private negative host results into stable

@@ -6,16 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Standard I/O](STANDARD_IO_ROADMAP.md) — **in progress**. Add four
-  whole-stream `std::io` functions backed by private `u8[]` intrinsics and a
-  small versioned handle/read/write/open/close runtime boundary while retaining
-  the bootstrap observability helpers. IO0 froze the contracts and IO1
-  published the independently tested runtime ABI, IO2 implemented the closed
-  private-intrinsic registry and typed I/O HIR, IO3 added verified
-  target-independent I/O MIR, and IO4 connected it to the version-7 runtime on
-  x86-64. IO5 implemented exact standard-stream writes, and IO6 completed the
-  public API with growable whole-input reads. IO7 integration hardening and
-  documentation reconciliation are next.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 
@@ -27,7 +18,9 @@ No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
-No implementation discoveries are currently pending.
+- [Standard I/O maintainability](STANDARD_IO_DISCOVERIES.md) — extract
+  assembly-only native probe builders from the backend behavior suite in a
+  future focused test-organization cleanup.
 
 ## Implementation baseline
 

@@ -247,6 +247,92 @@ fn canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selec
 }
 
 #[test]
+fn canonical_io_obeys_default_replacement_and_disabled_selection() {
+    let directory = TemporaryDirectory::new("request-standard-io-providers").unwrap();
+    let application = directory.join("application");
+    let installed = directory.join("installed");
+    let replacement = directory.join("replacement");
+    let self_contained = directory.join("self-contained");
+    let app_source = concat!(
+        "import std::io;\n",
+        "from std::str import Str;\n",
+        "fn main() -> i64 {\n",
+        "  var path: Str = \"input.bin\";\n",
+        "  var stdin: Str = std::io::read_stdin();\n",
+        "  var file: Str = std::io::read_file(path);\n",
+        "  std::io::write_stdout(stdin);\n",
+        "  std::io::write_stderr(file);\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    fs::create_dir_all(&application).unwrap();
+    fs::write(application.join("app.ska"), app_source).unwrap();
+    write_canonical_standard_library(&installed);
+    write_canonical_standard_library(&replacement);
+    fs::create_dir_all(&self_contained).unwrap();
+    fs::write(self_contained.join("app.ska"), app_source).unwrap();
+    write_canonical_standard_library(&self_contained);
+
+    let compile = |roots, standard_library, installed_root| {
+        let request = CompilationRequest::new(
+            EntrySelector::Module("app".parse().unwrap()),
+            roots,
+            standard_library,
+            Target::X86_64SysV,
+            ArtifactOptions::new(ArtifactKind::Assembly, None),
+            CompilationEnvironment::new(directory.path().to_owned(), installed_root),
+        );
+        compile_request_to_assembly(&request)
+    };
+
+    for artifact in [
+        compile(
+            vec![application.clone()],
+            StandardLibrarySelection::Default,
+            installed.clone(),
+        )
+        .unwrap(),
+        compile(
+            vec![application.clone()],
+            StandardLibrarySelection::Replacement(replacement),
+            directory.join("unused-installed"),
+        )
+        .unwrap(),
+        compile(
+            vec![self_contained],
+            StandardLibrarySelection::Disabled,
+            directory.join("unused-installed"),
+        )
+        .unwrap(),
+    ] {
+        assert!(artifact.report.diagnostics.is_empty());
+        assert_eq!(artifact.report.sources.len(), 4);
+        for runtime_symbol in [
+            "ska_rt_io_standard_handle",
+            "ska_rt_io_open",
+            "ska_rt_io_read",
+            "ska_rt_io_write",
+            "ska_rt_io_close",
+        ] {
+            assert!(artifact
+                .assembly
+                .contains(&format!("call {runtime_symbol}")));
+        }
+    }
+
+    let CompilationError::Diagnostics(report) = compile(
+        vec![application],
+        StandardLibrarySelection::Disabled,
+        directory.join("unused-installed"),
+    )
+    .unwrap_err() else {
+        panic!("disabled lookup without a provider-owned standard library must fail");
+    };
+    assert!(render_diagnostics(&report.sources, &report.diagnostics)
+        .contains("module `std::io` was not found"));
+}
+
+#[test]
 fn request_pipeline_preserves_configuration_and_source_failure_categories() {
     let directory = TemporaryDirectory::new("request-failures").unwrap();
     let invalid_root = directory.join("missing-root");

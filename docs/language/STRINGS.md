@@ -224,7 +224,7 @@ The required asymptotic behavior is:
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 
-The frozen [standard I/O API](IO.md) deliberately composes these existing
+The implemented [standard I/O API](IO.md) deliberately composes these existing
 operations. Its implemented reads accumulate an ordinary `u8[]` and call
 `Str.from_bytes`, while its implemented writes call `to_bytes` before crossing
 a private byte-array intrinsic boundary. It adds no borrowed byte view, owned-backing

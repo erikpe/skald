@@ -165,15 +165,15 @@ exports.
 After validation, resolved and typed compiler phases retain a stable intrinsic
 identity rather than matching the source spelling `panic`. The source
 semantics of invoking the canonical identity are owned by the
-[frozen panic design](ERRORS.md#frozen-panic-design). No other intrinsic is
+[frozen panic design](ERRORS.md#frozen-panic-design). No intrinsic is
 authorized merely because the parser accepts this declaration form.
 
-The frozen [standard I/O compiler contract](../compiler/IO.md) reserves five
-future private canonical declarations under `std::io`, using primitive and
-whole-array alias parameters. They are not in the implemented registry and
-cannot currently be declared or called successfully. Their eventual addition
-will reuse this declaration form and ordinary explicit module imports; it will
-not widen the restricted external-function ABI or create a prelude binding.
+The implemented [standard I/O compiler contract](../compiler/IO.md) adds five
+private canonical declarations under `std::io`, using primitive and
+whole-array alias parameters. Panic and these five operations form one closed
+registry keyed by exact module path and declaration name. Calls become
+dedicated typed I/O operations before executable IR; the declarations do not
+widen the restricted external-function ABI or create prelude bindings.
 
 ## Initial module system
 

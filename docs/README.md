@@ -22,7 +22,7 @@ Use the authority closest to the behavior:
 - the implemented raw-byte `std::str::Str` value, literals, and library
   boundary belong in
   [strings](language/STRINGS.md);
-- the frozen four-function whole-stream `std::io` source contract belongs in
+- the implemented four-function whole-stream `std::io` source contract belongs in
   [standard I/O](language/IO.md);
 - the frozen source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in

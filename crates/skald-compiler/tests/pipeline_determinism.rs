@@ -1020,20 +1020,22 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
     let mut io_source = include_str!("../../../std/std/io.ska").to_owned();
     if malformed {
         io_source = io_source.replace("intrinsic fn _io_close", "public intrinsic fn _io_close");
-    } else {
-        io_source.push_str(concat!(
-            "\npublic fn open(ref path: u8[], mode: u8) -> i64 {\n",
-            "  return _io_open(path, mode);\n",
-            "}\n",
-            "public fn write(handle: i64, ref source: u8[], offset: u64) -> i64 {\n",
-            "  return _io_write(handle, source, offset);\n",
-            "}\n",
-        ));
     }
     let sources = [
         (
             application.join("app.ska"),
-            "import std::io;\nfn main() -> i64 { return 0; }\n",
+            concat!(
+                "import std::io;\n",
+                "from std::str import Str;\n",
+                "fn main() -> i64 {\n",
+                "  var path: Str = \"input.bin\";\n",
+                "  var stdin: Str = std::io::read_stdin();\n",
+                "  var file: Str = std::io::read_file(path);\n",
+                "  std::io::write_stdout(stdin);\n",
+                "  std::io::write_stderr(file);\n",
+                "  return 0;\n",
+                "}\n",
+            ),
         ),
         (
             standard_library.join("std/str.ska"),
@@ -1089,11 +1091,15 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
         let checked = type_check(&resolved.program);
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let hir = checked.hir.unwrap();
+        let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+        let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
         format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}",
+            "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
             dump_resolved(&resolved.program),
             dump_hir(&hir),
+            dump_mir(&mir),
+            assembly,
         )
     };
     normalize_fixture_paths(&fixture.path, phases)

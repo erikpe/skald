@@ -135,7 +135,7 @@ makes a result source-observable.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations, and compiler/library boundary.
-- [Standard I/O](IO.md) freezes the four-function `std::io` surface,
+- [Standard I/O](IO.md) defines the implemented four-function `std::io` surface,
   raw-byte whole-input and exact-output behavior, stable failures, costs, and
   deliberate exclusions. Its private compiler/runtime foundation, x86-64
   lowering, exact standard-stream writes, and growable whole-input reads all

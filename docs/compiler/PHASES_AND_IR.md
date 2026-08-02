@@ -1003,7 +1003,7 @@ check succeeds.
 The [standard I/O compiler contract](IO.md) assigns canonical
 intrinsic validation to resolution and type checking, semantic access and
 offset information to typed HIR, and executable read, write, open, close, and
-standard-handle operations to MIR. MIR verification will own exact scalar and
+standard-handle operations to MIR. MIR verification owns exact scalar and
 array types, read-only versus mutable access, offset validity structure, and
 the backing anchor that keeps each array range live across its host call.
 

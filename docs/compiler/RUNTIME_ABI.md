@@ -52,7 +52,7 @@ void ska_rt_println_bool(bool value);
 ```
 
 These output functions are bootstrap observability facilities. They are not a
-general formatting API, recoverable I/O API, or final standard-library design.
+general formatting API, recoverable I/O API, or the standard I/O API.
 The compiler does not recognize their names specially: Skald programs declare
 and call them through the ordinary restricted external-function mechanism.
 
@@ -416,7 +416,7 @@ eight directly linked C harnesses:
 
 [Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that a stale
 version-6 archive fails the version-7 link guard without replacing an existing
-output artifact. Native golden programs exercise both ordinary external calls
-and private standard-I/O intrinsic lowering through the real archive,
-including checked ranges, ordinary negative host failures, and exact stdout
-expectations.
+output artifact. Native golden programs exercise ordinary external calls and
+public standard-I/O functions over private intrinsic lowering through the real
+archive, including checked ranges, ordinary negative host failures, and exact
+stdout expectations.

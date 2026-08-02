@@ -62,6 +62,7 @@ Archived plans:
 - [Integer division and remainder](INTEGER_DIVISION_AND_REMAINDER_ROADMAP.md)
 - [Remaining floating-point operators](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
 - [Complete primitive cast matrix](PRIMITIVE_CAST_MATRIX_ROADMAP.md)
+- [Standard I/O](STANDARD_IO_ROADMAP.md)
 
 Resolved string-design inputs:
 

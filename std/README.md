@@ -7,7 +7,7 @@ array conversion, and concatenation. The exact standard-stream output API is
 implemented in Skald; bootstrap C runtime print functions remain available
 for observability.
 
-The `std::io` module has a frozen
+The `std::io` module has an implemented
 [whole-stream source contract](../docs/language/IO.md) and a separate
 [compiler/runtime contract](../docs/compiler/IO.md). Its five private
 byte-array declarations, compiler HIR/MIR, and x86-64 lowering are implemented,

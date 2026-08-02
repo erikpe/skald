@@ -16,7 +16,7 @@ availability is summarized in [Language status](STATUS.md).
 
 ## Public surface
 
-The standard library's frozen explicitly imported `std::io` surface is:
+The standard library's explicitly imported `std::io` surface is:
 
 ```ska
 public fn read_stdin() -> Str;

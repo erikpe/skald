@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 through IO6 are complete, and IO7 is next.
+Status: complete and archived.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -127,7 +127,7 @@ lengths.
 - [x] IO4 — Lower verified I/O to the x86-64 runtime ABI
 - [x] IO5 — Implement exact standard-stream writes
 - [x] IO6 — Implement whole stdin and file reads
-- [ ] IO7 — Harden integration and reconcile living documentation
+- [x] IO7 — Harden integration and reconcile living documentation
 
 ## PR-sized implementation sequence
 
@@ -414,28 +414,28 @@ public fine-grained I/O API has appeared.
 the complete feature from canonical source through the versioned runtime
 without folding later formatting or observability migration into this plan.
 
-- [ ] Add complete deterministic resolved/HIR/MIR/assembly coverage for a
+- [x] Add complete deterministic resolved/HIR/MIR/assembly coverage for a
       program importing all four functions, including replacement and disabled
       standard-library providers and exact private-intrinsic visibility.
-- [ ] Audit intrinsic validation so panic plus the five I/O operations form
+- [x] Audit intrinsic validation so panic plus the five I/O operations form
       one closed canonical registry with no leaf-name recognition, forged
       declarations, residual intrinsic calls, or foreign array ABI escape.
-- [ ] Audit large functions and modules added by the feature by responsibility;
+- [x] Audit large functions and modules added by the feature by responsibility;
       keep intrinsic selection, I/O HIR/MIR, verification, target lowering,
       runtime host adaptation, and standard-library algorithms behind concise
       facades.
-- [ ] Audit source, runtime, samples, tests, and living documentation to ensure
+- [x] Audit source, runtime, samples, tests, and living documentation to ensure
       no claim says primitive formatting moved to `Str`, observability helpers
       were removed, `Str` gained zero-copy conversion, or public streaming,
       recoverable errors, file writing, or path abstraction is implemented.
-- [ ] Reconcile language/compiler I/O, strings, arrays, errors, modules,
+- [x] Reconcile language/compiler I/O, strings, arrays, errors, modules,
       phases/IR, backend, runtime ABI, standard-library, status, testing,
       debugging, README, and documentation-index wording with current
       implemented behavior and one authoritative owner per fact.
-- [ ] Confirm public symbols, the ABI-v7 marker, runtime archive contents,
+- [x] Confirm public symbols, the ABI-v7 marker, runtime archive contents,
       standard-library module paths, exact golden bytes, and absence of build
       artifacts or unrelated diffs.
-- [ ] Run the complete repository and supported-toolchain gates from an
+- [x] Run the complete repository and supported-toolchain gates from an
       artifact-free snapshot, complete every roadmap checkbox, and archive the
       roadmap with repaired index links.
 

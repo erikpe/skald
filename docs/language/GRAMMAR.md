@@ -710,7 +710,7 @@ equal-length slice assignment execute. Call-scoped whole-array and exact
 element aliases execute with hidden backing or shared-owner anchors. The
 implemented semantics belong to [Arrays](ARRAYS.md).
 
-The frozen [standard I/O API](IO.md) composes existing modules, functions,
+The implemented [standard I/O API](IO.md) composes existing modules, functions,
 calls, loops, arrays, aliases, and intrinsic declarations. It adds no token,
 precedence level, expression shape, statement shape, or declaration form.
 This grammar therefore already describes its source shapes. The `std::io`

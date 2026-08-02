@@ -287,8 +287,8 @@ backing anchor before reading assembly. On x86-64, open passes pointer and
 length in `rdi`/`rsi`; read and write pass handle, pointer, and remaining length
 in `rdi`/`rsi`/`rdx`. A larger offset must branch to array-bounds termination
 before any `ska_rt_io_*` call. If those are correct, reproduce host-result
-behavior with the private-standard-library golden or direct runtime I/O
-harness.
+behavior with a public standard-I/O golden, focused native probe, or direct
+runtime I/O harness.
 
 ## String pipeline inspection
 
