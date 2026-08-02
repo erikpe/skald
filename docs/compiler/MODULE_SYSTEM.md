@@ -416,7 +416,7 @@ Given:
 /project/modules/app/main.ska
 /project/modules/app/model.ska
 /deps/modules/math/geometry.ska
-/sdk/modules/std/io.ska
+/sdk/modules/std/numeric.ska
 ```
 
 the providers compose this logical tree:
@@ -425,7 +425,7 @@ the providers compose this logical tree:
 app::main
 app::model
 math::geometry
-std::io
+std::numeric
 ```
 
 The supporting modules may declare:
@@ -441,8 +441,10 @@ public fn measure(value: i64) -> i64 {
     return value;
 }
 
-// std/io.ska
-public extern fn print_i64(value: i64) -> unit;
+// std/numeric.ska
+public fn identity(value: i64) -> i64 {
+    return value;
+}
 ```
 
 The entry module can mix selective and qualified imports:
@@ -451,11 +453,10 @@ The entry module can mix selective and qualified imports:
 // app/main.ska
 from app::model import origin;
 import math::geometry as geometry;
-from std::io import print_i64;
+from std::numeric import identity;
 
 fn main() -> i64 {
-    print_i64(geometry::measure(origin()));
-    return 0;
+    return identity(geometry::measure(origin()));
 }
 ```
 

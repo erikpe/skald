@@ -6,11 +6,16 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Standard I/O](STANDARD_IO_ROADMAP.md) — **in progress**. Add four
+  whole-stream `std::io` functions backed by private `u8[]` intrinsics and a
+  small versioned handle/read/write/open/close runtime boundary while retaining
+  the bootstrap observability helpers. IO0 froze the language and
+  compiler/runtime contracts; IO1, publishing the byte-oriented runtime ABI,
+  is next.
 
 ## Planned
 
-No additional implementation roadmaps are currently planned.
+No implementation roadmaps are currently planned but not started.
 
 ## Design proposals
 

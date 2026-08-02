@@ -122,6 +122,12 @@ no-successor `MirTerminator::Panic`; using it in expression position emits
 `TYP041`. MIR verification independently rejects any residual direct call to
 intrinsic metadata.
 
+The frozen [standard I/O compiler contract](IO.md) reserves five additional
+canonical intrinsics under `std::io`, but they are not in the current registry
+and do not yet cross any compiler phase. Their implementation will use the
+existing declaration syntax and dedicated typed HIR and MIR operations rather
+than generic calls selected by source spelling.
+
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
 target identities. For optional owning values, type checking selects explicit
@@ -987,6 +993,21 @@ performed only on success and no allocation operation. Copy allocation
 instead composes a target-directed checked source with explicit source `new`,
 exact-class allocation, and the selected copy-constructor operation after the
 check succeeds.
+
+### Frozen standard I/O representation
+
+The planned [standard I/O compiler contract](IO.md) assigns canonical
+intrinsic validation to resolution and type checking, semantic access and
+offset information to typed HIR, and executable read, write, open, close, and
+standard-handle operations to MIR. MIR verification will own exact scalar and
+array types, read-only versus mutable access, offset validity structure, and
+the backing anchor that keeps each array range live across its host call.
+
+These are frozen phase responsibilities, not current IR variants. Lowering
+will preserve left-to-right, exactly-once argument evaluation and will expose
+neither a Skald array descriptor nor `Str` representation to a target. The
+x86-64 backend will instead receive verified operations from which it can pass
+one data pointer and remaining byte count to runtime ABI version 7.
 
 ### Frozen panic and termination representation
 

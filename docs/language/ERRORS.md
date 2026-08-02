@@ -254,6 +254,23 @@ minimum, its design must specify:
 These are constraints on a future design, not implemented exceptional-cleanup
 behavior.
 
+## Frozen standard I/O failures
+
+The planned [standard I/O API](IO.md) is all-or-panic. Its standard-library
+implementation translates private negative host results into stable
+operation-specific messages for open, file read, stdin read, stdout write,
+stderr write, and file close failures. It also uses `io: input too large` for
+unrepresentable growth and `io: invalid runtime result` for an impossible
+transfer count or non-progressing nonempty write.
+
+Those messages carry neither paths nor host error numbers. They are ordinary
+explicit panic messages selected by library code, not new compiler-known
+termination reasons in the catalog above. Standard I/O adds no recoverable
+value or exception edge, and a failed operation does not create a new cleanup
+guarantee. The compiler, runtime intrinsics, and `std::io` module are not
+implemented yet; this section freezes only their integration with the existing
+uncatchable panic policy.
+
 ## Recoverable and checked exceptions
 
 Recoverable exceptions are an **exploratory direction**. No exception syntax,

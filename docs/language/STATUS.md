@@ -90,6 +90,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
+| [Standard I/O](IO.md) | **Frozen design** | Four explicitly imported whole-stream `std::io` functions over `Str`, implemented through private `u8[]` intrinsics and a narrow handle runtime boundary. The module, intrinsics, and runtime ABI are not implemented; current scalar output remains bootstrap interoperation. |
 | [Recoverable and checked exceptions](ERRORS.md#recoverable-and-checked-exceptions) | **Exploratory direction** | Deterministic cleanup is a constraint, but syntax, exception values and sets, handlers, failed-construction behavior, and propagation remain open. |
 | [Multiple files and modules](MODULES_AND_INTEROP.md#initial-module-system) | **Implemented contract** | Whole-program compilation supports path-derived modules, anonymous composable roots, `::` qualification, explicit module and selective imports, private-by-default top-level declarations, cyclic multi-module imports with direct self-import rejection, file or logical entry selection, controlled standard-library lookup, deterministic filesystem resolution and identities, and compatible external-ABI coalescing. The in-memory source-text convenience API deliberately has no filesystem/module request context; separate compilation and package distribution remain deferred. |
 | [`while`](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits) | **Implemented contract** | Mandatory-block statement with an exact-`bool` condition, per-test full-expression cleanup, a fresh body lifetime per entered iteration, enclosing mutation, nesting, return, and conservative fallthrough for definite return. |
@@ -99,7 +100,7 @@ guarantees.
 | [Deferred operator and conversion work](TYPES_AND_VALUES.md#deferred-operator-and-conversion-work) | **Open question** | Power, floating remainder, object and user-defined operators, implicit promotion, non-primitive and user-defined conversions, total floating ordering, selectable overflow modes, compound assignment, and other explicitly excluded operations require separate designs. |
 | [Function values](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability), closures, and generics | **Open question** | Direct named calls are implemented; callable values, capture, generic declarations, inference, and specialization are not specified for Skald. |
 | Static state and broader class features | **Open question** | Static fields and state, abstract/final forms, method/function overloads, reflection, and user-defined conversions are not current language contracts. Declaring-class privacy, static methods, and ordinary initializer overloading are implemented separately above. |
-| Broader standard library | **Open question** | The canonical string module is implemented in Skald source. Collection, I/O, formatting, parsing, and broader library organization remain open; current scalar output is bootstrap runtime interoperation. |
+| Broader standard library | **Open question** | The canonical string module is implemented and the initial whole-stream I/O surface is frozen separately. Collections, formatting, parsing, and broader library organization remain open. |
 
 These rows are deliberately brief. Future behavior becomes normative only in a
 focused language document and reaches **frozen design** only after that design

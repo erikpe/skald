@@ -22,6 +22,8 @@ Use the authority closest to the behavior:
 - the implemented raw-byte `std::str::Str` value, literals, and library
   boundary belong in
   [strings](language/STRINGS.md);
+- the frozen four-function whole-stream `std::io` source contract belongs in
+  [standard I/O](language/IO.md);
 - the frozen source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
   [arrays](language/ARRAYS.md);
@@ -68,6 +70,9 @@ Use the authority closest to the behavior:
 - implemented language-item, literal-data, immortal-backing, verification, and
   target responsibilities belong in
   [the strings compiler contract](compiler/STRINGS.md);
+- the frozen private byte-array intrinsic, phase, target, and version-7 runtime
+  boundary belongs in
+  [the standard I/O compiler and runtime contract](compiler/IO.md);
 - implemented shared-owner lowering, allocation layout, generated reference
   counting, finalizers, and the future minimal allocation ABI belong in the
   [shared-ownership compiler and runtime contract](compiler/SHARED_OWNERSHIP.md);

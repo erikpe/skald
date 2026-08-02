@@ -553,6 +553,14 @@ consistent with existing shared ownership: read-only access prevents replacing
 that owner place but does not make the separately shared allocation deeply
 immutable.
 
+The frozen [standard I/O design](IO.md) reuses this existing alias surface for
+private `u8[]` intrinsics. Open and write receive read-only whole-array aliases;
+read receives a mutable whole-array alias plus an offset. The compiler keeps
+the existing backing anchor alive and passes only the checked remaining byte
+range to the runtime. This does not add array descriptor passage to the
+external C ABI, a public array I/O API, or new alias semantics, and it is not
+implemented yet.
+
 ## Lifetime and containment
 
 Elements begin lifetime in increasing index order after backing allocation

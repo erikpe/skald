@@ -6,6 +6,13 @@ safe byte-copying construction, checked observation and slicing, independent
 array conversion, and concatenation. Current output operations remain
 bootstrap C runtime functions rather than the final I/O API.
 
+The planned `std::io` module has a frozen
+[whole-stream source contract](../docs/language/IO.md) and a separate
+[compiler/runtime contract](../docs/compiler/IO.md). It is not installed yet.
+Its four public `Str` functions will be ordinary Skald library code over
+private `u8[]` intrinsics; it neither replaces the observability helpers nor
+adds formatting, parsing, or new string conversions.
+
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`
 explicitly. Call statements execute through the compiler's non-returning panic
@@ -38,5 +45,6 @@ variables use ordinary descriptive names unless they independently require an
 underscore.
 
 The public string contract is documented in
-[Skald Strings](../docs/language/STRINGS.md). Broader library scope remains an
-[open design area](../docs/language/STATUS.md#not-implemented).
+[Skald Strings](../docs/language/STRINGS.md). Feature maturity and the
+remaining broader library scope are tracked in the
+[status matrix](../docs/language/STATUS.md#not-implemented).

@@ -224,6 +224,14 @@ The required asymptotic behavior is:
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 
+The frozen [standard I/O API](IO.md) deliberately composes these existing
+operations. Its planned reads accumulate an ordinary `u8[]` and call
+`Str.from_bytes`, while its writes call `to_bytes` before crossing a private
+byte-array intrinsic boundary. It adds no borrowed byte view, owned-backing
+adoption, builder, primitive conversion, or string-specific runtime ABI. The
+extra `O(n)` copies are therefore part of the initial I/O cost model. The
+module and intrinsics are not implemented yet.
+
 The broader public method and builder APIs remain standard-library design.
 Indexing,
 slicing, equality, comparison, hashing, concatenation, formatting, and parsing

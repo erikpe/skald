@@ -50,6 +50,30 @@ general formatting API, recoverable I/O API, or final standard-library design.
 The compiler does not recognize their names specially: Skald programs declare
 and call them through the ordinary restricted external-function mechanism.
 
+## Frozen byte I/O ABI addition
+
+The [standard I/O compiler and runtime contract](IO.md) freezes five future
+host operations over handles, scalars, and byte pointer/length pairs. Landing
+them is an incompatible public-surface change and will advance the numeric
+version and link marker together from ABI version 6 to version 7.
+
+The planned C declarations are:
+
+```c
+int64_t ska_rt_io_standard_handle(uint8_t stream);
+int64_t ska_rt_io_open(const uint8_t* path, uint64_t path_length, uint8_t mode);
+int64_t ska_rt_io_read(int64_t handle, uint8_t* destination, uint64_t capacity);
+int64_t ska_rt_io_write(int64_t handle, const uint8_t* source, uint64_t length);
+int64_t ska_rt_io_close(int64_t handle);
+```
+
+These declarations are not in the current header. Version 6 exports none of
+them. The frozen boundary keeps arrays, strings, buffer growth, whole-input
+loops, partial-write completion, and public error selection outside C while
+giving the runtime ownership of one Linux host transfer at a time. The exact
+selectors, result convention, interruption behavior, path adaptation, and
+contract defects are defined only in the focused I/O contract.
+
 ## Version and link compatibility
 
 ABI version 6 uses the exported no-op marker `ska_rt_abi_v6`. Every generated
@@ -196,7 +220,7 @@ not carried by this ABI and remain deferred.
 
 ## Responsibility boundary
 
-The runtime owns its version/link guard, checked byte
+The current version-6 runtime owns its version/link guard, checked byte
 allocation/deallocation, the panic reporter, and the five output operations
 above. It has no public ABI for:
 
@@ -207,8 +231,10 @@ above. It has no public ABI for:
 - runtime traces;
 - recoverable or checked exceptions.
 
-Future language designs may require some of these responsibilities, but they
-do not exist merely because a runtime library is present.
+The frozen I/O addition above deliberately selects a small future exception to
+the files/general-I/O exclusion; it is not current behavior. Other future
+language designs may require more of these responsibilities, but they do not
+exist merely because a runtime library is present.
 
 The implemented
 [array compiler contract](ARRAYS.md#internal-abi-and-runtime-boundary) requires

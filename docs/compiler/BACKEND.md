@@ -16,6 +16,9 @@ exact-class optional local, field, parameter, result, and temporary MIR is
 legal backend input, including checked class payload views and optional shared
 owners. Inline optional-container aliases are indirect optional places with
 one address component and no object-origin metadata.
+The frozen [standard I/O compiler and runtime contract](IO.md) separately owns
+the planned byte-array operation and runtime-call boundary. It does not
+describe current backend input.
 
 ## Backend interface and target registry
 
@@ -370,6 +373,22 @@ fixed-home loop-carried values, calls across backedges, nested CFG, assembler
 acceptance, and observable per-iteration cleanup. Those tests prove mechanical
 realization of verified MIR; they do not establish source legality or repair
 invalid lifetime state.
+
+## Frozen standard I/O target boundary
+
+Standard I/O implementation will make five dedicated verified MIR operations
+legal on x86-64. The backend will lower array operands to a data pointer at the
+checked offset plus the remaining byte count, retain their backing anchors
+across the call, and use the scalar System V classifications already defined
+below. It will call only the exact version-7 symbols specified by the
+[I/O contract](IO.md#runtime-abi-version-7); it will not pass an array
+descriptor or a `Str` value to C.
+
+Offset validity must be established before pointer arithmetic and the call.
+The runtime's signed `i64` result returns through the ordinary integer result
+register and remains unaltered for standard-library validation. These are
+frozen target requirements; the current backend has no I/O MIR operations and
+still targets runtime ABI version 6.
 
 ## Panic and hard-trap boundary
 

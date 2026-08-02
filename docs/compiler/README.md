@@ -151,6 +151,13 @@ whole-array and exact element aliases execute with detached-backing and
 shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
+The [standard I/O compiler and runtime contract](IO.md) freezes a future
+five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64
+pointer/length lowering, and runtime ABI version 7. It deliberately leaves
+buffering, completion loops, `Str` conversion, and public failures in Skald
+standard-library code. None of that boundary is implemented yet: the current
+intrinsic registry and runtime ABI remain unchanged.
+
 ## Pipeline
 
 ```text
@@ -169,7 +176,7 @@ The current driver composes this path for one source file. The frozen module
 contract extends the source and resolution front of the same pipeline to a
 reachable graph; it does not introduce a second semantic linker or a separate
 lower pipeline. Every phase entry point and product also remains independently
-usable by repository tests and debugging tools. Source I/O, host tool
+usable by repository tests and debugging tools. Compiler source-file I/O, host tool
 invocation, runtime linkage, and artifact publication are driver
 responsibilities outside the phase pipeline.
 
