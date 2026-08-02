@@ -4,9 +4,11 @@ mod native_expectations;
 
 use std::{
     ffi::OsString,
-    fs, io,
+    fs,
+    io::{self, Write},
     path::{Path, PathBuf},
-    process::{self, Command, Output},
+    process::{self, Command, Output, Stdio},
+    thread,
 };
 
 use native_expectations::{load_native_expectations, verify_native_execution};
@@ -184,8 +186,8 @@ fn run_native_case(
         .map_err(|error| format!("could not start skac: {error}"))?;
     require_successful_compilation(&compilation)?;
 
-    let execution = run_executable(&executable, &case.working_directory)?;
-    let repeated = run_executable(&executable, &case.working_directory)?;
+    let execution = run_executable(&executable, &case.working_directory, expected.stdin())?;
+    let repeated = run_executable(&executable, &case.working_directory, expected.stdin())?;
     if (
         execution.status.code(),
         &execution.stdout,
@@ -202,11 +204,34 @@ fn run_native_case(
     )
 }
 
-fn run_executable(executable: &Path, working_directory: &Path) -> Result<Output, String> {
-    Command::new(executable)
+fn run_executable(
+    executable: &Path,
+    working_directory: &Path,
+    input: &[u8],
+) -> Result<Output, String> {
+    let mut child = Command::new(executable)
         .current_dir(working_directory)
-        .output()
-        .map_err(|error| format!("could not run generated executable: {error}"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("could not start generated executable: {error}"))?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .expect("piped child stdin is available exactly once");
+
+    thread::scope(|scope| {
+        let writer = scope.spawn(move || stdin.write_all(input));
+        let output = child
+            .wait_with_output()
+            .map_err(|error| format!("could not wait for generated executable: {error}"));
+        writer
+            .join()
+            .map_err(|_| "stdin writer thread panicked".to_owned())?
+            .map_err(|error| format!("could not write generated executable stdin: {error}"))?;
+        output
+    })
 }
 
 fn assert_deterministic_assembly(

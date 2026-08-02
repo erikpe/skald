@@ -174,12 +174,11 @@ assigns coverage across these same layers. Direct runtime harnesses now own
 the version-7 handle and one-transfer byte boundary. Phase tests own canonical
 identities, types, access modes, anchors, and deterministic dumps; backend
 tests own pointer/length lowering and exact symbols; private-standard-library
-native goldens own checked calls and host failures. IO5 adds public write
-goldens plus forced-partial, binary, invalid-progress, and closed-descriptor
-native coverage. IO6 and IO7 will add EOF and whole-input behavior.
-The golden harness currently has
-stdout, stderr, and exit sidecars but no stdin fixture. Adding an explicit
-stdin sidecar is an implementation prerequisite, not current harness support.
+native goldens own checked calls and host failures. Public I/O goldens and
+native probes cover exact writes, EOF, geometric read growth, working-directory
+files, binary partial transfers, invalid progress, close behavior, and stable
+failures. The golden harness accepts exact-byte stdin, stdout, stderr, and exit
+sidecars and feeds the same stdin bytes to both deterministic executions.
 
 Multi-file golden directories contain one `case.args` manifest plus their
 entry and supporting trees. The manifest records one exact command argument

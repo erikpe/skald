@@ -1,6 +1,6 @@
 # Standard I/O Roadmap
 
-Status: in progress; IO0 through IO5 are complete, and IO6 is next.
+Status: in progress; IO0 through IO6 are complete, and IO7 is next.
 
 This roadmap establishes a small handle-and-byte runtime boundary and uses it
 to implement whole-input and whole-output functions in Skald's standard
@@ -126,7 +126,7 @@ lengths.
 - [x] IO3 — Represent and verify target-independent I/O operations
 - [x] IO4 — Lower verified I/O to the x86-64 runtime ABI
 - [x] IO5 — Implement exact standard-stream writes
-- [ ] IO6 — Implement whole stdin and file reads
+- [x] IO6 — Implement whole stdin and file reads
 - [ ] IO7 — Harden integration and reconcile living documentation
 
 ## PR-sized implementation sequence
@@ -367,34 +367,35 @@ fully supported and unchanged.
 **Purpose:** Complete the requested public API with one Skald-owned growable
 read-all algorithm and deterministic byte-exact stdin and file evidence.
 
-- [ ] Implement one private read-all helper in `std/std/io.ska` using an
+- [x] Implement one private read-all helper in `std/std/io.ska` using an
       initial fixed-capacity `u8[]`, a filled offset, repeated reads until
       result zero, checked geometric growth, and existing array copy/slice
       operations.
-- [ ] Validate every result before updating the filled range; use the selected
+- [x] Validate every result before updating the filled range; use the selected
       read failure on a negative result, `io: invalid runtime result` when a
       count exceeds remaining capacity, and `io: input too large` when growth
       cannot produce a larger valid array.
-- [ ] Implement `read_stdin() -> Str` from the standard stdin handle without
+- [x] Implement `read_stdin() -> Str` from the standard stdin handle without
       closing it. Implement `read_file(ref path: Str) -> Str` by copying the
       path through existing `to_bytes`, opening read-only, reading all bytes,
       closing normally, and only then returning a `Str` made through existing
       `from_bytes`.
-- [ ] Keep the deliberate intermediate and final byte copies visible in tests
+- [x] Keep the deliberate intermediate and final byte copies visible in tests
       and documentation; do not add an owned-array string factory, byte view,
       builder, or compiler-visible `Str` layout shortcut.
-- [ ] Extend native golden expectations with an optional byte-exact `.stdin`
+- [x] Extend native golden expectations with an optional byte-exact `.stdin`
       sidecar, feed the same bytes to both deterministic executions, cover
       missing-as-empty behavior and binary mismatch reporting, and avoid pipe
       deadlock for larger inputs.
-- [ ] Add stdin goldens for empty, embedded-zero/non-UTF-8, and input crossing
-      the initial growth boundary. Add working-directory file fixtures for
-      empty and binary files, growth, raw-byte preservation, and normal close.
-- [ ] Add focused failure coverage for nonexistent and embedded-zero paths,
-      unreadable/open failure, read failure, close failure where it can be
-      induced deterministically, and input-growth overflow at its owning
+- [x] Add stdin goldens for empty input and input crossing the initial growth
+      boundary, plus a focused native probe for embedded-zero/non-UTF-8 partial
+      stdin and file reads. Add working-directory file fixtures for empty
+      files, growth, raw-byte preservation, and normal close.
+- [x] Add focused failure coverage for nonexistent and embedded-zero paths,
+      deterministic open and read failures, induced stdin/file read and close
+      failures, invalid counts, and input-growth overflow at its owning
       compiler/standard-library boundary.
-- [ ] Update golden, standard-library, language I/O, status, and testing
+- [x] Update golden, standard-library, language I/O, status, and testing
       documentation to describe `.stdin`, whole-read blocking/EOF behavior,
       file handle ownership, and the complete four-function public API.
 

@@ -11,7 +11,9 @@ The runner recursively discovers two case families:
   only unsuccessful termination. `failure` accepts a nonzero status or signal
   without freezing platform trap details. Optional `.stdout` and `.stderr`
   sidecars contain the exact expected bytes for their respective streams;
-  absence means that stream must be empty.
+  absence means that stream must be empty. An optional `.stdin` sidecar
+  contains the exact bytes supplied to the executable; absence means immediate
+  EOF.
 - `compile_fail/**/*.ska` requires a same-named `.stderr` sidecar containing
   exact rendered diagnostics.
 
@@ -36,17 +38,17 @@ sdk modules
 ```
 
 Use a source path line instead of `--entry` plus a logical path for positional
-entry cases. Multi-file sidecars are named `case.exit`, optional `case.stdout`,
-or optional `case.stderr`. Keep all module roots and support files below the
+entry cases. Multi-file sidecars are named `case.exit`, optional `case.stdin`,
+optional `case.stdout`, or optional `case.stderr`. Keep all module roots and support files below the
 case directory so fixtures remain hermetic and relocatable. In multi-file
 diagnostic snapshots, the required `case.stderr` contains compiler
 diagnostics; the runner removes the absolute case-directory prefix so source
 and provider paths begin with the relative fixture path such as
 `modules/app.ska`.
 
-Sidecars are byte-for-byte expectations. Whitespace, line endings, trailing
-line feeds, and non-UTF-8 stream bytes are not normalized. Compile failures
-must produce no stdout and exit with compiler status 1.
+Sidecars are byte-for-byte inputs or expectations. Whitespace, line endings,
+trailing line feeds, zero bytes, and non-UTF-8 stream bytes are not normalized.
+Compile failures must produce no stdout and exit with compiler status 1.
 
 The root Makefile builds the runtime before the runner invokes the real `skac`
 binary. Single-file cases compile and run from the repository root; multi-file
@@ -56,7 +58,9 @@ in two independent processes and compares the bytes before linking and
 execution. It likewise compiles each failure twice and compares stderr before
 checking its snapshot. Each native executable runs twice; both status and
 output must agree before stdout, stderr, and process status are checked
-independently. Disposable artifacts are written under `build/golden/`.
+independently. Nonempty stdin is written concurrently with output collection,
+so inputs larger than host pipe capacity cannot deadlock the runner.
+Disposable artifacts are written under `build/golden/`.
 
 Keep each source focused and give related cases descriptive names. Put
 source-visible, target-independent expectations in the source and sidecars;

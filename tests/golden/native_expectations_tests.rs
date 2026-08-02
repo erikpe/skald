@@ -13,9 +13,38 @@ use native_expectations::{load_native_expectations, verify_native_execution};
 static NEXT_TEMPORARY_DIRECTORY: AtomicUsize = AtomicUsize::new(0);
 
 #[test]
+fn missing_stdin_sidecar_means_empty_input() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(expected.stdin(), b"");
+}
+
+#[test]
+fn binary_stdin_sidecar_is_loaded_byte_for_byte() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(
+        directory.path(),
+        b"0\n",
+        Some(b"input\0\xff\n"),
+        Some(b"input\0\xff\n"),
+        None,
+    );
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(expected.stdin(), b"input\0\xff\n");
+    let error = verify_native_execution(&expected, Some(0), b"input\0\xfe\n", b"").unwrap_err();
+    assert!(error.contains("expected (8 bytes): b\"input\\x00\\xff\\n\""));
+    assert!(error.contains("actual (8 bytes): b\"input\\x00\\xfe\\n\""));
+}
+
+#[test]
 fn missing_stdout_sidecar_means_empty_output() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"7\n", None, None);
+    let source = write_case(directory.path(), b"7\n", None, None, None);
 
     let expected = load_native_expectations(&source).unwrap();
 
@@ -27,7 +56,7 @@ fn missing_stdout_sidecar_means_empty_output() {
 #[test]
 fn failure_accepts_a_nonzero_status_or_signal_without_freezing_either() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"failure\n", None, None);
+    let source = write_case(directory.path(), b"failure\n", None, None, None);
     let expected = load_native_expectations(&source).unwrap();
 
     assert!(verify_native_execution(&expected, Some(1), b"", b"").is_ok());
@@ -40,7 +69,7 @@ fn failure_accepts_a_nonzero_status_or_signal_without_freezing_either() {
 #[test]
 fn stdout_sidecar_is_loaded_and_compared_as_exact_bytes() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0\n", Some(b"42\r\n\xff"), None);
+    let source = write_case(directory.path(), b"0\n", None, Some(b"42\r\n\xff"), None);
 
     let expected = load_native_expectations(&source).unwrap();
 
@@ -51,7 +80,7 @@ fn stdout_sidecar_is_loaded_and_compared_as_exact_bytes() {
 #[test]
 fn missing_trailing_line_feed_is_reported_unambiguously() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", Some(b"42\n"), None);
+    let source = write_case(directory.path(), b"0", None, Some(b"42\n"), None);
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(0), b"42", b"").unwrap_err();
@@ -63,7 +92,7 @@ fn missing_trailing_line_feed_is_reported_unambiguously() {
 #[test]
 fn extra_trailing_line_feed_is_reported_unambiguously() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", Some(b"42"), None);
+    let source = write_case(directory.path(), b"0", None, Some(b"42"), None);
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(0), b"42\n", b"").unwrap_err();
@@ -75,7 +104,7 @@ fn extra_trailing_line_feed_is_reported_unambiguously() {
 #[test]
 fn non_utf8_mismatch_uses_escaped_byte_spelling() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", Some(b"\xff\n"), None);
+    let source = write_case(directory.path(), b"0", None, Some(b"\xff\n"), None);
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(0), b"\xfe\n", b"").unwrap_err();
@@ -87,7 +116,7 @@ fn non_utf8_mismatch_uses_escaped_byte_spelling() {
 #[test]
 fn missing_stderr_sidecar_means_empty_output() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", None, None);
+    let source = write_case(directory.path(), b"0", None, None, None);
     let expected = load_native_expectations(&source).unwrap();
 
     assert_eq!(expected.stderr(), b"");
@@ -105,6 +134,7 @@ fn stderr_sidecar_is_loaded_and_compared_as_exact_bytes() {
         directory.path(),
         b"failure",
         None,
+        None,
         Some(b"panic: bad\x00input\n"),
     );
     let expected = load_native_expectations(&source).unwrap();
@@ -116,7 +146,13 @@ fn stderr_sidecar_is_loaded_and_compared_as_exact_bytes() {
 #[test]
 fn stderr_missing_and_extra_bytes_are_reported_unambiguously() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"failure", None, Some(b"panic: bad\n"));
+    let source = write_case(
+        directory.path(),
+        b"failure",
+        None,
+        None,
+        Some(b"panic: bad\n"),
+    );
     let expected = load_native_expectations(&source).unwrap();
 
     let missing = verify_native_execution(&expected, Some(1), b"", b"panic: bad").unwrap_err();
@@ -130,7 +166,7 @@ fn stderr_missing_and_extra_bytes_are_reported_unambiguously() {
 #[test]
 fn non_utf8_stderr_mismatch_uses_escaped_byte_spelling() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"failure", None, Some(b"\xff\n"));
+    let source = write_case(directory.path(), b"failure", None, None, Some(b"\xff\n"));
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(1), b"", b"\xfe\n").unwrap_err();
@@ -145,6 +181,7 @@ fn exit_stdout_and_stderr_mismatches_are_reported_together() {
     let source = write_case(
         directory.path(),
         b"5",
+        None,
         Some(b"expected stdout\n"),
         Some(b"expected stderr\n"),
     );
@@ -161,11 +198,15 @@ fn exit_stdout_and_stderr_mismatches_are_reported_together() {
 fn write_case(
     directory: &Path,
     exit: &[u8],
+    stdin: Option<&[u8]>,
     stdout: Option<&[u8]>,
     stderr: Option<&[u8]>,
 ) -> PathBuf {
     let source = directory.join("case.ska");
     fs::write(source.with_extension("exit"), exit).unwrap();
+    if let Some(stdin) = stdin {
+        fs::write(source.with_extension("stdin"), stdin).unwrap();
+    }
     if let Some(stdout) = stdout {
         fs::write(source.with_extension("stdout"), stdout).unwrap();
     }

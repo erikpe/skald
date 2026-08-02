@@ -13,8 +13,9 @@ progress. Completed roadmaps and resolved discovery records move to
   published the independently tested runtime ABI, IO2 implemented the closed
   private-intrinsic registry and typed I/O HIR, IO3 added verified
   target-independent I/O MIR, and IO4 connected it to the version-7 runtime on
-  x86-64. IO5 implemented exact standard-stream writes; IO6 whole-input reads
-  are next.
+  x86-64. IO5 implemented exact standard-stream writes, and IO6 completed the
+  public API with growable whole-input reads. IO7 integration hardening and
+  documentation reconciliation are next.
 
 ## Planned
 

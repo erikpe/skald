@@ -1,15 +1,14 @@
 # Standard I/O
 
-**Status:** exact standard-stream writes implemented; whole-input reads planned.
+**Status:** implemented four-function whole-stream API.
 
 This document defines the source-level contract for Skald's first standard I/O
-module. The installed module exposes `write_stdout` and `write_stderr` as
-ordinary Skald functions over its five private byte-array intrinsics. The
-compiler resolves and types intrinsic calls into dedicated I/O HIR and
-verified MIR, and x86-64 lowers them to the narrow host byte operations
-provided by runtime ABI version 7. `read_stdin` and `read_file` are not yet
-implemented. The existing scalar print helpers remain available as a separate
-bootstrap observability facility.
+module. The installed module exposes all four functions as ordinary Skald code
+over its five private byte-array intrinsics. The compiler resolves and types
+intrinsic calls into dedicated I/O HIR and verified MIR, and x86-64 lowers
+them to the narrow host byte operations provided by runtime ABI version 7.
+The existing scalar print helpers remain available as a separate bootstrap
+observability facility.
 
 The compiler and runtime contract behind this API is specified in
 [Standard I/O compiler and runtime contract](../compiler/IO.md). Current
@@ -29,7 +28,7 @@ public fn write_stderr(ref text: Str) -> unit;
 These functions are ordinary Skald standard-library functions. Their private
 intrinsics and host handles are implementation details: programs cannot import
 or call them through this public surface. `std::io` is not part of the prelude.
-The two writes are currently available; the two reads remain planned.
+All four functions are currently available.
 
 ## Byte model
 
@@ -59,9 +58,11 @@ file after a successful read, and returns every byte in order. The initial host
 implementation uses Linux path bytes. An embedded NUL byte is not a valid path.
 No character decoding or newline transformation occurs.
 
-Both reads grow their internal buffer as needed. Their time and retained result
-space are linear in the number of bytes read. Inputs that cannot be represented
-by a Skald array fail rather than truncating.
+Both reads start with a 64-byte array and grow geometrically as needed, then
+copy the filled prefix into an exact-length array before `Str.from_bytes`
+performs the final string copy. Their time and retained result space are linear
+in the number of bytes read. Inputs that cannot be represented by a Skald array
+fail rather than truncating.
 
 ## Exact output writes
 

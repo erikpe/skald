@@ -51,6 +51,14 @@ pub(crate) fn standard_io_program(app: &str) -> MirProgram {
     lower_io_program(app, CANONICAL_IO_SOURCE)
 }
 
+pub(crate) fn standard_io_program_with_additional_bodies(
+    app: &str,
+    additional: &str,
+) -> MirProgram {
+    let io = format!("{CANONICAL_IO_SOURCE}\n{additional}");
+    lower_io_program(app, &io)
+}
+
 fn lower_io_program(app: &str, io: &str) -> MirProgram {
     let (_workspace, graph) = load_module_sources(
         "app",

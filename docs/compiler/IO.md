@@ -1,13 +1,13 @@
 # Standard I/O Compiler and Runtime Contract
 
-**Status:** runtime ABI, private compiler intrinsic pipeline, and public writes
-implemented; public reads planned.
+**Status:** runtime ABI, private compiler intrinsic pipeline, and all four
+public functions implemented.
 
 This document defines the compiler/runtime boundary for the source API in
 [Standard I/O](../language/IO.md). Runtime ABI version 7 implements the five
 host operations below. The closed compiler registry recognizes the five
-private declarations installed in `std::io`; the module exposes its two public
-writes while its two whole-input reads remain planned.
+private declarations installed in `std::io`; the module implements its complete
+four-function public surface in ordinary Skald code.
 
 ## Ownership boundary
 
@@ -167,10 +167,9 @@ length formation, empty ranges, assembler acceptance, and native version-7
 archive linkage. Private replacement-standard-library goldens cover successful
 results, host failures, dynamic offsets, and bounds failure before C.
 
-Standard-library and native tests cover completed stdout/stderr writes, exact
-binary bytes, forced partial transfers, invalid progress, and stable selected
-panic messages. Remaining standard-library work must cover whole stdin and
-file reads.
+Standard-library, golden, and native tests cover exact binary reads and writes,
+forced partial transfers, geometric read growth, EOF, normal file close,
+invalid progress, and stable selected panic messages.
 
 Direct C harnesses already cover runtime standard handles, open, close-on-exec,
 empty and binary transfers, partial progress, EOF, negative host failures,
@@ -181,6 +180,6 @@ Resolver and type-check tests already cover canonical identity,
 exact-signature and private-access diagnostics, array-alias eligibility,
 dedicated HIR, replacement providers, and deterministic resolved/HIR products.
 
-The golden harness will need an explicit stdin fixture before stdin behavior can
-be tested end to end. That harness capability is part of implementation, not a
-change to the language contract.
+The golden harness accepts an optional exact-byte `.stdin` sidecar, supplies it
+to both deterministic native executions, and treats a missing sidecar as
+immediate EOF.

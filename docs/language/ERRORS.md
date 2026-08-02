@@ -268,8 +268,8 @@ explicit panic messages selected by library code, not new compiler-known
 termination reasons in the catalog above. Standard I/O adds no recoverable
 value or exception edge, and a failed operation does not create a new cleanup
 guarantee. The runtime byte operations and private `std::io` compiler
-intrinsics and MIR/backend lowering are implemented. The public writes select
-their stable failures now; the public reads remain planned. This section
+intrinsics, MIR/backend lowering, and all four public functions are
+implemented. Library code selects every stable failure above. This section
 defines their integration with the existing
 uncatchable panic policy.
 

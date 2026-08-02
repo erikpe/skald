@@ -12,9 +12,10 @@ The `std::io` module has a frozen
 [compiler/runtime contract](../docs/compiler/IO.md). Its five private
 byte-array declarations, compiler HIR/MIR, and x86-64 lowering are implemented,
 and runtime ABI version 7 provides independently tested host byte operations.
-`write_stdout` and `write_stderr` are ordinary Skald library loops over those
-private `u8[]` intrinsics; `read_stdin` and `read_file` remain planned. This
-module neither replaces the observability helpers nor adds formatting,
+All four public functions are ordinary Skald library code over those private
+`u8[]` intrinsics. Reads own geometric buffering, EOF loops, exact-length
+trimming, normal file close, and the existing final `Str.from_bytes` copy.
+This module neither replaces the observability helpers nor adds formatting,
 parsing, or new string conversions.
 
 The `std::error` module declares the compiler-known

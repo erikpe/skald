@@ -7,6 +7,46 @@ intrinsic fn _io_read(handle: i64, mut ref destination: u8[], offset: u64) -> i6
 intrinsic fn _io_write(handle: i64, ref source: u8[], offset: u64) -> i64;
 intrinsic fn _io_close(handle: i64) -> i64;
 
+fn _next_read_capacity(capacity: u64) -> u64 {
+    if (capacity == 0u || capacity > 4611686018427387903u) {
+        panic("io: input too large");
+    }
+    return capacity * 2u;
+}
+
+fn _read_all(handle: i64, source: u8) -> u8[] {
+    var bytes: u8[] = u8[](64u);
+    var filled: u64 = 0u;
+
+    while (true) {
+        if (filled == bytes.len()) {
+            var capacity: u64 = bytes.len();
+            var grown: u8[] = u8[](_next_read_capacity(capacity));
+            grown[:(i64) capacity] = bytes;
+            bytes = grown;
+        }
+
+        var result: i64 = _io_read(handle, bytes, filled);
+        if (result < 0) {
+            if (source == 0u8) {
+                panic("io: failed to read stdin");
+            }
+            panic("io: failed to read file");
+        }
+        if (result == 0) {
+            return bytes[:(i64) filled];
+        }
+
+        var count: u64 = (u64) result;
+        var remaining: u64 = bytes.len() - filled;
+        if (count > remaining) {
+            panic("io: invalid runtime result");
+        }
+        filled = filled + count;
+    }
+    return u8[]();
+}
+
 fn _write_all(ref bytes: u8[], stream: u8) -> unit {
     var handle: i64 = _io_standard_handle(stream);
     var offset: u64 = 0u;
@@ -28,6 +68,27 @@ fn _write_all(ref bytes: u8[], stream: u8) -> unit {
         offset = offset + written;
     }
     return;
+}
+
+public fn read_stdin() -> std::str::Str {
+    var handle: i64 = _io_standard_handle(0u8);
+    var bytes: u8[] = _read_all(handle, 0u8);
+    return std::str::Str.from_bytes(bytes);
+}
+
+public fn read_file(ref path: std::str::Str) -> std::str::Str {
+    var path_bytes: u8[] = path.to_bytes();
+    var handle: i64 = _io_open(path_bytes, 0u8);
+    if (handle < 0) {
+        panic("io: failed to open file");
+    }
+
+    var bytes: u8[] = _read_all(handle, 1u8);
+    var close_result: i64 = _io_close(handle);
+    if (close_result < 0) {
+        panic("io: failed to close file");
+    }
+    return std::str::Str.from_bytes(bytes);
 }
 
 public fn write_stdout(ref text: std::str::Str) -> unit {

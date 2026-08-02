@@ -1,0 +1,4 @@
+--entry
+app::main
+--module-root
+application

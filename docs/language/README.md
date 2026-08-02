@@ -137,9 +137,9 @@ makes a result source-observable.
   operations, and compiler/library boundary.
 - [Standard I/O](IO.md) freezes the four-function `std::io` surface,
   raw-byte whole-input and exact-output behavior, stable failures, costs, and
-  deliberate exclusions. Its private compiler/runtime foundation and x86-64
-  lowering are implemented; both exact standard-stream writes execute as
-  ordinary Skald library code, while the two whole-input reads remain planned.
+  deliberate exclusions. Its private compiler/runtime foundation, x86-64
+  lowering, exact standard-stream writes, and growable whole-input reads all
+  execute through ordinary Skald library code over the private byte boundary.
 - [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
   construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
   and failure contract.

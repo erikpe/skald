@@ -1,0 +1,8 @@
+import std::io;
+import std::str;
+
+fn main() -> i64 {
+    var path: std::str::Str = "invalid\0path";
+    var contents: std::str::Str = std::io::read_file(path);
+    return 0;
+}

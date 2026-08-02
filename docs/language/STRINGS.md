@@ -225,13 +225,13 @@ The required asymptotic behavior is:
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 
 The frozen [standard I/O API](IO.md) deliberately composes these existing
-operations. Its planned reads accumulate an ordinary `u8[]` and call
+operations. Its implemented reads accumulate an ordinary `u8[]` and call
 `Str.from_bytes`, while its implemented writes call `to_bytes` before crossing
 a private byte-array intrinsic boundary. It adds no borrowed byte view, owned-backing
 adoption, builder, primitive conversion, or string-specific runtime ABI. The
 extra `O(n)` copies are therefore part of the initial I/O cost model. The
-private intrinsic pipeline and lower-phase execution are implemented. The two
-public writes are available; the two public reads remain planned.
+private intrinsic pipeline, lower-phase execution, and four public functions
+are implemented.
 
 The broader public method and builder APIs remain standard-library design.
 Indexing,

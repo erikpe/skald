@@ -1,0 +1,12 @@
+import std::io;
+import std::str;
+
+fn main() -> i64 {
+    var empty_path: std::str::Str = "empty.bin";
+    var payload_path: std::str::Str = "payload.bin";
+    var empty: std::str::Str = std::io::read_file(empty_path);
+    var payload: std::str::Str = std::io::read_file(payload_path);
+    std::io::write_stdout(empty);
+    std::io::write_stdout(payload);
+    return 0;
+}

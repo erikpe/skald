@@ -120,17 +120,6 @@ fn canonical_standard_io_writes_use_one_verified_partial_progress_loop() {
     ));
     verify_mir(&program).unwrap();
 
-    let operations = io_instructions(&program);
-    assert_eq!(operations.len(), 2);
-    assert!(matches!(
-        operations[0].operation,
-        MirIoOperation::StandardHandle { .. }
-    ));
-    assert!(matches!(
-        operations[1].operation,
-        MirIoOperation::Write { .. }
-    ));
-
     let write_all = program
         .definitions
         .iter()
@@ -141,6 +130,25 @@ fn canonical_standard_io_writes_use_one_verified_partial_progress_loop() {
                 .is_some_and(|declaration| declaration.name == "_write_all")
         })
         .expect("canonical standard library defines one write-all helper");
+    let operations = write_all
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Io(io) => Some(io),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(operations.len(), 2);
+    assert!(matches!(
+        operations[0].operation,
+        MirIoOperation::StandardHandle { .. }
+    ));
+    assert!(matches!(
+        operations[1].operation,
+        MirIoOperation::Write { .. }
+    ));
     assert!(write_all.body.blocks.iter().any(|block| {
         block.terminator.as_ref().is_some_and(|terminator| {
             terminator
@@ -158,6 +166,92 @@ fn canonical_standard_io_writes_use_one_verified_partial_progress_loop() {
             .count(),
         3
     );
+}
+
+#[test]
+fn canonical_standard_io_reads_use_one_verified_growable_eof_loop() {
+    let program = fixture_standard_io_program(concat!(
+        "import std::io;\n",
+        "import std::str;\n",
+        "fn main() -> i64 {\n",
+        "  var path: std::str::Str = \"input.bin\";\n",
+        "  var stdin: std::str::Str = std::io::read_stdin();\n",
+        "  var file: std::str::Str = std::io::read_file(path);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    verify_mir(&program).unwrap();
+
+    let read_all = program
+        .definitions
+        .iter()
+        .find(|definition| {
+            program
+                .declarations
+                .get(definition.function)
+                .is_some_and(|declaration| declaration.name == "_read_all")
+        })
+        .expect("canonical standard library defines one read-all helper");
+    let operations = read_all
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Io(io) => Some(io),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(operations.len(), 1);
+    assert!(matches!(
+        operations[0].operation,
+        MirIoOperation::Read { .. }
+    ));
+    assert!(read_all.body.blocks.iter().any(|block| {
+        block.terminator.as_ref().is_some_and(|terminator| {
+            terminator
+                .successors()
+                .any(|target| target.index() <= block.id.index())
+        })
+    }));
+    assert_eq!(
+        read_all
+            .body
+            .blocks
+            .iter()
+            .filter(|block| matches!(block.terminator, Some(MirTerminator::Panic { .. })))
+            .count(),
+        3
+    );
+
+    let public_operations = program
+        .definitions
+        .iter()
+        .filter(|definition| {
+            program
+                .declarations
+                .get(definition.function)
+                .is_some_and(|declaration| {
+                    matches!(declaration.name.as_str(), "read_stdin" | "read_file")
+                })
+        })
+        .flat_map(|definition| &definition.body.blocks)
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Io(io) => Some(&io.operation),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(public_operations.len(), 3);
+    assert!(public_operations
+        .iter()
+        .any(|operation| matches!(operation, MirIoOperation::StandardHandle { .. })));
+    assert!(public_operations
+        .iter()
+        .any(|operation| matches!(operation, MirIoOperation::Open { .. })));
+    assert!(public_operations
+        .iter()
+        .any(|operation| matches!(operation, MirIoOperation::Close { .. })));
 }
 
 #[test]

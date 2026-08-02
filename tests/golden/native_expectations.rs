@@ -5,11 +5,16 @@ use std::{fs, io::ErrorKind, path::Path};
 #[derive(Debug, Eq, PartialEq)]
 pub struct NativeExpectations {
     exit_status: ExpectedExitStatus,
+    stdin: Vec<u8>,
     stdout: Vec<u8>,
     stderr: Vec<u8>,
 }
 
 impl NativeExpectations {
+    pub fn stdin(&self) -> &[u8] {
+        &self.stdin
+    }
+
     pub fn stdout(&self) -> &[u8] {
         &self.stdout
     }
@@ -29,18 +34,21 @@ enum ExpectedExitStatus {
 ///
 /// An exit sidecar contains either one exact status in `0..=255` or `failure`
 /// when the contract promises only unsuccessful termination. A missing
-/// `.stdout` or `.stderr` sidecar means the corresponding stream must be empty.
+/// `.stdin`, `.stdout`, or `.stderr` sidecar means the corresponding stream
+/// must be empty.
 pub fn load_native_expectations(source: &Path) -> Result<NativeExpectations, String> {
     let exit_path = source.with_extension("exit");
     let exit_text = fs::read_to_string(&exit_path)
         .map_err(|error| format!("could not read {}: {error}", exit_path.display()))?;
     let exit_status = parse_exit_status(exit_text.trim())?;
 
+    let stdin = read_optional_sidecar(source, "stdin")?;
     let stdout = read_optional_sidecar(source, "stdout")?;
     let stderr = read_optional_sidecar(source, "stderr")?;
 
     Ok(NativeExpectations {
         exit_status,
+        stdin,
         stdout,
         stderr,
     })
