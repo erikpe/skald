@@ -8,13 +8,19 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md) —
   move explicit primitive formatting and optional parsing into
-  `std::str::Str`; TXT4 (shortest round-tripping binary64 formatting) is next.
+  `std::str::Str`; TXT5 (adopt string I/O and retire scalar runtime
+  observation) is next.
   It depends on the implemented primitive operator, optional-value, string,
   loop, and standard-I/O contracts.
 
 ## Planned
 
-No implementation roadmaps are currently planned but not started.
+- [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
+  — allow exact-class-producing expressions to bind directly to read-only
+  `ref` parameters through verified caller-owned full-expression temporaries;
+  PAA0 (freeze the contract) is next. It depends on the implemented alias,
+  object-temporary, full-expression cleanup, polymorphism, checked-cast, and
+  internal-call contracts.
 
 ## Design proposals
 
@@ -22,6 +28,9 @@ No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
+- [Primitive string conversion maintainability](PRIMITIVE_STRING_CONVERSIONS_DISCOVERIES.md)
+  — centralize canonical standard-library test fixture closures while
+  preserving explicit module overrides and source-order determinism.
 - [Standard I/O maintainability](STANDARD_IO_DISCOVERIES.md) — extract
   assembly-only native probe builders from the backend behavior suite in a
   future focused test-organization cleanup.

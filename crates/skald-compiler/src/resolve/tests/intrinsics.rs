@@ -5,6 +5,7 @@ use crate::{
     mir::{lower_hir, verify_mir, MirFunctionLinkage},
     test_support::{
         load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_IO_SOURCE,
+        CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE, CANONICAL_STR_FORMAT_F64_SOURCE,
         CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_SOURCE,
     },
     typeck::{
@@ -38,6 +39,11 @@ fn canonical_io_intrinsics_have_exact_stable_identities_and_no_definitions() {
             ("std/io.ska", CANONICAL_IO_SOURCE),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -112,6 +118,11 @@ fn io_intrinsic_calls_type_to_dedicated_target_independent_hir() {
             ("std/io.ska", &io),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -201,6 +212,11 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
                 ("std/io.ska", &io),
                 ("std/error.ska", CANONICAL_ERROR_SOURCE),
                 ("std/str.ska", CANONICAL_STR_SOURCE),
+                (
+                    "std/str/bigunsigned_helper.ska",
+                    CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+                ),
+                ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
                 ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
             ],
         );
@@ -234,6 +250,11 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
             ("std/io.ska", &io),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -258,6 +279,11 @@ fn rejects_private_io_imports_and_manufactured_intrinsics() {
             ("std/io.ska", CANONICAL_IO_SOURCE),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -309,6 +335,11 @@ fn rejects_malformed_replacement_io_intrinsic_declarations() {
                 ("std/io.ska", &replacement),
                 ("std/error.ska", CANONICAL_ERROR_SOURCE),
                 ("std/str.ska", CANONICAL_STR_SOURCE),
+                (
+                    "std/str/bigunsigned_helper.ska",
+                    CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+                ),
+                ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
                 ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
             ],
         );
@@ -352,6 +383,11 @@ fn all_supported_spellings_resolve_to_one_panic_intrinsic_identity() {
                 ),
             ),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -404,6 +440,11 @@ fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
             ),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -461,6 +502,11 @@ fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
             ),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/bigunsigned_helper.ska",
+                CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+            ),
+            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );
@@ -535,6 +581,11 @@ fn rejects_noncanonical_and_malformed_panic_intrinsics_during_resolution() {
                 ),
                 ("std/error.ska", &error_module),
                 ("std/str.ska", CANONICAL_STR_SOURCE),
+                (
+                    "std/str/bigunsigned_helper.ska",
+                    CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+                ),
+                ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
                 ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
             ],
         );

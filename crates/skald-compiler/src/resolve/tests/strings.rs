@@ -45,6 +45,7 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
                 "  var signed: Str = Str.from_i64(-1);\n",
                 "  var unsigned: Str = Str.from_u64(2u);\n",
                 "  var byte: Str = Str.from_u8(3u8);\n",
+                "  var formatted_float: Str = Str.from_f64(1.25);\n",
                 "  var parsed_flag: bool? = flag.to_bool();\n",
                 "  var parsed_signed: i64? = signed.to_i64();\n",
                 "  var parsed_unsigned: u64? = unsigned.to_u64();\n",
@@ -52,7 +53,8 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
                 "  var float_text: Str = \"1.25e2\";\n",
                 "  var parsed_float: f64? = float_text.to_f64();\n",
                 "  return (i64) (\n",
-                "    combined.len() + flag.len() + signed.len() + unsigned.len() + byte.len()\n",
+                "    combined.len() + flag.len() + signed.len() + unsigned.len()\n",
+                "    + byte.len() + formatted_float.len()\n",
                 "  );\n",
                 "}\n",
             ),
@@ -163,9 +165,9 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
             class.id
         ))
         .count(),
-        // from_bytes, slice, the decimal builder, and concat each install a
-        // trusted descriptor through the private initializer.
-        4,
+        // from_bytes, slice, the integer builder, from_f64, and concat each
+        // install a trusted descriptor through the private initializer.
+        5,
         "{dump}"
     );
 }

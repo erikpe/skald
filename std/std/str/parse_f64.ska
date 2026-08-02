@@ -1,3 +1,5 @@
+from std::str::bigunsigned_helper import BigUnsigned;
+
 public fn parse(
     ref storage: u8[],
     start: i64,
@@ -287,7 +289,10 @@ fn _parse_decimal_f64_exact(
     decimal_exponent: i64,
     negative: bool
 ) -> f64? {
-    var significand: _BigUnsigned = _BigUnsigned();
+    // The parser retains at most 800 digits. Its largest required denominator
+    // is below 2^3732, so 128 base-2^32 limbs leave a proven bound for rounding
+    // shifts without input-sized numeric storage.
+    var significand: BigUnsigned = BigUnsigned(128u);
     var saw_nonzero: bool = false;
     var sticky: bool = false;
     var kept_digits: u64 = 0u;
@@ -367,13 +372,13 @@ fn _bounded_signed_sum(
 }
 
 fn _round_decimal_f64(
-    ref significand: _BigUnsigned,
+    ref significand: BigUnsigned,
     decimal_exponent: i64,
     sticky: bool,
     negative: bool
 ) -> f64? {
-    var numerator: _BigUnsigned = _BigUnsigned(copy significand);
-    var denominator: _BigUnsigned = _BigUnsigned();
+    var numerator: BigUnsigned = BigUnsigned(copy significand);
+    var denominator: BigUnsigned = BigUnsigned(128u);
     if (!denominator.set(1u)) {
         return none;
     }
@@ -412,8 +417,8 @@ fn _round_decimal_f64(
         unit_exponent = binary_exponent - 52;
     }
 
-    var remainder: _BigUnsigned = _BigUnsigned(copy numerator);
-    var divisor: _BigUnsigned = _BigUnsigned(copy denominator);
+    var remainder: BigUnsigned = BigUnsigned(copy numerator);
+    var divisor: BigUnsigned = BigUnsigned(copy denominator);
     if (unit_exponent < 0) {
         if (!remainder.shift_left((u64) (-unit_exponent))) {
             return none;
@@ -470,8 +475,8 @@ fn _round_decimal_f64(
 }
 
 fn _floor_binary_exponent(
-    ref numerator: _BigUnsigned,
-    ref denominator: _BigUnsigned
+    ref numerator: BigUnsigned,
+    ref denominator: BigUnsigned
 ) -> i64 {
     var difference: i64 = (i64) numerator.bit_length() - (i64) denominator.bit_length();
     if (difference >= 0) {
@@ -502,224 +507,4 @@ fn _compose_binary_f64(
         remaining = remaining - 1;
     }
     return value;
-}
-
-class _BigUnsigned {
-    private _limbs: u64[];
-    private _length: u64;
-
-    init() {
-        // The decimal parser retains at most 800 digits. Its largest required
-        // denominator is below 2^3732, so 128 base-2^32 limbs leave a proven
-        // bound for rounding shifts without input-sized numeric storage.
-        self._limbs = u64[](128u);
-        self._length = 0u;
-    }
-
-    mut fn set(value: u64) -> bool {
-        self._length = 0u;
-        var remaining: u64 = value;
-        while (remaining != 0u) {
-            if (self._length == self._limbs.len()) {
-                return false;
-            }
-            self._limbs[(i64) self._length] = remaining & 4294967295u;
-            self._length = self._length + 1u;
-            remaining = remaining >> 32u;
-        }
-        return true;
-    }
-
-    mut fn multiply_add(multiplier: u64, addend: u64) -> bool {
-        if (multiplier > 10u || addend > 9u) {
-            return false;
-        }
-        var carry: u64 = addend;
-        var index: u64 = 0u;
-        while (index < self._length) {
-            var product: u64 = self._limbs[(i64) index] * multiplier + carry;
-            self._limbs[(i64) index] = product & 4294967295u;
-            carry = product >> 32u;
-            index = index + 1u;
-        }
-
-        while (carry != 0u) {
-            if (self._length == self._limbs.len()) {
-                return false;
-            }
-            self._limbs[(i64) self._length] = carry & 4294967295u;
-            self._length = self._length + 1u;
-            carry = carry >> 32u;
-        }
-        return true;
-    }
-
-    mut fn shift_left(count: u64) -> bool {
-        if (self._length == 0u || count == 0u) {
-            return true;
-        }
-
-        var word_shift: u64 = count / 32u;
-        var bit_shift: u64 = count % 32u;
-        var required: u64 = self._length + word_shift;
-        if (required < self._length) {
-            return false;
-        }
-        if (bit_shift != 0u) {
-            if (required == 18446744073709551615u) {
-                return false;
-            }
-            required = required + 1u;
-        }
-        if (required > self._limbs.len()) {
-            return false;
-        }
-
-        var source: u64 = self._length;
-        while (source > 0u) {
-            source = source - 1u;
-            self._limbs[(i64) (source + word_shift)] = self._limbs[(i64) source];
-        }
-        var clear: u64 = 0u;
-        while (clear < word_shift) {
-            self._limbs[(i64) clear] = 0u;
-            clear = clear + 1u;
-        }
-        self._length = self._length + word_shift;
-
-        if (bit_shift != 0u) {
-            var carry: u64 = 0u;
-            var index: u64 = word_shift;
-            while (index < self._length) {
-                var value: u64 = self._limbs[(i64) index];
-                self._limbs[(i64) index] = ((value << bit_shift) & 4294967295u) | carry;
-                carry = value >> (32u - bit_shift);
-                index = index + 1u;
-            }
-            if (carry != 0u) {
-                self._limbs[(i64) self._length] = carry;
-                self._length = self._length + 1u;
-            }
-        }
-        return true;
-    }
-
-    fn bit_length() -> u64 {
-        if (self._length == 0u) {
-            return 0u;
-        }
-
-        var top: u64 = self._limbs[(i64) (self._length - 1u)];
-        var top_bits: u64 = 0u;
-        while (top != 0u) {
-            top = top >> 1u;
-            top_bits = top_bits + 1u;
-        }
-        return (self._length - 1u) * 32u + top_bits;
-    }
-
-    fn compare(ref other: _BigUnsigned) -> i64 {
-        return self.compare_shifted(other, 0u);
-    }
-
-    fn compare_shifted(ref other: _BigUnsigned, shift: u64) -> i64 {
-        var self_bits: u64 = self.bit_length();
-        var other_bits: u64 = other.bit_length();
-        if (other_bits > 18446744073709551615u - shift) {
-            return -1;
-        }
-        other_bits = other_bits + shift;
-        if (self_bits < other_bits) {
-            return -1;
-        }
-        if (self_bits > other_bits) {
-            return 1;
-        }
-        if (self_bits == 0u) {
-            return 0;
-        }
-
-        var index: u64 = (self_bits - 1u) / 32u + 1u;
-        while (index > 0u) {
-            index = index - 1u;
-            var left: u64 = self._limbs[(i64) index];
-            var right: u64 = other._shifted_limb(index, shift);
-            if (left < right) {
-                return -1;
-            }
-            if (left > right) {
-                return 1;
-            }
-        }
-        return 0;
-    }
-
-    mut fn subtract_shifted(ref other: _BigUnsigned, shift: u64) -> bool {
-        if (self.compare_shifted(other, shift) < 0) {
-            return false;
-        }
-
-        var other_bits: u64 = other.bit_length();
-        if (other_bits > 18446744073709551615u - shift) {
-            return false;
-        }
-        var shifted_bits: u64 = other_bits + shift;
-        var shifted_length: u64 = 0u;
-        if (shifted_bits != 0u) {
-            shifted_length = (shifted_bits - 1u) / 32u + 1u;
-        }
-        var borrow: u64 = 0u;
-        var index: u64 = 0u;
-        while (index < shifted_length) {
-            var subtrahend: u64 = other._shifted_limb(index, shift) + borrow;
-            var current: u64 = self._limbs[(i64) index];
-            if (current >= subtrahend) {
-                self._limbs[(i64) index] = current - subtrahend;
-                borrow = 0u;
-            } else {
-                self._limbs[(i64) index] = 4294967296u + current - subtrahend;
-                borrow = 1u;
-            }
-            index = index + 1u;
-        }
-        while (borrow != 0u && index < self._length) {
-            var current: u64 = self._limbs[(i64) index];
-            if (current != 0u) {
-                self._limbs[(i64) index] = current - 1u;
-                borrow = 0u;
-            } else {
-                self._limbs[(i64) index] = 4294967295u;
-            }
-            index = index + 1u;
-        }
-        if (borrow != 0u) {
-            return false;
-        }
-
-        while (
-            self._length > 0u
-            && self._limbs[(i64) (self._length - 1u)] == 0u
-        ) {
-            self._length = self._length - 1u;
-        }
-        return true;
-    }
-
-    private fn _shifted_limb(index: u64, shift: u64) -> u64 {
-        var word_shift: u64 = shift / 32u;
-        if (index < word_shift) {
-            return 0u;
-        }
-
-        var bit_shift: u64 = shift % 32u;
-        var source: u64 = index - word_shift;
-        var result: u64 = 0u;
-        if (source < self._length) {
-            result = (self._limbs[(i64) source] << bit_shift) & 4294967295u;
-        }
-        if (bit_shift != 0u && source > 0u && source - 1u < self._length) {
-            result = result | (self._limbs[(i64) (source - 1u)] >> (32u - bit_shift));
-        }
-        return result;
-    }
 }

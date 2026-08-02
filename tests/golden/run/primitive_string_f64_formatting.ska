@@ -1,0 +1,47 @@
+import std::io as io;
+from std::str import Str;
+import std::str::format_f64 as format_f64;
+
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+
+fn write_line(text: Str) -> unit {
+    var newline: Str = "\n";
+    io::write_stdout(text);
+    io::write_stdout(newline);
+}
+
+fn observe(value: f64) -> unit {
+    var text: Str = Str.from_f64(value);
+    write_line(text);
+    var parsed: f64? = text.to_f64();
+    if (parsed is none) {
+        write_line("none");
+    } else {
+        ska_rt_println_f64_bits(parsed!);
+    }
+}
+
+fn main() -> i64 {
+    observe(0.0);
+    observe(-0.0);
+    observe(1.0 / 0.0);
+    observe(-(1.0 / 0.0));
+    write_line(Str.from_f64(0.0 / 0.0));
+    observe(1.0);
+    observe(-1.0);
+    observe(1.5);
+    observe(0.1);
+    observe(0.001);
+    observe(0.0001);
+    observe(9999999.0);
+    observe(10000000.0);
+    observe(1e20);
+    observe(4.9406564584124654e-324);
+    observe(2.2250738585072014e-308);
+    observe(1.7976931348623157e308);
+    observe(9007199254740992.0);
+    observe(9007199254740994.0);
+    var helper_storage: shared u8[] = format_f64::format(1.25);
+    write_line(Str.from_bytes(*helper_storage));
+    return 0;
+}

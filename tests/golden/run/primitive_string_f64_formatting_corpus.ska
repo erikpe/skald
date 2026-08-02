@@ -1,0 +1,55 @@
+import std::io as io;
+from std::str import Str;
+
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+
+fn write_line(text: Str) -> unit {
+    var newline: Str = "\n";
+    io::write_stdout(text);
+    io::write_stdout(newline);
+}
+
+fn observe(line: Str) -> i64 {
+    var parsed: f64? = line.to_f64();
+    if (parsed is none) {
+        write_line("invalid corpus input");
+        return 1;
+    }
+    var formatted: Str = Str.from_f64(parsed!);
+    write_line(formatted);
+
+    var round_trip: f64? = formatted.to_f64();
+    if (round_trip is none) {
+        write_line("invalid formatter output");
+        return 1;
+    }
+    ska_rt_println_f64_bits(round_trip!);
+    return 0;
+}
+
+fn main() -> i64 {
+    var corpus: Str = io::read_stdin();
+    var start: u64 = 0u;
+    var index: u64 = 0u;
+    while (index < corpus.len()) {
+        if (corpus.byte((i64) index) == 10u8) {
+            var status: i64 = observe(
+                corpus.slice((i64) start, (i64) index)
+            );
+            if (status != 0) {
+                return status;
+            }
+            start = index + 1u;
+        }
+        index = index + 1u;
+    }
+    if (start < corpus.len()) {
+        var status: i64 = observe(
+            corpus.slice((i64) start, (i64) corpus.len())
+        );
+        if (status != 0) {
+            return status;
+        }
+    }
+    return 0;
+}

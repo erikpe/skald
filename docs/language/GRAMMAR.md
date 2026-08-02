@@ -717,7 +717,7 @@ This grammar therefore already describes its source shapes. The `std::io`
 module installs its private canonical intrinsic declarations and implements
 all four public functions using existing language forms.
 
-The frozen
+The implemented
 [primitive string conversion API](STRINGS.md#frozen-primitive-textual-conversions)
 likewise composes existing static and instance methods, primitive parameters,
 class results, and optional primitive results. Its accepted text is data

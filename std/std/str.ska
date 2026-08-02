@@ -1,4 +1,5 @@
 from std::error import panic;
+import std::str::format_f64 as format_f64;
 import std::str::parse_f64 as parse_f64;
 
 public class Str {
@@ -91,14 +92,26 @@ public class Str {
         return Str._from_decimal_magnitude((u64) value, false);
     }
 
+    static fn from_f64(value: f64) -> Str {
+        if (value != value) {
+            return "NaN";
+        }
+
+        var infinity: f64 = 1.0 / 0.0;
+        if (value == infinity) {
+            return "Infinity";
+        }
+        if (value == -infinity) {
+            return "-Infinity";
+        }
+
+        var storage: shared u8[] = format_f64::format(value);
+        return Str(storage, 0, storage->len());
+    }
+
     fn to_bool() -> bool? {
-        if (
-            self._length == 4u
-            && self.byte(0) == 116u8
-            && self.byte(1) == 114u8
-            && self.byte(2) == 117u8
-            && self.byte(3) == 101u8
-        ) {
+        var true_text: Str = "true";
+        if (self.equals(true_text)) {
             return true;
         }
         if (

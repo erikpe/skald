@@ -966,6 +966,14 @@ fn string_phase_dump(variant: usize) -> String {
             include_str!("../../../std/std/str.ska"),
         ),
         (
+            standard_library.join("std/str/bigunsigned_helper.ska"),
+            include_str!("../../../std/std/str/bigunsigned_helper.ska"),
+        ),
+        (
+            standard_library.join("std/str/format_f64.ska"),
+            include_str!("../../../std/std/str/format_f64.ska"),
+        ),
+        (
             standard_library.join("std/str/parse_f64.ska"),
             include_str!("../../../std/std/str/parse_f64.ska"),
         ),
@@ -975,9 +983,9 @@ fn string_phase_dump(variant: usize) -> String {
         ),
     ];
     for index in if variant == 0 {
-        [0, 1, 2, 3]
+        [0, 1, 2, 3, 4, 5]
     } else {
-        [3, 2, 1, 0]
+        [5, 4, 3, 2, 1, 0]
     } {
         write_source(&sources[index].0, sources[index].1);
     }
@@ -1050,6 +1058,14 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
             include_str!("../../../std/std/str.ska"),
         ),
         (
+            standard_library.join("std/str/bigunsigned_helper.ska"),
+            include_str!("../../../std/std/str/bigunsigned_helper.ska"),
+        ),
+        (
+            standard_library.join("std/str/format_f64.ska"),
+            include_str!("../../../std/std/str/format_f64.ska"),
+        ),
+        (
             standard_library.join("std/str/parse_f64.ska"),
             include_str!("../../../std/std/str/parse_f64.ska"),
         ),
@@ -1060,9 +1076,9 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
         (standard_library.join("std/io.ska"), io_source.as_str()),
     ];
     for index in if variant == 0 {
-        [0, 1, 2, 3, 4]
+        [0, 1, 2, 3, 4, 5, 6]
     } else {
-        [4, 3, 2, 1, 0]
+        [6, 5, 4, 3, 2, 1, 0]
     } {
         write_source(&sources[index].0, sources[index].1);
     }

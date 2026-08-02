@@ -26,6 +26,10 @@ use crate::{
 static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) const CANONICAL_STR_SOURCE: &str = include_str!("../../../std/std/str.ska");
+pub(crate) const CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE: &str =
+    include_str!("../../../std/std/str/bigunsigned_helper.ska");
+pub(crate) const CANONICAL_STR_FORMAT_F64_SOURCE: &str =
+    include_str!("../../../std/std/str/format_f64.ska");
 pub(crate) const CANONICAL_STR_PARSE_F64_SOURCE: &str =
     include_str!("../../../std/std/str/parse_f64.ska");
 pub(crate) const CANONICAL_ERROR_SOURCE: &str = include_str!("../../../std/std/error.ska");
@@ -148,10 +152,15 @@ pub(crate) fn load_module_sources_with_standard_library(
     entry: &str,
     sources: &[(&str, &str)],
 ) -> (TemporaryDirectory, ModuleGraph) {
-    let mut complete_sources = Vec::with_capacity(sources.len() + 4);
+    let mut complete_sources = Vec::with_capacity(sources.len() + 6);
     complete_sources.extend_from_slice(sources);
     complete_sources.extend([
         ("std/str.ska", CANONICAL_STR_SOURCE),
+        (
+            "std/str/bigunsigned_helper.ska",
+            CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
+        ),
+        ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
         ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ("std/error.ska", CANONICAL_ERROR_SOURCE),
         ("std/io.ska", CANONICAL_IO_SOURCE),

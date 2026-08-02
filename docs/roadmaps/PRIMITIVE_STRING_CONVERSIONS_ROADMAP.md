@@ -1,6 +1,6 @@
 # Primitive String Conversions Roadmap
 
-Status: in progress; TXT4 is next.
+Status: in progress; TXT5 is next.
 
 This roadmap moves portable primitive formatting and parsing into the Skald
 standard library. The durable result is one explicit type-named `Str` method
@@ -50,7 +50,7 @@ This roadmap owns implementation order and does not redefine that contract.
 - [x] TXT1 — Implement boolean and integer formatting
 - [x] TXT2 — Implement optional boolean and integer parsing
 - [x] TXT3 — Implement correctly rounded binary64 parsing
-- [ ] TXT4 — Implement shortest round-tripping binary64 formatting
+- [x] TXT4 — Implement shortest round-tripping binary64 formatting
 - [ ] TXT5 — Adopt string I/O and retire scalar runtime observation
 
 Every implementation task runs focused standard-library and native golden
@@ -148,8 +148,9 @@ implemented parser contract.
       and round decimal values once to nearest binary64 with ties to even.
 - [x] Return `none` for malformed text or a finite decimal that rounds to
       infinity; return present subnormal or signed zero for valid underflow.
-- [x] Keep any wide-integer or decimal-scaling machinery private, bounded, and
-      reusable by formatting only when it has the same proven responsibility.
+- [x] Keep wide-integer and decimal-scaling machinery encapsulated, bounded,
+      and shared with formatting only where it has the same proven
+      responsibility; each conversion retains its own proven capacity.
 - [x] Keep common values allocation-free by scanning at most 19 significant
       digits into `u64`, using only proven integer and exact-power conversions,
       and retaining the exact wide fallback for every other finite value.
@@ -176,16 +177,17 @@ uses no host parser or runtime conversion service.
 inverse operation and its boundary corpus can validate every emitted
 candidate.
 
-- [ ] Implement special-value and signed-zero spelling without promising NaN
+- [x] Implement NaN and infinity spelling in the `Str` facade, finite and
+      signed-zero formatting in the companion module, and no promise of NaN
       payload or sign preservation.
-- [ ] Emit the frozen shortest finite decimal with nearest/even tie selection,
+- [x] Emit the frozen shortest finite decimal with nearest/even tie selection,
       plain/scientific threshold, decimal point, uppercase exponent marker,
       and exponent spelling.
-- [ ] Keep the algorithm independent of host locale and formatting libraries;
+- [x] Keep the algorithm independent of host locale and formatting libraries;
       use no runtime conversion helper.
-- [ ] Verify finite output by exact binary64 identity after `to_f64`, not by
+- [x] Verify finite output by exact binary64 identity after `to_f64`, not by
       approximate floating comparison.
-- [ ] Add exhaustive strategically bounded bit-pattern sweeps plus a stable
+- [x] Add exhaustive strategically bounded bit-pattern sweeps plus a stable
       generated corpus spanning every exponent class and significand edge.
 
 **Tests:** Special values, powers and neighbors, normal/subnormal boundaries,

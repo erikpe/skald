@@ -236,13 +236,14 @@ The required asymptotic behavior is:
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 | Format a boolean | `O(1)` literal-backed result |
 | Format an integer | `O(d)` final-backing allocation and decimal digit emission |
+| Format a binary64 value | `O(1)` over the fixed binary64 domain: one exact-length result allocation plus bounded 1280-bit interval work and at most 17 significant-digit probes |
 | Parse a boolean | `O(1)` exact byte comparison with no allocation |
 | Parse an integer | `O(n)` checked decimal accumulation with no allocation |
 | Parse a binary64 value | `O(n)` allocation-free scan and small-value conversion when provably safe; otherwise one `O(n)` significand rescan plus bounded 4096-bit exact rounding storage and work |
 
 ## Frozen primitive textual conversions
 
-Status: **frozen design with boolean, integer, and binary64 parsing implemented**.
+Status: **implemented contract**.
 This section settles the
 standard-library API and portable text contract for conversion between `Str`
 and every primitive value type. It adds no language syntax, compiler-known
@@ -258,12 +259,35 @@ f64?`. The helper validates the requested range and returns `none` for invalid
 bounds or non-decimal text. Its call-scoped read-only alias neither copies the
 bytes nor exposes a string's private backing to the caller.
 
+`Str.from_f64` recognizes NaN and both infinities at the facade and returns the
+corresponding literal-backed `Str`. Finite values delegate to
+`std::str::format_f64::format(value: f64) -> shared u8[]`, whose implementation
+contract requires a finite input. The helper returns fresh, exact-length
+mutable storage which `Str` immediately adopts behind its private descriptor.
+A user calling the helper directly owns only that newly created array; the API
+provides no operation for recovering or mutating the backing array of an
+existing `Str`.
+
 Binary64 parsing first retains at most 19 significant decimal digits in a
 `u64`. Integer-valued inputs that can be scaled without unsigned overflow, and
 values whose significand and power of ten are both exactly representable in
 binary64, convert without allocating numeric storage. Other finite values are
 rescanned into the bounded exact-rounding representation; the fast path does
 not approximate or replace that fallback.
+
+Binary64 formatting decomposes a finite magnitude using exact powers of two,
+constructs its exact nearest/even rounding interval, and searches decimal
+significand lengths from 1 through 17. Bounded base-2^32 arithmetic compares
+candidate integers to the interval, then selects the candidate nearest the
+exact value with an even final decimal digit on a tie. The formatter uses 40
+limbs (1280 bits), while the parser uses 128 limbs for its separately proven
+input bound. Both use the checked fixed-capacity `BigUnsigned` implementation
+in `std::str::bigunsigned_helper`; callers choose capacity, and no operation
+grows numeric storage from input. The helper owns its limb array and has no
+access to a `Str` descriptor or backing array. Presentation then applies the
+frozen plain/scientific threshold and allocates the final backing once. No host
+formatter, parser call, runtime conversion, or locale state participates in
+production.
 
 The supported primitive conversion surface on `Str` is exactly:
 
@@ -281,9 +305,7 @@ fn to_u8() -> u8?;
 fn to_f64() -> f64?;
 ```
 
-The installed library currently implements the four boolean and integer
-formatter/parser pairs plus `to_f64`. `from_f64` remains frozen but
-unavailable.
+The installed library implements all ten formatter and parser methods.
 
 The primitive type is explicit in every method name. There is no overloaded
 `from`, generic `parse`, expected-result-type selection, implicit conversion,

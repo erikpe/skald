@@ -1,0 +1,507 @@
+from std::str::bigunsigned_helper import BigUnsigned;
+
+// `value` must be finite. `Str.from_f64` owns NaN and infinity spelling.
+public fn format(value: f64) -> shared u8[] {
+    if (value == 0.0) {
+        if (1.0 / value < 0.0) {
+            return _zero(true);
+        }
+        return _zero(false);
+    }
+
+    var negative: bool = value < 0.0;
+    var magnitude: f64 = value;
+    if (negative) {
+        magnitude = -magnitude;
+    }
+    return _format_finite(magnitude, negative);
+}
+
+fn _format_finite(magnitude: f64, negative: bool) -> shared u8[] {
+    var significand: u64 = 0u;
+    var binary_exponent: i64 = 0;
+    if (magnitude < 2.2250738585072014e-308) {
+        var scaled_subnormal: f64 = magnitude;
+        var subnormal_shift: i64 = 0;
+        while (subnormal_shift < 1074) {
+            scaled_subnormal = scaled_subnormal * 2.0;
+            subnormal_shift = subnormal_shift + 1;
+        }
+        significand = (u64) scaled_subnormal;
+        binary_exponent = -1074;
+    } else {
+        var scaled_normal: f64 = magnitude;
+        while (scaled_normal < 4503599627370496.0) {
+            scaled_normal = scaled_normal * 2.0;
+            binary_exponent = binary_exponent - 1;
+        }
+        while (scaled_normal >= 9007199254740992.0) {
+            scaled_normal = scaled_normal / 2.0;
+            binary_exponent = binary_exponent + 1;
+        }
+        significand = (u64) scaled_normal;
+    }
+
+    var interval: _BinaryInterval = _BinaryInterval();
+    interval.set(significand, binary_exponent);
+    var decimal_exponent: i64 = _estimate_decimal_exponent(magnitude);
+    while (interval.compare_value_power10(decimal_exponent)! < 0) {
+        decimal_exponent = decimal_exponent - 1;
+    }
+    while (interval.compare_value_power10(decimal_exponent + 1)! >= 0) {
+        decimal_exponent = decimal_exponent + 1;
+    }
+
+    var digits: u64? = none;
+    var digit_count: u64 = 1u;
+    while (digit_count <= 17u && digits is none) {
+        digits = interval.shortest_candidate(decimal_exponent, digit_count);
+        digit_count = digit_count + 1u;
+    }
+
+    // Every finite binary64 value has a round-tripping decimal with at most
+    // 17 significant digits. Reaching an absent value here is an internal
+    // formatter defect rather than a data-dependent failure.
+    var selected: u64 = digits!;
+    var selected_digit_count: u64 = digit_count - 1u;
+    if (selected == _power10(selected_digit_count)) {
+        selected = selected / 10u;
+        selected_digit_count = 1u;
+        decimal_exponent = decimal_exponent + 1;
+    }
+    return _render(
+        selected,
+        selected_digit_count,
+        decimal_exponent,
+        negative
+    );
+}
+
+fn _estimate_decimal_exponent(value: f64) -> i64 {
+    var scaled: f64 = value;
+    var exponent: i64 = 0;
+    while (scaled >= 10.0) {
+        scaled = scaled / 10.0;
+        exponent = exponent + 1;
+    }
+    while (scaled < 1.0) {
+        scaled = scaled * 10.0;
+        exponent = exponent - 1;
+    }
+    return exponent;
+}
+
+fn _render(
+    significand: u64,
+    digit_count: u64,
+    decimal_exponent: i64,
+    negative: bool
+) -> shared u8[] {
+    var digits: u8[] = u8[](digit_count);
+    var remaining: u64 = significand;
+    var digit_index: u64 = digit_count;
+    while (digit_index > 0u) {
+        digit_index = digit_index - 1u;
+        digits[(i64) digit_index] = (u8) (remaining % 10u + 48u);
+        remaining = remaining / 10u;
+    }
+
+    if (decimal_exponent >= -3 && decimal_exponent < 7) {
+        return _render_plain(digits, decimal_exponent, negative);
+    }
+    return _render_scientific(digits, decimal_exponent, negative);
+}
+
+fn _render_plain(
+    ref digits: u8[],
+    decimal_exponent: i64,
+    negative: bool
+) -> shared u8[] {
+    var sign_length: u64 = 0u;
+    if (negative) {
+        sign_length = 1u;
+    }
+
+    if (decimal_exponent < 0) {
+        var leading_zeroes: u64 = (u64) (-decimal_exponent - 1);
+        var result: shared u8[] = new u8[](
+            sign_length + 2u + leading_zeroes + digits.len()
+        );
+        var output: u64 = 0u;
+        if (negative) {
+            result->[0] = 45u8;
+            output = 1u;
+        }
+        result->[(i64) output] = 48u8;
+        result->[(i64) (output + 1u)] = 46u8;
+        output = output + 2u;
+        var zero: u64 = 0u;
+        while (zero < leading_zeroes) {
+            result->[(i64) output] = 48u8;
+            output = output + 1u;
+            zero = zero + 1u;
+        }
+        _copy_digits(digits, *result, output);
+        return result;
+    }
+
+    var integer_digits: u64 = (u64) decimal_exponent + 1u;
+    if (digits.len() <= integer_digits) {
+        var trailing_zeroes: u64 = integer_digits - digits.len();
+        var result: shared u8[] = new u8[](
+            sign_length + integer_digits + 2u
+        );
+        var output: u64 = 0u;
+        if (negative) {
+            result->[0] = 45u8;
+            output = 1u;
+        }
+        _copy_digits(digits, *result, output);
+        output = output + digits.len();
+        var zero: u64 = 0u;
+        while (zero < trailing_zeroes) {
+            result->[(i64) output] = 48u8;
+            output = output + 1u;
+            zero = zero + 1u;
+        }
+        result->[(i64) output] = 46u8;
+        result->[(i64) (output + 1u)] = 48u8;
+        return result;
+    }
+
+    var result: shared u8[] = new u8[](
+        sign_length + digits.len() + 1u
+    );
+    var output: u64 = 0u;
+    if (negative) {
+        result->[0] = 45u8;
+        output = 1u;
+    }
+    var source: u64 = 0u;
+    while (source < digits.len()) {
+        if (source == integer_digits) {
+            result->[(i64) output] = 46u8;
+            output = output + 1u;
+        }
+        result->[(i64) output] = digits[(i64) source];
+        output = output + 1u;
+        source = source + 1u;
+    }
+    return result;
+}
+
+fn _render_scientific(
+    ref digits: u8[],
+    decimal_exponent: i64,
+    negative: bool
+) -> shared u8[] {
+    var exponent_negative: bool = decimal_exponent < 0;
+    var exponent_magnitude: u64 = (u64) decimal_exponent;
+    if (exponent_negative) {
+        exponent_magnitude = 0u - exponent_magnitude;
+    }
+    var exponent_digits: u64 = _decimal_digit_count(exponent_magnitude);
+    var fractional_digits: u64 = digits.len() - 1u;
+    if (fractional_digits == 0u) {
+        fractional_digits = 1u;
+    }
+    var sign_length: u64 = 0u;
+    if (negative) {
+        sign_length = 1u;
+    }
+    var exponent_sign_length: u64 = 0u;
+    if (exponent_negative) {
+        exponent_sign_length = 1u;
+    }
+
+    var result: shared u8[] = new u8[](
+        sign_length + 3u + fractional_digits
+        + exponent_sign_length + exponent_digits
+    );
+    var output: u64 = 0u;
+    if (negative) {
+        result->[0] = 45u8;
+        output = 1u;
+    }
+    result->[(i64) output] = digits[0];
+    result->[(i64) (output + 1u)] = 46u8;
+    output = output + 2u;
+    if (digits.len() == 1u) {
+        result->[(i64) output] = 48u8;
+        output = output + 1u;
+    } else {
+        var source: u64 = 1u;
+        while (source < digits.len()) {
+            result->[(i64) output] = digits[(i64) source];
+            output = output + 1u;
+            source = source + 1u;
+        }
+    }
+    result->[(i64) output] = 69u8;
+    output = output + 1u;
+    if (exponent_negative) {
+        result->[(i64) output] = 45u8;
+        output = output + 1u;
+    }
+
+    var divisor: u64 = _power10(exponent_digits - 1u);
+    while (divisor > 0u) {
+        result->[(i64) output] = (u8) (exponent_magnitude / divisor + 48u);
+        exponent_magnitude = exponent_magnitude % divisor;
+        divisor = divisor / 10u;
+        output = output + 1u;
+    }
+    return result;
+}
+
+fn _copy_digits(
+    ref source: u8[],
+    mut ref destination: u8[],
+    start: u64
+) -> unit {
+    var index: u64 = 0u;
+    while (index < source.len()) {
+        destination[(i64) (start + index)] = source[(i64) index];
+        index = index + 1u;
+    }
+}
+
+fn _decimal_digit_count(value: u64) -> u64 {
+    var count: u64 = 1u;
+    var remaining: u64 = value;
+    while (remaining >= 10u) {
+        remaining = remaining / 10u;
+        count = count + 1u;
+    }
+    return count;
+}
+
+fn _power10(exponent: u64) -> u64 {
+    var result: u64 = 1u;
+    var remaining: u64 = exponent;
+    while (remaining > 0u) {
+        result = result * 10u;
+        remaining = remaining - 1u;
+    }
+    return result;
+}
+
+fn _zero(negative: bool) -> shared u8[] {
+    var length: u64 = 3u;
+    if (negative) {
+        length = 4u;
+    }
+    var result: shared u8[] = new u8[](length);
+    var start: i64 = 0;
+    if (negative) {
+        result->[0] = 45u8;
+        start = 1;
+    }
+    result->[start] = 48u8;
+    result->[start + 1] = 46u8;
+    result->[start + 2] = 48u8;
+    return result;
+}
+
+class _BinaryInterval {
+    private _value: BigUnsigned;
+    private _lower: BigUnsigned;
+    private _upper: BigUnsigned;
+    private _denominator: BigUnsigned;
+    private _boundaries_inclusive: bool;
+    private _fits: bool;
+
+    init() {
+        // Binary64 interval scaling needs fewer than 1132 bits: the smallest
+        // midpoint denominator is 2^1075 and the largest candidate decimal
+        // scale is 10^340, paired with a correspondingly tiny numerator. The
+        // largest intermediate therefore fits within 40 base-2^32 limbs.
+        self._value = BigUnsigned(40u);
+        self._lower = BigUnsigned(40u);
+        self._upper = BigUnsigned(40u);
+        self._denominator = BigUnsigned(40u);
+        self._boundaries_inclusive = false;
+        self._fits = true;
+    }
+
+    mut fn set(significand: u64, binary_exponent: i64) -> unit {
+        var asymmetric: bool = (
+            significand == 4503599627370496u
+            && binary_exponent > -1074
+        );
+        var unit_exponent: i64 = binary_exponent - 1;
+        var scaled_significand: u64 = significand * 2u;
+        var upper_margin: u64 = 1u;
+        if (asymmetric) {
+            unit_exponent = binary_exponent - 2;
+            scaled_significand = significand * 4u;
+            upper_margin = 2u;
+        }
+
+        self._fits = self._value.set(scaled_significand);
+        if (!self._lower.set(scaled_significand - 1u)) {
+            self._fits = false;
+        }
+        if (!self._upper.set(scaled_significand + upper_margin)) {
+            self._fits = false;
+        }
+        if (!self._denominator.set(1u)) {
+            self._fits = false;
+        }
+        if (unit_exponent < 0) {
+            if (!self._denominator.shift_left((u64) (-unit_exponent))) {
+                self._fits = false;
+            }
+        } elif (unit_exponent > 0) {
+            if (!self._value.shift_left((u64) unit_exponent)) {
+                self._fits = false;
+            }
+            if (!self._lower.shift_left((u64) unit_exponent)) {
+                self._fits = false;
+            }
+            if (!self._upper.shift_left((u64) unit_exponent)) {
+                self._fits = false;
+            }
+        }
+        self._boundaries_inclusive = significand % 2u == 0u;
+    }
+
+    fn compare_value_power10(exponent: i64) -> i64? {
+        if (!self._fits) {
+            return none;
+        }
+        if (exponent >= 0) {
+            var scaled_denominator: BigUnsigned = BigUnsigned(
+                copy self._denominator
+            );
+            if (!scaled_denominator.multiply_power10((u64) exponent)) {
+                return none;
+            }
+            return self._value.compare(scaled_denominator);
+        }
+
+        var scaled_value: BigUnsigned = BigUnsigned(copy self._value);
+        if (!scaled_value.multiply_power10((u64) (-exponent))) {
+            return none;
+        }
+        return scaled_value.compare(self._denominator);
+    }
+
+    fn shortest_candidate(
+        decimal_exponent: i64,
+        digit_count: u64
+    ) -> u64? {
+        if (!self._fits) {
+            return none;
+        }
+        var power_exponent: i64 = decimal_exponent - (i64) digit_count + 1;
+        var denominator: BigUnsigned = BigUnsigned(copy self._denominator);
+        var lower: BigUnsigned = BigUnsigned(copy self._lower);
+        var value: BigUnsigned = BigUnsigned(copy self._value);
+        var upper: BigUnsigned = BigUnsigned(copy self._upper);
+        if (power_exponent >= 0) {
+            if (!denominator.multiply_power10((u64) power_exponent)) {
+                return none;
+            }
+        } else {
+            var scale: u64 = (u64) (-power_exponent);
+            if (
+                !lower.multiply_power10(scale)
+                || !value.multiply_power10(scale)
+                || !upper.multiply_power10(scale)
+            ) {
+                return none;
+            }
+        }
+
+        var lower_quotient: u64? = _divide_to_u64(lower, denominator);
+        var upper_quotient: u64? = _divide_to_u64(upper, denominator);
+        var value_quotient: u64? = _divide_to_u64(value, denominator);
+        if (
+            lower_quotient is none
+            || upper_quotient is none
+            || value_quotient is none
+        ) {
+            return none;
+        }
+
+        var minimum: u64 = lower_quotient!;
+        if (!self._boundaries_inclusive || !lower.is_zero()) {
+            minimum = minimum + 1u;
+        }
+
+        var maximum: u64 = upper_quotient!;
+        if (!self._boundaries_inclusive && upper.is_zero()) {
+            if (maximum == 0u) {
+                return none;
+            }
+            maximum = maximum - 1u;
+        }
+
+        var digit_minimum: u64 = _power10(digit_count - 1u);
+        // Admit the one carry value as well. It denotes the one-digit
+        // significand `1` at the next scientific exponent and can be the
+        // nearest shortest decimal for a value immediately below a power of
+        // ten (including the first few subnormals).
+        var digit_maximum: u64 = _power10(digit_count);
+        if (minimum < digit_minimum) {
+            minimum = digit_minimum;
+        }
+        if (maximum > digit_maximum) {
+            maximum = digit_maximum;
+        }
+        if (minimum > maximum) {
+            return none;
+        }
+
+        var nearest: u64 = value_quotient!;
+        var denominator_to_remainder: i64 = denominator.compare_shifted(
+            value,
+            1u
+        );
+        if (
+            denominator_to_remainder < 0
+            || (
+                denominator_to_remainder == 0
+                && nearest % 2u == 1u
+            )
+        ) {
+            nearest = nearest + 1u;
+        }
+        if (nearest < minimum) {
+            nearest = minimum;
+        }
+        if (nearest > maximum) {
+            nearest = maximum;
+        }
+        return nearest;
+    }
+}
+
+fn _divide_to_u64(
+    mut ref remainder: BigUnsigned,
+    ref denominator: BigUnsigned
+) -> u64? {
+    if (denominator.is_zero()) {
+        return none;
+    }
+
+    var quotient: u64 = 0u;
+    var quotient_shift: i64 = (
+        (i64) remainder.bit_length() - (i64) denominator.bit_length()
+    );
+    if (quotient_shift > 63) {
+        return none;
+    }
+    while (quotient_shift >= 0) {
+        var shift: u64 = (u64) quotient_shift;
+        if (remainder.compare_shifted(denominator, shift) >= 0) {
+            if (!remainder.subtract_shifted(denominator, shift)) {
+                return none;
+            }
+            quotient = quotient | (1u << shift);
+        }
+        quotient_shift = quotient_shift - 1;
+    }
+    return quotient;
+}

@@ -1,0 +1,65 @@
+from std::str::bigunsigned_helper import BigUnsigned;
+
+fn main() -> i64 {
+    var value: BigUnsigned = BigUnsigned(4u);
+    var one: BigUnsigned = BigUnsigned(4u);
+    if (!value.set(3u) || !one.set(1u)) {
+        return 1;
+    }
+    if (value.compare_shifted(one, 1u) != 1) {
+        return 2;
+    }
+    if (!value.subtract_shifted(one, 1u) || value.compare(one) != 0) {
+        return 3;
+    }
+    if (!value.multiply_power10(3u)) {
+        return 4;
+    }
+
+    var thousand: BigUnsigned = BigUnsigned(4u);
+    if (!thousand.set(1000u) || value.compare(thousand) != 0) {
+        return 5;
+    }
+    if (!thousand.shift_left(33u)) {
+        return 6;
+    }
+    if (thousand.compare_shifted(value, 33u) != 0) {
+        return 7;
+    }
+
+    var no_capacity: BigUnsigned = BigUnsigned(0u);
+    if (no_capacity.set(1u)) {
+        return 8;
+    }
+    if (value.multiply_add(11u, 0u) || value.multiply_add(1u, 10u)) {
+        return 9;
+    }
+
+    var copy: BigUnsigned = BigUnsigned(copy value);
+    if (!copy.subtract_shifted(value, 0u) || !copy.is_zero()) {
+        return 10;
+    }
+
+    var tight: BigUnsigned = BigUnsigned(1u);
+    var two: BigUnsigned = BigUnsigned(1u);
+    if (!tight.set(1u) || !tight.shift_left(1u) || !two.set(2u)) {
+        return 11;
+    }
+    if (tight.compare(two) != 0 || !tight.multiply_add(0u, 7u)) {
+        return 12;
+    }
+    var seven: BigUnsigned = BigUnsigned(1u);
+    if (!seven.set(7u) || tight.compare(seven) != 0) {
+        return 13;
+    }
+
+    var zero: BigUnsigned = BigUnsigned(0u);
+    if (
+        zero.compare_shifted(zero, 18446744073709551615u) != 0
+        || !seven.subtract_shifted(zero, 18446744073709551615u)
+        || seven.compare(tight) != 0
+    ) {
+        return 14;
+    }
+    return 0;
+}
