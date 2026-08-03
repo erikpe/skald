@@ -29,7 +29,7 @@ impl Analysis {
 }
 
 pub(super) fn analyze(program: &MirProgram, function: MirDefinitionRef<'_>) -> Analysis {
-    let entry_state = InitializationState::at_entry(function);
+    let entry_state = InitializationState::at_entry(program, function);
     let activation_conditions = function
         .path_conditions()
         .iter()

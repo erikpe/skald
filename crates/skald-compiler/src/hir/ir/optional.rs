@@ -20,6 +20,7 @@ pub struct HirOptionalPlace {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirOptionalStorage {
     Binding(BindingId),
+    Static(super::HirStaticPlace),
     Field(HirFieldPlace),
     ArrayElement(Box<super::HirArrayElementPlace>),
 }

@@ -155,32 +155,60 @@ impl CallableChecker<'_, '_> {
         &mut self,
         assignment: &crate::resolve::ResolvedStaticFieldAssignment,
     ) -> CheckedStatement {
-        let destination = self.check_primitive_static_place(
-            assignment.field,
-            assignment.member_span,
-            assignment.span,
-        );
-        let source = self.check_expression(&assignment.value);
-        let hir = match (destination, source) {
-            (Some((place, expected)), Some(source))
-                if require_type(
-                    source.ty,
-                    expected,
-                    source.span,
-                    "static field assignment",
-                    self.diagnostics,
-                ) =>
-            {
-                Some(HirStatement::PrimitiveAssignment(HirPrimitiveAssignment {
-                    destination: HirPrimitivePlace {
-                        storage: HirPrimitiveStorage::Static(place),
+        let Some((place, ty)) =
+            self.check_static_place(assignment.field, assignment.member_span, assignment.span)
+        else {
+            return CheckedStatement::falls_through(None);
+        };
+        let hir = match ty {
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => self
+                .check_expression(&assignment.value)
+                .filter(|source| {
+                    require_type(
+                        source.ty,
+                        ty,
+                        source.span,
+                        "static field assignment",
+                        self.diagnostics,
+                    )
+                })
+                .map(|source| {
+                    HirStatement::PrimitiveAssignment(HirPrimitiveAssignment {
+                        destination: HirPrimitivePlace {
+                            storage: HirPrimitiveStorage::Static(place),
+                            span: assignment.span,
+                        },
+                        source,
+                        span: assignment.span,
+                    })
+                }),
+            Type::OptionalPrimitive(payload) => self
+                .check_optional_source(&assignment.value, payload, "optional static assignment")
+                .map(|source| {
+                    HirStatement::OptionalAssignment(HirOptionalAssignment {
+                        destination: HirOptionalPlace {
+                            storage: HirOptionalStorage::Static(place),
+                            payload,
+                            span: assignment.span,
+                        },
+                        payload,
+                        source,
+                        kind: HirOptionalWriteKind::Assign,
+                        span: assignment.span,
+                    })
+                }),
+            Type::OptionalClass(class) => self
+                .check_class_optional_assignment(
+                    crate::hir::HirClassOptionalPlace {
+                        storage: HirOptionalStorage::Static(place),
+                        class,
                         span: assignment.span,
                     },
-                    source,
-                    span: assignment.span,
-                }))
-            }
-            _ => None,
+                    &assignment.value,
+                    "class optional static assignment",
+                )
+                .map(HirStatement::ClassOptionalAssignment),
+            _ => unreachable!("enabled static storage type must have a statement family"),
         };
         CheckedStatement::falls_through(hir)
     }

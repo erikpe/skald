@@ -1,4 +1,4 @@
-//! Deterministic writable storage planning for primitive static fields.
+//! Deterministic writable storage planning for executable static fields.
 
 use crate::{backend::BackendError, mir::MirProgram};
 

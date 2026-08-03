@@ -1,7 +1,8 @@
 # Zero-Default Static Fields
 
-Status: **frozen design; primitive execution implemented**. This document is authoritative for
-the selected source-visible static-field profile. The
+Status: **frozen design; primitive and inline-optional execution implemented**.
+This document is authoritative for the selected source-visible static-field
+profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
 the current compiler.
@@ -16,10 +17,11 @@ service.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
-complete zero-default storage-type set, and lowers primitive reads, writes,
-and call aliases to receiver-free typed HIR and MIR places. Primitive statics
-execute through deterministic native storage. Owning zero-default declarations
-are accepted but their source uses remain staged.
+complete zero-default storage-type set, and lowers primitive and inline-optional
+operations and call aliases to receiver-free typed HIR and MIR places.
+Primitive, primitive-optional, and exact-class-optional statics execute through
+deterministic native storage. Optional shared-owner and inline-array
+declarations are accepted but their source uses remain staged.
 
 ## Declaration syntax
 
@@ -227,14 +229,12 @@ The implementation must reject each error at the phase that owns it:
   wrong-kind selections; and
 - attempts to call a static field as a non-callable target.
 
-Diagnostic wording and codes remain compiler behavior. During the current
-implemented primitive stage, malformed declarations are syntax errors, namespace and
-privacy rules are enforced during resolution, `TYP042` rejects a declaration
-whose type lacks a complete all-zero live value, and `TYP043` rejects source
-use of an accepted owning static type until its ownership-specific stage.
-Primitive static programs reach verified MIR and native execution. `TYP043`
-continues to reserve accepted optional, shared-owner, and array uses for their
-ownership-specific roadmap stages.
+Diagnostic wording and codes remain compiler behavior. Malformed declarations
+are syntax errors, namespace and privacy rules are enforced during resolution,
+and `TYP042` rejects a declaration whose type lacks a complete all-zero live
+value. Primitive and inline-optional static programs reach verified MIR and
+native execution. `TYP043` continues to reserve optional shared-owner and
+inline-array uses for their ownership-specific roadmap stages.
 
 ## Runtime, ABI, and representation boundary
 

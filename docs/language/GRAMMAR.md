@@ -310,7 +310,8 @@ that otherwise well-formed type at the declaration's type span. The grammar
 alone does not decide which storage types are zero-valid or define executable
 access, initialization, mutation, or lifetime. Those settled rules belong to
 [Zero-Default Static Fields](STATIC_FIELDS.md). Type checking currently lowers
-primitive static places to HIR while later roadmap stages own MIR storage.
+primitive and inline-optional static places through HIR and MIR; later roadmap
+stages own optional shared-owner and inline-array source use.
 
 ### Construction-selection syntax
 

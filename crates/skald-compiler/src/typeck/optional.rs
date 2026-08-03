@@ -330,6 +330,18 @@ impl CallableChecker<'_, '_> {
                     span: grouped.span,
                     ..place
                 }),
+            ResolvedExpression::StaticFieldAccess(access) => {
+                let (place, ty) =
+                    self.check_static_place(access.field, access.member_span, access.span)?;
+                let Type::OptionalClass(class) = ty else {
+                    return None;
+                };
+                Some(HirClassOptionalPlace {
+                    storage: HirOptionalStorage::Static(place),
+                    class,
+                    span: access.span,
+                })
+            }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
                 let Type::OptionalClass(class) = expression.ty else {
@@ -462,6 +474,7 @@ impl CallableChecker<'_, '_> {
                 HirOptionalStorage::Binding(binding) => {
                     self.binding_access(*binding, false, unwrap.span)?
                 }
+                HirOptionalStorage::Static(_) => crate::hir::HirAccess::Mutable,
                 HirOptionalStorage::Field(field) => field.receiver.access,
                 HirOptionalStorage::ArrayElement(place) => place.receiver.access,
             },
@@ -559,6 +572,18 @@ impl CallableChecker<'_, '_> {
                         span: grouped.span,
                         ..place
                     })
+            }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                let (place, ty) =
+                    self.check_static_place(access.field, access.member_span, access.span)?;
+                let Type::OptionalPrimitive(payload) = ty else {
+                    return None;
+                };
+                Some(HirOptionalPlace {
+                    storage: HirOptionalStorage::Static(place),
+                    payload,
+                    span: access.span,
+                })
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;

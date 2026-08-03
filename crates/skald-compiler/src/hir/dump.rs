@@ -764,6 +764,7 @@ impl HirDumper {
                     assignment.span,
                 );
                 self.indented(|dumper| {
+                    dumper.class_optional_place(&assignment.destination);
                     dumper.class_optional_source(&assignment.source);
                 });
             }
@@ -1408,6 +1409,9 @@ impl HirDumper {
             crate::hir::HirOptionalStorage::Binding(binding) => {
                 self.line(&format!("OptionalPlace {binding}"), place.span);
             }
+            crate::hir::HirOptionalStorage::Static(root) => {
+                self.line(&format!("OptionalStaticPlace {}", root.field), place.span);
+            }
             crate::hir::HirOptionalStorage::Field(field) => {
                 self.line("OptionalFieldPlace", place.span);
                 self.indented(|dumper| dumper.field_place(field));
@@ -1423,6 +1427,12 @@ impl HirDumper {
         match &place.storage {
             crate::hir::HirOptionalStorage::Binding(binding) => {
                 self.line(&format!("ClassOptionalPlace {binding}"), place.span);
+            }
+            crate::hir::HirOptionalStorage::Static(root) => {
+                self.line(
+                    &format!("ClassOptionalStaticPlace {}", root.field),
+                    place.span,
+                );
             }
             crate::hir::HirOptionalStorage::Field(field) => {
                 self.line("ClassOptionalFieldPlace", place.span);
@@ -1748,6 +1758,14 @@ impl HirDumper {
             crate::hir::HirOptionalStorage::Binding(binding) => self.line(
                 &format!(
                     "OptionalSharedPlace {binding} : {}",
+                    optional_shared_target_name(place.target)
+                ),
+                place.span,
+            ),
+            crate::hir::HirOptionalStorage::Static(root) => self.line(
+                &format!(
+                    "OptionalSharedStaticPlace {} : {}",
+                    root.field,
                     optional_shared_target_name(place.target)
                 ),
                 place.span,

@@ -112,9 +112,11 @@ copy/adopt/move/release, and secured shared unwrap.
 
 ## MIR optional storage model
 
-Every source-visible optional local, field, parameter, result, and owning
-temporary lowers to initialized optional storage. The wrapper lifetime and the
-conditional payload lifetime are distinct:
+Every source-visible optional local, field, parameter, result, owning
+temporary, and inline-optional static lowers to initialized optional storage.
+Static optional containers are seeded as absent at every callable entry and
+remain initialized independently of local `StorageLive` epochs. The wrapper
+lifetime and the conditional payload lifetime are distinct:
 
 ```text
 wrapper storage: uninitialized -> initialized -> ended
@@ -337,6 +339,11 @@ The payload reserves the ordinary complete representation of `T`. Absence
 does not initialize those bytes as a `T`; loads, projections, copying,
 assignment, and cleanup branch on verified state before addressing them as a
 payload.
+
+An exact-class optional static uses this same layout in a separate program
+slot. It adds neither an inline-class containment edge nor bytes to instances
+of its declaring class, and its final present payload receives no generated
+process-exit cleanup.
 
 Zero means absent, one means present without an active view, and values from
 two through the maximum word value represent a present payload with one or

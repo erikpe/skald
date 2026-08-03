@@ -102,7 +102,13 @@ impl InstructionSelector<'_, '_> {
                 self.output.push(Instruction::LoadSymbolAddress {
                     symbol: symbol::static_field(self.program, field),
                     destination,
-                })
+                });
+                if layout.displacement() != 0 {
+                    self.output.push(Instruction::LoadEffectiveAddress {
+                        source: memory(destination, layout.displacement()),
+                        destination,
+                    });
+                }
             }
             _ => match layout.base().pointer_home() {
                 None => self.output.push(Instruction::LoadEffectiveAddress {

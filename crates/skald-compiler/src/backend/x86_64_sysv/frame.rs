@@ -205,19 +205,26 @@ impl FrameLayout {
             let field = program
                 .static_field(field_id)
                 .expect("verified static place must name a declaration");
-            debug_assert!(place.projections.is_empty());
+            let (displacement, ty) = projected_place(
+                program,
+                function,
+                data_layout,
+                0,
+                field.ty,
+                &place.projections,
+            )?;
             return Ok(FramePlace {
                 base: FramePlaceBase::StaticField(field_id),
-                displacement: 0,
-                ty: field.ty,
-                byte_access: matches!(field.ty, MirType::U8 | MirType::Bool),
+                displacement,
+                ty,
+                byte_access: matches!(ty, MirType::U8 | MirType::Bool),
             });
         }
         let storage_id = place.base.expect_local_storage();
         let storage = function
             .storage(storage_id)
             .expect("verified place base must identify storage");
-        let (base, mut displacement) = match place.base {
+        let (base, displacement) = match place.base {
             MirPlaceBase::Storage(_)
                 if storage.kind == MirStorageKind::Return
                     && !matches!(storage.ty, MirType::OptionalShared(_)) =>
@@ -283,59 +290,18 @@ impl FrameLayout {
                 unreachable!("static roots return before frame storage selection")
             }
         };
-        let mut ty = match (place.base, storage.ty) {
+        let ty = match (place.base, storage.ty) {
             (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),
             _ => storage.ty,
         };
-        for projection in &place.projections {
-            match *projection {
-                MirPlaceProjection::Base(base) => {
-                    let class = match ty {
-                        MirType::Class(class) => class,
-                        _ => return Err(place_metadata_error(function.callable())),
-                    };
-                    let base_layout = data_layout
-                        .class(class)
-                        .and_then(|layout| layout.base())
-                        .filter(|layout| layout.class == base)
-                        .ok_or_else(|| place_metadata_error(function.callable()))?;
-                    let offset = i32::try_from(base_layout.offset)
-                        .map_err(|_| place_address_error(function.callable()))?;
-                    displacement = displacement
-                        .checked_add(offset)
-                        .ok_or_else(|| place_address_error(function.callable()))?;
-                    ty = MirType::Class(base);
-                }
-                MirPlaceProjection::Field(field_id) => {
-                    let field_layout = data_layout
-                        .field(field_id)
-                        .expect("verified field must have a target layout");
-                    let offset = i32::try_from(field_layout.offset)
-                        .map_err(|_| place_address_error(function.callable()))?;
-                    displacement = displacement
-                        .checked_add(offset)
-                        .ok_or_else(|| place_address_error(function.callable()))?;
-                    ty = program
-                        .field(field_id)
-                        .expect("verified field must be declared")
-                        .ty;
-                }
-                MirPlaceProjection::OptionalPayload(class) => {
-                    if ty != MirType::OptionalClass(class) {
-                        return Err(place_metadata_error(function.callable()));
-                    }
-                    let offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
-                        .map_err(|_| place_address_error(function.callable()))?;
-                    displacement = displacement
-                        .checked_add(offset)
-                        .ok_or_else(|| place_address_error(function.callable()))?;
-                    ty = MirType::Class(class);
-                }
-                MirPlaceProjection::ArrayElement { .. } => {
-                    unreachable!("array element addresses are selected by array lowering")
-                }
-            }
-        }
+        let (displacement, ty) = projected_place(
+            program,
+            function,
+            data_layout,
+            displacement,
+            ty,
+            &place.projections,
+        )?;
         Ok(FramePlace {
             base,
             displacement,
@@ -343,6 +309,59 @@ impl FrameLayout {
             byte_access: !place.projections.is_empty() && matches!(ty, MirType::U8 | MirType::Bool),
         })
     }
+}
+
+fn projected_place(
+    program: &MirProgram,
+    function: MirDefinitionRef<'_>,
+    data_layout: &DataLayout,
+    mut displacement: i32,
+    mut ty: MirType,
+    projections: &[MirPlaceProjection],
+) -> Result<(i32, MirType), BackendError> {
+    for projection in projections {
+        let (offset, projected_ty) = match *projection {
+            MirPlaceProjection::Base(base) => {
+                let MirType::Class(class) = ty else {
+                    return Err(place_metadata_error(function.callable()));
+                };
+                let layout = data_layout
+                    .class(class)
+                    .and_then(|layout| layout.base())
+                    .filter(|layout| layout.class == base)
+                    .ok_or_else(|| place_metadata_error(function.callable()))?;
+                (layout.offset, MirType::Class(base))
+            }
+            MirPlaceProjection::Field(field_id) => {
+                let layout = data_layout
+                    .field(field_id)
+                    .expect("verified field must have a target layout");
+                let ty = program
+                    .field(field_id)
+                    .expect("verified field must be declared")
+                    .ty;
+                (layout.offset, ty)
+            }
+            MirPlaceProjection::OptionalPayload(class) => {
+                if ty != MirType::OptionalClass(class) {
+                    return Err(place_metadata_error(function.callable()));
+                }
+                (
+                    data_layout.optional_class(class)?.payload_offset(),
+                    MirType::Class(class),
+                )
+            }
+            MirPlaceProjection::ArrayElement { .. } => {
+                unreachable!("array element addresses are selected by array lowering")
+            }
+        };
+        let offset = i32::try_from(offset).map_err(|_| place_address_error(function.callable()))?;
+        displacement = displacement
+            .checked_add(offset)
+            .ok_or_else(|| place_address_error(function.callable()))?;
+        ty = projected_ty;
+    }
+    Ok((displacement, ty))
 }
 
 struct FrameAllocator {

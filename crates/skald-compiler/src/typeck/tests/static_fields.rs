@@ -1,11 +1,61 @@
 use super::*;
 use crate::{
-    hir::{HirCallArgument, HirExpressionKind, HirPrimitiveStorage},
+    hir::{HirCallArgument, HirExpressionKind, HirOptionalStorage, HirPrimitiveStorage},
     identity::{ClassId, MethodId, StaticFieldId},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
     typeck::{INVALID_STATIC_FIELD_TYPE, STATIC_FIELD_USE_UNAVAILABLE},
 };
+
+#[test]
+fn lowers_inline_optional_operations_to_static_places() {
+    let output = check_text(concat!(
+        "fn replace(mut ref value: i64?, next: i64?) -> unit { value = next; }\n",
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Base { static maybe_count: i64?; init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "class State {\n",
+        "  private static maybe_item: Item?; init() {}\n",
+        "  static fn read() -> i64 {\n",
+        "    State.maybe_item = Item(1);\n",
+        "    if (State.maybe_item is some) { return State.maybe_item!.value; }\n",
+        "    return 0;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  replace(Derived.maybe_count, 41);\n",
+        "  if (Base.maybe_count is some) { return Base.maybe_count! + State.read(); }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::Call(call) = &main.body.statements[0] else {
+        panic!("expected optional alias call");
+    };
+    let HirExpressionKind::DirectCall { arguments, .. } = &call.call.kind else {
+        panic!("expected direct call");
+    };
+    let HirCallArgument::OptionalPlace(crate::hir::HirOptionalAliasPlace::Primitive(place)) =
+        &arguments[0]
+    else {
+        panic!("expected primitive optional place argument");
+    };
+    assert!(matches!(place.storage, HirOptionalStorage::Static(_)));
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("OptionalStaticPlace c1:static0"), "{dump}");
+    assert!(
+        dump.contains("ClassOptionalStaticPlace c3:static0"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("ObjectPlace c3:method0:self : class c0 mutable"),
+        "{dump}"
+    );
+}
 
 #[test]
 fn lowers_primitive_reads_writes_and_aliases_to_identity_based_places() {
@@ -152,11 +202,12 @@ fn rejects_each_non_zero_default_type_at_its_declaration() {
 }
 
 #[test]
-fn rejects_owning_static_uses_at_the_primitive_source_boundary() {
+fn rejects_optional_shared_and_array_uses_at_the_current_source_boundary() {
     let output = check_text(concat!(
         "class Item { init() {} }\n",
-        "class State { static items: Item[]; init() {} }\n",
+        "class State { static items: Item[]; static owner: shared? Item; init() {} }\n",
         "fn count() -> u64 { return State.items.len(); }\n",
+        "fn clear_owner() -> unit { State.owner = none; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
@@ -167,7 +218,7 @@ fn rejects_owning_static_uses_at_the_primitive_source_boundary() {
             .iter()
             .filter(|diagnostic| diagnostic.code == STATIC_FIELD_USE_UNAVAILABLE)
             .count(),
-        1
+        2
     );
 }
 
@@ -210,6 +261,37 @@ fn preserves_source_argument_order_without_a_static_receiver() {
             ..
         })
     ));
+}
+
+#[test]
+fn module_qualified_inline_optional_places_retain_declaring_identity() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import state;\n",
+                    "fn main() -> i64 {\n",
+                    "  state::State.value = 42;\n",
+                    "  if (state::State.value is some) { return state::State.value!; }\n",
+                    "  return 0;\n",
+                    "}\n",
+                ),
+            ),
+            (
+                "state.ska",
+                "public class State { static value: i64?; init() {} }\n",
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let output = type_check(&resolved.program);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("OptionalStaticPlace c0:static0"), "{dump}");
 }
 
 #[test]

@@ -192,6 +192,7 @@ impl BodyLowerer<'_> {
     ) -> crate::mir::MirPlace {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
+            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
             HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }
@@ -334,6 +335,7 @@ impl BodyLowerer<'_> {
     ) -> crate::mir::MirPlace {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
+            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
             HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }
@@ -423,6 +425,7 @@ impl BodyLowerer<'_> {
     ) -> crate::mir::MirPlace {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
+            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
             HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }

@@ -68,6 +68,12 @@ pub(super) const fn has_zero_default(ty: Type) -> bool {
 pub(in crate::typeck) const fn source_use_is_enabled(ty: Type) -> bool {
     matches!(
         ty,
-        Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+        Type::I64
+            | Type::U64
+            | Type::U8
+            | Type::F64
+            | Type::Bool
+            | Type::OptionalPrimitive(_)
+            | Type::OptionalClass(_)
     )
 }

@@ -75,10 +75,12 @@ inline subobjects reached through owning values, receivers, and existing
 aliases.
 
 For an inline optional parameter, the argument may likewise be an exact
-optional local, value parameter, forwarded optional alias, or optional field
-reached through a supported mutable/read-only object path. `none`, an ordinary
-payload, a produced optional result, and an unwrapped payload are values rather
-than existing optional-container places and cannot bind the alias.
+optional local, value parameter, forwarded optional alias, optional field
+reached through a supported mutable/read-only object path, or a compatible
+inline-optional static field. Static selection evaluates no receiver. `none`,
+an ordinary payload, a produced optional result, and an unwrapped payload are
+values rather than existing optional-container places and cannot bind the
+alias.
 
 A concrete class source may convert to the same class, any ancestor class, or
 `Obj`. These conversions retain the original complete object and do not slice.

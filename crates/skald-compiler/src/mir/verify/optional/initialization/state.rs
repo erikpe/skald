@@ -15,7 +15,19 @@ pub(super) struct InitializationState {
 }
 
 impl InitializationState {
-    pub(super) fn at_entry(function: MirDefinitionRef<'_>) -> Self {
+    pub(super) fn at_entry(program: &MirProgram, function: MirDefinitionRef<'_>) -> Self {
+        let static_optionals = program.classes.iter().flat_map(|class| {
+            class
+                .static_fields
+                .iter()
+                .filter(|field| {
+                    matches!(
+                        field.ty,
+                        MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                    )
+                })
+                .map(|field| MirPlace::static_field(field.id))
+        });
         let mut state = Self {
             places: function
                 .parameters()
@@ -34,6 +46,7 @@ impl InitializationState {
                         MirPlace::base(*storage)
                     }
                 })
+                .chain(static_optionals)
                 .collect(),
         };
 
@@ -60,7 +73,7 @@ impl InitializationState {
 
     pub(super) fn reset_storage(&mut self, storage: StorageId) {
         self.places
-            .retain(|place| place.base.expect_local_storage() != storage);
+            .retain(|place| place.base.local_storage() != Some(storage));
     }
 
     pub(super) fn merge(&mut self, incoming: &Self) {

@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: in progress; STF4 is next.
+Status: in progress; STF5 is next.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -136,7 +136,7 @@ static-place addressing belongs in a descriptive lowering module while
 - [x] STF1 — Separate static declarations and inherited identity
 - [x] STF2 — Establish typed static places and primitive behavior
 - [x] STF3 — Add verified static MIR roots and x86-64 slots
-- [ ] STF4 — Extend inline optional storage to static roots
+- [x] STF4 — Extend inline optional storage to static roots
 - [ ] STF5 — Extend optional shared ownership to static roots
 - [ ] STF6 — Extend inline arrays, aliases, and I/O to static roots
 - [ ] STF7 — Harden composition and publish the implemented contract
@@ -310,25 +310,25 @@ layout nor the runtime interface.
 **Purpose:** Add absent-by-default primitive and exact-class optionals while
 preserving checked-view, mutation, copying, and conditional lifecycle rules.
 
-- [ ] Enable primitive `T?` and exact-class `T?` static declarations as
+- [x] Enable primitive `T?` and exact-class `T?` static declarations as
       initialized absent containers at every callable entry. Zero payload
       bytes carry no value while absent.
-- [ ] Extend typed optional source/destination/place families with static
+- [x] Extend typed optional source/destination/place families with static
       roots for presence tests, unwrap, copy, assignment, clearing,
       exact-class construction/copy/assignment, aliases to inline optional
       containers, and checked payload views.
-- [ ] Seed and preserve static optional initialization in the split optional
+- [x] Seed and preserve static optional initialization in the split optional
       verifier without coupling it to local `StorageLive` epochs. Integrate
       complete static places with existing path-conditioned state, guard
       counts, and mutation rejection.
-- [ ] Ensure static optional-class storage does not add a class-containment
+- [x] Ensure static optional-class storage does not add a class-containment
       edge or instance bytes. Its target slot still uses the existing checked
       optional-class layout for its reserved payload.
-- [ ] Reuse ordinary replacement behavior: replacing a present exact-class
+- [x] Reuse ordinary replacement behavior: replacing a present exact-class
       payload runs its current assignment or destruction path, while the final
       present payload remains live at process termination and receives no
       generated cleanup.
-- [ ] Extend x86-64 static addressing through optional state and payload
+- [x] Extend x86-64 static addressing through optional state and payload
       projections without a separate optional representation or runtime call.
 
 **Tests:** Absent defaults for every primitive and representative exact

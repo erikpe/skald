@@ -100,7 +100,7 @@ fn rejects_missing_mismatched_and_projected_static_roots() {
     assert!(verify_mir(&projected)
         .unwrap_err()
         .to_string()
-        .contains("cannot have projections"));
+        .contains("has a non-class base"));
 
     let mut malformed = lower_text(SOURCE);
     malformed.classes.entries_mut_for_test()[0].static_fields[0].ty =
@@ -117,4 +117,84 @@ fn rejects_missing_mismatched_and_projected_static_roots() {
         .unwrap_err()
         .to_string()
         .contains("static-field table index 1"));
+}
+
+#[test]
+fn inline_optional_statics_are_always_live_typed_roots() {
+    let program = lower_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class State { static count: i64?; static item: Item?; init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var local: i64? = none;\n",
+        "  if (State.count is some || State.item is some) { return 1; }\n",
+        "  State.count = 41; State.item = Item(1);\n",
+        "  if (State.item is some) { return State.count! + State.item!.value; }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    verify_mir(&program).unwrap();
+    let state = program.class(ClassId::new(1)).unwrap();
+    assert_eq!(
+        state.static_fields[0].ty,
+        MirType::OptionalPrimitive(MirPrimitiveType::I64)
+    );
+    assert_eq!(
+        state.static_fields[1].ty,
+        MirType::OptionalClass(ClassId::new(0))
+    );
+
+    let dump = dump_mir(&program);
+    assert!(dump.contains("static(c1:static0)"), "{dump}");
+    assert!(
+        dump.contains("static(c1:static1).optional-payload(c0)"),
+        "{dump}"
+    );
+    assert!(dump.contains("storage-live"), "{dump}");
+    assert!(
+        !dump.contains("OptionalInitialize static(c1:static0)"),
+        "{dump}"
+    );
+    assert!(
+        !dump.contains("ClassOptionalInitialize static(c1:static1)"),
+        "{dump}"
+    );
+}
+
+#[test]
+fn verifier_rejects_malformed_static_optional_projection_types() {
+    let mut program = lower_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class State { static item: Item?; init() {} }\n",
+        "fn main() -> i64 { State.item = Item(42); return State.item!.value; }\n",
+    ));
+    let main = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let projected =
+        main.body
+            .blocks
+            .iter_mut()
+            .flat_map(|block| &mut block.instructions)
+            .find_map(|instruction| match instruction {
+                MirInstruction::Assign(assignment)
+                    if matches!(assignment.rvalue.kind, MirRvalueKind::Load(_)) =>
+                {
+                    let MirRvalueKind::Load(place) = &mut assignment.rvalue.kind else {
+                        unreachable!()
+                    };
+                    place.projections.iter_mut().find(|projection| {
+                        matches!(projection, MirPlaceProjection::OptionalPayload(_))
+                    })
+                }
+                _ => None,
+            })
+            .expect("fixture must load the static optional payload");
+    *projected = MirPlaceProjection::OptionalPayload(ClassId::new(1));
+
+    assert!(verify_mir(&program)
+        .unwrap_err()
+        .to_string()
+        .contains("incompatible base type"));
 }

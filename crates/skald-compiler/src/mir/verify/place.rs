@@ -51,15 +51,12 @@ impl Verifier<'_> {
                 );
                 return None;
             };
-            if !place.projections.is_empty() {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    format!("primitive static place {field_id} cannot have projections"),
-                );
-                return None;
-            }
-            if !field.ty.is_scalar_value() {
+            if !field.ty.is_scalar_value()
+                && !matches!(
+                    field.ty,
+                    MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                )
+            {
                 self.block_error(
                     function.callable(),
                     block.id,
@@ -67,8 +64,10 @@ impl Verifier<'_> {
                 );
                 return None;
             }
+            let ty =
+                self.verify_place_projections(function, block, field.ty, &place.projections)?;
             return Some(VerifiedPlace {
-                ty: field.ty,
+                ty,
                 access: MirAliasAccess::Mutable,
             });
         }
@@ -181,11 +180,22 @@ impl Verifier<'_> {
                 unreachable!("static roots return before local-storage verification")
             }
         };
-        let mut ty = match (place.base, storage.ty) {
+        let ty = match (place.base, storage.ty) {
             (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),
             _ => storage.ty,
         };
-        for projection in &place.projections {
+        let ty = self.verify_place_projections(function, block, ty, &place.projections)?;
+        Some(VerifiedPlace { ty, access })
+    }
+
+    fn verify_place_projections(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        mut ty: MirType,
+        projections: &[MirPlaceProjection],
+    ) -> Option<MirType> {
+        for projection in projections {
             match *projection {
                 MirPlaceProjection::Base(base) => {
                     let MirType::Class(owner) = ty else {
@@ -284,7 +294,7 @@ impl Verifier<'_> {
                 }
             }
         }
-        Some(VerifiedPlace { ty, access })
+        Some(ty)
     }
 
     pub(super) fn storage_access(

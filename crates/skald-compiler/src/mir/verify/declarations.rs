@@ -441,7 +441,12 @@ impl<'mir> Verifier<'mir> {
                         class.id, field.id
                     ));
                 }
-                if !field.ty.is_scalar_value() {
+                if !field.ty.is_scalar_value()
+                    && !matches!(
+                        field.ty,
+                        MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                    )
+                {
                     self.program_error(format!(
                         "static field {} has unsupported MIR type {}",
                         field.id, field.ty

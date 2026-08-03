@@ -36,6 +36,22 @@ impl CallableChecker<'_, '_> {
         member_span: Span,
         span: Span,
     ) -> Option<(HirStaticPlace, Type)> {
+        let (place, ty) = self.check_static_place(field, member_span, span)?;
+        if !matches!(
+            ty,
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+        ) {
+            return None;
+        }
+        Some((place, ty))
+    }
+
+    pub(in crate::typeck) fn check_static_place(
+        &mut self,
+        field: StaticFieldId,
+        member_span: Span,
+        span: Span,
+    ) -> Option<(HirStaticPlace, Type)> {
         let declaration = self
             .program
             .static_field(field)
@@ -53,7 +69,7 @@ impl CallableChecker<'_, '_> {
                 )
                 .with_primary_label(
                     member_span,
-                    "only primitive static fields are currently usable",
+                    "this static storage category is not usable yet",
                 )
                 .with_secondary_label(declaration.name_span, "static field declared here"),
             );

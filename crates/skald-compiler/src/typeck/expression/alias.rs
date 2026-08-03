@@ -443,6 +443,7 @@ impl CallableChecker<'_, '_> {
             crate::hir::HirOptionalStorage::Binding(binding) => {
                 self.binding_access(*binding, false, span)
             }
+            crate::hir::HirOptionalStorage::Static(_) => Some(HirAccess::Mutable),
             crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access),
             crate::hir::HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
         }
