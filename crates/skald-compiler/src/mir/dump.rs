@@ -158,6 +158,13 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         write_span(output, field.span);
         output.push('\n');
     }
+    for field in &class.static_fields {
+        let _ = write!(output, "      StaticField {} ", field.id);
+        write_quoted(output, &field.name);
+        let _ = write!(output, " : {}", field.ty);
+        write_span(output, field.span);
+        output.push('\n');
+    }
     for initializer in &class.initializers {
         let _ = write!(output, "      Initializer {}(", initializer.id);
         dump_parameters(output, &initializer.parameters);
@@ -1270,6 +1277,9 @@ fn dump_optional_shared_source(output: &mut String, source: &MirOptionalSharedSo
 
 fn dump_place(output: &mut String, place: &MirPlace) {
     match place.base {
+        MirPlaceBase::StaticField(field) => {
+            let _ = write!(output, "static({field})");
+        }
         MirPlaceBase::Storage(storage) => {
             let _ = write!(output, "{storage}");
         }

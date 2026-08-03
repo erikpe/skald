@@ -59,7 +59,8 @@ impl InitializationState {
     }
 
     pub(super) fn reset_storage(&mut self, storage: StorageId) {
-        self.places.retain(|place| place.base.storage() != storage);
+        self.places
+            .retain(|place| place.base.expect_local_storage() != storage);
     }
 
     pub(super) fn merge(&mut self, incoming: &Self) {
@@ -112,7 +113,7 @@ impl InitializationState {
                     }
                     if let Some(destination) = &call.destination {
                         if function
-                            .storage(destination.base.storage())
+                            .storage(destination.base.expect_local_storage())
                             .is_some_and(|storage| is_optional(storage.ty))
                         {
                             self.insert(destination.clone());
@@ -247,7 +248,7 @@ impl InitializationState {
                 continue;
             };
             if function
-                .storage(place.base.storage())
+                .storage(place.base.expect_local_storage())
                 .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
             {
                 self.remove(place);
@@ -324,7 +325,7 @@ fn complete_class_storage(function: MirDefinitionRef<'_>, place: &MirPlace) -> O
     place
         .projections
         .is_empty()
-        .then(|| function.storage(place.base.storage()))
+        .then(|| function.storage(place.base.expect_local_storage()))
         .flatten()
         .and_then(|storage| match storage.ty {
             MirType::Class(class) => Some(class),

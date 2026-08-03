@@ -272,7 +272,10 @@ fn rejects_malformed_string_publication_one_invariant_at_a_time() {
         .contains("string initialization destination must be mutable owning string storage"));
 
     let wrong_backing = errors_after(|program| {
-        let destination = string_initialize_mut(program).destination.base.storage();
+        let destination = string_initialize_mut(program)
+            .destination
+            .base
+            .expect_local_storage();
         string_initialize_mut(program).backing = destination;
     });
     assert!(wrong_backing
@@ -327,7 +330,7 @@ fn verifies_panic_message_identity_and_initialization() {
             )
         }));
     let message = match definition.body.blocks[0].terminator.as_ref().unwrap() {
-        MirTerminator::Panic { message, .. } => message.base.storage(),
+        MirTerminator::Panic { message, .. } => message.base.expect_local_storage(),
         other => panic!("expected panic terminator, got {other:?}"),
     };
     definition.storage[message.index()].ty = MirType::I64;

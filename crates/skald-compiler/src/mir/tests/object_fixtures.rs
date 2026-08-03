@@ -27,6 +27,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             name: "Inner".to_owned(),
             direct_base: None,
             conformances: vec![],
+            static_fields: vec![],
             fields: vec![MirFieldDeclaration {
                 id: inner_value,
                 name: "value".to_owned(),
@@ -48,6 +49,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             name: "Outer".to_owned(),
             direct_base: None,
             conformances: vec![],
+            static_fields: vec![],
             fields: vec![MirFieldDeclaration {
                 id: outer_inner,
                 name: "inner".to_owned(),

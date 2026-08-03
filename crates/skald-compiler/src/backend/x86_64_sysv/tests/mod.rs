@@ -79,6 +79,7 @@ mod primitive_binding_assignment;
 mod primitive_casts;
 mod shared_ownership;
 mod shifts;
+mod static_fields;
 mod static_inheritance;
 mod strings;
 mod termination;

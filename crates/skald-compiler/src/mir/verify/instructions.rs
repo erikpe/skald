@@ -396,7 +396,7 @@ impl Verifier<'_> {
         for cleanup in &end.temporaries {
             let destination = self.verify_place(function, block, &cleanup.destination);
             let is_temporary = function
-                .storage(cleanup.destination.base.storage())
+                .storage(cleanup.destination.base.expect_local_storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Temporary);
             if !is_temporary
                 || !cleanup.destination.projections.is_empty()
@@ -497,7 +497,7 @@ impl Verifier<'_> {
                 "copy-allocation destination must name one complete unpublished payload",
             );
         }
-        let destination_storage = function.storage(destination_place.base.storage());
+        let destination_storage = function.storage(destination_place.base.expect_local_storage());
         if matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
             || destination_storage
                 .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
@@ -514,7 +514,7 @@ impl Verifier<'_> {
         }
         if !construction
             && destination_place.projections.is_empty()
-            && function.receiver() == Some(destination_place.base.storage())
+            && function.receiver() == Some(destination_place.base.expect_local_storage())
         {
             self.block_error(
                 function.callable(),
@@ -601,8 +601,10 @@ impl Verifier<'_> {
                 let place_ty = self
                     .verify_place(function, block, place)
                     .map(|place| place.ty);
-                if function
-                    .storage(place.base.storage())
+                if place
+                    .base
+                    .local_storage()
+                    .and_then(|storage| function.storage(storage))
                     .is_some_and(|storage| storage.kind == MirStorageKind::PathCondition)
                 {
                     self.block_error(

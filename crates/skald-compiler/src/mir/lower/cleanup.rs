@@ -486,13 +486,14 @@ mod tests {
             all.cleanups
                 .iter()
                 .map(|cleanup| match cleanup {
-                    PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
+                    PlannedCleanup::Inline(cleanup) =>
+                        cleanup.destination.base.expect_local_storage(),
                     PlannedCleanup::Shared(release) => release.owner,
                     PlannedCleanup::ClassOptional(cleanup) => {
-                        cleanup.destination.base.storage()
+                        cleanup.destination.base.expect_local_storage()
                     }
                     PlannedCleanup::OptionalShared(cleanup) => {
-                        cleanup.destination.base.storage()
+                        cleanup.destination.base.expect_local_storage()
                     }
                     PlannedCleanup::Array { storage, .. } => *storage,
                 })
@@ -510,10 +511,12 @@ mod tests {
         let outer_exit = planner.for_current_scope(span);
         assert_eq!(
             match &outer_exit.cleanups[0] {
-                PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
+                PlannedCleanup::Inline(cleanup) => cleanup.destination.base.expect_local_storage(),
                 PlannedCleanup::Shared(release) => release.owner,
-                PlannedCleanup::ClassOptional(cleanup) => cleanup.destination.base.storage(),
-                PlannedCleanup::OptionalShared(cleanup) => cleanup.destination.base.storage(),
+                PlannedCleanup::ClassOptional(cleanup) =>
+                    cleanup.destination.base.expect_local_storage(),
+                PlannedCleanup::OptionalShared(cleanup) =>
+                    cleanup.destination.base.expect_local_storage(),
                 PlannedCleanup::Array { storage, .. } => *storage,
             },
             outer

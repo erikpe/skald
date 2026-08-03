@@ -2,6 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
+    identity::StaticFieldId,
     mir::{
         MirDefinitionRef, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirStorageKind,
         MirType, StorageId, ValueId,
@@ -26,6 +27,7 @@ pub(super) struct FramePlace {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum FramePlaceBase {
+    StaticField(StaticFieldId),
     Direct,
     Return { home: i32 },
     Receiver { home: i32 },
@@ -37,7 +39,7 @@ pub(super) enum FramePlaceBase {
 impl FramePlaceBase {
     pub(super) const fn pointer_home(self) -> Option<i32> {
         match self {
-            Self::Direct => None,
+            Self::Direct | Self::StaticField(_) => None,
             Self::Return { home }
             | Self::Receiver { home }
             | Self::OwnedParameter { home }
@@ -199,7 +201,19 @@ impl FrameLayout {
         data_layout: &DataLayout,
         place: &MirPlace,
     ) -> Result<FramePlace, BackendError> {
-        let storage_id = place.base.storage();
+        if let MirPlaceBase::StaticField(field_id) = place.base {
+            let field = program
+                .static_field(field_id)
+                .expect("verified static place must name a declaration");
+            debug_assert!(place.projections.is_empty());
+            return Ok(FramePlace {
+                base: FramePlaceBase::StaticField(field_id),
+                displacement: 0,
+                ty: field.ty,
+                byte_access: matches!(field.ty, MirType::U8 | MirType::Bool),
+            });
+        }
+        let storage_id = place.base.expect_local_storage();
         let storage = function
             .storage(storage_id)
             .expect("verified place base must identify storage");
@@ -265,6 +279,9 @@ impl FrameLayout {
                     .map_err(|_| place_address_error(function.callable()))?,
             ),
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
+            MirPlaceBase::StaticField(_) => {
+                unreachable!("static roots return before frame storage selection")
+            }
         };
         let mut ty = match (place.base, storage.ty) {
             (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),

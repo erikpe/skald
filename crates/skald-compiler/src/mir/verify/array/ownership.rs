@@ -409,8 +409,10 @@ impl Verifier<'_> {
 }
 
 fn array_borrow_requires_anchor(function: MirDefinitionRef<'_>, place: &MirPlace) -> bool {
-    function
-        .storage(place.base.storage())
+    place
+        .base
+        .local_storage()
+        .and_then(|storage| function.storage(storage))
         .is_some_and(|storage| matches!(storage.ty, MirType::Array(_)))
         || place
             .projections
@@ -456,7 +458,7 @@ impl ArrayOwnerState {
     ) {
         if let MirInstruction::Call(call) = instruction {
             if let Some(destination) = &call.destination {
-                let storage = destination.base.storage();
+                let storage = destination.base.expect_local_storage();
                 if function
                     .storage(storage)
                     .is_some_and(|entry| entry.kind == MirStorageKind::ArrayProduced)
@@ -574,7 +576,7 @@ impl ArrayOwnerState {
                 }
             }
             MirArrayInstruction::Release { owner, .. } => {
-                let storage = owner.base.storage();
+                let storage = owner.base.expect_local_storage();
                 self.produced.remove(&storage);
                 if function.storage(storage).is_some_and(|storage| {
                     matches!(

@@ -158,11 +158,11 @@ fn break_targets_the_nearest_exit_and_cleans_every_exited_scope() {
         .filter_map(|instruction| match instruction {
             MirInstruction::Cleanup(cleanup)
                 if matches!(
-                    cleanup.destination.base.storage(),
+                    cleanup.destination.base.expect_local_storage(),
                     storage if storage == inner || storage == outer
                 ) =>
             {
-                Some(cleanup.destination.base.storage())
+                Some(cleanup.destination.base.expect_local_storage())
             }
             _ => None,
         })
@@ -266,9 +266,9 @@ fn continue_targets_the_latch_after_cleaning_every_exited_scope() {
         .iter()
         .filter_map(|instruction| match instruction {
             MirInstruction::Cleanup(cleanup)
-                if matches!(cleanup.destination.base.storage(), storage if storage == nested || storage == body) =>
+                if matches!(cleanup.destination.base.expect_local_storage(), storage if storage == nested || storage == body) =>
             {
-                Some(cleanup.destination.base.storage())
+                Some(cleanup.destination.base.expect_local_storage())
             }
             _ => None,
         })

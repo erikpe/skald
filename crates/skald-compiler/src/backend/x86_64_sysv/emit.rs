@@ -25,6 +25,16 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
         }
         writeln!(output, ".size {}, .-{}", function.symbol, function.symbol).unwrap();
     }
+    if !program.static_slots.is_empty() {
+        output.push_str("\n.bss\n");
+        for slot in &program.static_slots {
+            writeln!(output, ".p2align {}", slot.alignment_power).unwrap();
+            writeln!(output, ".type {}, @object", slot.symbol).unwrap();
+            writeln!(output, "{}:", slot.symbol).unwrap();
+            writeln!(output, "    .zero {}", slot.size).unwrap();
+            writeln!(output, ".size {}, {}", slot.symbol, slot.size).unwrap();
+        }
+    }
     if !program.literal_backings.is_empty()
         || !program.dispatch_tables.is_empty()
         || !program.panic_messages.is_empty()

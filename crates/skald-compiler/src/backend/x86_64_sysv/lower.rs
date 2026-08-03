@@ -65,6 +65,7 @@ pub(super) fn lower(
     let panic_messages = terminator::PanicMessagePool::build(&functions);
     Ok(AssemblyProgram {
         functions,
+        static_slots: super::static_fields::plan(program, data_layout)?,
         dispatch_tables: dispatch.assembly_tables(program),
         literal_backings: literal_pool.into_backings(),
         panic_messages: panic_messages.into_assembly(),

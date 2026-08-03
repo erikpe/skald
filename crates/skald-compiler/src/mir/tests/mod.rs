@@ -51,6 +51,7 @@ mod primitive_casts;
 mod robustness;
 mod shared;
 mod shifts;
+mod static_fields;
 mod static_inheritance;
 mod static_methods;
 mod storage_lifetimes;

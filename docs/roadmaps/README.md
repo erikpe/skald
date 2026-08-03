@@ -10,8 +10,8 @@ progress. Completed roadmaps and resolved discovery records move to
   class-qualified mutable storage for primitives, inline optionals, optional
   shared owners, and empty inline arrays through verified program-owned MIR
   places and deterministic x86-64 slots; STF2 (typed static places and
-  primitive behavior) is complete and STF3 (verified primitive MIR roots and
-  x86-64 slots) is next. It depends on the implemented
+  primitive behavior) and STF3 (verified primitive MIR roots and x86-64
+  slots) are complete; STF4 (inline optional static storage) is next. It depends on the implemented
   module/privacy/static-method, ownership, optional, array, path-state,
   standard-I/O, backend, and runtime-version-8 contracts, but not on the
   planned produced-object-alias roadmap.

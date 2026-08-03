@@ -17,6 +17,7 @@ mod legality;
 mod literal_data;
 mod lower;
 mod machine;
+mod static_fields;
 mod symbol;
 
 use crate::mir::MirProgram;

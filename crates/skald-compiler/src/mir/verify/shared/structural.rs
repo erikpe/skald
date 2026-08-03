@@ -491,7 +491,8 @@ impl<'mir> Verifier<'mir> {
             destination.projections.last(),
             Some(MirPlaceProjection::Field(_))
         );
-        let receiver_initialization = function.receiver() == Some(destination.base.storage())
+        let receiver_initialization = function.receiver()
+            == Some(destination.base.expect_local_storage())
             && matches!(
                 function.callable(),
                 CallableId::Initializer(_) | CallableId::CopyConstructor(_)

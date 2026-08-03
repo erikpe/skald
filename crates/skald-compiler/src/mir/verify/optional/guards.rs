@@ -369,23 +369,25 @@ impl OptionalGuardState {
     fn references_storage(&self, storage: crate::mir::StorageId) -> bool {
         self.active
             .values()
-            .any(|(source, _)| source.base.storage() == storage)
+            .any(|(source, _)| source.base.expect_local_storage() == storage)
             || self
                 .mutation_permits
                 .iter()
-                .any(|source| source.base.storage() == storage)
+                .any(|source| source.base.expect_local_storage() == storage)
     }
 
     fn reset_storage(&mut self, storage: crate::mir::StorageId) {
         let removed: HashSet<_> = self
             .active
             .iter()
-            .filter_map(|(guard, (source, _))| (source.base.storage() == storage).then_some(*guard))
+            .filter_map(|(guard, (source, _))| {
+                (source.base.expect_local_storage() == storage).then_some(*guard)
+            })
             .collect();
         self.active.retain(|guard, _| !removed.contains(guard));
         self.order.retain(|guard| !removed.contains(guard));
         self.mutation_permits
-            .retain(|source| source.base.storage() != storage);
+            .retain(|source| source.base.expect_local_storage() != storage);
     }
 }
 

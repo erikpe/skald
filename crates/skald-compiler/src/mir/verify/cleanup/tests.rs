@@ -52,7 +52,8 @@ fn structural_cleanup_validation_retains_exact_target_diagnostics() {
 fn structural_cleanup_validation_rejects_non_owning_foreign_and_scalar_places() {
     let mut non_owning = cleanup_program();
     let cleanup = cleanup_mut(&mut non_owning);
-    cleanup.destination.base = MirPlaceBase::AliasParameter(cleanup.destination.base.storage());
+    cleanup.destination.base =
+        MirPlaceBase::AliasParameter(cleanup.destination.base.expect_local_storage());
     assert!(messages(&non_owning)
         .iter()
         .any(|message| message == "cleanup destination must be owning storage"));

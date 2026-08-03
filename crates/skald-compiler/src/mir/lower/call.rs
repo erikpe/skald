@@ -450,8 +450,8 @@ impl BodyLowerer<'_> {
                         crate::hir::HirPrimitiveStorage::Binding(binding) => {
                             self.lower_binding_place(binding)
                         }
-                        crate::hir::HirPrimitiveStorage::Static(_) => {
-                            unreachable!("static aliases must not reach MIR lowering before static-root support")
+                        crate::hir::HirPrimitiveStorage::Static(place) => {
+                            MirPlace::static_field(place.field)
                         }
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))
@@ -579,7 +579,7 @@ impl BodyLowerer<'_> {
                     target,
                     ..
                 } => MirObjectOrigin::Shared {
-                    owner: source.base.storage(),
+                    owner: source.base.expect_local_storage(),
                     static_target: type_operations::lower_view_target(*target),
                     access: MirAliasAccess::Mutable,
                     exact_dynamic_class: shared_source.exact_dynamic_class(),

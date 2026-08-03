@@ -596,6 +596,12 @@ alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
 `rbp`-relative addressing.
 
+Primitive static roots do not receive frame homes. A private target-data plan
+maps each declaration identity to one aligned, writable, zero-filled local
+object using the ordinary target type layout. Instruction selection
+materializes its address with RIP-relative `lea`, after which the same byte,
+integer, floating, and alias-address operations used by other places apply.
+
 Return destinations and owned class, primitive-optional, or primitive-array
 parameters store an incoming pointer in a frame home. Receivers and aliases
 additionally store complete-object and metadata homes for forwarding.

@@ -45,8 +45,8 @@ impl BodyLowerer<'_> {
                         crate::hir::HirPrimitiveStorage::Binding(binding) => {
                             self.lower_binding_place(binding)
                         }
-                        crate::hir::HirPrimitiveStorage::Static(_) => {
-                            unreachable!("static places must not reach MIR lowering before static-root support")
+                        crate::hir::HirPrimitiveStorage::Static(place) => {
+                            MirPlace::static_field(place.field)
                         }
                     },
                     value,

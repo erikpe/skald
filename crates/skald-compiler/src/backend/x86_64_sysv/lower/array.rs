@@ -885,7 +885,7 @@ impl InstructionSelector<'_, '_> {
                     if self.array_backing_ownership(storage) == Some(MirArrayOwnership::Shared)));
         if shared {
             value::load_rax(
-                value::frame_storage(self.frame, owner.base.storage()),
+                value::frame_storage(self.frame, owner.base.expect_local_storage()),
                 self.output,
             );
         } else {
@@ -1006,7 +1006,7 @@ fn array_for_place(
     place: &MirPlace,
 ) -> Result<crate::identity::ArrayTypeId, BackendError> {
     let mut ty = function
-        .storage(place.base.storage())
+        .storage(place.base.expect_local_storage())
         .expect("verified array place has storage")
         .ty;
     for projection in &place.projections {

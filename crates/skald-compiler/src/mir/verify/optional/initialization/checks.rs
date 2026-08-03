@@ -181,7 +181,7 @@ fn verify_instruction(
             }
             if let Some(destination) = &call.destination {
                 if function
-                    .storage(destination.base.storage())
+                    .storage(destination.base.expect_local_storage())
                     .is_some_and(|storage| is_optional(storage.ty))
                 {
                     if !state.insert(destination.clone()) {
@@ -385,7 +385,7 @@ fn consume_class_optional_arguments(
             continue;
         };
         if !function
-            .storage(place.base.storage())
+            .storage(place.base.expect_local_storage())
             .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
         {
             continue;

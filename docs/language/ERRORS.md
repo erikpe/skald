@@ -37,9 +37,9 @@ resolution, where malformed shapes, member collisions, inherited identity,
 wrong-kind selection, non-callable use, and declaring-class privacy have their
 ordinary owners. Type checking reports `TYP042` at a declaration whose type
 has no complete all-zero live value. Primitive reads, writes, and call aliases
-lower to typed static places; `TYP043` reserves accepted ownership-bearing
-declarations for their later source-use stages. Until static MIR roots land,
-`TYP044` stops a well-typed static program before MIR lowering.
+lower through typed static places to verified primitive MIR roots; `TYP043`
+reserves accepted ownership-bearing declarations for their later source-use
+stages.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

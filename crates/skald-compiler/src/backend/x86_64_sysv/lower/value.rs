@@ -6,8 +6,11 @@ use crate::{
 };
 
 use super::{
-    super::frame::FramePlace,
     super::machine::{ByteRegister, FloatOperand, Instruction, Operand, Register, XmmRegister},
+    super::{
+        frame::{FramePlace, FramePlaceBase},
+        symbol,
+    },
     FrameLayout, InstructionSelector,
 };
 
@@ -49,16 +52,25 @@ impl InstructionSelector<'_, '_> {
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place)?;
-        let base = match layout.base().pointer_home() {
-            None => Register::Rbp,
-            Some(home) => {
-                load_rax(memory(Register::Rbp, home), self.output);
-                self.output.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination: Register::R11.into(),
+        let base = match layout.base() {
+            FramePlaceBase::StaticField(field) => {
+                self.output.push(Instruction::LoadSymbolAddress {
+                    symbol: symbol::static_field(self.program, field),
+                    destination: Register::R11,
                 });
                 Register::R11
             }
+            _ => match layout.base().pointer_home() {
+                None => Register::Rbp,
+                Some(home) => {
+                    load_rax(memory(Register::Rbp, home), self.output);
+                    self.output.push(Instruction::Move {
+                        source: Register::Rax.into(),
+                        destination: Register::R11.into(),
+                    });
+                    Register::R11
+                }
+            },
         };
         let operand = memory(base, layout.displacement());
         Ok((layout, operand))
@@ -85,23 +97,31 @@ impl InstructionSelector<'_, '_> {
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place)?;
-        match layout.base().pointer_home() {
-            None => self.output.push(Instruction::LoadEffectiveAddress {
-                source: memory(Register::Rbp, layout.displacement()),
-                destination,
-            }),
-            Some(home) => {
-                self.output.push(Instruction::Move {
-                    source: memory(Register::Rbp, home),
-                    destination: destination.into(),
-                });
-                if layout.displacement() != 0 {
-                    self.output.push(Instruction::LoadEffectiveAddress {
-                        source: memory(destination, layout.displacement()),
-                        destination,
-                    });
-                }
+        match layout.base() {
+            FramePlaceBase::StaticField(field) => {
+                self.output.push(Instruction::LoadSymbolAddress {
+                    symbol: symbol::static_field(self.program, field),
+                    destination,
+                })
             }
+            _ => match layout.base().pointer_home() {
+                None => self.output.push(Instruction::LoadEffectiveAddress {
+                    source: memory(Register::Rbp, layout.displacement()),
+                    destination,
+                }),
+                Some(home) => {
+                    self.output.push(Instruction::Move {
+                        source: memory(Register::Rbp, home),
+                        destination: destination.into(),
+                    });
+                    if layout.displacement() != 0 {
+                        self.output.push(Instruction::LoadEffectiveAddress {
+                            source: memory(destination, layout.displacement()),
+                            destination,
+                        });
+                    }
+                }
+            },
         }
         Ok(())
     }

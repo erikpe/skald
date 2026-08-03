@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    identity::{ArrayTypeId, ClassId, FieldId, InterfaceId},
+    identity::{ArrayTypeId, ClassId, FieldId, InterfaceId, StaticFieldId},
     source::Span,
 };
 
@@ -126,6 +126,13 @@ impl MirPlace {
         }
     }
 
+    pub fn static_field(field: StaticFieldId) -> Self {
+        Self {
+            base: MirPlaceBase::StaticField(field),
+            projections: Vec::new(),
+        }
+    }
+
     pub fn project_field(mut self, field: FieldId) -> Self {
         self.projections.push(MirPlaceProjection::Field(field));
         self
@@ -157,6 +164,7 @@ impl MirPlace {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPlaceBase {
+    StaticField(StaticFieldId),
     Storage(StorageId),
     AliasParameter(StorageId),
     CheckedView(StorageId),
@@ -168,14 +176,24 @@ pub enum MirPlaceBase {
 }
 
 impl MirPlaceBase {
-    pub const fn storage(self) -> StorageId {
+    /// Returns the function-local carrier for roots backed by MIR storage.
+    /// Static roots deliberately have no carrier and are always live.
+    pub const fn local_storage(self) -> Option<StorageId> {
         match self {
             Self::Storage(storage)
             | Self::AliasParameter(storage)
             | Self::CheckedView(storage)
             | Self::ArrayAlias(storage)
             | Self::SharedPointee(storage)
-            | Self::SharedAllocationPayload(storage) => storage,
+            | Self::SharedAllocationPayload(storage) => Some(storage),
+            Self::StaticField(_) => None,
+        }
+    }
+
+    pub const fn expect_local_storage(self) -> StorageId {
+        match self.local_storage() {
+            Some(storage) => storage,
+            None => panic!("static place root has no function-local storage carrier"),
         }
     }
 }

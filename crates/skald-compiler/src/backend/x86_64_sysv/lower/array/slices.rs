@@ -445,7 +445,7 @@ impl InstructionSelector<'_, '_> {
     ) -> Result<crate::identity::ArrayTypeId, BackendError> {
         let mut ty = self
             .function
-            .storage(place.base.storage())
+            .storage(place.base.expect_local_storage())
             .expect("verified slice owner has storage")
             .ty;
         if matches!(

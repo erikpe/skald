@@ -769,8 +769,8 @@ fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn typed_static_programs_stop_cleanly_before_mir_lowering() {
-    let error = compile_source_to_assembly(
+fn primitive_static_programs_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
         "static-field.ska",
         concat!(
             "class State { static count: i64; init() {} }\n",
@@ -778,13 +778,9 @@ fn typed_static_programs_stop_cleanly_before_mir_lowering() {
         ),
         Target::X86_64SysV,
     )
-    .expect_err("static MIR roots are implemented by the next roadmap stage");
-    let CompilationError::Diagnostics(report) = error else {
-        panic!("typed static fields must stop at a source diagnostic boundary");
-    };
-    assert_eq!(report.diagnostics.len(), 1);
-    assert_eq!(
-        report.diagnostics.iter().next().unwrap().code,
-        crate::typeck::STATIC_STORAGE_NOT_LOWERED
-    );
+    .expect("primitive static fields must lower through x86-64");
+    assert!(artifact
+        .assembly
+        .contains(".Lska.class.main.State.c0.static.s0"));
+    assert!(artifact.assembly.contains("\n.bss\n"));
 }

@@ -69,7 +69,6 @@ pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
 pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
 pub const STATIC_FIELD_USE_UNAVAILABLE: &str = "TYP043";
-pub const STATIC_STORAGE_NOT_LOWERED: &str = "TYP044";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

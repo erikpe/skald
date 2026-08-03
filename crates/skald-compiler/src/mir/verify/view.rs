@@ -301,7 +301,7 @@ impl Verifier<'_> {
                 ),
             );
         }
-        let complete_storage = site.function.storage(complete.base.storage());
+        let complete_storage = site.function.storage(complete.base.expect_local_storage());
         let forwarded_root = complete_storage.is_some_and(|storage| {
             matches!(
                 storage.kind,

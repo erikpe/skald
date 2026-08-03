@@ -294,7 +294,7 @@ fn require_executable_array_place(
     place: &MirPlace,
 ) -> Result<(), BackendError> {
     let storage = definition
-        .storage(place.base.storage())
+        .storage(place.base.expect_local_storage())
         .expect("verified array place has declared storage");
     let direct_owner = place.projections.is_empty()
         && matches!(

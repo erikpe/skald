@@ -42,7 +42,37 @@ impl Verifier<'_> {
         place: &MirPlace,
         allow_allocation_payload: bool,
     ) -> Option<VerifiedPlace> {
-        let storage_id = place.base.storage();
+        if let MirPlaceBase::StaticField(field_id) = place.base {
+            let Some(field) = self.program.static_field(field_id) else {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("static place base {field_id} is not declared"),
+                );
+                return None;
+            };
+            if !place.projections.is_empty() {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("primitive static place {field_id} cannot have projections"),
+                );
+                return None;
+            }
+            if !field.ty.is_scalar_value() {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("static place {field_id} has unsupported type {}", field.ty),
+                );
+                return None;
+            }
+            return Some(VerifiedPlace {
+                ty: field.ty,
+                access: MirAliasAccess::Mutable,
+            });
+        }
+        let storage_id = place.base.expect_local_storage();
         let Some(storage) = function.storage(storage_id) else {
             self.block_error(
                 function.callable(),
@@ -147,6 +177,9 @@ impl Verifier<'_> {
                 return None;
             }
             (MirPlaceBase::Storage(_), _) => self.storage_access(function, storage),
+            (MirPlaceBase::StaticField(_), _) => {
+                unreachable!("static roots return before local-storage verification")
+            }
         };
         let mut ty = match (place.base, storage.ty) {
             (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),

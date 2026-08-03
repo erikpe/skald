@@ -434,6 +434,20 @@ impl<'mir> Verifier<'mir> {
                     _ => {}
                 }
             }
+            for (index, field) in class.static_fields.iter().enumerate() {
+                if field.id.class() != class.id || field.id.index() != index {
+                    self.program_error(format!(
+                        "class {} static-field table index {index} contains {}",
+                        class.id, field.id
+                    ));
+                }
+                if !field.ty.is_scalar_value() {
+                    self.program_error(format!(
+                        "static field {} has unsupported MIR type {}",
+                        field.id, field.ty
+                    ));
+                }
+            }
             for (index, initializer) in class.initializers.iter().enumerate() {
                 if initializer.id.class() != class.id || initializer.id.index() != index {
                     self.program_error(format!(

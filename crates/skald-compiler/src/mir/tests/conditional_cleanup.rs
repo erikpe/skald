@@ -17,7 +17,7 @@ fn verifies_conditional_full_expression_cleanup_and_secured_result() {
     assert_eq!(
         end.temporaries
             .iter()
-            .map(|cleanup| cleanup.destination.base.storage().index())
+            .map(|cleanup| cleanup.destination.base.expect_local_storage().index())
             .collect::<Vec<_>>(),
         [2, 1]
     );

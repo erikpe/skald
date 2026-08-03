@@ -366,9 +366,17 @@ pub(super) struct AssemblyFunction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct AssemblyProgram {
     pub functions: Vec<AssemblyFunction>,
+    pub static_slots: Vec<AssemblyStaticSlot>,
     pub dispatch_tables: Vec<AssemblyDispatchTable>,
     pub literal_backings: Vec<AssemblyLiteralBacking>,
     pub panic_messages: Vec<AssemblyPanicMessage>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyStaticSlot {
+    pub symbol: String,
+    pub size: usize,
+    pub alignment_power: u8,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -1,7 +1,7 @@
 //! Collision-proof assembly symbols derived from canonical identities.
 
 use crate::{
-    identity::{ArrayTypeId, CallableId, ClassId, ModuleId},
+    identity::{ArrayTypeId, CallableId, ClassId, ModuleId, StaticFieldId},
     mir::{MirFunctionLinkage, MirProgram},
 };
 
@@ -36,6 +36,14 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
 
 pub(super) fn dispatch_table(program: &MirProgram, class: ClassId) -> String {
     format!(".Lska.{}.dispatch", class_stem(program, class))
+}
+
+pub(super) fn static_field(program: &MirProgram, field: StaticFieldId) -> String {
+    format!(
+        ".Lska.{}.static.s{}",
+        class_stem(program, field.class()),
+        field.index()
+    )
 }
 
 pub(super) fn complete_finalizer(program: &MirProgram, class: ClassId) -> String {

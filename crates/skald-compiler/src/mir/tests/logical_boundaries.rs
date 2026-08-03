@@ -69,7 +69,7 @@ fn bounded_optional_views_end_inside_the_selected_operand() {
                 matches!(
                     instruction,
                     MirInstruction::Store(store)
-                        if store.destination.base.storage() == logical.result
+                        if store.destination.base.expect_local_storage() == logical.result
                 )
             })
             .expect("the selected operand must publish its scalar result");
@@ -117,7 +117,7 @@ fn primitive_unwrap_copies_its_result_before_conditional_storage_cleanup() {
                     if matches!(
                         &assignment.rvalue.kind,
                         MirRvalueKind::Load(place)
-                            if place.base.storage() == unwrap.id
+                            if place.base.expect_local_storage() == unwrap.id
                     )
             )
         })
@@ -136,7 +136,7 @@ fn primitive_unwrap_copies_its_result_before_conditional_storage_cleanup() {
             .instructions
             .last()
             .and_then(|instruction| match instruction {
-                MirInstruction::Store(store) => Some(store.destination.base.storage()),
+                MirInstruction::Store(store) => Some(store.destination.base.expect_local_storage()),
                 _ => None,
             }),
         Some(logical.result)

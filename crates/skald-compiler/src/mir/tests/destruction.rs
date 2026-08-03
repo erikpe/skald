@@ -17,7 +17,9 @@ fn cleanup_storage(block: &MirBasicBlock) -> Vec<StorageId> {
         .instructions
         .iter()
         .filter_map(|instruction| match instruction {
-            MirInstruction::Cleanup(cleanup) => Some(cleanup.destination.base.storage()),
+            MirInstruction::Cleanup(cleanup) => {
+                Some(cleanup.destination.base.expect_local_storage())
+            }
             _ => None,
         })
         .collect()

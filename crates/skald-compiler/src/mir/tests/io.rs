@@ -380,7 +380,7 @@ fn read_and_write_lower_arguments_once_in_left_to_right_order() {
                         MirInstruction::Assign(MirAssignment {
                             rvalue: MirRvalue { kind: MirRvalueKind::Load(place), .. },
                             ..
-                        }) if place.base.storage() == parameter
+                        }) if place.base.expect_local_storage() == parameter
                     ))
                     .count(),
                 1
@@ -395,7 +395,7 @@ fn read_and_write_lower_arguments_once_in_left_to_right_order() {
             .filter_map(|instruction| match instruction {
                 MirInstruction::Store(store)
                     if function
-                        .storage(store.destination.base.storage())
+                        .storage(store.destination.base.expect_local_storage())
                         .is_some_and(|storage| storage.kind == MirStorageKind::ScalarSpill) =>
                 {
                     Some("handle-spill")

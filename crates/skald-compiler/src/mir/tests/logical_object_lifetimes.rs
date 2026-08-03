@@ -417,7 +417,7 @@ fn verifier_rejects_lost_duplicate_and_incompatible_conditional_optional_state()
     for block in &mut definition.body.blocks {
         block.instructions.retain(|instruction| match instruction {
             MirInstruction::ClassOptionalCleanup(cleanup) => {
-                cleanup.destination.base.storage() != right_storage
+                cleanup.destination.base.expect_local_storage() != right_storage
             }
             MirInstruction::StorageDead(operation) => operation.storage != right_storage,
             _ => true,

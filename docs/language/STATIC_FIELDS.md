@@ -1,6 +1,6 @@
 # Zero-Default Static Fields
 
-Status: **frozen design; typed primitive frontend implemented**. This document is authoritative for
+Status: **frozen design; primitive execution implemented**. This document is authoritative for
 the selected source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -17,10 +17,9 @@ service.
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
 complete zero-default storage-type set, and lowers primitive reads, writes,
-and call aliases to receiver-free typed HIR places. Owning zero-default
-declarations are accepted but their source uses remain staged. Static MIR
-roots and native storage are not implemented yet, so the complete driver
-reports `TYP044` before MIR lowering for a program containing static storage.
+and call aliases to receiver-free typed HIR and MIR places. Primitive statics
+execute through deterministic native storage. Owning zero-default declarations
+are accepted but their source uses remain staged.
 
 ## Declaration syntax
 
@@ -229,12 +228,13 @@ The implementation must reject each error at the phase that owns it:
 - attempts to call a static field as a non-callable target.
 
 Diagnostic wording and codes remain compiler behavior. During the current
-typed-HIR stage, malformed declarations are syntax errors, namespace and
+implemented primitive stage, malformed declarations are syntax errors, namespace and
 privacy rules are enforced during resolution, `TYP042` rejects a declaration
 whose type lacks a complete all-zero live value, and `TYP043` rejects source
 use of an accepted owning static type until its ownership-specific stage.
-Primitive static programs reach typed HIR; `TYP044` then prevents the complete
-driver from claiming MIR or native execution before static roots exist.
+Primitive static programs reach verified MIR and native execution. `TYP043`
+continues to reserve accepted optional, shared-owner, and array uses for their
+ownership-specific roadmap stages.
 
 ## Runtime, ABI, and representation boundary
 
@@ -244,7 +244,7 @@ or process-wrapper lifecycle step. Runtime ABI version 8 and its compatibility
 marker remain unchanged. Source `public` visibility does not export a native
 static symbol, and static fields are not permitted in external declarations.
 
-The initial x86-64 implementation is expected to emit one deterministic,
+The x86-64 implementation emits one deterministic,
 target-private, writable, aligned, zero-filled slot per declaration and to
 address it through ordinary verified typed places. Symbol spelling, section
 choice, alignment calculation, relocation form, compiler identities, IR, and

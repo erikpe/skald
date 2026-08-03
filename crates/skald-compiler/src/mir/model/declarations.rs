@@ -8,7 +8,7 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId,
-        ModuleId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, StaticFieldId, VirtualFamilyId, VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -53,6 +53,10 @@ impl MirProgram {
 
     pub fn field(&self, id: FieldId) -> Option<&MirFieldDeclaration> {
         self.class(id.class())?.field(id)
+    }
+
+    pub fn static_field(&self, id: StaticFieldId) -> Option<&MirStaticFieldDeclaration> {
+        self.class(id.class())?.static_field(id)
     }
 
     pub fn direct_base(&self, class: ClassId) -> Option<ClassId> {
@@ -310,6 +314,7 @@ pub struct MirClassDeclaration {
     pub direct_base: Option<MirDirectBase>,
     pub conformances: Vec<MirInterfaceConformance>,
     pub fields: Vec<MirFieldDeclaration>,
+    pub static_fields: Vec<MirStaticFieldDeclaration>,
     pub initializers: Vec<MirInitializerDeclaration>,
     pub copy_constructor_declaration: Option<MirCopyConstructorDeclaration>,
     pub copy_constructor: MirCopyCapability<CopyConstructorId>,
@@ -326,10 +331,25 @@ pub struct MirDirectBase {
     pub span: Span,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirStaticFieldDeclaration {
+    pub id: StaticFieldId,
+    pub name: String,
+    pub ty: MirType,
+    pub span: Span,
+}
+
 impl MirClassDeclaration {
     pub fn field(&self, id: FieldId) -> Option<&MirFieldDeclaration> {
         (id.class() == self.id)
             .then(|| self.fields.get(id.index()))
+            .flatten()
+            .filter(|field| field.id == id)
+    }
+
+    pub fn static_field(&self, id: StaticFieldId) -> Option<&MirStaticFieldDeclaration> {
+        (id.class() == self.id)
+            .then(|| self.static_fields.get(id.index()))
             .flatten()
             .filter(|field| field.id == id)
     }

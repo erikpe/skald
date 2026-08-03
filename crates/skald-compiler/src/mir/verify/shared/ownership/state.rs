@@ -50,7 +50,7 @@ impl SharedState {
         self.active_checked_views
             .retain(|carrier, owner| *carrier != storage && *owner != storage);
         self.initialized_fields
-            .retain(|place| place.base.storage() != storage);
+            .retain(|place| place.base.expect_local_storage() != storage);
     }
 
     pub(super) fn same_live_state(&self, other: &Self) -> bool {

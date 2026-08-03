@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: in progress; STF3 is next.
+Status: in progress; STF4 is next.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -135,7 +135,7 @@ static-place addressing belongs in a descriptive lowering module while
 - [x] STF0 — Freeze the zero-default static-field contract
 - [x] STF1 — Separate static declarations and inherited identity
 - [x] STF2 — Establish typed static places and primitive behavior
-- [ ] STF3 — Add verified static MIR roots and x86-64 slots
+- [x] STF3 — Add verified static MIR roots and x86-64 slots
 - [ ] STF4 — Extend inline optional storage to static roots
 - [ ] STF5 — Extend optional shared ownership to static roots
 - [ ] STF6 — Extend inline arrays, aliases, and I/O to static roots
@@ -263,33 +263,33 @@ claiming native execution.
 **Purpose:** Make primitive static storage executable through a general
 program-owned place foundation before adding optional and array ownership.
 
-- [ ] Add typed, dense `MirStaticFieldDeclaration` storage to `MirProgram` and
+- [x] Add typed, dense `MirStaticFieldDeclaration` storage to `MirProgram` and
       lower the HIR declarations without target size, alignment, symbol, or
       section decisions.
-- [ ] Add a static `MirPlaceBase`/root and replace unconditional
+- [x] Add a static `MirPlaceBase`/root and replace unconditional
       `base.storage()` assumptions with narrow root-aware APIs. Preserve local
       carrier identities for aliases, checked views, path activations, array
       indices, allocations, and temporaries.
-- [ ] Teach structural place verification to resolve static identity, type,
+- [x] Teach structural place verification to resolve static identity, type,
       and mutable access from `MirProgram`; reject missing, duplicate,
       wrong-type, and projected-through-nonaggregate uses, plus attempts to
       apply function-local storage-lifetime operations to a static root.
       Static roots are always live.
-- [ ] Update generic place visitors, argument checks, primitive stores/loads,
+- [x] Update generic place visitors, argument checks, primitive stores/loads,
       lifetime analysis, dumps, test fixtures, public mutation tests, and
       backend legality so malformed static MIR fails before layout or
       instruction selection.
-- [ ] Generalize target place addressing so frame-backed, indirect, and
+- [x] Generalize target place addressing so frame-backed, indirect, and
       symbol-backed places share checked projection/layout logic without
       assigning static slots fake frame homes.
-- [ ] Add deterministic collision-proof static symbols and a private
+- [x] Add deterministic collision-proof static symbols and a private
       ID-indexed slot plan using existing target type layouts. Extend the
       assembly model and emitter with aligned, writable, zero-filled local
       objects and correct byte, integer, and floating loads/stores/addressing.
-- [ ] Keep literal backings, dispatch metadata, panic messages, functions, and
+- [x] Keep literal backings, dispatch metadata, panic messages, functions, and
       static slots as distinct assembly object families. Preserve the existing
       host-entry wrapper and runtime ABI marker exactly.
-- [ ] Place substantial slot planning/emission and static-place lowering in
+- [x] Place substantial slot planning/emission and static-place lowering in
       descriptive private modules, with explicit facade re-exports only where
       a cross-owner API is required.
 

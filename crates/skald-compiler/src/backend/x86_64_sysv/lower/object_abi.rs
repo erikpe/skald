@@ -50,7 +50,7 @@ impl InstructionSelector<'_, '_> {
                 origin_locations,
             );
         }
-        let carrier = place.base.storage();
+        let carrier = place.base.expect_local_storage();
         if self.frame.object_origin(carrier).is_some() {
             self.select_forwarded_origin(carrier, origin_locations);
             return Ok(());

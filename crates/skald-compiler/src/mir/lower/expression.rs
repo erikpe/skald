@@ -83,9 +83,11 @@ impl BodyLowerer<'_> {
                 self.end_optional_views_from(optional_mark, expression.span);
                 Some(result)
             }
-            HirExpressionKind::StaticRead(_) => {
-                unreachable!("static reads must not reach MIR lowering before static-root support")
-            }
+            HirExpressionKind::StaticRead(place) => Some(self.assign(
+                MirRvalueKind::Load(MirPlace::static_field(place.field)),
+                lower_type(expression.ty),
+                expression.span,
+            )),
             HirExpressionKind::MethodCall {
                 receiver,
                 target,

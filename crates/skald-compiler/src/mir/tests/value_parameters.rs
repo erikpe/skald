@@ -61,7 +61,7 @@ fn lowers_owned_arguments_transfer_and_reverse_parameter_cleanup_explicitly() {
     let MirArgument::OwnedPlace(argument) = &call.arguments[1] else {
         panic!("class value argument must transfer an owned place");
     };
-    let argument_storage = main.storage(argument.base.storage()).unwrap();
+    let argument_storage = main.storage(argument.base.expect_local_storage()).unwrap();
     assert_eq!(argument_storage.kind, MirStorageKind::Argument);
     assert!(argument_storage.source.is_none());
     assert!(main.values.iter().all(|value| value.ty.is_scalar_value()));

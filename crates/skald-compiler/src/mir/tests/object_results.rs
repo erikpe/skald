@@ -63,7 +63,9 @@ fn lowers_explicit_return_storage_call_destinations_and_cleanup_order() {
         .as_ref()
         .expect("expected call destination");
     assert_eq!(
-        main.storage(destination.base.storage()).unwrap().kind,
+        main.storage(destination.base.expect_local_storage())
+            .unwrap()
+            .kind,
         MirStorageKind::Local
     );
     assert!(main.values.iter().all(|value| value.ty.is_scalar_value()));

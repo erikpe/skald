@@ -278,6 +278,16 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             })
             .collect(),
         fields,
+        static_fields: class
+            .static_fields
+            .iter()
+            .map(|field| MirStaticFieldDeclaration {
+                id: field.id,
+                name: field.name.clone(),
+                ty: lower_type(field.ty),
+                span: field.span,
+            })
+            .collect(),
         initializers: class
             .initializers
             .iter()

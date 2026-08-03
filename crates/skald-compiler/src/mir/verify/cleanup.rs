@@ -48,7 +48,7 @@ impl<'mir> Verifier<'mir> {
             );
         }
         if function
-            .storage(cleanup.destination.base.storage())
+            .storage(cleanup.destination.base.expect_local_storage())
             .is_some_and(|storage| {
                 matches!(
                     storage.kind,
@@ -757,7 +757,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
             };
             if !self
                 .function
-                .storage(place.base.storage())
+                .storage(place.base.expect_local_storage())
                 .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
             {
                 continue;
@@ -893,7 +893,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
         if !matches!(place.base, MirPlaceBase::Storage(_)) {
             return false;
         }
-        let Some(storage) = self.function.storage(place.base.storage()) else {
+        let Some(storage) = self.function.storage(place.base.expect_local_storage()) else {
             return false;
         };
         if matches!(storage.kind, MirStorageKind::AliasParameter(_)) {
@@ -903,7 +903,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 
     fn place_type(&self, place: &MirPlace) -> Option<MirType> {
-        let mut ty = self.function.storage(place.base.storage())?.ty;
+        let mut ty = self.function.storage(place.base.expect_local_storage())?.ty;
         for projection in &place.projections {
             match *projection {
                 MirPlaceProjection::Base(base) => {
@@ -946,7 +946,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
         place.projections.is_empty()
             && self
                 .function
-                .storage(place.base.storage())
+                .storage(place.base.expect_local_storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Local)
     }
 
@@ -955,7 +955,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
             && matches!(place.base, MirPlaceBase::Storage(_))
             && self
                 .function
-                .storage(place.base.storage())
+                .storage(place.base.expect_local_storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
     }
 
@@ -964,7 +964,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
             && matches!(place.base, MirPlaceBase::Storage(_))
             && self
                 .function
-                .storage(place.base.storage())
+                .storage(place.base.expect_local_storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Argument)
     }
 
@@ -1001,27 +1001,31 @@ impl ObjectState {
     fn has_live_temporary(&self, storage: crate::mir::StorageId) -> bool {
         self.live_temporaries
             .iter()
-            .any(|place| place.base.storage() == storage)
+            .any(|place| place.base.expect_local_storage() == storage)
     }
 
     fn reset_storage(&mut self, storage: crate::mir::StorageId) {
         self.finish_storage_epoch(storage);
-        self.cleaned.retain(|place| place.base.storage() != storage);
+        self.cleaned
+            .retain(|place| place.base.expect_local_storage() != storage);
     }
 
     fn finish_storage_epoch(&mut self, storage: crate::mir::StorageId) {
-        self.live.retain(|place| place.base.storage() != storage);
+        self.live
+            .retain(|place| place.base.expect_local_storage() != storage);
         self.outstanding_local_cleanup
-            .retain(|place| place.base.storage() != storage);
+            .retain(|place| place.base.expect_local_storage() != storage);
         self.outstanding_parameter_cleanup
-            .retain(|place| place.base.storage() != storage);
+            .retain(|place| place.base.expect_local_storage() != storage);
         self.live_arguments
-            .retain(|place| place.base.storage() != storage);
+            .retain(|place| place.base.expect_local_storage() != storage);
         self.live_temporaries
-            .retain(|place| place.base.storage() != storage);
+            .retain(|place| place.base.expect_local_storage() != storage);
     }
 }
 
 fn contains_storage(places: &HashSet<MirPlace>, storage: crate::mir::StorageId) -> bool {
-    places.iter().any(|place| place.base.storage() == storage)
+    places
+        .iter()
+        .any(|place| place.base.expect_local_storage() == storage)
 }

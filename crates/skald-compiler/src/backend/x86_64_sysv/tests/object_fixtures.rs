@@ -34,6 +34,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             name: "Nested".to_owned(),
             direct_base: None,
             conformances: vec![],
+            static_fields: vec![],
             fields: vec![
                 field(nested_small, "small", MirType::U8, span),
                 field(nested_payload, "payload", MirType::F64, span),
@@ -53,6 +54,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             name: "Container".to_owned(),
             direct_base: None,
             conformances: vec![],
+            static_fields: vec![],
             fields: vec![
                 field(container_tag, "tag", MirType::Bool, span),
                 field(container_nested, "nested", MirType::Class(nested), span),
@@ -73,6 +75,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             name: "Empty".to_owned(),
             direct_base: None,
             conformances: vec![],
+            static_fields: vec![],
             fields: vec![],
             initializers: vec![],
             copy_constructor_declaration: None,
@@ -216,6 +219,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         name: "Counter".to_owned(),
         direct_base: None,
         conformances: vec![],
+        static_fields: vec![],
         fields: vec![field(value_field, "value", MirType::I64, span)],
         initializers: vec![MirInitializerDeclaration {
             id: initializer,

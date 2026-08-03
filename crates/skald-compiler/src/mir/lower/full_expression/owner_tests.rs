@@ -181,7 +181,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         .flat_map(|block| &block.instructions)
         .filter_map(|instruction| match instruction {
             MirInstruction::EndFullExpression(end) if end.temporaries.len() == 1 => {
-                Some(end.temporaries[0].destination.base.storage())
+                Some(end.temporaries[0].destination.base.expect_local_storage())
             }
             _ => None,
         })

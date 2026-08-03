@@ -235,7 +235,7 @@ impl Verifier<'_> {
             && place.projections.is_empty()
             && site
                 .function
-                .storage(place.base.storage())
+                .storage(place.base.expect_local_storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Argument);
         if !complete_argument_storage {
             self.block_error(

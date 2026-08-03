@@ -224,7 +224,9 @@ fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
 }
 
 fn visit_place(place: &MirPlace, visit: &mut impl FnMut(StorageId)) {
-    visit(place.base.storage());
+    if let Some(storage) = place.base.local_storage() {
+        visit(storage);
+    }
     for projection in &place.projections {
         if let MirPlaceProjection::ArrayElement {
             normalized_index, ..

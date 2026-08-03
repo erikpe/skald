@@ -245,10 +245,9 @@ fn verifies_temporary_storage_and_reverse_full_expression_cleanup() {
         .iter_mut()
         .find_map(|instruction| match instruction {
             MirInstruction::EndFullExpression(end)
-                if end
-                    .temporaries
-                    .iter()
-                    .any(|cleanup| cleanup.destination.base.storage() == temporary) =>
+                if end.temporaries.iter().any(|cleanup| {
+                    cleanup.destination.base.expect_local_storage() == temporary
+                }) =>
             {
                 Some(end)
             }

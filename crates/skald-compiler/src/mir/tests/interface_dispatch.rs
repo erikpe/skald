@@ -123,7 +123,7 @@ fn interface_object_results_use_existing_destinations_and_cleanup() {
         .unwrap();
     let destination = call.destination.as_ref().unwrap();
     assert_eq!(
-        build.storage[destination.base.storage().index()].kind,
+        build.storage[destination.base.expect_local_storage().index()].kind,
         MirStorageKind::Temporary
     );
     assert!(call.result.is_none());

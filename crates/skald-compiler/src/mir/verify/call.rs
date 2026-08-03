@@ -579,7 +579,7 @@ impl<'mir> Verifier<'mir> {
                     place.projections.is_empty()
                         && matches!(place.base, MirPlaceBase::Storage(_))
                         && function
-                            .storage(place.base.storage())
+                            .storage(place.base.expect_local_storage())
                             .is_some_and(|storage| {
                                 matches!(
                                     storage.kind,
@@ -621,7 +621,7 @@ impl<'mir> Verifier<'mir> {
                     place.projections.is_empty()
                         && matches!(place.base, MirPlaceBase::Storage(_))
                         && function
-                            .storage(place.base.storage())
+                            .storage(place.base.expect_local_storage())
                             .is_some_and(|storage| {
                                 matches!(
                                     storage.kind,
@@ -649,7 +649,7 @@ impl<'mir> Verifier<'mir> {
                     place.projections.is_empty()
                         && matches!(place.base, MirPlaceBase::Storage(_))
                         && function
-                            .storage(place.base.storage())
+                            .storage(place.base.expect_local_storage())
                             .is_some_and(|storage| {
                                 matches!(
                                     storage.kind,

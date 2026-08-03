@@ -24,7 +24,10 @@ fn lowers_virtual_families_calls_and_forwarded_receivers_explicitly() {
         })
     );
     let receiver = method_receiver(call);
-    assert_eq!(receiver.place.base.storage(), receiver.origin_carrier());
+    assert_eq!(
+        receiver.place.base.expect_local_storage(),
+        receiver.origin_carrier()
+    );
     assert!(matches!(
         receiver.origin.as_ref(),
         MirObjectOrigin::Forwarded {
@@ -341,7 +344,7 @@ impl ReceiverOriginCarrier for MirMethodReceiver {
     fn origin_carrier(&self) -> StorageId {
         match self.origin.as_ref() {
             MirObjectOrigin::Forwarded { carrier, .. } => *carrier,
-            MirObjectOrigin::Exact { complete, .. } => complete.base.storage(),
+            MirObjectOrigin::Exact { complete, .. } => complete.base.expect_local_storage(),
             MirObjectOrigin::Shared { owner, .. } => *owner,
         }
     }
