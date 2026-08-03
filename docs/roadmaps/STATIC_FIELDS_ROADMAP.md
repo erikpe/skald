@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: in progress; STF5 is next.
+Status: in progress; STF6 is next.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -137,7 +137,7 @@ static-place addressing belongs in a descriptive lowering module while
 - [x] STF2 — Establish typed static places and primitive behavior
 - [x] STF3 — Add verified static MIR roots and x86-64 slots
 - [x] STF4 — Extend inline optional storage to static roots
-- [ ] STF5 — Extend optional shared ownership to static roots
+- [x] STF5 — Extend optional shared ownership to static roots
 - [ ] STF6 — Extend inline arrays, aliases, and I/O to static roots
 - [ ] STF7 — Harden composition and publish the implemented contract
 
@@ -347,24 +347,24 @@ cleanup, and leave their final state live when entry returns.
 **Purpose:** Add process-lifetime optional strong owners without allowing zero
 to enter the non-null shared-handle machinery or weakening ownership proof.
 
-- [ ] Enable `shared? T` statics for current class, interface, `Obj`, and array
+- [x] Enable `shared? T` statics for current class, interface, `Obj`, and array
       targets with the existing zero absent niche. Continue rejecting every
       non-optional `shared T` static.
-- [ ] Extend optional-shared typed places, copy/adopt/move assignment,
+- [x] Extend optional-shared typed places, copy/adopt/move assignment,
       presence, secured unwrap, owner casts, call arguments/results, and
       replaceable borrowed-source anchoring with static destinations and
       sources.
-- [ ] Generalize shared and optional initialization state where it assumes a
+- [x] Generalize shared and optional initialization state where it assumes a
       function-local root. A static optional owner is an initialized container
       at every function entry, contributes an owner only when dynamically
       present, and is never consumed merely by returning from a callable.
-- [ ] Preserve secure self-assignment and replacement: retain or secure the
+- [x] Preserve secure self-assignment and replacement: retain or secure the
       incoming owner before conditionally releasing the old static owner, and
       never pass zero to retain, release, finalization, or allocation helpers.
-- [ ] Prove that replacing the last old owner performs ordinary dynamic
+- [x] Prove that replacing the last old owner performs ordinary dynamic
       finalization, while the final owner stored at process exit is not
       released and its destructor need not run.
-- [ ] Keep the pending produced optional shared-array result-unwrap discovery
+- [x] Keep the pending produced optional shared-array result-unwrap discovery
       outside this task unless static-root support directly exposes the same
       invariant. Do not weaken its verifier as a workaround.
 

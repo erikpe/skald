@@ -58,6 +58,29 @@ fn lowers_inline_optional_operations_to_static_places() {
 }
 
 #[test]
+fn lowers_optional_shared_static_sources_destinations_and_unwraps() {
+    let output = check_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class State { static owner: shared? Item; init() {} }\n",
+        "fn forward(value: shared? Item) -> shared? Item { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  if (State.owner is some) { return 1; }\n",
+        "  State.owner = new Item(42);\n",
+        "  State.owner = forward(State.owner);\n",
+        "  return State.owner!->value;\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(
+        dump.contains("OptionalSharedStaticPlace c1:static0"),
+        "{dump}"
+    );
+    assert!(dump.contains("OptionalSharedProduced"), "{dump}");
+}
+
+#[test]
 fn lowers_primitive_reads_writes_and_aliases_to_identity_based_places() {
     let output = check_text(concat!(
         "fn observe(ref value: i64) -> i64 { return value; }\n",
@@ -202,7 +225,7 @@ fn rejects_each_non_zero_default_type_at_its_declaration() {
 }
 
 #[test]
-fn rejects_optional_shared_and_array_uses_at_the_current_source_boundary() {
+fn rejects_array_uses_at_the_current_source_boundary() {
     let output = check_text(concat!(
         "class Item { init() {} }\n",
         "class State { static items: Item[]; static owner: shared? Item; init() {} }\n",
@@ -218,7 +241,7 @@ fn rejects_optional_shared_and_array_uses_at_the_current_source_boundary() {
             .iter()
             .filter(|diagnostic| diagnostic.code == STATIC_FIELD_USE_UNAVAILABLE)
             .count(),
-        2
+        1
     );
 }
 
@@ -292,6 +315,45 @@ fn module_qualified_inline_optional_places_retain_declaring_identity() {
 
     let dump = dump_hir(&output.hir.unwrap());
     assert!(dump.contains("OptionalStaticPlace c0:static0"), "{dump}");
+}
+
+#[test]
+fn module_qualified_optional_shared_static_executes_through_declaring_identity() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import state;\n",
+                    "fn main() -> i64 {\n",
+                    "  state::State.prepare();\n",
+                    "  return state::State.owner!->read();\n",
+                    "}\n",
+                ),
+            ),
+            (
+                "state.ska",
+                concat!(
+                    "public class Item {\n",
+                    "  value: i64; init(value: i64) { self.value = value; }\n",
+                    "  fn read() -> i64 { return self.value; }\n",
+                    "}\n",
+                    "public class State {\n",
+                    "  static owner: shared? Item; init() {}\n",
+                    "  static fn prepare() -> unit { State.owner = new Item(42); }\n",
+                    "}\n",
+                ),
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let output = type_check(&resolved.program);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("OptionalSharedStaticPlace"), "{dump}");
 }
 
 #[test]

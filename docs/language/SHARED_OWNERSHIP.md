@@ -424,8 +424,8 @@ This profile does not include:
 - custom allocators;
 - shared values in external signatures or other public object ABI;
 - atomic reference counts, concurrency, or thread-safety guarantees;
-- non-optional static or global shared storage; the frozen static-field design
-  permits only optional shared owners as class-owned statics;
+- non-optional static or global shared storage; the implemented static-field
+  profile permits only optional shared owners as class-owned statics;
 - recoverable allocation failure; or
 - exceptional cleanup or failed-construction unwinding.
 

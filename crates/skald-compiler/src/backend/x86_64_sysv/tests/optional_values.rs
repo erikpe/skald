@@ -75,7 +75,7 @@ fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execut
     assert!(output.contains("shared_copy_invalid"));
     assert!(output.contains("shared_unwrap_overflow"));
     assert!(output.contains("shared_unwrap_invalid"));
-    output.push_str(optional_ownership_stubs());
+    output.push_str(native_allocator());
     output.push_str(record_i64_stub());
     let result = run_native_assembly_output(&output);
 
@@ -98,7 +98,7 @@ fn optional_shared_parameters_results_and_stack_pressure_execute() {
           return result!->marker;\n\
         }\n";
     let mut output = assembly(source);
-    output.push_str(optional_ownership_stubs());
+    output.push_str(native_allocator());
 
     assert!(output.contains("mov qword ptr [rsp]"));
     assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
@@ -129,7 +129,7 @@ fn optional_shared_unwrap_secures_anchors_and_composes_with_runtime_casts() {
           return consume(*holder.value!, holder.clear());\n\
         }\n";
     let mut output = assembly(source);
-    output.push_str(optional_ownership_stubs());
+    output.push_str(native_allocator());
 
     assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
 }
@@ -143,7 +143,7 @@ fn absent_optional_shared_unwrap_terminates() {
            return value!->read();\n\
          }\n",
     );
-    output.push_str(optional_ownership_stubs());
+    output.push_str(native_allocator());
 
     assert!(!run_native_assembly(&output).success());
 }
@@ -356,7 +356,7 @@ fn checked_class_payload_view_rejects_reentrant_clearing() {
         return 42;\n\
     }\n";
     let mut output = assembly(source);
-    output.push_str(optional_ownership_stubs());
+    output.push_str(native_allocator());
 
     assert!(!run_native_assembly(&output).success());
 }
@@ -601,20 +601,4 @@ fn optional_alias_signatures_execute_through_virtual_and_interface_dispatch() {
         }\n";
 
     assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
-}
-
-fn optional_ownership_stubs() -> &'static str {
-    concat!(
-        "\n.text\n",
-        ".globl ska_rt_alloc\n",
-        ".type ska_rt_alloc, @function\n",
-        "ska_rt_alloc:\n",
-        "    jmp malloc@PLT\n",
-        ".size ska_rt_alloc, .-ska_rt_alloc\n",
-        ".globl ska_rt_free\n",
-        ".type ska_rt_free, @function\n",
-        "ska_rt_free:\n",
-        "    jmp free@PLT\n",
-        ".size ska_rt_free, .-ska_rt_free\n",
-    )
 }

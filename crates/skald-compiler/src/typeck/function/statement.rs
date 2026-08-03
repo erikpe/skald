@@ -208,6 +208,17 @@ impl CallableChecker<'_, '_> {
                     "class optional static assignment",
                 )
                 .map(HirStatement::ClassOptionalAssignment),
+            Type::OptionalShared(target) => self
+                .check_optional_shared_assignment(
+                    crate::hir::HirOptionalSharedPlace {
+                        storage: HirOptionalStorage::Static(place),
+                        target,
+                        span: assignment.span,
+                    },
+                    &assignment.value,
+                    "optional shared static assignment",
+                )
+                .map(HirStatement::OptionalSharedAssignment),
             _ => unreachable!("enabled static storage type must have a statement family"),
         };
         CheckedStatement::falls_through(hir)

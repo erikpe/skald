@@ -54,7 +54,9 @@ impl Verifier<'_> {
             if !field.ty.is_scalar_value()
                 && !matches!(
                     field.ty,
-                    MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                    MirType::OptionalPrimitive(_)
+                        | MirType::OptionalClass(_)
+                        | MirType::OptionalShared(_)
                 )
             {
                 self.block_error(

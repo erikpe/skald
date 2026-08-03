@@ -143,6 +143,18 @@ impl CallableChecker<'_, '_> {
                     span: grouped.span,
                     ..place
                 }),
+            ResolvedExpression::StaticFieldAccess(access) => {
+                let (place, ty) =
+                    self.check_static_place(access.field, access.member_span, access.span)?;
+                let Type::OptionalShared(target) = ty else {
+                    return None;
+                };
+                Some(HirOptionalSharedPlace {
+                    storage: HirOptionalStorage::Static(place),
+                    target,
+                    span: access.span,
+                })
+            }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
                 let Type::OptionalShared(target) = expression.ty else {

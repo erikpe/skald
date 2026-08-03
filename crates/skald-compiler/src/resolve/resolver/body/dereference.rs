@@ -159,6 +159,14 @@ impl CallableResolver<'_, '_> {
                     .type_syntax
                     .kind
             }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                self.environment
+                    .classes
+                    .get(access.field.class())?
+                    .static_field(access.field)?
+                    .type_syntax
+                    .kind
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.environment
                     .functions

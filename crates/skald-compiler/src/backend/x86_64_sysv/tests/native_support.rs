@@ -34,3 +34,19 @@ pub(super) fn native_panic_reporter() -> &'static str {
         ".size ska_rt_panic, .-ska_rt_panic\n",
     )
 }
+
+pub(super) fn native_allocator() -> &'static str {
+    concat!(
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}

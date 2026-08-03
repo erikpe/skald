@@ -198,3 +198,61 @@ fn verifier_rejects_malformed_static_optional_projection_types() {
         .to_string()
         .contains("incompatible base type"));
 }
+
+#[test]
+fn optional_shared_statics_are_initialized_program_owned_containers() {
+    let program = lower_text(concat!(
+        "class Item { init() {} }\n",
+        "class State { static owner: shared? Item; init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var local: i64 = 0;\n",
+        "  if (State.owner is some) { return 1; }\n",
+        "  State.owner = new Item();\n",
+        "  State.owner = State.owner;\n",
+        "  return 42;\n",
+        "}\n",
+    ));
+
+    verify_mir(&program).unwrap();
+    let field = &program.class(ClassId::new(1)).unwrap().static_fields[0];
+    assert_eq!(
+        field.ty,
+        MirType::OptionalShared(MirSharedTarget::Class(ClassId::new(0)))
+    );
+    let dump = dump_mir(&program);
+    assert!(dump.contains("static(c1:static0)"), "{dump}");
+    assert!(
+        dump.contains("optional-shared-assign static(c1:static0)"),
+        "{dump}"
+    );
+    assert!(
+        !dump.contains("optional-shared-cleanup static(c1:static0)"),
+        "{dump}"
+    );
+    assert!(dump.contains("storage-live"), "{dump}");
+}
+
+#[test]
+fn verifier_rejects_nonoptional_and_mistyped_shared_static_roots() {
+    let source = concat!(
+        "class Item { init() {} }\n",
+        "class State { static owner: shared? Item; init() {} }\n",
+        "fn main() -> i64 { State.owner = new Item(); return 0; }\n",
+    );
+
+    let mut nonoptional = lower_text(source);
+    nonoptional.classes.entries_mut_for_test()[1].static_fields[0].ty =
+        MirType::Shared(MirSharedTarget::Class(ClassId::new(0)));
+    assert!(verify_mir(&nonoptional)
+        .unwrap_err()
+        .to_string()
+        .contains("unsupported MIR type"));
+
+    let mut mistyped = lower_text(source);
+    mistyped.classes.entries_mut_for_test()[1].static_fields[0].ty =
+        MirType::OptionalShared(MirSharedTarget::Obj);
+    assert!(verify_mir(&mistyped)
+        .unwrap_err()
+        .to_string()
+        .contains("wrong exact target type"));
+}

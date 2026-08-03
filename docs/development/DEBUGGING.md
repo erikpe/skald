@@ -351,4 +351,7 @@ Inspect optional frontend behavior at the narrowest owner defined by the
   defensive traps for impossible verified state; and
 - optional-container alias dumps use indirect optional places without object
   origin metadata; reserved boxed/nested optional forms and aliases to
-  optional shared owners remain frontend diagnostics.
+  optional shared owners remain frontend diagnostics; and
+- static-field HIR/MIR dumps expose optional shared owners through canonical
+  identity-based static places, with no function-local storage carrier or
+  generated exit cleanup.

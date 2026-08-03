@@ -169,7 +169,7 @@ fn class_optional_static_replacement_destroys_old_payload_but_not_final_payload(
         "}\n",
     );
     let mut output = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
-    output.push_str(record_seven_stub());
+    output.push_str(record_seven_then_42_stub());
     let result = run_native_assembly_output(&output);
 
     assert_eq!(result.status.code(), Some(42));
@@ -177,7 +177,7 @@ fn class_optional_static_replacement_destroys_old_payload_but_not_final_payload(
     assert!(result.stderr.is_empty());
 }
 
-fn record_seven_stub() -> &'static str {
+fn record_seven_then_42_stub() -> &'static str {
     concat!(
         ".bss\n",
         ".align 8\n",
@@ -215,6 +215,136 @@ fn record_seven_stub() -> &'static str {
         "    syscall\n",
         "    ret\n",
         ".Lrecord_optional_bad_value:\n",
+        "    mov rax, 60\n",
+        "    mov rdi, 99\n",
+        "    syscall\n",
+        ".size test_record_i64, .-test_record_i64\n",
+    )
+}
+
+#[test]
+fn optional_shared_statics_preserve_replacement_counts_and_final_owner() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Item {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "  destroy { test_record_i64(self.value); }\n",
+        "}\n",
+        "class State { static current: shared? Item; static copy: shared? Item; init() {} }\n",
+        "fn make(value: i64) -> shared? Item { return new Item(value); }\n",
+        "fn main() -> i64 {\n",
+        "  if (State.current is some || State.copy is some) { return 1; }\n",
+        "  State.current = new Item(7);\n",
+        "  State.copy = State.current;\n",
+        "  State.current = State.current;\n",
+        "  State.current = none;\n",
+        "  State.copy = make(42);\n",
+        "  return State.copy!->read();\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assert_eq!(
+        assembly,
+        lower_source_to_assembly(source, Target::X86_64SysV).unwrap()
+    );
+    assert!(assembly.contains(".Lska.class.main.State.c1.static.s0:\n    .zero 8"));
+    assembly.push_str(native_allocator());
+    assembly.push_str(record_single_seven_stub());
+    let result = run_native_assembly_output(&assembly);
+
+    assert_eq!(result.status.code(), Some(42));
+    assert_eq!(result.stdout, b"7\n");
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
+fn optional_shared_static_targets_support_views_casts_and_arrays() {
+    let source = concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Item implements Readable {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class State {\n",
+        "  private static concrete: shared? Item;\n",
+        "  static readable: shared? Readable; static object: shared? Obj;\n",
+        "  static values: shared? i64[]; init() {}\n",
+        "  static fn prepare() -> unit {\n",
+        "    State.concrete = new Item(40);\n",
+        "    State.readable = (shared Readable) State.concrete!;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  if (State.readable is some || State.object is some || State.values is some) { return 1; }\n",
+        "  State.prepare();\n",
+        "  State.object = State.readable;\n",
+        "  State.values = new i64[](2u);\n",
+        "  var recovered: shared Item = (shared Item) State.object!;\n",
+        "  return recovered->read() + (i64) State.values!->len();\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(native_allocator());
+
+    assert_system_assembler_accepts(&assembly);
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn inherited_optional_shared_selection_uses_one_base_owned_slot() {
+    let source = concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Base { static owner: shared? Item; init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn main() -> i64 { Derived.owner = new Item(42); return Base.owner!->value; }\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(native_allocator());
+
+    assert!(assembly.contains(".Lska.class.main.Base.c1.static.s0:"));
+    assert!(!assembly.contains(".Lska.class.main.Derived.c2.static"));
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn final_static_owner_may_participate_in_an_unreleased_strong_cycle() {
+    let source = concat!(
+        "class Node {\n",
+        "  next: shared? Node; init() { self.next = none; }\n",
+        "  mut fn link(value: shared? Node) -> unit { self.next = value; }\n",
+        "}\n",
+        "class State { static root: shared? Node; init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  State.root = new Node();\n",
+        "  State.root!->link(State.root);\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+fn record_single_seven_stub() -> &'static str {
+    concat!(
+        ".section .rodata\n",
+        ".Lrecord_single_seven_output:\n",
+        "    .ascii \"7\\n\"\n",
+        ".text\n",
+        ".globl test_record_i64\n",
+        ".type test_record_i64, @function\n",
+        "test_record_i64:\n",
+        "    cmp rdi, 7\n",
+        "    jne .Lrecord_single_seven_bad_value\n",
+        "    mov rax, 1\n",
+        "    mov rdi, 1\n",
+        "    lea rsi, [rip + .Lrecord_single_seven_output]\n",
+        "    mov rdx, 2\n",
+        "    syscall\n",
+        "    ret\n",
+        ".Lrecord_single_seven_bad_value:\n",
         "    mov rax, 60\n",
         "    mov rdi, 99\n",
         "    syscall\n",

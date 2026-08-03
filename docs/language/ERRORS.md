@@ -36,10 +36,10 @@ in explicit compiler stages. Static declarations are accepted by syntax and
 resolution, where malformed shapes, member collisions, inherited identity,
 wrong-kind selection, non-callable use, and declaring-class privacy have their
 ordinary owners. Type checking reports `TYP042` at a declaration whose type
-has no complete all-zero live value. Primitive and inline-optional reads,
-writes, checked views, replacement, and call aliases lower through typed static
-places to verified always-live MIR roots; `TYP043` reserves optional
-shared-owner and inline-array declarations for their later source-use stages.
+has no complete all-zero live value. Primitive, inline-optional, and optional
+shared-owner reads, writes, checked views, replacement, and calls lower through
+typed static places to verified always-live MIR roots; `TYP043` reserves
+inline-array declarations for their later source-use stage.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

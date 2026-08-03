@@ -23,7 +23,9 @@ impl InitializationState {
                 .filter(|field| {
                     matches!(
                         field.ty,
-                        MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                        MirType::OptionalPrimitive(_)
+                            | MirType::OptionalClass(_)
+                            | MirType::OptionalShared(_)
                     )
                 })
                 .map(|field| MirPlace::static_field(field.id))

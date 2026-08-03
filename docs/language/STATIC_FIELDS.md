@@ -1,6 +1,6 @@
 # Zero-Default Static Fields
 
-Status: **frozen design; primitive and inline-optional execution implemented**.
+Status: **frozen design; primitive, inline-optional, and optional-owner execution implemented**.
 This document is authoritative for the selected source-visible static-field
 profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
@@ -17,10 +17,9 @@ service.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
-complete zero-default storage-type set, and lowers primitive and inline-optional
-operations and call aliases to receiver-free typed HIR and MIR places.
-Primitive, primitive-optional, and exact-class-optional statics execute through
-deterministic native storage. Optional shared-owner and inline-array
+complete zero-default storage-type set, and lowers primitive, inline-optional,
+and optional shared-owner operations to receiver-free typed HIR and MIR places.
+These categories execute through deterministic native storage. Inline-array
 declarations are accepted but their source uses remain staged.
 
 ## Declaration syntax
@@ -232,9 +231,9 @@ The implementation must reject each error at the phase that owns it:
 Diagnostic wording and codes remain compiler behavior. Malformed declarations
 are syntax errors, namespace and privacy rules are enforced during resolution,
 and `TYP042` rejects a declaration whose type lacks a complete all-zero live
-value. Primitive and inline-optional static programs reach verified MIR and
-native execution. `TYP043` continues to reserve optional shared-owner and
-inline-array uses for their ownership-specific roadmap stages.
+value. Primitive, inline-optional, and optional shared-owner static programs
+reach verified MIR and native execution. `TYP043` continues to reserve
+inline-array uses for their ownership-specific roadmap stage.
 
 ## Runtime, ABI, and representation boundary
 

@@ -113,10 +113,11 @@ copy/adopt/move/release, and secured shared unwrap.
 ## MIR optional storage model
 
 Every source-visible optional local, field, parameter, result, owning
-temporary, and inline-optional static lowers to initialized optional storage.
-Static optional containers are seeded as absent at every callable entry and
-remain initialized independently of local `StorageLive` epochs. The wrapper
-lifetime and the conditional payload lifetime are distinct:
+temporary, inline-optional static, and optional shared-owner static lowers to
+initialized optional storage. Static optional containers are seeded as absent
+at every callable entry and remain initialized independently of local
+`StorageLive` epochs. The wrapper lifetime and the conditional payload lifetime
+are distinct:
 
 ```text
 wrapper storage: uninitialized -> initialized -> ended

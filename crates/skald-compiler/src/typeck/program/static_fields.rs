@@ -75,5 +75,6 @@ pub(in crate::typeck) const fn source_use_is_enabled(ty: Type) -> bool {
             | Type::Bool
             | Type::OptionalPrimitive(_)
             | Type::OptionalClass(_)
+            | Type::OptionalShared(_)
     )
 }

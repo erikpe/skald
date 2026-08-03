@@ -922,8 +922,9 @@ explicit:
 - callable declarations and executable definitions;
 - addressable storage and semantically projected places;
 - dense class-owned static declarations and always-live identity-based static
-  place roots, including inline-optional state and payload projections, kept
-  distinct from function-local storage carriers;
+  place roots, including inline-optional state/payload projections and
+  optional shared-owner slots, kept distinct from function-local storage
+  carriers;
 - canonical direct-base metadata and identity-based base projections;
 - transient primitive values;
 - source-ordered calls, argument modes, and access-restricted
