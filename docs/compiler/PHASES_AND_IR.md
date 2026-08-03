@@ -132,6 +132,18 @@ marshals scalar arguments and signed results, and calls the exact version-8
 runtime symbol selected by the MIR operation. Operation selection never
 depends on source spelling after resolution.
 
+Zero-default static fields follow the same phase ownership. Syntax retains a
+distinct class-member shape and modifier spans. Resolution allocates dense
+class-owned identities in source order, establishes ordinary namespace,
+inheritance, privacy, and module-qualified selection, and erases spelling from
+lower products. Type checking alone validates the complete all-zero live-value
+set and emits identity-based typed places for all accepted operations. MIR
+models those places as initialized, always-live program-owned roots; ordinary
+ownership, anchor, optional, array, and place verification proves every
+operation without a startup or cleanup instruction. Backends consume only
+that verified identity and type. The source-visible lifetime rule is owned by
+the [static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
+
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
 target identities. For optional owning values, type checking selects explicit
@@ -1375,6 +1387,11 @@ identity order, and module ownership on top-level declarations. The
 public dump paths let integration tests and temporary tools inspect the same
 representation used by focused tests. Practical inspection steps are in
 [Debugging the Compiler](../development/DEBUGGING.md).
+
+Static-field dumps retain declaration identity and type in resolved IR and
+HIR, and show the same identity on every MIR static root. Cross-process tests
+compare those products and assembly both for a complete source pipeline and
+for cyclic module graphs written and discovered in different orders.
 
 ## Trust and testing boundaries
 

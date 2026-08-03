@@ -293,34 +293,44 @@ fn require_executable_array_place(
     definition: MirDefinitionRef<'_>,
     place: &MirPlace,
 ) -> Result<(), BackendError> {
-    let storage = definition
-        .storage(place.base.expect_local_storage())
-        .expect("verified array place has declared storage");
-    let direct_owner = place.projections.is_empty()
+    let local_storage = place
+        .base
+        .local_storage()
+        .and_then(|storage| definition.storage(storage));
+    let root_ty = match place.base {
+        MirPlaceBase::StaticField(field) => program.static_field(field).map(|field| field.ty),
+        _ => local_storage.map(|storage| storage.ty),
+    }
+    .expect("verified array place has a declared root");
+    let direct_static = place.projections.is_empty()
+        && matches!(place.base, MirPlaceBase::StaticField(_))
+        && matches!(root_ty, MirType::Array(_));
+    let direct_local = place.projections.is_empty()
         && matches!(
             place.base,
             MirPlaceBase::Storage(_)
                 | MirPlaceBase::AliasParameter(_)
                 | MirPlaceBase::ArrayAlias(_)
         )
-        && matches!(
-            storage.kind,
-            MirStorageKind::Local
-                | MirStorageKind::Parameter
-                | MirStorageKind::Return
-                | MirStorageKind::Argument
-                | MirStorageKind::ArrayProduced
-                | MirStorageKind::ArraySlice
-                | MirStorageKind::ArrayAnchor(_)
-                | MirStorageKind::ArrayAlias(_)
-                | MirStorageKind::AliasParameter(_)
-        )
-        && matches!(storage.ty, MirType::Array(_));
+        && local_storage.is_some_and(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::Local
+                    | MirStorageKind::Parameter
+                    | MirStorageKind::Return
+                    | MirStorageKind::Argument
+                    | MirStorageKind::ArrayProduced
+                    | MirStorageKind::ArraySlice
+                    | MirStorageKind::ArrayAnchor(_)
+                    | MirStorageKind::ArrayAlias(_)
+                    | MirStorageKind::AliasParameter(_)
+            ) && matches!(storage.ty, MirType::Array(_))
+        });
     let projected_owner = (!place.projections.is_empty()
         || matches!(place.base, MirPlaceBase::SharedPointee(_)))
-        && projected_type(program, storage.ty, place) // verified projections
+        && projected_type(program, root_ty, place) // verified projections
             .is_some_and(|ty| matches!(ty, MirType::Array(_)));
-    if direct_owner || projected_owner {
+    if direct_static || direct_local || projected_owner {
         Ok(())
     } else {
         Err(error(

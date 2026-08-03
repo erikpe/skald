@@ -225,16 +225,14 @@ impl CallableChecker<'_, '_> {
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
         let expected = lower_type(parameter.type_syntax());
+        if matches!(expected, Type::Array(_)) || is_array_projection_through_groups(expression) {
+            return self.check_array_alias_argument(expression, parameter);
+        }
         if matches!(
             expected,
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
         ) {
             return self.check_primitive_alias_argument(expression, expected, parameter);
-        }
-        if matches!(expected, Type::Array(_))
-            || matches!(expression, ResolvedExpression::ArrayProjection(_))
-        {
-            return self.check_array_alias_argument(expression, parameter);
         }
         if matches!(
             expected,
@@ -1078,6 +1076,13 @@ impl CallableChecker<'_, '_> {
         }
         None
     }
+}
+
+fn is_array_projection_through_groups(mut expression: &ResolvedExpression) -> bool {
+    while let ResolvedExpression::Grouped(grouped) = expression {
+        expression = &grouped.expression;
+    }
+    matches!(expression, ResolvedExpression::ArrayProjection(_))
 }
 
 fn view_target_name(program: &crate::resolve::ResolvedProgram, target: HirViewTarget) -> String {

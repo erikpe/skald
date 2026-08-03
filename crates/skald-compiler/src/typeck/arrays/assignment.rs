@@ -106,6 +106,19 @@ impl CallableChecker<'_, '_> {
                     span: checked.span,
                 })))
             }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                let (place, ty) = self.check_static_place(access.field, access.span)?;
+                let Type::Array(array) = ty else {
+                    return None;
+                };
+                Some(ArrayAssignmentKind::Whole(Box::new(
+                    HirArrayPlace::Static {
+                        place,
+                        array,
+                        span: access.span,
+                    },
+                )))
+            }
             ResolvedExpression::ArrayProjection(projection) => {
                 Some(ArrayAssignmentKind::Projection(projection))
             }

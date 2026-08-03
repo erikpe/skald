@@ -29,7 +29,6 @@ mod static_fields;
 use class::{check_class_definitions, lower_class_declarations};
 use interfaces::analyze_interfaces;
 use overrides::validate_override_signatures;
-pub(super) use static_fields::source_use_is_enabled;
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -68,7 +67,6 @@ pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
 pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
-pub const STATIC_FIELD_USE_UNAVAILABLE: &str = "TYP043";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

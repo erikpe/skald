@@ -249,6 +249,7 @@ impl BodyLowerer<'_> {
         match place {
             HirArrayPlace::Binding { binding, .. } => self.lower_binding_place(*binding),
             HirArrayPlace::Field { place, .. } => self.lower_field_place(place),
+            HirArrayPlace::Static { place, .. } => MirPlace::static_field(place.field),
             HirArrayPlace::Element(element) => self.lower_array_element_place(element),
         }
     }
@@ -351,6 +352,7 @@ impl BodyLowerer<'_> {
         match &expression.kind {
             HirExpressionKind::Binding(binding) => self.lower_binding_place(*binding),
             HirExpressionKind::FieldRead(place) => self.lower_field_place(place),
+            HirExpressionKind::StaticRead(place) => MirPlace::static_field(place.field),
             HirExpressionKind::ArrayElement(element) => self.lower_array_element_place(element),
             HirExpressionKind::Grouped(inner) => self.lower_array_expression_place(inner),
             HirExpressionKind::DirectCall { .. }

@@ -308,6 +308,24 @@ fn inherited_optional_shared_selection_uses_one_base_owned_slot() {
 }
 
 #[test]
+fn inherited_inline_array_selection_uses_one_base_owned_descriptor() {
+    let source = concat!(
+        "class Base { static values: i64[]; init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn main() -> i64 {\n",
+        "  Derived.values = i64[](1u); Derived.values[0] = 42;\n",
+        "  return Base.values[0];\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(native_allocator());
+
+    assert!(assembly.contains(".Lska.class.main.Base.c0.static.s0:"));
+    assert!(!assembly.contains(".Lska.class.main.Derived.c1.static"));
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
 fn final_static_owner_may_participate_in_an_unreleased_strong_cycle() {
     let source = concat!(
         "class Node {\n",
@@ -325,6 +343,85 @@ fn final_static_owner_may_participate_in_an_unreleased_strong_cycle() {
     assembly.push_str(native_allocator());
 
     assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn inline_array_statics_support_replacement_projection_aliases_and_detached_backings() {
+    let source = concat!(
+        "fn reset() -> i64 { State.values = i64[](1u); State.values[0] = 2; return 0; }\n",
+        "fn detached(ref value: i64, ignored: i64) -> i64 { return value + ignored; }\n",
+        "fn mutate(mut ref values: i64[]) -> unit { values[0] = 40; }\n",
+        "class Item { init(value: i64) {} }\n",
+        "class State {\n",
+        "  static values: i64[]; static items: Item[]; static maybe: i64?[];\n",
+        "  static owners: (shared Item)[]; static nested: i64[][]; init() {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  if (State.values.len() != 0u || State.items.len() != 0u || State.nested.len() != 0u) { return 1; }\n",
+        "  State.values = i64[](3u); mutate(State.values);\n",
+        "  State.values[1] = 1; State.values[2] = 2;\n",
+        "  State.values[1:3] = State.values[0:2];\n",
+        "  State.values[2] = 2;\n",
+        "  var copied: i64[] = State.values[1:3];\n",
+        "  var old: i64 = detached(State.values[0], reset());\n",
+        "  return old + copied[1];\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assert_eq!(
+        assembly,
+        lower_source_to_assembly(source, Target::X86_64SysV).unwrap()
+    );
+    assert!(assembly.contains(".Lska.class.main.State.c1.static.s0:\n    .zero 8"));
+    assembly.push_str(native_allocator());
+
+    assert_system_assembler_accepts(&assembly);
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn static_array_replacement_releases_old_elements_but_not_final_backing() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Item {\n",
+        "  value: i64; init() { self.value = 7; }\n",
+        "  destroy { test_record_i64(self.value); }\n",
+        "}\n",
+        "class State { static items: Item[]; init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  State.items = Item[](1u);\n",
+        "  State.items = Item[]();\n",
+        "  State.items = Item[](1u);\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(native_allocator());
+    assembly.push_str(record_single_seven_stub());
+    let result = run_native_assembly_output(&assembly);
+
+    assert_eq!(result.status.code(), Some(42));
+    assert_eq!(result.stdout, b"7\n");
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
+fn static_array_checked_failures_terminate_before_addressing() {
+    let index = concat!(
+        "class State { static values: i64[]; init() {} }\n",
+        "fn main() -> i64 { State.values = i64[](1u); return State.values[1]; }\n",
+    );
+    let mut index_assembly = lower_source_to_assembly(index, Target::X86_64SysV).unwrap();
+    index_assembly.push_str(native_allocator());
+    assert!(!run_native_assembly(&index_assembly).success());
+
+    let slice = concat!(
+        "class State { static values: i64[]; init() {} }\n",
+        "fn main() -> i64 { State.values = i64[](1u); var copy: i64[] = State.values[1:0]; return 0; }\n",
+    );
+    let mut slice_assembly = lower_source_to_assembly(slice, Target::X86_64SysV).unwrap();
+    slice_assembly.push_str(native_allocator());
+    assert!(!run_native_assembly(&slice_assembly).success());
 }
 
 fn record_single_seven_stub() -> &'static str {

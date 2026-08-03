@@ -275,6 +275,7 @@ impl CallableChecker<'_, '_> {
                 .binding_access(*binding, false, expression.span)
                 .unwrap_or(HirAccess::ReadOnly),
             HirExpressionKind::FieldRead(place) => place.receiver.access,
+            HirExpressionKind::StaticRead(_) => HirAccess::Mutable,
             HirExpressionKind::ArrayElement(place) => place.receiver.access,
             HirExpressionKind::Grouped(inner) => self.array_expression_access(inner),
             _ => HirAccess::Mutable,

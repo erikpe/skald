@@ -5,6 +5,7 @@ use super::test_fixtures::{
     conditional_full_expression_cleanup_program as fixture_conditional_cleanup_program,
     empty_member_definition as fixture_empty_member_definition, io_program as fixture_io_program,
     io_program_with_additional_bodies as fixture_io_program_with_additional_bodies,
+    io_program_with_app_and_additional_bodies as fixture_io_program_with_app_and_additional_bodies,
     standard_io_program as fixture_standard_io_program, storage as fixture_storage,
     storage_dead as fixture_storage_dead, storage_live as fixture_storage_live,
     store as fixture_store, value as fixture_value,

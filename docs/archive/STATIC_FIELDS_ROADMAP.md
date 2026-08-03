@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: in progress; STF6 is next.
+Status: complete.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -138,8 +138,8 @@ static-place addressing belongs in a descriptive lowering module while
 - [x] STF3 — Add verified static MIR roots and x86-64 slots
 - [x] STF4 — Extend inline optional storage to static roots
 - [x] STF5 — Extend optional shared ownership to static roots
-- [ ] STF6 — Extend inline arrays, aliases, and I/O to static roots
-- [ ] STF7 — Harden composition and publish the implemented contract
+- [x] STF6 — Extend inline arrays, aliases, and I/O to static roots
+- [x] STF7 — Harden composition and publish the implemented contract
 
 ## PR-sized implementation sequence
 
@@ -385,28 +385,28 @@ retain their final process-lifetime owner without any GC or runtime-root API.
 arrays and prove that replaceable static backing composes with aliases,
 slices, ownership, and the current byte-I/O boundary.
 
-- [ ] Enable every legal inline `T[]` static declaration with the existing
+- [x] Enable every legal inline `T[]` static declaration with the existing
       zero empty descriptor, independent of element default construction. Keep
       non-optional shared-array statics rejected; optional shared-array owners
       remain covered by the preceding task.
-- [ ] Extend array owner places, whole-array replacement, indexing, element
+- [x] Extend array owner places, whole-array replacement, indexing, element
       assignment, slices, copied slices, length, nested arrays, and checked
       failure edges with static roots through existing typed operations.
-- [ ] Treat a static array as replaceable storage. Secure a detached backing
+- [x] Treat a static array as replaceable storage. Secure a detached backing
       anchor whenever an alias, slice, element place, or later call effect
       could outlive the source selection within its full expression.
-- [ ] Generalize array ownership, alias-dependency, legality, and cleanup
+- [x] Generalize array ownership, alias-dependency, legality, and cleanup
       verification away from unconditional local-storage roots while retaining
       local normalized-index, range-offset, slice-check, backing, anchor, and
       path-activation storage identities.
-- [ ] Permit compatible `ref` and `mut ref` static array arguments and compose
+- [x] Permit compatible `ref` and `mut ref` static array arguments and compose
       static byte arrays with the implemented standard-I/O read/write buffer
       intrinsics, including empty buffers, partial transfers, and later
       argument effects.
-- [ ] Reuse ordinary replacement release for displaced nonempty backing. Do
+- [x] Reuse ordinary replacement release for displaced nonempty backing. Do
       not emit exit cleanup for the final backing, recursively stored elements,
       or their destructors.
-- [ ] Extend target symbol addressing through descriptors and array operations
+- [x] Extend target symbol addressing through descriptors and array operations
       while keeping generated backing, clone, element, anchor, and release
       helpers unchanged.
 
@@ -423,46 +423,58 @@ the complete implemented array and byte-I/O surface with verified backing
 stability, ordinary replacement release, and deliberate process-lifetime
 retention of their final backing.
 
+**Completion summary:** Inline arrays now use static declarations as ordinary
+always-live descriptor roots. Whole replacement, checked projections, nested
+arrays, copied and assigned slices, exact element and whole-array aliases, and
+standard-I/O byte buffers reuse the existing array operation and backing-anchor
+model. Verifier and x86-64 legality/type discovery distinguish static roots
+from function-local carriers without moving normalized positions, generated
+backings, anchors, or helpers out of local storage. Native coverage proves
+empty zero state, detached backing stability, displaced-element cleanup,
+final-backing retention, inherited identity, and deterministic symbols. The
+focused suites, 269-case golden suite, `make check`, `make msrv-check`, and
+`git diff --check` pass.
+
 ### STF7 — Harden composition and publish the implemented contract
 
 **Purpose:** Close cross-phase gaps, prove determinism and exclusions, and
 replace future-static wording with one authoritative implemented profile.
 
-- [ ] Audit every exhaustive member, declaration, expression, statement,
+- [x] Audit every exhaustive member, declaration, expression, statement,
       place, ownership, lifetime, dump, legality, layout, symbol, and test
       helper match for the static-field cases. Resolve responsibility hotspots
       in touched modules; record unrelated maintainability work separately.
-- [ ] Prove cross-module and cyclic-module public/private access, inherited
+- [x] Prove cross-module and cyclic-module public/private access, inherited
       canonical identity, local shadowing, collision ordering, source-order ID
       allocation, and independence from module discovery order.
-- [ ] Prove composition with static and instance methods, lifecycle bodies,
+- [x] Prove composition with static and instance methods, lifecycle bodies,
       initializer overloads, primitive operators and casts, binary64 bit
       conversion, optionals, shared casts/views, arrays, loops, logical
       selection, panic isolation, strings where the supported type boundary
       permits them, standard I/O, and both alias modes.
-- [ ] Add exact compile-failure goldens for unsupported declaration types,
+- [x] Add exact compile-failure goldens for unsupported declaration types,
       malformed modifiers, privacy, wrong selection kind, collisions, and
       invalid uses; add native goldens for zero defaults, mutation,
       inheritance/module aliasing, ownership replacement, and intentional
       absence of exit cleanup.
-- [ ] Extend cross-process pipeline determinism through AST, resolved, HIR,
+- [x] Extend cross-process pipeline determinism through AST, resolved, HIR,
       MIR, diagnostics, static symbols, assembly, stdout/stderr/status, and
       module-source permutations. Ensure unrelated primitive and standard
       library fixtures do not need duplicated static setup.
-- [ ] Update the implemented grammar, classes/lifecycle, types/values,
+- [x] Update the implemented grammar, classes/lifecycle, types/values,
       optional, shared ownership, arrays, functions/control flow, modules,
       errors, status, compiler phases/IR, backend, runtime ABI, debugging, and
       testing documentation. Keep the process-lifetime rule authoritative in
       one language location and link to it elsewhere.
-- [ ] State explicitly that runtime ABI version 8, the public C header, the
+- [x] State explicitly that runtime ABI version 8, the public C header, the
       process entry wrapper, object layouts, dispatch metadata, and external
       ABI remain unchanged. Remove the old blanket statements that all static
       storage is unsupported while retaining exact-class/non-optional-owner
       initialization and shutdown as future work.
-- [ ] Review the planned produced-object-alias roadmap against the completed
+- [x] Review the planned produced-object-alias roadmap against the completed
       static alias behavior. Preserve its independent produced-temporary scope
       and update only material shared call/full-expression assumptions.
-- [ ] Run the full repository gate from an artifact-free snapshot, the MSRV
+- [x] Run the full repository gate from an artifact-free snapshot, the MSRV
       gate, extended robustness, documentation/link checks, and diff hygiene.
 
 **Tests:** All focused suites above plus `make check`, `make msrv-check`,

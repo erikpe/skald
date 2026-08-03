@@ -1005,10 +1005,20 @@ fn array_for_place(
     function: crate::mir::MirDefinitionRef<'_>,
     place: &MirPlace,
 ) -> Result<crate::identity::ArrayTypeId, BackendError> {
-    let mut ty = function
-        .storage(place.base.expect_local_storage())
-        .expect("verified array place has storage")
-        .ty;
+    let mut ty = match place.base {
+        crate::mir::MirPlaceBase::StaticField(field) => {
+            program
+                .static_field(field)
+                .expect("verified static array place has a declaration")
+                .ty
+        }
+        _ => {
+            function
+                .storage(place.base.expect_local_storage())
+                .expect("verified array place has storage")
+                .ty
+        }
+    };
     for projection in &place.projections {
         ty = match *projection {
             MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {

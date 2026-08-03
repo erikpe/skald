@@ -106,6 +106,45 @@ fn io_intrinsics_lower_to_verified_semantic_mir() {
 }
 
 #[test]
+fn static_byte_arrays_are_anchored_io_buffers() {
+    let program = fixture_io_program_with_app_and_additional_bodies(
+        concat!(
+            "import std::io;\n",
+            "class Buffers { static bytes: u8[]; init() {} }\n",
+            "fn main() -> i64 {\n",
+            "  var handle: i64 = std::io::standard(1u8);\n",
+            "  var empty_write: i64 = std::io::write(handle, Buffers.bytes, 0u);\n",
+            "  Buffers.bytes = u8[](4u);\n",
+            "  var partial_read: i64 = std::io::read(handle, Buffers.bytes, 2u);\n",
+            "  return empty_write + partial_read;\n",
+            "}\n",
+        ),
+        "",
+    );
+
+    verify_mir(&program).unwrap();
+    let buffers = io_instructions(&program)
+        .into_iter()
+        .filter_map(|io| match &io.operation {
+            MirIoOperation::Read { destination, .. } => Some(destination),
+            MirIoOperation::Write { source, .. } => Some(source),
+            _ => None,
+        })
+        .filter(|buffer| matches!(buffer.place.base, MirPlaceBase::StaticField(_)))
+        .collect::<Vec<_>>();
+    assert!(
+        buffers.is_empty(),
+        "standard wrappers receive alias carriers"
+    );
+
+    let dump = dump_mir(&program);
+    assert!(dump.contains("base: StaticField(StaticFieldId"), "{dump}");
+    assert!(dump.contains("place(static("), "{dump}");
+    assert!(dump.contains("InlineBacking"), "{dump}");
+    assert!(dump.contains("array-range-offset"), "{dump}");
+}
+
+#[test]
 fn canonical_standard_io_writes_use_one_verified_partial_progress_loop() {
     let program = fixture_standard_io_program(concat!(
         "import std::io;\n",

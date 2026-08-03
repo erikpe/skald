@@ -4,7 +4,7 @@ use crate::{
     identity::{ClassId, MethodId, StaticFieldId},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
-    typeck::{INVALID_STATIC_FIELD_TYPE, STATIC_FIELD_USE_UNAVAILABLE},
+    typeck::INVALID_STATIC_FIELD_TYPE,
 };
 
 #[test]
@@ -225,24 +225,28 @@ fn rejects_each_non_zero_default_type_at_its_declaration() {
 }
 
 #[test]
-fn rejects_array_uses_at_the_current_source_boundary() {
+fn lowers_static_array_operations_aliases_and_replacement() {
     let output = check_text(concat!(
-        "class Item { init() {} }\n",
-        "class State { static items: Item[]; static owner: shared? Item; init() {} }\n",
-        "fn count() -> u64 { return State.items.len(); }\n",
-        "fn clear_owner() -> unit { State.owner = none; }\n",
-        "fn main() -> i64 { return 0; }\n",
+        "fn inspect(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "fn change(mut ref values: i64[]) -> unit { values[0] = 40; }\n",
+        "class Item { init(value: i64) {} }\n",
+        "class State {\n",
+        "  static values: i64[]; static items: Item[]; static nested: i64[][];\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  State.values = i64[](2u); change(State.values);\n",
+        "  State.values[1] = 2; var copy: i64[] = State.values[:];\n",
+        "  return State.values[0] + (i64) inspect(State.values) + copy[1] - 2;\n",
+        "}\n",
     ));
 
-    assert!(output.hir.is_none());
-    assert_eq!(
-        output
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == STATIC_FIELD_USE_UNAVAILABLE)
-            .count(),
-        1
-    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("ArrayPlace static c1:static0"), "{dump}");
+    assert!(dump.contains("anchor=InlineBacking"), "{dump}");
+    assert!(dump.contains("ArraySlice"), "{dump}");
+    assert!(dump.contains("ArrayAliasArgument"), "{dump}");
 }
 
 #[test]
@@ -357,6 +361,41 @@ fn module_qualified_optional_shared_static_executes_through_declaring_identity()
 }
 
 #[test]
+fn module_qualified_inherited_array_static_retains_declaring_identity() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import state;\n",
+                    "fn main() -> i64 {\n",
+                    "  state::Derived.values = i64[](1u);\n",
+                    "  state::Derived.values[0] = 42;\n",
+                    "  return state::Base.values[0];\n",
+                    "}\n",
+                ),
+            ),
+            (
+                "state.ska",
+                concat!(
+                    "public class Base { static values: i64[]; init() {} }\n",
+                    "public class Derived extends Base { init() { super(); } }\n",
+                ),
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let output = type_check(&resolved.program);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("ArrayPlace static c0:static0"), "{dump}");
+    assert!(!dump.contains("ArrayPlace static c1:static0"), "{dump}");
+}
+
+#[test]
 fn primitive_statics_compose_with_bit_intrinsics_and_io_scalar_arguments() {
     let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
@@ -415,4 +454,54 @@ fn primitive_statics_reuse_operator_and_control_flow_semantics() {
     assert!(dump.contains("CheckedShift"));
     assert!(dump.contains("Logical"));
     assert!(dump.contains("Comparison"));
+}
+
+#[test]
+fn statics_compose_with_initializer_overloads_instance_methods_and_lifecycle_bodies() {
+    let output = check_text(concat!(
+        "class State { static count: i64; init() {} }\n",
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = State.count; }\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return State.count; }\n",
+        "  destroy { State.count = State.count + 1; }\n",
+        "}\n",
+        "fn main() -> i64 { State.count = 42; var item: Item = Item(); return item.read(); }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert_eq!(
+        dump.matches("PrimitiveStaticAssignment c0:static0").count(),
+        2
+    );
+    assert!(dump.contains("StaticRead c0:static0 : i64"), "{dump}");
+}
+
+#[test]
+fn optional_string_statics_use_ordinary_literal_and_method_semantics() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[(
+            "app.ska",
+            concat!(
+                "from std::str import Str;\n",
+                "class State { static text: Str?; init() {} }\n",
+                "fn main() -> i64 {\n",
+                "  if (State.text is some) { return 1; }\n",
+                "  State.text = \"42\";\n",
+                "  return State.text!.to_i64()!;\n",
+                "}\n",
+            ),
+        )],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let output = type_check(&resolved.program);
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("ClassOptionalStaticPlace"), "{dump}");
+    assert!(dump.contains("StringLiteral"), "{dump}");
 }

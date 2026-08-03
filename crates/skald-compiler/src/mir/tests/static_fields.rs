@@ -256,3 +256,36 @@ fn verifier_rejects_nonoptional_and_mistyped_shared_static_roots() {
         .to_string()
         .contains("wrong exact target type"));
 }
+
+#[test]
+fn inline_array_statics_lower_as_anchored_always_live_roots() {
+    let source = concat!(
+        "fn inspect(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "class State { static values: i64[]; static nested: i64[][]; init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  State.values = i64[](2u); State.values[0] = 42;\n",
+        "  var slice: i64[] = State.values[:];\n",
+        "  return State.values[0] + (i64) inspect(State.values) - (i64) slice.len();\n",
+        "}\n",
+    );
+    let program = lower_text(source);
+
+    verify_mir(&program).unwrap();
+    let field = &program.class(ClassId::new(0)).unwrap().static_fields[0];
+    let MirType::Array(array) = field.ty else {
+        panic!("static array declaration must retain its exact array identity")
+    };
+    let dump = dump_mir(&program);
+    assert!(dump.contains("array-replace static(c0:static0)"), "{dump}");
+    assert!(dump.contains("base: StaticField(StaticFieldId"), "{dump}");
+    assert!(dump.contains("InlineBacking"), "{dump}");
+    assert!(!dump.contains("array-release static(c0:static0)"), "{dump}");
+
+    let mut malformed = program.clone();
+    malformed.classes.entries_mut_for_test()[0].static_fields[0].ty =
+        MirType::Array(crate::identity::ArrayTypeId::new(array.index() + 99));
+    assert!(verify_mir(&malformed)
+        .unwrap_err()
+        .to_string()
+        .contains("undeclared array type"));
+}

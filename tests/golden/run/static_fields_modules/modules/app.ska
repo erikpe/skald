@@ -1,0 +1,9 @@
+import peer;
+import state;
+from state import Derived as Alias;
+
+fn main() -> i64 {
+    state::prepare();
+    Alias.count = Alias.count + peer::read();
+    return state::Base.count;
+}

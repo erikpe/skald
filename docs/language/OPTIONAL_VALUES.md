@@ -437,14 +437,14 @@ parameters, results, assignments, temporaries, methods, interfaces, virtual
 overrides, and initializer overloads. Alias parameters may designate supported
 inline optional containers as described above.
 
-The frozen [zero-default static-field contract](STATIC_FIELDS.md) separately
-permits primitive and exact-class `T?` and every currently supported
-`shared? T` target as future class-owned static storage. Such a container
+The implemented [zero-default static-field contract](STATIC_FIELDS.md)
+separately permits primitive and exact-class `T?` and every currently
+supported `shared? T` target as class-owned static storage. Such a container
 begins as `none`, remains initialized for process lifetime, performs the
 ordinary conditional replacement operations while the program runs, and does
-not clean a final present payload or owner at process exit. This is not yet
-accepted compiler syntax and does not change the implemented local, field, or
-callable-boundary optional contract.
+not clean a final present payload or owner at process exit. That lifetime rule
+is defined authoritatively by the static-field contract and does not change
+the local, instance-field, or callable-boundary optional contract.
 
 External declarations continue to reject every optional parameter and result.
 No C representation, calling convention, ownership transfer, or foreign

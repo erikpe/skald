@@ -53,16 +53,16 @@ impl CallableChecker<'_, '_> {
                 )
             } else {
                 let checked = self.check_expression(expression)?;
-                let HirExpressionKind::ArrayElement(mut place) = checked.kind else {
+                let actual = checked.ty;
+                let span = checked.span;
+                let Some(mut place) = array_element_through_groups(checked.kind) else {
                     self.report_invalid_array_alias(expression, parameter);
                     return None;
                 };
                 if place.receiver.ownership == crate::hir::HirArrayReceiverOwnership::Inline {
                     place.receiver.anchor = HirArrayAnchor::InlineBacking;
                 }
-                let actual = checked.ty;
                 let access = place.receiver.access;
-                let span = checked.span;
                 (HirArrayAliasSource::Element(place), actual, access, span)
             };
 
@@ -119,10 +119,21 @@ impl CallableChecker<'_, '_> {
     }
 }
 
+fn array_element_through_groups(
+    kind: HirExpressionKind,
+) -> Option<Box<crate::hir::HirArrayElementPlace>> {
+    match kind {
+        HirExpressionKind::ArrayElement(place) => Some(place),
+        HirExpressionKind::Grouped(inner) => array_element_through_groups(inner.kind),
+        _ => None,
+    }
+}
+
 fn is_whole_array_alias_syntax(expression: &ResolvedExpression) -> bool {
     match expression {
         ResolvedExpression::Binding(_)
         | ResolvedExpression::FieldAccess(_)
+        | ResolvedExpression::StaticFieldAccess(_)
         | ResolvedExpression::Dereference(_) => true,
         ResolvedExpression::Grouped(grouped) => is_whole_array_alias_syntax(&grouped.expression),
         ResolvedExpression::ArrayProjection(_) => false,
@@ -136,6 +147,7 @@ fn is_aliasable_receiver(source: &HirArrayReceiverSource) -> bool {
         HirArrayReceiverSource::Inline(expression) => match &expression.kind {
             HirExpressionKind::Binding(_)
             | HirExpressionKind::FieldRead(_)
+            | HirExpressionKind::StaticRead(_)
             | HirExpressionKind::ArrayElement(_) => true,
             HirExpressionKind::Grouped(inner) => {
                 is_aliasable_receiver(&HirArrayReceiverSource::Inline(inner.clone()))

@@ -304,8 +304,8 @@ expressions and calls plus the frozen logical-operator extension:
 5. an assignment destination place is selected before its right-hand source;
 6. a method receiver is selected before explicit arguments;
 7. explicit function, instance-method, static-method, and constructor
-   arguments are evaluated left to right; a static call's class spelling is
-   not evaluated;
+   arguments are evaluated left to right; a static call's class spelling and
+   a static field's class selection are not evaluated;
 8. an exact-class value-argument copy completes before the next argument is
    evaluated;
 9. object destination storage is selected before construction or an
@@ -327,6 +327,12 @@ Primitive binding reassignment uses item 4 without introducing
 an effectful destination computation: resolution selects the binding identity,
 the source evaluates once, the completed scalar is stored, and source
 full-expression cleanup follows the store.
+
+Static-field reads, destinations, and aliases use their declaration identity
+directly, so selecting one adds no receiver effect. Expressions used to update
+or consume the selected place retain the same ordering, short-circuiting,
+loop, panic, and full-expression rules as the corresponding local or instance
+place operation.
 
 The frozen [object-cast profile](OBJECT_CASTS.md) evaluates its source once,
 establishes any required lifetime anchor, performs a dynamic check when needed,

@@ -64,6 +64,7 @@ Archived plans:
 - [Complete primitive cast matrix](PRIMITIVE_CAST_MATRIX_ROADMAP.md)
 - [Standard I/O](STANDARD_IO_ROADMAP.md)
 - [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md)
+- [Zero-default static fields](STATIC_FIELDS_ROADMAP.md)
 
 Resolved string-design inputs:
 

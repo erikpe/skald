@@ -107,6 +107,16 @@ const PERMUTATION_HELPER_VARIANT: &str = "SKALD_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
 const MODULE_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_MODULE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_across_processes";
+const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
+const STATIC_FIELD_TEST_NAME: &str =
+    "static_field_phase_products_are_deterministic_across_processes";
+const STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_STATIC_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
+    "static_field_diagnostics_are_deterministic_across_processes";
+const STATIC_FIELD_MODULE_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_MODULE_DETERMINISM_OUTPUT";
+const STATIC_FIELD_MODULE_TEST_NAME: &str =
+    "static_field_module_products_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -155,6 +165,45 @@ fn array_phase_products_are_deterministic_across_processes() {
         ARRAY_HELPER_OUTPUT,
         ARRAY_TEST_NAME,
         array_phase_dump,
+    );
+}
+
+#[test]
+fn static_field_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "static-fields",
+        STATIC_FIELD_HELPER_OUTPUT,
+        STATIC_FIELD_TEST_NAME,
+        static_field_phase_dump,
+    );
+}
+
+#[test]
+fn static_field_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "static-field-diagnostics",
+        STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT,
+        STATIC_FIELD_DIAGNOSTIC_TEST_NAME,
+        static_field_diagnostic_dump,
+    );
+}
+
+#[test]
+fn static_field_module_products_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(STATIC_FIELD_MODULE_HELPER_OUTPUT) {
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
+        fs::write(output, static_field_module_phase_dump(variant)).unwrap();
+        return;
+    }
+
+    assert_cross_process_variants(
+        "static-field-modules",
+        STATIC_FIELD_MODULE_HELPER_OUTPUT,
+        STATIC_FIELD_MODULE_TEST_NAME,
+        PERMUTATION_HELPER_VARIANT,
     );
 }
 
@@ -770,6 +819,103 @@ fn optional_phase_dump() -> String {
 
 fn array_phase_dump() -> String {
     complete_golden_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
+}
+
+fn static_field_phase_dump() -> String {
+    complete_phase_dump(concat!(
+        "fn increment(mut ref value: i64) -> unit { value = value + 1; }\n",
+        "class Base { static count: i64; static maybe: i64?; static values: i64[]; init() {} }\n",
+        "class Derived extends Base { static owner: shared? Item; init() { super(); } }\n",
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn main() -> i64 { Derived.count = 40; increment(Base.count); ",
+        "Derived.maybe = Base.count; Derived.values = i64[](1u); ",
+        "Derived.values[0] = Derived.maybe!; Derived.owner = new Item(1); ",
+        "return Base.values[0] + Derived.owner!->value; }\n",
+    ))
+}
+
+fn static_field_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "static-field-diagnostics.ska",
+        concat!(
+            "class Item { init() {} }\n",
+            "class Invalid { static item: Item; static owner: shared Item; init() {} }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+    )
+}
+
+fn static_field_module_phase_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("static-field-modules", variant);
+    let modules = fixture.path.join("modules");
+    let modules_alias = fixture.path.join("modules-alias");
+    let sources = [
+        (
+            modules.join("app.ska"),
+            concat!(
+                "import state;\n",
+                "fn main() -> i64 { state::Derived.count = 42; ",
+                "return state::Base.count; }\n",
+            ),
+        ),
+        (
+            modules.join("state.ska"),
+            concat!(
+                "import helper;\n",
+                "public class Base { static count: i64; init() {} }\n",
+                "public class Derived extends Base { init() { super(); } }\n",
+                "public fn helper_value() -> i64 { return helper::value(); }\n",
+            ),
+        ),
+        (
+            modules.join("helper.ska"),
+            concat!(
+                "import state;\n",
+                "public fn value() -> i64 { return state::Base.count; }\n",
+            ),
+        ),
+    ];
+    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
+        write_source(&sources[index].0, sources[index].1);
+    }
+    link_directory(&modules, &modules_alias);
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::module_root(modules_alias),
+            ProviderRootConfiguration::module_root(modules),
+        ]
+    } else {
+        vec![
+            ProviderRootConfiguration::module_root(modules),
+            ProviderRootConfiguration::module_root(modules_alias),
+        ]
+    };
+    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let entry = if variant == 0 {
+        EntrySelector::Module("app".parse().unwrap())
+    } else {
+        EntrySelector::File(fixture.path.join("modules-alias/app.ska"))
+    };
+    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty());
+    let hir = checked.hir.unwrap();
+    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+
+    normalize_fixture_paths(
+        &fixture.path,
+        format!(
+            "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
+            dump_module_graph(&graph),
+            dump_resolved(&resolved.program),
+            dump_hir(&hir),
+            dump_mir(&mir),
+            assembly,
+        ),
+    )
 }
 
 fn integer_operation_phase_dump() -> String {

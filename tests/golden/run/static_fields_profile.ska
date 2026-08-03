@@ -1,0 +1,52 @@
+import std::io;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value);
+    }
+}
+
+class State {
+    static number: i64;
+    static flag: bool;
+    static maybe: Item?;
+    static owner: shared? Item;
+
+    init() {}
+}
+
+fn increment(mut ref value: i64) -> unit {
+    value = value + 1;
+}
+
+fn main() -> i64 {
+    if (State.number != 0 || State.flag || State.maybe is some || State.owner is some) {
+        return 1;
+    }
+    State.number = 40;
+    increment(State.number);
+    State.maybe = Item(7);
+    // Replacing the payload destroys 7; the assigned producer cleans its
+    // distinct temporary 41 after copying. The retained static 41 does not
+    // produce a second line at process exit.
+    State.maybe = Item(41);
+    State.owner = new Item(8);
+    State.owner = none;
+    State.owner = new Item(42);
+    // The final static owner likewise does not print 42 at process exit.
+    State.flag = true;
+    if (State.flag) {
+        return State.number + State.owner!->read() - 41;
+    }
+    return 2;
+}

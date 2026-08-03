@@ -302,11 +302,12 @@ claims, and casts. A qualified public class may select a static method with
 `module_binding::Class.method(arguments)`; qualification establishes class
 visibility but does not bypass member privacy.
 
-The frozen [zero-default static-field contract](STATIC_FIELDS.md) reuses this
+The implemented [zero-default static-field contract](STATIC_FIELDS.md) reuses this
 same boundary for `module_binding::Class.name`. A derived-class spelling
 retains the declaring static field's canonical identity, and multiple module
-bindings never create additional storage. This selection is not yet accepted
-by the compiler.
+bindings never create additional storage. Public static fields can be selected
+across modules; private ones remain accessible only from callables owned by
+their declaring class, including in cyclic module graphs.
 
 The same canonical module may have multiple local bindings:
 
@@ -491,7 +492,7 @@ The frozen initial system has no:
 - top-level state or module initialization; or
 - native export of source-public declarations.
 
-The top-level-state exclusion does not preclude the separately frozen
+The top-level-state exclusion does not preclude the separately implemented
 class-owned [zero-default static-field profile](STATIC_FIELDS.md). That profile
 adds neither module-owned storage nor module initialization, and source-public
 static fields do not become native exports.

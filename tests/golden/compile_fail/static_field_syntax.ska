@@ -1,0 +1,13 @@
+class Broken {
+    static private misordered: i64;
+    static initialized: i64 = 1;
+    private private static repeated: i64;
+    static missing_type: ;
+    static recovered: i64;
+
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

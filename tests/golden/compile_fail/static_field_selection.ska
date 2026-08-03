@@ -1,0 +1,25 @@
+class Base {
+    value: i64;
+    private static secret: i64;
+    static count: i64;
+
+    init() {
+        self.value = 0;
+    }
+}
+
+class Collision extends Base {
+    static count: i64;
+
+    init() {
+        super();
+    }
+}
+
+fn main() -> i64 {
+    var value: Base = Base();
+    value.count = 1;
+    Base.value = 2;
+    Base.count();
+    return Base.secret;
+}

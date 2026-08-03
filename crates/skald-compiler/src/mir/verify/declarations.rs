@@ -447,12 +447,21 @@ impl<'mir> Verifier<'mir> {
                         MirType::OptionalPrimitive(_)
                             | MirType::OptionalClass(_)
                             | MirType::OptionalShared(_)
+                            | MirType::Array(_)
                     )
                 {
                     self.program_error(format!(
                         "static field {} has unsupported MIR type {}",
                         field.id, field.ty
                     ));
+                }
+                if let MirType::Array(array) = field.ty {
+                    if self.program.array_type(array).is_none() {
+                        self.program_error(format!(
+                            "static field {} has undeclared array type {array}",
+                            field.id
+                        ));
+                    }
                 }
             }
             for (index, initializer) in class.initializers.iter().enumerate() {

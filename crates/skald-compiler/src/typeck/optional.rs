@@ -144,8 +144,7 @@ impl CallableChecker<'_, '_> {
                     ..place
                 }),
             ResolvedExpression::StaticFieldAccess(access) => {
-                let (place, ty) =
-                    self.check_static_place(access.field, access.member_span, access.span)?;
+                let (place, ty) = self.check_static_place(access.field, access.span)?;
                 let Type::OptionalShared(target) = ty else {
                     return None;
                 };
@@ -343,8 +342,7 @@ impl CallableChecker<'_, '_> {
                     ..place
                 }),
             ResolvedExpression::StaticFieldAccess(access) => {
-                let (place, ty) =
-                    self.check_static_place(access.field, access.member_span, access.span)?;
+                let (place, ty) = self.check_static_place(access.field, access.span)?;
                 let Type::OptionalClass(class) = ty else {
                     return None;
                 };
@@ -586,8 +584,7 @@ impl CallableChecker<'_, '_> {
                     })
             }
             ResolvedExpression::StaticFieldAccess(access) => {
-                let (place, ty) =
-                    self.check_static_place(access.field, access.member_span, access.span)?;
+                let (place, ty) = self.check_static_place(access.field, access.span)?;
                 let Type::OptionalPrimitive(payload) = ty else {
                     return None;
                 };

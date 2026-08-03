@@ -20,6 +20,14 @@ The [standard I/O compiler and runtime contract](IO.md) separately owns the
 implemented byte-array operations and runtime-call boundary, including current
 x86-64 backend input.
 
+Verified zero-default static fields are current backend input. The x86-64
+target emits one aligned, writable, target-private `.bss` slot per canonical
+declaration and addresses it with identity-derived RIP-relative relocations.
+Static slots reuse ordinary value layouts and place operations; they add no
+object-layout, dispatch, callable-ABI, external-ABI, process-wrapper, or
+runtime-marker rule. Their source lifetime is owned by the
+[language contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
+
 ## Backend interface and target registry
 
 Backends consume target-independent `MirProgram` values. They do not inspect
@@ -596,13 +604,16 @@ alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
 `rbp`-relative addressing.
 
-Primitive, inline-optional, and optional shared-owner static roots do not
+Primitive, inline-optional, optional shared-owner, and inline-array static
+roots do not
 receive frame homes. A private target-data plan maps each declaration identity
 to one aligned, writable, zero-filled local object using the ordinary target
 type layout. Instruction selection materializes its address with RIP-relative
 `lea` and applies the existing optional state, checked payload, and one-word
-optional-owner operations, after which the same scalar, aggregate, ownership,
-and alias-address machinery used by other places applies.
+optional-owner and array descriptor operations, after which the same scalar,
+aggregate, ownership, backing-anchor, projection, and alias-address machinery
+used by other places applies. Generated backing and element helpers remain
+ordinary array-type helpers; only the descriptor root uses static addressing.
 
 Return destinations and owned class, primitive-optional, or primitive-array
 parameters store an incoming pointer in a frame home. Receivers and aliases
@@ -717,6 +728,11 @@ to semantic lookup. Instance and static methods intentionally share the same
 collision-proof class-owned method symbol family because their `MethodId`
 identities are already distinct; static methods do not create a parallel
 symbol namespace.
+
+Static-field symbols are deterministic target-private object symbols derived
+from canonical module, class, and field identities. Source visibility does not
+export them, inherited or aliased selection does not duplicate them, and their
+spelling remains a debugging detail rather than a source or ABI identity.
 
 External calls preserve the exact declared symbol. The backend also emits one
 exported C-compatible `main` wrapper, which checks runtime ABI compatibility

@@ -585,16 +585,17 @@ Current unrecoverable termination does not guarantee cleanup of that prefix.
 Future recoverable exceptions must define and execute prefix cleanup before
 array construction can throw.
 
-## Frozen static storage
+## Static storage
 
-The frozen [zero-default static-field contract](STATIC_FIELDS.md) permits an
-inline `T[]` as future class-owned static storage for every legal array element
+The implemented [zero-default static-field contract](STATIC_FIELDS.md) permits an
+inline `T[]` as class-owned static storage for every legal array element
 type. It begins as the existing allocation-free empty descriptor, constructs
 no elements, and therefore does not require its element type to be default
 initializable. Later replacement, indexing, slicing, aliases, anchors, and
 standard-I/O buffer use retain this document's ordinary rules. Displaced
-backing receives ordinary cleanup, while final backing is deliberately not
-cleaned at process exit. Static array syntax is not yet implemented.
+backing receives ordinary cleanup. The static-field contract is authoritative
+for final process-lifetime retention. This static-array profile is implemented across
+replacement, projections, copied slices, call aliases, and byte-I/O buffers.
 
 ## Failure
 

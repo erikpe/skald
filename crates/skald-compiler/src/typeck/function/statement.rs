@@ -155,9 +155,7 @@ impl CallableChecker<'_, '_> {
         &mut self,
         assignment: &crate::resolve::ResolvedStaticFieldAssignment,
     ) -> CheckedStatement {
-        let Some((place, ty)) =
-            self.check_static_place(assignment.field, assignment.member_span, assignment.span)
-        else {
+        let Some((place, ty)) = self.check_static_place(assignment.field, assignment.span) else {
             return CheckedStatement::falls_through(None);
         };
         let hir = match ty {
@@ -219,6 +217,21 @@ impl CallableChecker<'_, '_> {
                     "optional shared static assignment",
                 )
                 .map(HirStatement::OptionalSharedAssignment),
+            Type::Array(array) => self
+                .check_array_initialize(array, &assignment.value, "static array replacement")
+                .map(|value| {
+                    HirStatement::ArrayAssignment(crate::hir::HirArrayAssignment {
+                        destination: crate::hir::HirArrayPlace::Static {
+                            place,
+                            array,
+                            span: assignment.span,
+                        },
+                        value,
+                        evaluation:
+                            crate::hir::HirArrayEvaluationOrder::DestinationThenSourceThenReplace,
+                        span: assignment.span,
+                    })
+                }),
             _ => unreachable!("enabled static storage type must have a statement family"),
         };
         CheckedStatement::falls_through(hir)

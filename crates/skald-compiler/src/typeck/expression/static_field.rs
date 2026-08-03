@@ -1,7 +1,6 @@
 //! Primitive static-place checking shared by reads, writes, and aliases.
 
 use crate::{
-    diagnostics::Diagnostic,
     hir::{
         HirExpression, HirExpressionKind, HirPrimitivePlace, HirPrimitiveStorage, HirStaticPlace,
         Type,
@@ -11,18 +10,20 @@ use crate::{
     source::Span,
 };
 
-use super::super::{
-    function::CallableChecker,
-    program::{lower_type, source_use_is_enabled, STATIC_FIELD_USE_UNAVAILABLE},
-};
+use super::super::{function::CallableChecker, program::lower_type};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_static_field_read(
         &mut self,
         access: &ResolvedStaticFieldAccessExpr,
     ) -> Option<HirExpression> {
-        let (place, ty) =
-            self.check_primitive_static_place(access.field, access.member_span, access.span)?;
+        let (place, ty) = self.check_static_place(access.field, access.span)?;
+        if !matches!(
+            ty,
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Array(_)
+        ) {
+            return None;
+        }
         Some(HirExpression {
             kind: HirExpressionKind::StaticRead(place),
             ty,
@@ -33,10 +34,9 @@ impl CallableChecker<'_, '_> {
     pub(in crate::typeck) fn check_primitive_static_place(
         &mut self,
         field: StaticFieldId,
-        member_span: Span,
         span: Span,
     ) -> Option<(HirStaticPlace, Type)> {
-        let (place, ty) = self.check_static_place(field, member_span, span)?;
+        let (place, ty) = self.check_static_place(field, span)?;
         if !matches!(
             ty,
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
@@ -49,7 +49,6 @@ impl CallableChecker<'_, '_> {
     pub(in crate::typeck) fn check_static_place(
         &mut self,
         field: StaticFieldId,
-        member_span: Span,
         span: Span,
     ) -> Option<(HirStaticPlace, Type)> {
         let declaration = self
@@ -57,24 +56,6 @@ impl CallableChecker<'_, '_> {
             .static_field(field)
             .expect("resolved static-field use must reference a declaration");
         let ty = lower_type(&declaration.type_syntax);
-        if !source_use_is_enabled(ty) {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    STATIC_FIELD_USE_UNAVAILABLE,
-                    format!(
-                        "static field `{}` cannot be used as `{}` storage yet",
-                        declaration.name,
-                        ty.name()
-                    ),
-                )
-                .with_primary_label(
-                    member_span,
-                    "this static storage category is not usable yet",
-                )
-                .with_secondary_label(declaration.name_span, "static field declared here"),
-            );
-            return None;
-        }
         Some((HirStaticPlace { field, span }, ty))
     }
 
@@ -82,8 +63,7 @@ impl CallableChecker<'_, '_> {
         &mut self,
         access: &ResolvedStaticFieldAccessExpr,
     ) -> Option<(HirPrimitivePlace, Type)> {
-        let (place, ty) =
-            self.check_primitive_static_place(access.field, access.member_span, access.span)?;
+        let (place, ty) = self.check_primitive_static_place(access.field, access.span)?;
         Some((
             HirPrimitivePlace {
                 storage: HirPrimitiveStorage::Static(place),

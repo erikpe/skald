@@ -21,12 +21,15 @@ Optional values add no runtime entry point or ABI-version change. The
 never passed to allocation, deallocation, finalization, or ordinary
 shared-owner machinery.
 
-The frozen
-[zero-default static-field design](../language/STATIC_FIELDS.md) likewise adds
+The implemented
+[zero-default static-field contract](../language/STATIC_FIELDS.md) likewise adds
 no public symbol, startup or shutdown call, root-registration service, panic
 reason, or ABI-version change. Static slots and their zero establishment are
 compiler/backend-owned, and generated code intentionally performs no final
-static cleanup. Runtime ABI version 8 remains the selected boundary.
+static cleanup. Runtime ABI version 8, `skald_runtime.h`, its compatibility
+marker, and the generated process-entry wrapper remain unchanged. Static
+fields do not alter instance object layouts, dispatch metadata, internal call
+classification, or the primitive-only external ABI.
 
 The current public surface is:
 

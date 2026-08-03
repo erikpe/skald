@@ -27,8 +27,8 @@ mod integer_division;
 pub(crate) use integer_division::checked_integer_division_program;
 mod io;
 pub(crate) use io::{
-    io_program, io_program_with_additional_bodies, standard_io_program,
-    standard_io_program_with_additional_bodies,
+    io_program, io_program_with_additional_bodies, io_program_with_app_and_additional_bodies,
+    standard_io_program, standard_io_program_with_additional_bodies,
 };
 mod primitive_cast;
 pub(crate) use primitive_cast::checked_primitive_cast_program;

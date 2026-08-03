@@ -6,7 +6,9 @@ use crate::{
     source::Span,
 };
 
-use super::{HirExpression, HirFieldPlace, HirSelectedCopyOperation, HirSharedTarget, Type};
+use super::{
+    HirExpression, HirFieldPlace, HirSelectedCopyOperation, HirSharedTarget, HirStaticPlace, Type,
+};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HirArrayTypeTable {
@@ -290,13 +292,20 @@ pub enum HirArrayPlace {
         access: super::HirAccess,
         span: Span,
     },
+    Static {
+        place: HirStaticPlace,
+        array: ArrayTypeId,
+        span: Span,
+    },
     Element(Box<HirArrayElementPlace>),
 }
 
 impl HirArrayPlace {
     pub fn array(&self) -> ArrayTypeId {
         match self {
-            Self::Binding { array, .. } | Self::Field { array, .. } => *array,
+            Self::Binding { array, .. }
+            | Self::Field { array, .. }
+            | Self::Static { array, .. } => *array,
             Self::Element(place) => match place.element {
                 Type::Array(array) => array,
                 _ => unreachable!("array element place must have an array element type"),
@@ -307,13 +316,16 @@ impl HirArrayPlace {
     pub const fn access(&self) -> super::HirAccess {
         match self {
             Self::Binding { access, .. } | Self::Field { access, .. } => *access,
+            Self::Static { .. } => super::HirAccess::Mutable,
             Self::Element(place) => place.receiver.access,
         }
     }
 
     pub const fn span(&self) -> Span {
         match self {
-            Self::Binding { span, .. } | Self::Field { span, .. } => *span,
+            Self::Binding { span, .. } | Self::Field { span, .. } | Self::Static { span, .. } => {
+                *span
+            }
             Self::Element(place) => place.span,
         }
     }

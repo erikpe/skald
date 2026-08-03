@@ -57,6 +57,7 @@ impl Verifier<'_> {
                     MirType::OptionalPrimitive(_)
                         | MirType::OptionalClass(_)
                         | MirType::OptionalShared(_)
+                        | MirType::Array(_)
                 )
             {
                 self.block_error(

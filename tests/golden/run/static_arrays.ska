@@ -1,0 +1,43 @@
+fn replace() -> i64 {
+    State.values = i64[](1u);
+    State.values[0] = 2;
+    return 0;
+}
+
+fn observe_detached(ref value: i64, ignored: i64) -> i64 {
+    return value + ignored;
+}
+
+fn mutate(mut ref values: i64[]) -> unit {
+    values[0] = 40;
+    return;
+}
+
+class Item {
+    init(value: i64) {}
+}
+
+class State {
+    static values: i64[];
+    static unavailable_default: Item[];
+    static nested: i64[][];
+
+    init() {}
+}
+
+fn main() -> i64 {
+    if (State.values.len() != 0u || State.unavailable_default.len() != 0u) {
+        return 1;
+    }
+
+    State.values = i64[](3u);
+    mutate(State.values);
+    State.values[1] = 1;
+    State.values[2] = 2;
+    State.values[1:3] = State.values[0:2];
+    State.values[2] = 2;
+
+    var copied: i64[] = State.values[1:3];
+    var detached: i64 = observe_detached(State.values[0], replace());
+    return detached + copied[1];
+}

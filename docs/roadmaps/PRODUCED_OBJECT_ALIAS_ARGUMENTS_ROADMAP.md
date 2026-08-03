@@ -56,6 +56,12 @@ implementation order; it does not make the feature available by itself.
   produced arrays, raw shared handles, or implicit shared dereference.
   Existing optional-, array-, and shared-alias source and anchoring rules stay
   authoritative.
+- Existing zero-default static fields remain ordinary identity-based places.
+  Their primitive, inline-optional, optional-owner, array, and projection alias
+  behavior requires no produced-object temporary and is outside this
+  roadmap's source relaxation. A produced object passed alongside a static
+  alias still follows the ordinary receiver-before-arguments, left-to-right,
+  and full-expression ordering defined here.
 - Add no local alias values, reference type, lifetime syntax, user-visible
   storage handle, external alias ABI, runtime service, or grammar form. The
   ordinary expression grammar already admits the source spelling.
@@ -287,6 +293,8 @@ publishes implemented status only after the full compiler pipeline is proven.
 
 The roadmap depends on the implemented alias, object value temporary,
 full-expression cleanup, polymorphism, checked object-cast, and internal call
-contracts. It does not depend on the unfinished floating formatter in the
+contracts. Implemented static-field aliases are an independent existing-place
+source and do not expand the produced source categories or lifetime proposed
+here. It does not depend on the unfinished floating formatter in the
 primitive string conversions roadmap, though PAA4 should coordinate its
 `Str.to_f64` cleanup with that roadmap's active source changes.

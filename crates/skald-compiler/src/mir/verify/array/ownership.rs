@@ -282,7 +282,7 @@ impl Verifier<'_> {
                     .aliases
                     .get(&alias)
                     .is_some_and(|anchor| state.anchors.contains(anchor)),
-                _ if array_borrow_requires_anchor(function, borrowed) => {
+                _ if array_borrow_requires_anchor(self.program, function, borrowed) => {
                     state.anchors.iter().any(|anchor| {
                         anchor_owners
                             .get(anchor)
@@ -408,12 +408,18 @@ impl Verifier<'_> {
     }
 }
 
-fn array_borrow_requires_anchor(function: MirDefinitionRef<'_>, place: &MirPlace) -> bool {
-    place
-        .base
-        .local_storage()
-        .and_then(|storage| function.storage(storage))
-        .is_some_and(|storage| matches!(storage.ty, MirType::Array(_)))
+fn array_borrow_requires_anchor(
+    program: &crate::mir::MirProgram,
+    function: MirDefinitionRef<'_>,
+    place: &MirPlace,
+) -> bool {
+    matches!(place.base, crate::mir::MirPlaceBase::StaticField(field)
+        if program.static_field(field).is_some_and(|field| matches!(field.ty, MirType::Array(_))))
+        || place
+            .base
+            .local_storage()
+            .and_then(|storage| function.storage(storage))
+            .is_some_and(|storage| matches!(storage.ty, MirType::Array(_)))
         || place
             .projections
             .iter()

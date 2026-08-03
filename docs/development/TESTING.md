@@ -558,3 +558,19 @@ unsuccessful termination; exact trap signals and shell-normalized statuses are
 not portable language observations. Optional full-phase determinism and the
 MIR mutation corpus cover dumps, verification, and backend rejection, while
 the extended robustness suite mutates optional punctuation deterministically.
+
+## Static-field coverage
+
+Static-field tests are divided by responsibility: syntax recovery owns
+modifier and declaration shape; resolution owns identities, collisions,
+privacy, inheritance, shadowing, qualification, and cyclic modules; type
+checking and HIR own the exact zero-default set and typed operation families;
+MIR mutation tests own always-live roots, place types, ownership, anchors, and
+the absence of exit cleanup; backend tests own layout, symbols, relocations,
+sections, legality, and native behavior. Compile-failure goldens freeze each
+owning phase's diagnostics, while native goldens cover zero defaults,
+replacement cleanup, final retention, arrays, inheritance, module aliases,
+and cyclic imports. The pipeline determinism suite compares static AST,
+resolved IR, HIR, MIR, diagnostics, symbols, and assembly across processes and
+module-source permutations; the golden runner independently compares assembly
+and repeated stdout, stderr, and status.

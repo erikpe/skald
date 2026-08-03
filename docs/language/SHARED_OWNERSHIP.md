@@ -164,7 +164,9 @@ results, and class fields. They are not permitted in external signatures or
 non-optional static storage. The frozen
 [zero-default static-field contract](STATIC_FIELDS.md) permits only
 `shared? T` static storage, initially absent; it does not make zero a valid
-ordinary `shared T` handle and is not yet implemented.
+ordinary `shared T` handle. Optional static owners use ordinary replacement,
+cast, view, and anchoring rules while executing; their final owner is retained
+under the static-field contract's process-lifetime rule.
 
 ## Strong-owner value semantics
 

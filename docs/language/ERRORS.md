@@ -31,15 +31,14 @@ than source-language exceptions.
 
 ### Static-field declaration boundary
 
-The [zero-default static-field design](STATIC_FIELDS.md) is being implemented
-in explicit compiler stages. Static declarations are accepted by syntax and
-resolution, where malformed shapes, member collisions, inherited identity,
-wrong-kind selection, non-callable use, and declaring-class privacy have their
-ordinary owners. Type checking reports `TYP042` at a declaration whose type
-has no complete all-zero live value. Primitive, inline-optional, and optional
-shared-owner reads, writes, checked views, replacement, and calls lower through
-typed static places to verified always-live MIR roots; `TYP043` reserves
-inline-array declarations for their later source-use stage.
+The implemented [zero-default static-field contract](STATIC_FIELDS.md) assigns
+malformed shapes to syntax analysis and member collisions, inherited identity,
+wrong-kind selection, non-callable use, and declaring-class privacy to
+resolution. Type checking reports `TYP042` at a declaration whose type has no
+complete all-zero live value. Every accepted primitive, inline-optional,
+optional shared-owner, and inline-array declaration can be read or mutated
+through its documented operations and lowers through typed static places to
+verified always-live MIR roots.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

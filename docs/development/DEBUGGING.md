@@ -355,3 +355,11 @@ Inspect optional frontend behavior at the narrowest owner defined by the
 - static-field HIR/MIR dumps expose optional shared owners through canonical
   identity-based static places, with no function-local storage carrier or
   generated exit cleanup.
+
+For a static-field issue, first compare the declaration identity in the
+resolved, HIR, and MIR dumps. In assembly, its target-private object should
+appear once in `.bss` with `.zero`, declared alignment, and RIP-relative
+address formation. An inherited class spelling, module alias, or second use
+must not create another object symbol. The generated wrapper should still
+reference only the runtime-v8 marker and contain no static startup or shutdown
+call.

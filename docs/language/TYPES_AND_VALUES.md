@@ -696,11 +696,11 @@ produced-backing adoption, arbitrary-length inline replacement, copied slices,
 call-scoped aliases, class fields, internal parameters/results, and cleanup on
 x86-64. No structural indexing or iteration protocol is implied.
 
-The frozen [zero-default static-field contract](STATIC_FIELDS.md) selects only
+The implemented [zero-default static-field contract](STATIC_FIELDS.md) selects only
 stored types for which zero-filled storage is already one complete live value:
 the five primitives, supported primitive and exact-class inline optionals,
 optional shared owners, and inline arrays. It does not add a type, nullable
-ordinary owner, implicit default construction, or accepted compiler syntax.
+ordinary owner or implicit default construction.
 
 An immutable language-facing string value remains an exploratory direction,
 but its type name, literal syntax and encoding, byte/text semantics, copying,

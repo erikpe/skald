@@ -1261,6 +1261,9 @@ impl HirDumper {
                 );
                 self.indented(|dumper| dumper.field_place(place));
             }
+            crate::hir::HirArrayPlace::Static { place, array, span } => {
+                self.line(&format!("ArrayPlace static {} {array}", place.field), *span)
+            }
             crate::hir::HirArrayPlace::Element(place) => self.array_element(place),
         }
     }

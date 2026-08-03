@@ -6,14 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Zero-default static fields](STATIC_FIELDS_ROADMAP.md) — add class-owned,
-  class-qualified mutable storage for primitives, inline optionals, optional
-  shared owners, and empty inline arrays through verified program-owned MIR
-  places and deterministic x86-64 slots; STF0 through STF5 are complete and
-  STF6 (inline-array static storage) is next. It depends on the
-  implemented module/privacy/static-method, ownership, optional, array,
-  path-state, standard-I/O, backend, and runtime-version-8 contracts, but not
-  on the planned produced-object-alias roadmap.
+No implementation roadmap is currently in progress.
 
 ## Planned
 

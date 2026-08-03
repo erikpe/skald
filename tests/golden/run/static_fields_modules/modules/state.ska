@@ -1,0 +1,23 @@
+import peer;
+
+public class Base {
+    static count: i64;
+    private static secret: i64;
+
+    init() {}
+
+    static fn prepare() -> unit {
+        Base.count = 40;
+        Base.secret = peer::read();
+    }
+}
+
+public class Derived extends Base {
+    init() {
+        super();
+    }
+}
+
+public fn prepare() -> unit {
+    Base.prepare();
+}
