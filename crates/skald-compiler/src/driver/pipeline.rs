@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::Diagnostics,
+    diagnostics::{Diagnostic, Diagnostics},
     lexer::lex,
     mir::lower_hir,
     module::{
@@ -14,7 +14,7 @@ use crate::{
     resolve::{resolve, resolve_module_graph, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
-    typeck::type_check,
+    typeck::{type_check, STATIC_STORAGE_NOT_LOWERED},
 };
 
 use super::CompilationRequest;
@@ -122,6 +122,27 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    for class in hir.classes.iter() {
+        for field in &class.static_fields {
+            diagnostics.push(
+                Diagnostic::error(
+                    STATIC_STORAGE_NOT_LOWERED,
+                    format!(
+                        "static field `{}.{}` cannot be emitted yet",
+                        class.name, field.name
+                    ),
+                )
+                .with_primary_label(
+                    field.static_span,
+                    "static MIR roots and target storage are not implemented",
+                )
+                .with_note("typed static places are available through HIR only for now"),
+            );
+        }
+    }
+    if diagnostics.has_errors() {
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let mir = lower_hir(&hir);
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;

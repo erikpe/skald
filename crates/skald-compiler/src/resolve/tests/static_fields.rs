@@ -1,12 +1,13 @@
 use super::*;
 use crate::{
-    identity::{ClassId, FieldId, MethodId, StaticFieldId},
+    identity::{ClassId, FieldId, FunctionId, MethodId, StaticFieldId},
     resolve::{
-        ResolvedClassMember, DUPLICATE_MEMBER, INHERITED_MEMBER_COLLISION, INVALID_OVERRIDE,
-        PRIVATE_MEMBER_ACCESS,
+        ResolvedClassMember, ResolvedExpression, ResolvedStatement, DUPLICATE_MEMBER,
+        INHERITED_MEMBER_COLLISION, INVALID_CALL_TARGET, INVALID_MEMBER_SELECTION,
+        INVALID_OVERRIDE, PRIVATE_MEMBER_ACCESS, UNKNOWN_MEMBER, UNKNOWN_NAME,
     },
     test_support::load_module_sources,
-    typeck::{type_check, INVALID_INTERFACE_CONFORMANCE, STATIC_FIELD_NOT_EXECUTABLE},
+    typeck::{type_check, INVALID_INTERFACE_CONFORMANCE},
 };
 
 #[test]
@@ -110,7 +111,123 @@ fn shares_the_ordinary_namespace_and_retains_inherited_declaring_identity() {
 }
 
 #[test]
-fn override_and_expression_uses_stop_at_the_stf1_phase_boundary() {
+fn resolves_reads_and_writes_to_the_declaring_static_identity() {
+    let output = resolve_text(concat!(
+        "class Base { static count: i64; init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn update(value: i64) -> i64 { Derived.count = value; return Base.count; }\n",
+        "fn main() -> i64 { return update(1); }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let expected = StaticFieldId::new(ClassId::new(0), 0);
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedStatement::StaticFieldAssignment(assignment) = &definition.body.statements[0]
+    else {
+        panic!("expected resolved static assignment");
+    };
+    assert_eq!(assignment.field, expected);
+    let ResolvedStatement::Return(returned) = &definition.body.statements[1] else {
+        panic!("expected return statement");
+    };
+    let ResolvedExpression::StaticFieldAccess(access) = returned.value.as_ref().unwrap() else {
+        panic!("expected resolved static read");
+    };
+    assert_eq!(access.field, expected);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("StaticFieldAssignment c0:static0"));
+    assert!(dump.contains("StaticFieldAccess c0:static0"));
+}
+
+#[test]
+fn diagnoses_static_wrong_kind_privacy_unknown_call_and_shadowing_uses() {
+    let output = resolve_text(concat!(
+        "class State {\n",
+        "  value: i64; private static secret: i64; static count: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "  static fn own_secret() -> i64 { return State.secret; }\n",
+        "  static fn bare() -> i64 { return count; }\n",
+        "}\n",
+        "fn object_selected(state: State) -> i64 { return state.count; }\n",
+        "fn shadowed(State: State) -> i64 { return State.count; }\n",
+        "fn class_field() -> i64 { return State.value; }\n",
+        "fn class_method() -> i64 { return State.read(); }\n",
+        "fn private_use() -> i64 { return State.secret; }\n",
+        "fn called_field() -> i64 { return State.count(); }\n",
+        "fn unknown() -> i64 { return State.missing; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_MEMBER_SELECTION)
+            .count(),
+        3,
+        "{:?}",
+        output.diagnostics
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == PRIVATE_MEMBER_ACCESS)
+            .count(),
+        1
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_CALL_TARGET)
+            .count(),
+        2
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNKNOWN_MEMBER)
+            .count(),
+        1
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNKNOWN_NAME)
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn resolves_module_qualified_static_uses() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import state; fn main() -> i64 { state::State.count = 1; return state::State.count; }\n",
+            ),
+            (
+                "state.ska",
+                "public class State { static count: i64; init() {} }\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let checked = type_check(&output.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    assert!(checked.hir.is_some());
+}
+
+#[test]
+fn resolves_static_expression_uses_and_enforces_privacy() {
     let output = resolve_text(concat!(
         "class Base {\n",
         "  private static secret: i64;\n",
@@ -131,19 +248,10 @@ fn override_and_expression_uses_stop_at_the_stf1_phase_boundary() {
         diagnostic.code == INVALID_OVERRIDE
             && diagnostic.message == "method `count` cannot override an inherited static field"
     }));
-    assert_eq!(
-        output
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| {
-                diagnostic.code == INVALID_MEMBER_SELECTION
-                    && diagnostic
-                        .message
-                        .contains("cannot be used in an expression yet")
-            })
-            .count(),
-        2
-    );
+    assert!(!output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_MEMBER_SELECTION));
     assert_eq!(
         output
             .diagnostics
@@ -155,7 +263,7 @@ fn override_and_expression_uses_stop_at_the_stf1_phase_boundary() {
 }
 
 #[test]
-fn declarations_resolve_but_cannot_cross_the_hir_boundary() {
+fn zero_default_declarations_cross_the_hir_boundary() {
     let output = resolve_text(concat!(
         "class State { static count: i64; static enabled: bool; init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
@@ -163,19 +271,12 @@ fn declarations_resolve_but_cannot_cross_the_hir_boundary() {
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
 
     let checked = type_check(&output.program);
-    assert!(checked.hir.is_none());
-    assert!(checked
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == STATIC_FIELD_NOT_EXECUTABLE));
-    assert_eq!(
-        checked
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == STATIC_FIELD_NOT_EXECUTABLE)
-            .count(),
-        2
-    );
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.expect("zero-default statics must lower to HIR");
+    let class = hir.class(ClassId::new(0)).unwrap();
+    assert_eq!(class.static_fields.len(), 2);
+    assert_eq!(class.static_fields[0].id, StaticFieldId::new(class.id, 0));
+    assert_eq!(class.static_fields[1].id, StaticFieldId::new(class.id, 1));
 }
 
 #[test]
@@ -194,10 +295,10 @@ fn static_fields_do_not_satisfy_interface_requirements() {
                 .message
                 .contains("does not implement requirement `Counter.count`")
     }));
-    assert!(checked
+    assert!(!checked
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == STATIC_FIELD_NOT_EXECUTABLE));
+        .any(|diagnostic| { diagnostic.code != INVALID_INTERFACE_CONFORMANCE }));
 }
 
 #[test]

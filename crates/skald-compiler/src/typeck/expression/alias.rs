@@ -225,6 +225,12 @@ impl CallableChecker<'_, '_> {
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
         let expected = lower_type(parameter.type_syntax());
+        if matches!(
+            expected,
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+        ) {
+            return self.check_primitive_alias_argument(expression, expected, parameter);
+        }
         if matches!(expected, Type::Array(_))
             || matches!(expression, ResolvedExpression::ArrayProjection(_))
         {
@@ -265,6 +271,97 @@ impl CallableChecker<'_, '_> {
             required,
             parameter,
         )
+    }
+
+    fn check_primitive_alias_argument(
+        &mut self,
+        expression: &ResolvedExpression,
+        expected: Type,
+        parameter: &impl CallParameter,
+    ) -> Option<HirCallArgument> {
+        let Some((place, actual, access)) = self.primitive_alias_place(expression) else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_ALIAS_ARGUMENT,
+                    "primitive alias argument must designate an existing primitive place",
+                )
+                .with_primary_label(
+                    expression.span(),
+                    "pass a primitive binding or static field",
+                )
+                .with_secondary_label(parameter.span(), "primitive alias declared here"),
+            );
+            return None;
+        };
+        if actual != expected {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!(
+                        "primitive alias argument has type `{}` but `{}` is required",
+                        actual.name(),
+                        expected.name()
+                    ),
+                )
+                .with_primary_label(place.span, "this place has a different primitive type")
+                .with_secondary_label(
+                    parameter.type_syntax().span,
+                    "alias parameter type declared here",
+                ),
+            );
+            return None;
+        }
+        let required = lower_parameter_mode(parameter.binding_mode())
+            .required_access()
+            .expect("alias parameter mode must require place access");
+        if !access.permits(required) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INSUFFICIENT_ALIAS_ACCESS,
+                    "read-only primitive access cannot satisfy a mutable alias parameter",
+                )
+                .with_primary_label(place.span, "this place provides read-only access")
+                .with_secondary_label(parameter.span(), "mutable alias declared here"),
+            );
+            return None;
+        }
+        Some(HirCallArgument::PrimitivePlace(place))
+    }
+
+    fn primitive_alias_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<(crate::hir::HirPrimitivePlace, Type, HirAccess)> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                let ty = self.binding_type(binding.binding);
+                matches!(
+                    ty,
+                    Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+                )
+                .then(|| {
+                    let access = self.binding_access(binding.binding, false, binding.span)?;
+                    Some((
+                        crate::hir::HirPrimitivePlace {
+                            storage: crate::hir::HirPrimitiveStorage::Binding(binding.binding),
+                            span: binding.span,
+                        },
+                        ty,
+                        access,
+                    ))
+                })
+                .flatten()
+            }
+            ResolvedExpression::StaticFieldAccess(access) => self
+                .primitive_static_alias_place(access)
+                .map(|(place, ty)| (place, ty, HirAccess::Mutable)),
+            ResolvedExpression::Grouped(grouped) => {
+                let (mut place, ty, access) = self.primitive_alias_place(&grouped.expression)?;
+                place.span = grouped.span;
+                Some((place, ty, access))
+            }
+            _ => None,
+        }
     }
 
     fn check_optional_alias_argument(

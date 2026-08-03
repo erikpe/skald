@@ -190,7 +190,7 @@ pub enum HirStatement {
     Conditional(HirConditional),
     While(HirWhile),
     Block(HirBlock),
-    PrimitiveBindingAssignment(HirPrimitiveBindingAssignment),
+    PrimitiveAssignment(HirPrimitiveAssignment),
     FieldAssignment(HirFieldAssignment),
     FieldConstruction(HirFieldConstruction),
     FieldCopyConstruction(HirFieldCopyConstruction),
@@ -220,7 +220,7 @@ impl HirStatement {
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
             Self::Block(block) => block.span,
-            Self::PrimitiveBindingAssignment(statement) => statement.span,
+            Self::PrimitiveAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::FieldConstruction(statement) => statement.span,
             Self::FieldCopyConstruction(statement) => statement.span,
@@ -240,10 +240,28 @@ impl HirStatement {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirPrimitiveBindingAssignment {
-    pub destination: BindingId,
+pub struct HirPrimitiveAssignment {
+    pub destination: HirPrimitivePlace,
     pub source: HirExpression,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirPrimitivePlace {
+    pub storage: HirPrimitiveStorage,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirPrimitiveStorage {
+    Binding(BindingId),
+    Static(super::HirStaticPlace),
+}
+
+impl HirPrimitivePlace {
+    pub const fn span(self) -> Span {
+        self.span
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

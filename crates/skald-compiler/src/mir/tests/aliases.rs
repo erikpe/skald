@@ -45,17 +45,18 @@ fn rejects_parameter_mode_storage_and_external_signature_corruption() {
         .iter()
         .any(|message| message.contains("storage mode differs from declaration")));
 
-    let (mut primitive_alias, ids) = alias_mir();
-    primitive_alias.declarations.entries_mut_for_test()[ids.observe.index()].parameters[0].ty =
-        MirType::I64;
-    primitive_alias
+    let (mut unit_alias, ids) = alias_mir();
+    unit_alias.declarations.entries_mut_for_test()[ids.observe.index()].parameters[0].ty =
+        MirType::Unit;
+    unit_alias
         .definitions
         .get_mut_for_test(ids.observe)
         .unwrap()
         .storage[0]
-        .ty = MirType::I64;
-    assert!(messages(&primitive_alias).iter().any(|message| {
-        message.contains("alias parameter 0 must have object-view or inline-optional type")
+        .ty = MirType::Unit;
+    assert!(messages(&unit_alias).iter().any(|message| {
+        message
+            .contains("alias parameter 0 must have primitive, object-view, or inline-optional type")
     }));
 
     let (mut unlisted, ids) = alias_mir();

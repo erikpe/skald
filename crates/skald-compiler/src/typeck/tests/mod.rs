@@ -75,6 +75,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             }
         }
         HirExpressionKind::FieldRead(_)
+        | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::TypeTest(_)
         | HirExpressionKind::PresenceTest { .. }
         | HirExpressionKind::Unwrap(_) => {}
@@ -124,6 +125,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
         crate::hir::HirCallArgument::OptionalPlace(_) => {}
         crate::hir::HirCallArgument::Array(_) => {}
         crate::hir::HirCallArgument::ArrayAlias(_) => {}
+        crate::hir::HirCallArgument::PrimitivePlace(_) => {}
     }
 }
 
@@ -171,6 +173,7 @@ mod primitive_casts;
 mod shared_ownership;
 mod shifts;
 mod short_circuit_boolean;
+mod static_fields;
 mod static_methods;
 mod type_operations;
 mod value_parameters;

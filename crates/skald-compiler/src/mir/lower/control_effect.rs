@@ -66,6 +66,7 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
             view_source_contains_control_effect(&test.source.source)
         }
         HirExpressionKind::Binding(_)
+        | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
         | HirExpressionKind::U8(_)
@@ -94,7 +95,9 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
         HirCallArgument::CheckedView(view) => checked_view_contains_control_effect(view),
         HirCallArgument::View(view) => view_source_contains_control_effect(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_control_effect(&copy.source),
-        HirCallArgument::Place(_) | HirCallArgument::OptionalPlace(_) => false,
+        HirCallArgument::Place(_)
+        | HirCallArgument::PrimitivePlace(_)
+        | HirCallArgument::OptionalPlace(_) => false,
         HirCallArgument::Shared(transfer) => match &transfer.source {
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
                 shared_allocation_contains_control_effect(allocation)

@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, ClassId, FieldId, LiteralDataId, LoopId, MethodId},
+    identity::{
+        BindingId, CallableId, ClassId, FieldId, LiteralDataId, LoopId, MethodId, StaticFieldId,
+    },
     source::{Span, TextRange},
 };
 
@@ -15,13 +17,11 @@ mod dereference;
 mod place;
 mod statement;
 
-/// An instance member that body resolution can lower today.
-///
-/// Static fields deliberately do not appear here: STF1 resolves their declarations and
-/// hierarchy identity, while expression support remains a later compiler phase.
+/// A selected ordinary class member after privacy and hierarchy lookup.
 #[derive(Clone, Copy)]
 enum SelectedClassMember {
     Field(FieldId),
+    StaticField(StaticFieldId),
     Method(MethodId),
 }
 
@@ -29,6 +29,7 @@ impl SelectedClassMember {
     const fn declaring_class(self) -> ClassId {
         match self {
             Self::Field(field) => field.class(),
+            Self::StaticField(field) => field.class(),
             Self::Method(method) => method.class(),
         }
     }

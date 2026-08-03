@@ -304,12 +304,13 @@ declaration initializer. `static` remains contextual: `static:` and
 static-field form. Methods, functions, parameters, locals, and other
 existing identifier positions retain their current use of the spelling.
 
-Syntax and resolution now retain static declarations and their inherited
-identity. The grammar alone does not decide which storage types are zero-valid
-or define executable access, initialization, mutation, or lifetime. Those
-settled rules belong to [Zero-Default Static Fields](STATIC_FIELDS.md).
-Type checking deliberately rejects programs containing static declarations
-until typed static places and storage lowering are implemented.
+Syntax and resolution retain static declarations and their inherited identity.
+Static-field parsing also retains `unit` so the zero-default rule can reject
+that otherwise well-formed type at the declaration's type span. The grammar
+alone does not decide which storage types are zero-valid or define executable
+access, initialization, mutation, or lifetime. Those settled rules belong to
+[Zero-Default Static Fields](STATIC_FIELDS.md). Type checking currently lowers
+primitive static places to HIR while later roadmap stages own MIR storage.
 
 ### Construction-selection syntax
 

@@ -6,8 +6,9 @@ use crate::{
         HirAccess, HirBaseInitialization, HirBlock, HirBreak, HirCallArgument, HirCallStatement,
         HirConditional, HirConditionalArm, HirContinue, HirControlEffects, HirLocalDecl,
         HirLocalInitializer, HirObjectReturn, HirOptionalAssignment, HirOptionalPlace,
-        HirOptionalStorage, HirOptionalWriteKind, HirPanic, HirPrimitiveBindingAssignment,
-        HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, HirWhile, Type,
+        HirOptionalStorage, HirOptionalWriteKind, HirPanic, HirPrimitiveAssignment,
+        HirPrimitivePlace, HirPrimitiveStorage, HirReturn, HirReturnValue, HirSharedAssignment,
+        HirStatement, HirWhile, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedContinue,
@@ -83,6 +84,9 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::FieldAssignment(assignment) => {
                 self.check_field_assignment(assignment)
             }
+            ResolvedStatement::StaticFieldAssignment(assignment) => {
+                self.check_static_field_assignment(assignment)
+            }
             ResolvedStatement::ObjectAssignment(assignment) => {
                 self.check_object_assignment(assignment)
             }
@@ -102,6 +106,21 @@ impl CallableChecker<'_, '_> {
         &mut self,
         assignment: &crate::resolve::ResolvedPrimitiveBindingAssignment,
     ) -> CheckedStatement {
+        let mutable = self
+            .binding_access(assignment.destination, false, assignment.span)
+            .is_some_and(|access| access == HirAccess::Mutable);
+        if !mutable {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    READ_ONLY_RECEIVER,
+                    "cannot assign through a read-only primitive alias",
+                )
+                .with_primary_label(
+                    assignment.span,
+                    "primitive assignment requires mutable access",
+                ),
+            );
+        }
         let expected = self.binding_type(assignment.destination);
         debug_assert!(matches!(
             expected,
@@ -118,14 +137,52 @@ impl CallableChecker<'_, '_> {
                     self.diagnostics,
                 )
             })
+            .filter(|_| mutable)
             .map(|source| {
-                HirStatement::PrimitiveBindingAssignment(HirPrimitiveBindingAssignment {
-                    destination: assignment.destination,
+                HirStatement::PrimitiveAssignment(HirPrimitiveAssignment {
+                    destination: HirPrimitivePlace {
+                        storage: HirPrimitiveStorage::Binding(assignment.destination),
+                        span: assignment.span,
+                    },
                     source,
                     span: assignment.span,
                 })
             });
         CheckedStatement::falls_through(source)
+    }
+
+    fn check_static_field_assignment(
+        &mut self,
+        assignment: &crate::resolve::ResolvedStaticFieldAssignment,
+    ) -> CheckedStatement {
+        let destination = self.check_primitive_static_place(
+            assignment.field,
+            assignment.member_span,
+            assignment.span,
+        );
+        let source = self.check_expression(&assignment.value);
+        let hir = match (destination, source) {
+            (Some((place, expected)), Some(source))
+                if require_type(
+                    source.ty,
+                    expected,
+                    source.span,
+                    "static field assignment",
+                    self.diagnostics,
+                ) =>
+            {
+                Some(HirStatement::PrimitiveAssignment(HirPrimitiveAssignment {
+                    destination: HirPrimitivePlace {
+                        storage: HirPrimitiveStorage::Static(place),
+                        span: assignment.span,
+                    },
+                    source,
+                    span: assignment.span,
+                }))
+            }
+            _ => None,
+        };
+        CheckedStatement::falls_through(hir)
     }
 
     fn check_shared_assignment(

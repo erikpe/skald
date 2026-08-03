@@ -24,10 +24,12 @@ use super::{
 mod class;
 mod interfaces;
 mod overrides;
+mod static_fields;
 
 use class::{check_class_definitions, lower_class_declarations};
 use interfaces::analyze_interfaces;
 use overrides::validate_override_signatures;
+pub(super) use static_fields::source_use_is_enabled;
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -65,7 +67,9 @@ pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
-pub const STATIC_FIELD_NOT_EXECUTABLE: &str = "TYP042";
+pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
+pub const STATIC_FIELD_USE_UNAVAILABLE: &str = "TYP043";
+pub const STATIC_STORAGE_NOT_LOWERED: &str = "TYP044";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -82,7 +86,6 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    reject_unlowered_static_fields(program, &mut diagnostics);
     super::arrays::validate_array_types(program, &mut diagnostics);
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
@@ -166,29 +169,6 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     TypeCheckOutput { hir, diagnostics }
 }
 
-fn reject_unlowered_static_fields(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
-    for class in program.classes.iter() {
-        for field in &class.static_fields {
-            diagnostics.push(
-                Diagnostic::error(
-                    STATIC_FIELD_NOT_EXECUTABLE,
-                    format!(
-                        "static field `{}.{}` cannot be emitted yet",
-                        class.name, field.name
-                    ),
-                )
-                .with_primary_label(
-                    field.static_span,
-                    "static storage and executable access are not implemented",
-                )
-                .with_note(
-                    "the declaration is available to syntax and name resolution only for now",
-                ),
-            );
-        }
-    }
-}
-
 fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
     for declaration in program.declarations.iter() {
         if matches!(declaration.linkage, ResolvedFunctionLinkage::Internal) {
@@ -246,7 +226,12 @@ fn validate_parameters(
             | ResolvedParameterBindingMode::MutableAlias { .. }
                 if !matches!(
                     ty,
-                    Type::Class(_)
+                    Type::I64
+                        | Type::U64
+                        | Type::U8
+                        | Type::F64
+                        | Type::Bool
+                        | Type::Class(_)
                         | Type::Obj
                         | Type::Interface(_)
                         | Type::Array(_)
@@ -258,13 +243,13 @@ fn validate_parameters(
                     Diagnostic::error(
                         INVALID_ALIAS_PARAMETER,
                         format!(
-                            "{owner} alias parameter `{}` must name a class, array, interface, `Obj`, or supported inline optional",
+                            "{owner} alias parameter `{}` must name a primitive, class, array, interface, `Obj`, or supported inline optional",
                             parameter.name
                         ),
                     )
                     .with_primary_label(
                         parameter.type_syntax.span,
-                        "plain primitive, shared-owner, and `unit` aliases are unavailable",
+                        "shared-owner and `unit` aliases are unavailable",
                     ),
                 );
                 valid = false;

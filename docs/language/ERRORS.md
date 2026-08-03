@@ -34,11 +34,12 @@ than source-language exceptions.
 The [zero-default static-field design](STATIC_FIELDS.md) is being implemented
 in explicit compiler stages. Static declarations are accepted by syntax and
 resolution, where malformed shapes, member collisions, inherited identity,
-and declaring-class privacy have their ordinary owners. Static-field
-expressions are deliberately unavailable, and `TYP042` rejects every static
-declaration before typed HIR until typed places and storage validation land.
-Later stages will reject unsupported zero-state types at the declared type and
-give wrong-kind or non-callable diagnostics to invalid selections.
+wrong-kind selection, non-callable use, and declaring-class privacy have their
+ordinary owners. Type checking reports `TYP042` at a declaration whose type
+has no complete all-zero live value. Primitive reads, writes, and call aliases
+lower to typed static places; `TYP043` reserves accepted ownership-bearing
+declarations for their later source-use stages. Until static MIR roots land,
+`TYP044` stops a well-typed static program before MIR lowering.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

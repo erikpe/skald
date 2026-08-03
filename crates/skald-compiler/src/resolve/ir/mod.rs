@@ -17,7 +17,7 @@ pub use body::{
     ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedLocalDecl,
     ResolvedMemberDefinition, ResolvedObjectAssignment, ResolvedOptionalAssignment,
     ResolvedPrimitiveBindingAssignment, ResolvedReturn, ResolvedSharedAssignment,
-    ResolvedStatement, ResolvedWhile,
+    ResolvedStatement, ResolvedStaticFieldAssignment, ResolvedWhile,
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,
@@ -44,8 +44,8 @@ pub use expression::{
     ResolvedMethodCallExpr, ResolvedNumericLiteralExpr, ResolvedObjectCastExpr,
     ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr, ResolvedPresenceTestKind,
     ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedStaticCallExpr,
-    ResolvedStringLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
-    ResolvedUnwrapExpr,
+    ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr, ResolvedTypeTestExpr,
+    ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

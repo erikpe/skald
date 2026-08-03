@@ -65,6 +65,7 @@ pub enum HirExpressionKind {
         arguments: Vec<HirCallArgument>,
     },
     FieldRead(HirFieldPlace),
+    StaticRead(super::HirStaticPlace),
     MethodCall {
         receiver: HirMethodReceiver,
         target: HirMethodCallTarget,
@@ -216,6 +217,7 @@ pub enum HirCallArgument {
     Shared(HirSharedTransfer),
     Array(super::HirArrayInitialize),
     ArrayAlias(super::HirArrayAliasArgument),
+    PrimitivePlace(super::HirPrimitivePlace),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -240,6 +242,7 @@ impl HirCallArgument {
             Self::Shared(value) => value.span,
             Self::Array(value) => value.span,
             Self::ArrayAlias(value) => value.span,
+            Self::PrimitivePlace(place) => place.span(),
         }
     }
 }

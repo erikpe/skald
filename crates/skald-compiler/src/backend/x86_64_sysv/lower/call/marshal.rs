@@ -333,10 +333,7 @@ impl InstructionSelector<'_, '_> {
             }
             (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
             | (MirArgument::Place(place), MirParameterMode::MutableAlias) => {
-                if matches!(
-                    parameter.ty,
-                    MirType::OptionalPrimitive(_) | MirType::OptionalClass(_) | MirType::Array(_)
-                ) {
+                if locations.origin().is_none() {
                     self.select_place_address(place, locations.value())?;
                 } else {
                     self.select_inferred_alias(place, locations)?;

@@ -1,6 +1,6 @@
 # Zero-Default Static Fields
 
-Status: **frozen design; declaration frontend implemented**. This document is authoritative for
+Status: **frozen design; typed primitive frontend implemented**. This document is authoritative for
 the selected source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -14,12 +14,13 @@ inline-array registries without introducing declaration expressions, module
 initialization, shutdown ordering, garbage collection, or a new runtime
 service.
 
-The compiler now parses static-field declarations, assigns independent
-resolved identities, and includes them in the inherited member namespace.
-Static-field expressions, storage-type validation, typed places, and runtime
-storage are not implemented yet. Type checking therefore rejects every
-program containing a static declaration with `TYP042`, even when the field is
-unused; source selections also receive a focused resolver diagnostic.
+The compiler parses static-field declarations, assigns independent resolved
+identities, includes them in the inherited member namespace, validates the
+complete zero-default storage-type set, and lowers primitive reads, writes,
+and call aliases to receiver-free typed HIR places. Owning zero-default
+declarations are accepted but their source uses remain staged. Static MIR
+roots and native storage are not implemented yet, so the complete driver
+reports `TYP044` before MIR lowering for a program containing static storage.
 
 ## Declaration syntax
 
@@ -228,9 +229,12 @@ The implementation must reject each error at the phase that owns it:
 - attempts to call a static field as a non-callable target.
 
 Diagnostic wording and codes remain compiler behavior. During the current
-declaration-only stage, malformed declarations are syntax errors, namespace
-and privacy rules are enforced during resolution, expression uses are
-unavailable, and `TYP042` prevents declarations from reaching typed HIR.
+typed-HIR stage, malformed declarations are syntax errors, namespace and
+privacy rules are enforced during resolution, `TYP042` rejects a declaration
+whose type lacks a complete all-zero live value, and `TYP043` rejects source
+use of an accepted owning static type until its ownership-specific stage.
+Primitive static programs reach typed HIR; `TYP044` then prevents the complete
+driver from claiming MIR or native execution before static roots exist.
 
 ## Runtime, ABI, and representation boundary
 

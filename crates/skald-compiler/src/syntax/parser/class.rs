@@ -459,8 +459,12 @@ impl Parser<'_> {
     ) -> Option<(Name, TypeSyntax, Span)> {
         let name = self.parse_name(kind.name_expectation())?;
         self.expect(TokenKind::Colon, kind.colon_expectation());
+        let type_context = match kind {
+            FieldDeclarationKind::Instance => TypeContext::Field,
+            FieldDeclarationKind::Static => TypeContext::StaticField,
+        };
         let type_syntax = self.parse_type(
-            TypeContext::Field,
+            type_context,
             format!(
                 "expected a {} type {}, a class name, or a shared object type",
                 kind.description(),

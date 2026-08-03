@@ -80,6 +80,11 @@ fn lower_class_declaration(
             }
         })
         .collect();
+    let static_fields =
+        super::static_fields::lower_static_fields(&class.static_fields, diagnostics);
+    if static_fields.is_none() {
+        valid = false;
+    }
     if class.initializers.is_empty() {
         diagnostics.push(
             Diagnostic::error(
@@ -189,6 +194,7 @@ fn lower_class_declaration(
         direct_base,
         conformances,
         fields,
+        static_fields: static_fields.unwrap_or_default(),
         initializers,
         copy_constructor_declaration,
         copy_constructor: copy_capabilities.constructor(class.id).clone(),

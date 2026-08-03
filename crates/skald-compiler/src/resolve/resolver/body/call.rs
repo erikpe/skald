@@ -11,6 +11,15 @@ impl CallableResolver<'_, '_> {
             match self.class_receiver(&member.receiver) {
                 ClassReceiver::Class(class) => {
                     let selected = self.select_member(class, &member.member)?;
+                    if let SelectedClassMember::StaticField(field) = selected {
+                        return Some(ResolvedExpression::StaticFieldAccess(
+                            ResolvedStaticFieldAccessExpr {
+                                field,
+                                member_span: member.member.span,
+                                span: member.span,
+                            },
+                        ));
+                    }
                     self.report_class_member_used_as_value(selected, &member.member);
                     return None;
                 }
@@ -45,6 +54,15 @@ impl CallableResolver<'_, '_> {
                     )
                     .with_primary_label(member.member.span, "call the method with `(...)`")
                     .with_secondary_label(declaration.name_span, "method declared here"),
+                );
+                None
+            }
+            SelectedClassMember::StaticField(field) => {
+                self.report_object_selected_static_field(
+                    field,
+                    &member.member,
+                    INVALID_MEMBER_SELECTION,
+                    "object-selected static field",
                 );
                 None
             }
@@ -282,6 +300,12 @@ impl CallableResolver<'_, '_> {
                 .get(access.field.class())
                 .and_then(|class| class.field(access.field))
                 .map(|field| field.type_syntax.kind),
+            ResolvedExpression::StaticFieldAccess(access) => self
+                .environment
+                .classes
+                .get(access.field.class())
+                .and_then(|class| class.static_field(access.field))
+                .map(|field| field.type_syntax.kind),
             ResolvedExpression::DirectCall(call) => self
                 .environment
                 .functions
@@ -496,6 +520,15 @@ impl CallableResolver<'_, '_> {
                         );
                         None
                     }
+                    SelectedClassMember::StaticField(field) => {
+                        self.report_object_selected_static_field(
+                            field,
+                            &member.member,
+                            INVALID_CALL_TARGET,
+                            "object-selected static field",
+                        );
+                        None
+                    }
                 }
             }
             _ => {
@@ -511,7 +544,7 @@ impl CallableResolver<'_, '_> {
         }
     }
 
-    fn class_receiver(&mut self, expression: &syntax::Expression) -> ClassReceiver {
+    pub(super) fn class_receiver(&mut self, expression: &syntax::Expression) -> ClassReceiver {
         let syntax::Expression::Identifier(identifier) = expression else {
             return ClassReceiver::NotClass;
         };
@@ -586,6 +619,23 @@ impl CallableResolver<'_, '_> {
                 );
                 None
             }
+            SelectedClassMember::StaticField(field) => {
+                let declaration = self
+                    .environment
+                    .classes
+                    .get(field.class())
+                    .and_then(|class| class.static_field(field))
+                    .expect("member symbols must reference declaration metadata");
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CALL_TARGET,
+                        format!("static field `{}` is not callable", declaration.name),
+                    )
+                    .with_primary_label(member.member.span, "called here")
+                    .with_secondary_label(declaration.name_span, "static field declared here"),
+                );
+                None
+            }
         }
     }
 
@@ -634,6 +684,9 @@ impl CallableResolver<'_, '_> {
                     .with_primary_label(name.span, "class-selected field")
                     .with_secondary_label(declaration.name_span, "field declared here"),
                 );
+            }
+            SelectedClassMember::StaticField(_) => {
+                unreachable!("class-selected static fields are values")
             }
         }
     }
@@ -834,32 +887,37 @@ impl CallableResolver<'_, '_> {
             return None;
         }
 
-        if let ResolvedClassMember::StaticField(field) = member {
-            let declaration = self
-                .environment
-                .classes
-                .get(declaring_class)
-                .and_then(|class| class.static_field(field))
-                .expect("selected static field must have declaration metadata");
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_MEMBER_SELECTION,
-                    format!(
-                        "static field `{}` cannot be used in an expression yet",
-                        declaration.name
-                    ),
-                )
-                .with_primary_label(name.span, "static field expressions are not implemented")
-                .with_secondary_label(declaration.name_span, "static field declared here"),
-            );
-            return None;
-        }
-
         Some(match member {
             ResolvedClassMember::Field(field) => SelectedClassMember::Field(field),
+            ResolvedClassMember::StaticField(field) => SelectedClassMember::StaticField(field),
             ResolvedClassMember::Method(method) => SelectedClassMember::Method(method),
-            ResolvedClassMember::StaticField(_) => unreachable!(),
         })
+    }
+
+    pub(super) fn report_object_selected_static_field(
+        &mut self,
+        field: StaticFieldId,
+        name: &syntax::Name,
+        code: &'static str,
+        label: &'static str,
+    ) {
+        let declaration = self
+            .environment
+            .classes
+            .get(field.class())
+            .and_then(|class| class.static_field(field))
+            .expect("selected static field must have declaration metadata");
+        self.diagnostics.push(
+            Diagnostic::error(
+                code,
+                format!(
+                    "static field `{}` must be selected through a class",
+                    declaration.name
+                ),
+            )
+            .with_primary_label(name.span, label)
+            .with_secondary_label(declaration.name_span, "static field declared here"),
+        );
     }
 }
 
@@ -886,7 +944,7 @@ enum CallTarget {
     },
 }
 
-enum ClassReceiver {
+pub(super) enum ClassReceiver {
     NotClass,
     Class(ClassId),
     Diagnosed,

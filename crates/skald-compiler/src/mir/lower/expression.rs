@@ -10,14 +10,11 @@ use crate::hir::{
 impl BodyLowerer<'_> {
     pub(super) fn lower_expression(&mut self, expression: &HirExpression) -> Option<ValueId> {
         match &expression.kind {
-            HirExpressionKind::Binding(binding) => {
-                let storage = self.storage_for_binding(*binding);
-                Some(self.assign(
-                    MirRvalueKind::Load(storage.into()),
-                    lower_type(expression.ty),
-                    expression.span,
-                ))
-            }
+            HirExpressionKind::Binding(binding) => Some(self.assign(
+                MirRvalueKind::Load(self.lower_binding_place(*binding)),
+                lower_type(expression.ty),
+                expression.span,
+            )),
             HirExpressionKind::I64(value) => Some(self.assign(
                 MirRvalueKind::ConstantI64(*value),
                 lower_type(expression.ty),
@@ -85,6 +82,9 @@ impl BodyLowerer<'_> {
                 );
                 self.end_optional_views_from(optional_mark, expression.span);
                 Some(result)
+            }
+            HirExpressionKind::StaticRead(_) => {
+                unreachable!("static reads must not reach MIR lowering before static-root support")
             }
             HirExpressionKind::MethodCall {
                 receiver,

@@ -445,6 +445,17 @@ impl BodyLowerer<'_> {
                 HirCallArgument::Place(place) => {
                     LoweredArgument::Ready(MirArgument::Place(self.lower_object_place(place)))
                 }
+                HirCallArgument::PrimitivePlace(place) => {
+                    let place = match place.storage {
+                        crate::hir::HirPrimitiveStorage::Binding(binding) => {
+                            self.lower_binding_place(binding)
+                        }
+                        crate::hir::HirPrimitiveStorage::Static(_) => {
+                            unreachable!("static aliases must not reach MIR lowering before static-root support")
+                        }
+                    };
+                    LoweredArgument::Ready(MirArgument::Place(place))
+                }
                 HirCallArgument::View(view) => {
                     LoweredArgument::Ready(MirArgument::View(self.lower_object_view(view)))
                 }

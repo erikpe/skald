@@ -633,7 +633,6 @@ fn malformed_and_excluded_destructor_sources_fail_before_backend_lowering() {
 fn malformed_and_excluded_alias_sources_never_reach_mir_or_backend_panics() {
     let cases = [
         "class Value { init() {} } fn malformed(ref mut value: Value) -> unit {} fn main() -> i64 { return 0; }",
-        "fn inspect(ref value: i64) -> unit {} fn main() -> i64 { return 0; }",
         "class Value { init() {} } extern fn inspect(ref value: Value) -> unit; fn main() -> i64 { return 0; }",
         "class Value { init() {} } fn inspect(mut ref value: Value) -> unit {} fn forward(ref value: Value) -> unit { inspect(value); } fn main() -> i64 { return 0; }",
         "class Value { init() {} } fn inspect(ref value: Value) -> unit {} fn main() -> i64 { inspect(Value()); return 0; }",
@@ -767,4 +766,25 @@ fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
     assert!(artifact.assembly.contains("call ska_rt_free"));
     assert!(artifact.assembly.contains(".Lska_array_0_copy_element"));
     assert!(artifact.assembly.contains("[r11 + r10*8 + 16]"));
+}
+
+#[test]
+fn typed_static_programs_stop_cleanly_before_mir_lowering() {
+    let error = compile_source_to_assembly(
+        "static-field.ska",
+        concat!(
+            "class State { static count: i64; init() {} }\n",
+            "fn main() -> i64 { State.count = 1; return State.count; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect_err("static MIR roots are implemented by the next roadmap stage");
+    let CompilationError::Diagnostics(report) = error else {
+        panic!("typed static fields must stop at a source diagnostic boundary");
+    };
+    assert_eq!(report.diagnostics.len(), 1);
+    assert_eq!(
+        report.diagnostics.iter().next().unwrap().code,
+        crate::typeck::STATIC_STORAGE_NOT_LOWERED
+    );
 }

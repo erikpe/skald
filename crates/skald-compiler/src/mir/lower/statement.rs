@@ -36,12 +36,19 @@ impl BodyLowerer<'_> {
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),
             HirStatement::While(statement) => self.lower_while(statement),
             HirStatement::Block(block) => self.lower_block(block),
-            HirStatement::PrimitiveBindingAssignment(assignment) => {
+            HirStatement::PrimitiveAssignment(assignment) => {
                 let value = self
                     .lower_expression(&assignment.source)
                     .expect("typed primitive binding assignment must produce a scalar value");
                 self.emit(MirInstruction::Store(MirStore {
-                    destination: self.lower_binding_place(assignment.destination),
+                    destination: match assignment.destination.storage {
+                        crate::hir::HirPrimitiveStorage::Binding(binding) => {
+                            self.lower_binding_place(binding)
+                        }
+                        crate::hir::HirPrimitiveStorage::Static(_) => {
+                            unreachable!("static places must not reach MIR lowering before static-root support")
+                        }
+                    },
                     value,
                     span: assignment.span,
                 }));

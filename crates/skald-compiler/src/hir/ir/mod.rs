@@ -17,6 +17,7 @@ mod optional;
 mod primitive;
 mod shared;
 mod shift;
+mod static_field;
 mod strings;
 
 pub use array::{
@@ -34,7 +35,8 @@ pub use body::{
     HirBlock, HirBreak, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
     HirConditional, HirConditionalArm, HirContinue, HirFunctionDefinition,
     HirFunctionDefinitionTable, HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
-    HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirStatement, HirWhile,
+    HirPrimitiveAssignment, HirPrimitivePlace, HirPrimitiveStorage, HirReturn, HirReturnValue,
+    HirStatement, HirWhile,
 };
 pub use control_flow::HirControlEffects;
 pub use declarations::{
@@ -84,6 +86,7 @@ pub use shared::{
 pub use shift::{
     HirCheckedShift, HirRightShiftFlavor, HirShiftDirection, HirShiftFailure, HirShiftOperation,
 };
+pub use static_field::{HirStaticFieldDeclaration, HirStaticPlace};
 pub use strings::{HirLiteralData, HirLiteralDataTable, HirStringLanguageItem, HirStringLiteral};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

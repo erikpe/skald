@@ -40,6 +40,7 @@ pub use ir::{
     ResolvedPresenceTestKind, ResolvedPrimitiveBindingAssignment, ResolvedPrimitiveCastExpr,
     ResolvedPrimitiveType, ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn,
     ResolvedSharedAssignment, ResolvedSharedTarget, ResolvedStatement, ResolvedStaticCallExpr,
+    ResolvedStaticFieldAccessExpr, ResolvedStaticFieldAssignment, ResolvedStaticFieldDeclaration,
     ResolvedStringLanguageItem, ResolvedStringLiteralExpr, ResolvedTopLevelId, ResolvedType,
     ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
     ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable, ResolvedVisibility,

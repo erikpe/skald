@@ -39,13 +39,14 @@ binding category is separate from the declared type:
 | Source category | Implemented meaning |
 |---|---|
 | `name: T` | A value parameter owning callee-local parameter storage. Primitive arguments are copied as values; exact-class arguments are copy-constructed for the call. |
-| `ref name: T` | A call-scoped read-only alias to an existing exact-class place. |
-| `mut ref name: T` | A call-scoped mutable alias to an existing exact-class place. |
+| `ref name: T` | A call-scoped read-only alias to an eligible existing place. |
+| `mut ref name: T` | A call-scoped mutable alias to an eligible existing place. |
 
 Value parameters may use implemented primitive or exact-class types. Alias
-parameters use exact class types and are supported only on internal callables.
-Aliases do not own or copy their object. Their access, source-place, forwarding,
-overlap, and non-escape rules are defined by
+parameters support the implemented primitive, object-view, inline-optional,
+and array families only on internal callables. Aliases do not own or copy
+their designated value. Their access, source-place, forwarding, overlap, and
+non-escape rules are defined by
 [aliases and ownership](ALIASES_AND_OWNERSHIP.md).
 
 Parameter names must be unique within one callable. Parameters and the

@@ -2,7 +2,9 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{BindingId, CallableId, ClassId, FieldId, FunctionId, LocalId, LoopId},
+    identity::{
+        BindingId, CallableId, ClassId, FieldId, FunctionId, LocalId, LoopId, StaticFieldId,
+    },
     source::Span,
 };
 
@@ -173,6 +175,7 @@ pub enum ResolvedStatement {
     Block(ResolvedBlock),
     PrimitiveBindingAssignment(ResolvedPrimitiveBindingAssignment),
     FieldAssignment(ResolvedFieldAssignment),
+    StaticFieldAssignment(ResolvedStaticFieldAssignment),
     ObjectAssignment(ResolvedObjectAssignment),
     SharedAssignment(ResolvedSharedAssignment),
     OptionalAssignment(ResolvedOptionalAssignment),
@@ -193,6 +196,7 @@ impl ResolvedStatement {
             Self::Block(block) => block.span,
             Self::PrimitiveBindingAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
+            Self::StaticFieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
             Self::SharedAssignment(statement) => statement.span,
             Self::OptionalAssignment(statement) => statement.span,
@@ -275,6 +279,15 @@ pub struct ResolvedObjectAssignment {
 pub struct ResolvedFieldAssignment {
     pub receiver: super::ResolvedObjectReceiver,
     pub field: FieldId,
+    pub member_span: Span,
+    pub equal_span: Span,
+    pub value: ResolvedExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedStaticFieldAssignment {
+    pub field: StaticFieldId,
     pub member_span: Span,
     pub equal_span: Span,
     pub value: ResolvedExpression,

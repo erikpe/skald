@@ -10,11 +10,12 @@ pub(super) enum TypeContext {
     ArrayElement,
     LocalValue,
     Field,
+    StaticField,
 }
 
 impl TypeContext {
     const fn accepts_unit(self) -> bool {
-        matches!(self, Self::Result)
+        matches!(self, Self::Result | Self::StaticField)
     }
 
     const fn accepts_named(self) -> bool {
@@ -26,6 +27,7 @@ impl TypeContext {
                 | Self::ArrayElement
                 | Self::LocalValue
                 | Self::Field
+                | Self::StaticField
         )
     }
 
@@ -55,7 +57,7 @@ impl TypeContext {
                 "locals must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
-            Self::Field => format!(
+            Self::Field | Self::StaticField => format!(
                 "fields must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),

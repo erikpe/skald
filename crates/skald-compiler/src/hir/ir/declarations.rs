@@ -6,7 +6,7 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, ParameterId, StaticFieldId, VirtualFamilyId, VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -46,6 +46,10 @@ impl HirProgram {
 
     pub fn field(&self, id: FieldId) -> Option<&HirFieldDeclaration> {
         self.class(id.class())?.field(id)
+    }
+
+    pub fn static_field(&self, id: StaticFieldId) -> Option<&super::HirStaticFieldDeclaration> {
+        self.class(id.class())?.static_field(id)
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {
@@ -237,6 +241,7 @@ pub struct HirClassDeclaration {
     pub direct_base: Option<HirDirectBase>,
     pub conformances: Vec<HirInterfaceConformance>,
     pub fields: Vec<HirFieldDeclaration>,
+    pub static_fields: Vec<super::HirStaticFieldDeclaration>,
     pub initializers: Vec<HirInitializerDeclaration>,
     pub copy_constructor_declaration: Option<HirCopyConstructorDeclaration>,
     pub copy_constructor: HirCopyCapability<CopyConstructorId>,
@@ -298,6 +303,15 @@ impl HirClassDeclaration {
             return None;
         }
         self.fields.get(id.index()).filter(|field| field.id == id)
+    }
+
+    pub fn static_field(&self, id: StaticFieldId) -> Option<&super::HirStaticFieldDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.static_fields
+            .get(id.index())
+            .filter(|field| field.id == id)
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {

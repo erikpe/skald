@@ -29,6 +29,7 @@ mod primitive;
 mod receiver;
 mod shared_pointee;
 mod shift;
+mod static_field;
 mod type_operations;
 
 pub(in crate::typeck) use object_view_relation::{
@@ -154,6 +155,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::StaticCall(call) => self.check_static_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),
+            ResolvedExpression::StaticFieldAccess(access) => self.check_static_field_read(access),
             ResolvedExpression::ArrayProjection(projection) => {
                 self.check_array_projection(projection)
             }

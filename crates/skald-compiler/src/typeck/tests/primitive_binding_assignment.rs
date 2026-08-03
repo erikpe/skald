@@ -1,5 +1,8 @@
 use super::*;
-use crate::identity::{BindingId, ParameterId};
+use crate::{
+    hir::HirPrimitiveStorage,
+    identity::{BindingId, ParameterId},
+};
 
 #[test]
 fn checks_all_primitive_binding_assignment_types_exactly() {
@@ -29,7 +32,7 @@ fn checks_all_primitive_binding_assignment_types_exactly() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            HirStatement::PrimitiveBindingAssignment(assignment) => Some(assignment),
+            HirStatement::PrimitiveAssignment(assignment) => Some(assignment),
             _ => None,
         })
         .collect();
@@ -51,7 +54,9 @@ fn checks_all_primitive_binding_assignment_types_exactly() {
         assignments
             .iter()
             .map(|assignment| {
-                let BindingId::Local(local) = assignment.destination else {
+                let HirPrimitiveStorage::Binding(BindingId::Local(local)) =
+                    assignment.destination.storage
+                else {
                     panic!("expected local destination");
                 };
                 local.index()
@@ -88,7 +93,7 @@ fn checks_all_primitive_parameter_assignment_types_exactly() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            HirStatement::PrimitiveBindingAssignment(assignment) => Some(assignment),
+            HirStatement::PrimitiveAssignment(assignment) => Some(assignment),
             _ => None,
         })
         .collect();
@@ -99,11 +104,11 @@ fn checks_all_primitive_parameter_assignment_types_exactly() {
             .collect::<Vec<_>>(),
         [Type::I64, Type::U64, Type::U8, Type::F64, Type::Bool]
     );
-    assert!(assignments
-        .iter()
-        .enumerate()
-        .all(|(index, assignment)| assignment.destination
-            == BindingId::Parameter(ParameterId::new(FunctionId::new(0), index))));
+    assert!(assignments.iter().enumerate().all(|(index, assignment)| {
+        let parameter = ParameterId::new(FunctionId::new(0), index);
+        assignment.destination.storage
+            == HirPrimitiveStorage::Binding(BindingId::Parameter(parameter))
+    }));
 }
 
 #[test]

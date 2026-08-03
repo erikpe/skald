@@ -3,7 +3,7 @@
 use crate::{
     identity::{
         BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
-        LiteralDataId, MethodId,
+        LiteralDataId, MethodId, StaticFieldId,
     },
     literal::NumericLiteralKind,
     source::Span,
@@ -34,6 +34,7 @@ pub enum ResolvedExpression {
     StaticCall(ResolvedStaticCallExpr),
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
+    StaticFieldAccess(ResolvedStaticFieldAccessExpr),
     ArrayProjection(Box<ResolvedArrayProjectionExpr>),
     MethodCall(ResolvedMethodCallExpr),
     InterfaceCall(ResolvedInterfaceCallExpr),
@@ -64,6 +65,7 @@ impl ResolvedExpression {
             Self::StaticCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
+            Self::StaticFieldAccess(expression) => expression.span,
             Self::ArrayProjection(expression) => expression.span,
             Self::MethodCall(expression) => expression.span,
             Self::InterfaceCall(expression) => expression.span,
@@ -276,6 +278,13 @@ pub enum ResolvedInterfaceReceiver {
 pub struct ResolvedFieldAccessExpr {
     pub receiver: ResolvedObjectReceiver,
     pub field: FieldId,
+    pub member_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedStaticFieldAccessExpr {
+    pub field: StaticFieldId,
     pub member_span: Span,
     pub span: Span,
 }

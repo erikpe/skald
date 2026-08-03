@@ -714,6 +714,17 @@ impl ResolvedDumper {
                     dumper.indented(|dumper| dumper.expression(&assignment.value));
                 });
             }
+            ResolvedStatement::StaticFieldAssignment(assignment) => {
+                self.line(
+                    &format!("StaticFieldAssignment {}", assignment.field),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Equal", assignment.equal_span);
+                    dumper.heading("Value");
+                    dumper.indented(|dumper| dumper.expression(&assignment.value));
+                });
+            }
             ResolvedStatement::ObjectAssignment(assignment) => {
                 self.line("ObjectAssignment", assignment.span);
                 self.indented(|dumper| {
@@ -783,6 +794,9 @@ impl ResolvedDumper {
             ResolvedExpression::Absent(absent) => self.line("Absent", absent.span),
             ResolvedExpression::Binding(binding) => {
                 self.line(&format!("Binding {}", binding.binding), binding.span);
+            }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                self.line(&format!("StaticFieldAccess {}", access.field), access.span);
             }
             ResolvedExpression::NumericLiteral(literal) => {
                 self.write_indentation();

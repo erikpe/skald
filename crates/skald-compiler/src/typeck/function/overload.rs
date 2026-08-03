@@ -225,6 +225,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => {
                 Some(self.static_receiver_access(&access.receiver))
             }
+            ResolvedExpression::StaticFieldAccess(_) => Some(HirAccess::Mutable),
             ResolvedExpression::ArrayProjection(projection) => {
                 self.static_place_access(&projection.receiver)
             }
@@ -315,6 +316,11 @@ impl CallableChecker<'_, '_> {
                 .field(access.field)
                 .map(|field| lower_type(&field.type_syntax))
                 .expect("resolved field access must reference a declaration"),
+            ResolvedExpression::StaticFieldAccess(access) => self
+                .program
+                .static_field(access.field)
+                .map(|field| lower_type(&field.type_syntax))
+                .expect("resolved static-field access must reference a declaration"),
             ResolvedExpression::MethodCall(call) => self
                 .program
                 .method(call.method)

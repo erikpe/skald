@@ -167,6 +167,15 @@ impl CallableResolver<'_, '_> {
                         );
                         None
                     }
+                    SelectedClassMember::StaticField(field) => {
+                        self.report_object_selected_static_field(
+                            field,
+                            &member.member,
+                            INVALID_MEMBER_SELECTION,
+                            "object-selected static field",
+                        );
+                        None
+                    }
                 }
             }
             _ => self
@@ -261,6 +270,15 @@ impl CallableResolver<'_, '_> {
                             )
                             .with_primary_label(member.member.span, "expected a class field here")
                             .with_secondary_label(declaration.name_span, "method declared here"),
+                        );
+                        None
+                    }
+                    SelectedClassMember::StaticField(field) => {
+                        self.report_object_selected_static_field(
+                            field,
+                            &member.member,
+                            INVALID_MEMBER_SELECTION,
+                            "object-selected static field",
                         );
                         None
                     }

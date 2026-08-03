@@ -1,5 +1,6 @@
 //! Statement sequencing, lexical scopes, and binding declarations.
 
+use super::call::ClassReceiver;
 use super::*;
 use crate::identity::{LocalId, LoopId};
 
@@ -80,9 +81,9 @@ impl CallableResolver<'_, '_> {
             syntax::Statement::Block(block) => {
                 Some(ResolvedStatement::Block(self.resolve_block(block, true)))
             }
-            syntax::Statement::FieldAssignment(assignment) => self
-                .resolve_field_assignment(assignment)
-                .map(ResolvedStatement::FieldAssignment),
+            syntax::Statement::FieldAssignment(assignment) => {
+                self.resolve_field_assignment(assignment)
+            }
             syntax::Statement::ObjectAssignment(assignment) => {
                 self.resolve_object_assignment(assignment)
             }
@@ -268,7 +269,86 @@ impl CallableResolver<'_, '_> {
     fn resolve_field_assignment(
         &mut self,
         assignment: &syntax::FieldAssignmentStatement,
-    ) -> Option<ResolvedFieldAssignment> {
+    ) -> Option<ResolvedStatement> {
+        if matches!(
+            assignment.place.operator,
+            syntax::MemberAccessOperator::Dot { .. }
+        ) {
+            match self.class_receiver(&assignment.place.receiver) {
+                ClassReceiver::Class(class) => {
+                    let selected = self.select_member(class, &assignment.place.member);
+                    let value = self.resolve_expression(&assignment.value);
+                    let (selected, value) = match (selected, value) {
+                        (Some(selected), Some(value)) => (selected, value),
+                        _ => return None,
+                    };
+                    return match selected {
+                        SelectedClassMember::StaticField(field) => {
+                            Some(ResolvedStatement::StaticFieldAssignment(
+                                ResolvedStaticFieldAssignment {
+                                    field,
+                                    member_span: assignment.place.member.span,
+                                    equal_span: assignment.equal_span,
+                                    value,
+                                    span: assignment.span,
+                                },
+                            ))
+                        }
+                        SelectedClassMember::Field(field) => {
+                            let declaration = self
+                                .environment
+                                .classes
+                                .get(field.class())
+                                .and_then(|class| class.field(field))
+                                .expect("selected field must have declaration metadata");
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_MEMBER_SELECTION,
+                                    format!(
+                                        "field `{}` requires an object receiver",
+                                        declaration.name
+                                    ),
+                                )
+                                .with_primary_label(
+                                    assignment.place.member.span,
+                                    "class-selected field",
+                                )
+                                .with_secondary_label(declaration.name_span, "field declared here"),
+                            );
+                            None
+                        }
+                        SelectedClassMember::Method(method) => {
+                            let declaration = self
+                                .environment
+                                .classes
+                                .get(method.class())
+                                .and_then(|class| class.method(method))
+                                .expect("selected method must have declaration metadata");
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_MEMBER_SELECTION,
+                                    format!("method `{}` cannot be assigned", declaration.name),
+                                )
+                                .with_primary_label(
+                                    assignment.place.member.span,
+                                    "expected a static field here",
+                                )
+                                .with_secondary_label(
+                                    declaration.name_span,
+                                    "method declared here",
+                                ),
+                            );
+                            None
+                        }
+                    };
+                }
+                ClassReceiver::Diagnosed => {
+                    let _ = self.resolve_expression(&assignment.value);
+                    return None;
+                }
+                ClassReceiver::NotClass => {}
+            }
+        }
         let receiver = self.resolve_member_object_receiver(&assignment.place);
         let selected = receiver.and_then(|receiver| {
             self.select_member(receiver.class(), &assignment.place.member)
@@ -284,6 +364,15 @@ impl CallableResolver<'_, '_> {
             _ => return None,
         };
         let SelectedClassMember::Field(field) = selected else {
+            if let SelectedClassMember::StaticField(field) = selected {
+                self.report_object_selected_static_field(
+                    field,
+                    &assignment.place.member,
+                    INVALID_MEMBER_SELECTION,
+                    "object-selected static field",
+                );
+                return None;
+            }
             let SelectedClassMember::Method(method) = selected else {
                 unreachable!()
             };
@@ -303,14 +392,16 @@ impl CallableResolver<'_, '_> {
             );
             return None;
         };
-        Some(ResolvedFieldAssignment {
-            receiver,
-            field,
-            member_span: assignment.place.member.span,
-            equal_span: assignment.equal_span,
-            value,
-            span: assignment.span,
-        })
+        Some(ResolvedStatement::FieldAssignment(
+            ResolvedFieldAssignment {
+                receiver,
+                field,
+                member_span: assignment.place.member.span,
+                equal_span: assignment.equal_span,
+                value,
+                span: assignment.span,
+            },
+        ))
     }
 
     fn resolve_object_assignment(
@@ -341,9 +432,7 @@ impl CallableResolver<'_, '_> {
                 value: assignment.value.clone(),
                 span: assignment.span,
             };
-            return self
-                .resolve_field_assignment(&field_assignment)
-                .map(ResolvedStatement::FieldAssignment);
+            return self.resolve_field_assignment(&field_assignment);
         }
 
         if let Some(identifier) = binding_identifier_through_groups(&assignment.place) {

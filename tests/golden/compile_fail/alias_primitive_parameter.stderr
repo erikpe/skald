@@ -1,5 +1,0 @@
-error[TYP019]: function alias parameter `value` must name a class, array, interface, `Obj`, or supported inline optional
- --> tests/golden/compile_fail/alias_primitive_parameter.ska:1:23
-   |
-1 | fn inspect(ref value: i64) -> unit {}
-   |                       ^^^ plain primitive, shared-owner, and `unit` aliases are unavailable

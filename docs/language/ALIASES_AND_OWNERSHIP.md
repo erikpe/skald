@@ -1,6 +1,6 @@
 # Skald Aliases and Ownership
 
-Status: authoritative for executable class, `Obj`, inline
+Status: authoritative for executable primitive, class, `Obj`, inline
 optional-container, and array aliases. Interface views
 follow the same source rules and lower through verified MIR; their backend
 execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
@@ -18,9 +18,8 @@ defines object places, copying, and owning-object lifetime.
 
 ## Binding modes
 
-An alias parameter is a non-owning name for an existing class object place,
-one of its static views, or a supported inline optional container. Its binding
-mode is separate from the static target:
+An alias parameter is a non-owning name for an eligible existing place. Its
+binding mode is separate from the static target:
 
 ```ska
 fn inspect(ref value: Item) -> i64 {
@@ -43,10 +42,10 @@ the same read-only source-binding semantics as part of their more specialized
 External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
-The implemented designated type may be one concrete class, one interface,
-`Obj`, or one supported primitive/exact-class inline optional container.
-Plain primitive, `unit`, shared-owner, array, and function alias parameter
-types are unsupported. The container borrows `ref value: T?` and
+The implemented designated type may be a primitive, concrete class,
+interface, `Obj`, inline array, or supported primitive/exact-class inline
+optional container. `unit`, shared-owner, and function alias parameter types
+are unsupported. The container borrows `ref value: T?` and
 `mut ref value: T?` designate an always-present optional wrapper, not an
 optional reference. A shared-backed source is explicitly dereferenced, as in
 `inspect(*owner)`, and borrows the allocated class/interface/`Obj` pointee
@@ -57,8 +56,8 @@ locals, fields, results, elements, statics, or captures.
 
 ## Eligible argument places
 
-An alias argument must designate an existing, already-live object place or a
-forwarded interface/`Obj` view. Its root may be:
+An object alias argument must designate an existing, already-live object place
+or a forwarded interface/`Obj` view. Its root may be:
 
 - an owning exact-class local;
 - an owning exact-class value parameter;
@@ -86,8 +85,13 @@ A concrete class source may convert to the same class, any ancestor class, or
 An `Obj` view may be forwarded only to `Obj`; there is no implicit downcast.
 Unrelated classes are invalid.
 
-A fresh inline construction, inline object-returning call, primitive binding
-or field, and any other produced inline value is not an alias source. A
+A primitive alias argument may designate an existing primitive local, value
+parameter, forwarded primitive alias parameter, or primitive static field.
+Static selection evaluates no receiver. Primitive fields and produced scalar
+values are not yet primitive alias sources.
+
+A fresh inline construction, inline object-returning call, and any other
+produced inline value is not an object alias source. A
 dereferenced produced shared allocation or shared-returning call is eligible
 because its owner is adopted into call-scoped anchor storage. A raw shared
 handle is an owning value rather than an alias place and is rejected here.

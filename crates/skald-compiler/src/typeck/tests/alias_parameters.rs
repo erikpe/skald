@@ -191,7 +191,7 @@ fn diagnoses_wrong_arity_for_alias_calls() {
 }
 
 #[test]
-fn rejects_external_aliases_and_corrupt_non_class_alias_signatures() {
+fn rejects_external_aliases_and_accepts_primitive_alias_signatures() {
     let external = check_text(concat!(
         "class Value { init() {} }\n",
         "extern fn imported(ref value: Value) -> unit;\n",
@@ -223,11 +223,8 @@ fn rejects_external_aliases_and_corrupt_non_class_alias_signatures() {
     ));
     take.parameters[0].type_syntax.kind = ResolvedTypeKind::I64;
     let corrupt = type_check(&resolved);
-    assert!(corrupt.hir.is_none());
-    assert!(corrupt
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_ALIAS_PARAMETER));
+    assert!(corrupt.diagnostics.is_empty(), "{:?}", corrupt.diagnostics);
+    assert!(corrupt.hir.is_some());
 }
 
 #[test]

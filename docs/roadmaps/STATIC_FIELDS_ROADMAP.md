@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: in progress; STF2 is next.
+Status: in progress; STF3 is next.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -134,7 +134,7 @@ static-place addressing belongs in a descriptive lowering module while
 
 - [x] STF0 — Freeze the zero-default static-field contract
 - [x] STF1 — Separate static declarations and inherited identity
-- [ ] STF2 — Establish typed static places and primitive behavior
+- [x] STF2 — Establish typed static places and primitive behavior
 - [ ] STF3 — Add verified static MIR roots and x86-64 slots
 - [ ] STF4 — Extend inline optional storage to static roots
 - [ ] STF5 — Extend optional shared ownership to static roots
@@ -220,30 +220,30 @@ deliberately unavailable until typed place semantics exist.
 **Purpose:** Define the receiver-free source-to-HIR place contract using the
 five primitive types before ownership-bearing static roots enter MIR.
 
-- [ ] Resolve class- and module-qualified static reads, assignment targets,
+- [x] Resolve class- and module-qualified static reads, assignment targets,
       call arguments, and non-callable uses directly to `StaticFieldId`.
       Reuse static-method class selection and module lookup rather than adding
       a second class-name parser or import path.
-- [ ] Diagnose object-selected statics, class-selected instance members,
+- [x] Diagnose object-selected statics, class-selected instance members,
       inaccessible private statics, unknown members, static calls on fields,
       bare static values where a place/value is unavailable, and local
       shadowing with deterministic existing-precedence rules.
-- [ ] Add typed static declarations and a small identity-based `HirStaticPlace`
+- [x] Add typed static declarations and a small identity-based `HirStaticPlace`
       owned by the HIR facade. Extend existing primitive expression,
       assignment, and alias families with a static-place case instead of
       cloning their operation semantics.
-- [ ] Enforce the full zero-default type predicate centrally, but initially
+- [x] Enforce the full zero-default type predicate centrally, but initially
       enable source use only for primitive statics while later tasks add the
       owning families. Unsupported declarations must receive one stable
       type-check diagnostic at their type span.
-- [ ] Treat statics as mutable without a receiver capability. Permit
+- [x] Treat statics as mutable without a receiver capability. Permit
       read-only and mutable primitive alias arguments under existing non-escape
       rules, with class selection contributing no runtime evaluation.
-- [ ] Preserve all current primitive consumers: arithmetic, division and
+- [x] Preserve all current primitive consumers: arithmetic, division and
       remainder, bitwise and shift operations, comparisons, eager and
       short-circuit boolean expressions, the complete cast matrix, `f64` bit
       reinterpretation, calls, returns, control flow, and I/O scalar values.
-- [ ] Extend resolved/HIR dumps and focused tests without broadening public
+- [x] Extend resolved/HIR dumps and focused tests without broadening public
       submodule namespaces or adding static-specific primitive algorithms.
 
 **Tests:** Resolver and type-check matrices for qualified access, privacy,

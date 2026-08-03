@@ -262,8 +262,7 @@ fn logical_control_flow_composes_inside_existing_expression_consumers() {
         boolean(true, span),
         span,
     );
-    let HirStatement::PrimitiveBindingAssignment(assignment) = &mut definition.body.statements[1]
-    else {
+    let HirStatement::PrimitiveAssignment(assignment) = &mut definition.body.statements[1] else {
         panic!("assignment fixture must contain a primitive reassignment");
     };
     let span = assignment.source.span;

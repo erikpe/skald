@@ -243,6 +243,19 @@ impl HirDumper {
                     dumper.output.push('\n');
                 }
             });
+            if !class.static_fields.is_empty() {
+                dumper.heading("StaticFields");
+                dumper.indented(|dumper| {
+                    for field in &class.static_fields {
+                        dumper.write_indentation();
+                        let _ = write!(dumper.output, "StaticField {} ", field.id);
+                        write_quoted(&mut dumper.output, &field.name);
+                        let _ = write!(dumper.output, " : {}", field.ty.name());
+                        write_span(&mut dumper.output, field.span);
+                        dumper.output.push('\n');
+                    }
+                });
+            }
             dumper.heading("Initializers");
             dumper.indented(|dumper| {
                 for initializer in &class.initializers {
@@ -657,11 +670,17 @@ impl HirDumper {
                 });
             }
             HirStatement::Block(block) => self.block(block),
-            HirStatement::PrimitiveBindingAssignment(assignment) => {
-                self.line(
-                    &format!("PrimitiveBindingAssignment {}", assignment.destination),
-                    assignment.span,
-                );
+            HirStatement::PrimitiveAssignment(assignment) => {
+                match assignment.destination.storage {
+                    crate::hir::HirPrimitiveStorage::Binding(binding) => self.line(
+                        &format!("PrimitiveBindingAssignment {binding}"),
+                        assignment.span,
+                    ),
+                    crate::hir::HirPrimitiveStorage::Static(place) => self.line(
+                        &format!("PrimitiveStaticAssignment {}", place.field),
+                        assignment.span,
+                    ),
+                }
                 self.indented(|dumper| dumper.expression(&assignment.source));
             }
             HirStatement::FieldAssignment(statement) => {
@@ -1037,6 +1056,9 @@ impl HirDumper {
             HirExpressionKind::FieldRead(place) => {
                 self.typed_line(&format!("FieldRead {}", place.field), expression);
                 self.indented(|dumper| dumper.object_place(&place.receiver));
+            }
+            HirExpressionKind::StaticRead(place) => {
+                self.typed_line(&format!("StaticRead {}", place.field), expression);
             }
             HirExpressionKind::MethodCall {
                 receiver,
@@ -1568,6 +1590,17 @@ impl HirDumper {
                     }
                     crate::hir::HirArrayAliasSource::Element(place) => dumper.array_element(place),
                 });
+            }
+            HirCallArgument::PrimitivePlace(place) => {
+                let storage = match place.storage {
+                    crate::hir::HirPrimitiveStorage::Binding(binding) => {
+                        format!("binding {binding}")
+                    }
+                    crate::hir::HirPrimitiveStorage::Static(place) => {
+                        format!("static {}", place.field)
+                    }
+                };
+                self.line(&format!("PrimitivePlaceArgument {storage}"), place.span);
             }
         }
     }

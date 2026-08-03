@@ -1,0 +1,13 @@
+fn increment(mut ref value: i64) -> unit {
+    value = value + 1;
+}
+
+fn observe(ref value: i64) -> i64 {
+    return value;
+}
+
+fn main() -> i64 {
+    var value: i64 = 41;
+    increment(value);
+    return observe(value);
+}
