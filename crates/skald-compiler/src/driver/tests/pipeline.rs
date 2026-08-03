@@ -19,6 +19,7 @@ fn write_canonical_standard_library(root: &Path) {
     )
     .unwrap();
     fs::write(root.join("std/error.ska"), CANONICAL_ERROR_SOURCE).unwrap();
+    fs::write(root.join("std/f64.ska"), CANONICAL_F64_SOURCE).unwrap();
     fs::write(root.join("std/io.ska"), CANONICAL_IO_SOURCE).unwrap();
 }
 

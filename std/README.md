@@ -11,6 +11,12 @@ keeps special spellings in the facade and delegates finite formatting to
 `std::str::format_f64`. The exact standard-stream and primitive-line-output
 APIs are implemented in Skald, with no scalar runtime observation surface.
 
+The `std::f64` module provides exact `to_bits(f64) -> u64` and
+`from_bits(u64) -> f64` value reinterpretation. Its public functions are
+ordinary Skald wrappers over two private compiler intrinsics. Typed HIR,
+verified MIR, and x86-64 lowering preserve every binary64 bit inline; the
+module adds no allocation, foreign call, or runtime ABI surface.
+
 The `std::io` module has an implemented
 [whole-stream source contract](../docs/language/IO.md) and a separate
 [compiler/runtime contract](../docs/compiler/IO.md). Its five private

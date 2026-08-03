@@ -79,6 +79,28 @@ fn module_words_remain_contextual_identifiers() {
 }
 
 #[test]
+fn primitive_type_spellings_can_name_module_namespaces() {
+    let (_, output) = parse_text(
+        "import std::f64;\n\
+         fn main() -> i64 {\n\
+           std::f64::to_bits(1.0);\n\
+           std::f64::from_bits(0u);\n\
+           return 0;\n\
+         }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let ImportDeclaration::Module(import) = &output.ast.imports[0] else {
+        panic!("expected a module import");
+    };
+    assert_eq!(import.module.text, "std::f64");
+    let dump = dump_ast(&output.ast);
+    assert!(dump.contains("Component \"f64\""));
+    assert!(dump.contains("Identifier \"std::f64::to_bits\""));
+    assert!(dump.contains("Identifier \"std::f64::from_bits\""));
+}
+
+#[test]
 fn rejects_invalid_import_forms_and_recovers_to_later_declarations() {
     for source in [
         "from std::Str import *; fn later() -> unit {}",

@@ -28,21 +28,27 @@ impl CallableChecker<'_, '_> {
             .get(call.function)
             .expect("resolved direct-call target must exist");
         if let crate::resolve::ResolvedFunctionLinkage::Intrinsic { intrinsic } = target.linkage {
-            if intrinsic == crate::intrinsic::Intrinsic::Panic {
-                self.diagnostics.push(
-                    crate::diagnostics::Diagnostic::error(
-                        PANIC_REQUIRES_CALL_STATEMENT,
-                        "`std::error::panic` can only be used as a call statement",
-                    )
-                    .with_primary_label(
-                        call.span,
-                        "panic cannot be used as a value-producing expression",
-                    )
-                    .with_note("write `panic(message);` as a standalone statement"),
-                );
-                return None;
+            match intrinsic {
+                crate::intrinsic::Intrinsic::Panic => {
+                    self.diagnostics.push(
+                        crate::diagnostics::Diagnostic::error(
+                            PANIC_REQUIRES_CALL_STATEMENT,
+                            "`std::error::panic` can only be used as a call statement",
+                        )
+                        .with_primary_label(
+                            call.span,
+                            "panic cannot be used as a value-producing expression",
+                        )
+                        .with_note("write `panic(message);` as a standalone statement"),
+                    );
+                    return None;
+                }
+                crate::intrinsic::Intrinsic::F64ToBits
+                | crate::intrinsic::Intrinsic::F64FromBits => {
+                    return self.check_bit_reinterpretation_intrinsic_call(call, target, intrinsic);
+                }
+                _ => return self.check_io_intrinsic_call(call, target, intrinsic),
             }
-            return self.check_io_intrinsic_call(call, target, intrinsic);
         }
         let arguments = self.check_arguments(
             &call.arguments,

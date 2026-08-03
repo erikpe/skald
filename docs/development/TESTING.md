@@ -130,6 +130,11 @@ token, AST, resolved, HIR, MIR, diagnostic, and assembly products; the golden
 runner repeats compilation and execution to compare stdout, stderr, and
 status. Generated-object inspection owns the unchanged runtime marker,
 reporter, and absence of conversion helpers.
+Exact binary64 bit-representation coverage separately checks the canonical
+`std::f64` intrinsic identities and signatures, primitive-keyword module path,
+distinct HIR/MIR bit-reinterpretation semantics, verifier type relation,
+inline cross-register-class moves, arbitrary `u64` round trips including NaN
+payloads, both zero signs, infinities, and absence of runtime helpers.
 
 ## Focused commands
 

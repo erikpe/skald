@@ -16,6 +16,7 @@ use super::{
 };
 
 mod alias;
+mod bit_reinterpretation;
 mod bitwise;
 mod call;
 mod comparison;

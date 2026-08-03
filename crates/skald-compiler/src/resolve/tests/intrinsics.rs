@@ -1,10 +1,11 @@
 use super::*;
 use crate::{
+    backend::{emit_assembly, Target},
     hir::{HirExpressionKind, HirIoOperation, HirReturnValue, HirStatement},
     intrinsic::Intrinsic,
     mir::{lower_hir, verify_mir, MirFunctionLinkage},
     test_support::{
-        load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_IO_SOURCE,
+        load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
         CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE, CANONICAL_STR_FORMAT_F64_SOURCE,
         CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_SOURCE,
     },
@@ -12,6 +13,113 @@ use crate::{
         type_check, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT, INVALID_CALL_STATEMENT,
     },
 };
+
+#[test]
+fn canonical_f64_bit_intrinsics_lower_to_verified_bit_reinterpretation() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import std::f64;\n",
+                    "fn main() -> i64 {\n",
+                    "  return (i64) std::f64::to_bits(std::f64::from_bits(0u));\n",
+                    "}\n",
+                ),
+            ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+
+    let identities = resolved
+        .program
+        .declarations
+        .iter()
+        .filter_map(|declaration| match declaration.linkage {
+            ResolvedFunctionLinkage::Intrinsic { intrinsic } => {
+                Some((declaration.name.as_str(), intrinsic, declaration.visibility))
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        identities,
+        vec![
+            (
+                "_to_bits",
+                Intrinsic::F64ToBits,
+                ResolvedVisibility::Private
+            ),
+            (
+                "_from_bits",
+                Intrinsic::F64FromBits,
+                ResolvedVisibility::Private,
+            ),
+        ]
+    );
+    assert!(resolved.program.external_links.is_empty());
+
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.expect("valid f64 bit intrinsics produce HIR");
+    let hir_dump = crate::hir::dump_hir(&hir);
+    assert!(hir_dump.contains("PrimitiveCast bit_reinterpretation f64.u64 : u64"));
+    assert!(hir_dump.contains("PrimitiveCast bit_reinterpretation u64.f64 : f64"));
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let mir_dump = crate::mir::dump_mir(&mir);
+    assert!(mir_dump.contains("cast.f64.u64 bit_reinterpretation"));
+    assert!(mir_dump.contains("cast.u64.f64 bit_reinterpretation"));
+
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    assert!(assembly.contains("movq rax, xmm14"));
+    assert!(assembly.contains("movq xmm14, rax"));
+    assert!(!assembly.contains("ska_rt_f64"));
+}
+
+#[test]
+fn rejects_malformed_f64_bit_intrinsic_declarations() {
+    for replacement in [
+        CANONICAL_F64_SOURCE.replace("intrinsic fn _to_bits", "public intrinsic fn _to_bits"),
+        CANONICAL_F64_SOURCE.replace("value: f64", "number: f64"),
+        CANONICAL_F64_SOURCE.replace("value: f64", "value: u64"),
+        CANONICAL_F64_SOURCE.replace("_to_bits(value: f64)", "_to_bits()"),
+        CANONICAL_F64_SOURCE.replace("_to_bits(value: f64) -> u64", "_to_bits(value: f64) -> f64"),
+        CANONICAL_F64_SOURCE.replace(
+            "intrinsic fn _to_bits(value: f64) -> u64;",
+            "fn _to_bits(value: f64) -> u64 { return 0u; }",
+        ),
+        CANONICAL_F64_SOURCE.replace("_from_bits", "_unknown_from_bits"),
+    ] {
+        let (_workspace, graph) = load_module_sources(
+            "app",
+            &[
+                (
+                    "app.ska",
+                    "import std::f64;\nfn main() -> i64 { return 0; }\n",
+                ),
+                ("std/f64.ska", &replacement),
+            ],
+        );
+        let output = resolve_module_graph(&graph);
+        assert!(
+            output
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == INVALID_INTRINSIC_DECLARATION),
+            "expected intrinsic diagnostic for replacement:\n{replacement}\n{:?}",
+            output.diagnostics
+        );
+    }
+}
 
 fn io_module_with_bodies(bodies: &str) -> String {
     format!("{CANONICAL_IO_SOURCE}\n{bodies}")

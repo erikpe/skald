@@ -9,8 +9,8 @@ conversion behavior.
 **Priority:** medium after the primitive string conversions roadmap.
 
 **Problem:** Compiler tests manually enumerate the canonical `std::str`,
-`std::error`, `std::io`, and string companion modules in several independent
-fixture builders. Adding `std::str::format_f64` and then its shared
+`std::error`, `std::f64`, `std::io`, and string companion modules in several
+independent fixture builders. Adding `std::str::format_f64` and then its shared
 `std::str::bigunsigned_helper` dependency required repeating each new module in
 resolver intrinsic tests, MIR I/O fixtures, driver provider tests, and
 cross-process pipeline fixtures. Migrating golden programs to `std::io` again

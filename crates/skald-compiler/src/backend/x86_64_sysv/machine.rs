@@ -198,6 +198,10 @@ pub(super) enum Instruction {
         source: Register,
         destination: XmmRegister,
     },
+    MoveFloatBitsToInteger {
+        source: XmmRegister,
+        destination: Register,
+    },
     ConvertSignedIntegerToFloat64 {
         source: Register,
         destination: XmmRegister,

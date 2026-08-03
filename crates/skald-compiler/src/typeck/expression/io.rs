@@ -45,6 +45,9 @@ impl CallableChecker<'_, '_> {
                 handle: value(&mut arguments),
             },
             Intrinsic::Panic => unreachable!("panic is checked as a diverging call statement"),
+            Intrinsic::F64ToBits | Intrinsic::F64FromBits => {
+                unreachable!("f64 bit intrinsics have dedicated expression checking")
+            }
         };
         debug_assert!(arguments.next().is_none());
         Some(HirExpression {

@@ -165,8 +165,13 @@ module-import                 = "import" module-path ["as" identifier] ";"
 selective-import              = "from" module-path "import" imported-declaration
                                 {"," imported-declaration} ";"
 imported-declaration          = identifier ["as" identifier]
-module-path                   = identifier {"::" identifier}
-declaration-path              = identifier {"::" identifier}
+primitive-module-name         = "i64" | "u64" | "u8" | "f64" | "bool"
+module-path-component         = identifier | primitive-module-name
+module-path                   = module-path-component
+                                {"::" module-path-component}
+qualified-declaration-path    = module-path-component
+                                {"::" module-path-component} "::" identifier
+declaration-path              = identifier | qualified-declaration-path
 
 top-level-declaration         = ["public"] (
                                   function-definition
@@ -206,6 +211,12 @@ storage-type                  = primitive-type | named-type | shared-type
                               | array-storage-type
 result-type                   = storage-type | "unit"
 ```
+
+Primitive type spellings remain reserved as declaration and binding names,
+but may identify a module namespace inside a module or qualified declaration
+path. This permits standard-library paths such as `std::f64` and qualified
+uses such as `std::f64::to_bits`; it does not make `f64` an ordinary
+identifier in any other context.
 
 Imports must precede declarations. Selective import lists, parameter lists,
 and argument lists do not accept trailing commas. Wildcard imports,

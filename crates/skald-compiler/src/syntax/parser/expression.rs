@@ -417,6 +417,10 @@ impl Parser<'_> {
                 self.peek_ahead(distance).kind,
                 TokenKind::Minus | TokenKind::Bang | TokenKind::Tilde
             ))
+            || (matches!(
+                self.peek_ahead(distance).kind,
+                TokenKind::I64 | TokenKind::U64 | TokenKind::U8 | TokenKind::F64 | TokenKind::Bool
+            ) && self.peek_ahead(distance + 1).kind == TokenKind::DoubleColon)
             || matches!(
                 self.peek_ahead(distance).kind,
                 TokenKind::Identifier
@@ -681,7 +685,9 @@ impl Parser<'_> {
             return Some(Expression::Absent(AbsentExpr { span: token.span }));
         }
 
-        if self.at(TokenKind::Identifier) {
+        if self.at(TokenKind::Identifier)
+            || (self.at_primitive_type_name() && self.peek_ahead(1).kind == TokenKind::DoubleColon)
+        {
             let name = self.parse_name_path("expected a declaration or binding name")?;
             return Some(Expression::Identifier(IdentifierExpr {
                 span: name.span,
@@ -773,13 +779,29 @@ impl Parser<'_> {
     }
 
     fn name_path_end(&self, start: usize) -> Option<usize> {
-        (self.peek_ahead(start).kind == TokenKind::Identifier).then_some(())?;
-        let mut distance = start + 1;
-        while self.peek_ahead(distance).kind == TokenKind::DoubleColon {
-            (self.peek_ahead(distance + 1).kind == TokenKind::Identifier).then_some(())?;
-            distance += 2;
+        let mut distance = start;
+        loop {
+            let kind = self.peek_ahead(distance).kind;
+            let followed_by_separator =
+                self.peek_ahead(distance + 1).kind == TokenKind::DoubleColon;
+            if kind != TokenKind::Identifier
+                && !(matches!(
+                    kind,
+                    TokenKind::I64
+                        | TokenKind::U64
+                        | TokenKind::U8
+                        | TokenKind::F64
+                        | TokenKind::Bool
+                ) && followed_by_separator)
+            {
+                return None;
+            }
+            distance += 1;
+            if !followed_by_separator {
+                return Some(distance);
+            }
+            distance += 1;
         }
-        Some(distance)
     }
 }
 

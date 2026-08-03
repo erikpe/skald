@@ -308,6 +308,14 @@ through the existing `ska_rt_panic` entry point. The feature adds no conversion
 helper, public symbol, calling-convention category, metadata object, allocation,
 or runtime ABI version. Pure casts add no failure edge or reporter reference.
 
+Verified binary64 bit reinterpretation is also inline but remains semantically
+separate from numeric casting. `f64` to `u64` moves the complete scalar payload
+from the SSE register class to the integer register class; `u64` to `f64`
+moves the same payload in the opposite direction. Neither operation rounds,
+canonicalizes NaNs, changes signed zero, branches, allocates, or calls a
+helper. The target accepts only the verified exact `f64`/`u64` pairs and adds
+no public symbol or runtime ABI entry point.
+
 Constant folding and target peepholes may replace a cast only with an exactly
 equivalent canonical value or terminal reason. Assembly and behavior must be
 identical in meaning across optimization settings, including at every

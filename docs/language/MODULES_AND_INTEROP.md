@@ -146,19 +146,21 @@ ordinary two-module cycle. Both directions retain their exact source import
 and declaration identities; neither direction is compiler-special
 reachability or a re-export.
 
-The implemented intrinsic registry contains only that canonical identity. The
-compiler validates the declaration while module ownership, visibility,
-parameter modes, exact type identities, result type, body absence, and source
-spans are still available. It rejects an intrinsic at any other module path,
-an unrecognized intrinsic name, a private or body-bearing canonical
-declaration, any signature other than one by-value exact
-`std::str::Str` parameter and `unit` result, and any attempt to combine the
-declaration with ordinary function, member, lifecycle, interface, override,
-or external-function syntax. An unused valid declaration remains bodyless
-metadata through executable IR. A call statement resolves to the stable
-intrinsic function identity and becomes the dedicated non-returning panic
-operation before HIR. Expression-position use is rejected because panic does
-not produce a value. Intrinsics cannot be entry points, methods,
+The implemented intrinsic registry contains only closed canonical
+standard-library identities. The compiler validates each declaration while
+module ownership, visibility, parameter modes, exact type identities, result
+type, body absence, and source spans are still available. It rejects an
+intrinsic at any other module path, an unrecognized intrinsic name, a
+body-bearing declaration, a signature or visibility that differs from its
+registry entry, and any attempt to combine the declaration with ordinary
+function, member, lifecycle, interface, override, or external-function
+syntax. For `std::error::panic` specifically, the required signature is one
+public, by-value, exact `std::str::Str` parameter and a `unit` result. An
+unused valid declaration remains bodyless metadata through executable IR. A
+panic call statement resolves to the stable intrinsic function identity and
+becomes the dedicated non-returning panic operation before HIR.
+Expression-position use is rejected because panic does not produce a value.
+Intrinsics cannot be entry points, methods,
 initializers, lifecycle members, interface requirements, overrides, or native
 exports.
 
@@ -170,9 +172,14 @@ authorized merely because the parser accepts this declaration form.
 
 The implemented [standard I/O compiler contract](../compiler/IO.md) adds five
 private canonical declarations under `std::io`, using primitive and
-whole-array alias parameters. Panic and these five operations form one closed
+whole-array alias parameters. The canonical `std::f64` module additionally
+declares private `_to_bits(f64) -> u64` and `_from_bits(u64) -> f64`
+intrinsics behind ordinary public `to_bits` and `from_bits` wrappers. Their
+calls become pure bit-reinterpretation operations before executable IR and
+never enter the foreign or runtime ABI. Panic, the two binary64 bit
+operations, and the five I/O operations form one closed
 registry keyed by exact module path and declaration name. Calls become
-dedicated typed I/O operations before executable IR; the declarations do not
+dedicated typed operations before executable IR; the declarations do not
 widen the restricted external-function ABI or create prelude bindings.
 
 ## Initial module system

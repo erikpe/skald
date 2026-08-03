@@ -84,6 +84,7 @@ pub enum MirPrimitiveCastKind {
     ToBool,
     ToF64,
     FromBool,
+    BitReinterpretation,
     CheckedF64ToInteger,
 }
 
@@ -99,6 +100,7 @@ impl MirPrimitiveCastKind {
             Self::ToBool => "to_bool",
             Self::ToF64 => "to_f64",
             Self::FromBool => "from_bool",
+            Self::BitReinterpretation => "bit_reinterpretation",
             Self::CheckedF64ToInteger => "checked_f64_to_integer",
         }
     }
@@ -141,6 +143,22 @@ impl MirPrimitiveCast {
         self.source.value_type()
     }
 
+    pub fn bit_reinterpretation(source: MirPrimitiveType, target: MirPrimitiveType) -> Self {
+        assert!(
+            matches!(
+                (source, target),
+                (MirPrimitiveType::F64, MirPrimitiveType::U64)
+                    | (MirPrimitiveType::U64, MirPrimitiveType::F64)
+            ),
+            "bit reinterpretation is defined only between f64 and u64"
+        );
+        Self {
+            source,
+            target,
+            kind: MirPrimitiveCastKind::BitReinterpretation,
+        }
+    }
+
     pub const fn kind(self) -> MirPrimitiveCastKind {
         self.kind
     }
@@ -154,6 +172,13 @@ impl MirPrimitiveCast {
     }
 
     pub fn is_semantically_consistent(self) -> bool {
+        if self.kind == MirPrimitiveCastKind::BitReinterpretation {
+            return matches!(
+                (self.source, self.target),
+                (MirPrimitiveType::F64, MirPrimitiveType::U64)
+                    | (MirPrimitiveType::U64, MirPrimitiveType::F64)
+            );
+        }
         Self::new(self.source, self.target).kind == self.kind
     }
 

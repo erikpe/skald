@@ -25,10 +25,13 @@ impl BodyLowerer<'_> {
             .lower_expression(operand)
             .expect("typed primitive-cast operand must produce a value");
         let expected_kind = lower_primitive_cast_kind(operation.kind());
-        let operation = MirPrimitiveCast::new(
-            lower_primitive_type(operation.source),
-            lower_primitive_type(operation.target),
-        );
+        let source = lower_primitive_type(operation.source);
+        let target = lower_primitive_type(operation.target);
+        let operation = if expected_kind == MirPrimitiveCastKind::BitReinterpretation {
+            MirPrimitiveCast::bit_reinterpretation(source, target)
+        } else {
+            MirPrimitiveCast::new(source, target)
+        };
         debug_assert_eq!(operation.kind(), expected_kind);
         Some(self.assign(
             MirRvalueKind::PrimitiveCast { operation, operand },
@@ -142,6 +145,7 @@ const fn lower_primitive_cast_kind(kind: HirPrimitiveCastKind) -> MirPrimitiveCa
         HirPrimitiveCastKind::ToBool => MirPrimitiveCastKind::ToBool,
         HirPrimitiveCastKind::ToF64 => MirPrimitiveCastKind::ToF64,
         HirPrimitiveCastKind::FromBool => MirPrimitiveCastKind::FromBool,
+        HirPrimitiveCastKind::BitReinterpretation => MirPrimitiveCastKind::BitReinterpretation,
         HirPrimitiveCastKind::CheckedF64ToInteger => MirPrimitiveCastKind::CheckedF64ToInteger,
     }
 }

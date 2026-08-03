@@ -627,6 +627,27 @@ cast completes before a surrounding operator is selected, and the operator
 observes only the cast's exact result type. No cast allocates, changes
 ownership, or creates a runtime-managed value.
 
+## Exact binary64 bit representation
+
+The installed `std::f64` module exposes two ordinary public functions:
+
+```ska
+public fn to_bits(value: f64) -> u64;
+public fn from_bits(bits: u64) -> f64;
+```
+
+`to_bits` returns the exact IEEE-754 binary64 representation of its argument.
+`from_bits` constructs the `f64` having exactly the supplied representation.
+The functions preserve every bit, including the sign of zero, infinities, and
+NaN sign, payload, and signaling state. Consequently,
+`std::f64::to_bits(std::f64::from_bits(bits)) == bits` for every `u64` value.
+
+These operations reinterpret one complete primitive value; they do not
+perform a numeric cast, inspect memory, depend on host endianness, allocate,
+fail, or call the runtime. The existing `(u64) value` and `(f64) bits` casts
+retain their numeric conversion meanings. Source access requires an explicit
+module or selective import; there is no primitive-method or prelude lookup.
+
 ## Deferred conversion work
 
 The complete primitive matrix does not define:

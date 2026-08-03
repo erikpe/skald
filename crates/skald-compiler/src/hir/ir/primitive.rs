@@ -78,6 +78,7 @@ pub enum HirPrimitiveCastKind {
     ToBool,
     ToF64,
     FromBool,
+    BitReinterpretation,
     CheckedF64ToInteger,
 }
 
@@ -93,6 +94,7 @@ impl HirPrimitiveCastKind {
             Self::ToBool => "to_bool",
             Self::ToF64 => "to_f64",
             Self::FromBool => "from_bool",
+            Self::BitReinterpretation => "bit_reinterpretation",
             Self::CheckedF64ToInteger => "checked_f64_to_integer",
         }
     }
@@ -133,6 +135,22 @@ impl HirPrimitiveCast {
 
     pub const fn source_type(self) -> Type {
         self.source.value_type()
+    }
+
+    pub fn bit_reinterpretation(source: HirPrimitiveType, target: HirPrimitiveType) -> Self {
+        assert!(
+            matches!(
+                (source, target),
+                (HirPrimitiveType::F64, HirPrimitiveType::U64)
+                    | (HirPrimitiveType::U64, HirPrimitiveType::F64)
+            ),
+            "bit reinterpretation is defined only between f64 and u64"
+        );
+        Self {
+            source,
+            target,
+            kind: HirPrimitiveCastKind::BitReinterpretation,
+        }
     }
 
     pub const fn kind(self) -> HirPrimitiveCastKind {

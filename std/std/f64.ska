@@ -1,0 +1,12 @@
+intrinsic fn _to_bits(value: f64) -> u64;
+intrinsic fn _from_bits(bits: u64) -> f64;
+
+// Return the exact IEEE-754 binary64 representation of `value`.
+public fn to_bits(value: f64) -> u64 {
+    return _to_bits(value);
+}
+
+// Construct an f64 with exactly the supplied IEEE-754 binary64 representation.
+public fn from_bits(bits: u64) -> f64 {
+    return _from_bits(bits);
+}

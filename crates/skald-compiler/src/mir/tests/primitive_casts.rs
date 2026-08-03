@@ -576,6 +576,16 @@ fn semantic_classes_cover_the_frozen_matrix() {
     ] {
         assert_eq!(MirPrimitiveCast::new(source, target).kind(), expected);
     }
+
+    for (source, target) in [
+        (MirPrimitiveType::F64, MirPrimitiveType::U64),
+        (MirPrimitiveType::U64, MirPrimitiveType::F64),
+    ] {
+        let operation = MirPrimitiveCast::bit_reinterpretation(source, target);
+        assert_eq!(operation.kind(), MirPrimitiveCastKind::BitReinterpretation);
+        assert!(operation.is_semantically_consistent());
+        assert!(!operation.may_terminate());
+    }
 }
 
 #[test]

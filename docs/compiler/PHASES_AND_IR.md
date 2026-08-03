@@ -576,6 +576,18 @@ cohesive primitive types and casts with no parallel integer-only cast model.
 Source, HIR, and MIR fixtures cover the complete matrix through native
 execution, including checked success and failure paths.
 
+The canonical private `std::f64` intrinsics reuse the primitive operation
+pipeline without changing explicit-cast syntax. Type checking replaces
+`_to_bits(f64) -> u64` and `_from_bits(u64) -> f64` calls with a distinct
+`bit_reinterpretation` HIR semantic class. It is valid only for the exact
+`f64`/`u64` pair in either direction, is pure and non-terminating, and remains
+distinguishable from the numeric conversions selected by `(u64) value` and
+`(f64) bits`. MIR carries the same source type, result type, operand, and
+semantic class as an ordinary scalar rvalue. Verification rejects any other
+type pair or mismatched result and proves definition-before-use. Intrinsic
+declaration metadata may remain for deterministic whole-program identity, but
+no intrinsic call survives typed HIR.
+
 Focused validation covers all twenty-five pairs through
 syntax, resolution, type checking, HIR, MIR, verification, target legality,
 assembly, and native observation. Boundary coverage includes integer extrema,

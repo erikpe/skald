@@ -16,6 +16,7 @@ use crate::{
 use super::super::{ArrayTypeInterner, INVALID_INTRINSIC_DECLARATION};
 
 const ERROR_MODULE_PATH: &str = "std::error";
+const F64_MODULE_PATH: &str = "std::f64";
 const IO_MODULE_PATH: &str = "std::io";
 const STRING_MODULE_PATH: &str = "std::str";
 
@@ -57,6 +58,16 @@ const REGISTRY: &[RegistryEntry] = &[
         name: "_io_close",
         intrinsic: Intrinsic::IoClose,
     },
+    RegistryEntry {
+        module_path: F64_MODULE_PATH,
+        name: "_to_bits",
+        intrinsic: Intrinsic::F64ToBits,
+    },
+    RegistryEntry {
+        module_path: F64_MODULE_PATH,
+        name: "_from_bits",
+        intrinsic: Intrinsic::F64FromBits,
+    },
 ];
 
 pub(super) fn intrinsic_for_declaration(
@@ -94,18 +105,21 @@ pub(super) fn validate_intrinsic_declarations(
         let io_candidate = module_path
             == &ModulePath::try_from(IO_MODULE_PATH).expect("canonical I/O path is valid")
             || declaration.name.starts_with("_io_");
+        let f64_candidate = module_path
+            == &ModulePath::try_from(F64_MODULE_PATH).expect("canonical f64 path is valid");
         let diagnostic = Diagnostic::error(
             INVALID_INTRINSIC_DECLARATION,
             "intrinsic functions are reserved for compiler-defined declarations",
         );
-        diagnostics.push(if io_candidate {
+        diagnostics.push(if io_candidate || f64_candidate {
             diagnostic
                 .with_primary_label(
                     declaration.span,
                     "this is not a canonical standard-library intrinsic declaration",
                 )
                 .with_note(
-                    "only the canonical declarations in `std::error` and `std::io` are recognized",
+                    "only the canonical declarations in `std::error`, `std::f64`, and `std::io` \
+                     are recognized",
                 )
         } else {
             // Preserve the original panic-registry diagnostic for source
@@ -123,6 +137,7 @@ pub(super) fn validate_intrinsic_declarations(
     }
 
     validate_panic_intrinsic(modules, module_declarations, functions, diagnostics);
+    validate_f64_intrinsics(modules, module_declarations, functions, diagnostics);
     validate_io_intrinsics(
         modules,
         module_declarations,
@@ -131,6 +146,186 @@ pub(super) fn validate_intrinsic_declarations(
         diagnostics,
     );
 }
+
+fn validate_f64_intrinsics(
+    modules: &ProgramModuleTable,
+    module_declarations: &ResolvedModuleDeclarationTable,
+    functions: &ResolvedFunctionDeclarationTable,
+    diagnostics: &mut Diagnostics,
+) {
+    let Some(f64_module) = canonical_module(modules, F64_MODULE_PATH) else {
+        return;
+    };
+    let declarations = module_declarations
+        .get(f64_module)
+        .expect("every loaded module has a declaration table");
+
+    for specification in F64_INTRINSICS {
+        let qualified_name = format!("`std::f64::{}`", specification.name);
+        let Some(indexed) = declarations.get(specification.name) else {
+            let source_id = modules
+                .get(f64_module)
+                .expect("canonical f64 module must be loaded")
+                .source_id();
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTRINSIC_DECLARATION,
+                    format!(
+                        "`std::f64` must declare the canonical `{}` intrinsic",
+                        specification.name
+                    ),
+                )
+                .with_primary_label(
+                    Span::empty(source_id, 0),
+                    format!("add `{}`", specification.source_signature),
+                ),
+            );
+            continue;
+        };
+        let ResolvedTopLevelId::Function(function_id) = indexed.declaration else {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTRINSIC_DECLARATION,
+                    format!("{qualified_name} must be an intrinsic function"),
+                )
+                .with_primary_label(indexed.name_span, "declared with the wrong kind"),
+            );
+            continue;
+        };
+        let declaration = functions
+            .get(function_id)
+            .expect("resolved function declaration identity must exist");
+        if !matches!(
+            declaration.linkage,
+            ResolvedFunctionLinkage::Intrinsic { intrinsic }
+                if intrinsic == specification.intrinsic
+        ) {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTRINSIC_DECLARATION,
+                    format!("{qualified_name} must use `intrinsic fn`"),
+                )
+                .with_primary_label(
+                    declaration.span,
+                    "ordinary and external functions are not f64 bit intrinsics",
+                ),
+            );
+            continue;
+        }
+        if declaration.visibility != ResolvedVisibility::Private {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTRINSIC_DECLARATION,
+                    format!("{qualified_name} must be private"),
+                )
+                .with_primary_label(declaration.name_span, "public intrinsic declaration"),
+            );
+        }
+        if declaration.parameters.len() != 1 {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTRINSIC_DECLARATION,
+                    format!("{qualified_name} must declare one parameter"),
+                )
+                .with_primary_label(
+                    declaration.name_span,
+                    format!("found {} parameters", declaration.parameters.len()),
+                ),
+            );
+        } else {
+            let parameter = &declaration.parameters[0];
+            if parameter.name != specification.parameter_name {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INTRINSIC_DECLARATION,
+                        format!(
+                            "the {qualified_name} parameter must be named `{}`",
+                            specification.parameter_name
+                        ),
+                    )
+                    .with_primary_label(
+                        parameter.name_span,
+                        format!(
+                            "rename this parameter to `{}`",
+                            specification.parameter_name
+                        ),
+                    ),
+                );
+            }
+            if parameter.binding_mode != ResolvedParameterBindingMode::Value {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INTRINSIC_DECLARATION,
+                        format!("the {qualified_name} parameter must be passed by value"),
+                    )
+                    .with_primary_label(parameter.span, "wrong parameter binding mode"),
+                );
+            }
+            if parameter.type_syntax.kind != specification.parameter_type {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INTRINSIC_DECLARATION,
+                        format!(
+                            "the {qualified_name} parameter must have exact type `{}`",
+                            specification.parameter_type_name
+                        ),
+                    )
+                    .with_primary_label(
+                        parameter.type_syntax.span,
+                        "wrong intrinsic parameter type",
+                    ),
+                );
+            }
+        }
+        if declaration.return_type.kind != specification.return_type {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTRINSIC_DECLARATION,
+                    format!(
+                        "{qualified_name} must return `{}`",
+                        specification.return_type_name
+                    ),
+                )
+                .with_primary_label(declaration.return_type.span, "wrong intrinsic result type"),
+            );
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct F64IntrinsicSpecification {
+    intrinsic: Intrinsic,
+    name: &'static str,
+    parameter_name: &'static str,
+    parameter_type: ResolvedTypeKind,
+    parameter_type_name: &'static str,
+    return_type: ResolvedTypeKind,
+    return_type_name: &'static str,
+    source_signature: &'static str,
+}
+
+const F64_INTRINSICS: &[F64IntrinsicSpecification] = &[
+    F64IntrinsicSpecification {
+        intrinsic: Intrinsic::F64ToBits,
+        name: "_to_bits",
+        parameter_name: "value",
+        parameter_type: ResolvedTypeKind::F64,
+        parameter_type_name: "f64",
+        return_type: ResolvedTypeKind::U64,
+        return_type_name: "u64",
+        source_signature: "intrinsic fn _to_bits(value: f64) -> u64;",
+    },
+    F64IntrinsicSpecification {
+        intrinsic: Intrinsic::F64FromBits,
+        name: "_from_bits",
+        parameter_name: "bits",
+        parameter_type: ResolvedTypeKind::U64,
+        parameter_type_name: "u64",
+        return_type: ResolvedTypeKind::F64,
+        return_type_name: "f64",
+        source_signature: "intrinsic fn _from_bits(bits: u64) -> f64;",
+    },
+];
 
 fn validate_io_intrinsics(
     modules: &ProgramModuleTable,

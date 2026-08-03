@@ -229,6 +229,37 @@ fn primitive_cast_semantic_class_mismatch_has_one_focused_error() {
 }
 
 #[test]
+fn bit_reinterpretation_rejects_non_f64_u64_pairs() {
+    let mut program =
+        lower_source_to_mir("fn cast() -> u8 { return (u8) 1u; } fn main() -> i64 { return 0; }");
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let operation = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment) => match &mut assignment.rvalue.kind {
+                MirRvalueKind::PrimitiveCast { operation, .. } => Some(operation),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap();
+    operation.set_kind_for_test(MirPrimitiveCastKind::BitReinterpretation);
+
+    assert_eq!(
+        verify_mir(&program)
+            .unwrap_err()
+            .iter()
+            .map(|error| error.message.as_str())
+            .collect::<Vec<_>>(),
+        ["primitive cast semantic class `bit_reinterpretation` does not match `u64 -> u8`"]
+    );
+}
+
+#[test]
 fn comparison_corruption_accumulates_errors_in_deterministic_order() {
     let mut program =
         lower_source_to_mir("fn less() -> bool { return 1u < 2u; } fn main() -> i64 { return 0; }");

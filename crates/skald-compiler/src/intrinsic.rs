@@ -9,4 +9,6 @@ pub enum Intrinsic {
     IoRead,
     IoWrite,
     IoClose,
+    F64ToBits,
+    F64FromBits,
 }

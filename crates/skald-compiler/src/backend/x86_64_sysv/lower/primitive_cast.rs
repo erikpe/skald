@@ -135,6 +135,9 @@ impl InstructionSelector<'_, '_> {
             MirPrimitiveCastKind::ToF64 => {
                 self.select_integer_to_f64(operation.source, operand, destination);
             }
+            MirPrimitiveCastKind::BitReinterpretation => {
+                self.select_bit_reinterpretation(operation, operand, destination);
+            }
             MirPrimitiveCastKind::CheckedF64ToInteger => {
                 unreachable!("checked primitive casts use their dedicated success conversion")
             }
@@ -230,6 +233,41 @@ impl InstructionSelector<'_, '_> {
             value::float_operand(destination),
             self.output,
         );
+    }
+
+    fn select_bit_reinterpretation(
+        &mut self,
+        operation: MirPrimitiveCast,
+        operand: ValueId,
+        destination: Operand,
+    ) {
+        match (operation.source, operation.target) {
+            (MirPrimitiveType::F64, MirPrimitiveType::U64) => {
+                value::load_float(
+                    value::float_operand(value::frame_value(self.frame, operand)),
+                    XmmRegister::Xmm14,
+                    self.output,
+                );
+                self.output.push(Instruction::MoveFloatBitsToInteger {
+                    source: XmmRegister::Xmm14,
+                    destination: Register::Rax,
+                });
+                value::store_canonical_rax(MirType::U64, destination, self.output);
+            }
+            (MirPrimitiveType::U64, MirPrimitiveType::F64) => {
+                value::load_rax(value::frame_value(self.frame, operand), self.output);
+                self.output.push(Instruction::MoveBitsToFloat {
+                    source: Register::Rax,
+                    destination: XmmRegister::Xmm14,
+                });
+                value::store_float(
+                    XmmRegister::Xmm14,
+                    value::float_operand(destination),
+                    self.output,
+                );
+            }
+            _ => unreachable!("verified bit reinterpretation has an exact f64/u64 pair"),
+        }
     }
 
     fn select_integer_class_bits(

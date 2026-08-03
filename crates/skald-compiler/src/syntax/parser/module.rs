@@ -106,7 +106,7 @@ impl Parser<'_> {
             );
             return None;
         }
-        self.parse_name_path(message)
+        self.parse_module_name_path(message)
     }
 
     fn parse_alias(&mut self, kind: &'static str) -> Option<(Option<Span>, Option<Name>)> {

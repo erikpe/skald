@@ -217,7 +217,19 @@ impl<'source> Parser<'source> {
     }
 
     fn parse_name_path(&mut self, message: &'static str) -> Option<Name> {
-        let first = self.expect(TokenKind::Identifier, message)?;
+        self.parse_name_path_with_primitive_module_component(message, false)
+    }
+
+    fn parse_module_name_path(&mut self, message: &'static str) -> Option<Name> {
+        self.parse_name_path_with_primitive_module_component(message, true)
+    }
+
+    fn parse_name_path_with_primitive_module_component(
+        &mut self,
+        message: &'static str,
+        allow_terminal_primitive: bool,
+    ) -> Option<Name> {
+        let first = self.parse_name_path_component(message, allow_terminal_primitive)?;
         let mut components = vec![NameComponent {
             text: self.lexeme(first).to_owned(),
             span: first.span,
@@ -225,7 +237,10 @@ impl<'source> Parser<'source> {
         let mut separator_spans = Vec::new();
         while let Some(separator) = self.consume(TokenKind::DoubleColon) {
             separator_spans.push(separator.span);
-            let component = self.expect(TokenKind::Identifier, "a name component after `::`")?;
+            let component = self.parse_name_path_component(
+                "a name component after `::`",
+                allow_terminal_primitive,
+            )?;
             components.push(NameComponent {
                 text: self.lexeme(component).to_owned(),
                 span: component.span,
@@ -245,6 +260,32 @@ impl<'source> Parser<'source> {
         } else {
             Some(Name::qualified(text, span, components, separator_spans))
         }
+    }
+
+    fn parse_name_path_component(
+        &mut self,
+        message: &'static str,
+        allow_terminal_primitive: bool,
+    ) -> Option<Token> {
+        if self.at(TokenKind::Identifier) {
+            return Some(self.advance());
+        }
+        if self.at_primitive_type_name()
+            && (allow_terminal_primitive || self.peek_ahead(1).kind == TokenKind::DoubleColon)
+        {
+            return Some(self.advance());
+        }
+        self.expect(TokenKind::Identifier, message)
+    }
+
+    fn at_primitive_type_name(&self) -> bool {
+        self.at_any(&[
+            TokenKind::I64,
+            TokenKind::U64,
+            TokenKind::U8,
+            TokenKind::F64,
+            TokenKind::Bool,
+        ])
     }
 
     fn parse_visibility(&mut self) -> Visibility {
