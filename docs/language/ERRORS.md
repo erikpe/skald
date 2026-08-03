@@ -29,15 +29,16 @@ Tool usage, source I/O, target selection, backend legality, assembly, linkage,
 and artifact-publication failures are compiler or toolchain failures rather
 than source-language exceptions.
 
-### Frozen static-field rejection boundary
+### Static-field declaration boundary
 
-The [zero-default static-field design](STATIC_FIELDS.md) freezes future syntax
-without making it accepted by the current compiler. Until implementation, a
-static-field declaration receives the focused unsupported-syntax diagnostic.
-Once implemented, malformed declaration shapes remain syntax errors;
-unsupported zero-state types are rejected at the declared type; namespace
-collisions, privacy, and wrong-kind selections are rejected by their existing
-semantic owners; and calling a static field is a non-callable-target error.
+The [zero-default static-field design](STATIC_FIELDS.md) is being implemented
+in explicit compiler stages. Static declarations are accepted by syntax and
+resolution, where malformed shapes, member collisions, inherited identity,
+and declaring-class privacy have their ordinary owners. Static-field
+expressions are deliberately unavailable, and `TYP042` rejects every static
+declaration before typed HIR until typed places and storage validation land.
+Later stages will reject unsupported zero-state types at the declared type and
+give wrong-kind or non-callable diagnostics to invalid selections.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

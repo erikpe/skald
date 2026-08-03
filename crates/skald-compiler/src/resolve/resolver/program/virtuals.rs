@@ -216,6 +216,18 @@ fn invalid_override_diagnostic(
             member_name_span(classes, ResolvedClassMember::Field(field)),
             "inherited field declared here",
         ),
+        Some(ResolvedClassMember::StaticField(field)) => Diagnostic::error(
+            INVALID_OVERRIDE,
+            format!(
+                "method `{}` cannot override an inherited static field",
+                method.name
+            ),
+        )
+        .with_primary_label(modifier_span, "only virtual methods can be overridden")
+        .with_secondary_label(
+            member_name_span(classes, ResolvedClassMember::StaticField(field)),
+            "inherited static field declared here",
+        ),
         Some(ResolvedClassMember::Method(overridden)) => Diagnostic::error(
             INVALID_OVERRIDE,
             format!(
@@ -238,6 +250,7 @@ fn invalid_override_diagnostic(
 fn ordinary_member_name(member: &syntax::ClassMember) -> Option<(&syntax::Name, Span)> {
     match member {
         syntax::ClassMember::Field(field) => Some((&field.name, field.name.span)),
+        syntax::ClassMember::StaticField(field) => Some((&field.name, field.name.span)),
         syntax::ClassMember::Method(method) => Some((&method.name, method.name.span)),
         syntax::ClassMember::Initializer(_)
         | syntax::ClassMember::CopyConstructor(_)
@@ -288,6 +301,13 @@ fn member_name_span(classes: &ResolvedClassDeclarationTable, member: ResolvedCla
                 .expect("inherited field must exist")
                 .name_span
         }
+        ResolvedClassMember::StaticField(field) => {
+            classes
+                .get(field.class())
+                .and_then(|class| class.static_field(field))
+                .expect("inherited static field must exist")
+                .name_span
+        }
         ResolvedClassMember::Method(method) => {
             classes
                 .get(method.class())
@@ -301,6 +321,7 @@ fn member_name_span(classes: &ResolvedClassDeclarationTable, member: ResolvedCla
 const fn resolved_member(kind: OrdinaryMemberSymbolKind) -> ResolvedClassMember {
     match kind {
         OrdinaryMemberSymbolKind::Field(field) => ResolvedClassMember::Field(field),
+        OrdinaryMemberSymbolKind::StaticField(field) => ResolvedClassMember::StaticField(field),
         OrdinaryMemberSymbolKind::Method(method) => ResolvedClassMember::Method(method),
     }
 }
@@ -308,6 +329,7 @@ const fn resolved_member(kind: OrdinaryMemberSymbolKind) -> ResolvedClassMember 
 const fn member_kind(member: ResolvedClassMember) -> &'static str {
     match member {
         ResolvedClassMember::Field(_) => "field",
+        ResolvedClassMember::StaticField(_) => "static field",
         ResolvedClassMember::Method(_) => "method",
     }
 }

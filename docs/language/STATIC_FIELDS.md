@@ -1,6 +1,6 @@
 # Zero-Default Static Fields
 
-Status: **frozen design; not implemented**. This document is authoritative for
+Status: **frozen design; declaration frontend implemented**. This document is authoritative for
 the selected source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -14,9 +14,12 @@ inline-array registries without introducing declaration expressions, module
 initialization, shutdown ordering, garbage collection, or a new runtime
 service.
 
-The examples in this document illustrate frozen future syntax. The current
-compiler continues to reject static-field declarations until the feature is
-implemented.
+The compiler now parses static-field declarations, assigns independent
+resolved identities, and includes them in the inherited member namespace.
+Static-field expressions, storage-type validation, typed places, and runtime
+storage are not implemented yet. Type checking therefore rejects every
+program containing a static declaration with `TYP042`, even when the field is
+unused; source selections also receive a focused resolver diagnostic.
 
 ## Declaration syntax
 
@@ -224,9 +227,10 @@ The implementation must reject each error at the phase that owns it:
   wrong-kind selections; and
 - attempts to call a static field as a non-callable target.
 
-Diagnostic wording and codes remain compiler behavior. Until implementation,
-the current focused unsupported-static-field diagnostic remains correct and
-the frozen syntax is not accepted source.
+Diagnostic wording and codes remain compiler behavior. During the current
+declaration-only stage, malformed declarations are syntax errors, namespace
+and privacy rules are enforced during resolution, expression uses are
+unavailable, and `TYP042` prevents declarations from reaching typed HIR.
 
 ## Runtime, ABI, and representation boundary
 

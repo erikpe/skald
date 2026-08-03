@@ -141,13 +141,13 @@ impl CallableResolver<'_, '_> {
                 let receiver =
                     self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
                 match selected {
-                    OrdinaryMemberSymbolKind::Field(field) => self.project_receiver_field(
+                    SelectedClassMember::Field(field) => self.project_receiver_field(
                         receiver,
                         field,
                         member.span,
                         member.member.span,
                     ),
-                    OrdinaryMemberSymbolKind::Method(method) => {
+                    SelectedClassMember::Method(method) => {
                         let declaration = self
                             .environment
                             .classes
@@ -241,10 +241,10 @@ impl CallableResolver<'_, '_> {
                 let receiver =
                     self.project_to_declaring_class(receiver, selected.declaring_class());
                 match selected {
-                    OrdinaryMemberSymbolKind::Field(field) => {
+                    SelectedClassMember::Field(field) => {
                         self.project_field(receiver, field, member.span, member.member.span)
                     }
-                    OrdinaryMemberSymbolKind::Method(method) => {
+                    SelectedClassMember::Method(method) => {
                         let declaration = self
                             .environment
                             .classes

@@ -161,6 +161,15 @@ impl AstDumper {
                     dumper.type_syntax(&field.type_syntax);
                 });
             }
+            ClassMember::StaticField(field) => {
+                self.line("StaticField", field.span);
+                self.indented(|dumper| {
+                    dumper.member_visibility(field.visibility);
+                    dumper.line("Static", field.static_span);
+                    dumper.named("Name", &field.name.text, field.name.span);
+                    dumper.type_syntax(&field.type_syntax);
+                });
+            }
             ClassMember::Initializer(initializer) => {
                 self.line("Initializer", initializer.span);
                 self.indented(|dumper| {

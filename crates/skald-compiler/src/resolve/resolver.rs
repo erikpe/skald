@@ -6,7 +6,7 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
         ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, FunctionId,
-        InitializerId, InterfaceId, MethodId,
+        InitializerId, InterfaceId, MethodId, StaticFieldId,
     },
     module::ModuleGraph,
     source::Span,
@@ -339,16 +339,8 @@ pub(super) struct OrdinaryMemberSymbol {
 #[derive(Clone, Copy, Debug)]
 pub(super) enum OrdinaryMemberSymbolKind {
     Field(FieldId),
+    StaticField(StaticFieldId),
     Method(MethodId),
-}
-
-impl OrdinaryMemberSymbolKind {
-    pub(super) const fn declaring_class(self) -> ClassId {
-        match self {
-            Self::Field(field) => field.class(),
-            Self::Method(method) => method.class(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

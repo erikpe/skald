@@ -92,7 +92,7 @@ fn rejects_invalid_static_member_forms_and_recovers_to_later_members() {
         "}\n",
     ));
 
-    assert_eq!(output.diagnostics.len(), 12);
+    assert_eq!(output.diagnostics.len(), 10);
     assert!(output
         .diagnostics
         .iter()
@@ -102,11 +102,18 @@ fn rejects_invalid_static_member_forms_and_recovers_to_later_members() {
         .iter()
         .map(|diagnostic| diagnostic.message.as_str())
         .collect::<Vec<_>>();
-    assert!(messages.contains(&"static fields are not supported"));
     assert!(messages.contains(&"static methods cannot use `mut`"));
     assert!(messages.contains(&"static methods cannot be `virtual` or `override`"));
 
     let broken = class(&output.ast, 0);
+    assert_eq!(
+        broken
+            .members
+            .iter()
+            .filter(|member| matches!(member, ClassMember::StaticField(_)))
+            .count(),
+        2
+    );
     assert!(broken.members.iter().any(
         |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
     ));

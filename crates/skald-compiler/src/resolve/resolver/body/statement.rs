@@ -283,8 +283,8 @@ impl CallableResolver<'_, '_> {
             (Some((receiver, selected)), Some(value)) => (receiver, selected, value),
             _ => return None,
         };
-        let OrdinaryMemberSymbolKind::Field(field) = selected else {
-            let OrdinaryMemberSymbolKind::Method(method) = selected else {
+        let SelectedClassMember::Field(field) = selected else {
+            let SelectedClassMember::Method(method) = selected else {
                 unreachable!()
             };
             let declaration = self

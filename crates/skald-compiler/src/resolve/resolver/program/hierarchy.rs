@@ -178,6 +178,7 @@ fn cycle_diagnostic(classes: &ResolvedClassDeclarationTable, cycle: &[ClassId]) 
 const fn resolved_member(kind: OrdinaryMemberSymbolKind) -> ResolvedClassMember {
     match kind {
         OrdinaryMemberSymbolKind::Field(field) => ResolvedClassMember::Field(field),
+        OrdinaryMemberSymbolKind::StaticField(field) => ResolvedClassMember::StaticField(field),
         OrdinaryMemberSymbolKind::Method(method) => ResolvedClassMember::Method(method),
     }
 }

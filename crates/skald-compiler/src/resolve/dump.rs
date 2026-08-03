@@ -315,6 +315,28 @@ impl ResolvedDumper {
                     });
                 }
             });
+            if !class.static_fields.is_empty() {
+                dumper.heading("StaticFields");
+                dumper.indented(|dumper| {
+                    for field in &class.static_fields {
+                        dumper.write_indentation();
+                        let _ = write!(dumper.output, "StaticField {} ", field.id);
+                        if field.visibility.private_span().is_some() {
+                            dumper.output.push_str("private ");
+                        }
+                        write_quoted(&mut dumper.output, &field.name);
+                        write_span(&mut dumper.output, field.span);
+                        dumper.output.push('\n');
+                        dumper.indented(|dumper| {
+                            if let Some(span) = field.visibility.private_span() {
+                                dumper.line("Private", span);
+                            }
+                            dumper.line("Static", field.static_span);
+                            dumper.type_syntax(&field.type_syntax);
+                        });
+                    }
+                });
+            }
             dumper.heading("OrdinaryInitializers");
             dumper.indented(|dumper| {
                 for initializer in &class.initializers {

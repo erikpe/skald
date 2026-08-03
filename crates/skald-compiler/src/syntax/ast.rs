@@ -156,6 +156,7 @@ pub struct InterfaceRequirementDecl {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ClassMember {
     Field(FieldDecl),
+    StaticField(StaticFieldDecl),
     Initializer(InitializerDecl),
     CopyConstructor(CopyConstructorDecl),
     CopyAssignment(CopyAssignmentDecl),
@@ -167,6 +168,7 @@ impl ClassMember {
     pub const fn span(&self) -> Span {
         match self {
             Self::Field(field) => field.span,
+            Self::StaticField(field) => field.span,
             Self::Initializer(initializer) => initializer.span,
             Self::CopyConstructor(constructor) => constructor.span,
             Self::CopyAssignment(assignment) => assignment.span,
@@ -179,6 +181,15 @@ impl ClassMember {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FieldDecl {
     pub visibility: MemberVisibility,
+    pub name: Name,
+    pub type_syntax: TypeSyntax,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StaticFieldDecl {
+    pub visibility: MemberVisibility,
+    pub static_span: Span,
     pub name: Name,
     pub type_syntax: TypeSyntax,
     pub span: Span,

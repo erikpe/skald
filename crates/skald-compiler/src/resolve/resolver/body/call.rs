@@ -23,7 +23,7 @@ impl CallableResolver<'_, '_> {
         let receiver =
             self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
         match selected {
-            OrdinaryMemberSymbolKind::Field(field) => {
+            SelectedClassMember::Field(field) => {
                 Some(ResolvedExpression::FieldAccess(ResolvedFieldAccessExpr {
                     receiver,
                     field,
@@ -31,7 +31,7 @@ impl CallableResolver<'_, '_> {
                     span: member.span,
                 }))
             }
-            OrdinaryMemberSymbolKind::Method(method) => {
+            SelectedClassMember::Method(method) => {
                 let declaration = self
                     .environment
                     .classes
@@ -445,7 +445,7 @@ impl CallableResolver<'_, '_> {
                 let receiver =
                     self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
                 match selected {
-                    OrdinaryMemberSymbolKind::Method(method) => {
+                    SelectedClassMember::Method(method) => {
                         let declaration = self
                             .environment
                             .classes
@@ -479,7 +479,7 @@ impl CallableResolver<'_, '_> {
                             })
                         }
                     }
-                    OrdinaryMemberSymbolKind::Field(field) => {
+                    SelectedClassMember::Field(field) => {
                         let declaration = self
                             .environment
                             .classes
@@ -539,7 +539,7 @@ impl CallableResolver<'_, '_> {
     ) -> Option<CallTarget> {
         let selected = self.select_member(class, &member.member)?;
         match selected {
-            OrdinaryMemberSymbolKind::Method(method) => {
+            SelectedClassMember::Method(method) => {
                 let declaration = self
                     .environment
                     .classes
@@ -569,7 +569,7 @@ impl CallableResolver<'_, '_> {
                     None
                 }
             }
-            OrdinaryMemberSymbolKind::Field(field) => {
+            SelectedClassMember::Field(field) => {
                 let declaration = self
                     .environment
                     .classes
@@ -591,11 +591,11 @@ impl CallableResolver<'_, '_> {
 
     fn report_class_member_used_as_value(
         &mut self,
-        selected: OrdinaryMemberSymbolKind,
+        selected: SelectedClassMember,
         name: &syntax::Name,
     ) {
         match selected {
-            OrdinaryMemberSymbolKind::Method(method) => {
+            SelectedClassMember::Method(method) => {
                 let declaration = self
                     .environment
                     .classes
@@ -619,7 +619,7 @@ impl CallableResolver<'_, '_> {
                         .with_secondary_label(declaration.name_span, "method declared here"),
                 );
             }
-            OrdinaryMemberSymbolKind::Field(field) => {
+            SelectedClassMember::Field(field) => {
                 let declaration = self
                     .environment
                     .classes
@@ -762,7 +762,7 @@ impl CallableResolver<'_, '_> {
         &mut self,
         class: ClassId,
         name: &syntax::Name,
-    ) -> Option<OrdinaryMemberSymbolKind> {
+    ) -> Option<SelectedClassMember> {
         let member = self
             .environment
             .hierarchy
@@ -792,6 +792,14 @@ impl CallableResolver<'_, '_> {
                 .get(declaring_class)
                 .and_then(|class| class.field(field))
                 .expect("selected field must have declaration metadata")
+                .visibility
+                .private_span(),
+            ResolvedClassMember::StaticField(field) => self
+                .environment
+                .classes
+                .get(declaring_class)
+                .and_then(|class| class.static_field(field))
+                .expect("selected static field must have declaration metadata")
                 .visibility
                 .private_span(),
             ResolvedClassMember::Method(method) => self
@@ -826,9 +834,31 @@ impl CallableResolver<'_, '_> {
             return None;
         }
 
+        if let ResolvedClassMember::StaticField(field) = member {
+            let declaration = self
+                .environment
+                .classes
+                .get(declaring_class)
+                .and_then(|class| class.static_field(field))
+                .expect("selected static field must have declaration metadata");
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_MEMBER_SELECTION,
+                    format!(
+                        "static field `{}` cannot be used in an expression yet",
+                        declaration.name
+                    ),
+                )
+                .with_primary_label(name.span, "static field expressions are not implemented")
+                .with_secondary_label(declaration.name_span, "static field declared here"),
+            );
+            return None;
+        }
+
         Some(match member {
-            ResolvedClassMember::Field(field) => OrdinaryMemberSymbolKind::Field(field),
-            ResolvedClassMember::Method(method) => OrdinaryMemberSymbolKind::Method(method),
+            ResolvedClassMember::Field(field) => SelectedClassMember::Field(field),
+            ResolvedClassMember::Method(method) => SelectedClassMember::Method(method),
+            ResolvedClassMember::StaticField(_) => unreachable!(),
         })
     }
 }

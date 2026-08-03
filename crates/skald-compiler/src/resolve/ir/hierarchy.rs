@@ -4,13 +4,14 @@ use std::collections::BTreeMap;
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{ClassId, FieldId, MethodId},
+    identity::{ClassId, FieldId, MethodId, StaticFieldId},
 };
 
 /// A selected ordinary class member together with its declaring-class identity.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ResolvedClassMember {
     Field(FieldId),
+    StaticField(StaticFieldId),
     Method(MethodId),
 }
 
@@ -18,6 +19,7 @@ impl ResolvedClassMember {
     pub const fn declaring_class(self) -> ClassId {
         match self {
             Self::Field(field) => field.class(),
+            Self::StaticField(field) => field.class(),
             Self::Method(method) => method.class(),
         }
     }

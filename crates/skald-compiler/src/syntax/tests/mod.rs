@@ -44,6 +44,7 @@ mod recovery;
 mod shared_ownership;
 mod shifts;
 mod short_circuit_boolean;
+mod static_fields;
 mod static_methods;
 mod type_operations;
 mod while_loops;

@@ -2,6 +2,42 @@
 
 use super::{declaration::TypeContext, *};
 
+#[derive(Clone, Copy)]
+enum FieldDeclarationKind {
+    Instance,
+    Static,
+}
+
+impl FieldDeclarationKind {
+    const fn description(self) -> &'static str {
+        match self {
+            Self::Instance => "field",
+            Self::Static => "static field",
+        }
+    }
+
+    const fn name_expectation(self) -> &'static str {
+        match self {
+            Self::Instance => "expected a field name",
+            Self::Static => "expected a static field name",
+        }
+    }
+
+    const fn colon_expectation(self) -> &'static str {
+        match self {
+            Self::Instance => "`:` after the field name",
+            Self::Static => "`:` after the static field name",
+        }
+    }
+
+    const fn semicolon_expectation(self) -> &'static str {
+        match self {
+            Self::Instance => "`;` after the field declaration",
+            Self::Static => "`;` after the static field declaration",
+        }
+    }
+}
+
 impl Parser<'_> {
     pub(super) fn parse_class(&mut self, visibility: Visibility) -> Option<ClassDecl> {
         let class_token = self.advance();
@@ -139,15 +175,10 @@ impl Parser<'_> {
                 self.parse_initializer(MemberVisibility::Private { span: private_span });
                 return None;
             }
-            if self.peek_ahead(1).kind == TokenKind::Colon {
-                self.report(
-                    INVALID_CLASS_MEMBER,
-                    "static fields are not supported",
-                    static_token.span,
-                    "static storage is a separate future feature",
-                );
-                self.parse_field(MemberVisibility::Public);
-                return None;
+            if self.at(TokenKind::Identifier) && self.peek_ahead(1).kind == TokenKind::Colon {
+                return self
+                    .parse_static_field(visibility, static_token.span)
+                    .map(ClassMember::StaticField);
             }
             if self.at(TokenKind::Identifier)
                 && matches!(
@@ -397,23 +428,48 @@ impl Parser<'_> {
     }
 
     fn parse_field(&mut self, visibility: MemberVisibility) -> Option<FieldDecl> {
-        let name = self.parse_name("expected a field name")?;
-        self.expect(TokenKind::Colon, "`:` after the field name");
-        let type_syntax = self.parse_type(
-            TypeContext::Field,
-            format!(
-                "expected a field type {}, a class name, or a shared object type",
-                format_type_list(STORED_TYPE_NAMES)
-            ),
-        )?;
-        let semicolon = self.expect(TokenKind::Semicolon, "`;` after the field declaration");
-        let end_span = semicolon.map_or(type_syntax.span, |token| token.span);
+        let (name, type_syntax, end_span) =
+            self.parse_field_parts(FieldDeclarationKind::Instance)?;
         Some(FieldDecl {
             span: self.cover(visibility.start_span(name.span), end_span),
             visibility,
             name,
             type_syntax,
         })
+    }
+
+    fn parse_static_field(
+        &mut self,
+        visibility: MemberVisibility,
+        static_span: Span,
+    ) -> Option<StaticFieldDecl> {
+        let (name, type_syntax, end_span) = self.parse_field_parts(FieldDeclarationKind::Static)?;
+        Some(StaticFieldDecl {
+            span: self.cover(visibility.start_span(static_span), end_span),
+            visibility,
+            static_span,
+            name,
+            type_syntax,
+        })
+    }
+
+    fn parse_field_parts(
+        &mut self,
+        kind: FieldDeclarationKind,
+    ) -> Option<(Name, TypeSyntax, Span)> {
+        let name = self.parse_name(kind.name_expectation())?;
+        self.expect(TokenKind::Colon, kind.colon_expectation());
+        let type_syntax = self.parse_type(
+            TypeContext::Field,
+            format!(
+                "expected a {} type {}, a class name, or a shared object type",
+                kind.description(),
+                format_type_list(STORED_TYPE_NAMES)
+            ),
+        )?;
+        let semicolon = self.expect(TokenKind::Semicolon, kind.semicolon_expectation());
+        let end_span = semicolon.map_or(type_syntax.span, |token| token.span);
+        Some((name, type_syntax, end_span))
     }
 
     fn parse_initializer(&mut self, visibility: MemberVisibility) -> Option<InitializerDecl> {

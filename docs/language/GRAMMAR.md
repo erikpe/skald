@@ -256,6 +256,7 @@ class-declaration           = "class" identifier ["extends" declaration-path]
                               "{" {class-member} "}"
 
 class-member                = field-declaration
+                            | static-field-declaration
                             | initializer-declaration
                             | copy-constructor-declaration
                             | copy-assignment-declaration
@@ -263,6 +264,8 @@ class-member                = field-declaration
                             | method-declaration
 
 field-declaration           = ["private"] identifier ":" storage-type ";"
+static-field-declaration    = ["private"] "static" identifier ":"
+                              storage-type ";"
 initializer-declaration     = ["private"] "init" parameter-list block
 copy-constructor-declaration = "copy" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
@@ -293,33 +296,20 @@ name. Fields, methods, and ordinary initializers are public unless prefixed by
 `private`. Copy constructors, copy assignments, and destructors do not accept
 visibility, and no lifecycle declaration accepts `static`. Ordinary
 initializers do not accept `mut`, `virtual`, or `override`; static methods
-cannot use those modifiers either. Static field forms such as
-`static name: T` and `private static name: T` are rejected because static
-storage is not implemented. Their selected future shape is frozen separately
-below.
-
-### Frozen future static-field extension
-
-The following production is frozen for later implementation and is not an
-alternative of the currently implemented `class-member` production:
-
-```text
-static-field-declaration = ["private"] "static" identifier ":"
-                           storage-type ";"
-```
-
-It accepts exactly `static name: T;` and `private static name: T;`, with no
+cannot use those modifiers either. Static fields accept exactly
+`static name: T;` and `private static name: T;`, with no
 declaration initializer. `static` remains contextual: `static:` and
 `private static:` continue to declare an instance field whose identifier is
 `static`, while `static` followed by another identifier and `:` selects the
-future static-field form. Methods, functions, parameters, locals, and other
+static-field form. Methods, functions, parameters, locals, and other
 existing identifier positions retain their current use of the spelling.
 
-The grammar alone does not decide which storage types are zero-valid or define
-lookup, access, initialization, mutation, inheritance, or lifetime. Those
-settled rules belong to [Zero-Default Static Fields](STATIC_FIELDS.md). The
-current compiler must continue to reject this frozen form until its explicit
-implementation gate is complete.
+Syntax and resolution now retain static declarations and their inherited
+identity. The grammar alone does not decide which storage types are zero-valid
+or define executable access, initialization, mutation, or lifetime. Those
+settled rules belong to [Zero-Default Static Fields](STATIC_FIELDS.md).
+Type checking deliberately rejects programs containing static declarations
+until typed static places and storage lowering are implemented.
 
 ### Construction-selection syntax
 

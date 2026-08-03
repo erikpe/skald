@@ -28,6 +28,7 @@ struct ClassCollectionState {
     id: ClassId,
     direct_base: Option<ResolvedDirectBase>,
     fields: Vec<ResolvedFieldDeclaration>,
+    static_fields: Vec<ResolvedStaticFieldDeclaration>,
     methods: Vec<ResolvedMethodDeclaration>,
     lifecycle: LifecycleDeclarations,
     symbols: ClassSymbols,
@@ -45,6 +46,7 @@ impl ClassCollectionState {
             id,
             direct_base,
             fields: Vec::new(),
+            static_fields: Vec::new(),
             methods: Vec::new(),
             lifecycle: LifecycleDeclarations::new(),
             symbols: ClassSymbols::default(),
@@ -84,6 +86,37 @@ impl ClassCollectionState {
         self.fields.push(ResolvedFieldDeclaration {
             id: field_id,
             visibility: resolved_member_visibility(field.visibility),
+            name: field.name.text.to_string(),
+            name_span: field.name.span,
+            type_syntax,
+            span: field.span,
+        });
+    }
+
+    fn collect_static_field(
+        &mut self,
+        field: &syntax::StaticFieldDecl,
+        lookup: ModuleLookup<'_>,
+        array_types: &mut ArrayTypeInterner,
+        diagnostics: &mut Diagnostics,
+    ) {
+        let Some(type_syntax) = resolve_type(&field.type_syntax, lookup, array_types, diagnostics)
+        else {
+            return;
+        };
+        let id = StaticFieldId::new(self.id, self.static_fields.len());
+        if !declare_ordinary_member(
+            &mut self.symbols,
+            &field.name,
+            OrdinaryMemberSymbolKind::StaticField(id),
+            diagnostics,
+        ) {
+            return;
+        }
+        self.static_fields.push(ResolvedStaticFieldDeclaration {
+            id,
+            visibility: resolved_member_visibility(field.visibility),
+            static_span: field.static_span,
             name: field.name.text.to_string(),
             name_span: field.name.span,
             type_syntax,
@@ -342,6 +375,7 @@ impl ClassCollectionState {
                 direct_base: self.direct_base,
                 implemented_interfaces: Vec::new(),
                 fields: self.fields,
+                static_fields: self.static_fields,
                 initializers: self.lifecycle.initializers,
                 copy_constructor,
                 copy_constructor_declaration: self.lifecycle.copy_constructor,
@@ -381,6 +415,9 @@ pub(super) fn collect_class(
         match member {
             syntax::ClassMember::Field(field) => {
                 state.collect_field(field, lookup, array_types, diagnostics)
+            }
+            syntax::ClassMember::StaticField(field) => {
+                state.collect_static_field(field, lookup, array_types, diagnostics)
             }
             syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
                 member_index,

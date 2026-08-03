@@ -65,6 +65,7 @@ pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
+pub const STATIC_FIELD_NOT_EXECUTABLE: &str = "TYP042";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -81,6 +82,7 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    reject_unlowered_static_fields(program, &mut diagnostics);
     super::arrays::validate_array_types(program, &mut diagnostics);
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
@@ -162,6 +164,29 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     };
 
     TypeCheckOutput { hir, diagnostics }
+}
+
+fn reject_unlowered_static_fields(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
+    for class in program.classes.iter() {
+        for field in &class.static_fields {
+            diagnostics.push(
+                Diagnostic::error(
+                    STATIC_FIELD_NOT_EXECUTABLE,
+                    format!(
+                        "static field `{}.{}` cannot be emitted yet",
+                        class.name, field.name
+                    ),
+                )
+                .with_primary_label(
+                    field.static_span,
+                    "static storage and executable access are not implemented",
+                )
+                .with_note(
+                    "the declaration is available to syntax and name resolution only for now",
+                ),
+            );
+        }
+    }
 }
 
 fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {

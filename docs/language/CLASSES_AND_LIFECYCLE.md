@@ -42,9 +42,10 @@ The implemented class model uses these member categories:
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
 The frozen [zero-default static-field contract](STATIC_FIELDS.md) adds a
-separate class-owned storage category in the future. It does not turn a static
-field into an instance field, lifecycle slot, or receiver operation, and the
-current compiler does not yet accept it.
+separate class-owned storage category. The compiler now accepts and resolves
+its declarations with independent identity, but does not yet lower them to
+typed places or runtime storage. A static field is never an instance field,
+lifecycle slot, or receiver operation.
 
 The shared top-level namespace is defined by
 [modules and foreign interoperation](MODULES_AND_INTEROP.md#top-level-namespace).
@@ -72,9 +73,10 @@ may instead begin with the contextual modifier `private`. Copy constructors,
 copy assignments, and destructors do not declare visibility. Static methods
 use `static fn`; `private static fn` composes the same visibility rule with
 receiverless method kind. Ordinary initializers and the other lifecycle
-declarations cannot be static. Static fields are not implemented; their
-future syntax, namespace, access, lifetime, and supported zero-state types are
-frozen in [Zero-Default Static Fields](STATIC_FIELDS.md).
+declarations cannot be static. Static-field declarations and inherited
+namespace identity are implemented; executable access, lifetime, and
+supported zero-state validation remain staged according to
+[Zero-Default Static Fields](STATIC_FIELDS.md).
 
 ### Declaring-class privacy
 

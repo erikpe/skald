@@ -160,6 +160,7 @@ global_id!(VirtualFamilyId, "vf");
 global_id!(VirtualSlotId, "vs");
 
 class_member_id!(FieldId, "field");
+class_member_id!(StaticFieldId, "static");
 class_member_id!(InitializerId, "init");
 class_member_id!(CopyConstructorId, "copy");
 class_member_id!(CopyAssignmentId, "assign");
@@ -362,6 +363,7 @@ mod tests {
         let class = ClassId::new(3);
         let other_class = ClassId::new(4);
         let field = FieldId::new(class, 2);
+        let static_field = StaticFieldId::new(class, 4);
         let initializer = InitializerId::new(class, 0);
         let copy = CopyConstructorId::new(class, 0);
         let assignment = CopyAssignmentId::new(class, 0);
@@ -372,6 +374,8 @@ mod tests {
         assert!(class < other_class);
         assert_eq!(field.class(), class);
         assert_eq!(field.index(), 2);
+        assert_eq!(static_field.class(), class);
+        assert_eq!(static_field.index(), 4);
         assert_eq!(initializer.class(), class);
         assert_eq!(initializer.index(), 0);
         assert_eq!(copy.class(), class);
@@ -384,6 +388,7 @@ mod tests {
         assert_eq!(method.index(), 5);
         assert_eq!(class.to_string(), "c3");
         assert_eq!(field.to_string(), "c3:field2");
+        assert_eq!(static_field.to_string(), "c3:static4");
         assert_eq!(initializer.to_string(), "c3:init0");
         assert_eq!(copy.to_string(), "c3:copy0");
         assert_eq!(assignment.to_string(), "c3:assign0");

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, ClassId, LiteralDataId, LoopId},
+    identity::{BindingId, CallableId, ClassId, FieldId, LiteralDataId, LoopId, MethodId},
     source::{Span, TextRange},
 };
 
@@ -14,6 +14,25 @@ mod call;
 mod dereference;
 mod place;
 mod statement;
+
+/// An instance member that body resolution can lower today.
+///
+/// Static fields deliberately do not appear here: STF1 resolves their declarations and
+/// hierarchy identity, while expression support remains a later compiler phase.
+#[derive(Clone, Copy)]
+enum SelectedClassMember {
+    Field(FieldId),
+    Method(MethodId),
+}
+
+impl SelectedClassMember {
+    const fn declaring_class(self) -> ClassId {
+        match self {
+            Self::Field(field) => field.class(),
+            Self::Method(method) => method.class(),
+        }
+    }
+}
 
 pub(super) struct ResolvedCallableBody {
     pub(super) locals: Vec<ResolvedLocal>,

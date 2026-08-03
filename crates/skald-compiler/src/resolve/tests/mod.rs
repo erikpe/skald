@@ -54,6 +54,7 @@ mod primitive_casts;
 mod shared_ownership;
 mod shifts;
 mod short_circuit_boolean;
+mod static_fields;
 mod static_methods;
 mod strings;
 mod type_operations;

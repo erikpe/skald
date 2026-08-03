@@ -6,7 +6,7 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, ParameterId, StaticFieldId, VirtualFamilyId, VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -57,6 +57,10 @@ impl ResolvedProgram {
 
     pub fn field(&self, id: FieldId) -> Option<&ResolvedFieldDeclaration> {
         self.class(id.class())?.field(id)
+    }
+
+    pub fn static_field(&self, id: StaticFieldId) -> Option<&ResolvedStaticFieldDeclaration> {
+        self.class(id.class())?.static_field(id)
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
@@ -194,6 +198,7 @@ pub struct ResolvedClassDeclaration {
     pub direct_base: Option<ResolvedDirectBase>,
     pub implemented_interfaces: Vec<ResolvedInterfaceClaim>,
     pub fields: Vec<ResolvedFieldDeclaration>,
+    pub static_fields: Vec<ResolvedStaticFieldDeclaration>,
     pub initializers: Vec<ResolvedInitializerDeclaration>,
     pub copy_constructor_declaration: Option<ResolvedCopyConstructorDeclaration>,
     pub copy_constructor: ResolvedCopyOperation<CopyConstructorId>,
@@ -221,6 +226,15 @@ impl ResolvedClassDeclaration {
             return None;
         }
         self.fields.get(id.index()).filter(|field| field.id == id)
+    }
+
+    pub fn static_field(&self, id: StaticFieldId) -> Option<&ResolvedStaticFieldDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.static_fields
+            .get(id.index())
+            .filter(|field| field.id == id)
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
@@ -277,6 +291,17 @@ impl ResolvedClassDeclaration {
 pub struct ResolvedFieldDeclaration {
     pub id: FieldId,
     pub visibility: ResolvedMemberVisibility,
+    pub name: String,
+    pub name_span: Span,
+    pub type_syntax: ResolvedType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedStaticFieldDeclaration {
+    pub id: StaticFieldId,
+    pub visibility: ResolvedMemberVisibility,
+    pub static_span: Span,
     pub name: String,
     pub name_span: Span,
     pub type_syntax: ResolvedType,

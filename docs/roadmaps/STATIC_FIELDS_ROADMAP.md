@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: in progress; STF1 is next.
+Status: in progress; STF2 is next.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -133,7 +133,7 @@ static-place addressing belongs in a descriptive lowering module while
 ## Progress
 
 - [x] STF0 — Freeze the zero-default static-field contract
-- [ ] STF1 — Separate static declarations and inherited identity
+- [x] STF1 — Separate static declarations and inherited identity
 - [ ] STF2 — Establish typed static places and primitive behavior
 - [ ] STF3 — Add verified static MIR roots and x86-64 slots
 - [ ] STF4 — Extend inline optional storage to static roots
@@ -179,28 +179,28 @@ from implemented syntax.
 **Purpose:** Establish source and resolved identities that cannot leak into
 instance layout or lifecycle before accepting static uses in typed HIR.
 
-- [ ] Add a dedicated syntax static-field declaration and class-member variant
+- [x] Add a dedicated syntax static-field declaration and class-member variant
       with visibility, `static` span, name, type, and complete declaration
       span. Keep syntax module exports selective and its facade concise.
-- [ ] Replace the parser's current unsupported-static-field branch with exact
+- [x] Replace the parser's current unsupported-static-field branch with exact
       parsing for public and private static fields while preserving recovery
       for duplicate/misordered modifiers, lifecycle combinations, missing
       names/types/semicolons, and later class members.
-- [ ] Preserve contextual identifier behavior for `static: T`, `fn static`,
+- [x] Preserve contextual identifier behavior for `static: T`, `fn static`,
       parameters, locals, and top-level declarations in lexer/parser dumps and
       robustness coverage.
-- [ ] Add class-owned `StaticFieldId` allocation independent of `FieldId` and
+- [x] Add class-owned `StaticFieldId` allocation independent of `FieldId` and
       `MethodId`, plus resolved static declaration tables and program/class
       accessors with dense-ID validation.
-- [ ] Extend the canonical ordinary-member tag, hierarchy construction,
+- [x] Extend the canonical ordinary-member tag, hierarchy construction,
       collision diagnostics, virtual/override diagnostics, and member display
       helpers with static-field identity. Derived selection must retain the
       declaring base ID and all inherited redeclarations must fail.
-- [ ] Keep static declarations out of instance `fields`, containment graphs,
+- [x] Keep static declarations out of instance `fields`, containment graphs,
       initializer completeness, copy capabilities, destruction plans,
       interface conformance, virtual families, and string-language-item field
       matching.
-- [ ] Extend deterministic AST/resolved dumps and declaration tests across
+- [x] Extend deterministic AST/resolved dumps and declaration tests across
       interleaved instance fields, statics, methods, modules, and cyclic module
       graphs. Use a cohesive resolver submodule if static collection would
       otherwise enlarge the class facade substantially.
