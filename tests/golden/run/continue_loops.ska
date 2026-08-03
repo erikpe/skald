@@ -1,6 +1,7 @@
+import std::io;
+
 import std::error;
 
-extern fn ska_rt_println_i64(value: i64) -> unit;
 
 class Trace {
     marker: i64;
@@ -10,7 +11,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -72,7 +73,7 @@ fn nested_loops() -> i64 {
 }
 
 fn condition(value: i64, limit: i64) -> bool {
-    ska_rt_println_i64(70 + value);
+    std::io::println_i64(70 + value);
     return value < limit;
 }
 
@@ -121,15 +122,15 @@ fn mixed(mode: i64) -> i64 {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64(immediate());
-    ska_rt_println_i64(conditional());
-    ska_rt_println_i64(nested_block_cleanup());
-    ska_rt_println_i64(nested_loops());
-    ska_rt_println_i64(condition_effects());
-    ska_rt_println_i64(ownership_heavy());
-    ska_rt_println_i64(mixed(0));
-    ska_rt_println_i64(mixed(1));
-    ska_rt_println_i64(mixed(2));
-    ska_rt_println_i64(mixed(4));
+    std::io::println_i64(immediate());
+    std::io::println_i64(conditional());
+    std::io::println_i64(nested_block_cleanup());
+    std::io::println_i64(nested_loops());
+    std::io::println_i64(condition_effects());
+    std::io::println_i64(ownership_heavy());
+    std::io::println_i64(mixed(0));
+    std::io::println_i64(mixed(1));
+    std::io::println_i64(mixed(2));
+    std::io::println_i64(mixed(4));
     return 0;
 }

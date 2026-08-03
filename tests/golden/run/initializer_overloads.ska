@@ -1,7 +1,7 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn observed() -> i64 {
-    ska_rt_println_i64(90);
+    std::io::println_i64(90);
     return 7;
 }
 
@@ -59,10 +59,10 @@ fn main() -> i64 {
     var alias: Choice = Choice(source);
     var holder: Holder = Holder(true);
     var produced: Choice = make(true);
-    ska_rt_println_i64(scalar.read());
-    ska_rt_println_i64(alias.read());
-    ska_rt_println_i64(holder.read());
-    ska_rt_println_i64(produced.read());
-    ska_rt_println_i64(consume(Choice(2)));
+    std::io::println_i64(scalar.read());
+    std::io::println_i64(alias.read());
+    std::io::println_i64(holder.read());
+    std::io::println_i64(produced.read());
+    std::io::println_i64(consume(Choice(2)));
     return 0;
 }

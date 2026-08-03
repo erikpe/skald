@@ -1,7 +1,7 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn mark(value: i64) -> i64 {
-    ska_rt_println_i64(value);
+    std::io::println_i64(value);
     return value;
 }
 
@@ -28,6 +28,6 @@ fn main() -> i64 {
     var first: Pair = Pair(mark(1), mark(2));
     var second: Pair = Pair(mark(3), mark(4));
     first.set(mark(5), mark(6));
-    ska_rt_println_i64(first.sum());
+    std::io::println_i64(first.sum());
     return second.sum() - 7;
 }

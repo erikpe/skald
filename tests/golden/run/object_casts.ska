@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Root {
     value: i64;
@@ -54,7 +54,7 @@ fn owning_casts(ref value: Obj) -> i64 {
 
 fn main() -> i64 {
     var leaf: Leaf = Leaf(10, 5);
-    ska_rt_println_i64(through_cast(leaf));
-    ska_rt_println_i64(owning_casts(leaf));
+    std::io::println_i64(through_cast(leaf));
+    std::io::println_i64(owning_casts(leaf));
     return 0;
 }

@@ -1,11 +1,7 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
-extern fn ska_rt_println_bool(value: bool) -> unit;
+import std::io;
 
 fn produce_signed() -> i64 {
-    ska_rt_println_i64(100);
+    std::io::println_i64(100);
     return 41;
 }
 
@@ -21,11 +17,11 @@ fn reassign_parameters(
     byte = byte + 1u8;
     float = float + 0.5;
     flag = true;
-    ska_rt_println_i64(signed);
-    ska_rt_println_u64(unsigned);
-    ska_rt_println_u8(byte);
-    ska_rt_println_f64_bits(float);
-    ska_rt_println_bool(flag);
+    std::io::println_i64(signed);
+    std::io::println_u64(unsigned);
+    std::io::println_u8(byte);
+    std::io::println_f64(float);
+    std::io::println_bool(flag);
 }
 
 fn main() -> i64 {
@@ -43,11 +39,11 @@ fn main() -> i64 {
     float = 2.5;
     flag = true;
 
-    ska_rt_println_i64(signed);
-    ska_rt_println_u64(unsigned);
-    ska_rt_println_u8(byte);
-    ska_rt_println_f64_bits(float);
-    ska_rt_println_bool(flag);
+    std::io::println_i64(signed);
+    std::io::println_u64(unsigned);
+    std::io::println_u8(byte);
+    std::io::println_f64(float);
+    std::io::println_bool(flag);
 
     var branch: i64 = 0;
     if (flag) {
@@ -55,10 +51,10 @@ fn main() -> i64 {
         {
             var branch: i64 = 8;
             branch = 9;
-            ska_rt_println_i64(branch);
+            std::io::println_i64(branch);
         }
         branch = 10;
     }
-    ska_rt_println_i64(branch);
+    std::io::println_i64(branch);
     return 0;
 }

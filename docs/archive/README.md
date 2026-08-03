@@ -63,6 +63,7 @@ Archived plans:
 - [Remaining floating-point operators](REMAINING_FLOATING_POINT_OPERATORS_ROADMAP.md)
 - [Complete primitive cast matrix](PRIMITIVE_CAST_MATRIX_ROADMAP.md)
 - [Standard I/O](STANDARD_IO_ROADMAP.md)
+- [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md)
 
 Resolved string-design inputs:
 

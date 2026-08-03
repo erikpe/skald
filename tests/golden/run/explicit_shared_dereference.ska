@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Readable {
     fn read() -> i64;
@@ -54,17 +54,17 @@ fn make_readable(value: i64) -> shared Readable {
 fn main() -> i64 {
     var owner: shared Node = new Node(1);
     owner->value = 5;
-    ska_rt_println_i64(owner->read());
-    ska_rt_println_i64((*owner).read());
-    ska_rt_println_i64((*owner).value);
-    ska_rt_println_i64(owner->inline_child.read());
-    ska_rt_println_i64(owner->next->read());
-    ska_rt_println_i64(make(6)->read());
-    ska_rt_println_i64(make_readable(7)->read());
+    std::io::println_i64(owner->read());
+    std::io::println_i64((*owner).read());
+    std::io::println_i64((*owner).value);
+    std::io::println_i64(owner->inline_child.read());
+    std::io::println_i64(owner->next->read());
+    std::io::println_i64(make(6)->read());
+    std::io::println_i64(make_readable(7)->read());
     if (*owner is Node) {
-        ska_rt_println_i64(1);
+        std::io::println_i64(1);
     } else {
-        ska_rt_println_i64(0);
+        std::io::println_i64(0);
     }
     return 0;
 }

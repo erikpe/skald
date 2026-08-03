@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Readable {
     fn read() -> i64;
@@ -30,12 +30,12 @@ class Decorated extends Message {
 }
 
 fn print_readable(ref value: Readable) -> unit {
-    ska_rt_println_i64(value.read());
+    std::io::println_i64(value.read());
 }
 
 fn inspect(ref value: Obj) -> unit {
     if (value is Decorated) {
-        ska_rt_println_i64(((Decorated) value).read());
+        std::io::println_i64(((Decorated) value).read());
     }
 }
 

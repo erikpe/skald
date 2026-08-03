@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Left {
     fn value() -> i64;
@@ -40,8 +40,8 @@ fn main() -> i64 {
     var left: shared Left = leaf;
     var right: shared Right = (shared Right) left;
     var root: shared Root = (shared Root) new Leaf();
-    ska_rt_println_i64(leaf->value());
-    ska_rt_println_i64(right->value());
-    ska_rt_println_i64(root->value());
+    std::io::println_i64(leaf->value());
+    std::io::println_i64(right->value());
+    std::io::println_i64(root->value());
     return 0;
 }

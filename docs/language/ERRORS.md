@@ -41,11 +41,6 @@ and inline-backing ownership-count exhaustion uses that same reporter, while
 invalid ownership state remains a hard compiler-defect trap. Skald has no
 `throw`, `try`, `catch`, or other recoverable runtime-failure construct.
 
-The repository's bootstrap output functions are ordinary external calls. Their
-current runtime contract terminates the process unsuccessfully when a write or
-flush failure is detected. No exact diagnostic text, process status, or signal
-is promised. This does not establish a general Skald panic mechanism.
-
 Foreign code reached through an external declaration may also fail to return
 or may terminate the process. Such behavior lies beyond the guarantees of the
 trusted [foreign-interoperation boundary](MODULES_AND_INTEROP.md#external-function-declarations).
@@ -268,7 +263,7 @@ explicit panic messages selected by library code, not new compiler-known
 termination reasons in the catalog above. Standard I/O adds no recoverable
 value or exception edge, and a failed operation does not create a new cleanup
 guarantee. The runtime byte operations and private `std::io` compiler
-intrinsics, MIR/backend lowering, and all four public functions are
+intrinsics, MIR/backend lowering, and all nine public functions are
 implemented. Library code selects every stable failure above. This section
 defines their integration with the existing
 uncatchable panic policy.
@@ -305,6 +300,6 @@ the exception model and may be implemented before it.
 Diagnostic codes, rendering format, compiler exit codes, phase recovery,
 backend errors, and toolchain reporting belong to compiler documentation,
 including [driver and artifacts](../compiler/DRIVER_AND_ARTIFACTS.md). Runtime
-symbols, exact output-failure implementation, and the
-runtime compatibility contract belong to the
+symbols, exact failure-reporting implementation, and the compatibility
+contract belong to the
 [runtime ABI](../compiler/RUNTIME_ABI.md).

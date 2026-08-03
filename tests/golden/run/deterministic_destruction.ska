@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Root {
     marker: i64;
@@ -10,7 +10,7 @@ class Root {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -34,7 +34,7 @@ class Owner {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -50,7 +50,7 @@ class Leaf {
     }
 
     destroy {
-        ska_rt_println_i64(self.value);
+        std::io::println_i64(self.value);
     }
 }
 

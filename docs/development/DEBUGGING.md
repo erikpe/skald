@@ -118,8 +118,9 @@ results then pass through the floor-quotient correction.
 For exact source `f64 / f64`, HIR and MIR print the portable `div.f64`
 operation. There is no divisor check, failure block, or panic reason; assembly
 uses scalar binary64 division. A floating zero divisor is therefore an
-ordinary input whose infinity or NaN result can be inspected through raw-bit
-runtime observation where the contract fixes those bits.
+ordinary input whose infinity or NaN result can be inspected through canonical
+standard-library formatting; backend-native fixtures remain available when a
+test requires exact representation identity.
 
 Source floating-comparison fixtures print `eq.f64`, `ne.f64`, `lt.f64`,
 `le.f64`, `gt.f64`, or `ge.f64` in MIR. Their assembly must contain

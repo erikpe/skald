@@ -1,7 +1,7 @@
+import std::io;
+
 from std::str import Str;
 
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
 
 fn main() -> i64 {
     var greeting: Str = "hello";
@@ -15,9 +15,9 @@ fn main() -> i64 {
     var independent: u8[] = tail.to_bytes();
     independent[0] = 65u8;
 
-    ska_rt_println_u64(message.len());
-    ska_rt_println_u8(message.byte(5));
-    ska_rt_println_u8(tail.byte(0));
-    ska_rt_println_u8(independent[0]);
+    std::io::println_u64(message.len());
+    std::io::println_u8(message.byte(5));
+    std::io::println_u8(tail.byte(0));
+    std::io::println_u8(independent[0]);
     return 0;
 }

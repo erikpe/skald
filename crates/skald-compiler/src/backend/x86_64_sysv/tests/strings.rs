@@ -172,11 +172,12 @@ fn backend_rejects_unverified_static_provenance() {
 }
 
 #[test]
-fn string_emission_does_not_change_the_public_runtime_abi() {
+fn string_emission_uses_the_conversion_free_runtime_abi() {
     let header = include_str!("../../../../../../runtime/include/skald_runtime.h");
-    assert!(header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(7)"));
-    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v7"));
+    assert!(header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(8)"));
+    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8"));
     assert!(!header.contains("string"));
+    assert!(!header.contains("println"));
 }
 
 #[test]

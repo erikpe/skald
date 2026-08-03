@@ -1,7 +1,7 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn observed() -> i64 {
-    ska_rt_println_i64(90);
+    std::io::println_i64(90);
     return 7;
 }
 
@@ -38,7 +38,7 @@ class Derived extends Root {
 fn main() -> i64 {
     var integer: Derived = Derived();
     var boolean: Derived = Derived(true);
-    ska_rt_println_i64(integer.read());
-    ska_rt_println_i64(boolean.read());
+    std::io::println_i64(integer.read());
+    std::io::println_i64(boolean.read());
     return 0;
 }

@@ -1,5 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+import std::io;
 
 class Counter {
     value: i64;
@@ -18,7 +17,7 @@ fn mixed(
     x8: f64,
     amount: i64
 ) -> unit {
-    ska_rt_println_f64_bits(x8);
+    std::io::println_f64(x8);
     destination.value = destination.value + source.value + amount;
 }
 
@@ -34,6 +33,6 @@ fn main() -> i64 {
         9.5,
         7
     );
-    ska_rt_println_i64(destination.value);
+    std::io::println_i64(destination.value);
     return 0;
 }

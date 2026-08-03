@@ -174,7 +174,7 @@ fn hand_built_conditional_executes_both_branch_directions() {
 fn hand_built_members_construct_mutate_and_print_through_receiver_calls() {
     let program = counter_member_program();
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    output.push_str(println_i64_stub());
+    output.push_str(record_i64_stub());
 
     let result = run_native_assembly_output(&output);
     assert!(result.status.success());
@@ -186,7 +186,7 @@ fn hand_built_members_construct_mutate_and_print_through_receiver_calls() {
 fn hand_built_aliases_mutate_forward_overlap_initialize_and_mix_abi_classes() {
     let (program, _) = alias_counter_program();
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    output.push_str(alias_println_i64_stub());
+    output.push_str(alias_record_i64_stub());
 
     let result = run_native_assembly_output(&output);
     assert!(
@@ -202,7 +202,7 @@ fn hand_built_aliases_mutate_forward_overlap_initialize_and_mix_abi_classes() {
 #[test]
 fn source_aliases_lower_through_the_native_backend() {
     let source = concat!(
-        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "extern fn test_record_i64(value: i64) -> unit;\n",
         "class Counter {\n",
         "    value: i64;\n",
         "    init(value: i64) { self.value = value; }\n",
@@ -214,12 +214,12 @@ fn source_aliases_lower_through_the_native_backend() {
         "fn main() -> i64 {\n",
         "    var counter: Counter = Counter(40);\n",
         "    forward(counter, 10);\n",
-        "    ska_rt_println_i64(counter.value);\n",
+        "    test_record_i64(counter.value);\n",
         "    return 0;\n",
         "}\n",
     );
     let mut output = assembly(source);
-    output.push_str(alias_println_i64_stub());
+    output.push_str(alias_record_i64_stub());
 
     let result = run_native_assembly_output(&output);
     assert!(result.status.success());

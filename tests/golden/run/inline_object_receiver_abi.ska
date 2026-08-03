@@ -1,7 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
-extern fn ska_rt_println_bool(value: bool) -> unit;
+import std::io;
 
 class Padded {
     tag: u8;
@@ -17,10 +14,10 @@ class Padded {
     }
 
     fn observe() -> unit {
-        ska_rt_println_u8(self.tag);
-        ska_rt_println_f64_bits(self.value);
-        ska_rt_println_bool(self.flag);
-        ska_rt_println_i64(self.count);
+        std::io::println_u8(self.tag);
+        std::io::println_f64(self.value);
+        std::io::println_bool(self.flag);
+        std::io::println_i64(self.count);
     }
 
     fn exhausted(
@@ -36,7 +33,7 @@ class Padded {
 fn main() -> i64 {
     var value: Padded = Padded(7u8, 1.5, true, 9);
     value.observe();
-    ska_rt_println_f64_bits(value.exhausted(
+    std::io::println_f64(value.exhausted(
         1, 2.0, 3u, 4.0,
         5u8, 6.0, 7, 8.0,
         9, 10.0, 11, 12.0,

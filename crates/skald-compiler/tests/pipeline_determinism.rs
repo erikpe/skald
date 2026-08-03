@@ -753,27 +753,27 @@ fn object_phase_dump() -> String {
 }
 
 fn polymorphism_phase_dump() -> String {
-    complete_phase_dump(include_str!("../../../tests/golden/run/polymorphism.ska"))
+    complete_golden_phase_dump(include_str!("../../../tests/golden/run/polymorphism.ska"))
 }
 
 fn shared_ownership_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/shared_copy_allocation.ska"
     ))
 }
 
 fn optional_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/optional_shared_profile.ska"
     ))
 }
 
 fn array_phase_dump() -> String {
-    complete_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
+    complete_golden_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
 }
 
 fn integer_operation_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/integer_string_range_guards.ska"
     ))
 }
@@ -813,7 +813,7 @@ fn integer_bitwise_and_shift_diagnostic_dump() -> String {
 }
 
 fn integer_division_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/integer_division_operators.ska"
     ))
 }
@@ -826,7 +826,7 @@ fn integer_division_diagnostic_dump() -> String {
 }
 
 fn floating_division_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/floating_division.ska"
     ))
 }
@@ -847,7 +847,7 @@ fn floating_division_diagnostic_dump() -> String {
 }
 
 fn floating_comparison_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/floating_comparisons.ska"
     ))
 }
@@ -867,13 +867,13 @@ fn floating_comparison_diagnostic_dump() -> String {
 }
 
 fn primitive_operator_profile_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/primitive_operator_profile.ska"
     ))
 }
 
 fn primitive_cast_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/primitive_cast_matrix.ska"
     ))
 }
@@ -890,7 +890,7 @@ fn primitive_cast_diagnostic_dump() -> String {
 }
 
 fn eager_boolean_phase_dump() -> String {
-    complete_phase_dump(include_str!(
+    complete_golden_phase_dump(include_str!(
         "../../../tests/golden/run/eager_boolean_operators.ska"
     ))
 }
@@ -981,11 +981,15 @@ fn string_phase_dump(variant: usize) -> String {
             standard_library.join("std/error.ska"),
             include_str!("../../../std/std/error.ska"),
         ),
+        (
+            standard_library.join("std/io.ska"),
+            include_str!("../../../std/std/io.ska"),
+        ),
     ];
     for index in if variant == 0 {
-        [0, 1, 2, 3, 4, 5]
+        [0, 1, 2, 3, 4, 5, 6]
     } else {
-        [5, 4, 3, 2, 1, 0]
+        [6, 5, 4, 3, 2, 1, 0]
     } {
         write_source(&sources[index].0, sources[index].1);
     }
@@ -1225,6 +1229,27 @@ fn complete_phase_dump(text: &str) -> String {
         dump_mir(&mir),
         assembly,
     )
+}
+
+fn complete_golden_phase_dump(text: &str) -> String {
+    let mut source = text.replace("import std::io;\n\n", "");
+    let mut declarations = String::new();
+    for (public_name, recorder_name, parameter_type) in [
+        ("std::io::println_bool", "test_record_bool", "bool"),
+        ("std::io::println_i64", "test_record_i64", "i64"),
+        ("std::io::println_u64", "test_record_u64", "u64"),
+        ("std::io::println_u8", "test_record_u8", "u8"),
+        ("std::io::println_f64", "test_record_f64", "f64"),
+    ] {
+        if source.contains(public_name) {
+            declarations.push_str(&format!(
+                "extern fn {recorder_name}(value: {parameter_type}) -> unit;\n"
+            ));
+            source = source.replace(public_name, recorder_name);
+        }
+    }
+    declarations.push_str(&source);
+    complete_phase_dump(&declarations)
 }
 
 struct TemporaryArtifacts {

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Value {
     field: i64;
@@ -16,7 +16,7 @@ class Value {
     }
 
     destroy {
-        ska_rt_println_i64(self.field);
+        std::io::println_i64(self.field);
     }
 }
 
@@ -48,8 +48,8 @@ fn cleanup_pair(first: Value, second: Value) -> unit {}
 fn main() -> i64 {
     var source: Value = Value(10);
     var other: Value = Value(20);
-    ska_rt_println_i64(crowded(1, 2, 3, 4, 5, 6, source, source, 7));
+    std::io::println_i64(crowded(1, 2, 3, 4, 5, 6, source, source, 7));
     cleanup_pair(source, other);
-    ska_rt_println_i64(recurse(source, true));
+    std::io::println_i64(recurse(source, true));
     return 0;
 }

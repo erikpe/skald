@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Value {
     number: i64;
@@ -16,7 +16,7 @@ class Value {
     }
 
     destroy {
-        ska_rt_println_i64(300 + self.number);
+        std::io::println_i64(300 + self.number);
     }
 }
 
@@ -25,7 +25,7 @@ fn produce(number: i64) -> Value {
 }
 
 fn observe(value: Value) -> unit {
-    ska_rt_println_i64(value.number);
+    std::io::println_i64(value.number);
 }
 
 fn main() -> i64 {
@@ -36,8 +36,8 @@ fn main() -> i64 {
     direct = produce(3);
     observe(Value(4));
 
-    ska_rt_println_i64(direct.number);
-    ska_rt_println_i64(copied.number);
-    ska_rt_println_i64(grouped.number);
+    std::io::println_i64(direct.number);
+    std::io::println_i64(copied.number);
+    std::io::println_i64(grouped.number);
     return 0;
 }

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Animal {
     value: i64;
@@ -47,8 +47,8 @@ fn main() -> i64 {
     var source: shared Animal = new Dog(20, 7);
     var checked: shared Dog = copy_checked(source);
     var produced: shared Animal = new Animal(copy *new Dog(30, 9));
-    ska_rt_println_i64(sliced->read());
-    ska_rt_println_i64(checked->total());
-    ska_rt_println_i64(produced->read());
+    std::io::println_i64(sliced->read());
+    std::io::println_i64(checked->total());
+    std::io::println_i64(produced->read());
     return 0;
 }

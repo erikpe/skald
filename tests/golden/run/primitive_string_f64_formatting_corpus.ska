@@ -1,7 +1,6 @@
 import std::io as io;
 from std::str import Str;
 
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
 
 fn write_line(text: Str) -> unit {
     var newline: Str = "\n";
@@ -23,7 +22,7 @@ fn observe(line: Str) -> i64 {
         write_line("invalid formatter output");
         return 1;
     }
-    ska_rt_println_f64_bits(round_trip!);
+    io::println_f64(round_trip!);
     return 0;
 }
 

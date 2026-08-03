@@ -143,11 +143,11 @@ pub(super) fn lower_fixture_logical(
 
 pub(super) fn native_output(mir: &MirProgram) -> std::process::Output {
     let mut assembly = emit_assembly(Target::X86_64SysV, mir).unwrap();
-    assembly.push_str(println_digit_stub());
+    assembly.push_str(record_digit_stub());
     run_native_assembly_output(&assembly)
 }
 
-fn println_digit_stub() -> &'static str {
+fn record_digit_stub() -> &'static str {
     concat!(
         ".text\n",
         ".globl ska_rt_alloc\n",
@@ -160,9 +160,9 @@ fn println_digit_stub() -> &'static str {
         "ska_rt_free:\n",
         "    jmp free\n",
         ".size ska_rt_free, .-ska_rt_free\n",
-        ".globl ska_rt_println_i64\n",
-        ".type ska_rt_println_i64, @function\n",
-        "ska_rt_println_i64:\n",
+        ".globl test_record_i64\n",
+        ".type test_record_i64, @function\n",
+        "test_record_i64:\n",
         "    sub rsp, 8\n",
         "    add dil, 48\n",
         "    mov byte ptr [rsp], dil\n",
@@ -174,6 +174,6 @@ fn println_digit_stub() -> &'static str {
         "    syscall\n",
         "    add rsp, 8\n",
         "    ret\n",
-        ".size ska_rt_println_i64, .-ska_rt_println_i64\n",
+        ".size test_record_i64, .-test_record_i64\n",
     )
 }

@@ -13,8 +13,10 @@ conversion behavior.
 fixture builders. Adding `std::str::format_f64` and then its shared
 `std::str::bigunsigned_helper` dependency required repeating each new module in
 resolver intrinsic tests, MIR I/O fixtures, driver provider tests, and
-cross-process pipeline fixtures. A future companion can silently leave a
-fixture with an incomplete reachable module closure.
+cross-process pipeline fixtures. Migrating golden programs to `std::io` again
+required extending the cross-process string fixture independently. A future
+companion can silently leave a fixture with an incomplete reachable module
+closure.
 
 **Evidence:** The canonical constants and general loader live in
 `crates/skald-compiler/src/test_support.rs`, while additional source lists

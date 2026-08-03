@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Root {
     value: i64;
@@ -39,16 +39,16 @@ fn produce() -> shared Obj {
 
 fn main() -> i64 {
     var holder: Holder = Holder();
-    ska_rt_println_i64(((Leaf) *holder.edge).read());
+    std::io::println_i64(((Leaf) *holder.edge).read());
     ((Leaf) *holder.edge).extra = 7;
     var copied: Leaf = (Leaf) *holder.edge;
     var sliced: Root = (Leaf) *holder.edge;
     var assigned: Leaf = Leaf(0, 0);
     assigned = (Leaf) *holder.edge;
-    ska_rt_println_i64(inspect((Leaf) *holder.edge));
-    ska_rt_println_i64(copied.read());
-    ska_rt_println_i64(sliced.value);
-    ska_rt_println_i64(assigned.read());
-    ska_rt_println_i64(((Leaf) *produce()).read());
+    std::io::println_i64(inspect((Leaf) *holder.edge));
+    std::io::println_i64(copied.read());
+    std::io::println_i64(sliced.value);
+    std::io::println_i64(assigned.read());
+    std::io::println_i64(((Leaf) *produce()).read());
     return 0;
 }

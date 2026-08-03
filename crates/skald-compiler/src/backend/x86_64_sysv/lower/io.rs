@@ -1,4 +1,4 @@
-//! Standard-I/O instruction selection for runtime ABI version 7.
+//! Standard-I/O instruction selection for runtime ABI version 8.
 
 use crate::{
     backend::BackendError,
@@ -95,7 +95,7 @@ impl InstructionSelector<'_, '_> {
 
         // An empty descriptor has no backing header to inspect. The runtime
         // receives a null pointer and zero length, which is valid for every
-        // version-7 byte operation and never requires a dereference.
+        // version-8 byte operation and never requires a dereference.
         self.output.push(Instruction::Test(Register::Rax));
         self.output.push(Instruction::JumpIfEqual(empty.clone()));
         self.output.push(Instruction::Move {

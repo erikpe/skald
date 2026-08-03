@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     value: i64;
@@ -8,7 +8,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.value);
+        std::io::println_i64(self.value);
     }
 }
 
@@ -20,7 +20,7 @@ class Inner {
     }
 
     destroy {
-        ska_rt_println_i64(30);
+        std::io::println_i64(30);
     }
 }
 
@@ -32,7 +32,7 @@ class Root {
     }
 
     destroy {
-        ska_rt_println_i64(40);
+        std::io::println_i64(40);
     }
 }
 
@@ -47,7 +47,7 @@ class Holder extends Root {
     }
 
     destroy {
-        ska_rt_println_i64(50);
+        std::io::println_i64(50);
     }
 
     mut fn replace(value: shared Trace) -> unit {

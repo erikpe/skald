@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Value {
     tag: u8;
@@ -19,7 +19,7 @@ class Value {
     }
 
     destroy {
-        ska_rt_println_i64(self.field);
+        std::io::println_i64(self.field);
     }
 }
 
@@ -29,7 +29,7 @@ class Empty {
     copy(ref other: Empty) {}
 
     destroy {
-        ska_rt_println_i64(2);
+        std::io::println_i64(2);
     }
 }
 
@@ -56,13 +56,13 @@ fn main() -> i64 {
     var source: Value = Value(10, 7u8);
     var other: Value = Value(20, 8u8);
     var chosen: Value = choose(source, other, true);
-    ska_rt_println_i64(chosen.field);
+    std::io::println_i64(chosen.field);
     var alternative: Value = choose(source, other, false);
-    ska_rt_println_i64(alternative.field);
+    std::io::println_i64(alternative.field);
     var nested: Value = recursive(source, true);
-    ska_rt_println_i64(nested.field);
+    std::io::println_i64(nested.field);
     var method: Value = chosen.duplicate(1, 2, 3, 4, 5);
-    ska_rt_println_i64(method.field);
+    std::io::println_i64(method.field);
     var empty: Empty = Empty();
     var empty_copy: Empty = copy_empty(empty);
     return 0;

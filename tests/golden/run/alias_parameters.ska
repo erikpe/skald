@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Counter {
     value: i64;
@@ -56,24 +56,24 @@ fn choose(mut ref counter: Counter, flag: bool) -> unit {
 
 fn main() -> i64 {
     var counter: Counter = Counter(10);
-    ska_rt_println_i64(read(counter));
+    std::io::println_i64(read(counter));
 
     forward(counter, 5);
-    ska_rt_println_i64(read(counter));
+    std::io::println_i64(read(counter));
 
     touch_twice(counter, counter);
-    ska_rt_println_i64(read(counter));
+    std::io::println_i64(read(counter));
 
     counter.add_from(counter);
-    ska_rt_println_i64(read(counter));
+    std::io::println_i64(read(counter));
 
     var snapshot: Snapshot = Snapshot(counter);
-    ska_rt_println_i64(snapshot.value);
+    std::io::println_i64(snapshot.value);
 
     choose(counter, true);
-    ska_rt_println_i64(read(counter));
+    std::io::println_i64(read(counter));
 
     forward(counter, read(counter));
-    ska_rt_println_i64(read(counter));
+    std::io::println_i64(read(counter));
     return 7;
 }

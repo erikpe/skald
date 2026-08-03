@@ -9,7 +9,7 @@ use crate::{
 };
 
 const SHARED_OPERANDS: &str = concat!(
-    "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+    "extern fn test_record_i64(value: i64) -> unit;\n",
     "class Trace {\n",
     "  marker: i64;\n",
     "  truth: bool;\n",
@@ -18,7 +18,7 @@ const SHARED_OPERANDS: &str = concat!(
     "    self.truth = truth;\n",
     "  }\n",
     "  fn read() -> bool { return self.truth; }\n",
-    "  destroy { ska_rt_println_i64(self.marker); }\n",
+    "  destroy { test_record_i64(self.marker); }\n",
     "}\n",
     "fn make(marker: i64, truth: bool) -> shared Trace {\n",
     "  return new Trace(marker, truth);\n",
@@ -236,12 +236,12 @@ fn produced_arrays_elements_and_anchors_follow_logical_selection() {
 }
 
 const RETAINED_SHARED_OPERANDS: &str = concat!(
-    "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+    "extern fn test_record_i64(value: i64) -> unit;\n",
     "class Item {\n",
     "  marker: i64;\n",
     "  init(marker: i64) { self.marker = marker; }\n",
     "  fn read() -> bool { return true; }\n",
-    "  destroy { ska_rt_println_i64(self.marker); }\n",
+    "  destroy { test_record_i64(self.marker); }\n",
     "}\n",
     "fn inspect(value: shared Item) -> bool { return value->read(); }\n",
     "fn evaluate() -> bool {\n",

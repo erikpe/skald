@@ -1,8 +1,8 @@
 # Runtime ABI
 
 Status: authoritative for the current compiler/runtime compatibility contract,
-public C header, platform requirements, bootstrap output records, and runtime
-responsibility boundary. Explicitly marked frozen additions confirm when a
+public C header, platform requirements, and runtime responsibility boundary.
+Explicitly marked frozen additions confirm when a
 selected future compiler feature leaves that boundary unchanged.
 Source-visible external declarations are owned by
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md), and
@@ -24,11 +24,10 @@ shared-owner machinery.
 The current public surface is:
 
 ```c
-#include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(7)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v7
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(8)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8
 
 void SKALD_RUNTIME_ABI_MARKER(void);
 uint64_t ska_rt_abi_version(void);
@@ -43,29 +42,15 @@ int64_t ska_rt_io_open(const uint8_t* path, uint64_t path_length, uint8_t mode);
 int64_t ska_rt_io_read(int64_t handle, uint8_t* destination, uint64_t capacity);
 int64_t ska_rt_io_write(int64_t handle, const uint8_t* source, uint64_t length);
 int64_t ska_rt_io_close(int64_t handle);
-
-void ska_rt_println_i64(int64_t value);
-void ska_rt_println_u64(uint64_t value);
-void ska_rt_println_u8(uint8_t value);
-void ska_rt_println_f64_bits(double value);
-void ska_rt_println_bool(bool value);
 ```
 
-These output functions are bootstrap observability facilities. They are not a
-general formatting API, recoverable I/O API, or the standard I/O API.
-The compiler does not recognize their names specially: Skald programs declare
-and call them through the ordinary restricted external-function mechanism.
-The frozen
-[primitive string conversion contract](../language/STRINGS.md#frozen-primitive-textual-conversions)
-replaces their repository observability role only after its ordinary
-standard-library methods are implemented. Their eventual removal and the
-required ABI-version transition are ordered by the active
-[primitive string conversions roadmap](../roadmaps/PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md);
-they remain part of the current version-7 surface until that transition.
+Primitive formatting, parsing, and line output are ordinary standard-library
+code over `Str` and the byte-I/O boundary. The runtime has no primitive text
+conversion or scalar observation entry point.
 
 ## Byte I/O ABI
 
-ABI version 7 implements the five host operations over handles, scalars, and
+ABI version 8 implements the five host operations over handles, scalars, and
 byte pointer/length pairs shown in the public surface above. They form the
 runtime half of the [standard I/O compiler and runtime contract](IO.md). The
 compiler's canonical intrinsic identities, typed I/O HIR, verified
@@ -106,9 +91,9 @@ growth, whole-input loop, partial-write completion, public error message,
 
 ## Version and link compatibility
 
-ABI version 7 uses the exported no-op marker `ska_rt_abi_v7`. Every generated
+ABI version 8 uses the exported no-op marker `ska_rt_abi_v8`. Every generated
 process entry wrapper calls that exact symbol before entering Skald code. A
-version-6 or otherwise incompatible runtime archive therefore fails
+version-7 or otherwise incompatible runtime archive therefore fails
 normal linking with an undefined-symbol error rather than producing an
 executable with mismatched compiler/runtime assumptions.
 
@@ -135,15 +120,12 @@ The current runtime implementation requires:
   close-on-exec support;
 - the standard-error descriptor for allocation-free panic records;
 - eight-bit bytes (`CHAR_BIT == 8`);
-- IEC 60559 / IEEE-754 floating-point semantics;
-- a binary C `double` with 64-bit storage, 53-bit significand, and the
-  binary64 exponent range; and
 - exact-width `int64_t`, `uint64_t`, and `uint8_t` types from `<stdint.h>`.
 
-The implementation enforces the byte and binary64 properties at compile time.
-The direct contract harness repeats them independently so a platform mismatch
-fails while building the runtime suite. The current compiler target maps Skald
-primitive values to these C types as described in the
+The implementation enforces the byte property at compile time. The direct
+contract harness repeats the runtime's platform requirements independently so
+a mismatch fails while building the runtime suite. The current compiler target
+maps Skald primitive values to these C types as described in the
 [external C ABI](BACKEND.md#external-c-abi).
 
 ## Allocation and deallocation
@@ -166,46 +148,9 @@ not know object layout, initialize reference counts, inspect metadata, invoke
 finalizers, retain owners, or release owners. `malloc`, `free`, and the common
 unrecoverable termination helper remain implementation details.
 
-## Output records
-
-Every successful output call writes one record to C `stdout` and flushes it
-before returning. Records contain only the bytes specified below; there is no
-locale-dependent formatting, carriage return, padding, grouping, or trailing
-whitespace beyond the final line feed (`0x0a`). Consecutive calls produce
-consecutive records in call order.
-
-| Function | Successful record |
-|---|---|
-| `ska_rt_println_i64` | Shortest signed ASCII decimal spelling, including one leading `-` for negative values, then LF. The complete `int64_t` range is supported. |
-| `ska_rt_println_u64` | Shortest unsigned ASCII decimal spelling of the complete `uint64_t` range, then LF. |
-| `ska_rt_println_u8` | Shortest unsigned ASCII decimal spelling in `0` through `255`, then LF. |
-| `ska_rt_println_bool` | Lowercase `true` or `false`, then LF. |
-| `ska_rt_println_f64_bits` | Lowercase `0x`, exactly 16 lowercase hexadecimal digits for the received binary64 bits from most- to least-significant nibble, then LF. |
-
-Integer zero is written as `0`; positive integers have no sign; and no integer
-record has leading zeroes. Signed minimum is handled without signed overflow.
-
-Floating output observes representation rather than formatting a decimal
-number. It distinguishes positive and negative zero and preserves the received
-bits of subnormals, infinities, and NaNs. It does not promise how compiler or
-hardware arithmetic produced a NaN payload before the call.
-
-## Detected output failure
-
-Each output function requires a complete `fwrite` and, when that succeeds, a
-successful following `fflush`. If either reports failure, the operation does
-not return to Skald and the process terminates unsuccessfully. The ABI does not
-promise diagnostic text, an exact exit status, or a particular terminating
-signal. A failed write may already have made a partial record externally
-visible.
-
-The current implementation terminates through `_Exit(EXIT_FAILURE)`, avoiding
-another implicit flush of the failed stream. That mechanism is private; the
-stable contract is unsuccessful termination without a normal return.
-
 ## Panic-reporting ABI
 
-ABI version 7 exports this reporting entry point:
+ABI version 8 exports this reporting entry point:
 
 ```c
 _Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
@@ -251,9 +196,9 @@ not carried by this ABI and remain deferred.
 
 ## Responsibility boundary
 
-The current version-7 runtime owns its version/link guard, checked byte
-allocation/deallocation, panic reporter, five bootstrap output operations, and
-five narrow handle/byte I/O operations above. It has no public ABI for:
+The current version-8 runtime owns its version/link guard, checked byte
+allocation/deallocation, panic reporter, and five narrow handle/byte I/O
+operations above. It has no public ABI for:
 
 - shared ownership or reference counting;
 - object, class, interface, or dynamic-type metadata;
@@ -294,12 +239,12 @@ runtime symbol.
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,
 descriptor materialization, and immortal retain/release behavior are generated
-compiler responsibilities; the runtime marker remains version 7.
+compiler responsibilities; the runtime marker remains version 8.
 
 Primitive integer comparisons likewise add no public C symbol or ABI revision.
 The x86-64 backend selects signed or unsigned target conditions and
 materializes canonical boolean results entirely in generated code; the runtime
-marker remains version 7.
+marker remains version 8.
 
 ## Loop ABI boundary
 
@@ -307,7 +252,7 @@ The implemented `while`, `break`, and `continue`
 [source contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits)
 and [phase representation](PHASES_AND_IR.md#while-loop-representation)
 add no public C symbol, runtime state, or ABI-version change. The runtime marker
-remains `ska_rt_abi_v7`.
+remains `ska_rt_abi_v8`.
 
 Loop execution is generated control flow. The runtime never receives or
 interprets:
@@ -321,8 +266,8 @@ interprets:
 - iteration counts or optimizer loop metadata.
 
 Condition and body expressions may independently use existing runtime
-allocation, deallocation, panic, or bootstrap-output entry points under their
-ordinary contracts. Deterministic destruction, shared retain/release, optional
+allocation, deallocation, panic, or byte-I/O entry points under their ordinary
+contracts. Deterministic destruction, shared retain/release, optional
 state, array lifecycle, cleanup selection, and storage lifetime transitions
 remain compiler-generated operations. Repetition does not create a runtime
 loop service around those operations.
@@ -342,7 +287,7 @@ new runtime harness.
 The
 [implemented primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 adds no public C symbol, runtime-managed value, or ABI-version change. The
-runtime marker remains `ska_rt_abi_v7`.
+runtime marker remains `ska_rt_abi_v8`.
 
 Wrapping arithmetic, division and remainder, bitwise operations, shifts,
 floating operations and comparisons, boolean operations, short-circuit
@@ -372,7 +317,7 @@ The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
 adds no public C symbol, runtime-managed value, or ABI-version change. All
 twenty-two pure cells are generated inline and retain the existing
-`ska_rt_abi_v7` marker. The compiler catalogs the checked conversion's
+`ska_rt_abi_v8` marker. The compiler catalogs the checked conversion's
 distinct termination reason and exact static message while preserving that
 marker. x86-64 executes the checked diamond and reaches the existing
 reporter on failure without adding a runtime symbol or conversion helper.
@@ -398,7 +343,7 @@ harnesses.
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds
-eight directly linked C harnesses:
+six directly linked C harnesses:
 
 - the contract harness checks the marker, numeric version, and platform
   requirements;
@@ -413,17 +358,12 @@ eight directly linked C harnesses:
   post-close failure;
 - the I/O-defect harness uses child processes to keep invalid selectors,
   modes, handles, and pointer/length pairs on the private hard-failure path;
-- the output harness compares successful records byte for byte, including
-  range boundaries and exact binary64 patterns;
-- the output-failure harness closes child-process stdout and requires every
-  output function to terminate unsuccessfully; and
 - the panic harness captures exact stderr for empty, ordinary, embedded-zero,
   and embedded-newline messages, verifies reporter-output failure, and keeps
   invalid reporter input on a silent private hard-failure path.
 
 [Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that a stale
-version-6 archive fails the version-7 link guard without replacing an existing
-output artifact. Native golden programs exercise ordinary external calls and
-public standard-I/O functions over private intrinsic lowering through the real
-archive, including checked ranges, ordinary negative host failures, and exact
-stdout expectations.
+version-7 archive fails the version-8 link guard without replacing an existing
+output artifact. Native golden programs exercise public standard-I/O functions
+over private intrinsic lowering through the real archive, including checked
+ranges, ordinary negative host failures, and exact stdout expectations.

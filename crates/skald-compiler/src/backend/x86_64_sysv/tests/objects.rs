@@ -154,7 +154,7 @@ fn lowers_initializer_and_method_bodies_with_identity_based_symbols() {
     assert!(output.contains("call .Lska.class.main.Counter.c0.method.get_via_receiver.m2"));
     assert!(output.contains("call .Lska.fn.main.sum.f1"));
     assert!(output.contains("mov qword ptr [rbp - 8], rdi"));
-    assert_system_assembler_accepts(&format!("{output}\n{}", println_i64_stub()));
+    assert_system_assembler_accepts(&format!("{output}\n{}", record_i64_stub()));
 }
 
 #[test]
@@ -246,7 +246,7 @@ fn alias_homes_are_pointer_sized_and_indirect_places_lower_deterministically() {
     assert!(first.contains(".Lska.class.main.Counter.c0.init.i1.block_0:"));
     assert!(first.contains("call .Lska.class.main.Counter.c0.init.i1"));
     assert!(first.contains("call .Lska.class.main.Counter.c0.method.add_from_alias.m3"));
-    assert_system_assembler_accepts(&format!("{first}\n{}", println_i64_stub()));
+    assert_system_assembler_accepts(&format!("{first}\n{}", record_i64_stub()));
 }
 
 #[test]
@@ -264,27 +264,27 @@ fn lowers_exhausted_receiver_alias_and_sse_arguments_through_ordered_stack_slots
     assert_system_assembler_accepts(&output);
 }
 
-pub(super) fn println_i64_stub() -> &'static str {
+pub(super) fn record_i64_stub() -> &'static str {
     concat!(
         ".section .rodata\n",
-        ".Lprintln_i64_output:\n",
+        ".Lrecord_i64_output:\n",
         "    .ascii \"42\\n\"\n",
         ".text\n",
-        ".globl ska_rt_println_i64\n",
-        ".type ska_rt_println_i64, @function\n",
-        "ska_rt_println_i64:\n",
+        ".globl test_record_i64\n",
+        ".type test_record_i64, @function\n",
+        "test_record_i64:\n",
         "    cmp rdi, 42\n",
-        "    jne .Lprintln_i64_bad_value\n",
+        "    jne .Lrecord_i64_bad_value\n",
         "    mov rax, 1\n",
         "    mov rdi, 1\n",
-        "    lea rsi, [rip + .Lprintln_i64_output]\n",
+        "    lea rsi, [rip + .Lrecord_i64_output]\n",
         "    mov rdx, 3\n",
         "    syscall\n",
         "    ret\n",
-        ".Lprintln_i64_bad_value:\n",
+        ".Lrecord_i64_bad_value:\n",
         "    mov rax, 60\n",
         "    mov rdi, 99\n",
         "    syscall\n",
-        ".size ska_rt_println_i64, .-ska_rt_println_i64\n",
+        ".size test_record_i64, .-test_record_i64\n",
     )
 }

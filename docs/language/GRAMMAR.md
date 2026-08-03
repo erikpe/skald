@@ -715,7 +715,7 @@ calls, loops, arrays, aliases, and intrinsic declarations. It adds no token,
 precedence level, expression shape, statement shape, or declaration form.
 This grammar therefore already describes its source shapes. The `std::io`
 module installs its private canonical intrinsic declarations and implements
-all four public functions using existing language forms.
+all nine public functions using existing language forms.
 
 The implemented
 [primitive string conversion API](STRINGS.md#frozen-primitive-textual-conversions)

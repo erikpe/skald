@@ -2,7 +2,6 @@ import std::io;
 from std::str import Str;
 import std::str::parse_f64 as parse_f64;
 
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
 
 fn write_line(text: Str) -> unit {
     var newline: Str = "\n";
@@ -22,7 +21,7 @@ fn observe_parsed(parsed: f64?) -> unit {
         write_line("nan");
         return;
     }
-    ska_rt_println_f64_bits(value);
+    std::io::println_f64(value);
     return;
 }
 

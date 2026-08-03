@@ -87,8 +87,8 @@ fn malformed_copy_mir_is_rejected_before_instruction_selection() {
 #[test]
 fn allocates_and_destroys_bounded_full_expression_temporaries() {
     let mut program = lower_text(concat!(
-        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
-        "class Value { value: i64; init(value: i64) { self.value = value; } destroy { ska_rt_println_i64(self.value); } }\n",
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Value { value: i64; init(value: i64) { self.value = value; } destroy { test_record_i64(self.value); } }\n",
         "fn main() -> i64 { var source: Value = Value(42); return 0; }\n",
     ));
     let class = ClassId::new(0);
@@ -144,7 +144,7 @@ fn allocates_and_destroys_bounded_full_expression_temporaries() {
     );
 
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    output.push_str(println_i64_stub());
+    output.push_str(record_i64_stub());
     let result = run_native_assembly_output(&output);
     assert!(
         result.status.success(),

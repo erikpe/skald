@@ -6,9 +6,7 @@ This document defines the source-level contract for Skald's first standard I/O
 module. The installed module exposes its public functions as ordinary Skald
 code over five private byte-array intrinsics. The compiler resolves and types
 intrinsic calls into dedicated I/O HIR and verified MIR, and x86-64 lowers
-them to the narrow host byte operations provided by runtime ABI version 7.
-The existing scalar print helpers remain available as a separate bootstrap
-observability facility.
+them to the narrow host byte operations provided by runtime ABI version 8.
 
 The compiler and runtime contract behind this API is specified in
 [Standard I/O compiler and runtime contract](../compiler/IO.md). Current
@@ -114,7 +112,6 @@ so this first API does not promise cleanup after an earlier operation fails.
 This initial module does not include:
 
 - format strings, interpolation, configurable numeric formatting, or parsing;
-- replacement or removal of the scalar observability print helpers;
 - public files, handles, streams, or incremental read/write APIs;
 - file creation, writing, appending, seeking, metadata, or directory operations;
 - line iteration, buffering controls, explicit flushing, asynchronous I/O, or

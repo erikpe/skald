@@ -1,5 +1,4 @@
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
+import std::io;
 
 fn byte_or(
     ref storage: u8[],
@@ -43,18 +42,18 @@ fn main() -> i64 {
     storage[3] = 40u8;
     storage[4] = 50u8;
 
-    ska_rt_println_u8(byte_or(storage, 1u, 3u, 0u, 80u8));
-    ska_rt_println_u8(byte_or(storage, 1u, 3u, 2u, 81u8));
-    ska_rt_println_u8(
+    std::io::println_u8(byte_or(storage, 1u, 3u, 0u, 80u8));
+    std::io::println_u8(byte_or(storage, 1u, 3u, 2u, 81u8));
+    std::io::println_u8(
         byte_or(storage, 1u, 3u, 18446744073709551615u, 90u8)
     );
-    ska_rt_println_u8(
+    std::io::println_u8(
         byte_or(storage, 1u, 3u, 9223372036854775808u, 91u8)
     );
 
-    ska_rt_println_u64(range_length_or(storage, 1u, 3u, 0u, 3u, 800u));
-    ska_rt_println_u64(range_length_or(storage, 1u, 3u, 1u, 2u, 801u));
-    ska_rt_println_u64(
+    std::io::println_u64(range_length_or(storage, 1u, 3u, 0u, 3u, 800u));
+    std::io::println_u64(range_length_or(storage, 1u, 3u, 1u, 2u, 801u));
+    std::io::println_u64(
         range_length_or(
             storage,
             1u,
@@ -64,7 +63,7 @@ fn main() -> i64 {
             900u
         )
     );
-    ska_rt_println_u64(
+    std::io::println_u64(
         range_length_or(
             storage,
             1u,

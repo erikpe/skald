@@ -1,4 +1,4 @@
-extern fn ska_rt_println_u8(value: u8) -> unit;
+import std::io;
 
 fn seventh(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8) -> u8 {
     return g;
@@ -10,14 +10,14 @@ fn step(value: u8) -> u8 {
 
 fn main() -> i64 {
     var one: u8 = 1u8;
-    ska_rt_println_u8(0u8);
-    ska_rt_println_u8(one);
-    ska_rt_println_u8(255u8);
-    ska_rt_println_u8(255u8 + 1u8);
-    ska_rt_println_u8(0u8 - 1u8);
-    ska_rt_println_u8(200u8 * 2u8);
-    ska_rt_println_u8(step(one));
-    ska_rt_println_u8(step(step(250u8)));
-    ska_rt_println_u8(seventh(1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8));
+    std::io::println_u8(0u8);
+    std::io::println_u8(one);
+    std::io::println_u8(255u8);
+    std::io::println_u8(255u8 + 1u8);
+    std::io::println_u8(0u8 - 1u8);
+    std::io::println_u8(200u8 * 2u8);
+    std::io::println_u8(step(one));
+    std::io::println_u8(step(step(250u8)));
+    std::io::println_u8(seventh(1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8));
     return 0;
 }

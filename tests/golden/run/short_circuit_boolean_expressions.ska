@@ -1,5 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Truth {
     fn truth() -> bool;
@@ -41,7 +40,7 @@ fn consume(value: bool) -> bool {
 }
 
 fn output(value: bool, marker: i64) -> bool {
-    ska_rt_println_i64(marker);
+    std::io::println_i64(marker);
     return value;
 }
 
@@ -64,19 +63,19 @@ fn returned(left: bool, right: bool) -> bool {
 }
 
 fn main() -> i64 {
-    ska_rt_println_bool(false && false);
-    ska_rt_println_bool(false && true);
-    ska_rt_println_bool(true && false);
-    ska_rt_println_bool(true && true);
-    ska_rt_println_bool(false || false);
-    ska_rt_println_bool(false || true);
-    ska_rt_println_bool(true || false);
-    ska_rt_println_bool(true || true);
+    std::io::println_bool(false && false);
+    std::io::println_bool(false && true);
+    std::io::println_bool(true && false);
+    std::io::println_bool(true && true);
+    std::io::println_bool(false || false);
+    std::io::println_bool(false || true);
+    std::io::println_bool(true || false);
+    std::io::println_bool(true || true);
 
-    ska_rt_println_bool(false || true && false);
-    ska_rt_println_bool((false || true) && false);
-    ska_rt_println_bool(true && true && false || true);
-    ska_rt_println_bool(true && (false || true));
+    std::io::println_bool(false || true && false);
+    std::io::println_bool((false || true) && false);
+    std::io::println_bool(true && true && false || true);
+    std::io::println_bool(true && (false || true));
 
     var optional: bool? = true;
     var flags: bool[] = bool[](2u);
@@ -84,56 +83,56 @@ fn main() -> i64 {
     flags[1] = true;
     var probe: Probe = Probe(true);
 
-    ska_rt_println_bool(optional! && probe.flag);
-    ska_rt_println_bool(optional is some && probe is Probe);
-    ska_rt_println_bool(flags[0] || flags[1]);
-    ska_rt_println_bool(true == probe.flag && !false);
+    std::io::println_bool(optional! && probe.flag);
+    std::io::println_bool(optional is some && probe is Probe);
+    std::io::println_bool(flags[0] || flags[1]);
+    std::io::println_bool(true == probe.flag && !false);
 
-    ska_rt_println_bool(direct(true) && Probe.select(false || true));
-    ska_rt_println_bool(probe.truth() && interface_truth(probe));
+    std::io::println_bool(direct(true) && Probe.select(false || true));
+    std::io::println_bool(probe.truth() && interface_truth(probe));
 
     var stored: bool = false && probe.observe(true, 9);
     stored = true || probe.observe(false, 8);
     probe.flag = stored && true;
     flags[0] = stored || false;
-    ska_rt_println_bool(consume(stored && flags[0]));
+    std::io::println_bool(consume(stored && flags[0]));
     var initialized: Probe = Probe(stored || false);
-    ska_rt_println_bool(initialized.truth());
-    ska_rt_println_bool(choose_probe(stored && true)->truth());
-    ska_rt_println_bool(flags[choose_index(false || true)]);
-    ska_rt_println_bool(returned(false, true));
-    ska_rt_println_i64(probe.sequence);
+    std::io::println_bool(initialized.truth());
+    std::io::println_bool(choose_probe(stored && true)->truth());
+    std::io::println_bool(flags[choose_index(false || true)]);
+    std::io::println_bool(returned(false, true));
+    std::io::println_i64(probe.sequence);
 
     var argument_probe: Probe = Probe(false);
-    ska_rt_println_bool(argument_probe.observe(false || true, 1));
-    ska_rt_println_i64(argument_probe.sequence);
+    std::io::println_bool(argument_probe.observe(false || true, 1));
+    std::io::println_i64(argument_probe.sequence);
 
-    ska_rt_println_bool(false && output(true, 90));
-    ska_rt_println_bool(true || output(false, 91));
-    ska_rt_println_bool(true && output(true, 92));
-    ska_rt_println_bool(false || output(true, 93));
+    std::io::println_bool(false && output(true, 90));
+    std::io::println_bool(true || output(false, 91));
+    std::io::println_bool(true && output(true, 92));
+    std::io::println_bool(false || output(true, 93));
 
     var effects: Probe = Probe(false);
-    ska_rt_println_bool(
+    std::io::println_bool(
         effects.observe(false, 1) && effects.observe(true, 2)
     );
-    ska_rt_println_i64(effects.sequence);
-    ska_rt_println_bool(
+    std::io::println_i64(effects.sequence);
+    std::io::println_bool(
         effects.observe(true, 3) || effects.observe(false, 4)
     );
-    ska_rt_println_i64(effects.sequence);
-    ska_rt_println_bool(
+    std::io::println_i64(effects.sequence);
+    std::io::println_bool(
         effects.observe(true, 5)
             && effects.observe(false, 6)
             || effects.observe(true, 7)
     );
-    ska_rt_println_i64(effects.sequence);
+    std::io::println_i64(effects.sequence);
 
     if (false && effects.observe(true, 8)) {
         return 1;
     }
     elif (true || effects.observe(false, 9)) {
-        ska_rt_println_bool(true);
+        std::io::println_bool(true);
     }
 
     var first: bool = true;
@@ -142,7 +141,7 @@ fn main() -> i64 {
         iterations = iterations + 1;
         first = iterations < 2;
     }
-    ska_rt_println_i64(iterations);
-    ska_rt_println_i64(effects.sequence);
+    std::io::println_i64(iterations);
+    std::io::println_i64(effects.sequence);
     return 0;
 }

@@ -112,11 +112,11 @@ fn materializes_class_and_interface_casts_through_nested_stack_pressure() {
 fn successful_cast_preserves_temporary_cleanup_order() {
     let source = format!(
         "{TYPE_OPERATION_TYPES}\
-         extern fn ska_rt_println_i64(value: i64) -> unit;\n\
+         extern fn test_record_i64(value: i64) -> unit;\n\
          class Token {{\n\
            value: i64;\n\
            init(value: i64) {{ self.value = value; }}\n\
-           destroy {{ ska_rt_println_i64(self.value); }}\n\
+           destroy {{ test_record_i64(self.value); }}\n\
          }}\n\
          fn consume(value: Token) -> unit {{}}\n\
          fn cast_leaf(ref any: Obj) -> i64 {{\n\
@@ -126,7 +126,7 @@ fn successful_cast_preserves_temporary_cleanup_order() {
          fn main() -> i64 {{ var leaf: Leaf = Leaf(); return cast_leaf(leaf); }}\n"
     );
     let mut output = assembly(&source);
-    output.push_str(println_i64_stub());
+    output.push_str(record_i64_stub());
 
     let result = run_native_assembly_output(&output);
     assert_eq!(result.status.code(), Some(28));
@@ -208,19 +208,19 @@ fn checked_cast_places_execute_through_owning_copy_operations() {
 #[test]
 fn produced_cast_copy_sources_are_destroyed_exactly_once_after_copying() {
     let source = "\
-         extern fn ska_rt_println_i64(value: i64) -> unit;\n\
+         extern fn test_record_i64(value: i64) -> unit;\n\
          class Token {\n\
            value: i64;\n\
            init(value: i64) { self.value = value; }\n\
            copy(ref other: Token) { self.value = other.value; }\n\
-           destroy { ska_rt_println_i64(self.value); }\n\
+           destroy { test_record_i64(self.value); }\n\
          }\n\
          fn main() -> i64 {\n\
            var copied: Token = (Token) Token(42);\n\
            return 0;\n\
          }\n";
     let mut output = assembly(source);
-    output.push_str(println_i64_stub());
+    output.push_str(record_i64_stub());
 
     let result = run_native_assembly_output(&output);
     assert_eq!(result.stdout, b"42\n42\n");

@@ -1,5 +1,5 @@
 error[TYP005]: call argument has type `i64` but `bool` is required
- --> tests/golden/compile_fail/destructor_type_violation.ska:11:29
+ --> tests/golden/compile_fail/destructor_type_violation.ska:11:31
     |
-11 |         ska_rt_println_bool(self.value);
-    |                             ^^^^^^^^^^ type mismatch
+11 |         std::io::println_bool(self.value);
+    |                               ^^^^^^^^^^ type mismatch

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Resource {
     marker: i64;
@@ -8,7 +8,7 @@ class Resource {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -21,11 +21,11 @@ class Wrapper {
 }
 
 fn observe(ref resource: Resource) -> unit {
-    ska_rt_println_i64(resource.marker);
+    std::io::println_i64(resource.marker);
 }
 
 fn evaluate_return(value: i64) -> i64 {
-    ska_rt_println_i64(value);
+    std::io::println_i64(value);
     return value;
 }
 
@@ -38,14 +38,14 @@ fn choose(early: bool, ref observed: Resource) -> i64 {
     } else {
         var branch: Resource = Resource(40);
     }
-    ska_rt_println_i64(50);
+    std::io::println_i64(50);
     return 60;
 }
 
 fn main() -> i64 {
     var anchor: Resource = Resource(1);
     var no_user_body: Wrapper = Wrapper(70);
-    ska_rt_println_i64(choose(true, anchor));
-    ska_rt_println_i64(choose(false, anchor));
+    std::io::println_i64(choose(true, anchor));
+    std::io::println_i64(choose(false, anchor));
     return 0;
 }

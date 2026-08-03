@@ -1,5 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn zero() -> f64 {
     return 0.0;
@@ -26,7 +25,7 @@ fn not_a_number() -> f64 {
 }
 
 fn mark(marker: i64, value: f64) -> f64 {
-    ska_rt_println_i64(marker);
+    std::io::println_i64(marker);
     return value;
 }
 
@@ -66,7 +65,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(100 + self.marker);
+        std::io::println_i64(100 + self.marker);
     }
 }
 
@@ -75,51 +74,51 @@ fn make(marker: i64, value: f64) -> shared Trace {
 }
 
 fn main() -> i64 {
-    ska_rt_println_bool(1.0 == 2.0);
-    ska_rt_println_bool(1.0 != 2.0);
-    ska_rt_println_bool(1.0 < 2.0);
-    ska_rt_println_bool(1.0 <= 2.0);
-    ska_rt_println_bool(1.0 > 2.0);
-    ska_rt_println_bool(1.0 >= 2.0);
+    std::io::println_bool(1.0 == 2.0);
+    std::io::println_bool(1.0 != 2.0);
+    std::io::println_bool(1.0 < 2.0);
+    std::io::println_bool(1.0 <= 2.0);
+    std::io::println_bool(1.0 > 2.0);
+    std::io::println_bool(1.0 >= 2.0);
 
-    ska_rt_println_bool(2.0 == 2.0);
-    ska_rt_println_bool(2.0 != 2.0);
-    ska_rt_println_bool(2.0 < 2.0);
-    ska_rt_println_bool(2.0 <= 2.0);
-    ska_rt_println_bool(2.0 > 2.0);
-    ska_rt_println_bool(2.0 >= 2.0);
+    std::io::println_bool(2.0 == 2.0);
+    std::io::println_bool(2.0 != 2.0);
+    std::io::println_bool(2.0 < 2.0);
+    std::io::println_bool(2.0 <= 2.0);
+    std::io::println_bool(2.0 > 2.0);
+    std::io::println_bool(2.0 >= 2.0);
 
     var nan: f64 = not_a_number();
-    ska_rt_println_bool(nan == 1.0);
-    ska_rt_println_bool(nan != 1.0);
-    ska_rt_println_bool(nan < 1.0);
-    ska_rt_println_bool(nan <= 1.0);
-    ska_rt_println_bool(nan > 1.0);
-    ska_rt_println_bool(nan >= 1.0);
+    std::io::println_bool(nan == 1.0);
+    std::io::println_bool(nan != 1.0);
+    std::io::println_bool(nan < 1.0);
+    std::io::println_bool(nan <= 1.0);
+    std::io::println_bool(nan > 1.0);
+    std::io::println_bool(nan >= 1.0);
 
-    ska_rt_println_bool(1.0 == nan);
-    ska_rt_println_bool(1.0 != nan);
-    ska_rt_println_bool(1.0 < nan);
-    ska_rt_println_bool(1.0 <= nan);
-    ska_rt_println_bool(1.0 > nan);
-    ska_rt_println_bool(1.0 >= nan);
+    std::io::println_bool(1.0 == nan);
+    std::io::println_bool(1.0 != nan);
+    std::io::println_bool(1.0 < nan);
+    std::io::println_bool(1.0 <= nan);
+    std::io::println_bool(1.0 > nan);
+    std::io::println_bool(1.0 >= nan);
 
     var positive: f64 = positive_zero();
     var negative: f64 = negative_zero();
-    ska_rt_println_bool(positive == negative);
-    ska_rt_println_bool(positive != negative);
-    ska_rt_println_bool(positive < negative);
-    ska_rt_println_bool(positive <= negative);
-    ska_rt_println_bool(positive > negative);
-    ska_rt_println_bool(positive >= negative);
+    std::io::println_bool(positive == negative);
+    std::io::println_bool(positive != negative);
+    std::io::println_bool(positive < negative);
+    std::io::println_bool(positive <= negative);
+    std::io::println_bool(positive > negative);
+    std::io::println_bool(positive >= negative);
 
     var low: f64 = negative_infinity();
     var high: f64 = positive_infinity();
-    ska_rt_println_bool(low < -1.0);
-    ska_rt_println_bool(-1.0 < high);
-    ska_rt_println_bool(high > 1.0);
-    ska_rt_println_bool(low == negative_infinity());
-    ska_rt_println_bool(high >= positive_infinity());
+    std::io::println_bool(low < -1.0);
+    std::io::println_bool(-1.0 < high);
+    std::io::println_bool(high > 1.0);
+    std::io::println_bool(low == negative_infinity());
+    std::io::println_bool(high >= positive_infinity());
 
     var values: f64[] = f64[](2u);
     values[0] = 2.0;
@@ -129,31 +128,31 @@ fn main() -> i64 {
     var box: Box = Box(4.0);
 
     var result: bool = consume(values[0] < optional!);
-    ska_rt_println_bool(result);
+    std::io::println_bool(result);
     result = compare(box.value, values[1]);
-    ska_rt_println_bool(result);
+    std::io::println_bool(result);
     box.flag = !(box.value >= optional!);
-    ska_rt_println_bool(box.flag);
+    std::io::println_bool(box.flag);
     flags[0] = returned(values[1], box.value);
-    ska_rt_println_bool(flags[0]);
+    std::io::println_bool(flags[0]);
 
     if (box.value > optional!) {
-        ska_rt_println_bool(true);
+        std::io::println_bool(true);
     }
     elif (box.value == optional!) {
-        ska_rt_println_bool(false);
+        std::io::println_bool(false);
     }
 
     var iterations: i64 = 0;
     while (values[0] < optional! && iterations < 1) {
         iterations = iterations + 1;
     }
-    ska_rt_println_i64(iterations);
+    std::io::println_i64(iterations);
 
-    ska_rt_println_bool(mark(1, 8.0) < mark(2, 9.0));
-    ska_rt_println_bool(false && mark(90, 1.0) < mark(91, 2.0));
-    ska_rt_println_bool(true || mark(92, 1.0) < mark(93, 2.0));
-    ska_rt_println_bool(true && mark(93, 1.0) < mark(94, 2.0));
-    ska_rt_println_bool(make(3, 1.0)->read() < make(4, 2.0)->read());
+    std::io::println_bool(mark(1, 8.0) < mark(2, 9.0));
+    std::io::println_bool(false && mark(90, 1.0) < mark(91, 2.0));
+    std::io::println_bool(true || mark(92, 1.0) < mark(93, 2.0));
+    std::io::println_bool(true && mark(93, 1.0) < mark(94, 2.0));
+    std::io::println_bool(make(3, 1.0)->read() < make(4, 2.0)->read());
     return 0;
 }

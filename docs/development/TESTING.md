@@ -171,7 +171,7 @@ Top-level corpus and sidecar formats are documented locally:
 
 The implemented [standard I/O compiler contract](../compiler/IO.md#verification-obligations)
 assigns coverage across these same layers. Direct runtime harnesses now own
-the version-7 handle and one-transfer byte boundary. Phase tests own canonical
+the version-8 handle and one-transfer byte boundary. Phase tests own canonical
 identities, types, access modes, anchors, and deterministic dumps; backend
 tests own pointer/length lowering and exact symbols; private-standard-library
 native goldens own checked calls and host failures. Public I/O goldens and
@@ -354,11 +354,12 @@ tests own exact `f64 / f64` selection, mixed and nonnumeric rejection,
 source-order diagnostics, and arbitrary operands and consumers. HIR/MIR and
 backend tests own the portable `div.f64` identity, exact operand/result types,
 ordinary eager lowering, `divsd` realization, and absence of an integer
-zero-check path. Native goldens observe contract-fixed raw bits for signed
-zero, infinity, subnormal, overflow, and underflow, execute NaN production
-without freezing its payload, and trace exactly-once evaluation plus reverse
-full-expression cleanup. Cross-process snapshots cover phase products and
-focused diagnostics.
+zero-check path. Native goldens observe signed zero, infinity, subnormal,
+overflow, and underflow through canonical shortest text, execute NaN
+production without freezing its payload, and trace
+exactly-once evaluation plus reverse full-expression cleanup. Backend-native
+oracles retain exact-bit checks where representation identity is the tested
+contract. Cross-process snapshots cover phase products and focused diagnostics.
 
 Floating-comparison coverage owns the complete source-to-native boundary.
 Type-check matrices retain all six predicates for exact `f64` operands,

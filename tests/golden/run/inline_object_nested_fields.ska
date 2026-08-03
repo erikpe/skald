@@ -1,7 +1,7 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn mark(value: i64) -> i64 {
-    ska_rt_println_i64(value);
+    std::io::println_i64(value);
     return value;
 }
 
@@ -83,12 +83,12 @@ fn forward(ref root: Root) -> i64 {
 
 fn main() -> i64 {
     var root: Root = Root(mark(10), mark(20));
-    ska_rt_println_i64(root.bundle.left.value);
+    std::io::println_i64(root.bundle.left.value);
     root.bundle.left.value = 11;
     root.adjust();
-    ska_rt_println_i64(root.inspect());
-    ska_rt_println_i64(relay(root));
-    ska_rt_println_i64(read(root.bundle.left));
-    ska_rt_println_i64(forward(root));
+    std::io::println_i64(root.inspect());
+    std::io::println_i64(relay(root));
+    std::io::println_i64(read(root.bundle.left));
+    std::io::println_i64(forward(root));
     return 0;
 }

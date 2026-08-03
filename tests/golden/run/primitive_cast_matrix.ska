@@ -1,8 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+import std::io;
 
 class Holder {
     enabled: bool;
@@ -28,7 +24,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(100 + self.marker);
+        std::io::println_i64(100 + self.marker);
     }
 }
 
@@ -37,7 +33,7 @@ fn make(marker: i64, value: f64) -> shared Trace {
 }
 
 fn mark(marker: i64, value: u64) -> u64 {
-    ska_rt_println_i64(marker);
+    std::io::println_i64(marker);
     return value;
 }
 
@@ -46,59 +42,59 @@ fn as_f64(value: u64) -> f64 {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64((i64) -1);
-    ska_rt_println_u64((u64) -1);
-    ska_rt_println_u8((u8) -1);
-    ska_rt_println_f64_bits((f64) -1);
-    ska_rt_println_bool((bool) -1);
+    std::io::println_i64((i64) -1);
+    std::io::println_u64((u64) -1);
+    std::io::println_u8((u8) -1);
+    std::io::println_f64((f64) -1);
+    std::io::println_bool((bool) -1);
 
-    ska_rt_println_i64((i64) 18446744073709551615u);
-    ska_rt_println_u64((u64) 18446744073709551615u);
-    ska_rt_println_u8((u8) 18446744073709551615u);
-    ska_rt_println_f64_bits((f64) 18446744073709551615u);
-    ska_rt_println_bool((bool) 18446744073709551615u);
+    std::io::println_i64((i64) 18446744073709551615u);
+    std::io::println_u64((u64) 18446744073709551615u);
+    std::io::println_u8((u8) 18446744073709551615u);
+    std::io::println_f64((f64) 18446744073709551615u);
+    std::io::println_bool((bool) 18446744073709551615u);
 
-    ska_rt_println_i64((i64) 255u8);
-    ska_rt_println_u64((u64) 255u8);
-    ska_rt_println_u8((u8) 255u8);
-    ska_rt_println_f64_bits((f64) 255u8);
-    ska_rt_println_bool((bool) 255u8);
+    std::io::println_i64((i64) 255u8);
+    std::io::println_u64((u64) 255u8);
+    std::io::println_u8((u8) 255u8);
+    std::io::println_f64((f64) 255u8);
+    std::io::println_bool((bool) 255u8);
 
-    ska_rt_println_f64_bits((f64) -0.0);
-    ska_rt_println_bool((bool) -0.0);
-    ska_rt_println_bool((bool) (0.0 / 0.0));
-    ska_rt_println_bool((bool) (1.0 / 0.0));
-    ska_rt_println_bool((bool) 4.9406564584124654e-324);
-    ska_rt_println_i64((i64) -7.9);
-    ska_rt_println_u64((u64) -0.5);
-    ska_rt_println_u8((u8) 255.9);
+    std::io::println_f64((f64) -0.0);
+    std::io::println_bool((bool) -0.0);
+    std::io::println_bool((bool) (0.0 / 0.0));
+    std::io::println_bool((bool) (1.0 / 0.0));
+    std::io::println_bool((bool) 4.9406564584124654e-324);
+    std::io::println_i64((i64) -7.9);
+    std::io::println_u64((u64) -0.5);
+    std::io::println_u8((u8) 255.9);
 
-    ska_rt_println_i64((i64) true);
-    ska_rt_println_u64((u64) true);
-    ska_rt_println_u8((u8) true);
-    ska_rt_println_f64_bits((f64) true);
-    ska_rt_println_bool((bool) true);
+    std::io::println_i64((i64) true);
+    std::io::println_u64((u64) true);
+    std::io::println_u8((u8) true);
+    std::io::println_f64((f64) true);
+    std::io::println_bool((bool) true);
 
     var local: f64 = (f64) 7u8;
     local = (f64) false;
-    ska_rt_println_f64_bits(local);
+    std::io::println_f64(local);
 
     var values: f64[] = f64[](1u);
     values[0] = as_f64(9u);
-    ska_rt_println_f64_bits(values[0]);
+    std::io::println_f64(values[0]);
 
     var optional: f64? = (f64) true;
-    ska_rt_println_f64_bits(optional!);
+    std::io::println_f64(optional!);
 
     var holder: Holder = Holder(10u);
-    ska_rt_println_bool(holder.enabled);
-    ska_rt_println_f64_bits(holder.value);
+    std::io::println_bool(holder.enabled);
+    std::io::println_f64(holder.value);
 
-    ska_rt_println_bool((bool) mark(30, 7u));
-    ska_rt_println_bool(false && (bool) mark(31, 7u));
-    ska_rt_println_bool(true && (bool) mark(32, 7u));
-    ska_rt_println_f64_bits((f64) (bool) 0u);
-    ska_rt_println_bool((bool) make(40, 2.0)->read());
+    std::io::println_bool((bool) mark(30, 7u));
+    std::io::println_bool(false && (bool) mark(31, 7u));
+    std::io::println_bool(true && (bool) mark(32, 7u));
+    std::io::println_f64((f64) (bool) 0u);
+    std::io::println_bool((bool) make(40, 2.0)->read());
 
     if ((bool) values[0]) {
         return 44;

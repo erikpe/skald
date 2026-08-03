@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     value: i64;
@@ -13,11 +13,11 @@ class Trace {
 
     assign(ref other: Trace) {
         self.value = other.value + 100;
-        ska_rt_println_i64(self.value + 2000);
+        std::io::println_i64(self.value + 2000);
     }
 
     destroy {
-        ska_rt_println_i64(self.value + 3000);
+        std::io::println_i64(self.value + 3000);
     }
 }
 
@@ -39,11 +39,11 @@ fn main() -> i64 {
     values[4] = 5;
     values[1:4] = values[0:3];
 
-    ska_rt_println_i64(destination[0].value);
-    ska_rt_println_i64(destination[1].value);
-    ska_rt_println_i64(destination[2].value);
-    ska_rt_println_i64(values[1]);
-    ska_rt_println_i64(values[2]);
-    ska_rt_println_i64(values[3]);
+    std::io::println_i64(destination[0].value);
+    std::io::println_i64(destination[1].value);
+    std::io::println_i64(destination[2].value);
+    std::io::println_i64(values[1]);
+    std::io::println_i64(values[2]);
+    std::io::println_i64(values[3]);
     return 0;
 }

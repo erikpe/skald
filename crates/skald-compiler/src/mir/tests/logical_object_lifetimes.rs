@@ -65,7 +65,7 @@ fn selected_inline_object_receivers_live_until_conditional_cleanup() {
 }
 
 const OBSERVABLE_OBJECT_OPERANDS: &str = concat!(
-    "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+    "extern fn test_record_i64(value: i64) -> unit;\n",
     "class Trace {\n",
     "  marker: i64;\n",
     "  truth: bool;\n",
@@ -79,7 +79,7 @@ const OBSERVABLE_OBJECT_OPERANDS: &str = concat!(
     "  }\n",
     "  fn read() -> bool { return self.truth; }\n",
     "  static fn static_read(value: Trace) -> bool { return value.read(); }\n",
-    "  destroy { ska_rt_println_i64(self.marker); }\n",
+    "  destroy { test_record_i64(self.marker); }\n",
     "}\n",
     "fn inspect(value: Trace) -> bool { return value.truth; }\n",
     "fn produce(marker: i64, truth: bool) -> Trace { return Trace(marker, truth); }\n",
@@ -272,11 +272,11 @@ fn lower_optional_logical(
 }
 
 const OBSERVABLE_OPTIONAL_OPERANDS: &str = concat!(
-    "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+    "extern fn test_record_i64(value: i64) -> unit;\n",
     "class Trace {\n",
     "  marker: i64;\n",
     "  init(marker: i64) { self.marker = marker; }\n",
-    "  destroy { ska_rt_println_i64(self.marker); }\n",
+    "  destroy { test_record_i64(self.marker); }\n",
     "}\n",
     "fn present(marker: i64) -> Trace? { return Trace(marker); }\n",
     "fn absent() -> Trace? { return none; }\n",

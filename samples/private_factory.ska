@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Token {
     private value: i64;
@@ -18,6 +18,6 @@ class Token {
 
 fn main() -> i64 {
     var token: Token = Token.create(42);
-    ska_rt_println_i64(token.reveal());
+    std::io::println_i64(token.reveal());
     return 0;
 }

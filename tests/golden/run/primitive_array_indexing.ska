@@ -1,8 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
-extern fn ska_rt_println_bool(value: bool) -> unit;
+import std::io;
 
 fn main() -> i64 {
     var signed: i64[] = i64[](3u);
@@ -18,12 +14,12 @@ fn main() -> i64 {
     floats[-3] = 1.5;
     flags[-1] = true;
 
-    ska_rt_println_i64(signed[-3]);
-    ska_rt_println_i64(signed[1]);
-    ska_rt_println_i64(signed[2]);
-    ska_rt_println_u64(unsigned[1]);
-    ska_rt_println_u8(bytes[-2]);
-    ska_rt_println_f64_bits(floats[0]);
-    ska_rt_println_bool(flags[2]);
+    std::io::println_i64(signed[-3]);
+    std::io::println_i64(signed[1]);
+    std::io::println_i64(signed[2]);
+    std::io::println_u64(unsigned[1]);
+    std::io::println_u8(bytes[-2]);
+    std::io::println_f64(floats[0]);
+    std::io::println_bool(flags[2]);
     return 0;
 }

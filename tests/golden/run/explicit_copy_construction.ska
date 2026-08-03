@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Base {
     value: i64;
@@ -22,7 +22,7 @@ class Leaf extends Base {
 }
 
 fn make_leaf(value: i64, extra: i64) -> Leaf {
-    ska_rt_println_i64(900);
+    std::io::println_i64(900);
     return Leaf(value, extra);
 }
 
@@ -33,14 +33,14 @@ fn checked_downcast(ref source: Base) -> Leaf {
 fn main() -> i64 {
     var leaf: Leaf = Leaf(7, 70);
     var produced: Leaf = Leaf(copy make_leaf(7, 70));
-    ska_rt_println_i64(produced.value);
-    ska_rt_println_i64(produced.extra);
+    std::io::println_i64(produced.value);
+    std::io::println_i64(produced.extra);
 
     var sliced: Base = Base(copy leaf);
-    ska_rt_println_i64(sliced.value);
+    std::io::println_i64(sliced.value);
 
     var narrowed: Leaf = checked_downcast(leaf);
-    ska_rt_println_i64(narrowed.value);
-    ska_rt_println_i64(narrowed.extra);
+    std::io::println_i64(narrowed.value);
+    std::io::println_i64(narrowed.extra);
     return 0;
 }

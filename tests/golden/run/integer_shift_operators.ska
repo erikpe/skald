@@ -1,7 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
+import std::io;
 
 class Holder {
     bits: u64;
@@ -40,7 +37,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -53,7 +50,7 @@ fn shift_return(value: u8) -> u8 {
 }
 
 fn consume(value: u64) -> unit {
-    ska_rt_println_u64(value);
+    std::io::println_u64(value);
 }
 
 fn produce_trace(marker: i64, value: u64) -> Trace {
@@ -69,57 +66,57 @@ fn make_trace(marker: i64, value: u64) -> shared Trace {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64(1 << 0u);
-    ska_rt_println_i64(1 << 63u);
-    ska_rt_println_i64(-8 >> 1u);
-    ska_rt_println_i64(-1 >> 63u);
+    std::io::println_i64(1 << 0u);
+    std::io::println_i64(1 << 63u);
+    std::io::println_i64(-8 >> 1u);
+    std::io::println_i64(-1 >> 63u);
 
-    ska_rt_println_u64(1u << 63u);
-    ska_rt_println_u64(18446744073709551615u >> 63u);
-    ska_rt_println_u64(9223372036854775808u << 1u);
+    std::io::println_u64(1u << 63u);
+    std::io::println_u64(18446744073709551615u >> 63u);
+    std::io::println_u64(9223372036854775808u << 1u);
 
-    ska_rt_println_u8(1u8 << 7u);
-    ska_rt_println_u8(129u8 >> 7u);
-    ska_rt_println_u8(129u8 << 1u);
-    ska_rt_println_u8(shift_return(240u8));
+    std::io::println_u8(1u8 << 7u);
+    std::io::println_u8(129u8 >> 7u);
+    std::io::println_u8(129u8 << 1u);
+    std::io::println_u8(shift_return(240u8));
 
     var assigned: u64 = 0u;
     assigned = shift_parameter(3u, 4u);
     consume(assigned);
 
     var holder: Holder = Holder(128u, 3u);
-    ska_rt_println_u64(holder.bits >> holder.count);
+    std::io::println_u64(holder.bits >> holder.count);
     holder.bits = holder.bits << 1u;
-    ska_rt_println_u64(holder.bits);
+    std::io::println_u64(holder.bits);
 
     var optional: u64? = 5u;
-    ska_rt_println_u64(optional! << ((u64) 2));
+    std::io::println_u64(optional! << ((u64) 2));
     optional = 3u << 5u;
-    ska_rt_println_u64(optional!);
+    std::io::println_u64(optional!);
 
     var values: u64[] = u64[](2u);
     values[0] = 9u;
     values[1] = 1u;
-    ska_rt_println_u64(values[0] << values[1]);
+    std::io::println_u64(values[0] << values[1]);
     values[1] = values[0] >> 2u;
-    ska_rt_println_u64(values[1]);
+    std::io::println_u64(values[1]);
 
-    ska_rt_println_u64(256u >> 1u >> 2u);
-    ska_rt_println_u64(1u << (2u + 3u) & 63u);
+    std::io::println_u64(256u >> 1u >> 2u);
+    std::io::println_u64(1u << (2u + 3u) & 63u);
 
     var probe: Probe = Probe();
-    ska_rt_println_u64(probe.observe(8u, 1) >> probe.observe(1u, 2));
-    ska_rt_println_i64(probe.sequence);
-    ska_rt_println_bool(
+    std::io::println_u64(probe.observe(8u, 1) >> probe.observe(1u, 2));
+    std::io::println_i64(probe.sequence);
+    std::io::println_bool(
         (probe.observe(3u, 3) << probe.observe(2u, 4)) == 12u
         && (probe.observe(32u, 5) >> 5u) == 1u
     );
-    ska_rt_println_i64(probe.sequence);
+    std::io::println_i64(probe.sequence);
 
-    ska_rt_println_u64(
+    std::io::println_u64(
         read_trace(produce_trace(41, 1u)) << read_trace(produce_trace(42, 3u))
     );
-    ska_rt_println_u64(
+    std::io::println_u64(
         make_trace(51, 16u)->read() >> make_trace(52, 2u)->read()
     );
 

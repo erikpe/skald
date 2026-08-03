@@ -3,11 +3,10 @@
 
 /* Public C surface documented in docs/compiler/RUNTIME_ABI.md. */
 
-#include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(7)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v7
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(8)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8
 
 /* Version-specific link guard required by compiler-generated executables. */
 void SKALD_RUNTIME_ABI_MARKER(void);
@@ -42,23 +41,5 @@ int64_t ska_rt_io_write(int64_t handle, const uint8_t* source, uint64_t length);
 
 /* Attempts one close. The handle must be representable as a POSIX descriptor. */
 int64_t ska_rt_io_close(int64_t handle);
-
-/* Writes the shortest ASCII decimal representation and one LF to stdout.
-   A detected write or flush failure terminates the process unsuccessfully. */
-void ska_rt_println_i64(int64_t value);
-
-/* Writes lowercase "true" or "false" and one LF to stdout.
-   A detected write or flush failure terminates the process unsuccessfully. */
-void ska_rt_println_bool(bool value);
-
-/* Writes the shortest unsigned ASCII decimal representation and one LF.
-   A detected write or flush failure terminates the process unsuccessfully. */
-void ska_rt_println_u64(uint64_t value);
-void ska_rt_println_u8(uint8_t value);
-
-/* Writes "0x", exactly 16 lowercase hexadecimal digits containing the
-   IEEE-754 binary64 representation, and one LF. A detected write or flush
-   failure terminates the process unsuccessfully. */
-void ska_rt_println_f64_bits(double value);
 
 #endif

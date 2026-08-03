@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Leaf {
     value: i64;
@@ -44,8 +44,8 @@ fn produce(value: i64) -> shared Leaf {
 
 fn main() -> i64 {
     var owner: shared Leaf = new Leaf(5);
-    ska_rt_println_i64(inspect(*owner));
-    ska_rt_println_i64(inspect(*owner));
+    std::io::println_i64(inspect(*owner));
+    std::io::println_i64(inspect(*owner));
 
     increment(*owner);
     var holder: Holder = Holder(owner);
@@ -58,13 +58,13 @@ fn main() -> i64 {
     var allocated: shared Leaf = new Leaf(copy *holder.edge);
     var produced: Leaf = Leaf(copy *produce(7));
 
-    ska_rt_println_i64(holder.inline_copy.value);
-    ska_rt_println_i64(copied.value);
-    ska_rt_println_i64(assigned.value);
-    ska_rt_println_i64(consumed);
-    ska_rt_println_i64(returned.value);
-    ska_rt_println_i64(constructed.value);
-    ska_rt_println_i64(allocated->value);
-    ska_rt_println_i64(produced.value);
+    std::io::println_i64(holder.inline_copy.value);
+    std::io::println_i64(copied.value);
+    std::io::println_i64(assigned.value);
+    std::io::println_i64(consumed);
+    std::io::println_i64(returned.value);
+    std::io::println_i64(constructed.value);
+    std::io::println_i64(allocated->value);
+    std::io::println_i64(produced.value);
     return 0;
 }

@@ -1,8 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
-extern fn ska_rt_println_bool(value: bool) -> unit;
+import std::io;
 
 class Record {
     signed: i64;
@@ -20,11 +16,11 @@ class Record {
     }
 
     fn observe() -> unit {
-        ska_rt_println_i64(self.signed);
-        ska_rt_println_u64(self.unsigned);
-        ska_rt_println_u8(self.byte);
-        ska_rt_println_f64_bits(self.floating);
-        ska_rt_println_bool(self.flag);
+        std::io::println_i64(self.signed);
+        std::io::println_u64(self.unsigned);
+        std::io::println_u8(self.byte);
+        std::io::println_f64(self.floating);
+        std::io::println_bool(self.flag);
     }
 
     mut fn replace(signed: i64, unsigned: u64, byte: u8, floating: f64, flag: bool) -> unit {
@@ -52,7 +48,7 @@ fn main() -> i64 {
 
     {
         var second: Record = Record(40, 50u, 60u8, 2.0, true);
-        ska_rt_println_i64(second.selected());
+        std::io::println_i64(second.selected());
     }
     return 0;
 }

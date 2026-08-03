@@ -6,12 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md) —
-  move explicit primitive formatting and optional parsing into
-  `std::str::Str`; TXT5 (adopt string I/O and retire scalar runtime
-  observation) is next.
-  It depends on the implemented primitive operator, optional-value, string,
-  loop, and standard-I/O contracts.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

@@ -39,12 +39,12 @@ fn optional_shared_owner_uses_the_zero_niche_one_word_layout() {
 #[test]
 fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execute() {
     let source = concat!(
-        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "extern fn test_record_i64(value: i64) -> unit;\n",
         "class Value {\n",
         "  marker: i64;\n",
         "  init(marker: i64) { self.marker = marker; }\n",
         "  fn read() -> i64 { return self.marker; }\n",
-        "  destroy { ska_rt_println_i64(self.marker); }\n",
+        "  destroy { test_record_i64(self.marker); }\n",
         "}\n",
         "class Holder {\n",
         "  value: shared? Value;\n",
@@ -76,7 +76,7 @@ fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execut
     assert!(output.contains("shared_unwrap_overflow"));
     assert!(output.contains("shared_unwrap_invalid"));
     output.push_str(optional_ownership_stubs());
-    output.push_str(println_i64_stub());
+    output.push_str(record_i64_stub());
     let result = run_native_assembly_output(&output);
 
     assert_eq!(result.status.code(), Some(42), "{output}");
@@ -451,11 +451,11 @@ fn optional_values_execute_through_virtual_and_interface_calls() {
 #[test]
 fn class_optional_lifecycle_executes_through_calls_fields_and_assignment() {
     let source = concat!(
-        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "extern fn test_record_i64(value: i64) -> unit;\n",
         "class Value {\n",
         "  marker: i64;\n",
         "  init(marker: i64) { self.marker = marker; }\n",
-        "  destroy { ska_rt_println_i64(self.marker); }\n",
+        "  destroy { test_record_i64(self.marker); }\n",
         "}\n",
         "class Holder {\n",
         "  value: Value?;\n",
@@ -473,7 +473,7 @@ fn class_optional_lifecycle_executes_through_calls_fields_and_assignment() {
         "}\n",
     );
     let mut output = assembly(source);
-    output.push_str(println_i64_stub());
+    output.push_str(record_i64_stub());
     let result = run_native_assembly_output(&output);
 
     assert_eq!(result.status.code(), Some(42));

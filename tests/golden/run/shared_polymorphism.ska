@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Readable {
     fn read() -> i64;
@@ -48,8 +48,8 @@ fn main() -> i64 {
     var root: shared Root = leaf;
     var readable: shared Readable = leaf;
     var erased: shared Obj = leaf;
-    ska_rt_println_i64(root->read());
-    ska_rt_println_i64(readable->read());
-    ska_rt_println_i64(classify(erased));
+    std::io::println_i64(root->read());
+    std::io::println_i64(readable->read());
+    std::io::println_i64(classify(erased));
     return 0;
 }

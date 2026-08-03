@@ -1,6 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
+import std::io;
 
 class CastFields {
     small: u8;
@@ -25,41 +23,41 @@ fn reinterpret(value: u64) -> i64 {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64((i64) -9223372036854775808);
-    ska_rt_println_i64((i64) 9223372036854775807);
-    ska_rt_println_u64((u64) 18446744073709551615u);
+    std::io::println_i64((i64) -9223372036854775808);
+    std::io::println_i64((i64) 9223372036854775807);
+    std::io::println_u64((u64) 18446744073709551615u);
 
-    ska_rt_println_u64((u64) -1);
-    ska_rt_println_u64((u64) -9223372036854775808);
-    ska_rt_println_u64((u64) 9223372036854775807);
-    ska_rt_println_i64((i64) 9223372036854775807u);
-    ska_rt_println_i64((i64) 9223372036854775808u);
-    ska_rt_println_i64((i64) 18446744073709551615u);
+    std::io::println_u64((u64) -1);
+    std::io::println_u64((u64) -9223372036854775808);
+    std::io::println_u64((u64) 9223372036854775807);
+    std::io::println_i64((i64) 9223372036854775807u);
+    std::io::println_i64((i64) 9223372036854775808u);
+    std::io::println_i64((i64) 18446744073709551615u);
 
-    ska_rt_println_u8((u8) 0u);
-    ska_rt_println_u8((u8) 255u);
-    ska_rt_println_u8((u8) 256u);
-    ska_rt_println_u8((u8) 258u);
-    ska_rt_println_u8((u8) 18446744073709551615u);
-    ska_rt_println_u8((u8) -1);
-    ska_rt_println_u8((u8) -9223372036854775808);
-    ska_rt_println_u8((u8) 9223372036854775807);
+    std::io::println_u8((u8) 0u);
+    std::io::println_u8((u8) 255u);
+    std::io::println_u8((u8) 256u);
+    std::io::println_u8((u8) 258u);
+    std::io::println_u8((u8) 18446744073709551615u);
+    std::io::println_u8((u8) -1);
+    std::io::println_u8((u8) -9223372036854775808);
+    std::io::println_u8((u8) 9223372036854775807);
 
-    ska_rt_println_i64((i64) 0u8);
-    ska_rt_println_i64((i64) 127u8);
-    ska_rt_println_i64((i64) 128u8);
-    ska_rt_println_i64((i64) 255u8);
-    ska_rt_println_u64((u64) 255u8);
-    ska_rt_println_u8((u8) 255u8);
+    std::io::println_i64((i64) 0u8);
+    std::io::println_i64((i64) 127u8);
+    std::io::println_i64((i64) 128u8);
+    std::io::println_i64((i64) 255u8);
+    std::io::println_u64((u64) 255u8);
+    std::io::println_u8((u8) 255u8);
 
-    ska_rt_println_u8(narrow(258u));
-    ska_rt_println_u64(widen(255u8));
-    ska_rt_println_i64(reinterpret(18446744073709551615u));
+    std::io::println_u8(narrow(258u));
+    std::io::println_u64(widen(255u8));
+    std::io::println_i64(reinterpret(18446744073709551615u));
 
     var fields: CastFields = CastFields(-1);
-    ska_rt_println_u8(fields.small);
-    ska_rt_println_u64(fields.wide);
-    ska_rt_println_u64((u64) ((u8) 258u + 40u8));
+    std::io::println_u8(fields.small);
+    std::io::println_u64(fields.wide);
+    std::io::println_u64((u64) ((u8) 258u + 40u8));
 
     if ((i64) 18446744073709551615u == -1) {
         if ((u8) -1 == 255u8) {

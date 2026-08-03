@@ -1,5 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     marker: i64;
@@ -19,7 +18,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -89,14 +88,14 @@ fn checked_cast_skipped() -> bool {
 }
 
 fn main() -> i64 {
-    ska_rt_println_bool(inline_selected());
-    ska_rt_println_bool(inline_skipped());
-    ska_rt_println_bool(shared_selected());
-    ska_rt_println_bool(shared_skipped());
-    ska_rt_println_bool(later_consumer());
-    ska_rt_println_bool(optional_selected());
-    ska_rt_println_bool(optional_skipped());
-    ska_rt_println_bool(checked_cast_selected());
-    ska_rt_println_bool(checked_cast_skipped());
+    std::io::println_bool(inline_selected());
+    std::io::println_bool(inline_skipped());
+    std::io::println_bool(shared_selected());
+    std::io::println_bool(shared_skipped());
+    std::io::println_bool(later_consumer());
+    std::io::println_bool(optional_selected());
+    std::io::println_bool(optional_skipped());
+    std::io::println_bool(checked_cast_selected());
+    std::io::println_bool(checked_cast_skipped());
     return 0;
 }

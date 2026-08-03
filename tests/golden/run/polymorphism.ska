@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Readable {
     fn read() -> i64;
@@ -33,7 +33,7 @@ class Root implements Adjustable, Readable {
     }
 
     destroy {
-        ska_rt_println_i64(1000 + self.value);
+        std::io::println_i64(1000 + self.value);
     }
 }
 
@@ -43,7 +43,7 @@ class Middle extends Root {
     }
 
     destroy {
-        ska_rt_println_i64(2000 + self.value);
+        std::io::println_i64(2000 + self.value);
     }
 }
 
@@ -65,7 +65,7 @@ class Leaf extends Middle {
     }
 
     destroy {
-        ska_rt_println_i64(3000 + self.extra);
+        std::io::println_i64(3000 + self.extra);
     }
 }
 
@@ -103,17 +103,17 @@ fn slice(ref value: Leaf) -> Root {
 
 fn main() -> i64 {
     var leaf: Leaf = Leaf(10, 5);
-    ska_rt_println_i64(read_root(leaf));
-    ska_rt_println_i64(read_interface(leaf));
-    ska_rt_println_i64(adjust_interface(leaf, 2));
-    ska_rt_println_i64(leaf.read_through_self());
-    ska_rt_println_i64(classify_interface(leaf));
-    ska_rt_println_i64(cast_read(leaf));
+    std::io::println_i64(read_root(leaf));
+    std::io::println_i64(read_interface(leaf));
+    std::io::println_i64(adjust_interface(leaf, 2));
+    std::io::println_i64(leaf.read_through_self());
+    std::io::println_i64(classify_interface(leaf));
+    std::io::println_i64(cast_read(leaf));
 
     var sliced: Root = slice(leaf);
-    ska_rt_println_i64(read_root(sliced));
+    std::io::println_i64(read_root(sliced));
 
     var copied: Leaf = leaf;
-    ska_rt_println_i64(read_root(copied));
+    std::io::println_i64(read_root(copied));
     return 0;
 }

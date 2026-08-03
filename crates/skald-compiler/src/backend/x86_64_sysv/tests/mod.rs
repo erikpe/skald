@@ -85,4 +85,4 @@ mod termination;
 mod type_operations;
 mod value_parameters;
 mod virtual_dispatch;
-use objects::println_i64_stub;
+use objects::record_i64_stub;

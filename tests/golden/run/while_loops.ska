@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     marker: i64;
@@ -8,7 +8,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -34,7 +34,7 @@ fn nested() -> unit {
         var inner: i64 = 0;
         while (inner < 2) {
             inner = inner + 1;
-            ska_rt_println_i64(outer * 10 + inner);
+            std::io::println_i64(outer * 10 + inner);
         }
     }
 }
@@ -52,10 +52,10 @@ fn early_return() -> i64 {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64(count(0));
-    ska_rt_println_i64(count(1));
-    ska_rt_println_i64(count(3));
+    std::io::println_i64(count(0));
+    std::io::println_i64(count(1));
+    std::io::println_i64(count(3));
     nested();
-    ska_rt_println_i64(early_return());
+    std::io::println_i64(early_return());
     return 0;
 }

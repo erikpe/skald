@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     value: i64;
@@ -8,7 +8,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.value);
+        std::io::println_i64(self.value);
     }
 }
 
@@ -30,8 +30,8 @@ fn main() -> i64 {
     var value_zero: shared Trace = values[0];
     var copied_zero: shared Trace = copied[0];
     var shared_zero: shared Trace = shared_values->[0];
-    ska_rt_println_i64(value_zero->value);
-    ska_rt_println_i64(copied_zero->value);
-    ska_rt_println_i64(shared_zero->value);
+    std::io::println_i64(value_zero->value);
+    std::io::println_i64(copied_zero->value);
+    std::io::println_i64(shared_zero->value);
     return 0;
 }

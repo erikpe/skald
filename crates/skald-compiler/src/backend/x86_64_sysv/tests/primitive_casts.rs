@@ -344,14 +344,14 @@ fn complete_cast_object_uses_only_the_existing_runtime_abi_surface() {
 
     assert!(undefined
         .lines()
-        .any(|line| line.ends_with(" ska_rt_abi_v7")));
+        .any(|line| line.ends_with(" ska_rt_abi_v8")));
     assert!(undefined
         .lines()
         .any(|line| line.ends_with(" ska_rt_panic")));
     assert!(!undefined.lines().any(|line| line.contains("cast")));
 
     let header = include_str!("../../../../../../runtime/include/skald_runtime.h");
-    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v7"));
+    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8"));
     assert!(header.contains("_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);"));
     assert!(!header.contains("primitive_cast"));
 }

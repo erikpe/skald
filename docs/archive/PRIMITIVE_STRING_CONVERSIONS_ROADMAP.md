@@ -1,6 +1,6 @@
 # Primitive String Conversions Roadmap
 
-Status: in progress; TXT5 is next.
+Status: complete.
 
 This roadmap moves portable primitive formatting and parsing into the Skald
 standard library. The durable result is one explicit type-named `Str` method
@@ -53,7 +53,7 @@ This roadmap owns implementation order and does not redefine that contract.
 - [x] TXT3 — Implement correctly rounded binary64 parsing
 - [x] TXT4 — Implement shortest round-tripping binary64 formatting and
       primitive line output
-- [ ] TXT5 — Adopt string I/O and retire scalar runtime observation
+- [x] TXT5 — Adopt string I/O and retire scalar runtime observation
 
 Every implementation task runs focused standard-library and native golden
 tests, then `make check` and `make msrv-check`. Documentation-only TXT0 runs
@@ -211,18 +211,18 @@ formatting behavior is involved.
 **Purpose:** Remove the bootstrap boundary only after ordinary standard-library
 conversion and exact `Str` output cover its useful repository roles.
 
-- [ ] Migrate samples and source-to-native tests that observe primitive values
+- [x] Migrate samples and source-to-native tests that observe primitive values
       to `std::io::println_<type>` where canonical line output is intended, or
       to `Str.from_<type>` plus exact `std::io::write_stdout` where composition
       requires explicit control.
-- [ ] Preserve low-level compiler/backend tests that need scalar ABI probes by
+- [x] Preserve low-level compiler/backend tests that need scalar ABI probes by
       replacing their observations with exit status, memory-visible behavior,
       assembly inspection, or the new standard-library path as appropriate.
-- [ ] Remove the five `ska_rt_println_*` declarations, implementations,
+- [x] Remove the five `ska_rt_println_*` declarations, implementations,
       headers, direct harnesses, link dependencies, and stale documentation.
-- [ ] Advance the runtime ABI and link marker once, retaining allocation,
+- [x] Advance the runtime ABI and link marker once, retaining allocation,
       panic, and byte I/O behavior unchanged.
-- [ ] Audit the repository for remaining scalar observation symbols and prove
+- [x] Audit the repository for remaining scalar observation symbols and prove
       exact stdout/stderr and deterministic execution through ordinary I/O.
 
 **Tests:** Focused migrated goldens and runtime contract tests; stale-runtime

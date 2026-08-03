@@ -128,7 +128,7 @@ array-alias checking, dedicated typed HIR, and verified target-independent MIR
 are implemented. MIR preserves exact byte-array places, access, backing
 anchors, length-inclusive checked range offsets, and one exact `i64` result.
 The x86-64 target mechanically extracts verified byte pointers and lengths,
-marshals scalar arguments and signed results, and calls the exact version-7
+marshals scalar arguments and signed results, and calls the exact version-8
 runtime symbol selected by the MIR operation. Operation selection never
 depends on source spelling after resolution.
 
@@ -1012,7 +1012,7 @@ preserves left-to-right, exactly-once argument evaluation and exposes neither
 a Skald array descriptor nor `Str` representation to the runtime. The x86-64
 backend consumes the verified operations, checks each unsigned offset against
 the array length, and passes one data pointer and remaining byte count to
-runtime ABI version 7.
+runtime ABI version 8.
 
 ### Frozen panic and termination representation
 

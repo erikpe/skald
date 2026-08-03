@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Leaf {
     prefix: u8;
@@ -24,7 +24,7 @@ class Leaf {
     }
 
     destroy {
-        ska_rt_println_i64(300 + self.value);
+        std::io::println_i64(300 + self.value);
     }
 }
 
@@ -47,14 +47,14 @@ class Pair {
 fn main() -> i64 {
     var source: Pair = Pair(1, 2);
     var destination: Pair = source;
-    ska_rt_println_i64(destination.left.value);
-    ska_rt_println_i64(destination.right.value);
+    std::io::println_i64(destination.left.value);
+    std::io::println_i64(destination.right.value);
     destination.left = destination.left;
-    ska_rt_println_i64(destination.left.value);
+    std::io::println_i64(destination.left.value);
     destination.right = source.left;
-    ska_rt_println_i64(destination.right.value);
+    std::io::println_i64(destination.right.value);
     source = source;
-    ska_rt_println_i64(source.left.value);
-    ska_rt_println_i64(source.right.value);
+    std::io::println_i64(source.left.value);
+    std::io::println_i64(source.right.value);
     return 0;
 }

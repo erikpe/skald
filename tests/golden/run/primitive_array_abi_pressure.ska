@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn eighth(
     a: i64[],
@@ -32,11 +32,11 @@ fn main() -> i64 {
         i64[](1u),
         i64[](1u)
     );
-    ska_rt_println_i64(selected[0]);
+    std::io::println_i64(selected[0]);
 
     var recursive: i64[] = recursive_copy(selected, true);
     recursive[0] = 90;
-    ska_rt_println_i64(selected[0]);
-    ska_rt_println_i64(recursive[0]);
+    std::io::println_i64(selected[0]);
+    std::io::println_i64(recursive[0]);
     return 0;
 }

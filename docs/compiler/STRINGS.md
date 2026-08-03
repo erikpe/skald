@@ -211,7 +211,7 @@ allocator/free boundary. No public runtime symbol, runtime ABI version, native
 string object, interning service, or external `Str` calling convention is
 added.
 
-Runtime ABI version 7 includes one common length-delimited reporter, not a
+Runtime ABI version 8 includes one common length-delimited reporter, not a
 string ABI. Panic lowering validates the canonical `Str` identity, then
 extracts its logical backing-byte address and length through the existing
 field identities and target layout. The C reporter never receives a

@@ -1,16 +1,15 @@
+import std::io;
+
 from std::str import Str;
 
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_bool(value: bool) -> unit;
 
 class Other {
     init() {}
 }
 
 fn observe(value: Str) -> unit {
-    ska_rt_println_u64(value.len());
-    ska_rt_println_u8(value.byte(0));
+    std::io::println_u64(value.len());
+    std::io::println_u8(value.byte(0));
     return;
 }
 
@@ -22,9 +21,9 @@ fn concatenated_byte(left: Str, right: Str, index: i64) -> u8 {
 fn main() -> i64 {
     var literal: Str = "a\0\x80\xff";
     observe(literal);
-    ska_rt_println_u8(literal.byte(1));
-    ska_rt_println_u8(literal.byte(2));
-    ska_rt_println_u8(literal.byte(-1));
+    std::io::println_u8(literal.byte(1));
+    std::io::println_u8(literal.byte(2));
+    std::io::println_u8(literal.byte(-1));
 
     var copied: Str = literal;
     var reassigned: Str = "";
@@ -32,9 +31,9 @@ fn main() -> i64 {
     observe(reassigned);
 
     var middle: Str = literal.slice(1, -1);
-    ska_rt_println_u64(middle.len());
-    ska_rt_println_u8(middle.byte(0));
-    ska_rt_println_u8(middle.byte(-1));
+    std::io::println_u64(middle.len());
+    std::io::println_u8(middle.byte(0));
+    std::io::println_u8(middle.byte(-1));
 
     var caller: u8[] = u8[](2u);
     caller[0] = 65u8;
@@ -45,29 +44,29 @@ fn main() -> i64 {
 
     var independent: u8[] = middle.to_bytes();
     independent[0] = 33u8;
-    ska_rt_println_u8(middle.byte(0));
-    ska_rt_println_u8(independent[0]);
+    std::io::println_u8(middle.byte(0));
+    std::io::println_u8(independent[0]);
 
     var combined: Str = frozen.concat(middle);
-    ska_rt_println_u64(combined.len());
-    ska_rt_println_u8(combined.byte(0));
-    ska_rt_println_u8(combined.byte(1));
-    ska_rt_println_u8(combined.byte(-2));
-    ska_rt_println_u8(combined.byte(-1));
+    std::io::println_u64(combined.len());
+    std::io::println_u8(combined.byte(0));
+    std::io::println_u8(combined.byte(1));
+    std::io::println_u8(combined.byte(-2));
+    std::io::println_u8(combined.byte(-1));
 
     var temporary: u8 = concatenated_byte(
         Str.from_bytes(caller),
         literal.slice(-2, -1),
         -1
     );
-    ska_rt_println_u8(temporary);
+    std::io::println_u8(temporary);
 
     var same_bytes: Str = "a\0\x80\xff";
     var middle_bytes: Str = "\0\x80";
     var other: Other = Other();
-    ska_rt_println_bool(literal.equals(same_bytes));
-    ska_rt_println_bool(middle.equals(middle_bytes));
-    ska_rt_println_bool(literal.equals(middle));
-    ska_rt_println_bool(literal.equals(other));
+    std::io::println_bool(literal.equals(same_bytes));
+    std::io::println_bool(middle.equals(middle_bytes));
+    std::io::println_bool(literal.equals(middle));
+    std::io::println_bool(literal.equals(other));
     return 0;
 }

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
+import std::io;
 
 class Resource {
     value: i64;
@@ -8,7 +8,7 @@ class Resource {
     }
 
     destroy {
-        ska_rt_println_bool(self.value);
+        std::io::println_bool(self.value);
     }
 }
 

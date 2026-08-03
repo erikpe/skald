@@ -138,7 +138,7 @@ makes a result source-observable.
   optional boolean and integer parsing, and correctly rounded binary64
   parsing, the compiler/library boundary, and the remaining frozen binary64
   formatting contract.
-- [Standard I/O](IO.md) defines the implemented four-function `std::io` surface,
+- [Standard I/O](IO.md) defines the implemented nine-function `std::io` surface,
   raw-byte whole-input and exact-output behavior, stable failures, costs, and
   deliberate exclusions. Its private compiler/runtime foundation, x86-64
   lowering, exact standard-stream writes, and growable whole-input reads all

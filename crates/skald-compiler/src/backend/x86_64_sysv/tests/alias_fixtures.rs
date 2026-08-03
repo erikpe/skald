@@ -209,15 +209,15 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
     (program, AliasProgramIds { add, class })
 }
 
-pub(super) fn alias_println_i64_stub() -> &'static str {
+pub(super) fn alias_record_i64_stub() -> &'static str {
     concat!(
         ".section .rodata\n",
         ".Lalias_output:\n",
         "    .ascii \"50\\n\"\n",
         ".text\n",
-        ".globl ska_rt_println_i64\n",
-        ".type ska_rt_println_i64, @function\n",
-        "ska_rt_println_i64:\n",
+        ".globl test_record_i64\n",
+        ".type test_record_i64, @function\n",
+        "test_record_i64:\n",
         "    cmp rdi, 50\n",
         "    jne .Lalias_bad_value\n",
         "    mov rax, 1\n",
@@ -230,7 +230,7 @@ pub(super) fn alias_println_i64_stub() -> &'static str {
         "    mov rax, 60\n",
         "    mov rdi, 99\n",
         "    syscall\n",
-        ".size ska_rt_println_i64, .-ska_rt_println_i64\n",
+        ".size test_record_i64, .-test_record_i64\n",
     )
 }
 

@@ -199,7 +199,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
 
 pub(super) fn counter_member_program() -> MirProgram {
     let mut program = lower_source_to_mir(concat!(
-        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "extern fn test_record_i64(value: i64) -> unit;\n",
         "fn sum(a: i64, b: i64) -> i64 { return a + b; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
+import std::io;
 
 fn through_parameter(value: bool) -> bool {
     return value;
@@ -9,10 +9,10 @@ fn function_value() -> bool {
 }
 
 fn main() -> i64 {
-    ska_rt_println_bool(false);
+    std::io::println_bool(false);
     var local: bool = true;
-    ska_rt_println_bool(local);
-    ska_rt_println_bool(through_parameter(false));
-    ska_rt_println_bool(function_value());
+    std::io::println_bool(local);
+    std::io::println_bool(through_parameter(false));
+    std::io::println_bool(function_value());
     return 74;
 }

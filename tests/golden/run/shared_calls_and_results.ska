@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 interface Relay {
     fn pass(value: shared Trace) -> shared Trace;
@@ -12,7 +12,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -81,7 +81,7 @@ fn main() -> i64 {
     var via_interface: shared Trace = through_interface(relay, first);
     var recursive: shared Trace = recurse(make(3), true);
     consume_pair(new Trace(4), new Trace(5));
-    ska_rt_println_i64(crowded(1, 2, 3, 4, 5, 6, first, 7));
+    std::io::println_i64(crowded(1, 2, 3, 4, 5, 6, first, 7));
     var replacement: shared Trace = replace(copied, produced);
     return 0;
 }

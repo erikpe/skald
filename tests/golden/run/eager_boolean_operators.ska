@@ -1,5 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Probe {
     sequence: i64;
@@ -29,43 +28,43 @@ fn same(left: bool, right: bool) -> bool {
 }
 
 fn main() -> i64 {
-    ska_rt_println_bool(!false);
-    ska_rt_println_bool(!true);
+    std::io::println_bool(!false);
+    std::io::println_bool(!true);
 
-    ska_rt_println_bool(false == false);
-    ska_rt_println_bool(false == true);
-    ska_rt_println_bool(true == false);
-    ska_rt_println_bool(true == true);
-    ska_rt_println_bool(false != false);
-    ska_rt_println_bool(false != true);
-    ska_rt_println_bool(true != false);
-    ska_rt_println_bool(true != true);
+    std::io::println_bool(false == false);
+    std::io::println_bool(false == true);
+    std::io::println_bool(true == false);
+    std::io::println_bool(true == true);
+    std::io::println_bool(false != false);
+    std::io::println_bool(false != true);
+    std::io::println_bool(true != false);
+    std::io::println_bool(true != true);
 
     var value: bool = false;
     value = !value;
-    ska_rt_println_bool(value);
-    ska_rt_println_bool(inverted(value));
-    ska_rt_println_bool(same(value, true));
+    std::io::println_bool(value);
+    std::io::println_bool(inverted(value));
+    std::io::println_bool(same(value, true));
 
     var optional: bool? = false;
-    ska_rt_println_bool(!optional!);
-    ska_rt_println_bool(!(optional is none));
-    ska_rt_println_bool(((i64) 1u8 == 1) == !false);
+    std::io::println_bool(!optional!);
+    std::io::println_bool(!(optional is none));
+    std::io::println_bool(((i64) 1u8 == 1) == !false);
 
     var probe: Probe = Probe(false);
-    ska_rt_println_bool(probe.flag == false);
-    ska_rt_println_bool(probe.inverted());
-    ska_rt_println_bool(!probe.observe(false, 1));
-    ska_rt_println_i64(probe.sequence);
-    ska_rt_println_bool(probe.observe(true, 2) == probe.observe(false, 3));
-    ska_rt_println_i64(probe.sequence);
+    std::io::println_bool(probe.flag == false);
+    std::io::println_bool(probe.inverted());
+    std::io::println_bool(!probe.observe(false, 1));
+    std::io::println_i64(probe.sequence);
+    std::io::println_bool(probe.observe(true, 2) == probe.observe(false, 3));
+    std::io::println_i64(probe.sequence);
 
-    ska_rt_println_bool(!true == false);
-    ska_rt_println_bool(true == !false);
-    ska_rt_println_bool(!(true == false));
+    std::io::println_bool(!true == false);
+    std::io::println_bool(true == !false);
+    std::io::println_bool(!(true == false));
 
     if (!false) {
-        ska_rt_println_i64(40);
+        std::io::println_i64(40);
     }
 
     var done: bool = false;
@@ -74,6 +73,6 @@ fn main() -> i64 {
         iterations = iterations + 1;
         done = true;
     }
-    ska_rt_println_i64(iterations);
+    std::io::println_i64(iterations);
     return 0;
 }

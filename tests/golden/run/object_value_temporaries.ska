@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     value: i64;
@@ -16,7 +16,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(400 + self.value);
+        std::io::println_i64(400 + self.value);
     }
 }
 
@@ -29,7 +29,7 @@ fn grouped(value: i64) -> Trace {
 }
 
 fn consume(value: Trace) -> unit {
-    ska_rt_println_i64(500 + value.value);
+    std::io::println_i64(500 + value.value);
 }
 
 fn main() -> i64 {

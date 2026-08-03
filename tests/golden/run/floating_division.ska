@@ -1,8 +1,7 @@
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn mark(marker: i64, value: f64) -> f64 {
-    ska_rt_println_i64(marker);
+    std::io::println_i64(marker);
     return value;
 }
 
@@ -30,7 +29,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(100 + self.marker);
+        std::io::println_i64(100 + self.marker);
     }
 }
 
@@ -43,17 +42,17 @@ fn divide_array(values: f64[], divisor: f64?) -> f64 {
 }
 
 fn main() -> i64 {
-    ska_rt_println_f64_bits(6.0 / 2.0);
-    ska_rt_println_f64_bits(1.0 / 3.0);
-    ska_rt_println_f64_bits(1.0 / zero());
-    ska_rt_println_f64_bits(1.0 / negative_zero());
-    ska_rt_println_f64_bits(-1.0 / zero());
-    ska_rt_println_f64_bits(0.0 / -2.0);
-    ska_rt_println_f64_bits(-0.0 / -2.0);
-    ska_rt_println_f64_bits(2.2250738585072014e-308 / 2.0);
-    ska_rt_println_f64_bits(4.9406564584124654e-324 / 2.0);
-    ska_rt_println_f64_bits(-4.9406564584124654e-324 / 2.0);
-    ska_rt_println_f64_bits(1.7976931348623157e308 / 0.5);
+    std::io::println_f64(6.0 / 2.0);
+    std::io::println_f64(1.0 / 3.0);
+    std::io::println_f64(1.0 / zero());
+    std::io::println_f64(1.0 / negative_zero());
+    std::io::println_f64(-1.0 / zero());
+    std::io::println_f64(0.0 / -2.0);
+    std::io::println_f64(-0.0 / -2.0);
+    std::io::println_f64(2.2250738585072014e-308 / 2.0);
+    std::io::println_f64(4.9406564584124654e-324 / 2.0);
+    std::io::println_f64(-4.9406564584124654e-324 / 2.0);
+    std::io::println_f64(1.7976931348623157e308 / 0.5);
 
     consume(1.0 / 0.0);
     consume(0.0 / 0.0);
@@ -64,9 +63,9 @@ fn main() -> i64 {
     var divisor: f64? = 2.0;
     var result: f64 = divide_array(values, divisor);
     result = result / 2.0;
-    ska_rt_println_f64_bits(result);
+    std::io::println_f64(result);
 
-    ska_rt_println_f64_bits(mark(1, 8.0) / mark(2, 2.0));
-    ska_rt_println_f64_bits(make(3, 9.0)->read() / make(4, 3.0)->read());
+    std::io::println_f64(mark(1, 8.0) / mark(2, 2.0));
+    std::io::println_f64(make(3, 9.0)->read() / make(4, 3.0)->read());
     return 0;
 }

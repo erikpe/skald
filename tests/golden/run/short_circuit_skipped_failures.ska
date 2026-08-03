@@ -1,6 +1,7 @@
+import std::io;
+
 import std::error;
 
-extern fn ska_rt_println_bool(value: bool) -> unit;
 
 class Wanted {
     init() {}
@@ -42,15 +43,15 @@ fn explicit_failure() -> bool {
 }
 
 fn main() -> i64 {
-    ska_rt_println_bool(false && optional_failure());
-    ska_rt_println_bool(true || optional_failure());
-    ska_rt_println_bool(false && cast_failure());
-    ska_rt_println_bool(true || cast_failure());
-    ska_rt_println_bool(false && bounds_failure());
-    ska_rt_println_bool(true || bounds_failure());
-    ska_rt_println_bool(false && allocation_failure());
-    ska_rt_println_bool(true || allocation_failure());
-    ska_rt_println_bool(false && explicit_failure());
-    ska_rt_println_bool(true || explicit_failure());
+    std::io::println_bool(false && optional_failure());
+    std::io::println_bool(true || optional_failure());
+    std::io::println_bool(false && cast_failure());
+    std::io::println_bool(true || cast_failure());
+    std::io::println_bool(false && bounds_failure());
+    std::io::println_bool(true || bounds_failure());
+    std::io::println_bool(false && allocation_failure());
+    std::io::println_bool(true || allocation_failure());
+    std::io::println_bool(false && explicit_failure());
+    std::io::println_bool(true || explicit_failure());
     return 0;
 }

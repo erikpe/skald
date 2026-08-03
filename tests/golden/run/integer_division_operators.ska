@@ -1,7 +1,4 @@
-extern fn ska_rt_println_bool(value: bool) -> unit;
-extern fn ska_rt_println_i64(value: i64) -> unit;
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
+import std::io;
 
 class Holder {
     quotient: u64;
@@ -40,7 +37,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -49,7 +46,7 @@ fn divide(left: u64, right: u64) -> u64 {
 }
 
 fn consume(value: u64) -> unit {
-    ska_rt_println_u64(value);
+    std::io::println_u64(value);
 }
 
 fn produce_trace(marker: i64, value: u64) -> Trace {
@@ -65,64 +62,64 @@ fn make_trace(marker: i64, value: u64) -> shared Trace {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64(7 / 3);
-    ska_rt_println_i64(-7 / 3);
-    ska_rt_println_i64(7 / -3);
-    ska_rt_println_i64(-7 / -3);
-    ska_rt_println_i64(7 % 3);
-    ska_rt_println_i64(-7 % 3);
-    ska_rt_println_i64(7 % -3);
-    ska_rt_println_i64(-7 % -3);
-    ska_rt_println_i64(-9223372036854775808 / -1);
-    ska_rt_println_i64(-9223372036854775808 % -1);
-    ska_rt_println_i64(9223372036854775807 / -1);
-    ska_rt_println_i64(-9223372036854775808 / 9223372036854775807);
-    ska_rt_println_i64(-9223372036854775808 % 9223372036854775807);
+    std::io::println_i64(7 / 3);
+    std::io::println_i64(-7 / 3);
+    std::io::println_i64(7 / -3);
+    std::io::println_i64(-7 / -3);
+    std::io::println_i64(7 % 3);
+    std::io::println_i64(-7 % 3);
+    std::io::println_i64(7 % -3);
+    std::io::println_i64(-7 % -3);
+    std::io::println_i64(-9223372036854775808 / -1);
+    std::io::println_i64(-9223372036854775808 % -1);
+    std::io::println_i64(9223372036854775807 / -1);
+    std::io::println_i64(-9223372036854775808 / 9223372036854775807);
+    std::io::println_i64(-9223372036854775808 % 9223372036854775807);
 
-    ska_rt_println_u64(9223372036854775808u / 3u);
-    ska_rt_println_u64(9223372036854775808u % 3u);
-    ska_rt_println_u64(18446744073709551615u / 2u);
-    ska_rt_println_u64(18446744073709551615u % 2u);
-    ska_rt_println_u8(0u8 / 1u8);
-    ska_rt_println_u8(255u8 / 1u8);
-    ska_rt_println_u8(255u8 / 2u8);
-    ska_rt_println_u8(255u8 % 2u8);
+    std::io::println_u64(9223372036854775808u / 3u);
+    std::io::println_u64(9223372036854775808u % 3u);
+    std::io::println_u64(18446744073709551615u / 2u);
+    std::io::println_u64(18446744073709551615u % 2u);
+    std::io::println_u8(0u8 / 1u8);
+    std::io::println_u8(255u8 / 1u8);
+    std::io::println_u8(255u8 / 2u8);
+    std::io::println_u8(255u8 % 2u8);
 
     var assigned: u64 = 0u;
     assigned = divide(100u, 7u);
     consume(assigned);
 
     var holder: Holder = Holder(20u / 3u, 20u % 3u);
-    ska_rt_println_u64(holder.quotient);
-    ska_rt_println_u64(holder.remainder);
+    std::io::println_u64(holder.quotient);
+    std::io::println_u64(holder.remainder);
     holder.quotient = 81u / 9u;
-    ska_rt_println_u64(holder.quotient);
+    std::io::println_u64(holder.quotient);
 
     var optional: u64? = 20u / 3u;
-    ska_rt_println_u64(optional!);
+    std::io::println_u64(optional!);
     optional = 20u % 3u;
-    ska_rt_println_u64(optional!);
+    std::io::println_u64(optional!);
 
     var values: u64[] = u64[](2u);
     values[0] = 100u / 9u;
     values[1] = values[0] % 4u;
-    ska_rt_println_u64(values[0]);
-    ska_rt_println_u64(values[1]);
+    std::io::println_u64(values[0]);
+    std::io::println_u64(values[1]);
 
-    ska_rt_println_u64((100u / 7u) % 5u);
-    ska_rt_println_u64(128u / (32u >> 3u));
-    ska_rt_println_i64(((i64) 20u) / ((i64) 3u));
+    std::io::println_u64((100u / 7u) % 5u);
+    std::io::println_u64(128u / (32u >> 3u));
+    std::io::println_i64(((i64) 20u) / ((i64) 3u));
 
     var probe: Probe = Probe();
-    ska_rt_println_u64(probe.observe(20u, 1) / probe.observe(3u, 2));
-    ska_rt_println_i64(probe.sequence);
+    std::io::println_u64(probe.observe(20u, 1) / probe.observe(3u, 2));
+    std::io::println_i64(probe.sequence);
 
-    ska_rt_println_bool((20u / 3u) == 6u && (20u % 3u) == 2u);
+    std::io::println_bool((20u / 3u) == 6u && (20u % 3u) == 2u);
     if ((255u8 / 2u8) == 127u8 && (255u8 % 2u8) == 1u8) {
-        ska_rt_println_u64(
+        std::io::println_u64(
             read_trace(produce_trace(41, 20u)) / read_trace(produce_trace(42, 3u))
         );
-        ska_rt_println_u64(
+        std::io::println_u64(
             make_trace(51, 20u)->read() % make_trace(52, 3u)->read()
         );
         return 0;

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Trace {
     marker: i64;
@@ -8,7 +8,7 @@ class Trace {
     }
 
     destroy {
-        ska_rt_println_i64(self.marker);
+        std::io::println_i64(self.marker);
     }
 }
 
@@ -78,10 +78,10 @@ fn owned_cleanup() -> i64 {
 }
 
 fn main() -> i64 {
-    ska_rt_println_i64(immediate());
-    ska_rt_println_i64(conditional(5));
-    ska_rt_println_i64(nested());
-    ska_rt_println_i64(nested_cleanup());
-    ska_rt_println_i64(owned_cleanup());
+    std::io::println_i64(immediate());
+    std::io::println_i64(conditional(5));
+    std::io::println_i64(nested());
+    std::io::println_i64(nested_cleanup());
+    std::io::println_i64(owned_cleanup());
     return 0;
 }

@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Base {
     tag: u8;
@@ -20,7 +20,7 @@ class Base {
     }
 
     destroy {
-        ska_rt_println_i64(3000 + self.value);
+        std::io::println_i64(3000 + self.value);
     }
 }
 
@@ -30,7 +30,7 @@ class Middle extends Base {
     }
 
     destroy {
-        ska_rt_println_i64(4000 + self.value);
+        std::io::println_i64(4000 + self.value);
     }
 }
 
@@ -45,7 +45,7 @@ class Leaf extends Middle {
     }
 
     destroy {
-        ska_rt_println_i64(5000 + self.extra);
+        std::io::println_i64(5000 + self.extra);
     }
 }
 
@@ -77,24 +77,24 @@ fn sliced_result(ref leaf: Leaf) -> Base {
 }
 
 fn consume(value: Base) -> unit {
-    ska_rt_println_i64(value.value);
+    std::io::println_i64(value.value);
 }
 
 fn main() -> i64 {
     var leaf: Leaf = Leaf(7, 70);
-    ska_rt_println_i64(inspect(leaf));
+    std::io::println_i64(inspect(leaf));
     forward_any(leaf);
-    ska_rt_println_i64(pressure(1, 2, 3, 4, 5, 6, leaf, 2.5));
+    std::io::println_i64(pressure(1, 2, 3, 4, 5, 6, leaf, 2.5));
 
     var copied: Leaf = leaf;
-    ska_rt_println_i64(copied.value);
-    ska_rt_println_i64(copied.extra);
+    std::io::println_i64(copied.value);
+    std::io::println_i64(copied.extra);
 
     copied = leaf;
-    ska_rt_println_i64(copied.value);
+    std::io::println_i64(copied.value);
 
     var sliced: Base = sliced_result(leaf);
-    ska_rt_println_i64(sliced.value);
+    std::io::println_i64(sliced.value);
     consume(Leaf(9, 90));
     return 0;
 }

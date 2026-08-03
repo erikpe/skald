@@ -1,7 +1,7 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 fn left() -> u64 {
-    ska_rt_println_i64(1);
+    std::io::println_i64(1);
     return 8u;
 }
 

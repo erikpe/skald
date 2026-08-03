@@ -1,4 +1,4 @@
-extern fn ska_rt_println_i64(value: i64) -> unit;
+import std::io;
 
 class Item {
     value: i64;
@@ -8,7 +8,7 @@ class Item {
     }
 
     destroy {
-        ska_rt_println_i64(self.value + 1000);
+        std::io::println_i64(self.value + 1000);
     }
 }
 
@@ -28,12 +28,12 @@ class Holder {
 }
 
 fn observe_element(ref item: Item, ignored: i64) -> unit {
-    ska_rt_println_i64(item.value);
+    std::io::println_i64(item.value);
     return;
 }
 
 fn observe_array(ref items: Item[], ignored: i64) -> unit {
-    ska_rt_println_i64(items[0].value);
+    std::io::println_i64(items[0].value);
     return;
 }
 

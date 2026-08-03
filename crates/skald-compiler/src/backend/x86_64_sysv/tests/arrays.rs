@@ -91,7 +91,7 @@ fn primitive_inline_array_helpers_are_deterministic_and_layout_specialized() {
     assert!(first.contains(".Lska_array_1_clone:"));
     assert!(first.contains("mov byte ptr [rdi + rsi*1 + 16], al"));
     assert!(first.contains(".Lska_array_0_release:"));
-    assert!(first.contains("call ska_rt_abi_v7"));
+    assert!(first.contains("call ska_rt_abi_v8"));
     assert!(first.contains("call ska_rt_alloc"));
     assert!(first.contains("call ska_rt_free"));
     assert!(!first.contains("ska_rt_array"));
