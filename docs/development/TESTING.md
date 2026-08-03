@@ -177,8 +177,11 @@ tests own pointer/length lowering and exact symbols; private-standard-library
 native goldens own checked calls and host failures. Public I/O goldens and
 native probes cover exact writes, EOF, geometric read growth, working-directory
 files, binary partial transfers, invalid progress, close behavior, and stable
-failures. The golden harness accepts exact-byte stdin, stdout, stderr, and exit
-sidecars and feeds the same stdin bytes to both deterministic executions.
+failures. A source-native golden covers every primitive `println_<type>` helper,
+including extrema, signed zero, infinities, and NaN, through exact stdout bytes
+without a scalar runtime observer. The golden harness accepts exact-byte stdin,
+stdout, stderr, and exit sidecars and feeds the same stdin bytes to both
+deterministic executions.
 
 Multi-file golden directories contain one `case.args` manifest plus their
 entry and supporting trees. The manifest records one exact command argument

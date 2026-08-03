@@ -32,9 +32,10 @@ This roadmap owns implementation order and does not redefine that contract.
   conversion ABI.
 - Keep `from_u8` numeric and keep byte-string construction under the existing
   `from_bytes` name.
-- Keep `std::io` byte-exact and line-ending-free. Convenience output APIs,
-  interpolation, format strings, arbitrary radices, parser diagnostics,
-  whitespace trimming, and Unicode remain excluded.
+- Keep `std::io` byte-exact. Type-named primitive `println_<type>` conveniences
+  append exactly one ASCII line feed; interpolation, format strings, arbitrary
+  radices, parser diagnostics, whitespace trimming, and Unicode remain
+  excluded.
 - Preserve the five bootstrap scalar observation helpers until repository
   programs and tests no longer depend on them; remove them only in the final
   focused compatibility slice.
@@ -50,7 +51,8 @@ This roadmap owns implementation order and does not redefine that contract.
 - [x] TXT1 — Implement boolean and integer formatting
 - [x] TXT2 — Implement optional boolean and integer parsing
 - [x] TXT3 — Implement correctly rounded binary64 parsing
-- [x] TXT4 — Implement shortest round-tripping binary64 formatting
+- [x] TXT4 — Implement shortest round-tripping binary64 formatting and
+      primitive line output
 - [ ] TXT5 — Adopt string I/O and retire scalar runtime observation
 
 Every implementation task runs focused standard-library and native golden
@@ -171,11 +173,12 @@ goldens, malformed and long-input robustness tests, `make check`, and
 rejects exactly the frozen syntax/range failures, preserves signed zero, and
 uses no host parser or runtime conversion service.
 
-### TXT4 — Implement shortest round-tripping binary64 formatting
+### TXT4 — Implement shortest round-tripping binary64 formatting and primitive line output
 
 **Purpose:** Complete deterministic user-facing formatting only after the
 inverse operation and its boundary corpus can validate every emitted
-candidate.
+candidate, then expose canonical primitive line output by composing those
+conversions with standard output.
 
 - [x] Implement NaN and infinity spelling in the `Str` facade, finite and
       signed-zero formatting in the companion module, and no promise of NaN
@@ -189,14 +192,19 @@ candidate.
       approximate floating comparison.
 - [x] Add exhaustive strategically bounded bit-pattern sweeps plus a stable
       generated corpus spanning every exponent class and significand edge.
+- [x] Add type-named primitive `std::io::println_<type>` conveniences that
+      compose `Str.from_<type>`, exact stdout writing, and one ASCII line feed
+      without adding compiler or runtime behavior.
 
 **Tests:** Special values, powers and neighbors, normal/subnormal boundaries,
 largest finite values, halfway selections, corpus round trips, output grammar
-checks, determinism, `make check`, and `make msrv-check`.
+checks, every primitive line helper and numeric extrema through exact stdout,
+determinism, `make check`, and `make msrv-check`.
 
 **Exit criteria:** Every `f64` category has its frozen spelling, every finite
-datum round trips bit-identically, output is shortest under the contract, and
-no compiler or runtime formatting behavior is involved.
+datum round trips bit-identically, output is shortest under the contract, every
+primitive has exact LF-terminated standard output, and no compiler or runtime
+formatting behavior is involved.
 
 ### TXT5 — Adopt string I/O and retire scalar runtime observation
 
@@ -204,8 +212,9 @@ no compiler or runtime formatting behavior is involved.
 conversion and exact `Str` output cover its useful repository roles.
 
 - [ ] Migrate samples and source-to-native tests that observe primitive values
-      to `Str.from_<type>` plus `std::io::write_stdout`, adding line endings
-      explicitly where records require them.
+      to `std::io::println_<type>` where canonical line output is intended, or
+      to `Str.from_<type>` plus exact `std::io::write_stdout` where composition
+      requires explicit control.
 - [ ] Preserve low-level compiler/backend tests that need scalar ABI probes by
       replacing their observations with exit status, memory-visible behavior,
       assembly inspection, or the new standard-library path as appropriate.

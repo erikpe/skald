@@ -1,10 +1,10 @@
 # Standard I/O
 
-**Status:** implemented four-function whole-stream API.
+**Status:** implemented whole-stream and primitive-line-output API.
 
 This document defines the source-level contract for Skald's first standard I/O
-module. The installed module exposes all four functions as ordinary Skald code
-over its five private byte-array intrinsics. The compiler resolves and types
+module. The installed module exposes its public functions as ordinary Skald
+code over five private byte-array intrinsics. The compiler resolves and types
 intrinsic calls into dedicated I/O HIR and verified MIR, and x86-64 lowers
 them to the narrow host byte operations provided by runtime ABI version 7.
 The existing scalar print helpers remain available as a separate bootstrap
@@ -23,12 +23,17 @@ public fn read_stdin() -> Str;
 public fn read_file(ref path: Str) -> Str;
 public fn write_stdout(ref text: Str) -> unit;
 public fn write_stderr(ref text: Str) -> unit;
+public fn println_bool(value: bool) -> unit;
+public fn println_i64(value: i64) -> unit;
+public fn println_u64(value: u64) -> unit;
+public fn println_u8(value: u8) -> unit;
+public fn println_f64(value: f64) -> unit;
 ```
 
 These functions are ordinary Skald standard-library functions. Their private
 intrinsics and host handles are implementation details: programs cannot import
 or call them through this public surface. `std::io` is not part of the prelude.
-All four functions are currently available.
+All nine functions are currently available.
 
 ## Byte model
 
@@ -37,15 +42,17 @@ functions do not validate, decode, normalize, or encode text. In particular,
 their behavior is independent of UTF-8 validity.
 
 This API does not add any `Str` conversion, borrowing, adoption, or builder
-operation. The implementation uses the existing copying conversions:
+operation. Reads and exact writes use the existing copying conversions:
 
 - `Str.to_bytes()` returns an independent `u8[]` copy.
 - `Str.from_bytes(ref bytes: u8[])` copies the supplied bytes into a new `Str`.
 
 Consequently, reads require storage for the accumulated byte array and the
 resulting `Str`, and writes require a byte-array copy of the supplied `Str`.
-Those costs are part of this initial design and may be optimized later without
-changing the four public signatures.
+Primitive line output additionally creates its canonical `Str` representation
+through the existing `Str.from_<type>` methods. Those costs are part of this
+initial design and may be optimized later without changing the public
+signatures.
 
 ## Whole-input reads
 
@@ -74,6 +81,13 @@ several partial writes were required.
 Neither function appends a newline, flushes C library buffers, nor closes the
 standard handle. Writing an empty `Str` succeeds without requiring a host write.
 
+Each `println_<type>(value)` converts its primitive with the correspondingly
+named `Str.from_<type>` method, writes that canonical representation to
+standard output, and then writes exactly one ASCII line-feed byte (`0x0A`).
+The helpers add no spaces or other separators. `println_f64` uses the frozen
+shortest round-tripping decimal contract; it is not a raw-bit observer and does
+not preserve a NaN payload or sign.
+
 ## Failure behavior
 
 The public API is all-or-panic. It does not expose host handles, error numbers,
@@ -99,7 +113,7 @@ so this first API does not promise cleanup after an earlier operation fails.
 
 This initial module does not include:
 
-- primitive formatting or parsing, or any new primitive-to-`Str` conversion;
+- format strings, interpolation, configurable numeric formatting, or parsing;
 - replacement or removal of the scalar observability print helpers;
 - public files, handles, streams, or incremental read/write APIs;
 - file creation, writing, appending, seeking, metadata, or directory operations;
