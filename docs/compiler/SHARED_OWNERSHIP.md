@@ -258,6 +258,11 @@ The MIR verifier must reject a program unless all of the following hold:
 - each dynamic class identifies exactly one compatible complete finalizer; and
 - shared values are absent from external signatures and static storage.
 
+That final exclusion describes the implemented verifier. The frozen
+[zero-default static-field design](../language/STATIC_FIELDS.md) will later
+admit only optional `shared? T` statics, whose zero state owns nothing; it does
+not admit a zero or uninitialized ordinary `shared T` handle.
+
 As with existing MIR, invalid public or mutated MIR fails verification before
 target layout or code generation. Reference-count underflow and dangling
 provenance are compiler defects that verification and focused lowering tests

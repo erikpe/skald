@@ -585,6 +585,17 @@ Current unrecoverable termination does not guarantee cleanup of that prefix.
 Future recoverable exceptions must define and execute prefix cleanup before
 array construction can throw.
 
+## Frozen static storage
+
+The frozen [zero-default static-field contract](STATIC_FIELDS.md) permits an
+inline `T[]` as future class-owned static storage for every legal array element
+type. It begins as the existing allocation-free empty descriptor, constructs
+no elements, and therefore does not require its element type to be default
+initializable. Later replacement, indexing, slicing, aliases, anchors, and
+standard-I/O buffer use retain this document's ordinary rules. Displaced
+backing receives ordinary cleanup, while final backing is deliberately not
+cleaned at process exit. Static array syntax is not yet implemented.
+
 ## Failure
 
 These source operations terminate unsuccessfully without returning a value or
@@ -617,7 +628,7 @@ The following are intentionally outside the implemented array profile:
   protocols;
 - `for` iteration and iterator lifetime behavior;
 - whole-pointee shared array assignment;
-- static array storage and array external ABI mappings;
+- array external ABI mappings;
 - recoverable bounds or allocation failures and exceptional prefix cleanup;
   and
 - concurrency, atomic shared counts, or synchronization guarantees.

@@ -302,6 +302,12 @@ claims, and casts. A qualified public class may select a static method with
 `module_binding::Class.method(arguments)`; qualification establishes class
 visibility but does not bypass member privacy.
 
+The frozen [zero-default static-field contract](STATIC_FIELDS.md) reuses this
+same boundary for `module_binding::Class.name`. A derived-class spelling
+retains the declaring static field's canonical identity, and multiple module
+bindings never create additional storage. This selection is not yet accepted
+by the compiler.
+
 The same canonical module may have multiple local bindings:
 
 ```ska
@@ -484,6 +490,11 @@ The frozen initial system has no:
 - separate compilation, serialized interfaces, or binary Skald libraries;
 - top-level state or module initialization; or
 - native export of source-public declarations.
+
+The top-level-state exclusion does not preclude the separately frozen
+class-owned [zero-default static-field profile](STATIC_FIELDS.md). That profile
+adds neither module-owned storage nor module initialization, and source-public
+static fields do not become native exports.
 
 Package identities may later group roots and define package-private access
 without changing existing logical paths or imports. Separate compilation may

@@ -6,17 +6,17 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
-
-## Planned
-
 - [Zero-default static fields](STATIC_FIELDS_ROADMAP.md) — add class-owned,
   class-qualified mutable storage for primitives, inline optionals, optional
   shared owners, and empty inline arrays through verified program-owned MIR
-  places and deterministic x86-64 slots; STF0 (freeze the contract) is next.
-  It depends on the implemented module/privacy/static-method, ownership,
-  optional, array, path-state, standard-I/O, backend, and runtime-version-8
-  contracts, but not on the planned produced-object-alias roadmap.
+  places and deterministic x86-64 slots; STF1 (separate declarations and
+  inherited identity) is next. It depends on the implemented
+  module/privacy/static-method, ownership, optional, array, path-state,
+  standard-I/O, backend, and runtime-version-8 contracts, but not on the
+  planned produced-object-alias roadmap.
+
+## Planned
+
 - [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
   — allow exact-class-producing expressions to bind directly to read-only
   `ref` parameters through verified caller-owned full-expression temporaries;

@@ -41,6 +41,11 @@ The implemented class model uses these member categories:
 | Static method | A class-owned operation with no receiver or `self`; it is selected through a class spelling. |
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
+The frozen [zero-default static-field contract](STATIC_FIELDS.md) adds a
+separate class-owned storage category in the future. It does not turn a static
+field into an instance field, lifecycle slot, or receiver operation, and the
+current compiler does not yet accept it.
+
 The shared top-level namespace is defined by
 [modules and foreign interoperation](MODULES_AND_INTEROP.md#top-level-namespace).
 Within each class, fields and ordinary methods share one
@@ -67,7 +72,9 @@ may instead begin with the contextual modifier `private`. Copy constructors,
 copy assignments, and destructors do not declare visibility. Static methods
 use `static fn`; `private static fn` composes the same visibility rule with
 receiverless method kind. Ordinary initializers and the other lifecycle
-declarations cannot be static. Static fields are not implemented.
+declarations cannot be static. Static fields are not implemented; their
+future syntax, namespace, access, lifetime, and supported zero-state types are
+frozen in [Zero-Default Static Fields](STATIC_FIELDS.md).
 
 ### Declaring-class privacy
 
@@ -685,7 +692,8 @@ field order. Checked optional-class payload access uses bounded presence
 guards. Optional `shared? T` fields also execute: absence owns nothing,
 presence owns one strong handle, synthesized copy retains conditionally, and
 assignment/destruction conditionally release in the ordinary reverse field
-order. The model does not yet include static fields or state, lifecycle-member
+order. The model does not yet execute the frozen zero-default static-field
+profile and does not include broader static state, lifecycle-member
 visibility, protected access, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields

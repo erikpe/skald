@@ -161,7 +161,10 @@ Shared types are distinct from inline exact-class values and from non-owning
 aliases. There is no implicit conversion between an inline owning value and a
 shared owner. Shared values are permitted as locals, value parameters,
 results, and class fields. They are not permitted in external signatures or
-static storage in this initial design.
+non-optional static storage. The frozen
+[zero-default static-field contract](STATIC_FIELDS.md) permits only
+`shared? T` static storage, initially absent; it does not make zero a valid
+ordinary `shared T` handle and is not yet implemented.
 
 ## Strong-owner value semantics
 
@@ -421,7 +424,8 @@ This profile does not include:
 - custom allocators;
 - shared values in external signatures or other public object ABI;
 - atomic reference counts, concurrency, or thread-safety guarantees;
-- static or global shared storage;
+- non-optional static or global shared storage; the frozen static-field design
+  permits only optional shared owners as class-owned statics;
 - recoverable allocation failure; or
 - exceptional cleanup or failed-construction unwinding.
 

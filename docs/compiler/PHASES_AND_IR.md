@@ -1126,7 +1126,7 @@ respectively, the exit or latch target.
 
 ### Repeatable MIR storage lifetimes
 
-MIR keeps one static storage identity and declaration for each source local or
+MIR keeps one stable storage identity and declaration for each source local or
 compiler temporary. A storage whose dynamic lifetime can repeat has explicit
 target-independent lifetime epochs with operations equivalent to:
 

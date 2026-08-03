@@ -29,6 +29,20 @@ Tool usage, source I/O, target selection, backend legality, assembly, linkage,
 and artifact-publication failures are compiler or toolchain failures rather
 than source-language exceptions.
 
+### Frozen static-field rejection boundary
+
+The [zero-default static-field design](STATIC_FIELDS.md) freezes future syntax
+without making it accepted by the current compiler. Until implementation, a
+static-field declaration receives the focused unsupported-syntax diagnostic.
+Once implemented, malformed declaration shapes remain syntax errors;
+unsupported zero-state types are rejected at the declared type; namespace
+collisions, privacy, and wrong-kind selections are rejected by their existing
+semantic owners; and calling a static field is a non-callable-target error.
+
+Static storage adds no runtime failure or panic reason. Operations performed
+through a static place retain their existing failures, such as optional
+unwrap, array bounds, allocation, and ownership-count failure.
+
 ## Current runtime failures
 
 The compiler implements executable `std::error::panic` call statements and

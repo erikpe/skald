@@ -1,6 +1,6 @@
 # Zero-Default Static Fields Roadmap
 
-Status: planned; STF0 is next.
+Status: in progress; STF1 is next.
 
 This roadmap adds class-owned mutable storage for values whose complete live
 state can be established by zero-filled target storage before Skald entry
@@ -132,7 +132,7 @@ static-place addressing belongs in a descriptive lowering module while
 
 ## Progress
 
-- [ ] STF0 — Freeze the zero-default static-field contract
+- [x] STF0 — Freeze the zero-default static-field contract
 - [ ] STF1 — Separate static declarations and inherited identity
 - [ ] STF2 — Establish typed static places and primitive behavior
 - [ ] STF3 — Add verified static MIR roots and x86-64 slots
@@ -148,20 +148,20 @@ static-place addressing belongs in a descriptive lowering module while
 **Purpose:** Publish the exact source, lifetime, supported-type, and runtime
 boundaries before representation work depends on them.
 
-- [ ] Add a clearly marked frozen future extension to the language grammar for
+- [x] Add a clearly marked frozen future extension to the language grammar for
       `static name: T;` and `private static name: T;`, including contextual
       disambiguation from an instance field named `static`.
-- [ ] Specify class-qualified and module-qualified access, inherited aliasing,
+- [x] Specify class-qualified and module-qualified access, inherited aliasing,
       declaring-class privacy, shared namespace collisions, local shadowing,
       wrong-kind uses, and the absence of receiver evaluation.
-- [ ] Specify the complete supported zero-state type set and exact initial
+- [x] Specify the complete supported zero-state type set and exact initial
       values, including positive-zero `f64`, absent optionals, and empty inline
       arrays. Record targeted rejection for every non-zero-valid storage type.
-- [ ] Specify program/process lifetime, ordinary replacement effects, and the
+- [x] Specify program/process lifetime, ordinary replacement effects, and the
       observable absence of final static cleanup after normal entry return.
-- [ ] State that static fields add no initialization order, shutdown order,
+- [x] State that static fields add no initialization order, shutdown order,
       runtime service, panic reason, public symbol, or ABI-version change.
-- [ ] Update the status matrix only as a frozen planned contract; do not claim
+- [x] Update the status matrix only as a frozen planned contract; do not claim
       compiler availability before the final task.
 
 **Tests:** Documentation link/index checks and a consistency review across the

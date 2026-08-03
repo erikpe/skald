@@ -21,6 +21,13 @@ Optional values add no runtime entry point or ABI-version change. The
 never passed to allocation, deallocation, finalization, or ordinary
 shared-owner machinery.
 
+The frozen
+[zero-default static-field design](../language/STATIC_FIELDS.md) likewise adds
+no public symbol, startup or shutdown call, root-registration service, panic
+reason, or ABI-version change. Static slots and their zero establishment are
+compiler/backend-owned, and generated code intentionally performs no final
+static cleanup. Runtime ABI version 8 remains the selected boundary.
+
 The current public surface is:
 
 ```c
