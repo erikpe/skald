@@ -3,8 +3,8 @@
 Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
-how the frozen but unavailable produced read-only alias extension composes
-with initializer selection and owning full-expression temporaries. The
+how the frozen produced read-only alias extension, implemented through HIR,
+composes with initializer selection and owning full-expression temporaries. The
 [status matrix](STATUS.md) records the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
@@ -367,8 +367,8 @@ makes a compatible `ref` candidate applicable under these same static rules;
 it never makes a `mut ref` candidate applicable. Applicability analysis does
 not evaluate or materialize the producer. After unique selection and access
 checking, execution evaluates the source exactly once while binding the
-selected initializer argument. This extension is not yet accepted by the
-compiler.
+selected initializer argument. Type checking and HIR now implement this
+selection; verified lifetime lowering remains staged.
 
 ## Fresh construction
 
@@ -666,10 +666,11 @@ materialized class temporaries. A completed object result becomes caller-owned.
 Receivers and aliases are non-owning. An inline class field is destroyed with
 its containing object rather than registered as a separate lexical owner.
 
-Once the frozen produced read-only alias extension is implemented, its hidden
-exact-class storage is one of these ordinary materialized class temporaries.
-The alias parameter itself remains non-owning and receives no independent
-registration.
+The frozen produced read-only alias extension specifies its hidden exact-class
+storage as one of these ordinary materialized class temporaries. Type checking
+and HIR already identify that source; the staged lifetime proof must establish
+the registration described here. The alias parameter itself remains
+non-owning and receives no independent registration.
 
 An owning place is registered only after its complete initialization or copy
 construction finishes. On normal fallthrough, each scope destroys registered

@@ -25,6 +25,22 @@ pub(super) enum ViewSourceUse {
 }
 
 impl ViewSourceUse {
+    const fn accepts_produced_inline(self) -> bool {
+        matches!(
+            self,
+            Self::AliasArgument | Self::Cast | Self::CopyConstruction
+        )
+    }
+
+    const fn source_context(self) -> &'static str {
+        match self {
+            Self::AliasArgument => "alias argument source",
+            Self::TypeTest => "type-test source",
+            Self::Cast => "object-cast source",
+            Self::CopyConstruction => "copy-construction source",
+        }
+    }
+
     const fn diagnostic_code(self) -> &'static str {
         match self {
             Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
@@ -240,6 +256,31 @@ impl CallableChecker<'_, '_> {
         ) {
             return self.check_optional_alias_argument(expression, expected, parameter);
         }
+        if let Some(target) = self.resolved_shared_target(expression) {
+            let diagnostic = self
+                .implicit_shared_dereference_diagnostic(expression.span(), target)
+                .with_secondary_label(parameter.span(), "alias parameter declared here")
+                .with_note(ViewSourceUse::AliasArgument.place_message());
+            self.diagnostics.push(diagnostic);
+            return None;
+        }
+        let required = lower_parameter_mode(parameter.binding_mode())
+            .required_access()
+            .expect("alias parameter mode must require place access");
+        if required == HirAccess::Mutable && self.is_produced_alias_source(expression) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_ALIAS_ARGUMENT,
+                    "mutable alias argument requires an existing object place",
+                )
+                .with_primary_label(
+                    expression.span(),
+                    "this expression produces a temporary object",
+                )
+                .with_secondary_label(parameter.span(), "mutable alias declared here"),
+            );
+            return None;
+        }
         if let ResolvedExpression::ObjectCast(cast) = expression {
             return self.check_cast_alias_argument(cast, parameter);
         }
@@ -249,9 +290,6 @@ impl CallableChecker<'_, '_> {
             }
         }
         let source = self.check_object_view_source(expression, ViewSourceUse::AliasArgument)?;
-        let required = lower_parameter_mode(parameter.binding_mode())
-            .required_access()
-            .expect("alias parameter mode must require place access");
         if !source.access().permits(required) {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -536,6 +574,24 @@ impl CallableChecker<'_, '_> {
         Some(HirCallArgument::CheckedView(Box::new(checked)))
     }
 
+    fn is_produced_alias_source(&self, expression: &ResolvedExpression) -> bool {
+        match expression {
+            ResolvedExpression::Construct(_)
+            | ResolvedExpression::StringLiteral(_)
+            | ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::StaticCall(_)
+            | ResolvedExpression::MethodCall(_)
+            | ResolvedExpression::InterfaceCall(_) => {
+                self.resolved_object_class(expression).is_some()
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                self.is_produced_alias_source(&grouped.expression)
+            }
+            ResolvedExpression::ObjectCast(cast) => self.is_produced_alias_source(&cast.source),
+            _ => false,
+        }
+    }
+
     pub(super) fn check_object_view_source(
         &mut self,
         expression: &ResolvedExpression,
@@ -708,10 +764,8 @@ impl CallableChecker<'_, '_> {
                 )
             }
             expression
-                if matches!(
-                    source_use,
-                    ViewSourceUse::Cast | ViewSourceUse::CopyConstruction
-                ) && !is_object_cast_expression(expression)
+                if source_use.accepts_produced_inline()
+                    && !is_object_cast_expression(expression)
                     && self.resolved_object_class(expression).is_some() =>
             {
                 self.check_produced_inline_view_source(expression, source_use)
@@ -760,7 +814,7 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         };
-        let source = self.check_object_source(expression, class, "object-cast source")?;
+        let source = self.check_object_source(expression, class, source_use.source_context())?;
         let crate::hir::HirObjectSource::Produced(source) = source else {
             unreachable!("non-place object cast source must produce an object")
         };
@@ -969,6 +1023,47 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
+                source @ CheckedObjectViewSource::Produced { class, .. },
+                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
+            ) => {
+                if required != HirAccess::ReadOnly {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_ALIAS_ARGUMENT,
+                            "mutable alias argument requires an existing object place",
+                        )
+                        .with_primary_label(
+                            source_span,
+                            "this expression produces a temporary object",
+                        )
+                        .with_secondary_label(parameter.span(), "mutable alias declared here"),
+                    );
+                    return None;
+                }
+                let expected_target = match expected {
+                    Type::Class(class) => HirViewTarget::Class(class),
+                    Type::Interface(interface) => HirViewTarget::Interface(interface),
+                    Type::Obj => HirViewTarget::Obj,
+                    _ => unreachable!(),
+                };
+                if !super::object_view_relation::class_provides_view(
+                    self.program,
+                    class,
+                    expected_target,
+                ) {
+                    self.diagnostics.push(mismatch(
+                        &view_target_name(self.program, HirViewTarget::Class(class)),
+                        &view_target_name(self.program, expected_target),
+                        source_span,
+                        "this produced object cannot provide the required view",
+                    ));
+                    return None;
+                }
+                Some(HirCallArgument::View(
+                    source.into_view(expected_target, HirAccess::ReadOnly),
+                ))
+            }
+            (
                 CheckedObjectViewSource::Shared(mut source),
                 expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
             ) => {
@@ -1053,9 +1148,6 @@ impl CallableChecker<'_, '_> {
                 | Type::Array(_),
             ) => None,
             (_, Type::Shared(_)) => None,
-            (CheckedObjectViewSource::Produced { .. }, _) => {
-                unreachable!("produced views enter alias arguments only through explicit casts")
-            }
         }
     }
 

@@ -222,13 +222,13 @@ rules and metadata.
 
 Alias parameters extend to class, interface, and `Obj` targets. They remain
 call-scoped, non-owning, non-storable, non-returnable, non-rebindable, and
-non-exclusive. Under the implemented boundary, eligible sources remain live
-object places or forwarded aliases; polymorphism alone does not make fresh and
-returned objects borrowable. The frozen but unavailable
+non-exclusive. Eligible sources include live object places and forwarded
+aliases. The frozen
 [produced read-only alias extension](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
-first materializes an exact-class producer in hidden caller-owned storage and
-then permits these same non-owning conversions for `ref`, without admitting
-the producer for `mut ref`.
+is implemented through type checking and HIR: it first represents an
+exact-class producer in hidden caller-owned storage and then permits these same
+non-owning conversions for `ref`, without admitting the producer for `mut
+ref`. Verified lifetime lowering and native execution remain staged.
 
 These implicit view conversions are available:
 

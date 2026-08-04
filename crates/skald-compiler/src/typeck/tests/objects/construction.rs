@@ -571,6 +571,7 @@ fn alias_access_filters_candidates_before_type_specificity() {
         "fn main() -> i64 {\n",
         "  var dog: Dog = Dog();\n",
         "  var mutable: Choice = Choice(dog);\n",
+        "  var produced: Choice = Choice(Dog());\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -611,6 +612,31 @@ fn alias_access_filters_candidates_before_type_specificity() {
         construction.initializer().unwrap(),
         InitializerId::new(ClassId::new(2), 1)
     );
+
+    let HirStatement::Local(local) = &main.body.statements[2] else {
+        panic!("expected produced choice local");
+    };
+    let HirLocalInitializer::Object(initialization) = &local.initializer else {
+        panic!("expected produced choice construction");
+    };
+    let crate::hir::HirObjectProducer::Construct(construction) = &initialization.producer else {
+        panic!("expected constructor producer");
+    };
+    assert_eq!(
+        construction.initializer().unwrap(),
+        InitializerId::new(ClassId::new(2), 0),
+        "a produced source must select the read-only alias candidate"
+    );
+    assert!(matches!(
+        construction.arguments().unwrap(),
+        [crate::hir::HirCallArgument::View(
+            crate::hir::HirObjectView {
+                source: crate::hir::HirViewSource::Produced(_),
+                access: HirAccess::ReadOnly,
+                ..
+            }
+        )]
+    ));
 }
 
 #[test]

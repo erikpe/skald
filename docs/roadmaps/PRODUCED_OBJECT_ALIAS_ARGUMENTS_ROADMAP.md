@@ -1,6 +1,6 @@
 # Produced Object Alias Arguments Roadmap
 
-Status: in progress; PAA1 is next.
+Status: in progress; PAA1 is complete and PAA2 is next.
 
 This roadmap generalizes class alias arguments so a produced exact-class
 object can bind directly to a read-only `ref` parameter. The compiler
@@ -10,10 +10,10 @@ full-expression temporaries. The feature removes source-only staging locals
 such as the one currently needed for `text.equals("NaN")` without weakening
 the language's alias non-escape or ownership rules.
 
-The completed first task publishes the source-visible contract in the living
-language documentation. This roadmap records that frozen contract and the
-remaining implementation order; it does not make the feature available by
-itself.
+The completed first two tasks publish the source-visible contract and accept
+the source through type checking and HIR. This roadmap records that frozen
+contract and the remaining lifetime, native-execution, and adoption order; the
+front-end work alone does not publish the feature as an implemented contract.
 
 ## Scope and invariants
 
@@ -91,7 +91,7 @@ rather than introduce a second temporary or alias pipeline.
 ## Progress
 
 - [x] PAA0 — Freeze the produced read-only alias contract
-- [ ] PAA1 — Accept and represent produced object alias arguments
+- [x] PAA1 — Accept and represent produced object alias arguments
 - [ ] PAA2 — Verify temporary lifetime and source-ordered lowering
 - [ ] PAA3 — Prove polymorphic native execution and diagnostics
 - [ ] PAA4 — Adopt the feature and publish the implemented boundary
@@ -141,26 +141,26 @@ excluded; executable behavior is unchanged.
 **Purpose:** Make typed call selection recognize the new source category and
 carry its ownership provenance explicitly into HIR.
 
-- [ ] Extend object-view source checking so an exact-class producer is
+- [x] Extend object-view source checking so an exact-class producer is
       eligible for an alias argument when the selected parameter is
       read-only, without weakening place validation for mutable aliases.
-- [ ] Reuse ordinary object-producer checking for constructions, literals,
+- [x] Reuse ordinary object-producer checking for constructions, literals,
       exact-class-returning calls, grouping, and checked casts; do not
       duplicate expression typing or evaluate a source during applicability
       probing.
-- [ ] Apply existing static class projection and interface-conformance rules
+- [x] Apply existing static class projection and interface-conformance rules
       to the produced source, retaining its exact dynamic-class origin and
       complete-object identity.
-- [ ] Emit a produced `HirObjectView` call argument with read-only access.
+- [x] Emit a produced `HirObjectView` call argument with read-only access.
       Keep the distinction from a place view visible and deterministic in HIR
       dumps.
-- [ ] Keep overload applicability and final checking consistent for ordinary
+- [x] Keep overload applicability and final checking consistent for ordinary
       initializer candidates so speculative checks neither consume identities
       nor emit duplicate diagnostics.
-- [ ] Add focused success tests for direct, static, method, interface, and
+- [x] Add focused success tests for direct, static, method, interface, and
       initializer calls, including `Str` literal to `Obj`, exact class,
       ancestor, interface, grouping, and one checked-cast composition.
-- [ ] Add focused failures for unrelated targets, implicit downcasts,
+- [x] Add focused failures for unrelated targets, implicit downcasts,
       `mut ref` producers, primitives, raw shared handles, arrays, and produced
       optional containers, with stable parameter-site context.
 
@@ -171,6 +171,16 @@ compile-failure diagnostic goldens; `make check`; `make msrv-check`.
 alias through one explicit HIR representation, every excluded family fails at
 the type-check boundary, mutable alias acceptance remains place-based, and no
 source expression is checked or represented twice.
+
+**Completion summary (2026-08-04):** Object alias checking now classifies
+ordinary exact-class producers through the shared producer pipeline and emits
+one read-only `HirViewSource::Produced` view with exact dynamic-class origin.
+Initializer applicability admits that category only for `ref`, including
+through checked casts, while `mut ref` remains place-only and is rejected
+before producer checking. Focused HIR and standard-library literal tests cover
+all producer/call and static-view families; diagnostic tests and goldens cover
+the excluded families with parameter-site context. `make check` and
+`make msrv-check` pass.
 
 ### PAA2 — Verify temporary lifetime and source-ordered lowering
 

@@ -640,7 +640,7 @@ fn malformed_and_excluded_alias_sources_never_reach_mir_or_backend_panics() {
         "class Value { init() {} } fn malformed(ref mut value: Value) -> unit {} fn main() -> i64 { return 0; }",
         "class Value { init() {} } extern fn inspect(ref value: Value) -> unit; fn main() -> i64 { return 0; }",
         "class Value { init() {} } fn inspect(mut ref value: Value) -> unit {} fn forward(ref value: Value) -> unit { inspect(value); } fn main() -> i64 { return 0; }",
-        "class Value { init() {} } fn inspect(ref value: Value) -> unit {} fn main() -> i64 { inspect(Value()); return 0; }",
+        "class Value { init() {} } fn inspect(mut ref value: Value) -> unit {} fn main() -> i64 { inspect(Value()); return 0; }",
     ];
 
     for (index, source) in cases.into_iter().enumerate() {

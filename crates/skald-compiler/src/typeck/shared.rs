@@ -394,21 +394,29 @@ impl CallableChecker<'_, '_> {
         target: HirSharedTarget,
         consumer_requirement: &str,
     ) -> Option<T> {
-        self.diagnostics.push(
-            Diagnostic::error(
-                IMPLICIT_SHARED_DEREFERENCE,
-                "shared owner must be explicitly dereferenced for object-place use",
-            )
-            .with_primary_label(
-                span,
-                format!(
-                    "this expression has type `{}`; use `*` to select its pointee",
-                    self.shared_target_name(target)
-                ),
-            )
-            .with_note(consumer_requirement),
-        );
+        let diagnostic = self
+            .implicit_shared_dereference_diagnostic(span, target)
+            .with_note(consumer_requirement);
+        self.diagnostics.push(diagnostic);
         None
+    }
+
+    pub(in crate::typeck) fn implicit_shared_dereference_diagnostic(
+        &self,
+        span: Span,
+        target: HirSharedTarget,
+    ) -> Diagnostic {
+        Diagnostic::error(
+            IMPLICIT_SHARED_DEREFERENCE,
+            "shared owner must be explicitly dereferenced for object-place use",
+        )
+        .with_primary_label(
+            span,
+            format!(
+                "this expression has type `{}`; use `*` to select its pointee",
+                self.shared_target_name(target)
+            ),
+        )
     }
 
     pub(super) fn resolved_shared_target(

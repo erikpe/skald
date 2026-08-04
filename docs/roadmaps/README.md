@@ -9,8 +9,9 @@ progress. Completed roadmaps and resolved discovery records move to
 - [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
   — allow exact-class-producing expressions to bind directly to read-only
   `ref` parameters through verified caller-owned full-expression temporaries;
-  PAA1 (accept and represent produced object alias arguments) is next after
-  the frozen source and compiler contract. It depends on the
+  PAA1 now accepts and represents produced object alias arguments after the
+  frozen source and compiler contract; PAA2 is next and will prove temporary
+  lifetime and source-ordered lowering. It depends on the
   implemented alias, object-temporary, full-expression cleanup, polymorphism,
   checked-cast, and internal-call contracts.
 

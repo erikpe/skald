@@ -735,10 +735,10 @@ expression wherever a call argument is written. The
 [frozen produced read-only alias contract](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
 therefore adds no token, precedence level, expression node, reference
 expression, or call form. Resolution continues to retain the ordinary source
-expression. The current compiler rejects direct produced inline objects during
-alias type checking; the frozen extension changes that semantic eligibility
-only for compatible read-only `ref` parameters, while `mut ref` remains
-place-based.
+expression. Alias type checking and HIR now admit direct compatible
+exact-class producers only for read-only `ref` parameters, while `mut ref`
+remains place-based. Verified lifetime lowering remains a later implementation
+boundary and requires no grammar change.
 
 Optional type and expression shapes cross lexing, parsing, and name resolution
 with explicit nodes and flat resolved target identities. Primitive and

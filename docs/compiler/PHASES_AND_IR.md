@@ -169,14 +169,16 @@ recursive initialization of optional fields in completed class storage. This
 division is internal: diagnostic text, ordering, MIR contracts, and the
 separate immediate-consumer guard analysis are unchanged.
 
-## Frozen produced exact-class alias representation
+## Produced exact-class alias representation
 
 The source-visible
 [produced read-only alias contract](../language/ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
-is frozen but unavailable. The current compiler still rejects a direct
-produced inline object as a non-place alias source. Once implemented, the
-extension uses the existing phase owners and object-view pipeline rather than
-introducing a reference-valued expression or a second alias representation:
+is frozen. Syntax and resolution reuse the ordinary producer path, while type
+checking and HIR now implement the source classification, compatibility,
+access, diagnostics, and produced-view representation. MIR lifetime proof and
+native execution remain staged. The extension uses the existing phase owners
+and object-view pipeline rather than introducing a reference-valued expression
+or a second alias representation:
 
 - Syntax retains the producer as an ordinary call argument expression. No AST
   node, grammar form, binding mode, or lifetime annotation is added.
@@ -217,6 +219,11 @@ introducing a reference-valued expression or a second alias representation:
   The existing internal alias calling convention is unchanged, external
   object and alias signatures remain invalid, and no runtime service or ABI
   version change is introduced.
+
+The syntax, resolution, type-checking, and HIR bullets above describe the
+current front-end boundary. The MIR, verifier, and backend bullets remain the
+required contract for the later lifetime and native-execution roadmap stages;
+they are not yet a completion claim.
 
 Type-check diagnostics preserve the distinction between provenance and type:
 an incompatible exact-class producer reports a type mismatch with producer

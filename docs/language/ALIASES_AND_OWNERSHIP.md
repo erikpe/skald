@@ -7,8 +7,9 @@ execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
 call borrows and their hidden owner anchors are implemented as specified by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Local aliases and
 aliases into other future value families remain unfrozen. The produced
-exact-class read-only alias extension is frozen here but is not yet accepted
-by the compiler. Array-specific descriptor and detached-backing behavior
+exact-class read-only alias extension is frozen here; type checking and HIR
+now accept and represent it, while verified MIR lifetime and native-execution
+coverage remain staged. Array-specific descriptor and detached-backing behavior
 belongs to [Arrays](ARRAYS.md). Feature maturity is authoritative in the
 [status matrix](STATUS.md).
 
@@ -96,10 +97,11 @@ parameter, forwarded primitive alias parameter, or primitive static field.
 Static selection evaluates no receiver. Primitive fields and produced scalar
 values are not yet primitive alias sources.
 
-A fresh inline construction, inline object-returning call, and any other
-produced inline value is not currently an object alias source. The
-[frozen extension](#frozen-produced-read-only-alias-arguments) replaces only
-this exact-class restriction once implemented. A
+A fresh inline construction, exact-class object-returning call, canonical
+class literal, or supported cast composition is now an object alias source for
+read-only `ref` during type checking and HIR construction. The
+[frozen extension](#frozen-produced-read-only-alias-arguments) changes only
+this exact-class restriction; `mut ref` remains place-based. A
 dereferenced produced shared allocation or shared-returning call is eligible
 because its owner is adopted into call-scoped anchor storage. A raw shared
 handle is an owning value rather than an alias place and is rejected here.
@@ -112,10 +114,12 @@ callee operates on the same place selected by the caller.
 
 ## Frozen produced read-only alias arguments
 
-The following source contract is frozen but unavailable in the current
-compiler. An ordinary expression that produces one complete inline object of
-a known exact class may bind directly to a compatible read-only `ref`
-parameter. Accepted producers are:
+The following source contract is frozen. Type checking and HIR implement its
+source classification, compatibility, access, diagnostics, and produced-view
+representation. Verified MIR lifetime and native-execution coverage remain
+staged. An ordinary expression that produces one complete inline object of a
+known exact class may bind directly to a compatible read-only `ref` parameter.
+Accepted producers are:
 
 - a fresh exact-class construction;
 - an exact-class result from an internal direct, static, instance-method, or
@@ -191,9 +195,9 @@ Diagnostics distinguish source-category failure from type incompatibility:
   family-specific alias or explicit-dereference diagnostics.
 
 Call checking continues through the complete argument list so independent
-errors retain ordinary reporting and source order. Until this extension is
-implemented, a direct produced exact-class alias argument continues to receive
-the current existing-place diagnostic.
+errors retain ordinary reporting and source order. The typed representation
+uses one produced read-only view; later implementation stages must prove that
+its owner remains live for the complete call.
 
 ## Access propagation
 

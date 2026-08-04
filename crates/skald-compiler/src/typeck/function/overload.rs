@@ -46,8 +46,9 @@ enum InitializerCallSite {
 }
 
 impl ObjectArgumentSource {
-    const fn can_bind_alias(self) -> bool {
+    const fn can_bind_alias(self, required: HirAccess) -> bool {
         matches!(self, Self::ExistingPlace | Self::CheckedPlace)
+            || matches!((self, required), (Self::Produced, HirAccess::ReadOnly))
     }
 }
 
@@ -405,10 +406,20 @@ impl CallableChecker<'_, '_> {
                     source: ObjectArgumentSource::ExistingPlace,
                 })
             }
-            ResolvedExpression::ObjectCast(cast) => Some(ObjectArgument {
-                access: self.static_cast_access(&cast.source),
-                source: ObjectArgumentSource::CheckedPlace,
-            }),
+            ResolvedExpression::ObjectCast(cast) => {
+                let source = self.object_argument(&cast.source).map_or(
+                    ObjectArgumentSource::CheckedPlace,
+                    |argument| match argument.source {
+                        ObjectArgumentSource::Produced => ObjectArgumentSource::Produced,
+                        ObjectArgumentSource::ExistingPlace
+                        | ObjectArgumentSource::CheckedPlace => ObjectArgumentSource::CheckedPlace,
+                    },
+                );
+                Some(ObjectArgument {
+                    access: self.static_cast_access(&cast.source),
+                    source,
+                })
+            }
             ResolvedExpression::Construct(_)
             | ResolvedExpression::StringLiteral(_)
             | ResolvedExpression::DirectCall(_)
@@ -546,7 +557,7 @@ impl CallableChecker<'_, '_> {
                 }
                 let Some(object) = argument
                     .object
-                    .filter(|object| object.source.can_bind_alias())
+                    .filter(|object| object.source.can_bind_alias(required))
                 else {
                     return false;
                 };

@@ -1,8 +1,12 @@
 use super::*;
 use crate::{
-    hir::{HirAccess, HirCallArgument, HirExpressionKind, HirParameterMode, HirStatement},
+    hir::{
+        HirAccess, HirCallArgument, HirExpressionKind, HirObjectOrigin, HirObjectProducer,
+        HirParameterMode, HirStatement, HirViewSource, HirViewTarget,
+    },
     identity::{ClassId, FunctionId},
-    resolve::{ResolvedParameterBindingMode, ResolvedTypeKind},
+    resolve::{resolve_module_graph, ResolvedParameterBindingMode, ResolvedTypeKind},
+    test_support::load_module_sources_with_standard_library,
 };
 
 #[test]
@@ -106,7 +110,7 @@ fn enforces_read_only_alias_field_method_and_forwarding_restrictions() {
 }
 
 #[test]
-fn checks_exact_nominal_type_and_requires_existing_object_places() {
+fn checks_nominal_type_and_rejects_non_object_alias_sources() {
     let output = check_text(concat!(
         "class Left { value: i64; init() { self.value = 0; } }\n",
         "class Right { value: i64; init() { self.value = 0; } }\n",
@@ -116,7 +120,6 @@ fn checks_exact_nominal_type_and_requires_existing_object_places() {
         "  var scalar: i64 = 1;\n",
         "  take(right);\n",
         "  take(scalar);\n",
-        "  take(Left());\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -127,13 +130,176 @@ fn checks_exact_nominal_type_and_requires_existing_object_places() {
         .iter()
         .map(|diagnostic| diagnostic.code)
         .collect();
-    assert_eq!(
-        codes,
-        [
-            TYPE_MISMATCH,
-            INVALID_ALIAS_ARGUMENT,
-            INVALID_ALIAS_ARGUMENT
-        ]
+    assert_eq!(codes, [TYPE_MISMATCH, INVALID_ALIAS_ARGUMENT]);
+}
+
+#[test]
+fn accepts_exact_class_producers_for_read_only_aliases_across_call_forms() {
+    let output = check_text(concat!(
+        "interface Named {}\n",
+        "interface Producer { fn make() -> Derived; }\n",
+        "class Base { init() {} }\n",
+        "class Derived extends Base implements Named { init() { super(); } }\n",
+        "class Factory implements Producer {\n",
+        "  init() {}\n",
+        "  static fn make_static() -> Derived { return Derived(); }\n",
+        "  fn make() -> Derived { return Derived(); }\n",
+        "}\n",
+        "class Consumer { init(ref value: Derived) {} }\n",
+        "fn make_direct() -> Derived { return Derived(); }\n",
+        "fn take_exact(ref value: Derived) -> unit {}\n",
+        "fn take_base(ref value: Base) -> unit {}\n",
+        "fn take_named(ref value: Named) -> unit {}\n",
+        "fn take_obj(ref value: Obj) -> unit {}\n",
+        "fn from_interface(ref producer: Producer) -> unit { take_exact(producer.make()); }\n",
+        "fn main() -> i64 {\n",
+        "  var factory: Factory = Factory();\n",
+        "  take_exact(Derived());\n",
+        "  take_base((Derived()));\n",
+        "  take_named(Factory.make_static());\n",
+        "  take_obj(factory.make());\n",
+        "  from_interface(factory);\n",
+        "  take_base((Base) Derived());\n",
+        "  var consumer: Consumer = Consumer(make_direct());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("ProducedView").count(), 7, "{dump}");
+    assert!(dump.contains("ObjectCall function"), "{dump}");
+    assert!(dump.contains("ObjectCall static"), "{dump}");
+    assert!(dump.contains("ObjectCall method"), "{dump}");
+    assert!(dump.contains("ObjectCall interface"), "{dump}");
+
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::Call(exact) = &main.body.statements[1] else {
+        panic!("expected direct alias call");
+    };
+    let HirExpressionKind::DirectCall { arguments, .. } = &exact.call.kind else {
+        panic!("expected direct alias call expression");
+    };
+    let HirCallArgument::View(view) = &arguments[0] else {
+        panic!("expected produced alias view");
+    };
+    assert_eq!(view.access, HirAccess::ReadOnly);
+    assert_eq!(view.target, HirViewTarget::Class(ClassId::new(1)));
+    assert!(matches!(view.source, HirViewSource::Produced(_)));
+    assert!(matches!(
+        view.origin.as_ref(),
+        HirObjectOrigin::Produced {
+            dynamic_class,
+            ..
+        } if *dynamic_class == ClassId::new(1)
+    ));
+}
+
+#[test]
+fn accepts_string_literal_producers_as_obj_aliases() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[(
+            "app.ska",
+            concat!(
+                "fn inspect(ref value: Obj) -> i64 { return 1; }\n",
+                "fn main() -> i64 { return inspect(\"temporary\"); }\n",
+            ),
+        )],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let output = type_check(&resolved.program);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirExpressionKind::DirectCall { arguments, .. } = &returned_expression(main).kind else {
+        panic!("expected direct call");
+    };
+    let HirCallArgument::View(view) = &arguments[0] else {
+        panic!("expected produced string view");
+    };
+    assert_eq!(view.target, HirViewTarget::Obj);
+    assert_eq!(view.access, HirAccess::ReadOnly);
+    assert!(matches!(
+        &view.source,
+        HirViewSource::Produced(producer)
+            if matches!(&**producer, HirObjectProducer::StringLiteral(_))
+    ));
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("ViewArgument -> Obj readonly"), "{dump}");
+    assert!(dump.contains("ProducedView @"), "{dump}");
+    assert!(dump.contains("StringLiteral"), "{dump}");
+}
+
+#[test]
+fn produced_objects_cannot_bind_mutable_aliases_even_through_casts() {
+    let output = check_text(concat!(
+        "class Value { init() {} }\n",
+        "fn mutate(mut ref value: Value) -> unit {}\n",
+        "fn main() -> i64 {\n",
+        "  mutate(Value(1));\n",
+        "  mutate((Value) Value());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 2, "{diagnostics:?}");
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_ALIAS_ARGUMENT));
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.message.contains("existing object place")));
+    assert!(diagnostics.iter().all(|diagnostic| diagnostic
+        .labels
+        .iter()
+        .any(|label| label.message == "mutable alias declared here")));
+}
+
+#[test]
+fn rejects_excluded_producer_families_with_parameter_context() {
+    let output = check_text(concat!(
+        "class Base { init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "class Other { init() {} }\n",
+        "fn unrelated(ref value: Other) -> unit {}\n",
+        "fn downcast(ref value: Derived) -> unit {}\n",
+        "fn primitive(ref value: i64) -> unit {}\n",
+        "fn array(ref value: i64[]) -> unit {}\n",
+        "fn optional(ref value: Base?) -> unit {}\n",
+        "fn make_optional() -> Base? { return Base(); }\n",
+        "fn main() -> i64 {\n",
+        "  unrelated(Base());\n",
+        "  downcast(Base());\n",
+        "  primitive(1);\n",
+        "  array(i64[]());\n",
+        "  optional(make_optional());\n",
+        "  var owner: shared Base = new Base();\n",
+        "  unrelated(owner);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 6, "{diagnostics:#?}");
+    assert_eq!(diagnostics[0].code, TYPE_MISMATCH);
+    assert_eq!(diagnostics[1].code, TYPE_MISMATCH);
+    assert_eq!(diagnostics[2].code, INVALID_ALIAS_ARGUMENT);
+    assert_eq!(diagnostics[3].code, INVALID_ALIAS_ARGUMENT);
+    assert_eq!(diagnostics[4].code, INVALID_ALIAS_ARGUMENT);
+    assert_eq!(diagnostics[5].code, IMPLICIT_SHARED_DEREFERENCE);
+    assert!(
+        diagnostics.iter().all(|diagnostic| diagnostic
+            .labels
+            .iter()
+            .any(|label| label.message.contains("declared here"))),
+        "{diagnostics:#?}"
     );
 }
 

@@ -4,8 +4,9 @@ Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
 semantics, including implemented `while` loops, `break`, `continue`, and
 short-circuit logical expressions with selected-path cleanup. It also records
-the frozen but unavailable call-order boundary for produced exact-class
-read-only aliases. The
+the frozen call-order boundary for produced exact-class read-only aliases,
+whose type-check/HIR representation is implemented while lifetime lowering
+verification remains staged. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -44,10 +45,10 @@ binding category is separate from the declared type:
 | `ref name: T` | A call-scoped read-only alias to an eligible existing place. |
 | `mut ref name: T` | A call-scoped mutable alias to an eligible existing place. |
 
-The frozen produced-object alias extension additionally allows an exact-class
+The frozen produced-object alias extension allows an exact-class
 producer to establish a hidden caller-owned place for a read-only `ref`.
-`mut ref` remains restricted to an existing mutable place. This relaxation is
-not yet accepted by the compiler; its complete source and lifetime contract is
+`mut ref` remains restricted to an existing mutable place. Type checking and
+HIR accept this relaxation; its complete source and staged lifetime contract is
 defined by
 [aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
 
@@ -65,13 +66,12 @@ local cannot redeclare a parameter. A nested block may shadow it.
 ## Calls and results
 
 A call supplies exactly one argument per parameter. Value arguments must have
-the exact declared type. Under the implemented boundary, alias arguments must
-designate a compatible place and provide the required access. The frozen
-produced-object extension lets a compatible exact-class producer materialize
-such a place only for read-only `ref`; this does not turn the expression or
-parameter into a storable reference value. The complete argument list is
-checked even when one argument is invalid, so independent source errors can be
-reported.
+the exact declared type. Alias arguments must designate a compatible place and
+provide the required access, or be an accepted compatible exact-class producer
+for read-only `ref`. The latter is represented as one produced HIR view; it
+does not turn the expression or parameter into a storable reference value. The
+complete argument list is checked even when one argument is invalid, so
+independent source errors can be reported.
 When an alias argument borrows a shared pointee, the caller must write
 `*owner`; passing the raw shared handle instead selects an owning value and is
 rejected for the alias parameter.

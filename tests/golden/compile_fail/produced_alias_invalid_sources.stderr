@@ -1,0 +1,63 @@
+error[TYP005]: alias argument has type `Base`, expected `Other`
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:14:15
+    |
+14 |     unrelated(Base());
+    |               ^^^^^^ this produced object cannot provide the required view
+   |
+5 | fn unrelated(ref value: Other) -> unit {}
+   |                         ----- alias parameter type declared here
+
+error[TYP005]: alias argument has type `Base`, expected `Derived`
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:15:14
+    |
+15 |     downcast(Base());
+    |              ^^^^^^ this produced object cannot provide the required view
+   |
+6 | fn downcast(ref value: Derived) -> unit {}
+   |                        ------- alias parameter type declared here
+
+error[TYP020]: mutable alias argument requires an existing object place
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:16:12
+    |
+16 |     mutate(Base());
+    |            ^^^^^^ this expression produces a temporary object
+   |
+7 | fn mutate(mut ref value: Base) -> unit {}
+   |           ------------------- mutable alias declared here
+
+error[TYP020]: primitive alias argument must designate an existing primitive place
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:17:15
+    |
+17 |     primitive(1);
+    |               ^ pass a primitive binding or static field
+   |
+8 | fn primitive(ref value: i64) -> unit {}
+   |              -------------- primitive alias declared here
+
+error[TYP020]: array alias argument must designate an existing array or exact element place
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:18:11
+    |
+18 |     array(i64[]());
+    |           ^^^^^^^ produced values and slices cannot be aliased
+   |
+9 | fn array(ref value: i64[]) -> unit {}
+   |          ---------------- alias parameter declared here
+
+error[TYP020]: optional alias argument must designate an existing optional container
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:19:14
+    |
+19 |     optional(make_optional());
+    |              ^^^^^^^^^^^^^^^ pass an optional local, parameter, field, or grouping
+    |
+10 | fn optional(ref value: Base?) -> unit {}
+    |             ---------------- optional alias declared here
+
+error[TYP034]: shared owner must be explicitly dereferenced for object-place use
+ --> tests/golden/compile_fail/produced_alias_invalid_sources.ska:21:15
+    |
+21 |     unrelated(owner);
+    |               ^^^^^ this expression has type `shared Base`; use `*` to select its pointee
+   |
+5 | fn unrelated(ref value: Other) -> unit {}
+   |              ---------------- alias parameter declared here
+  = note: alias argument must be an existing object place
