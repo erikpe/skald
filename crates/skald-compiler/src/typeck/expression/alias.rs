@@ -162,6 +162,15 @@ impl CheckedObjectViewSource {
     }
 
     pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
+        self.into_view_with_produced_projections(target, access, Vec::new())
+    }
+
+    fn into_view_with_produced_projections(
+        self,
+        target: HirViewTarget,
+        access: HirAccess,
+        produced_projections: Vec<crate::object_path::ObjectProjection>,
+    ) -> HirObjectView {
         match self {
             Self::Class { place, origin } => HirObjectView {
                 span: place.span(),
@@ -200,7 +209,10 @@ impl CheckedObjectViewSource {
                 class,
                 span,
             } => HirObjectView {
-                source: HirViewSource::Produced(Box::new(source)),
+                source: HirViewSource::Produced {
+                    producer: Box::new(source),
+                    projections: produced_projections,
+                },
                 origin: Box::new(HirObjectOrigin::Produced {
                     dynamic_class: class,
                     span,
@@ -1060,7 +1072,15 @@ impl CallableChecker<'_, '_> {
                     return None;
                 }
                 Some(HirCallArgument::View(
-                    source.into_view(expected_target, HirAccess::ReadOnly),
+                    source.into_view_with_produced_projections(
+                        expected_target,
+                        HirAccess::ReadOnly,
+                        static_class_up_projections(
+                            self.program,
+                            HirViewTarget::Class(class),
+                            expected_target,
+                        ),
+                    ),
                 ))
             }
             (
@@ -1087,7 +1107,8 @@ impl CallableChecker<'_, '_> {
                     ));
                     return None;
                 }
-                let projections = shared_up_projections(self.program, actual, expected_target);
+                let projections =
+                    static_class_up_projections(self.program, actual, expected_target);
                 source.set_projections(projections);
                 Some(HirCallArgument::View(
                     source.into_view(expected_target, required),
@@ -1120,7 +1141,7 @@ impl CallableChecker<'_, '_> {
                     ));
                     return None;
                 }
-                projections.extend(shared_up_projections(
+                projections.extend(static_class_up_projections(
                     self.program,
                     HirViewTarget::Class(class),
                     expected_target,
@@ -1193,7 +1214,7 @@ fn view_target_name(program: &crate::resolve::ResolvedProgram, target: HirViewTa
     }
 }
 
-fn shared_up_projections(
+fn static_class_up_projections(
     program: &crate::resolve::ResolvedProgram,
     actual: HirViewTarget,
     expected: HirViewTarget,

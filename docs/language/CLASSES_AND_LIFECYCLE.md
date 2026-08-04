@@ -3,9 +3,10 @@
 Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
-how the frozen produced read-only alias extension, implemented through HIR,
-composes with initializer selection and owning full-expression temporaries. The
-[status matrix](STATUS.md) records the current compiler boundary.
+how the frozen produced read-only alias extension, implemented through
+verified MIR, composes with initializer selection and owning full-expression
+temporaries. The [status matrix](STATUS.md) records the current compiler
+boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -368,7 +369,7 @@ it never makes a `mut ref` candidate applicable. Applicability analysis does
 not evaluate or materialize the producer. After unique selection and access
 checking, execution evaluates the source exactly once while binding the
 selected initializer argument. Type checking and HIR now implement this
-selection; verified lifetime lowering remains staged.
+selection, and verified MIR now proves its hidden argument lifetime.
 
 ## Fresh construction
 
@@ -668,9 +669,9 @@ its containing object rather than registered as a separate lexical owner.
 
 The frozen produced read-only alias extension specifies its hidden exact-class
 storage as one of these ordinary materialized class temporaries. Type checking
-and HIR already identify that source; the staged lifetime proof must establish
-the registration described here. The alias parameter itself remains
-non-owning and receives no independent registration.
+and HIR identify that source, and verified MIR establishes the registration
+described here. The alias parameter itself remains non-owning and receives no
+independent registration.
 
 An owning place is registered only after its complete initialization or copy
 construction finishes. On normal fallthrough, each scope destroys registered

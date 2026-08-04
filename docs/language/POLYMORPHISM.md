@@ -225,10 +225,10 @@ call-scoped, non-owning, non-storable, non-returnable, non-rebindable, and
 non-exclusive. Eligible sources include live object places and forwarded
 aliases. The frozen
 [produced read-only alias extension](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
-is implemented through type checking and HIR: it first represents an
+is implemented through verified MIR: it first represents an
 exact-class producer in hidden caller-owned storage and then permits these same
 non-owning conversions for `ref`, without admitting the producer for `mut
-ref`. Verified lifetime lowering and native execution remain staged.
+ref`. Native polymorphic execution coverage remains staged.
 
 These implicit view conversions are available:
 

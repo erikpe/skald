@@ -656,6 +656,17 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     .iter()
                     .map(|cleanup| cleanup.destination.clone())
                     .collect();
+                if !actual.is_empty()
+                    && state
+                        .live
+                        .iter()
+                        .any(|place| matches!(place.base, MirPlaceBase::CheckedView(_)))
+                {
+                    self.block_error(
+                        block.id,
+                        "checked-view carriers must end before owning temporary cleanup",
+                    );
+                }
                 if (actual.is_empty() && !expected.is_empty()) || !expected.starts_with(&actual) {
                     self.block_error(
                         block.id,

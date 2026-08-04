@@ -49,6 +49,7 @@ mod optional_values;
 mod path_conditions;
 mod primitive_binding_assignment;
 mod primitive_casts;
+mod produced_aliases;
 mod robustness;
 mod shared;
 mod shifts;

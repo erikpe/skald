@@ -445,7 +445,12 @@ pub enum HirCheckedObjectViewKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirViewSource {
     Place(HirObjectPlace),
-    Produced(Box<HirObjectProducer>),
+    Produced {
+        producer: Box<HirObjectProducer>,
+        /// Static base projections from the complete produced class to the
+        /// view's class target. Interface and `Obj` views need no projection.
+        projections: Vec<crate::object_path::ObjectProjection>,
+    },
     Forwarded {
         binding: BindingId,
         target: HirViewTarget,

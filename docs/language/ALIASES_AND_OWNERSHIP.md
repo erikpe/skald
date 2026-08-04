@@ -114,11 +114,12 @@ callee operates on the same place selected by the caller.
 
 ## Frozen produced read-only alias arguments
 
-The following source contract is frozen. Type checking and HIR implement its
-source classification, compatibility, access, diagnostics, and produced-view
-representation. Verified MIR lifetime and native-execution coverage remain
-staged. An ordinary expression that produces one complete inline object of a
-known exact class may bind directly to a compatible read-only `ref` parameter.
+The following source contract is frozen. Type checking, HIR, MIR lowering,
+and MIR verification implement its source classification, compatibility,
+access, produced-view representation, and hidden temporary lifetime.
+Native-execution coverage remains staged. An ordinary expression that
+produces one complete inline object of a known exact class may bind directly
+to a compatible read-only `ref` parameter.
 Accepted producers are:
 
 - a fresh exact-class construction;
@@ -196,8 +197,9 @@ Diagnostics distinguish source-category failure from type incompatibility:
 
 Call checking continues through the complete argument list so independent
 errors retain ordinary reporting and source order. The typed representation
-uses one produced read-only view; later implementation stages must prove that
-its owner remains live for the complete call.
+uses one produced read-only view. Verified MIR constructs its owner once,
+keeps it live for the complete call, and destroys it once at the enclosing
+full-expression boundary.
 
 ## Access propagation
 

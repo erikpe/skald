@@ -737,8 +737,8 @@ therefore adds no token, precedence level, expression node, reference
 expression, or call form. Resolution continues to retain the ordinary source
 expression. Alias type checking and HIR now admit direct compatible
 exact-class producers only for read-only `ref` parameters, while `mut ref`
-remains place-based. Verified lifetime lowering remains a later implementation
-boundary and requires no grammar change.
+remains place-based. Verified MIR lifetime lowering requires no grammar change;
+native execution coverage remains a later implementation boundary.
 
 Optional type and expression shapes cross lexing, parsing, and name resolution
 with explicit nodes and flat resolved target identities. Primitive and

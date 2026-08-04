@@ -47,7 +47,7 @@ arguments have deterministic source order.
 | **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **array** | A built-in invariant fixed-size sequence. Inline `T[]` values deep-copy named sources and adopt produced backing; `shared T[]` owners share one allocation. Arrays support nested owning element categories, immutable length, checked indexing, copied slices, explicit shared projection, deterministic lifecycle, and call-scoped aliases on x86-64. |
 | **string** | An exact `std::str::Str` class value describing an immutable finite sequence of `u8` bytes. Literals use immortal backing; ordinary standard-library construction and concatenation use dynamically reclaimed shared backing. |
-| **alias** | A call-scoped, non-owning view of a live place. Object aliases may start from an existing place; type checking and HIR also represent frozen exact-class producers as hidden caller-owned places for read-only access. The static target may be a class, an ancestor, an interface, or `Obj`; verified lifetime lowering for produced aliases remains staged. |
+| **alias** | A call-scoped, non-owning view of a live place. Object aliases may start from an existing place; verified MIR also represents frozen exact-class producers as hidden caller-owned places for read-only access. The static target may be a class, an ancestor, an interface, or `Obj`; native execution coverage for produced aliases remains staged. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. Ordinary `init` declarations form an overload set; `copy`, `assign`, and `destroy` retain their distinct slots. |
 
@@ -67,9 +67,9 @@ view for one call; they do not copy or own the object. Ordinary methods have
 read-only receivers, while `mut fn` methods may mutate through their receiver.
 The frozen produced-object alias extension also lets a compatible exact-class
 producer initialize hidden caller-owned storage for a read-only `ref`; type
-checking and HIR implement this distinction, while verified lifetime lowering
-remains staged. It does not relax `mut ref` or transfer that storage to the
-callee.
+checking, HIR, and verified MIR implement this distinction. Native execution
+coverage remains staged. The rule does not relax `mut ref` or transfer that
+storage to the callee.
 
 Assignment updates an already live value without beginning a new lifetime.
 Construction begins a lifetime, and destruction ends it. Class fields are

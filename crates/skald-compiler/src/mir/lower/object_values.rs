@@ -159,29 +159,40 @@ impl BodyLowerer<'_> {
         match source {
             HirObjectSource::Place(place) => self.lower_object_place(place),
             HirObjectSource::ArrayElement(element) => self.lower_array_element_place(element),
-            HirObjectSource::Produced(producer) => {
-                let storage = self.new_object_storage(
-                    MirStorageKind::Temporary,
-                    "temporary",
-                    producer.class(),
-                    producer.span(),
-                );
-                let destination = MirPlace::base(storage);
-                self.lower_object_producer(producer, destination.clone());
-                self.full_expression
-                    .register_temporary(FullExpressionTemporary::Inline(MirCleanup {
-                        destination: destination.clone(),
-                        target: producer.class(),
-                        span: producer.span(),
-                    }));
-                destination
-            }
+            HirObjectSource::Produced(producer) => self.lower_object_producer_temporary(producer),
             HirObjectSource::Checked(view) => self.lower_checked_object_view(view).source,
             HirObjectSource::Slice(slice) => slice.bases.iter().copied().fold(
                 self.lower_object_source(&slice.source),
                 MirPlace::project_base,
             ),
         }
+    }
+
+    /// Materialize one produced object in caller-owned full-expression storage.
+    ///
+    /// The storage lifetime must begin before initialization, but ownership is
+    /// registered for cleanup only after the producer has completed on the
+    /// current path. Consumers borrow the returned complete place directly;
+    /// they must not introduce a second object or a copy-construction step.
+    pub(super) fn lower_object_producer_temporary(
+        &mut self,
+        producer: &HirObjectProducer,
+    ) -> MirPlace {
+        let storage = self.new_object_storage(
+            MirStorageKind::Temporary,
+            "temporary",
+            producer.class(),
+            producer.span(),
+        );
+        let destination = MirPlace::base(storage);
+        self.lower_object_producer(producer, destination.clone());
+        self.full_expression
+            .register_temporary(FullExpressionTemporary::Inline(MirCleanup {
+                destination: destination.clone(),
+                target: producer.class(),
+                span: producer.span(),
+            }));
+        destination
     }
 
     pub(super) fn new_object_storage(

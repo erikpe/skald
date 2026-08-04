@@ -631,7 +631,7 @@ fn alias_access_filters_candidates_before_type_specificity() {
         construction.arguments().unwrap(),
         [crate::hir::HirCallArgument::View(
             crate::hir::HirObjectView {
-                source: crate::hir::HirViewSource::Produced(_),
+                source: crate::hir::HirViewSource::Produced { .. },
                 access: HirAccess::ReadOnly,
                 ..
             }

@@ -17,6 +17,7 @@ mod tests;
 
 impl Verifier<'_> {
     pub(super) fn verify_storage_lifetimes(&mut self, function: MirDefinitionRef<'_>) {
+        self.verify_temporary_lifetime_shape(function);
         let entry_state = implicit_entry_storage(function);
         let condition_reads = condition_reads(function);
         let activation_conditions: HashMap<_, _> = function
@@ -131,6 +132,46 @@ impl Verifier<'_> {
                 PathStates::initial(entry_state.clone()),
             ) {
                 break;
+            }
+        }
+    }
+
+    /// Hidden owning temporaries represent one expression evaluation site.
+    /// Reusing their static storage identity for another epoch would make
+    /// completion order and full-expression cleanup ambiguous.
+    fn verify_temporary_lifetime_shape(&mut self, function: MirDefinitionRef<'_>) {
+        for storage in function
+            .storage_entries()
+            .iter()
+            .filter(|storage| storage.kind == MirStorageKind::Temporary)
+        {
+            let mut starts = 0;
+            let mut ends = 0;
+            for instruction in function
+                .body()
+                .blocks
+                .iter()
+                .flat_map(|block| &block.instructions)
+            {
+                match instruction {
+                    MirInstruction::StorageLive(operation) if operation.storage == storage.id => {
+                        starts += 1;
+                    }
+                    MirInstruction::StorageDead(operation) if operation.storage == storage.id => {
+                        ends += 1;
+                    }
+                    _ => {}
+                }
+            }
+            if starts != 1 || ends > 1 {
+                self.block_error(
+                    function.callable(),
+                    function.body().entry,
+                    format!(
+                        "temporary storage {} must have one non-reused lifetime epoch, found {starts} starts and {ends} ends",
+                        storage.id
+                    ),
+                );
             }
         }
     }

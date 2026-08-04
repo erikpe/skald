@@ -4,8 +4,9 @@ use std::collections::HashSet;
 
 use super::{
     super::model::{
-        MirAliasAccess, MirArgument, MirBasicBlock, MirDefinitionRef, MirObjectView, MirParameter,
-        MirParameterMode, MirPlace, MirPlaceBase, MirStorageKind, MirType, ValueId,
+        MirAliasAccess, MirArgument, MirBasicBlock, MirDefinitionRef, MirObjectOrigin,
+        MirObjectView, MirParameter, MirParameterMode, MirPlace, MirPlaceBase, MirStorageKind,
+        MirType, ValueId,
     },
     context::Verifier,
 };
@@ -312,6 +313,24 @@ impl Verifier<'_> {
         parameter: &MirParameter,
     ) {
         self.verify_object_view(site.function, site.block, view, "object view");
+        let produced_temporary = match view.origin.as_ref() {
+            MirObjectOrigin::Exact { complete, .. } => complete
+                .base
+                .local_storage()
+                .and_then(|storage| site.function.storage(storage))
+                .is_some_and(|storage| storage.kind == MirStorageKind::Temporary),
+            MirObjectOrigin::Forwarded { .. } | MirObjectOrigin::Shared { .. } => false,
+        };
+        if produced_temporary && view.access != MirAliasAccess::ReadOnly {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} cannot grant mutable access to a produced temporary",
+                    site.kind
+                ),
+            );
+        }
         let target_ty = view.target.ty();
         if target_ty != parameter.ty {
             self.block_error(

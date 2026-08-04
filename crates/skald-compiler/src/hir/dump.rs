@@ -1808,9 +1808,25 @@ impl HirDumper {
         self.indented(|dumper| {
             match &view.source {
                 HirViewSource::Place(place) => dumper.object_place(place),
-                HirViewSource::Produced(producer) => {
+                HirViewSource::Produced {
+                    producer,
+                    projections,
+                } => {
                     dumper.line("ProducedView", producer.span());
-                    dumper.indented(|dumper| dumper.object_producer(producer));
+                    dumper.indented(|dumper| {
+                        dumper.object_producer(producer);
+                        for projection in projections {
+                            match projection {
+                                crate::object_path::ObjectProjection::Base(base) => {
+                                    dumper.line(&format!("BaseProjection {base}"), producer.span());
+                                }
+                                crate::object_path::ObjectProjection::Field(field) => {
+                                    dumper
+                                        .line(&format!("FieldProjection {field}"), producer.span());
+                                }
+                            }
+                        }
+                    });
                 }
                 HirViewSource::Forwarded {
                     binding,

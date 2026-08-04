@@ -47,9 +47,9 @@ binding category is separate from the declared type:
 
 The frozen produced-object alias extension allows an exact-class
 producer to establish a hidden caller-owned place for a read-only `ref`.
-`mut ref` remains restricted to an existing mutable place. Type checking and
-HIR accept this relaxation; its complete source and staged lifetime contract is
-defined by
+`mut ref` remains restricted to an existing mutable place. Type checking,
+HIR, and verified MIR implement this relaxation; its complete source and
+lifetime contract is defined by
 [aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
 
 Value parameters may use implemented primitive or exact-class types. Alias

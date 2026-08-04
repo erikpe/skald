@@ -175,8 +175,9 @@ The source-visible
 [produced read-only alias contract](../language/ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
 is frozen. Syntax and resolution reuse the ordinary producer path, while type
 checking and HIR now implement the source classification, compatibility,
-access, diagnostics, and produced-view representation. MIR lifetime proof and
-native execution remain staged. The extension uses the existing phase owners
+access, diagnostics, and produced-view representation. MIR lowering and
+verification now implement the temporary lifetime proof; native execution
+coverage remains staged. The extension uses the existing phase owners
 and object-view pipeline rather than introducing a reference-valued expression
 or a second alias representation:
 
@@ -196,11 +197,11 @@ or a second alias representation:
   diagnostics; final checking represents the selected source once.
 - Typed HIR records one `HirObjectView` whose source is the existing
   `HirViewSource::Produced` producer form, whose origin retains the exact
-  dynamic class and complete-object identity, whose target retains the
-  selected class/interface/`Obj` view, and whose access is read-only. Grouping
-  changes only spans. A checked cast retains its ordinary static or runtime
-  selection and bounded carrier instead of being flattened into an
-  existing-place view.
+  dynamic class and complete-object identity, whose static base projections
+  retain an ancestor target without slicing, whose target retains the selected
+  class/interface/`Obj` view, and whose access is read-only. Grouping changes
+  only spans. A checked cast retains its ordinary static or runtime selection
+  and bounded carrier instead of being flattened into an existing-place view.
 - HIR-to-MIR lowering allocates one caller-owned exact-class `Temporary` at
   the argument's source position, lowers the producer directly into it, and
   uses that same complete place as the alias-view source. It emits no
@@ -220,10 +221,10 @@ or a second alias representation:
   object and alias signatures remain invalid, and no runtime service or ABI
   version change is introduced.
 
-The syntax, resolution, type-checking, and HIR bullets above describe the
-current front-end boundary. The MIR, verifier, and backend bullets remain the
-required contract for the later lifetime and native-execution roadmap stages;
-they are not yet a completion claim.
+The syntax through verifier bullets above describe the current compiler
+boundary. Native backend behavior and exhaustive ABI evidence remain the
+required contract for the later execution roadmap stage; the backend bullet
+is not yet a native-completion claim.
 
 Type-check diagnostics preserve the distinction between provenance and type:
 an incompatible exact-class producer reports a type mismatch with producer

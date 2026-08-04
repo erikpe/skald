@@ -202,7 +202,7 @@ fn checked_view_contains_control_effect(view: &HirCheckedObjectView) -> bool {
 
 fn view_source_contains_control_effect(source: &HirViewSource) -> bool {
     match source {
-        HirViewSource::Produced(producer) => producer_contains_control_effect(producer),
+        HirViewSource::Produced { producer, .. } => producer_contains_control_effect(producer),
         HirViewSource::Place(_)
         | HirViewSource::Forwarded { .. }
         | HirViewSource::Shared { .. } => false,

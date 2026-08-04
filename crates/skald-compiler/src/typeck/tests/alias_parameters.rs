@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirExpressionKind, HirObjectOrigin, HirObjectProducer,
-        HirParameterMode, HirStatement, HirViewSource, HirViewTarget,
+        HirObjectView, HirParameterMode, HirStatement, HirViewSource, HirViewTarget,
     },
     identity::{ClassId, FunctionId},
     resolve::{resolve_module_graph, ResolvedParameterBindingMode, ResolvedTypeKind},
@@ -186,7 +186,7 @@ fn accepts_exact_class_producers_for_read_only_aliases_across_call_forms() {
     };
     assert_eq!(view.access, HirAccess::ReadOnly);
     assert_eq!(view.target, HirViewTarget::Class(ClassId::new(1)));
-    assert!(matches!(view.source, HirViewSource::Produced(_)));
+    assert!(matches!(view.source, HirViewSource::Produced { .. }));
     assert!(matches!(
         view.origin.as_ref(),
         HirObjectOrigin::Produced {
@@ -194,6 +194,24 @@ fn accepts_exact_class_producers_for_read_only_aliases_across_call_forms() {
             ..
         } if *dynamic_class == ClassId::new(1)
     ));
+
+    let HirStatement::Call(base) = &main.body.statements[2] else {
+        panic!("expected produced ancestor alias call");
+    };
+    let HirExpressionKind::DirectCall { arguments, .. } = &base.call.kind else {
+        panic!("expected direct ancestor alias call");
+    };
+    let HirCallArgument::View(HirObjectView {
+        source: HirViewSource::Produced { projections, .. },
+        ..
+    }) = &arguments[0]
+    else {
+        panic!("expected projected produced alias view");
+    };
+    assert_eq!(
+        projections,
+        &[crate::object_path::ObjectProjection::Base(ClassId::new(0))]
+    );
 }
 
 #[test]
@@ -225,7 +243,7 @@ fn accepts_string_literal_producers_as_obj_aliases() {
     assert_eq!(view.access, HirAccess::ReadOnly);
     assert!(matches!(
         &view.source,
-        HirViewSource::Produced(producer)
+        HirViewSource::Produced { producer, .. }
             if matches!(&**producer, HirObjectProducer::StringLiteral(_))
     ));
     let dump = dump_hir(&hir);

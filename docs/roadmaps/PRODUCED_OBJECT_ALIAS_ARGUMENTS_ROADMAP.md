@@ -1,6 +1,6 @@
 # Produced Object Alias Arguments Roadmap
 
-Status: in progress; PAA1 is complete and PAA2 is next.
+Status: in progress; PAA0 through PAA2 are complete, and PAA3 is next.
 
 This roadmap generalizes class alias arguments so a produced exact-class
 object can bind directly to a read-only `ref` parameter. The compiler
@@ -10,10 +10,11 @@ full-expression temporaries. The feature removes source-only staging locals
 such as the one currently needed for `text.equals("NaN")` without weakening
 the language's alias non-escape or ownership rules.
 
-The completed first two tasks publish the source-visible contract and accept
-the source through type checking and HIR. This roadmap records that frozen
-contract and the remaining lifetime, native-execution, and adoption order; the
-front-end work alone does not publish the feature as an implemented contract.
+The completed first three tasks publish the source-visible contract, accept
+the source through type checking and HIR, and prove its temporary lifetime in
+MIR. This roadmap records that frozen contract and the remaining native-
+execution and adoption order; verified MIR alone does not publish the feature
+as an implemented language contract.
 
 ## Scope and invariants
 
@@ -92,7 +93,7 @@ rather than introduce a second temporary or alias pipeline.
 
 - [x] PAA0 — Freeze the produced read-only alias contract
 - [x] PAA1 — Accept and represent produced object alias arguments
-- [ ] PAA2 — Verify temporary lifetime and source-ordered lowering
+- [x] PAA2 — Verify temporary lifetime and source-ordered lowering
 - [ ] PAA3 — Prove polymorphic native execution and diagnostics
 - [ ] PAA4 — Adopt the feature and publish the implemented boundary
 
@@ -187,29 +188,30 @@ the excluded families with parameter-site context. `make check` and
 **Purpose:** Turn the HIR producer view into one caller-owned temporary whose
 construction, use, and destruction are mechanically proven.
 
-- [ ] Lower the object producer directly into hidden `Temporary` storage at
+- [x] Lower the object producer directly into hidden `Temporary` storage at
       its argument position and use that same complete place as the alias-view
       source; do not add a copy-construction step.
-- [ ] Reuse the common produced-object lowering used by receivers, casts, and
+- [x] Reuse the common produced-object lowering used by receivers, casts, and
       owning consumers, extracting a cohesive helper if that removes
       source-specific lifetime logic.
-- [ ] Register storage only after successful completion, keep it live through
-      later argument evaluation and the outer call, and destroy completed
-      temporaries in reverse order at the enclosing full-expression boundary.
-- [ ] Preserve selected-path behavior in short-circuit expressions and
+- [x] Begin storage lifetime before initialization, register cleanup ownership
+      only after successful completion, keep the object live through later
+      argument evaluation and the outer call, and destroy completed temporaries
+      in reverse order at the enclosing full-expression boundary.
+- [x] Preserve selected-path behavior in short-circuit expressions and
       conditions. A skipped producer creates no storage, effects, view, or
       cleanup obligation.
-- [ ] Compose checked casts so their bounded carrier ends before the owning
+- [x] Compose checked casts so their bounded carrier ends before the owning
       produced temporary, while static projections continue to avoid an
       unnecessary carrier.
-- [ ] Strengthen MIR verification where necessary to prove one storage
+- [x] Strengthen MIR verification where necessary to prove one storage
       lifetime, initialization before view use, read-only alias access,
       full-expression registration, reverse cleanup, and absence of use after
       cleanup or duplicate destruction.
-- [ ] Add mutation-based verifier tests for premature cleanup, missing
+- [x] Add mutation-based verifier tests for premature cleanup, missing
       cleanup, mutable produced views, incorrect construction order, invalid
       complete-object origins, and duplicate cleanup.
-- [ ] Add deterministic MIR tests with multiple produced aliases, mixed scalar
+- [x] Add deterministic MIR tests with multiple produced aliases, mixed scalar
       and alias arguments, nested forwarding, later argument calls, checked
       casts, and selected-path control flow.
 
@@ -221,6 +223,18 @@ correct source position, the alias always designates live owning storage for
 the complete call, every completed temporary has exactly one correctly
 ordered cleanup, and malformed lifetime/access variants are rejected before
 backend lowering.
+
+**Completion summary (2026-08-04):** Produced views now share one cohesive
+object-temporary materialization helper that lowers directly into hidden
+caller storage and registers cleanup only after successful completion. HIR
+retains static ancestor projections separately from exact complete-object
+provenance, and MIR preserves left-to-right construction, forwarding,
+selected-path ownership, checked-carrier ordering, and reverse
+full-expression cleanup without copying. Verification rejects reused
+temporary epochs, mutable produced views, invalid origins, early or missing
+cleanup, checked carriers that outlive their owner, and duplicate destruction.
+Focused deterministic and mutation tests pass; `make check` and
+`make msrv-check` pass.
 
 ### PAA3 — Prove polymorphic native execution and diagnostics
 

@@ -532,14 +532,18 @@ impl BodyLowerer<'_> {
 
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
         let produced_class = match &view.source {
-            HirViewSource::Produced(producer) => Some(producer.class()),
+            HirViewSource::Produced { producer, .. } => Some(producer.class()),
             HirViewSource::OptionalPayload { view, .. } => Some(view.source.class()),
             _ => None,
         };
         let source = match &view.source {
             HirViewSource::Place(place) => self.lower_object_place(place),
-            HirViewSource::Produced(producer) => self.lower_object_source(
-                &crate::hir::HirObjectSource::Produced(producer.as_ref().clone()),
+            HirViewSource::Produced {
+                producer,
+                projections,
+            } => projections.iter().fold(
+                self.lower_object_producer_temporary(producer),
+                lower_projection,
             ),
             HirViewSource::Forwarded { binding, .. } => {
                 let storage = self.storage_for_binding(*binding);
@@ -572,6 +576,8 @@ impl BodyLowerer<'_> {
                 .iter()
                 .fold(self.begin_optional_view(optional), lower_projection),
         };
+        let produced_complete = matches!(view.source, HirViewSource::Produced { .. })
+            .then(|| MirPlace::base(source.base.expect_local_storage()));
         let origin = produced_class.map_or_else(
             || match &view.source {
                 HirViewSource::AnchoredShared {
@@ -588,7 +594,7 @@ impl BodyLowerer<'_> {
                 _ => self.lower_object_origin(&view.origin),
             },
             |dynamic_class| MirObjectOrigin::Exact {
-                complete: source.clone(),
+                complete: produced_complete.unwrap_or_else(|| source.clone()),
                 dynamic_class,
             },
         );
@@ -646,7 +652,7 @@ impl BodyLowerer<'_> {
         let source = self.lower_object_view(&checked.view);
         let direct_static_source = matches!(
             checked.view.source,
-            HirViewSource::Place(_) | HirViewSource::Produced(_)
+            HirViewSource::Place(_) | HirViewSource::Produced { .. }
         );
         if checked.kind == crate::hir::HirCheckedObjectViewKind::Static && direct_static_source {
             let projected = checked
