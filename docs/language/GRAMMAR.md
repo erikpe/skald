@@ -122,10 +122,13 @@ reserved.
 ```text
 decimal-digits  = digit { digit }
 digit           = "0".."9"
+hex-prefix      = "0x" | "0X"
+hex-digit       = digit | "a".."f" | "A".."F"
+hex-digits      = hex-digit { hex-digit }
 
-i64-literal     = decimal-digits
-u64-literal     = decimal-digits "u"
-u8-literal      = decimal-digits "u8"
+i64-literal     = decimal-digits | hex-prefix hex-digits
+u64-literal     = decimal-digits "u" | hex-prefix hex-digits "u"
+u8-literal      = decimal-digits "u8" | hex-prefix hex-digits "u8"
 
 exponent        = ("e" | "E") ["+" | "-"] decimal-digits
 f64-literal     = decimal-digits "." decimal-digits [exponent]
@@ -139,13 +142,14 @@ string-escape   = backslash ( double-quote | backslash | "n" | "r" | "t"
 literal         = numeric-literal | bool-literal | string-literal
 ```
 
-Leading `-` is a separate unary token. A decimal point requires digits on both
-sides, and an exponent requires at least one digit. Numeric-looking suffixes or
-tails not present above make the complete numeric-looking spelling invalid;
-examples include `1_000`, `0xff`, `1.`, `1e+`, `1.2.3`, and `42u64`. A leading
-dot is punctuation, so `.5` tokenizes as `.` followed by `5` and is not a
-floating literal. Literal ranges and value interpretation are semantic rules,
-not grammar.
+Hexadecimal prefixes and digits are case-insensitive; integer suffixes remain
+lowercase and case-sensitive. Leading `-` is a separate unary token. A decimal
+point requires digits on both sides, and an exponent requires at least one
+digit. Numeric-looking suffixes or tails not present above make the complete
+numeric-looking spelling invalid; examples include `1_000`, `0x`, `0xg`,
+`0xffu64`, `0x_ff`, `0x1.0`, `1.`, `1e+`, `1.2.3`, and `42u64`. A
+leading-dot numeric-looking spelling such as `.5` is rejected as one malformed
+token. Literal ranges and value interpretation are semantic rules, not grammar.
 
 Unescaped string content is printable ASCII other than double quote and
 backslash. The exact escapes, decoded bytes, and invalid-content behavior are

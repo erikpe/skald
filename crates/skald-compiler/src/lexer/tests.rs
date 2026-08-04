@@ -14,6 +14,12 @@ const U64_LITERAL: TokenKind =
     TokenKind::NumericLiteral(NumericLiteralKind::U64(IntegerRadix::Decimal));
 const U8_LITERAL: TokenKind =
     TokenKind::NumericLiteral(NumericLiteralKind::U8(IntegerRadix::Decimal));
+const HEX_I64_LITERAL: TokenKind =
+    TokenKind::NumericLiteral(NumericLiteralKind::I64(IntegerRadix::Hexadecimal));
+const HEX_U64_LITERAL: TokenKind =
+    TokenKind::NumericLiteral(NumericLiteralKind::U64(IntegerRadix::Hexadecimal));
+const HEX_U8_LITERAL: TokenKind =
+    TokenKind::NumericLiteral(NumericLiteralKind::U8(IntegerRadix::Hexadecimal));
 const F64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::F64);
 
 fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) {
@@ -542,6 +548,58 @@ fn recognizes_f64_type_and_decimal_literal_forms() {
 }
 
 #[test]
+fn recognizes_hexadecimal_integer_forms_and_preserves_their_spelling() {
+    let (sources, source_id, output) = lex_text("0x2a 0X2A 0x0010 0x2Au 0Xffu8");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            HEX_I64_LITERAL,
+            HEX_I64_LITERAL,
+            HEX_I64_LITERAL,
+            HEX_U64_LITERAL,
+            HEX_U8_LITERAL,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["0x2a", "0X2A", "0x0010", "0x2Au", "0Xffu8", ""]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
+fn hexadecimal_e_digits_remain_distinct_from_decimal_exponents() {
+    let (_, _, output) = lex_text("0x1e3 0X1E3 1e3 1E3");
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            HEX_I64_LITERAL,
+            HEX_I64_LITERAL,
+            F64_LITERAL,
+            F64_LITERAL,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn recognizes_conditional_keywords_without_reserving_prefixes() {
     let (_, _, output) = lex_text("if elif else iffy elseif");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
@@ -640,8 +698,8 @@ fn identifiers_are_ascii_and_allow_underscores_and_later_digits() {
 }
 
 #[test]
-fn malformed_decimal_spellings_are_single_invalid_tokens() {
-    let (sources, source_id, output) = lex_text("12abc 1_000 12. 0xff");
+fn malformed_numeric_spellings_are_single_invalid_tokens() {
+    let (sources, source_id, output) = lex_text("12abc 1_000 12.");
     let source = sources.get(source_id).unwrap();
     let invalid_lexemes: Vec<_> = output
         .tokens
@@ -650,12 +708,35 @@ fn malformed_decimal_spellings_are_single_invalid_tokens() {
         .map(|token| source.slice(token.span.range()).unwrap())
         .collect();
 
-    assert_eq!(invalid_lexemes, vec!["12abc", "1_000", "12.", "0xff"]);
-    assert_eq!(output.diagnostics.len(), 4);
+    assert_eq!(invalid_lexemes, vec!["12abc", "1_000", "12."]);
+    assert_eq!(output.diagnostics.len(), 3);
     assert!(output
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
+}
+
+#[test]
+fn malformed_hexadecimal_spellings_recover_as_complete_tokens() {
+    let (sources, source_id, output) = lex_text("0x 0xg 0x1g 0xffu64 0x_ff 0x1.0 return");
+    let source = sources.get(source_id).unwrap();
+    let spellings: Vec<_> = output
+        .tokens
+        .iter()
+        .filter(|token| token.kind == TokenKind::Invalid)
+        .map(|token| source.slice(token.span.range()).unwrap())
+        .collect();
+
+    assert_eq!(
+        spellings,
+        ["0x", "0xg", "0x1g", "0xffu64", "0x_ff", "0x1.0"]
+    );
+    assert_eq!(output.diagnostics.len(), spellings.len());
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
+    assert_eq!(output.tokens[spellings.len()].kind, TokenKind::Return);
 }
 
 #[test]

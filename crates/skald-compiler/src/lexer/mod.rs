@@ -2,7 +2,7 @@
 //!
 //! The lexer accepts the deliberately restricted token set documented in
 //! `docs/language/GRAMMAR.md`. It recovers after invalid characters and
-//! malformed decimal spellings, returning tokens and structured diagnostics
+//! malformed numeric spellings, returning tokens and structured diagnostics
 //! together.
 
 mod dump;

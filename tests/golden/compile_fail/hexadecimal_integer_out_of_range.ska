@@ -1,0 +1,19 @@
+fn positive_i64() -> i64 {
+    return 0x8000000000000000;
+}
+
+fn negative_i64() -> i64 {
+    return -0x8000000000000001;
+}
+
+fn too_large_u64() -> u64 {
+    return 0x10000000000000000u;
+}
+
+fn too_large_u8() -> u8 {
+    return 0x100u8;
+}
+
+fn main() -> i64 {
+    return 0;
+}

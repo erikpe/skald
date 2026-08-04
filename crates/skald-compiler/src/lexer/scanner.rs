@@ -237,7 +237,7 @@ impl<'source> Lexer<'source> {
                 MALFORMED_NUMERIC_LITERAL,
                 format!("malformed numeric literal `{spelling}`"),
             )
-            .with_primary_label(span, "expected a supported decimal numeric spelling")
+            .with_primary_label(span, "expected a supported numeric spelling")
             .with_note("numeric range checking occurs during type checking"),
         );
     }

@@ -14,6 +14,43 @@ fn resolution_preserves_numeric_classification_and_source_spelling() {
 }
 
 #[test]
+fn resolution_preserves_hexadecimal_radix_and_source_spelling() {
+    for (source, expected_kind, expected_spelling, dump_fragment) in [
+        (
+            "fn value() -> i64 { return 0X002a; }",
+            NumericLiteralKind::I64(IntegerRadix::Hexadecimal),
+            "0X002a",
+            "Integer \"0X002a\"",
+        ),
+        (
+            "fn value() -> u64 { return 0x2Au; }",
+            NumericLiteralKind::U64(IntegerRadix::Hexadecimal),
+            "0x2Au",
+            "U64 \"0x2Au\"",
+        ),
+        (
+            "fn value() -> u8 { return 0Xffu8; }",
+            NumericLiteralKind::U8(IntegerRadix::Hexadecimal),
+            "0Xffu8",
+            "U8 \"0Xffu8\"",
+        ),
+    ] {
+        let output = resolve_text(source);
+        let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+        let ResolvedExpression::NumericLiteral(literal) =
+            return_value(&definition.body.statements[0])
+        else {
+            panic!("expected a resolved numeric literal");
+        };
+
+        assert_eq!(literal.kind, expected_kind);
+        assert_eq!(literal.spelling, expected_spelling);
+        assert_eq!(literal.span.range().len(), expected_spelling.len());
+        assert!(dump_resolved(&output.program).contains(dump_fragment));
+    }
+}
+
+#[test]
 fn resolution_preserves_arbitrary_precision_decimal_magnitudes_without_conversion() {
     let spelling = "9".repeat(200);
     let output = resolve_text(&format!("fn main() -> i64 {{ return {spelling}; }}"));

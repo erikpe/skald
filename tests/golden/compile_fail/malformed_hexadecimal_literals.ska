@@ -1,0 +1,32 @@
+fn missing_digits() -> i64 {
+    return 0x;
+}
+
+fn invalid_first_digit() -> i64 {
+    return 0xg;
+}
+
+fn invalid_later_digit() -> i64 {
+    return 0x1g;
+}
+
+fn unsupported_suffix() -> u64 {
+    return 0xffu64;
+}
+
+fn separator() -> i64 {
+    return 0x_ff;
+}
+
+fn decimal_point() -> i64 {
+    return 0x1.0;
+}
+
+fn recovers() -> i64 {
+    var malformed: i64 = 0xnope;
+    return 0x2a;
+}
+
+fn main() -> i64 {
+    return 0;
+}

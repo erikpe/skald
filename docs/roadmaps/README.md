@@ -8,10 +8,10 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Hexadecimal integer and byte literals](HEXADECIMAL_INTEGER_AND_BYTE_LITERALS_ROADMAP.md)
   — add radix-explicit `0x`/`0X` spellings for `i64`, `u64`, and `u8`, plus
-  single-quoted ASCII/escaped byte literals of exact type `u8`; LIT1
-  (implement hexadecimal integers end to end) is next. It depends only on the
-  implemented primitive literal and raw-byte foundations and does not change
-  `f64`, the runtime ABI, or ownership.
+  single-quoted ASCII/escaped byte literals of exact type `u8`; LIT2
+  (implement single-quoted `u8` byte literals end to end) is next. It depends
+  only on the implemented primitive literal and raw-byte foundations and does
+  not change `f64`, the runtime ABI, or ownership.
 
 ## Planned
 

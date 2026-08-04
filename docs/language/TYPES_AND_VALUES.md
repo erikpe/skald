@@ -63,9 +63,9 @@ and there is no untyped numeric-literal stage visible to the language:
 
 | Source form | Type | Accepted value boundary |
 |---|---|---|
-| decimal digits without a suffix | `i64` | `0` through `9223372036854775807`; unary `-` also admits the minimum boundary described below |
-| decimal digits followed by `u` | `u64` | `0u` through `18446744073709551615u` |
-| decimal digits followed by `u8` | `u8` | `0u8` through `255u8` |
+| decimal digits or `0x`/`0X` hexadecimal digits without a suffix | `i64` | `0` through `9223372036854775807`; unary `-` also admits the minimum boundary described below |
+| decimal digits or `0x`/`0X` hexadecimal digits followed by `u` | `u64` | `0u` through `18446744073709551615u` |
+| decimal digits or `0x`/`0X` hexadecimal digits followed by `u8` | `u8` | `0u8` through `255u8` |
 | decimal point or exponent form | `f64` | any spelling that rounds to a finite binary64 value |
 | `false`, `true` | `bool` | the two boolean values |
 
@@ -74,9 +74,16 @@ by the [grammar](GRAMMAR.md#literals). Range checks occur before a valid program
 is accepted.
 
 A leading `-` is an operator, not part of a numeric token. The otherwise
-out-of-range magnitude `9223372036854775808` is accepted only as the operand of
-unary negation, through any number of grouping parentheses, to form the `i64`
-minimum. Larger positive or negative integer magnitudes are errors.
+out-of-range magnitude `9223372036854775808` (or `0x8000000000000000`) is
+accepted only as the operand of unary negation, through any number of grouping
+parentheses, to form the `i64` minimum. Larger positive or negative integer
+magnitudes are errors.
+
+A hexadecimal integer denotes a non-negative mathematical magnitude, not a
+two's-complement bit pattern. Consequently, unsuffixed
+`0xffffffffffffffff` is out of range for `i64`; the suffixed
+`0xffffffffffffffffu` is `u64::MAX`. Radix changes only the source spelling,
+not type selection, range, arithmetic, or conversion rules.
 
 Decimal floating literals round once to the nearest binary64 value, with ties
 to an even significand. Subnormal results and underflow to positive zero are

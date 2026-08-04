@@ -2,33 +2,33 @@ error[LEX002]: malformed numeric literal `42u64`
  --> tests/golden/compile_fail/malformed_numeric_literals.ska:2:12
    |
 2 |     return 42u64;
-   |            ^^^^^ expected a supported decimal numeric spelling
+   |            ^^^^^ expected a supported numeric spelling
   = note: numeric range checking occurs during type checking
 
 error[LEX002]: malformed numeric literal `1.`
  --> tests/golden/compile_fail/malformed_numeric_literals.ska:6:12
    |
 6 |     return 1.;
-   |            ^^ expected a supported decimal numeric spelling
+   |            ^^ expected a supported numeric spelling
   = note: numeric range checking occurs during type checking
 
 error[LEX002]: malformed numeric literal `.5`
  --> tests/golden/compile_fail/malformed_numeric_literals.ska:10:12
     |
 10 |     return .5;
-    |            ^^ expected a supported decimal numeric spelling
+    |            ^^ expected a supported numeric spelling
   = note: numeric range checking occurs during type checking
 
 error[LEX002]: malformed numeric literal `1.0f64`
  --> tests/golden/compile_fail/malformed_numeric_literals.ska:14:12
     |
 14 |     return 1.0f64;
-    |            ^^^^^^ expected a supported decimal numeric spelling
+    |            ^^^^^^ expected a supported numeric spelling
   = note: numeric range checking occurs during type checking
 
 error[LEX002]: malformed numeric literal `1e+`
  --> tests/golden/compile_fail/malformed_numeric_literals.ska:18:12
     |
 18 |     return 1e+;
-    |            ^^^ expected a supported decimal numeric spelling
+    |            ^^^ expected a supported numeric spelling
   = note: numeric range checking occurs during type checking

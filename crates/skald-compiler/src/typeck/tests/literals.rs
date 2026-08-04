@@ -102,6 +102,36 @@ fn positive_i64_maximum_is_accepted() {
 }
 
 #[test]
+fn hexadecimal_literals_convert_to_existing_typed_integer_constants() {
+    let output = check_text(concat!(
+        "fn signed() -> i64 { return 0X7fffffffffffffff; }\n",
+        "fn unsigned() -> u64 { return 0xffffffffffffffffu; }\n",
+        "fn byte() -> u8 { return 0Xffu8; }\n",
+        "fn main() -> i64 { return 0x0; }\n",
+    ));
+    let hir = output
+        .hir
+        .expect("in-range hexadecimal literals must produce HIR");
+
+    assert!(matches!(
+        returned_expression(hir.definitions.get(FunctionId::new(0)).unwrap()).kind,
+        HirExpressionKind::I64(i64::MAX)
+    ));
+    assert!(matches!(
+        returned_expression(hir.definitions.get(FunctionId::new(1)).unwrap()).kind,
+        HirExpressionKind::U64(u64::MAX)
+    ));
+    assert!(matches!(
+        returned_expression(hir.definitions.get(FunctionId::new(2)).unwrap()).kind,
+        HirExpressionKind::U8(u8::MAX)
+    ));
+    assert!(matches!(
+        returned_expression(hir.definitions.get(FunctionId::new(3)).unwrap()).kind,
+        HirExpressionKind::I64(0)
+    ));
+}
+
+#[test]
 fn checks_u64_literals_signatures_and_typed_arithmetic() {
     let output = check_text(concat!(
         "extern fn observe(value: u64) -> unit;\n",
@@ -338,6 +368,48 @@ fn grouping_does_not_break_the_i64_minimum_boundary() {
 
     assert!(output.hir.is_some());
     assert!(output.diagnostics.is_empty());
+}
+
+#[test]
+fn unary_minus_admits_the_grouped_hexadecimal_i64_minimum_boundary() {
+    let output = check_text("fn main() -> i64 { return -((0X8000000000000000)); }");
+    let hir = output
+        .hir
+        .expect("grouped hexadecimal i64 minimum must type-check");
+
+    assert!(matches!(
+        returned_expression(hir.definitions.get(hir.entry_function).unwrap()).kind,
+        HirExpressionKind::I64(i64::MIN)
+    ));
+}
+
+#[test]
+fn hexadecimal_integer_extrema_use_existing_range_diagnostics() {
+    for (source, expected_code) in [
+        (
+            "fn main() -> i64 { return 0x8000000000000000; }",
+            INTEGER_LITERAL_OUT_OF_RANGE,
+        ),
+        (
+            "fn main() -> i64 { return -0x8000000000000001; }",
+            INTEGER_LITERAL_OUT_OF_RANGE,
+        ),
+        (
+            "fn value() -> u64 { return 0x10000000000000000u; } fn main() -> i64 { return 0; }",
+            U64_LITERAL_OUT_OF_RANGE,
+        ),
+        (
+            "fn value() -> u8 { return 0x100u8; } fn main() -> i64 { return 0; }",
+            U8_LITERAL_OUT_OF_RANGE,
+        ),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none(), "{source}");
+        assert_eq!(output.diagnostics.len(), 1, "{source}");
+        let diagnostic = output.diagnostics.iter().next().unwrap();
+        assert_eq!(diagnostic.code, expected_code, "{source}");
+        assert!(diagnostic.message.contains("0x"), "{source}");
+    }
 }
 
 #[test]

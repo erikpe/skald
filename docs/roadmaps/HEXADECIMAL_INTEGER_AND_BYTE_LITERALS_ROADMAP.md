@@ -1,6 +1,6 @@
 # Hexadecimal Integer and Byte Literals Roadmap
 
-Status: in progress; LIT1 is next.
+Status: in progress; LIT2 is next.
 
 This roadmap adds hexadecimal source spellings for all three Skald integer
 types and single-quoted byte literals of exact type `u8`. The design is frozen
@@ -116,7 +116,7 @@ task that enables each source form updates them.
 ## Progress
 
 - [x] LIT0 — Make integer literal representation radix-aware
-- [ ] LIT1 — Implement hexadecimal integers end to end
+- [x] LIT1 — Implement hexadecimal integers end to end
 - [ ] LIT2 — Implement single-quoted `u8` byte literals end to end
 
 Every task runs its focused tests, then `make check` and `make msrv-check`.
@@ -162,32 +162,32 @@ consumer rediscovers radix from spelling, and the full quality gates pass.
 **Purpose:** Enable the frozen hexadecimal spelling for `i64`, `u64`, and
 `u8` while reusing every existing typed integer path below type checking.
 
-- [ ] Extend the numeric scanner with `0x`/`0X`, case-insensitive hexadecimal
+- [x] Extend the numeric scanner with `0x`/`0X`, case-insensitive hexadecimal
       digits, the existing lowercase suffixes, longest valid recognition, and
       whole-token malformed-tail recovery.
-- [ ] Preserve integer kind, hexadecimal radix, original spelling, and exact
+- [x] Preserve integer kind, hexadecimal radix, original spelling, and exact
       span through tokens, AST, and resolved IR with deterministic source-shaped
       dumps.
-- [ ] Convert suffix-free hexadecimal digits with the centralized radix-aware
+- [x] Convert suffix-free hexadecimal digits with the centralized radix-aware
       type-check helpers and emit the existing typed HIR constants.
-- [ ] Apply existing range diagnostic codes and wording to hexadecimal values,
+- [x] Apply existing range diagnostic codes and wording to hexadecimal values,
       retaining the original spelling and type-specific range notes.
-- [ ] Extend the unary-minus magnitude rule through grouping for hexadecimal
+- [x] Extend the unary-minus magnitude rule through grouping for hexadecimal
       `i64::MIN`; reject its positive magnitude and adjacent larger positive
       and negative values.
-- [ ] Cover lowercase and uppercase prefixes and digits, all three suffix
+- [x] Cover lowercase and uppercase prefixes and digits, all three suffix
       selections, leading zeroes, extrema, overflow, invalid digits, missing
       digits, bad suffixes, separators, decimal points, token boundaries, and
       recovery into a following valid statement.
-- [ ] Prove hexadecimal values work through representative arithmetic,
+- [x] Prove hexadecimal values work through representative arithmetic,
       bitwise operations, shifts, comparisons, casts, calls, returns, storage,
       arrays, and native observation without a new HIR, MIR, verifier, backend,
       runtime, or ABI branch.
-- [ ] Update the implemented grammar, type/value contract, phase documentation,
+- [x] Update the implemented grammar, type/value contract, phase documentation,
       status matrix, and relevant examples in the same change that enables the
       syntax. Remove `0xff` from lists of malformed examples while preserving
       the still-excluded literal forms.
-- [ ] Retain focused regression coverage for every existing `f64` form and for
+- [x] Retain focused regression coverage for every existing `f64` form and for
       the distinction between hexadecimal digits containing `e`/`E` and
       decimal exponent syntax.
 

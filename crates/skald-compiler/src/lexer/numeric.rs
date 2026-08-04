@@ -16,6 +16,10 @@ pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
     let bytes = source.as_bytes();
     assert!(bytes.first().is_some_and(u8::is_ascii_digit));
 
+    if bytes.starts_with(b"0x") || bytes.starts_with(b"0X") {
+        return scan_hexadecimal_integer(bytes);
+    }
+
     let mut end = take_digits(bytes, 0);
     let mut kind = NumericLiteralKind::I64(IntegerRadix::Decimal);
     let mut well_formed = true;
@@ -62,6 +66,34 @@ pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
     }
 }
 
+fn scan_hexadecimal_integer(bytes: &[u8]) -> NumericScan {
+    debug_assert!(bytes.starts_with(b"0x") || bytes.starts_with(b"0X"));
+    let digits_start = 2;
+    let mut end = take_hexadecimal_digits(bytes, digits_start);
+    let mut kind = NumericLiteralKind::I64(IntegerRadix::Hexadecimal);
+    let mut well_formed = end > digits_start;
+
+    if bytes.get(end) == Some(&b'u') {
+        end += 1;
+        if bytes.get(end) == Some(&b'8') {
+            end += 1;
+            kind = NumericLiteralKind::U8(IntegerRadix::Hexadecimal);
+        } else {
+            kind = NumericLiteralKind::U64(IntegerRadix::Hexadecimal);
+        }
+    }
+
+    if bytes.get(end).is_some_and(|byte| is_numeric_tail(*byte)) {
+        well_formed = false;
+        end = take_numeric_tail(bytes, end);
+    }
+
+    NumericScan {
+        byte_len: end,
+        kind: well_formed.then_some(kind),
+    }
+}
+
 #[derive(Clone, Copy)]
 struct ExponentScan {
     end: usize,
@@ -84,6 +116,13 @@ fn scan_exponent(bytes: &[u8], mut end: usize) -> ExponentScan {
 
 fn take_digits(bytes: &[u8], mut end: usize) -> usize {
     while bytes.get(end).is_some_and(u8::is_ascii_digit) {
+        end += 1;
+    }
+    end
+}
+
+fn take_hexadecimal_digits(bytes: &[u8], mut end: usize) -> usize {
+    while bytes.get(end).is_some_and(u8::is_ascii_hexdigit) {
         end += 1;
     }
     end
@@ -125,11 +164,30 @@ mod tests {
         );
         assert_eq!(scan("1.5;"), (3, Some(NumericLiteralKind::F64)));
         assert_eq!(scan("6e-2;"), (4, Some(NumericLiteralKind::F64)));
+        assert_eq!(
+            scan("0x2a;"),
+            (4, Some(NumericLiteralKind::I64(IntegerRadix::Hexadecimal)))
+        );
+        assert_eq!(
+            scan("0X2Au;"),
+            (5, Some(NumericLiteralKind::U64(IntegerRadix::Hexadecimal)))
+        );
+        assert_eq!(
+            scan("0xffu8;"),
+            (6, Some(NumericLiteralKind::U8(IntegerRadix::Hexadecimal)))
+        );
+        assert_eq!(
+            scan("0x1e3;"),
+            (5, Some(NumericLiteralKind::I64(IntegerRadix::Hexadecimal)))
+        );
     }
 
     #[test]
     fn consumes_malformed_numeric_tails_as_one_spelling() {
-        for spelling in ["12abc", "1_000", "0xff", "1.", "1e+", "1.2.3", "42u64"] {
+        for spelling in [
+            "12abc", "1_000", "1.", "1e+", "1.2.3", "42u64", "0x", "0xg", "0x1g", "0xffu64",
+            "0x1U", "0x1U8", "0x1u9", "0x_ff", "0x1.0",
+        ] {
             assert_eq!(scan(spelling), (spelling.len(), None), "{spelling}");
         }
     }
@@ -147,6 +205,10 @@ mod tests {
         assert_eq!(
             scan("1é"),
             (1, Some(NumericLiteralKind::I64(IntegerRadix::Decimal)))
+        );
+        assert_eq!(
+            scan("0x1e+2"),
+            (4, Some(NumericLiteralKind::I64(IntegerRadix::Hexadecimal)))
         );
     }
 }

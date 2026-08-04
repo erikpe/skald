@@ -19,6 +19,46 @@ fn numeric_literals_preserve_their_lexical_kind_spelling_and_span() {
 }
 
 #[test]
+fn hexadecimal_literals_preserve_kind_radix_spelling_and_span() {
+    for (source, expected_kind, expected_spelling, dump_fragment) in [
+        (
+            "fn value() -> i64 { return 0X002a; }",
+            NumericLiteralKind::I64(IntegerRadix::Hexadecimal),
+            "0X002a",
+            "Integer \"0X002a\"",
+        ),
+        (
+            "fn value() -> u64 { return 0x2Au; }",
+            NumericLiteralKind::U64(IntegerRadix::Hexadecimal),
+            "0x2Au",
+            "U64 \"0x2Au\"",
+        ),
+        (
+            "fn value() -> u8 { return 0Xffu8; }",
+            NumericLiteralKind::U8(IntegerRadix::Hexadecimal),
+            "0Xffu8",
+            "U8 \"0Xffu8\"",
+        ),
+    ] {
+        let (sources, output) = parse_text(source);
+        let Expression::NumericLiteral(literal) = return_value(function(&output.ast, 0)) else {
+            panic!("expected a numeric literal");
+        };
+
+        assert_eq!(literal.kind, expected_kind);
+        assert_eq!(literal.spelling, expected_spelling);
+        assert_eq!(
+            sources
+                .get(literal.span.source_id())
+                .unwrap()
+                .slice(literal.span.range()),
+            Some(expected_spelling)
+        );
+        assert!(dump_ast(&output.ast).contains(dump_fragment));
+    }
+}
+
+#[test]
 fn string_literals_preserve_decoded_bytes_full_span_and_stable_dump() {
     let (sources, output) = parse_text("fn value() -> i64 { return \"A\\n\\x42\\0\\\"\\\\\"; }");
     let Expression::StringLiteral(literal) = return_value(function(&output.ast, 0)) else {

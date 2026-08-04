@@ -1,0 +1,48 @@
+error[LEX002]: malformed numeric literal `0x`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:2:12
+   |
+2 |     return 0x;
+   |            ^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking
+
+error[LEX002]: malformed numeric literal `0xg`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:6:12
+   |
+6 |     return 0xg;
+   |            ^^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking
+
+error[LEX002]: malformed numeric literal `0x1g`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:10:12
+    |
+10 |     return 0x1g;
+    |            ^^^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking
+
+error[LEX002]: malformed numeric literal `0xffu64`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:14:12
+    |
+14 |     return 0xffu64;
+    |            ^^^^^^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking
+
+error[LEX002]: malformed numeric literal `0x_ff`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:18:12
+    |
+18 |     return 0x_ff;
+    |            ^^^^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking
+
+error[LEX002]: malformed numeric literal `0x1.0`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:22:12
+    |
+22 |     return 0x1.0;
+    |            ^^^^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking
+
+error[LEX002]: malformed numeric literal `0xnope`
+ --> tests/golden/compile_fail/malformed_hexadecimal_literals.ska:26:26
+    |
+26 |     var malformed: i64 = 0xnope;
+    |                          ^^^^^^ expected a supported numeric spelling
+  = note: numeric range checking occurs during type checking

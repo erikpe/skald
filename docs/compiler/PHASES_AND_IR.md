@@ -633,9 +633,15 @@ spellings. It does not perform name lookup, choose semantic types, or convert
 numeric payloads into checked language values.
 
 Integer token kinds carry their radix structurally alongside the preserved
-source spelling. The currently implemented integer forms all carry decimal
+source spelling. Implemented integer forms carry either decimal or hexadecimal
 radix; later phases consume that classification rather than rediscovering a
 prefix from text. Floating literals remain a distinct radix-free kind.
+
+Syntax and resolved IR preserve an integer literal's complete spelling and
+explicit radix for source-facing dumps and diagnostics. Type checking removes
+the known prefix and suffix and converts the magnitude exactly once to the
+existing typed HIR integer constant. No hexadecimal distinction survives into
+MIR, verification, code generation, or the runtime.
 
 `LexOutput` contains tokens and diagnostics together. Invalid characters and
 malformed numeric spellings are diagnosed while retaining a recoverable token
