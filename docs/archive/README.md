@@ -66,6 +66,7 @@ Archived plans:
 - [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md)
 - [Zero-default static fields](STATIC_FIELDS_ROADMAP.md)
 - [Compact Ryū binary64 formatting](COMPACT_RYU_F64_FORMATTING_ROADMAP.md)
+- [Efficient binary64 parsing](EFFICIENT_F64_PARSING_ROADMAP.md)
 
 Resolved string-design inputs:
 

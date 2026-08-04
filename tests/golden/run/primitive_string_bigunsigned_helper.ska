@@ -1,4 +1,4 @@
-from std::str::bigunsigned_helper import BigUnsigned;
+from std::str::parse_f64 import BigUnsigned;
 
 fn main() -> i64 {
     var value: BigUnsigned = BigUnsigned(4u);
@@ -12,7 +12,11 @@ fn main() -> i64 {
     if (!value.subtract_shifted(one, 1u) || value.compare(one) != 0) {
         return 3;
     }
-    if (!value.multiply_power10(3u)) {
+    if (
+        !value.multiply_add(10u, 0u)
+        || !value.multiply_add(10u, 0u)
+        || !value.multiply_add(10u, 0u)
+    ) {
         return 4;
     }
 
@@ -36,7 +40,7 @@ fn main() -> i64 {
     }
 
     var copy: BigUnsigned = BigUnsigned(copy value);
-    if (!copy.subtract_shifted(value, 0u) || !copy.is_zero()) {
+    if (!copy.subtract_shifted(value, 0u) || copy.bit_length() != 0u) {
         return 10;
     }
 

@@ -239,7 +239,7 @@ The required asymptotic behavior is:
 | Format a binary64 value | `O(1)` over the fixed binary64 domain: one exact-length result allocation plus bounded fixed-width Ryū arithmetic; the first non-small finite value also initializes one reusable 832-byte cached-power table |
 | Parse a boolean | `O(1)` exact byte comparison with no allocation |
 | Parse an integer | `O(n)` checked decimal accumulation with no allocation |
-| Parse a binary64 value | `O(n)` allocation-free scan and small-value conversion when provably safe; otherwise one `O(n)` significand rescan plus bounded 4096-bit exact rounding storage and work |
+| Parse a binary64 value | `O(n)` allocation-free scan, followed by an exact small conversion or fixed-width Eisel-Lemire conversion in ordinary cases; ambiguous inputs use one `O(n)` rescan plus bounded 768-digit, 4096-bit exact rounding storage and work |
 
 ## Frozen primitive textual conversions
 
@@ -271,9 +271,15 @@ existing `Str`.
 Binary64 parsing first retains at most 19 significant decimal digits in a
 `u64`. Integer-valued inputs that can be scaled without unsigned overflow, and
 values whose significand and power of ten are both exactly representable in
-binary64, convert without allocating numeric storage. Other finite values are
-rescanned into the bounded exact-rounding representation; the fast path does
-not approximate or replace that fallback.
+binary64, use the exact small path. Other ordinary values use Eisel-Lemire
+conversion with portable `64 × 64 -> 128` multiplication and an independently
+encoded power-of-five table covering decimal exponents from -342 through 308.
+The parser decodes only the selected two-word power directly from an immortal
+hexadecimal literal and performs no table or numeric-storage allocation on
+that path. When more than 19 digits are significant, the result is accepted
+only if converting both adjacent retained-prefix endpoints selects the same
+binary64 value. Near-halfway and otherwise ambiguous inputs are rescanned into
+the exact-rounding fallback.
 
 Binary64 formatting reads the exact IEEE-754 representation through
 `std::f64::to_bits` and applies Ryū's fixed-width nearest/even interval
@@ -287,9 +293,10 @@ and reuses that process-lifetime array; table decoding and numeric conversion
 perform no per-value allocation. The current single-threaded execution model
 permits the empty static array to serve as the initialization sentinel.
 
-The parser alone uses the checked fixed-capacity `BigUnsigned` implementation
-in `std::str::bigunsigned_helper`, with 128 limbs for its separately proven
-input bound. The helper owns its limb array and has no access to a `Str`
+The exact parser fallback retains at most 768 significant digits plus a
+nonzero-tail bit. Every binary64 rounding boundary can be decided within that
+bound. It uses the checked 128-limb `BigUnsigned` class owned by
+`std::str::parse_f64`; the class owns its arrays and has no access to a `Str`
 descriptor or backing array. Formatting presentation applies the frozen
 plain/scientific threshold directly into one exact-length result backing. No
 host formatter, parser call, runtime conversion, or locale state participates
