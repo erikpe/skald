@@ -1,0 +1,35 @@
+fn empty() -> u8 {
+    return '';
+}
+
+fn multiple() -> u8 {
+    return 'ab';
+}
+
+fn unknown_escape() -> u8 {
+    return '\q';
+}
+
+fn short_hex_escape() -> u8 {
+    return '\x4';
+}
+
+fn invalid_hex_escape() -> u8 {
+    return '\xgg';
+}
+
+fn non_ascii() -> u8 {
+    return 'é';
+}
+
+fn direct_control() -> u8 {
+    return '	';
+}
+
+fn unescaped_newline() -> u8 {
+    return 'bad
+}
+
+fn main() -> i64 {
+    return 0;
+}

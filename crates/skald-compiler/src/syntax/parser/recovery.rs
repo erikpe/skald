@@ -81,6 +81,7 @@ impl Parser<'_> {
                     TokenKind::Bool,
                     TokenKind::Unit,
                     TokenKind::SelfValue,
+                    TokenKind::ByteLiteral,
                     TokenKind::StringLiteral,
                     TokenKind::True,
                     TokenKind::False,
@@ -133,6 +134,7 @@ impl Parser<'_> {
                 | TokenKind::Unit
                 | TokenKind::SelfValue
                 | TokenKind::NumericLiteral(_)
+                | TokenKind::ByteLiteral
                 | TokenKind::StringLiteral
                 | TokenKind::True
                 | TokenKind::False

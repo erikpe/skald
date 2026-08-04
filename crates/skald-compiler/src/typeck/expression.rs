@@ -2,7 +2,7 @@
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    hir::{HirExpression, Type},
+    hir::{HirExpression, HirExpressionKind, Type},
     resolve::{
         ResolvedExpression, ResolvedInterfaceParameter, ResolvedParameter,
         ResolvedParameterBindingMode, ResolvedType,
@@ -87,6 +87,11 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Unwrap(unwrap) => self.check_optional_unwrap(unwrap),
             ResolvedExpression::Binding(binding) => self.check_binding_expression(binding),
             ResolvedExpression::NumericLiteral(literal) => self.check_numeric_literal(literal),
+            ResolvedExpression::ByteLiteral(literal) => Some(HirExpression {
+                kind: HirExpressionKind::U8(literal.value),
+                ty: Type::U8,
+                span: literal.span,
+            }),
             ResolvedExpression::StringLiteral(literal) => {
                 self.diagnostics.push(
                     Diagnostic::error(

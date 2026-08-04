@@ -528,6 +528,9 @@ impl AstDumper {
                 };
                 self.named(name, &literal.spelling, literal.span);
             }
+            Expression::ByteLiteral(literal) => {
+                self.line(&format!("Byte {:02x}", literal.value), literal.span);
+            }
             Expression::StringLiteral(literal) => {
                 let mut bytes = String::with_capacity(literal.bytes.len() * 2);
                 for byte in &literal.bytes {

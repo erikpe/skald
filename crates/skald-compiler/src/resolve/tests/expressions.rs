@@ -51,6 +51,22 @@ fn resolution_preserves_hexadecimal_radix_and_source_spelling() {
 }
 
 #[test]
+fn resolution_preserves_byte_literal_value_span_and_source_family() {
+    let output = resolve_text("fn value() -> u8 { return '\\xAf'; }");
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::ByteLiteral(literal) = return_value(&definition.body.statements[0])
+    else {
+        panic!("expected a resolved byte literal");
+    };
+
+    assert_eq!(literal.value, 0xaf);
+    assert_eq!(literal.span.range().len(), "'\\xAf'".len());
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Byte af"), "{dump}");
+    assert_eq!(dump, dump_resolved(&output.program));
+}
+
+#[test]
 fn resolution_preserves_arbitrary_precision_decimal_magnitudes_without_conversion() {
     let spelling = "9".repeat(200);
     let output = resolve_text(&format!("fn main() -> i64 {{ return {spelling}; }}"));

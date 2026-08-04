@@ -142,6 +142,11 @@ An implementation may pool equal decoded byte sequences and should use one
 canonical empty backing per program. Backing identity is unobservable, so the
 language does not promise whether distinct occurrences share storage.
 
+Single-quoted [byte literals](TYPES_AND_VALUES.md#literal-types-and-ranges)
+reuse the byte-oriented escape vocabulary where applicable but have exact type
+`u8` and decode to exactly one byte. They do not construct `Str`, load the
+string language item, or imply a character or Unicode model.
+
 ## Language-item dependency and source access
 
 A module containing a valid string literal acquires a compiler-owned
@@ -459,7 +464,7 @@ checked cast nor string-only numeric rules.
 
 This frozen profile does not define:
 
-- Unicode or a character type;
+- Unicode or a character type (single-quoted byte literals remain exact `u8`);
 - null termination or C-string interoperation;
 - mutable strings or mutable views through `Str`;
 - adjacent literals, interpolation, formatting syntax, or string operators;

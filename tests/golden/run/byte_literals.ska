@@ -1,0 +1,43 @@
+import std::io;
+from std::str import Str;
+
+class ByteBox {
+    value: u8;
+
+    init(value: u8) {
+        self.value = value;
+    }
+
+    fn plus(increment: u8) -> u8 {
+        return self.value + increment;
+    }
+}
+
+fn identity(value: u8) -> u8 {
+    return value;
+}
+
+fn main() -> i64 {
+    var direct: u8 = 'A';
+    var control: u8 = '\n';
+    var maximum: u8 = '\xff';
+    var bytes: u8[] = u8[](3u);
+    bytes[0] = direct;
+    bytes[1] = 'B';
+    bytes[2] = bytes[0] + '\x02';
+    var box: ByteBox = ByteBox('\x40');
+    var text: Str = "ABC";
+
+    std::io::println_u8(identity(direct));
+    std::io::println_u8(control);
+    std::io::println_u8(maximum);
+    std::io::println_u8(box.plus('\x01'));
+    std::io::println_u8(bytes[2]);
+    std::io::println_i64((i64) '\'');
+    std::io::println_bool(text.byte(1) == 'B');
+
+    if (bytes[0] == 65u8 && bytes[1] == 0x42u8 && text.byte(2) == 'C') {
+        return 0;
+    }
+    return 1;
+}

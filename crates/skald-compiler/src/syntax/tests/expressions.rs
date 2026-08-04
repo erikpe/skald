@@ -78,6 +78,29 @@ fn string_literals_preserve_decoded_bytes_full_span_and_stable_dump() {
 }
 
 #[test]
+fn byte_literals_preserve_decoded_value_full_span_and_stable_dump() {
+    for (spelling, expected) in [("'A'", 0x41), ("'\\n'", 0x0a), ("'\\xAf'", 0xaf)] {
+        let source = format!("fn value() -> u8 {{ return {spelling}; }}");
+        let (sources, output) = parse_text(&source);
+        let Expression::ByteLiteral(literal) = return_value(function(&output.ast, 0)) else {
+            panic!("expected a byte literal");
+        };
+
+        assert_eq!(literal.value, expected);
+        assert_eq!(
+            sources
+                .get(literal.span.source_id())
+                .unwrap()
+                .slice(literal.span.range()),
+            Some(spelling)
+        );
+        let dump = dump_ast(&output.ast);
+        assert!(dump.contains(&format!("Byte {expected:02x}")), "{dump}");
+        assert_eq!(dump, dump_ast(&output.ast));
+    }
+}
+
+#[test]
 fn parses_u64_types_and_preserves_suffixed_literal_spelling() {
     let (_, output) = parse_text(
         "fn identity(value: u64) -> u64 { var result: u64 = value; return 42u; } fn main() -> i64 { return 0; }",

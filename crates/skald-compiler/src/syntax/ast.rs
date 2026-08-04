@@ -614,6 +614,7 @@ pub enum Expression {
     Absent(AbsentExpr),
     Identifier(IdentifierExpr),
     NumericLiteral(NumericLiteralExpr),
+    ByteLiteral(ByteLiteralExpr),
     StringLiteral(StringLiteralExpr),
     Boolean(BooleanExpr),
     Unary(UnaryExpr),
@@ -639,6 +640,7 @@ impl Expression {
             Self::Absent(expression) => expression.span,
             Self::Identifier(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
+            Self::ByteLiteral(expression) => expression.span,
             Self::StringLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
@@ -842,6 +844,13 @@ pub struct NumericLiteralExpr {
     pub kind: NumericLiteralKind,
     /// The complete original source spelling, retained for diagnostics.
     pub spelling: String,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ByteLiteralExpr {
+    /// The one byte produced by the validated source spelling.
+    pub value: u8,
     pub span: Span,
 }
 

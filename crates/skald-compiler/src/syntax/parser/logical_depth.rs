@@ -13,6 +13,7 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
             Expression::Absent(_)
             | Expression::Identifier(_)
             | Expression::NumericLiteral(_)
+            | Expression::ByteLiteral(_)
             | Expression::StringLiteral(_)
             | Expression::Boolean(_)
             | Expression::SelfValue(_) => {}

@@ -20,9 +20,9 @@ const MAX_GENERATED_BYTES: usize = 1_024;
 const BYTE_SEED: u64 = 0x6a09_e667_f3bc_c909;
 const UTF8_SEED: u64 = 0xbb67_ae85_84ca_a73b;
 const VALID_CHARACTERS: &[char] = &[
-    '\0', '\n', '\r', '\t', ' ', '(', ')', '{', '}', ':', ';', ',', '.', '+', '-', '*', '/', '=',
-    '!', '0', '1', '8', '9', '?', 'a', 'c', 'd', 'e', 'f', 'i', 'l', 'n', 'r', 's', 't', 'u', 'x',
-    '_', 'é', 'λ', '中', '🦀',
+    '\0', '\n', '\r', '\t', ' ', '"', '\'', '\\', '(', ')', '{', '}', ':', ';', ',', '.', '+', '-',
+    '*', '/', '=', '!', '0', '1', '8', '9', '?', 'a', 'c', 'd', 'e', 'f', 'i', 'l', 'n', 'r', 's',
+    't', 'u', 'x', '_', 'é', 'λ', '中', '🦀',
 ];
 
 #[test]
@@ -33,6 +33,7 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_class_header_mutations();
     exercise_optional_syntax_mutations();
     exercise_array_syntax_mutations();
+    exercise_byte_literal_mutations();
 }
 
 #[test]
@@ -134,6 +135,39 @@ fn exercise_array_syntax_mutations() {
         let mut insertion = SEED.to_owned();
         insertion.insert(index, if index % 2 == 0 { '[' } else { ']' });
         assert_frontend_does_not_panic(&format!("array-insert-{index}"), &insertion);
+    }
+}
+
+fn exercise_byte_literal_mutations() {
+    const SEED: &str = "fn main() -> i64 { var value: u8 = '\\xAf'; return (i64) value; }";
+
+    for index in 0..SEED.len() {
+        let mut deletion = SEED.to_owned();
+        deletion.remove(index);
+        assert_frontend_does_not_panic(&format!("byte-literal-delete-{index}"), &deletion);
+    }
+    for index in 0..=SEED.len() {
+        let mut insertion = SEED.to_owned();
+        insertion.insert(index, if index % 2 == 0 { '\'' } else { '\\' });
+        assert_frontend_does_not_panic(&format!("byte-literal-insert-{index}"), &insertion);
+    }
+
+    for (index, malformed) in [
+        "''",
+        "'ab'",
+        "'\\q'",
+        "'\\x'",
+        "'\\x4'",
+        "'\\xgg'",
+        "'é'",
+        "'\t'",
+        "'bad\nnext",
+        "'unterminated",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert_frontend_does_not_panic(&format!("malformed-byte-literal-{index}"), malformed);
     }
 }
 

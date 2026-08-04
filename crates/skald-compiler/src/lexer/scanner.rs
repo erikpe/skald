@@ -5,6 +5,7 @@ use crate::{
 };
 
 use super::{
+    byte::{scan_byte_literal, ByteLiteralError},
     numeric::scan_numeric_literal,
     string::{scan_string_literal, StringLiteralError},
     Token, TokenKind,
@@ -26,6 +27,7 @@ const COMPOUND_PUNCTUATION: &[(&str, TokenKind)] = &[
 pub const UNEXPECTED_CHARACTER: &str = "LEX001";
 pub const MALFORMED_NUMERIC_LITERAL: &str = "LEX002";
 pub const MALFORMED_STRING_LITERAL: &str = "LEX003";
+pub const MALFORMED_BYTE_LITERAL: &str = "LEX004";
 /// Compatibility name retained for clients of the earlier integer-only lexer.
 pub const MALFORMED_INTEGER_LITERAL: &str = MALFORMED_NUMERIC_LITERAL;
 
@@ -74,6 +76,8 @@ impl<'source> Lexer<'source> {
 
             if is_identifier_start(character) {
                 self.lex_identifier(start);
+            } else if character == '\'' {
+                self.lex_byte_literal(start);
             } else if character == '"' {
                 self.lex_string_literal(start);
             } else if character.is_ascii_digit() {
@@ -223,6 +227,61 @@ impl<'source> Lexer<'source> {
             return;
         }
         self.push_token(TokenKind::StringLiteral, start);
+    }
+
+    fn lex_byte_literal(&mut self, start: usize) {
+        let scan = scan_byte_literal(self.remaining());
+        self.offset += scan.byte_len;
+        let Some(error) = scan.error else {
+            self.push_token(TokenKind::ByteLiteral, start);
+            return;
+        };
+
+        let span = self.span(start, self.offset);
+        self.tokens.push(Token {
+            kind: TokenKind::Invalid,
+            span,
+        });
+        let (message, label) = match error {
+            ByteLiteralError::Empty => (
+                "empty byte literal",
+                "expected one printable ASCII byte or supported escape",
+            ),
+            ByteLiteralError::MultipleBytes => (
+                "multiple bytes in byte literal",
+                "a byte literal must decode to exactly one byte",
+            ),
+            ByteLiteralError::UnknownEscape => (
+                "unknown byte escape",
+                "use one of `\\'`, `\\\"`, `\\\\`, `\\n`, `\\r`, `\\t`, `\\0`, or `\\xNN`",
+            ),
+            ByteLiteralError::IncompleteEscape => (
+                "incomplete byte escape",
+                "expected an escape code after `\\`",
+            ),
+            ByteLiteralError::IncompleteHexEscape => (
+                "malformed hexadecimal byte escape",
+                "expected exactly two hexadecimal digits after `\\x`",
+            ),
+            ByteLiteralError::NonPrintableAscii => (
+                "non-printable byte in byte literal",
+                "encode this byte with a supported escape",
+            ),
+            ByteLiteralError::NonAscii => (
+                "non-ASCII content in byte literal",
+                "encode the byte with a `\\xNN` escape",
+            ),
+            ByteLiteralError::UnescapedNewline => (
+                "unescaped newline in byte literal",
+                "use `\\n` or terminate the literal before this line",
+            ),
+            ByteLiteralError::Unterminated => {
+                ("unterminated byte literal", "expected a closing `'`")
+            }
+        };
+        self.diagnostics.push(
+            Diagnostic::error(MALFORMED_BYTE_LITERAL, message).with_primary_label(span, label),
+        );
     }
 
     fn report_malformed_numeric(&mut self, start: usize) {

@@ -68,6 +68,7 @@ Archived plans:
 - [Compact Ryū binary64 formatting](COMPACT_RYU_F64_FORMATTING_ROADMAP.md)
 - [Efficient binary64 parsing](EFFICIENT_F64_PARSING_ROADMAP.md)
 - [Integer string helper modules](INTEGER_STRING_HELPER_MODULES_ROADMAP.md)
+- [Hexadecimal integer and byte literals](HEXADECIMAL_INTEGER_AND_BYTE_LITERALS_ROADMAP.md)
 
 Resolved string-design inputs:
 

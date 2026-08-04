@@ -132,6 +132,70 @@ fn hexadecimal_literals_convert_to_existing_typed_integer_constants() {
 }
 
 #[test]
+fn byte_literals_convert_directly_to_exact_u8_constants() {
+    let output = check_text(concat!(
+        "fn direct() -> u8 { return 'A'; }\n",
+        "fn escaped() -> u8 { return '\\x41'; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let hir = output.hir.expect("byte literals must produce typed HIR");
+
+    for function in [FunctionId::new(0), FunctionId::new(1)] {
+        let expression = returned_expression(hir.definitions.get(function).unwrap());
+        assert_eq!(expression.ty, Type::U8);
+        assert!(matches!(expression.kind, HirExpressionKind::U8(0x41)));
+    }
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("U8 65 : u8").count(), 2, "{dump}");
+}
+
+#[test]
+fn byte_decimal_and_hexadecimal_spellings_converge_below_type_checking() {
+    let mut assemblies = Vec::new();
+    for spelling in ["'A'", "65u8", "0x41u8"] {
+        let output = check_text(&format!(
+            "fn value() -> u8 {{ return {spelling}; }} fn main() -> i64 {{ return 0; }}"
+        ));
+        let hir = output.hir.expect("equivalent byte value must type-check");
+        let value = hir.definitions.get(FunctionId::new(0)).unwrap();
+        assert!(matches!(
+            returned_expression(value).kind,
+            HirExpressionKind::U8(65)
+        ));
+        assert!(dump_hir(&hir).contains("U8 65 : u8"));
+
+        let mir = crate::mir::lower_hir(&hir);
+        assert!(crate::mir::dump_mir(&mir).contains("const.u8 65"));
+        let mir = crate::passes::run_mir_pipeline(mir).unwrap();
+        assemblies
+            .push(crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir).unwrap());
+    }
+
+    assert!(assemblies.windows(2).all(|pair| pair[0] == pair[1]));
+}
+
+#[test]
+fn byte_literals_do_not_receive_contextual_integer_conversion() {
+    for (source, expected) in [
+        (
+            "fn value() -> i64 { return 'A'; } fn main() -> i64 { return 0; }",
+            "return value has type `u8` but `i64` is required",
+        ),
+        (
+            "fn value() -> u64 { return 'A'; } fn main() -> i64 { return 0; }",
+            "return value has type `u8` but `u64` is required",
+        ),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none(), "{source}");
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.message == expected));
+    }
+}
+
+#[test]
 fn checks_u64_literals_signatures_and_typed_arithmetic() {
     let output = check_text(concat!(
         "extern fn observe(value: u64) -> unit;\n",

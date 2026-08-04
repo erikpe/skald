@@ -810,6 +810,9 @@ impl ResolvedDumper {
                 write_span(&mut self.output, literal.span);
                 self.output.push('\n');
             }
+            ResolvedExpression::ByteLiteral(literal) => {
+                self.line(&format!("Byte {:02x}", literal.value), literal.span);
+            }
             ResolvedExpression::StringLiteral(literal) => {
                 self.line(
                     &format!("StringLiteral {} class {}", literal.data, literal.class),

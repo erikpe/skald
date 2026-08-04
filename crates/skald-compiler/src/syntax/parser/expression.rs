@@ -426,6 +426,7 @@ impl Parser<'_> {
                 TokenKind::Identifier
                     | TokenKind::SelfValue
                     | TokenKind::NumericLiteral(_)
+                    | TokenKind::ByteLiteral
                     | TokenKind::StringLiteral
                     | TokenKind::True
                     | TokenKind::False
@@ -706,6 +707,10 @@ impl Parser<'_> {
             }));
         }
 
+        if self.at(TokenKind::ByteLiteral) {
+            return Some(self.parse_byte_literal());
+        }
+
         if let Some(token) = self.consume(TokenKind::StringLiteral) {
             return Some(Expression::StringLiteral(StringLiteralExpr {
                 bytes: decode_string_literal(self.lexeme(token)),
@@ -756,6 +761,15 @@ impl Parser<'_> {
             "expected an identifier, literal, `none`, `self`, prefix operator, or `(`",
         );
         None
+    }
+
+    fn parse_byte_literal(&mut self) -> Expression {
+        let token = self.advance();
+        debug_assert_eq!(token.kind, TokenKind::ByteLiteral);
+        Expression::ByteLiteral(ByteLiteralExpr {
+            value: decode_byte_literal(self.lexeme(token)),
+            span: token.span,
+        })
     }
 
     fn parse_allocation(&mut self) -> Option<Expression> {

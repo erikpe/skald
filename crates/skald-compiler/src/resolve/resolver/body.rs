@@ -276,6 +276,12 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     span: literal.span,
                 }),
             ),
+            syntax::Expression::ByteLiteral(literal) => {
+                Some(ResolvedExpression::ByteLiteral(ResolvedByteLiteralExpr {
+                    value: literal.value,
+                    span: literal.span,
+                }))
+            }
             syntax::Expression::StringLiteral(literal) => {
                 if !self.environment.has_module_context
                     && self

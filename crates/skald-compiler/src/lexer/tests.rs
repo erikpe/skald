@@ -291,6 +291,84 @@ fn recognizes_string_literals_as_single_full_span_tokens() {
 }
 
 #[test]
+fn recognizes_byte_literals_as_single_full_span_tokens() {
+    let text = "'A' '\"' '\\\'' '\\\\' '\\n' '\\x00' '\\xAf' '\\xff'";
+    let (sources, source_id, output) = lex_text(text);
+    let source = sources.get(source_id).unwrap();
+
+    assert!(output
+        .tokens
+        .iter()
+        .take(8)
+        .all(|token| token.kind == TokenKind::ByteLiteral));
+    assert_eq!(output.tokens[8].kind, TokenKind::Eof);
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["'A'", "'\"'", "'\\\''", "'\\\\'", "'\\n'", "'\\x00'", "'\\xAf'", "'\\xff'", ""]
+    );
+    assert!(!output.has_errors());
+    assert!(dump_tokens(source, &output.tokens).contains("BYTE_LITERAL"));
+}
+
+#[test]
+fn malformed_byte_categories_are_single_invalid_tokens() {
+    for (text, message) in [
+        ("''", "empty byte literal"),
+        ("'ab'", "multiple bytes"),
+        ("'\\q'", "unknown byte escape"),
+        ("'\\x4'", "malformed hexadecimal byte escape"),
+        ("'é'", "non-ASCII content"),
+        ("'\t'", "non-printable byte"),
+        ("'A", "unterminated byte literal"),
+    ] {
+        let (sources, source_id, output) = lex_text(text);
+        let source = sources.get(source_id).unwrap();
+        assert_eq!(output.tokens[0].kind, TokenKind::Invalid, "{text:?}");
+        assert_eq!(
+            source.slice(output.tokens[0].span.range()),
+            Some(text),
+            "{text:?}"
+        );
+        assert_eq!(output.diagnostics.len(), 1, "{text:?}");
+        let diagnostic = output.diagnostics.iter().next().unwrap();
+        assert_eq!(diagnostic.code, MALFORMED_BYTE_LITERAL);
+        assert!(diagnostic.message.contains(message), "{text:?}");
+    }
+}
+
+#[test]
+fn unescaped_byte_newline_recovers_at_the_next_line_with_utf8_safe_spans() {
+    let (sources, source_id, output) = lex_text("'é' 'bad\nfn");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::Invalid,
+            TokenKind::Invalid,
+            TokenKind::Fn,
+            TokenKind::Eof
+        ]
+    );
+    assert_eq!(source.slice(output.tokens[0].span.range()), Some("'é'"));
+    assert_eq!(source.slice(output.tokens[1].span.range()), Some("'bad"));
+    assert_eq!(output.tokens[2].span.range().start(), "'é' 'bad\n".len());
+    assert_eq!(output.diagnostics.len(), 2);
+    assert!(output.diagnostics.iter().all(|diagnostic| {
+        diagnostic.code == MALFORMED_BYTE_LITERAL
+            && source.slice(diagnostic.labels[0].span.range()).is_some()
+    }));
+}
+
+#[test]
 fn malformed_string_categories_are_single_invalid_tokens() {
     for (text, message) in [
         ("\"bad\\q\"", "unknown string escape"),

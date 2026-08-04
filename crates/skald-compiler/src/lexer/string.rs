@@ -1,5 +1,7 @@
 //! String-literal validation and decoding.
 
+use super::escape::decode_hexadecimal_byte;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum StringLiteralError {
     UnknownEscape,
@@ -116,7 +118,10 @@ pub(crate) fn decode_string_literal(lexeme: &str) -> Vec<u8> {
             b't' => decoded.push(b'\t'),
             b'0' => decoded.push(b'\0'),
             b'x' => {
-                decoded.push((hex_value(payload[index + 1]) << 4) | hex_value(payload[index + 2]));
+                decoded.push(decode_hexadecimal_byte(
+                    payload[index + 1],
+                    payload[index + 2],
+                ));
                 index += 2;
             }
             _ => unreachable!("validated string token has a known escape"),
@@ -124,13 +129,4 @@ pub(crate) fn decode_string_literal(lexeme: &str) -> Vec<u8> {
         index += 1;
     }
     decoded
-}
-
-fn hex_value(byte: u8) -> u8 {
-    match byte {
-        b'0'..=b'9' => byte - b'0',
-        b'a'..=b'f' => byte - b'a' + 10,
-        b'A'..=b'F' => byte - b'A' + 10,
-        _ => unreachable!("validated hexadecimal digit"),
-    }
 }

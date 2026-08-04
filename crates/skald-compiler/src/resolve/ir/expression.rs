@@ -16,6 +16,7 @@ pub enum ResolvedExpression {
     Absent(ResolvedAbsentExpr),
     Binding(ResolvedBindingExpr),
     NumericLiteral(ResolvedNumericLiteralExpr),
+    ByteLiteral(ResolvedByteLiteralExpr),
     StringLiteral(ResolvedStringLiteralExpr),
     Boolean(ResolvedBooleanExpr),
     Unary(ResolvedUnaryExpr),
@@ -47,6 +48,7 @@ impl ResolvedExpression {
             Self::Absent(expression) => expression.span,
             Self::Binding(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
+            Self::ByteLiteral(expression) => expression.span,
             Self::StringLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
@@ -148,6 +150,12 @@ pub enum ResolvedArrayProjectionBounds {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ResolvedAbsentExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedByteLiteralExpr {
+    pub value: u8,
     pub span: Span,
 }
 

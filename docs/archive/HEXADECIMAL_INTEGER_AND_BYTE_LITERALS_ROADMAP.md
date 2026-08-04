@@ -1,6 +1,6 @@
 # Hexadecimal Integer and Byte Literals Roadmap
 
-Status: in progress; LIT2 is next.
+Status: complete.
 
 This roadmap adds hexadecimal source spellings for all three Skald integer
 types and single-quoted byte literals of exact type `u8`. The design is frozen
@@ -117,7 +117,7 @@ task that enables each source form updates them.
 
 - [x] LIT0 — Make integer literal representation radix-aware
 - [x] LIT1 — Implement hexadecimal integers end to end
-- [ ] LIT2 — Implement single-quoted `u8` byte literals end to end
+- [x] LIT2 — Implement single-quoted `u8` byte literals end to end
 
 Every task runs its focused tests, then `make check` and `make msrv-check`.
 The Makefile remains the repository automation interface.
@@ -207,34 +207,34 @@ source-radix concern.
 **Purpose:** Add concise raw-byte source notation while keeping Skald free of
 an implied character or Unicode model.
 
-- [ ] Add a cohesive byte-literal scanner and decoder with the frozen direct
+- [x] Add a cohesive byte-literal scanner and decoder with the frozen direct
       ASCII set, exact escapes, full spans, dedicated diagnostic code and
       wording, and newline/closing-quote recovery.
-- [ ] Add the byte-literal token to token names, dumps, expression starts,
+- [x] Add the byte-literal token to token names, dumps, expression starts,
       parser recovery, nesting traversal, receiver/place classification, and
       every other exhaustive frontend match.
-- [ ] Carry one distinct decoded-byte expression through the source-shaped AST
+- [x] Carry one distinct decoded-byte expression through the source-shaped AST
       and resolved IR, with stable two-digit hexadecimal syntax and resolved
       dumps, then type-check it directly to the existing exact `u8` HIR
       constant.
-- [ ] Cover the direct printable-ASCII boundaries and exclusions, all simple
+- [x] Cover the direct printable-ASCII boundaries and exclusions, all simple
       escapes, `\x00`, mixed-case hexadecimal digits, `\xff`, empty and
       multiple contents, direct control and non-ASCII input, unknown and
       incomplete escapes, newline, EOF, accurate UTF-8 spans, and recovery into
       following declarations and statements.
-- [ ] Prove byte literals compose with representative `u8` arithmetic,
+- [x] Prove byte literals compose with representative `u8` arithmetic,
       comparisons, casts, calls, returns, fields, arrays, string byte APIs, and
       native output, while mismatches with `i64` and `u64` remain exact-type
       errors.
-- [ ] Compare equivalent byte, hexadecimal `u8`, and decimal `u8` spellings
+- [x] Compare equivalent byte, hexadecimal `u8`, and decimal `u8` spellings
       across normalized HIR, MIR, assembly, and native results, while keeping
       their source-shaped token, syntax, and resolved dumps intentionally
       distinct.
-- [ ] Update the implemented grammar, types/value contract, string byte-model
+- [x] Update the implemented grammar, types/value contract, string byte-model
       cross-reference, phase documentation, status matrix, and examples in the
       same change that enables the syntax. Continue to state explicitly that
       Skald has no character or Unicode type.
-- [ ] Extend deterministic frontend robustness coverage so arbitrary bytes and
+- [x] Extend deterministic frontend robustness coverage so arbitrary bytes and
       malformed quote runs cannot panic, loop, or escape their source spans.
 
 **Tests:** Focused lexer byte-scanner, syntax/recovery, resolved-dump,

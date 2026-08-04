@@ -1,0 +1,47 @@
+error[LEX004]: empty byte literal
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:2:12
+   |
+2 |     return '';
+   |            ^^ expected one printable ASCII byte or supported escape
+
+error[LEX004]: multiple bytes in byte literal
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:6:12
+   |
+6 |     return 'ab';
+   |            ^^^^ a byte literal must decode to exactly one byte
+
+error[LEX004]: unknown byte escape
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:10:12
+    |
+10 |     return '\q';
+    |            ^^^^ use one of `\'`, `\"`, `\\`, `\n`, `\r`, `\t`, `\0`, or `\xNN`
+
+error[LEX004]: malformed hexadecimal byte escape
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:14:12
+    |
+14 |     return '\x4';
+    |            ^^^^^ expected exactly two hexadecimal digits after `\x`
+
+error[LEX004]: malformed hexadecimal byte escape
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:18:12
+    |
+18 |     return '\xgg';
+    |            ^^^^^^ expected exactly two hexadecimal digits after `\x`
+
+error[LEX004]: non-ASCII content in byte literal
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:22:12
+    |
+22 |     return 'é';
+    |            ^^^ encode the byte with a `\xNN` escape
+
+error[LEX004]: non-printable byte in byte literal
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:26:12
+    |
+26 |     return '	';
+    |            ^^^ encode this byte with a supported escape
+
+error[LEX004]: unescaped newline in byte literal
+ --> tests/golden/compile_fail/malformed_byte_literals.ska:30:12
+    |
+30 |     return 'bad
+    |            ^^^^ use `\n` or terminate the literal before this line

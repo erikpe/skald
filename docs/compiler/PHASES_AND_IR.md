@@ -637,15 +637,26 @@ source spelling. Implemented integer forms carry either decimal or hexadecimal
 radix; later phases consume that classification rather than rediscovering a
 prefix from text. Floating literals remain a distinct radix-free kind.
 
+Single-quoted byte literals have a dedicated token and lexical diagnostic
+family. Their scanner validates that the spelling decodes to exactly one byte,
+recovers through a closing quote or at a physical newline, and shares only
+delimiter-independent hexadecimal decoding with strings.
+
 Syntax and resolved IR preserve an integer literal's complete spelling and
 explicit radix for source-facing dumps and diagnostics. Type checking removes
 the known prefix and suffix and converts the magnitude exactly once to the
 existing typed HIR integer constant. No hexadecimal distinction survives into
 MIR, verification, code generation, or the runtime.
 
+The source AST and resolved IR retain a distinct byte-literal node containing
+the decoded `u8` and complete span; their dumps render the byte as two lowercase
+hexadecimal digits. Type checking immediately lowers that node to the existing
+typed HIR `u8` constant, so no byte-literal source distinction reaches MIR,
+verification, code generation, layout, ABI, or runtime behavior.
+
 `LexOutput` contains tokens and diagnostics together. Invalid characters and
-malformed numeric spellings are diagnosed while retaining a recoverable token
-stream. Token kinds and accepted lexical forms follow the
+malformed numeric, byte, and string spellings are diagnosed while retaining a
+recoverable token stream. Token kinds and accepted lexical forms follow the
 [grammar authority](../language/GRAMMAR.md).
 
 ## Syntax

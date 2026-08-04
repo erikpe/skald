@@ -446,6 +446,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         Expression::ArrayProjection(projection) => is_receiver_place(&projection.receiver),
         Expression::Unary(unary) if unary.operator == UnaryOperator::Dereference => true,
         Expression::NumericLiteral(_)
+        | Expression::ByteLiteral(_)
         | Expression::StringLiteral(_)
         | Expression::Absent(_)
         | Expression::Boolean(_)

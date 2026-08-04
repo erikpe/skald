@@ -257,6 +257,7 @@ impl CallableChecker<'_, '_> {
                 NumericLiteralKind::U8(_) => Type::U8,
                 NumericLiteralKind::F64 => Type::F64,
             },
+            ResolvedExpression::ByteLiteral(_) => Type::U8,
             ResolvedExpression::StringLiteral(literal) => Type::Class(literal.class),
             ResolvedExpression::Boolean(_) | ResolvedExpression::TypeTest(_) => Type::Bool,
             ResolvedExpression::Unary(unary) => self.static_expression_type(&unary.operand),

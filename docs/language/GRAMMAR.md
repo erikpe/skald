@@ -113,9 +113,9 @@ The complete punctuation and operator token set outside literal delimiters is:
 ( ) { } [ ] , : :: ; . -> + - * / % = == != < <= > >= ? ! ~ & | ^ << >> && ||
 ```
 
-Double quotes delimit one string-literal token. There are no character or
-power tokens in the implemented grammar. Power syntax is not frozen or
-reserved.
+Double quotes delimit one string-literal token. Single quotes delimit one
+byte-literal token of type `u8`; Skald has no character type. There is no power
+token in the implemented grammar. Power syntax is not frozen or reserved.
 
 ## Literals
 
@@ -136,10 +136,15 @@ f64-literal     = decimal-digits "." decimal-digits [exponent]
 
 bool-literal    = "true" | "false"
 numeric-literal = i64-literal | u64-literal | u8-literal | f64-literal
+byte-literal    = single-quote (direct-byte | byte-escape) single-quote
+direct-byte     = printable-ascii-except-single-quote-or-backslash
+byte-escape     = backslash ( single-quote | double-quote | backslash
+                              | "n" | "r" | "t" | "0"
+                              | "x" hex-digit hex-digit )
 string-literal  = double-quote { printable-ascii | string-escape } double-quote
 string-escape   = backslash ( double-quote | backslash | "n" | "r" | "t"
                              | "0" | "x" hex-digit hex-digit )
-literal         = numeric-literal | bool-literal | string-literal
+literal         = numeric-literal | byte-literal | bool-literal | string-literal
 ```
 
 Hexadecimal prefixes and digits are case-insensitive; integer suffixes remain
@@ -157,6 +162,14 @@ defined by [Skald Strings](STRINGS.md#string-literals). A physical newline,
 direct non-ASCII content, unknown or incomplete escape, or missing closing
 quote invalidates the complete literal token; parser recovery does not create
 a string expression for it.
+
+A byte literal decodes to exactly one byte. Direct content is one printable
+ASCII byte other than single quote or backslash; the escapes are exactly those
+in `byte-escape` above. Empty, multiple-byte, direct control-byte, direct
+non-ASCII, unknown or incomplete escape, physical-newline, and unterminated
+spellings are malformed. Recovery consumes through a closing quote when one is
+available and otherwise stops before a physical newline. A byte literal is
+always `u8`, not a Unicode scalar, code point, grapheme, or character value.
 
 ## Compilation unit and declarations
 

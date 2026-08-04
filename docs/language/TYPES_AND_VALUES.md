@@ -66,6 +66,7 @@ and there is no untyped numeric-literal stage visible to the language:
 | decimal digits or `0x`/`0X` hexadecimal digits without a suffix | `i64` | `0` through `9223372036854775807`; unary `-` also admits the minimum boundary described below |
 | decimal digits or `0x`/`0X` hexadecimal digits followed by `u` | `u64` | `0u` through `18446744073709551615u` |
 | decimal digits or `0x`/`0X` hexadecimal digits followed by `u8` | `u8` | `0u8` through `255u8` |
+| one printable ASCII byte or supported escape between single quotes | `u8` | `0` through `255`; for example `'A'`, `'\n'`, or `'\xff'` |
 | decimal point or exponent form | `f64` | any spelling that rounds to a finite binary64 value |
 | `false`, `true` | `bool` | the two boolean values |
 
@@ -84,6 +85,12 @@ two's-complement bit pattern. Consequently, unsuffixed
 `0xffffffffffffffff` is out of range for `i64`; the suffixed
 `0xffffffffffffffffu` is `u64::MAX`. Radix changes only the source spelling,
 not type selection, range, arithmetic, or conversion rules.
+
+A single-quoted byte literal is another exact `u8` spelling. It decodes one
+direct printable ASCII byte or one supported escape, including `\xNN` for any
+byte value. It receives no contextual integer conversion, and it does not
+introduce a character or Unicode type. Its complete lexical contract is in the
+[grammar](GRAMMAR.md#literals).
 
 Decimal floating literals round once to the nearest binary64 value, with ties
 to an even significand. Subnormal results and underflow to positive zero are
