@@ -1,0 +1,57 @@
+public fn format_i64(value: i64) -> shared u8[] {
+    var negative: bool = value < 0;
+    var magnitude: u64 = (u64) value;
+    if (negative) {
+        // The total cast preserves the two's-complement bits. Wrapping
+        // subtraction therefore forms the magnitude without negating
+        // i64 minimum.
+        magnitude = 0u - magnitude;
+    }
+    return _format_decimal_magnitude(magnitude, negative);
+}
+
+public fn format_u64(value: u64) -> shared u8[] {
+    return _format_decimal_magnitude(value, false);
+}
+
+public fn format_u8(value: u8) -> shared u8[] {
+    return _format_decimal_magnitude((u64) value, false);
+}
+
+fn _decimal_digit_count(value: u64) -> u64 {
+    var remaining: u64 = value;
+    var count: u64 = 1u;
+    while (remaining >= 10u) {
+        remaining = remaining / 10u;
+        count = count + 1u;
+    }
+    return count;
+}
+
+fn _format_decimal_magnitude(
+    magnitude: u64,
+    negative: bool
+) -> shared u8[] {
+    var digit_count: u64 = _decimal_digit_count(magnitude);
+    var sign_length: u64 = 0u;
+    if (negative) {
+        sign_length = 1u;
+    }
+
+    var text_length: u64 = sign_length + digit_count;
+    var storage: shared u8[] = new u8[](text_length);
+    var remaining: u64 = magnitude;
+    var index: i64 = (i64) text_length - 1;
+
+    while (digit_count > 0u) {
+        storage->[index] = (u8) (remaining % 10u + 48u);
+        remaining = remaining / 10u;
+        digit_count = digit_count - 1u;
+        index = index - 1;
+    }
+
+    if (negative) {
+        storage->[0] = 45u8;
+    }
+    return storage;
+}

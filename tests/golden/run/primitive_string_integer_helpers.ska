@@ -1,0 +1,63 @@
+import std::io;
+from std::str import Str;
+import std::str::format_integer as format_integer;
+import std::str::parse_integer as parse_integer;
+
+fn write_line(text: Str) -> unit {
+    var newline: Str = "\n";
+    std::io::write_stdout(text);
+    std::io::write_stdout(newline);
+    return;
+}
+
+fn observe_i64(value: i64?) -> unit {
+    if (value is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_i64(value!));
+    return;
+}
+
+fn observe_u64(value: u64?) -> unit {
+    if (value is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_u64(value!));
+    return;
+}
+
+fn observe_u8(value: u8?) -> unit {
+    if (value is none) {
+        write_line("none");
+        return;
+    }
+    write_line(Str.from_u8(value!));
+    return;
+}
+
+fn main() -> i64 {
+    var i64_storage: shared u8[] = format_integer::format_i64(-9223372036854775808);
+    var u64_storage: shared u8[] = format_integer::format_u64(18446744073709551615u);
+    var u8_storage: shared u8[] = format_integer::format_u8(255u8);
+    write_line(Str.from_bytes(*i64_storage));
+    write_line(Str.from_bytes(*u64_storage));
+    write_line(Str.from_bytes(*u8_storage));
+
+    var signed_text: Str = "x-42y";
+    var signed_bytes: u8[] = signed_text.to_bytes();
+    observe_i64(parse_integer::parse_i64(signed_bytes, 1, 3u));
+    observe_i64(parse_integer::parse_i64(signed_bytes, -1, 3u));
+    observe_i64(parse_integer::parse_i64(signed_bytes, 6, 0u));
+    observe_i64(parse_integer::parse_i64(signed_bytes, 4, 2u));
+
+    var u64_text: Str = "x18446744073709551615y";
+    var u64_bytes: u8[] = u64_text.to_bytes();
+    observe_u64(parse_integer::parse_u64(u64_bytes, 1, 20u));
+
+    var u8_text: Str = "x255y";
+    var u8_bytes: u8[] = u8_text.to_bytes();
+    observe_u8(parse_integer::parse_u8(u8_bytes, 1, 3u));
+    return 0;
+}

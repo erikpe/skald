@@ -165,9 +165,9 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
             class.id
         ))
         .count(),
-        // from_bytes, slice, the integer builder, from_f64, and concat each
-        // install a trusted descriptor through the private initializer.
-        5,
+        // from_bytes, slice, the three integer facades, from_f64, and concat
+        // each install a trusted descriptor through the private initializer.
+        7,
         "{dump}"
     );
 }

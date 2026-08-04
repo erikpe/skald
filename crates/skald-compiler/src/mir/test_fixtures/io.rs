@@ -3,7 +3,8 @@ use crate::{
     resolve::resolve_module_graph,
     test_support::{
         load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
-        CANONICAL_STR_FORMAT_F64_SOURCE, CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_SOURCE,
+        CANONICAL_STR_FORMAT_F64_SOURCE, CANONICAL_STR_FORMAT_INTEGER_SOURCE,
+        CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_PARSE_INTEGER_SOURCE, CANONICAL_STR_SOURCE,
     },
     typeck::type_check,
 };
@@ -69,7 +70,15 @@ fn lower_io_program(app: &str, io: &str) -> MirProgram {
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
             ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
+            (
+                "std/str/format_integer.ska",
+                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
+            ),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
+            (
+                "std/str/parse_integer.ska",
+                CANONICAL_STR_PARSE_INTEGER_SOURCE,
+            ),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
     );

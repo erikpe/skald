@@ -5,7 +5,10 @@ canonical `std::str::Str` module provides the frozen byte-string descriptor,
 safe byte-copying construction, checked observation and slicing, independent
 array conversion, byte equality against generic objects, concatenation, and
 canonical formatting plus optional parsing for every primitive type. Its
-`to_f64` facade recognizes special values with ordinary string equality and
+integer methods delegate to type-named helpers in
+`std::str::format_integer` and `std::str::parse_integer`; the descriptor keeps
+no decimal integer algorithm of its own. Its `to_f64` facade recognizes
+special values with ordinary string equality and
 delegates finite conversion to `std::str::parse_f64`; `from_f64` similarly
 keeps special spellings in the facade and delegates finite formatting to
 `std::str::format_f64`. The exact standard-stream and primitive-line-output
@@ -39,17 +42,27 @@ function or an exception API.
 
 `std::str` selectively imports that panic declaration for invalid byte and
 slice bounds, forming an ordinary two-module cycle with `std::error`. It also
-imports `std::str::parse_f64` and `std::str::format_f64` in one direction. The
-parser and formatter independently import `std::f64` for bit conversion and
-`Str` only to read their own immortal encoded tables. Those reciprocal
-`std::str` imports are ordinary source cycles, not backing-storage escapes.
+imports the integer and binary64 formatting and parsing descendant modules in
+one direction. The integer helpers depend only on primitive values and arrays.
+The binary64 parser and formatter independently import `std::f64` for bit
+conversion and `Str` only to read their own immortal encoded tables. Those
+reciprocal `std::str` imports are ordinary source cycles, not backing-storage
+escapes.
 Only the formatter has lazy mutable state; it publishes its private
 cached-power array on first use, so the cycles impose no eager initialization
 order.
 
 A module and descendant module may coexist: the `std/str.ska` source is
-`std::str`, while files below `std/str/` are distinct descendant modules. The
-parser's public `parse(ref storage: u8[], start: i64, length: u64) -> f64?`
+`std::str`, while files below `std/str/` are distinct descendant modules.
+`std::str::format_integer` provides `format_i64`, `format_u64`, and
+`format_u8`, each returning a fresh exact-length `shared u8[]`.
+`std::str::parse_integer` provides the corresponding `parse_i64`, `parse_u64`,
+and `parse_u8` functions over validated backing-array ranges. `Str` lends its
+private backing only for each parse call; direct users can pass only arrays
+they already possess.
+
+The binary64 parser's public
+`parse(ref storage: u8[], start: i64, length: u64) -> f64?`
 validates its range and is available for direct decimal parsing. `Str.to_f64`
 borrows its private backing only for that call; the call-scoped alias cannot
 expose the backing to callers. The formatter's public `format(value: f64) ->

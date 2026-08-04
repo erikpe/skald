@@ -67,6 +67,7 @@ Archived plans:
 - [Zero-default static fields](STATIC_FIELDS_ROADMAP.md)
 - [Compact Ryū binary64 formatting](COMPACT_RYU_F64_FORMATTING_ROADMAP.md)
 - [Efficient binary64 parsing](EFFICIENT_F64_PARSING_ROADMAP.md)
+- [Integer string helper modules](INTEGER_STRING_HELPER_MODULES_ROADMAP.md)
 
 Resolved string-design inputs:
 

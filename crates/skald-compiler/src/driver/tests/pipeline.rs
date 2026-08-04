@@ -4,8 +4,18 @@ fn write_canonical_standard_library(root: &Path) {
     fs::create_dir_all(root.join("std/str")).unwrap();
     fs::write(root.join("std/str.ska"), CANONICAL_STR_SOURCE).unwrap();
     fs::write(
+        root.join("std/str/format_integer.ska"),
+        CANONICAL_STR_FORMAT_INTEGER_SOURCE,
+    )
+    .unwrap();
+    fs::write(
         root.join("std/str/format_f64.ska"),
         CANONICAL_STR_FORMAT_F64_SOURCE,
+    )
+    .unwrap();
+    fs::write(
+        root.join("std/str/parse_integer.ska"),
+        CANONICAL_STR_PARSE_INTEGER_SOURCE,
     )
     .unwrap();
     fs::write(
@@ -241,7 +251,7 @@ fn canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selec
         .unwrap(),
     ] {
         assert!(artifact.report.diagnostics.is_empty());
-        assert_eq!(artifact.report.sources.len(), 6);
+        assert_eq!(artifact.report.sources.len(), 8);
         assert!(artifact.assembly.contains("call ska_rt_panic"));
     }
 
@@ -317,7 +327,7 @@ fn canonical_io_obeys_default_replacement_and_disabled_selection() {
         .unwrap(),
     ] {
         assert!(artifact.report.diagnostics.is_empty());
-        assert_eq!(artifact.report.sources.len(), 7);
+        assert_eq!(artifact.report.sources.len(), 9);
         for runtime_symbol in [
             "ska_rt_io_standard_handle",
             "ska_rt_io_open",

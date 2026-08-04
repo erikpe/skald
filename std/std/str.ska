@@ -1,5 +1,7 @@
 from std::error import panic;
+import std::str::format_integer as format_integer;
 import std::str::format_f64 as format_f64;
+import std::str::parse_integer as parse_integer;
 import std::str::parse_f64 as parse_f64;
 
 public class Str {
@@ -40,7 +42,25 @@ public class Str {
         if (!(other is Str)) {
             return false;
         }
-        return self._equals_str((Str) other);
+        return self.equals_str((Str) other);
+    }
+
+    fn equals_str(ref other: Str) -> bool {
+        if (self._length != other._length) {
+            return false;
+        }
+
+        var self_storage: shared u8[] = self._storage;
+        var other_storage: shared u8[] = other._storage;
+        var index: u64 = 0u;
+        while (index < self._length) {
+            var offset: i64 = (i64) index;
+            if (self_storage->[self._start + offset] != other_storage->[other._start + offset]) {
+                return false;
+            }
+            index = index + 1u;
+        }
+        return true;
     }
 
     fn slice(start: i64, end: i64) -> Str {
@@ -61,6 +81,17 @@ public class Str {
         return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
     }
 
+    fn concat(ref other: Str) -> Str {
+        var combined_length: u64 = self._length + other._length;
+        var result: shared u8[] = new u8[](combined_length);
+
+        var middle: i64 = (i64) self._length;
+        result->[:middle] = self._storage->[self._start:(self._start + (i64) self._length)];
+        result->[middle:] = other._storage->[other._start:(other._start + (i64) other._length)];
+
+        return Str(result, 0, combined_length);
+    }
+
     static fn from_bytes(ref bytes: u8[]) -> Str {
         return Str(new u8[](copy bytes), 0, bytes.len());
     }
@@ -73,30 +104,24 @@ public class Str {
     }
 
     static fn from_i64(value: i64) -> Str {
-        var negative: bool = value < 0;
-        var magnitude: u64 = (u64) value;
-        if (negative) {
-            // The total cast preserves the two's-complement bits. Wrapping
-            // subtraction therefore forms the magnitude without negating
-            // i64 minimum.
-            magnitude = 0u - magnitude;
-        }
-        return Str._from_decimal_magnitude(magnitude, negative);
+        var storage: shared u8[] = format_integer::format_i64(value);
+        return Str(storage, 0, storage->len());
     }
 
     static fn from_u64(value: u64) -> Str {
-        return Str._from_decimal_magnitude(value, false);
+        var storage: shared u8[] = format_integer::format_u64(value);
+        return Str(storage, 0, storage->len());
     }
 
     static fn from_u8(value: u8) -> Str {
-        return Str._from_decimal_magnitude((u64) value, false);
+        var storage: shared u8[] = format_integer::format_u8(value);
+        return Str(storage, 0, storage->len());
     }
 
     static fn from_f64(value: f64) -> Str {
         if (value != value) {
             return "NaN";
         }
-
         var infinity: f64 = 1.0 / 0.0;
         if (value == infinity) {
             return "Infinity";
@@ -104,189 +129,51 @@ public class Str {
         if (value == -infinity) {
             return "-Infinity";
         }
-
         var storage: shared u8[] = format_f64::format(value);
         return Str(storage, 0, storage->len());
-    }
-
-    fn to_bool() -> bool? {
-        var true_text: Str = "true";
-        if (self.equals(true_text)) {
-            return true;
-        }
-        if (
-            self._length == 5u
-            && self.byte(0) == 102u8
-            && self.byte(1) == 97u8
-            && self.byte(2) == 108u8
-            && self.byte(3) == 115u8
-            && self.byte(4) == 101u8
-        ) {
-            return false;
-        }
-        return none;
-    }
-
-    fn to_i64() -> i64? {
-        if (self._length == 0u) {
-            return none;
-        }
-
-        var negative: bool = false;
-        var start: u64 = 0u;
-        var limit: u64 = 9223372036854775807u;
-        if (self.byte(0) == 45u8) {
-            negative = true;
-            start = 1u;
-            limit = 9223372036854775808u;
-        }
-
-        var parsed: u64? = self._parse_decimal_magnitude(start, limit);
-        if (parsed is none) {
-            return none;
-        }
-
-        var magnitude: u64 = parsed!;
-        if (negative) {
-            if (magnitude == 9223372036854775808u) {
-                return -9223372036854775808;
-            }
-            return -((i64) magnitude);
-        }
-        return (i64) magnitude;
-    }
-
-    fn to_u64() -> u64? {
-        return self._parse_decimal_magnitude(0u, 18446744073709551615u);
-    }
-
-    fn to_u8() -> u8? {
-        var parsed: u64? = self._parse_decimal_magnitude(0u, 255u);
-        if (parsed is none) {
-            return none;
-        }
-        return (u8) parsed!;
-    }
-
-    fn to_f64() -> f64? {
-        var nan: Str = "NaN";
-        if (self.equals(nan)) {
-            return 0.0 / 0.0;
-        }
-        var infinity: Str = "Infinity";
-        if (self.equals(infinity)) {
-            return 1.0 / 0.0;
-        }
-        var negative_infinity: Str = "-Infinity";
-        if (self.equals(negative_infinity)) {
-            return -(1.0 / 0.0);
-        }
-        return parse_f64::parse(*self._storage, self._start, self._length);
-    }
-
-    private fn _equals_str(ref other: Str) -> bool {
-        if (self._length != other._length) {
-            return false;
-        }
-
-        var self_storage: shared u8[] = self._storage;
-        var other_storage: shared u8[] = other._storage;
-        var index: u64 = 0u;
-        while (index < self._length) {
-            var offset: i64 = (i64) index;
-            if (
-                self_storage->[self._start + offset]
-                != other_storage->[other._start + offset]
-            ) {
-                return false;
-            }
-            index = index + 1u;
-        }
-        return true;
-    }
-
-    private static fn _decimal_digit_count(value: u64) -> u64 {
-        var remaining: u64 = value;
-        var count: u64 = 1u;
-        while (remaining >= 10u) {
-            remaining = remaining / 10u;
-            count = count + 1u;
-        }
-        return count;
-    }
-
-    private static fn _from_decimal_magnitude(
-        magnitude: u64,
-        negative: bool
-    ) -> Str {
-        var digit_count: u64 = Str._decimal_digit_count(magnitude);
-        var sign_length: u64 = 0u;
-        if (negative) {
-            sign_length = 1u;
-        }
-
-        var text_length: u64 = sign_length + digit_count;
-        var storage: shared u8[] = new u8[](text_length);
-        var remaining: u64 = magnitude;
-        var index: i64 = (i64) text_length - 1;
-
-        while (digit_count > 0u) {
-            storage->[index] = (u8) (remaining % 10u + 48u);
-            remaining = remaining / 10u;
-            digit_count = digit_count - 1u;
-            index = index - 1;
-        }
-
-        if (negative) {
-            storage->[0] = 45u8;
-        }
-        return Str(storage, 0, text_length);
-    }
-
-    private fn _parse_decimal_magnitude(
-        start: u64,
-        limit: u64
-    ) -> u64? {
-        if (start >= self._length) {
-            return none;
-        }
-
-        var limit_quotient: u64 = limit / 10u;
-        var limit_remainder: u64 = limit % 10u;
-        var value: u64 = 0u;
-        var index: u64 = start;
-        while (index < self._length) {
-            var byte_value: u8 = self.byte((i64) index);
-            if (byte_value < 48u8 || byte_value > 57u8) {
-                return none;
-            }
-
-            var digit: u64 = (u64) (byte_value - 48u8);
-            if (
-                value > limit_quotient
-                || (value == limit_quotient && digit > limit_remainder)
-            ) {
-                return none;
-            }
-
-            value = value * 10u + digit;
-            index = index + 1u;
-        }
-        return value;
     }
 
     fn to_bytes() -> u8[] {
         return self._storage->[self._start:(self._start + (i64) self._length)];
     }
 
-    fn concat(ref other: Str) -> Str {
-        var combined_length: u64 = self._length + other._length;
-        var result: shared u8[] = new u8[](combined_length);
+    fn to_bool() -> bool? {
+        var true_text: Str = "true";
+        if (self.equals_str(true_text)) {
+            return true;
+        }
+        var false_text: Str = "false";
+        if (self.equals_str(false_text)) {
+            return false;
+        }
+        return none;
+    }
 
-        var middle: i64 = (i64) self._length;
-        result->[:middle] = self._storage->[self._start:(self._start + (i64) self._length)];
-        result->[middle:] = other._storage->[other._start:(other._start + (i64) other._length)];
+    fn to_i64() -> i64? {
+        return parse_integer::parse_i64(*self._storage, self._start, self._length);
+    }
 
-        return Str(result, 0, combined_length);
+    fn to_u64() -> u64? {
+        return parse_integer::parse_u64(*self._storage, self._start, self._length);
+    }
+
+    fn to_u8() -> u8? {
+        return parse_integer::parse_u8(*self._storage, self._start, self._length);
+    }
+
+    fn to_f64() -> f64? {
+        var nan: Str = "NaN";
+        if (self.equals_str(nan)) {
+            return 0.0 / 0.0;
+        }
+        var infinity: Str = "Infinity";
+        if (self.equals_str(infinity)) {
+            return 1.0 / 0.0;
+        }
+        var negative_infinity: Str = "-Infinity";
+        if (self.equals_str(negative_infinity)) {
+            return -(1.0 / 0.0);
+        }
+        return parse_f64::parse(*self._storage, self._start, self._length);
     }
 }

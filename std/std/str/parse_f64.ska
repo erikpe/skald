@@ -7,11 +7,7 @@ from std::str import Str;
 // Source revision: rust-lang/rust 8bab26f4f68e0e26f0bb7960be334d5b520ea452
 // See std/THIRD_PARTY.md for provenance.
 
-public fn parse(
-    ref storage: u8[],
-    start: i64,
-    length: u64
-) -> f64? {
+public fn parse(ref storage: u8[], start: i64, length: u64) -> f64? {
     if (!_is_valid_range(storage, start, length)) {
         return none;
     }

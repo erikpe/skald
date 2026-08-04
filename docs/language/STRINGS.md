@@ -250,8 +250,17 @@ and every primitive value type. It adds no language syntax, compiler-known
 method, intrinsic, or runtime ABI. The implementation belongs in ordinary
 standard-library source and composes the existing primitive operators, arrays,
 loops, static methods, and optional results. `Str` owns the user-facing
-conversion surface; substantial implementation code may live in a companion
-module. `Str.to_f64` recognizes the three exact special spellings through
+conversion surface; substantial implementation code lives in focused
+companion modules.
+
+Integer facades delegate to the type-named helpers in
+`std::str::format_integer` and `std::str::parse_integer`. Formatting helpers
+return one fresh exact-length `shared u8[]`, which `Str` immediately adopts.
+Parsing helpers accept a validated `(ref storage, start, length)` range and
+perform checked decimal accumulation without allocation. The borrowed array
+is available only for the helper call and is never returned or retained.
+
+`Str.to_f64` recognizes the three exact special spellings through
 `Str.equals`, then borrows its private backing array into the decimal parser's
 public implementation helper
 `std::str::parse_f64::parse(ref storage: u8[], start: i64, length: u64) ->

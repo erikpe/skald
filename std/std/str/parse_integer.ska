@@ -1,0 +1,125 @@
+public fn parse_i64(
+    ref storage: u8[],
+    start: i64,
+    length: u64
+) -> i64? {
+    if (!_is_valid_range(storage, start, length) || length == 0u) {
+        return none;
+    }
+
+    var negative: bool = false;
+    var digit_start: u64 = 0u;
+    var limit: u64 = 9223372036854775807u;
+    if (storage[start] == 45u8) {
+        negative = true;
+        digit_start = 1u;
+        limit = 9223372036854775808u;
+    }
+
+    var parsed: u64? = _parse_decimal_magnitude(
+        storage,
+        start,
+        length,
+        digit_start,
+        limit
+    );
+    if (parsed is none) {
+        return none;
+    }
+
+    var magnitude: u64 = parsed!;
+    if (negative) {
+        if (magnitude == 9223372036854775808u) {
+            return -9223372036854775808;
+        }
+        return -((i64) magnitude);
+    }
+    return (i64) magnitude;
+}
+
+public fn parse_u64(
+    ref storage: u8[],
+    start: i64,
+    length: u64
+) -> u64? {
+    if (!_is_valid_range(storage, start, length)) {
+        return none;
+    }
+    return _parse_decimal_magnitude(
+        storage,
+        start,
+        length,
+        0u,
+        18446744073709551615u
+    );
+}
+
+public fn parse_u8(
+    ref storage: u8[],
+    start: i64,
+    length: u64
+) -> u8? {
+    if (!_is_valid_range(storage, start, length)) {
+        return none;
+    }
+
+    var parsed: u64? = _parse_decimal_magnitude(
+        storage,
+        start,
+        length,
+        0u,
+        255u
+    );
+    if (parsed is none) {
+        return none;
+    }
+    return (u8) parsed!;
+}
+
+fn _is_valid_range(ref storage: u8[], start: i64, length: u64) -> bool {
+    if (start < 0) {
+        return false;
+    }
+
+    var storage_length: u64 = storage.len();
+    var unsigned_start: u64 = (u64) start;
+    if (unsigned_start > storage_length) {
+        return false;
+    }
+    return length <= storage_length - unsigned_start;
+}
+
+fn _parse_decimal_magnitude(
+    ref storage: u8[],
+    start: i64,
+    length: u64,
+    digit_start: u64,
+    limit: u64
+) -> u64? {
+    if (digit_start >= length) {
+        return none;
+    }
+
+    var limit_quotient: u64 = limit / 10u;
+    var limit_remainder: u64 = limit % 10u;
+    var value: u64 = 0u;
+    var index: u64 = digit_start;
+    while (index < length) {
+        var byte_value: u8 = storage[start + (i64) index];
+        if (byte_value < 48u8 || byte_value > 57u8) {
+            return none;
+        }
+
+        var digit: u64 = (u64) (byte_value - 48u8);
+        if (
+            value > limit_quotient
+            || (value == limit_quotient && digit > limit_remainder)
+        ) {
+            return none;
+        }
+
+        value = value * 10u + digit;
+        index = index + 1u;
+    }
+    return value;
+}
