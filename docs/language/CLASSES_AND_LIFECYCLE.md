@@ -2,7 +2,9 @@
 
 Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
-frozen path-dependent logical-expression temporary extension. The
+frozen path-dependent logical-expression temporary extension. It also defines
+how the frozen but unavailable produced read-only alias extension composes
+with initializer selection and owning full-expression temporaries. The
 [status matrix](STATUS.md) records the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
@@ -360,6 +362,14 @@ profile. Every derived ordinary initializer still begins with exactly one
 `super(arguments);`, and that call independently selects one overload from
 the direct base.
 
+Under the frozen produced read-only alias extension, an exact-class producer
+makes a compatible `ref` candidate applicable under these same static rules;
+it never makes a `mut ref` candidate applicable. Applicability analysis does
+not evaluate or materialize the producer. After unique selection and access
+checking, execution evaluates the source exactly once while binding the
+selected initializer argument. This extension is not yet accepted by the
+compiler.
+
 ## Fresh construction
 
 After overload selection, the arguments must satisfy the selected
@@ -600,6 +610,16 @@ before its initializer temporaries are cleaned. On return, the result is
 completed first, then expression temporaries are destroyed, followed by
 lexical locals and owning value parameters.
 
+The frozen produced read-only alias extension uses this same temporary
+category and boundary. Its exact-class producer initializes one hidden
+caller-owned temporary directly at the argument position; alias binding adds
+no copy and no callee-owned parameter object. The temporary remains live
+through later arguments and the complete call, then is destroyed with other
+full-expression temporaries. `mut ref`, produced primitives, optional
+containers, arrays, and raw shared handles do not acquire this rule. The
+complete eligibility and non-escape contract is defined by
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
+
 Grouping does not change an existing place, but it does change whether a fresh
 construction matches the restricted elision forms below.
 
@@ -645,6 +665,11 @@ The owning roots are completed class locals, class value parameters, and
 materialized class temporaries. A completed object result becomes caller-owned.
 Receivers and aliases are non-owning. An inline class field is destroyed with
 its containing object rather than registered as a separate lexical owner.
+
+Once the frozen produced read-only alias extension is implemented, its hidden
+exact-class storage is one of these ordinary materialized class temporaries.
+The alias parameter itself remains non-owning and receives no independent
+registration.
 
 An owning place is registered only after its complete initialization or copy
 construction finishes. On normal fallthrough, each scope destroys registered

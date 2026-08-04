@@ -169,6 +169,63 @@ recursive initialization of optional fields in completed class storage. This
 division is internal: diagnostic text, ordering, MIR contracts, and the
 separate immediate-consumer guard analysis are unchanged.
 
+## Frozen produced exact-class alias representation
+
+The source-visible
+[produced read-only alias contract](../language/ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
+is frozen but unavailable. The current compiler still rejects a direct
+produced inline object as a non-place alias source. Once implemented, the
+extension uses the existing phase owners and object-view pipeline rather than
+introducing a reference-valued expression or a second alias representation:
+
+- Syntax retains the producer as an ordinary call argument expression. No AST
+  node, grammar form, binding mode, or lifetime annotation is added.
+- Resolution selects ordinary construction, literal, direct/static/method/
+  interface-call, grouping, and checked-cast identities exactly as it does in
+  other object-producing contexts. It does not decide alias eligibility or
+  materialize storage.
+- Type checking recognizes an exact-class producer only after the selected
+  parameter requires read-only alias access. It applies the existing exact,
+  ancestor, implemented-interface, and `Obj` view relation and rejects the
+  same implicit downcasts and unrelated targets. A `mut ref` parameter still
+  requires an existing mutable place. Initializer applicability observes this
+  same static binding relation without evaluating a producer, allocating
+  identities speculatively, or emitting candidate-local duplicate
+  diagnostics; final checking represents the selected source once.
+- Typed HIR records one `HirObjectView` whose source is the existing
+  `HirViewSource::Produced` producer form, whose origin retains the exact
+  dynamic class and complete-object identity, whose target retains the
+  selected class/interface/`Obj` view, and whose access is read-only. Grouping
+  changes only spans. A checked cast retains its ordinary static or runtime
+  selection and bounded carrier instead of being flattened into an
+  existing-place view.
+- HIR-to-MIR lowering allocates one caller-owned exact-class `Temporary` at
+  the argument's source position, lowers the producer directly into it, and
+  uses that same complete place as the alias-view source. It emits no
+  copy-construction step. Registration occurs only after successful
+  completion. The temporary remains live through later arguments and the
+  outer call, then joins the enclosing full-expression plan and is destroyed
+  once in reverse completion order. Selected-path lowering creates no
+  storage, view, or cleanup for a skipped producer, and any checked-view
+  carrier ends before its owning producer temporary.
+- MIR verification proves storage lifetime, initialization before view use,
+  exact complete-object origin, compatible read-only access, registration,
+  use through the consuming call, checked-carrier dependency order, and one
+  correctly ordered cleanup. A mutable produced view, premature or missing
+  cleanup, duplicate destruction, or mismatched origin is malformed MIR.
+- Backends consume the ordinary verified `MirArgument::View` representation.
+  The existing internal alias calling convention is unchanged, external
+  object and alias signatures remain invalid, and no runtime service or ABI
+  version change is introduced.
+
+Type-check diagnostics preserve the distinction between provenance and type:
+an incompatible exact-class producer reports a type mismatch with producer
+and parameter context, while a compatible producer selected for `mut ref`
+reports that an existing mutable place is required. Excluded primitive,
+optional, array, raw-shared-owner, and implicit-shared-dereference sources keep
+their family-specific diagnostics. Call checking continues through later
+arguments in source order.
+
 ## Primitive binding reassignment boundary
 
 The source contract for

@@ -6,9 +6,11 @@ follow the same source rules and lower through verified MIR; their backend
 execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
 call borrows and their hidden owner anchors are implemented as specified by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Local aliases and
-aliases into other future value families remain unfrozen. Array-specific
-descriptor and detached-backing behavior belongs to [Arrays](ARRAYS.md).
-Feature maturity is authoritative in the [status matrix](STATUS.md).
+aliases into other future value families remain unfrozen. The produced
+exact-class read-only alias extension is frozen here but is not yet accepted
+by the compiler. Array-specific descriptor and detached-backing behavior
+belongs to [Arrays](ARRAYS.md). Feature maturity is authoritative in the
+[status matrix](STATUS.md).
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -18,8 +20,10 @@ defines object places, copying, and owning-object lifetime.
 
 ## Binding modes
 
-An alias parameter is a non-owning name for an eligible existing place. Its
-binding mode is separate from the static target:
+An implemented alias parameter is a non-owning name for an eligible existing
+place. Its binding mode is separate from the static target. The frozen
+produced-object extension below first materializes an owning place in hidden
+caller storage and then applies the same non-owning binding model:
 
 ```ska
 fn inspect(ref value: Item) -> i64 {
@@ -54,7 +58,7 @@ universal non-owning target with no members or inline storage. Interfaces
 expose only their declared requirements. Alias modifiers are not accepted on
 locals, fields, results, elements, statics, or captures.
 
-## Eligible argument places
+## Implemented eligible argument places
 
 An object alias argument must designate an existing, already-live object place
 or a forwarded interface/`Obj` view. Its root may be:
@@ -62,7 +66,7 @@ or a forwarded interface/`Obj` view. Its root may be:
 - an owning exact-class local;
 - an owning exact-class value parameter;
 - a live method or destructor `self`;
-- an existing `ref` or `mut ref` parameter being forwarded.
+- an existing `ref` or `mut ref` parameter being forwarded;
 - a dereferenced stable shared local or value parameter;
 - a dereferenced shared field or nested shared place, through a hidden copied
   owner; or
@@ -93,7 +97,9 @@ Static selection evaluates no receiver. Primitive fields and produced scalar
 values are not yet primitive alias sources.
 
 A fresh inline construction, inline object-returning call, and any other
-produced inline value is not an object alias source. A
+produced inline value is not currently an object alias source. The
+[frozen extension](#frozen-produced-read-only-alias-arguments) replaces only
+this exact-class restriction once implemented. A
 dereferenced produced shared allocation or shared-returning call is eligible
 because its owner is adopted into call-scoped anchor storage. A raw shared
 handle is an owning value rather than an alias place and is rejected here.
@@ -103,6 +109,91 @@ initializer-body rules permit.
 
 Alias binding does not copy the object or begin a new object lifetime. The
 callee operates on the same place selected by the caller.
+
+## Frozen produced read-only alias arguments
+
+The following source contract is frozen but unavailable in the current
+compiler. An ordinary expression that produces one complete inline object of
+a known exact class may bind directly to a compatible read-only `ref`
+parameter. Accepted producers are:
+
+- a fresh exact-class construction;
+- an exact-class result from an internal direct, static, instance-method, or
+  interface call;
+- a canonical class-valued literal such as a `Str` literal;
+- any grouping of an accepted producer; and
+- a supported `(T) source` checked cast whose selected object is backed by an
+  accepted produced exact-class value.
+
+The rule applies uniformly to internal functions, static and instance
+methods, interface calls, and ordinary initializer overloads. It creates no
+standard-library exception. Syntax and resolution continue to treat the
+source as an ordinary argument expression; no explicit reference expression
+or new grammar form is introduced.
+
+The producer's exact dynamic class determines compatibility. The temporary
+may be viewed as that class, an ancestor, any interface implemented by that
+class, or `Obj`. These are non-owning views of the same complete object: they
+do not slice, copy, reconstruct metadata, or change dynamic identity.
+Unrelated targets, implicit downcasts, and unsupported interface conversions
+remain invalid. An explicit checked cast performs its ordinary static or
+runtime selection first. Any bounded checked-view carrier remains subordinate
+to the owning producer temporary and ends before that temporary is destroyed.
+
+Only read-only `ref` receives this relaxation. A `mut ref` argument continues
+to require an existing mutable source place, even though the compiler's hidden
+temporary storage is physically writable during initialization. This keeps
+implicit temporary binding observational. Any future facility for mutating an
+unnamed object would require its own source syntax and contract.
+
+The relaxation does not apply to produced primitives, optional containers,
+arrays, raw shared handles, or implicit shared dereference. Existing
+inline-optional and array alias rules remain place-based. Shared-backed
+borrowing continues to require explicit `*` or `->` selection and follows its
+existing stable-owner or hidden-anchor rules. The extension also creates no
+local alias, stored reference, alias result, capture, external alias
+signature, or independently storable reference type.
+
+### Production, ownership, and lifetime
+
+The caller evaluates an accepted producer exactly once at its ordinary
+left-to-right argument position. A method receiver is selected first. The
+complete object is initialized directly in one hidden caller-owned exact-class
+temporary before evaluation proceeds to later arguments. The temporary
+becomes live and acquires cleanup responsibility only after production
+successfully completes; a failed producer or checked conversion does not
+enter the call.
+
+The same temporary remains live through later argument effects, the complete
+dynamic call, and any nested forwarding performed by the callee. The alias is
+valid only during that call, while its owner follows the enclosing
+full-expression lifetime and is destroyed in reverse completion order with
+other owning temporaries after the call result has been secured. A selected
+short-circuit path owns only the producers it actually evaluates.
+
+Binding performs no copy construction and transfers no ownership to the
+callee. The parameter owns no cleanup and cannot destroy, retain, rebind,
+store, or return its alias. If the callee copies the designated object into an
+owning destination or result, that distinct copy must complete before the
+temporary is destroyed and then follows its own lifetime.
+
+### Diagnostics
+
+Diagnostics distinguish source-category failure from type incompatibility:
+
+- an exact-class producer that cannot supply the requested class, interface,
+  or `Obj` view is a type mismatch; its diagnostic identifies the producer
+  and retains parameter-type declaration context;
+- an otherwise compatible producer passed to `mut ref` is an invalid mutable
+  alias source whose diagnostic requires an existing mutable place, rather
+  than describing the producer as a read-only place; and
+- excluded primitive, optional, array, and shared-owner families retain their
+  family-specific alias or explicit-dereference diagnostics.
+
+Call checking continues through the complete argument list so independent
+errors retain ordinary reporting and source order. Until this extension is
+implemented, a direct produced exact-class alias argument continues to receive
+the current existing-place diagnostic.
 
 ## Access propagation
 
@@ -118,6 +209,10 @@ Each root supplies one access capability for its complete projection path:
 Projecting an inline class field or direct base preserves that access. A view
 conversion may restrict mutable access when forwarding to `ref`; read-only
 access cannot satisfy a `mut ref` parameter.
+
+Under the frozen produced-object extension, the compiler-created temporary
+supplies read-only alias access regardless of the temporary's internal
+initialization capability. It therefore forwards only to another `ref`.
 
 Through read-only access, code may read primitive fields, call read-only
 methods, use the object as a copy source, and forward the place to another
@@ -190,6 +285,11 @@ An alias parameter is valid only for the dynamic execution of its call. The
 caller retains ownership of every directly supplied inline place for that
 complete call. Forwarding relies on the enclosing call's same guarantee.
 
+Under the frozen produced-object extension, hidden caller storage instead
+owns the materialized place through the enclosing full expression. The alias
+still cannot outlive its dynamic call; the slightly longer owner lifetime
+only supplies deterministic cleanup and does not create an escaping view.
+
 The alias owns no cleanup registration and is never destroyed. Ending the
 callee's parameter scope does not affect the referenced object's lifetime.
 Conversely, source syntax provides no way to retain the alias after the call:
@@ -260,6 +360,12 @@ The language requires an alias call to preserve place identity, access,
 evaluation order, and source lifetime. It does not require a raw-pointer type,
 object address to be source-visible, a particular parameter representation,
 frame home, register class, field offset, or calling convention.
+
+The frozen produced-object extension changes only how the caller establishes
+the aliased place. It adds no external object or alias ABI, changes no internal
+alias calling convention, and requires no runtime service. Once implemented,
+the backend receives the same verified non-owning alias representation used
+for an existing place.
 
 The current target realization is an implementation concern recorded in the
 [backend and target contract](../compiler/BACKEND.md). Allocation, reference

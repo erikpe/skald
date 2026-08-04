@@ -3,7 +3,9 @@
 Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
 semantics, including implemented `while` loops, `break`, `continue`, and
-short-circuit logical expressions with selected-path cleanup. The
+short-circuit logical expressions with selected-path cleanup. It also records
+the frozen but unavailable call-order boundary for produced exact-class
+read-only aliases. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -42,6 +44,13 @@ binding category is separate from the declared type:
 | `ref name: T` | A call-scoped read-only alias to an eligible existing place. |
 | `mut ref name: T` | A call-scoped mutable alias to an eligible existing place. |
 
+The frozen produced-object alias extension additionally allows an exact-class
+producer to establish a hidden caller-owned place for a read-only `ref`.
+`mut ref` remains restricted to an existing mutable place. This relaxation is
+not yet accepted by the compiler; its complete source and lifetime contract is
+defined by
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
+
 Value parameters may use implemented primitive or exact-class types. Alias
 parameters support the implemented primitive, object-view, inline-optional,
 and array families only on internal callables. Aliases do not own or copy
@@ -56,9 +65,13 @@ local cannot redeclare a parameter. A nested block may shadow it.
 ## Calls and results
 
 A call supplies exactly one argument per parameter. Value arguments must have
-the exact declared type; alias arguments must designate a compatible place and
-provide the required access. The complete argument list is checked even when
-one argument is invalid, so independent source errors can be reported.
+the exact declared type. Under the implemented boundary, alias arguments must
+designate a compatible place and provide the required access. The frozen
+produced-object extension lets a compatible exact-class producer materialize
+such a place only for read-only `ref`; this does not turn the expression or
+parameter into a storable reference value. The complete argument list is
+checked even when one argument is invalid, so independent source errors can be
+reported.
 When an alias argument borrows a shared pointee, the caller must write
 `*owner`; passing the raw shared handle instead selects an owning value and is
 rejected for the alias parameter.
@@ -307,7 +320,8 @@ expressions and calls plus the frozen logical-operator extension:
    arguments are evaluated left to right; a static call's class spelling and
    a static field's class selection are not evaluated;
 8. an exact-class value-argument copy completes before the next argument is
-   evaluated;
+   evaluated; under the frozen produced read-only alias extension, its hidden
+   temporary likewise completes before the next argument;
 9. object destination storage is selected before construction or an
    object-producing call, then the receiver and explicit arguments follow the
    ordering above;
@@ -322,6 +336,14 @@ expressions and calls plus the frozen logical-operator extension:
 Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
+
+For a frozen produced read-only alias, the producer runs exactly once at its
+argument position after any receiver and before every later argument. The
+materialized caller-owned object remains live through those later effects and
+the complete call, then joins ordinary reverse cleanup at the enclosing
+full-expression boundary. The detailed eligibility, forwarding, failure, and
+non-escape rules are owned by
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
 
 Primitive binding reassignment uses item 4 without introducing
 an effectful destination computation: resolution selects the binding identity,

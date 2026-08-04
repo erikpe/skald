@@ -6,16 +6,17 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
-
-## Planned
-
 - [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
   — allow exact-class-producing expressions to bind directly to read-only
   `ref` parameters through verified caller-owned full-expression temporaries;
-  PAA0 (freeze the contract) is next. It depends on the implemented alias,
-  object-temporary, full-expression cleanup, polymorphism, checked-cast, and
-  internal-call contracts.
+  PAA1 (accept and represent produced object alias arguments) is next after
+  the frozen source and compiler contract. It depends on the
+  implemented alias, object-temporary, full-expression cleanup, polymorphism,
+  checked-cast, and internal-call contracts.
+
+## Planned
+
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

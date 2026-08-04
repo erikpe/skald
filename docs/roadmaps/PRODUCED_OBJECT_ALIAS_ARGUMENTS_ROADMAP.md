@@ -1,6 +1,6 @@
 # Produced Object Alias Arguments Roadmap
 
-Status: planned; PAA0 is next.
+Status: in progress; PAA1 is next.
 
 This roadmap generalizes class alias arguments so a produced exact-class
 object can bind directly to a read-only `ref` parameter. The compiler
@@ -10,9 +10,10 @@ full-expression temporaries. The feature removes source-only staging locals
 such as the one currently needed for `text.equals("NaN")` without weakening
 the language's alias non-escape or ownership rules.
 
-The first task publishes the source-visible contract in the living language
-documentation. This roadmap records the recommended contract and
-implementation order; it does not make the feature available by itself.
+The completed first task publishes the source-visible contract in the living
+language documentation. This roadmap records that frozen contract and the
+remaining implementation order; it does not make the feature available by
+itself.
 
 ## Scope and invariants
 
@@ -89,7 +90,7 @@ rather than introduce a second temporary or alias pipeline.
 
 ## Progress
 
-- [ ] PAA0 — Freeze the produced read-only alias contract
+- [x] PAA0 — Freeze the produced read-only alias contract
 - [ ] PAA1 — Accept and represent produced object alias arguments
 - [ ] PAA2 — Verify temporary lifetime and source-ordered lowering
 - [ ] PAA3 — Prove polymorphic native execution and diagnostics
@@ -108,23 +109,23 @@ Makefile remains the repository automation interface.
 precise contract for hidden owning temporaries before compiler behavior or
 standard-library source relies on it.
 
-- [ ] Update the alias, call, lifecycle, and status documentation to
+- [x] Update the alias, call, lifecycle, and status documentation to
       distinguish existing-place aliases from produced read-only alias
       arguments.
-- [ ] Define the accepted exact-class producer families, class/interface/`Obj`
+- [x] Define the accepted exact-class producer families, class/interface/`Obj`
       conversions, grouping and checked-cast composition, and the explicit
       exclusions for `mut ref`, optional containers, arrays, and shared
       handles.
-- [ ] Freeze exactly-once evaluation, receiver-before-arguments and
+- [x] Freeze exactly-once evaluation, receiver-before-arguments and
       left-to-right order, completion before the call, lifetime through later
       arguments and forwarding, and reverse full-expression cleanup.
-- [ ] State that alias binding performs no copy, preserves the complete
+- [x] State that alias binding performs no copy, preserves the complete
       dynamic object, creates no ownership in the callee, and leaves the
       internal and external ABI boundaries unchanged.
-- [ ] Specify diagnostics that identify an incompatible object producer
+- [x] Specify diagnostics that identify an incompatible object producer
       separately from a `mut ref` argument that requires an existing mutable
       place.
-- [ ] Reconcile the grammar's semantic note and compiler phase documentation
+- [x] Reconcile the grammar's semantic note and compiler phase documentation
       while retaining “frozen but unavailable” status wording.
 
 **Tests:** `make docs-check`; review non-archived matches from
