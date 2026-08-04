@@ -1,6 +1,6 @@
 # Hexadecimal Integer and Byte Literals Roadmap
 
-Status: planned; LIT0 is next.
+Status: in progress; LIT1 is next.
 
 This roadmap adds hexadecimal source spellings for all three Skald integer
 types and single-quoted byte literals of exact type `u8`. The design is frozen
@@ -115,7 +115,7 @@ task that enables each source form updates them.
 
 ## Progress
 
-- [ ] LIT0 — Make integer literal representation radix-aware
+- [x] LIT0 — Make integer literal representation radix-aware
 - [ ] LIT1 — Implement hexadecimal integers end to end
 - [ ] LIT2 — Implement single-quoted `u8` byte literals end to end
 
@@ -129,23 +129,23 @@ The Makefile remains the repository automation interface.
 **Purpose:** Establish an explicit, invalid-state-free radix representation
 without changing accepted source, diagnostics, dumps, or compiled behavior.
 
-- [ ] Add the public source-literal `IntegerRadix` vocabulary beside
+- [x] Add the public source-literal `IntegerRadix` vocabulary beside
       `NumericLiteralKind`, and make each integer kind carry its radix while
       leaving `F64` radix-free.
-- [ ] Thread decimal radix metadata through numeric scanning, tokens, AST,
+- [x] Thread decimal radix metadata through numeric scanning, tokens, AST,
       syntax dumps, resolution, resolved dumps, overload classification, and
       type checking without asking later consumers to inspect a prefix.
-- [ ] Centralize suffix removal, digit selection, radix conversion, and
+- [x] Centralize suffix removal, digit selection, radix conversion, and
       magnitude classification in the type-check literal owner. Preserve the
       original full spelling for that one semantic conversion plus
       source-facing dumps and diagnostics; do not use it to infer kind or
       radix.
-- [ ] Preserve the grouped `i64::MIN` path, all decimal range diagnostics,
+- [x] Preserve the grouped `i64::MIN` path, all decimal range diagnostics,
       exact literal types, malformed-tail recovery, token names, and normalized
       HIR/MIR dumps byte for byte.
-- [ ] Keep module facades concise and selectively re-export only the literal
+- [x] Keep module facades concise and selectively re-export only the literal
       vocabulary required across phase boundaries.
-- [ ] Add focused representation and conversion tests proving that every
+- [x] Add focused representation and conversion tests proving that every
       currently accepted numeric form carries decimal radix and that arbitrary
       precision is retained until the unary-minus boundary is classified.
 

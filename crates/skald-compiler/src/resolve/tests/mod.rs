@@ -5,7 +5,7 @@ use crate::{
         FunctionId, InitializerId, LocalId, MethodId, ParameterId,
     },
     lexer::lex,
-    literal::NumericLiteralKind,
+    literal::{IntegerRadix, NumericLiteralKind},
     source::SourceDatabase,
     syntax::{self, parse, Statement},
     test_support::resolve_source,

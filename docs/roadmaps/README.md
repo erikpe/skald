@@ -6,16 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No roadmaps are currently in progress.
+- [Hexadecimal integer and byte literals](HEXADECIMAL_INTEGER_AND_BYTE_LITERALS_ROADMAP.md)
+  — add radix-explicit `0x`/`0X` spellings for `i64`, `u64`, and `u8`, plus
+  single-quoted ASCII/escaped byte literals of exact type `u8`; LIT1
+  (implement hexadecimal integers end to end) is next. It depends only on the
+  implemented primitive literal and raw-byte foundations and does not change
+  `f64`, the runtime ABI, or ownership.
 
 ## Planned
 
-- [Hexadecimal integer and byte literals](HEXADECIMAL_INTEGER_AND_BYTE_LITERALS_ROADMAP.md)
-  — add radix-explicit `0x`/`0X` spellings for `i64`, `u64`, and `u8`, plus
-  single-quoted ASCII/escaped byte literals of exact type `u8`; LIT0
-  (make integer literal representation radix-aware) is next. It depends only
-  on the implemented primitive literal and raw-byte foundations and does not
-  change `f64`, the runtime ABI, or ownership.
 - [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
   — allow exact-class-producing expressions to bind directly to read-only
   `ref` parameters through verified caller-owned full-expression temporaries;

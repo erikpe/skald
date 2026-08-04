@@ -23,7 +23,7 @@ use skald_compiler::{
         PackageId, ProviderId,
     },
     lexer::{dump_tokens, lex, LexOutput},
-    literal::NumericLiteralKind,
+    literal::{IntegerRadix, NumericLiteralKind},
     mir::{
         dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
         MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirComparisonOperand,
@@ -226,6 +226,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _interface_identity: Option<InterfaceId> = None;
     let _requirement_identity: Option<InterfaceRequirementId> = None;
     let _literal_path: Option<NumericLiteralKind> = None;
+    let _integer_radix_path: Option<IntegerRadix> = None;
 }
 
 #[test]

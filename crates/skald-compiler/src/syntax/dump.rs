@@ -521,9 +521,9 @@ impl AstDumper {
             }
             Expression::NumericLiteral(literal) => {
                 let name = match literal.kind {
-                    crate::literal::NumericLiteralKind::I64 => "Integer",
-                    crate::literal::NumericLiteralKind::U64 => "U64",
-                    crate::literal::NumericLiteralKind::U8 => "U8",
+                    crate::literal::NumericLiteralKind::I64(_) => "Integer",
+                    crate::literal::NumericLiteralKind::U64(_) => "U64",
+                    crate::literal::NumericLiteralKind::U8(_) => "U8",
                     crate::literal::NumericLiteralKind::F64 => "F64",
                 };
                 self.named(name, &literal.spelling, literal.span);

@@ -252,9 +252,9 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
-                NumericLiteralKind::I64 => Type::I64,
-                NumericLiteralKind::U64 => Type::U64,
-                NumericLiteralKind::U8 => Type::U8,
+                NumericLiteralKind::I64(_) => Type::I64,
+                NumericLiteralKind::U64(_) => Type::U64,
+                NumericLiteralKind::U8(_) => Type::U8,
                 NumericLiteralKind::F64 => Type::F64,
             },
             ResolvedExpression::StringLiteral(literal) => Type::Class(literal.class),

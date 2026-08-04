@@ -3,14 +3,17 @@
 use super::*;
 use crate::{
     diagnostics::render_diagnostics,
-    literal::NumericLiteralKind,
+    literal::{IntegerRadix, NumericLiteralKind},
     source::{LineColumn, SourceDatabase},
     test_support::lex_source,
 };
 
-const I64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::I64);
-const U64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U64);
-const U8_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U8);
+const I64_LITERAL: TokenKind =
+    TokenKind::NumericLiteral(NumericLiteralKind::I64(IntegerRadix::Decimal));
+const U64_LITERAL: TokenKind =
+    TokenKind::NumericLiteral(NumericLiteralKind::U64(IntegerRadix::Decimal));
+const U8_LITERAL: TokenKind =
+    TokenKind::NumericLiteral(NumericLiteralKind::U8(IntegerRadix::Decimal));
 const F64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::F64);
 
 fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) {

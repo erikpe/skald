@@ -1,6 +1,6 @@
 //! Centralized recognition of numeric-looking source spellings.
 
-use crate::literal::NumericLiteralKind;
+use crate::literal::{IntegerRadix, NumericLiteralKind};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct NumericScan {
@@ -17,7 +17,7 @@ pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
     assert!(bytes.first().is_some_and(u8::is_ascii_digit));
 
     let mut end = take_digits(bytes, 0);
-    let mut kind = NumericLiteralKind::I64;
+    let mut kind = NumericLiteralKind::I64(IntegerRadix::Decimal);
     let mut well_formed = true;
 
     match bytes.get(end).copied() {
@@ -25,9 +25,9 @@ pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
             end += 1;
             if bytes.get(end) == Some(&b'8') {
                 end += 1;
-                kind = NumericLiteralKind::U8;
+                kind = NumericLiteralKind::U8(IntegerRadix::Decimal);
             } else {
-                kind = NumericLiteralKind::U64;
+                kind = NumericLiteralKind::U64(IntegerRadix::Decimal);
             }
         }
         Some(b'.') => {
@@ -111,9 +111,18 @@ mod tests {
 
     #[test]
     fn classifies_every_contracted_numeric_form_without_converting_values() {
-        assert_eq!(scan("42;"), (2, Some(NumericLiteralKind::I64)));
-        assert_eq!(scan("42u;"), (3, Some(NumericLiteralKind::U64)));
-        assert_eq!(scan("42u8;"), (4, Some(NumericLiteralKind::U8)));
+        assert_eq!(
+            scan("42;"),
+            (2, Some(NumericLiteralKind::I64(IntegerRadix::Decimal)))
+        );
+        assert_eq!(
+            scan("42u;"),
+            (3, Some(NumericLiteralKind::U64(IntegerRadix::Decimal)))
+        );
+        assert_eq!(
+            scan("42u8;"),
+            (4, Some(NumericLiteralKind::U8(IntegerRadix::Decimal)))
+        );
         assert_eq!(scan("1.5;"), (3, Some(NumericLiteralKind::F64)));
         assert_eq!(scan("6e-2;"), (4, Some(NumericLiteralKind::F64)));
     }
@@ -127,8 +136,17 @@ mod tests {
 
     #[test]
     fn stops_at_source_token_boundaries() {
-        assert_eq!(scan("1+2"), (1, Some(NumericLiteralKind::I64)));
-        assert_eq!(scan("1u-2"), (2, Some(NumericLiteralKind::U64)));
-        assert_eq!(scan("1é"), (1, Some(NumericLiteralKind::I64)));
+        assert_eq!(
+            scan("1+2"),
+            (1, Some(NumericLiteralKind::I64(IntegerRadix::Decimal)))
+        );
+        assert_eq!(
+            scan("1u-2"),
+            (2, Some(NumericLiteralKind::U64(IntegerRadix::Decimal)))
+        );
+        assert_eq!(
+            scan("1é"),
+            (1, Some(NumericLiteralKind::I64(IntegerRadix::Decimal)))
+        );
     }
 }

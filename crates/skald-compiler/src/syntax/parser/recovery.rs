@@ -1,7 +1,5 @@
 //! Grammar-aware synchronization and expression-start classification.
 
-use crate::literal::NumericLiteralKind;
-
 use super::*;
 
 impl Parser<'_> {
@@ -65,38 +63,36 @@ impl Parser<'_> {
             if self.consume(TokenKind::Semicolon).is_some() {
                 return;
             }
-            if self.at_any(&[
-                TokenKind::Var,
-                TokenKind::Return,
-                TokenKind::If,
-                TokenKind::Elif,
-                TokenKind::Else,
-                TokenKind::While,
-                TokenKind::Break,
-                TokenKind::Continue,
-                TokenKind::Identifier,
-                TokenKind::I64,
-                TokenKind::U64,
-                TokenKind::U8,
-                TokenKind::F64,
-                TokenKind::Bool,
-                TokenKind::Unit,
-                TokenKind::SelfValue,
-                TokenKind::NumericLiteral(NumericLiteralKind::I64),
-                TokenKind::NumericLiteral(NumericLiteralKind::U64),
-                TokenKind::NumericLiteral(NumericLiteralKind::U8),
-                TokenKind::NumericLiteral(NumericLiteralKind::F64),
-                TokenKind::StringLiteral,
-                TokenKind::True,
-                TokenKind::False,
-                TokenKind::Minus,
-                TokenKind::LeftParen,
-                TokenKind::LeftBrace,
-                TokenKind::RightBrace,
-                TokenKind::Fn,
-                TokenKind::Extern,
-                TokenKind::Class,
-            ]) {
+            if matches!(self.peek().kind, TokenKind::NumericLiteral(_))
+                || self.at_any(&[
+                    TokenKind::Var,
+                    TokenKind::Return,
+                    TokenKind::If,
+                    TokenKind::Elif,
+                    TokenKind::Else,
+                    TokenKind::While,
+                    TokenKind::Break,
+                    TokenKind::Continue,
+                    TokenKind::Identifier,
+                    TokenKind::I64,
+                    TokenKind::U64,
+                    TokenKind::U8,
+                    TokenKind::F64,
+                    TokenKind::Bool,
+                    TokenKind::Unit,
+                    TokenKind::SelfValue,
+                    TokenKind::StringLiteral,
+                    TokenKind::True,
+                    TokenKind::False,
+                    TokenKind::Minus,
+                    TokenKind::LeftParen,
+                    TokenKind::LeftBrace,
+                    TokenKind::RightBrace,
+                    TokenKind::Fn,
+                    TokenKind::Extern,
+                    TokenKind::Class,
+                ])
+            {
                 return;
             }
             self.advance();
@@ -136,10 +132,7 @@ impl Parser<'_> {
                 | TokenKind::Bool
                 | TokenKind::Unit
                 | TokenKind::SelfValue
-                | TokenKind::NumericLiteral(NumericLiteralKind::I64)
-                | TokenKind::NumericLiteral(NumericLiteralKind::U64)
-                | TokenKind::NumericLiteral(NumericLiteralKind::U8)
-                | TokenKind::NumericLiteral(NumericLiteralKind::F64)
+                | TokenKind::NumericLiteral(_)
                 | TokenKind::StringLiteral
                 | TokenKind::True
                 | TokenKind::False

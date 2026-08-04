@@ -2,7 +2,10 @@
 
 use super::*;
 use crate::{
-    lexer::lex, literal::NumericLiteralKind, source::SourceDatabase, syntax::dump_ast,
+    lexer::lex,
+    literal::{IntegerRadix, NumericLiteralKind},
+    source::SourceDatabase,
+    syntax::dump_ast,
     test_support::parse_source,
 };
 

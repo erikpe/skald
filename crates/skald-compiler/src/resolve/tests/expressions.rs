@@ -8,9 +8,22 @@ fn resolution_preserves_numeric_classification_and_source_spelling() {
         panic!("expected a resolved numeric literal");
     };
 
-    assert_eq!(literal.kind, NumericLiteralKind::I64);
+    assert_eq!(literal.kind, NumericLiteralKind::I64(IntegerRadix::Decimal));
     assert_eq!(literal.spelling, "007");
     assert_eq!(literal.span.range().len(), 3);
+}
+
+#[test]
+fn resolution_preserves_arbitrary_precision_decimal_magnitudes_without_conversion() {
+    let spelling = "9".repeat(200);
+    let output = resolve_text(&format!("fn main() -> i64 {{ return {spelling}; }}"));
+    let main = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::NumericLiteral(literal) = return_value(&main.body.statements[0]) else {
+        panic!("expected a resolved numeric literal");
+    };
+
+    assert_eq!(literal.kind, NumericLiteralKind::I64(IntegerRadix::Decimal));
+    assert_eq!(literal.spelling, spelling);
 }
 
 #[test]
@@ -30,7 +43,7 @@ fn resolution_preserves_u64_types_and_literal_magnitude() {
     else {
         panic!("expected a resolved u64 literal");
     };
-    assert_eq!(literal.kind, NumericLiteralKind::U64);
+    assert_eq!(literal.kind, NumericLiteralKind::U64(IntegerRadix::Decimal));
     assert_eq!(literal.spelling, "18446744073709551615u");
     assert!(dump_resolved(&output.program).contains("U64 \"18446744073709551615u\""));
 }
@@ -52,7 +65,7 @@ fn resolution_preserves_u8_types_and_literal_magnitude() {
     else {
         panic!("expected a resolved u8 literal");
     };
-    assert_eq!(literal.kind, NumericLiteralKind::U8);
+    assert_eq!(literal.kind, NumericLiteralKind::U8(IntegerRadix::Decimal));
     assert_eq!(literal.spelling, "255u8");
     assert!(dump_resolved(&output.program).contains("U8 \"255u8\""));
 }

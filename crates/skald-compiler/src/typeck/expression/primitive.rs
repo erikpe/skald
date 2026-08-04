@@ -108,7 +108,7 @@ impl CallableChecker<'_, '_> {
         match unary.operator {
             ResolvedUnaryOperator::Negate => {
                 if let Some(literal) = i64_literal_through_groups(&unary.operand) {
-                    match classify_i64_magnitude(&literal.spelling) {
+                    match classify_i64_magnitude(literal) {
                         Magnitude::MinimumBoundary => {
                             return Some(HirExpression {
                                 kind: HirExpressionKind::I64(i64::MIN),

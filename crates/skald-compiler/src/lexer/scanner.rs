@@ -1,7 +1,6 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     lexical_policy::{is_identifier_continue, is_identifier_start},
-    literal::NumericLiteralKind,
     source::{SourceFile, Span},
 };
 
@@ -162,25 +161,12 @@ impl<'source> Lexer<'source> {
         let scan = scan_numeric_literal(self.remaining());
         self.offset += scan.byte_len;
 
-        // Every recognized numeric kind has a complete path through the
-        // implemented compiler pipeline.
-        if !matches!(
-            scan.kind,
-            Some(
-                NumericLiteralKind::I64
-                    | NumericLiteralKind::U64
-                    | NumericLiteralKind::U8
-                    | NumericLiteralKind::F64
-            )
-        ) {
+        let Some(kind) = scan.kind else {
             self.report_malformed_numeric(start);
             return;
-        }
+        };
 
-        self.push_token(
-            TokenKind::NumericLiteral(scan.kind.expect("enabled numeric kind")),
-            start,
-        );
+        self.push_token(TokenKind::NumericLiteral(kind), start);
     }
 
     fn lex_leading_dot_numeric(&mut self, start: usize) {

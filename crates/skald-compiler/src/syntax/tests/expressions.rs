@@ -7,7 +7,7 @@ fn numeric_literals_preserve_their_lexical_kind_spelling_and_span() {
         panic!("expected a numeric literal");
     };
 
-    assert_eq!(literal.kind, NumericLiteralKind::I64);
+    assert_eq!(literal.kind, NumericLiteralKind::I64(IntegerRadix::Decimal));
     assert_eq!(literal.spelling, "007");
     assert_eq!(
         sources
@@ -49,7 +49,7 @@ fn parses_u64_types_and_preserves_suffixed_literal_spelling() {
     let Expression::NumericLiteral(literal) = return_value(identity) else {
         panic!("expected a u64 literal");
     };
-    assert_eq!(literal.kind, NumericLiteralKind::U64);
+    assert_eq!(literal.kind, NumericLiteralKind::U64(IntegerRadix::Decimal));
     assert_eq!(literal.spelling, "42u");
     assert!(dump_ast(&output.ast).contains("U64 \"42u\""));
 }
@@ -66,7 +66,7 @@ fn parses_u8_types_and_preserves_suffixed_literal_spelling() {
     let Expression::NumericLiteral(literal) = return_value(identity) else {
         panic!("expected a u8 literal");
     };
-    assert_eq!(literal.kind, NumericLiteralKind::U8);
+    assert_eq!(literal.kind, NumericLiteralKind::U8(IntegerRadix::Decimal));
     assert_eq!(literal.spelling, "255u8");
     assert!(dump_ast(&output.ast).contains("U8 \"255u8\""));
 }

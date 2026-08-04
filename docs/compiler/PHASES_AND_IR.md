@@ -632,6 +632,11 @@ The lexer owns token formation, trivia handling, and preservation of source
 spellings. It does not perform name lookup, choose semantic types, or convert
 numeric payloads into checked language values.
 
+Integer token kinds carry their radix structurally alongside the preserved
+source spelling. The currently implemented integer forms all carry decimal
+radix; later phases consume that classification rather than rediscovering a
+prefix from text. Floating literals remain a distinct radix-free kind.
+
 `LexOutput` contains tokens and diagnostics together. Invalid characters and
 malformed numeric spellings are diagnosed while retaining a recoverable token
 stream. Token kinds and accepted lexical forms follow the

@@ -346,6 +346,7 @@ fn positive_and_negative_out_of_range_literals_are_diagnosed() {
         "fn main() -> i64 { return 9223372036854775808; }",
         "fn main() -> i64 { return -9223372036854775809; }",
         "fn main() -> i64 { return 999999999999999999999999999999999999999; }",
+        "fn main() -> i64 { return -999999999999999999999999999999999999999; }",
     ] {
         let output = check_text(source);
         assert!(output.hir.is_none());

@@ -45,7 +45,7 @@ fn resolves_primitive_binding_assignments_to_exact_local_identities() {
     assert!(matches!(
         assignments[1].source,
         ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {
-            kind: NumericLiteralKind::U64,
+            kind: NumericLiteralKind::U64(IntegerRadix::Decimal),
             ..
         })
     ));
