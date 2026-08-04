@@ -40,10 +40,12 @@ function or an exception API.
 `std::str` selectively imports that panic declaration for invalid byte and
 slice bounds, forming an ordinary two-module cycle with `std::error`. It also
 imports `std::str::parse_f64` and `std::str::format_f64` in one direction. The
-companions depend only on primitives, arrays, and their shared
-`std::str::bigunsigned_helper`; they do not import `Str`. The error cycle has
-no initialization-order consequences because modules contain no executable
-top-level state.
+parser depends on primitives, arrays, and `std::str::bigunsigned_helper`. The
+formatter imports `std::f64` for exact bit decomposition and `Str` only to read
+the immortal compact-table literal during lazy initialization. That reciprocal
+`std::str` import is an ordinary source cycle, not a backing-storage escape.
+The error and formatter cycles have no eager initialization order: the
+formatter publishes its private cached-power array only on first use.
 
 A module and descendant module may coexist: the `std/str.ska` source is
 `std::str`, while files below `std/str/` are distinct descendant modules. The
@@ -52,9 +54,13 @@ validates its range and is available for direct decimal parsing. `Str.to_f64`
 borrows its private backing only for that call; the call-scoped alias cannot
 expose the backing to callers. The formatter's public `format(value: f64) ->
 shared u8[]` requires a finite value because the `Str` facade owns special
-spellings. Stateless conversion support remains private module code; the
-public `BigUnsigned` helper is a narrow implementation entry point required by
-both companion modules, not part of the supported `Str` conversion surface.
+spellings. It uses fixed-width Ryū arithmetic, lazily decodes one 832-byte
+encoding held in five immortal literal sections into a reusable private static
+table, and allocates only the returned exact-length array per value. The public
+`BigUnsigned` helper remains
+a narrow parser implementation entry point, not part of the supported `Str`
+conversion surface. Third-party-derived standard-library code is listed in
+[Third-party notices](THIRD_PARTY.md).
 
 Import and call the panic intrinsic as a standalone statement:
 

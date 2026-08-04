@@ -135,6 +135,17 @@ fn direct_call(statement: &ResolvedStatement) -> &ResolvedDirectCallExpr {
     call
 }
 
+fn is_io_intrinsic(intrinsic: Intrinsic) -> bool {
+    matches!(
+        intrinsic,
+        Intrinsic::IoStandardHandle
+            | Intrinsic::IoOpen
+            | Intrinsic::IoRead
+            | Intrinsic::IoWrite
+            | Intrinsic::IoClose
+    )
+}
+
 #[test]
 fn canonical_io_intrinsics_have_exact_stable_identities_and_no_definitions() {
     let (_workspace, graph) = load_module_sources(
@@ -151,6 +162,7 @@ fn canonical_io_intrinsics_have_exact_stable_identities_and_no_definitions() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -163,7 +175,7 @@ fn canonical_io_intrinsics_have_exact_stable_identities_and_no_definitions() {
         .declarations
         .iter()
         .filter_map(|declaration| match declaration.linkage {
-            ResolvedFunctionLinkage::Intrinsic { intrinsic } if intrinsic != Intrinsic::Panic => {
+            ResolvedFunctionLinkage::Intrinsic { intrinsic } if is_io_intrinsic(intrinsic) => {
                 Some((declaration.name.as_str(), intrinsic))
             }
             _ => None,
@@ -182,7 +194,7 @@ fn canonical_io_intrinsics_have_exact_stable_identities_and_no_definitions() {
     for declaration in output.program.declarations.iter().filter(|declaration| {
         matches!(
             declaration.linkage,
-            ResolvedFunctionLinkage::Intrinsic { intrinsic } if intrinsic != Intrinsic::Panic
+            ResolvedFunctionLinkage::Intrinsic { intrinsic } if is_io_intrinsic(intrinsic)
         )
     }) {
         assert_eq!(declaration.visibility, ResolvedVisibility::Private);
@@ -230,6 +242,7 @@ fn io_intrinsic_calls_type_to_dedicated_target_independent_hir() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -324,6 +337,7 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
                     "std/str/bigunsigned_helper.ska",
                     CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
                 ),
+                ("std/f64.ska", CANONICAL_F64_SOURCE),
                 ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
                 ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
             ],
@@ -362,6 +376,7 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -391,6 +406,7 @@ fn rejects_private_io_imports_and_manufactured_intrinsics() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -447,6 +463,7 @@ fn rejects_malformed_replacement_io_intrinsic_declarations() {
                     "std/str/bigunsigned_helper.ska",
                     CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
                 ),
+                ("std/f64.ska", CANONICAL_F64_SOURCE),
                 ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
                 ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
             ],
@@ -495,6 +512,7 @@ fn all_supported_spellings_resolve_to_one_panic_intrinsic_identity() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -552,6 +570,7 @@ fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -614,6 +633,7 @@ fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
                 "std/str/bigunsigned_helper.ska",
                 CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
             ),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
             ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
         ],
@@ -693,6 +713,7 @@ fn rejects_noncanonical_and_malformed_panic_intrinsics_during_resolution() {
                     "std/str/bigunsigned_helper.ska",
                     CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE,
                 ),
+                ("std/f64.ska", CANONICAL_F64_SOURCE),
                 ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
                 ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
             ],

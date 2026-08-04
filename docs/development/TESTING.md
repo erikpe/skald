@@ -473,7 +473,8 @@ String coverage follows the
   checked-in exact-fraction midpoint oracle, shortest binary64 formatting
   across every exponent field and bounded exhaustive significand sweeps
   against an independent generated oracle, bit-identical formatter/parser
-  round trips, and repeated execution; and
+  round trips, repeated execution, and reuse of the lazily decoded compact Ryū
+  table throughout the 2,929-input formatting corpus; and
 - `pipeline_determinism` compares canonical graph, diagnostics, resolved HIR,
   verified MIR, and assembly across independent processes and provider/source
   permutations.

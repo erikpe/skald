@@ -425,7 +425,9 @@ fn primitive_statics_compose_with_bit_intrinsics_and_io_scalar_arguments() {
     let dump = dump_hir(&output.hir.unwrap());
     assert!(dump.contains("bit_reinterpretation f64.u64"));
     assert!(dump.contains("bit_reinterpretation u64.f64"));
-    assert_eq!(dump.matches("StaticRead").count(), 7);
+    // Seven reads belong to the application. The canonical formatter's lazy
+    // Ryū cache contributes eight more static reads to the complete graph.
+    assert_eq!(dump.matches("StaticRead").count(), 15);
 }
 
 #[test]

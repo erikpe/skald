@@ -236,7 +236,7 @@ The required asymptotic behavior is:
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 | Format a boolean | `O(1)` literal-backed result |
 | Format an integer | `O(d)` final-backing allocation and decimal digit emission |
-| Format a binary64 value | `O(1)` over the fixed binary64 domain: one exact-length result allocation plus bounded 1280-bit interval work and at most 17 significant-digit probes |
+| Format a binary64 value | `O(1)` over the fixed binary64 domain: one exact-length result allocation plus bounded fixed-width Ryū arithmetic; the first non-small finite value also initializes one reusable 832-byte cached-power table |
 | Parse a boolean | `O(1)` exact byte comparison with no allocation |
 | Parse an integer | `O(n)` checked decimal accumulation with no allocation |
 | Parse a binary64 value | `O(n)` allocation-free scan and small-value conversion when provably safe; otherwise one `O(n)` significand rescan plus bounded 4096-bit exact rounding storage and work |
@@ -275,19 +275,25 @@ binary64, convert without allocating numeric storage. Other finite values are
 rescanned into the bounded exact-rounding representation; the fast path does
 not approximate or replace that fallback.
 
-Binary64 formatting decomposes a finite magnitude using exact powers of two,
-constructs its exact nearest/even rounding interval, and searches decimal
-significand lengths from 1 through 17. Bounded base-2^32 arithmetic compares
-candidate integers to the interval, then selects the candidate nearest the
-exact value with an even final decimal digit on a tie. The formatter uses 40
-limbs (1280 bits), while the parser uses 128 limbs for its separately proven
-input bound. Both use the checked fixed-capacity `BigUnsigned` implementation
-in `std::str::bigunsigned_helper`; callers choose capacity, and no operation
-grows numeric storage from input. The helper owns its limb array and has no
-access to a `Str` descriptor or backing array. Presentation then applies the
-frozen plain/scientific threshold and allocates the final backing once. No host
-formatter, parser call, runtime conversion, or locale state participates in
-production.
+Binary64 formatting reads the exact IEEE-754 representation through
+`std::f64::to_bits` and applies Ryū's fixed-width nearest/even interval
+algorithm. Values in Ryū's small-integer range avoid the cached-power table.
+Other finite nonzero values reconstruct the needed power from Ryū's
+size-optimized constants using portable `64 × 64 -> 128` limb arithmetic. The
+constants occupy an 832-byte canonical little-endian encoding split into five
+immortal string-literal sections. On first use, the formatter decodes them
+into one zero-default static 104-word `u64[]`
+and reuses that process-lifetime array; table decoding and numeric conversion
+perform no per-value allocation. The current single-threaded execution model
+permits the empty static array to serve as the initialization sentinel.
+
+The parser alone uses the checked fixed-capacity `BigUnsigned` implementation
+in `std::str::bigunsigned_helper`, with 128 limbs for its separately proven
+input bound. The helper owns its limb array and has no access to a `Str`
+descriptor or backing array. Formatting presentation applies the frozen
+plain/scientific threshold directly into one exact-length result backing. No
+host formatter, parser call, runtime conversion, or locale state participates
+in production.
 
 The supported primitive conversion surface on `Str` is exactly:
 

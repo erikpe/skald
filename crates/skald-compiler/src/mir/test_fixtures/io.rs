@@ -2,7 +2,7 @@ use crate::{
     mir::{lower_hir, MirProgram},
     resolve::resolve_module_graph,
     test_support::{
-        load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_IO_SOURCE,
+        load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
         CANONICAL_STR_BIGUNSIGNED_HELPER_SOURCE, CANONICAL_STR_FORMAT_F64_SOURCE,
         CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_SOURCE,
     },
@@ -68,6 +68,7 @@ fn lower_io_program(app: &str, io: &str) -> MirProgram {
             ("app.ska", app),
             ("std/io.ska", io),
             ("std/error.ska", CANONICAL_ERROR_SOURCE),
+            ("std/f64.ska", CANONICAL_F64_SOURCE),
             ("std/str.ska", CANONICAL_STR_SOURCE),
             (
                 "std/str/bigunsigned_helper.ska",
