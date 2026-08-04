@@ -44,14 +44,14 @@ fn _format_decimal_magnitude(
     var index: i64 = (i64) text_length - 1;
 
     while (digit_count > 0u) {
-        storage->[index] = (u8) (remaining % 10u + 48u);
+        storage->[index] = (u8) (remaining % 10u + (u64) '0');
         remaining = remaining / 10u;
         digit_count = digit_count - 1u;
         index = index - 1;
     }
 
     if (negative) {
-        storage->[0] = 45u8;
+        storage->[0] = '-';
     }
     return storage;
 }

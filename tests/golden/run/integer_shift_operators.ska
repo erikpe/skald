@@ -67,24 +67,24 @@ fn make_trace(marker: i64, value: u64) -> shared Trace {
 
 fn main() -> i64 {
     std::io::println_i64(1 << 0u);
-    std::io::println_i64(1 << 63u);
+    std::io::println_i64(0x1 << 63u);
     std::io::println_i64(-8 >> 1u);
     std::io::println_i64(-1 >> 63u);
 
-    std::io::println_u64(1u << 63u);
-    std::io::println_u64(18446744073709551615u >> 63u);
-    std::io::println_u64(9223372036854775808u << 1u);
+    std::io::println_u64(0x1u << 63u);
+    std::io::println_u64(0xffffffffffffffffu >> 63u);
+    std::io::println_u64(0x8000000000000000u << 1u);
 
-    std::io::println_u8(1u8 << 7u);
-    std::io::println_u8(129u8 >> 7u);
-    std::io::println_u8(129u8 << 1u);
-    std::io::println_u8(shift_return(240u8));
+    std::io::println_u8(0x01u8 << 7u);
+    std::io::println_u8(0x81u8 >> 7u);
+    std::io::println_u8(0x81u8 << 1u);
+    std::io::println_u8(shift_return(0xf0u8));
 
     var assigned: u64 = 0u;
     assigned = shift_parameter(3u, 4u);
     consume(assigned);
 
-    var holder: Holder = Holder(128u, 3u);
+    var holder: Holder = Holder(0x80u, 3u);
     std::io::println_u64(holder.bits >> holder.count);
     holder.bits = holder.bits << 1u;
     std::io::println_u64(holder.bits);
@@ -101,8 +101,8 @@ fn main() -> i64 {
     values[1] = values[0] >> 2u;
     std::io::println_u64(values[1]);
 
-    std::io::println_u64(256u >> 1u >> 2u);
-    std::io::println_u64(1u << (2u + 3u) & 63u);
+    std::io::println_u64(0x100u >> 1u >> 2u);
+    std::io::println_u64(0x1u << (2u + 3u) & 0x3fu);
 
     var probe: Probe = Probe();
     std::io::println_u64(probe.observe(8u, 1) >> probe.observe(1u, 2));
@@ -120,7 +120,7 @@ fn main() -> i64 {
         make_trace(51, 16u)->read() >> make_trace(52, 2u)->read()
     );
 
-    if ((1u8 << 7u) == 128u8 && (255u8 >> 7u) == 1u8) {
+    if ((0x01u8 << 7u) == 0x80u8 && (0xffu8 >> 7u) == 0x01u8) {
         return 93;
     }
     return 1;

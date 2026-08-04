@@ -10,7 +10,7 @@ public fn parse_i64(
     var negative: bool = false;
     var digit_start: u64 = 0u;
     var limit: u64 = 9223372036854775807u;
-    if (storage[start] == 45u8) {
+    if (storage[start] == '-') {
         negative = true;
         digit_start = 1u;
         limit = 9223372036854775808u;
@@ -106,11 +106,11 @@ fn _parse_decimal_magnitude(
     var index: u64 = digit_start;
     while (index < length) {
         var byte_value: u8 = storage[start + (i64) index];
-        if (byte_value < 48u8 || byte_value > 57u8) {
+        if (byte_value < '0' || byte_value > '9') {
             return none;
         }
 
-        var digit: u64 = (u64) (byte_value - 48u8);
+        var digit: u64 = (u64) (byte_value - '0');
         if (
             value > limit_quotient
             || (value == limit_quotient && digit > limit_remainder)

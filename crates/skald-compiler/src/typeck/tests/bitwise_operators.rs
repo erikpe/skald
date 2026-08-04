@@ -2,9 +2,9 @@ use super::*;
 use crate::hir::{HirIntegerBitwiseOperation, HirIntegerType, HirUnaryOperation};
 
 const INTEGER_TYPES: &[(HirIntegerType, &str, &str, &str)] = &[
-    (HirIntegerType::I64, "i64", "-1", "42"),
-    (HirIntegerType::U64, "u64", "1u", "42u"),
-    (HirIntegerType::U8, "u8", "1u8", "42u8"),
+    (HirIntegerType::I64, "i64", "-0x1", "0x2a"),
+    (HirIntegerType::U64, "u64", "0x1u", "0x2au"),
+    (HirIntegerType::U8, "u8", "0x1u8", "0x2au8"),
 ];
 
 const BINARY_OPERATORS: &[(HirIntegerBitwiseOperation, &str)] = &[
@@ -165,7 +165,7 @@ fn rejects_every_noninteger_family_with_focused_actual_type_diagnostics() {
 fn source_bitwise_composition_has_deterministic_exact_hir_and_mir_dumps() {
     let output = check_text(concat!(
         "fn mix(left: u8, right: u8) -> bool {\n",
-        "  return (~left + 1u8 & (u8) right ^ left | right) == 255u8 && true;\n",
+        "  return (~left + 0x01u8 & (u8) right ^ left | right) == 0xffu8 && true;\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     ));

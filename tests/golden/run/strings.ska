@@ -36,14 +36,14 @@ fn main() -> i64 {
     std::io::println_u8(middle.byte(-1));
 
     var caller: u8[] = u8[](2u);
-    caller[0] = 65u8;
-    caller[1] = 66u8;
+    caller[0] = 'A';
+    caller[1] = 'B';
     var frozen: Str = Str.from_bytes(caller);
-    caller[0] = 90u8;
+    caller[0] = 'Z';
     observe(frozen);
 
     var independent: u8[] = middle.to_bytes();
-    independent[0] = 33u8;
+    independent[0] = '!';
     std::io::println_u8(middle.byte(0));
     std::io::println_u8(independent[0]);
 

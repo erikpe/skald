@@ -932,12 +932,12 @@ fn integer_bitwise_and_shift_phase_dump() -> String {
         "fn read() -> u64 { return self.value; } destroy {} }\n",
         "fn make(value: u64) -> shared Trace { return new Trace(value); }\n",
         "fn mix(ref bits: Bits, optional: u8?, values: u8[]) -> bool { ",
-        "return (((~bits.value + 1u8 << bits.count) >> 1u) & values[0] ",
-        "^ optional! | 1u8) == 7u8 && true; }\n",
-        "fn cleanup() -> u64 { return make(16u)->read() >> make(2u)->read(); }\n",
-        "fn main() -> i64 { var bits: Bits = Bits(3u8, 2u); ",
-        "var optional: u8? = 4u8; var values: u8[] = u8[](1u); values[0] = 7u8; ",
-        "if (mix(bits, optional, values) || cleanup() == 4u) { return 0; } return 1; }\n",
+        "return (((~bits.value + 0x01u8 << bits.count) >> 1u) & values[0] ",
+        "^ optional! | 0x01u8) == 0x07u8 && true; }\n",
+        "fn cleanup() -> u64 { return make(0x10u)->read() >> make(2u)->read(); }\n",
+        "fn main() -> i64 { var bits: Bits = Bits(0x03u8, 2u); ",
+        "var optional: u8? = 0x04u8; var values: u8[] = u8[](1u); values[0] = 0x07u8; ",
+        "if (mix(bits, optional, values) || cleanup() == 0x04u) { return 0; } return 1; }\n",
     ))
 }
 

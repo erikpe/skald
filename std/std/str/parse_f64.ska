@@ -39,7 +39,7 @@ fn _parse_decimal_f64(
 
     var negative: bool = false;
     var index: u64 = 0u;
-    if (storage[start] == 45u8) {
+    if (storage[start] == '-') {
         negative = true;
         index = 1u;
     }
@@ -59,13 +59,13 @@ fn _parse_decimal_f64(
 
     while (index < length) {
         var byte_value: u8 = storage[start + (i64) index];
-        if (byte_value >= 48u8 && byte_value <= 57u8) {
+        if (byte_value >= '0' && byte_value <= '9') {
             saw_digit = true;
             if (!saw_point) {
                 digits_before_point = digits_before_point + 1u;
             }
 
-            var digit: u64 = (u64) (byte_value - 48u8);
+            var digit: u64 = (u64) (byte_value - '0');
             if (!saw_nonzero && digit != 0u) {
                 saw_nonzero = true;
                 first_nonzero_index = digit_index;
@@ -85,7 +85,7 @@ fn _parse_decimal_f64(
             index = index + 1u;
             continue;
         }
-        if (byte_value == 46u8 && !saw_point) {
+        if (byte_value == '.' && !saw_point) {
             saw_point = true;
             index = index + 1u;
             continue;
@@ -101,7 +101,7 @@ fn _parse_decimal_f64(
     var exponent_magnitude: u64 = 0u;
     if (index < length) {
         var exponent_marker: u8 = storage[start + (i64) index];
-        if (exponent_marker != 101u8 && exponent_marker != 69u8) {
+        if (exponent_marker != 'e' && exponent_marker != 'E') {
             return none;
         }
         index = index + 1u;
@@ -110,8 +110,8 @@ fn _parse_decimal_f64(
         }
 
         var exponent_sign: u8 = storage[start + (i64) index];
-        if (exponent_sign == 43u8 || exponent_sign == 45u8) {
-            exponent_negative = exponent_sign == 45u8;
+        if (exponent_sign == '+' || exponent_sign == '-') {
+            exponent_negative = exponent_sign == '-';
             index = index + 1u;
         }
         if (index == length) {
@@ -128,11 +128,11 @@ fn _parse_decimal_f64(
         var cap_remainder: u64 = exponent_cap % 10u;
         while (index < length) {
             var exponent_byte: u8 = storage[start + (i64) index];
-            if (exponent_byte < 48u8 || exponent_byte > 57u8) {
+            if (exponent_byte < '0' || exponent_byte > '9') {
                 return none;
             }
 
-            var exponent_digit: u64 = (u64) (exponent_byte - 48u8);
+            var exponent_digit: u64 = (u64) (exponent_byte - '0');
             if (exponent_magnitude < exponent_cap) {
                 if (
                     exponent_magnitude > cap_quotient
@@ -252,7 +252,7 @@ fn _try_eisel_lemire_f64(
 
     // A finite decimal that rounds to infinity is outside the frozen parser
     // range and therefore remains an optional failure.
-    if (rounded.biased_exponent == 2047) {
+    if (rounded.biased_exponent == 0x7ff) {
         return none;
     }
 
@@ -261,7 +261,7 @@ fn _try_eisel_lemire_f64(
         | ((u64) rounded.biased_exponent << 52u)
     );
     if (negative) {
-        bits = bits | 9223372036854775808u;
+        bits = bits | 0x8000000000000000u;
     }
     return std::f64::from_bits(bits);
 }
@@ -274,7 +274,7 @@ fn _compute_eisel_lemire(
         return _BiasedF64(0u, 0);
     }
     if (decimal_exponent > 308) {
-        return _BiasedF64(0u, 2047);
+        return _BiasedF64(0u, 0x7ff);
     }
 
     var leading_zeroes: u64 = _leading_zeroes(significand);
@@ -285,7 +285,7 @@ fn _compute_eisel_lemire(
     );
 
     if (
-        product.low == 18446744073709551615u
+        product.low == 0xffffffffffffffffu
         && (decimal_exponent < -27 || decimal_exponent > 55)
     ) {
         return _BiasedF64();
@@ -307,10 +307,10 @@ fn _compute_eisel_lemire(
             return _BiasedF64(0u, 0);
         }
         mantissa = mantissa >> (u64) subnormal_shift;
-        mantissa = mantissa + (mantissa & 1u);
+        mantissa = mantissa + (mantissa & 0x1u);
         mantissa = mantissa >> 1u;
         var subnormal_exponent: i64 = 0;
-        if (mantissa >= 4503599627370496u) {
+        if (mantissa >= 0x0010000000000000u) {
             subnormal_exponent = 1;
         }
         return _BiasedF64(mantissa, subnormal_exponent);
@@ -320,21 +320,21 @@ fn _compute_eisel_lemire(
         product.low <= 1u
         && decimal_exponent >= -4
         && decimal_exponent <= 23
-        && (mantissa & 3u) == 1u
+        && (mantissa & 0x3u) == 0x1u
         && (mantissa << mantissa_shift) == product.high
     ) {
-        mantissa = mantissa & 18446744073709551614u;
+        mantissa = mantissa & 0xfffffffffffffffeu;
     }
 
-    mantissa = mantissa + (mantissa & 1u);
+    mantissa = mantissa + (mantissa & 0x1u);
     mantissa = mantissa >> 1u;
-    if (mantissa >= 9007199254740992u) {
-        mantissa = 4503599627370496u;
+    if (mantissa >= 0x0020000000000000u) {
+        mantissa = 0x0010000000000000u;
         biased_exponent = biased_exponent + 1;
     }
-    mantissa = mantissa & 4503599627370495u;
-    if (biased_exponent >= 2047) {
-        return _BiasedF64(0u, 2047);
+    mantissa = mantissa & 0x000fffffffffffffu;
+    if (biased_exponent >= 0x7ff) {
+        return _BiasedF64(0u, 0x7ff);
     }
     return _BiasedF64(mantissa, biased_exponent);
 }
@@ -349,7 +349,7 @@ fn _compute_product_approx(
     // With 56 requested precision bits, an all-one low suffix can carry into
     // the rounding decision. One more high product supplies the required
     // 192-bit approximation without a general wide integer.
-    if ((first.high & 255u) == 255u) {
+    if ((first.high & 0xffu) == 0xffu) {
         var second_high: u64 = _multiply_high(significand, power.high);
         var previous_low: u64 = first.low;
         first.low = first.low + second_high;
@@ -365,7 +365,7 @@ fn _multiply_wide(left: u64, right: u64) -> _WideProduct {
 }
 
 fn _multiply_high(left: u64, right: u64) -> u64 {
-    var mask: u64 = 4294967295u;
+    var mask: u64 = 0xffffffffu;
     var left_low: u64 = left & mask;
     var left_high: u64 = left >> 32u;
     var right_low: u64 = right & mask;
@@ -383,7 +383,7 @@ fn _multiply_high(left: u64, right: u64) -> u64 {
 fn _leading_zeroes(value: u64) -> u64 {
     var remaining: u64 = value;
     var result: u64 = 0u;
-    while ((remaining & 9223372036854775808u) == 0u) {
+    while ((remaining & 0x8000000000000000u) == 0u) {
         remaining = remaining << 1u;
         result = result + 1u;
     }
@@ -473,10 +473,10 @@ fn _decode_hex_word(ref encoded: Str, start: u64) -> u64 {
 }
 
 fn _hex_digit(value: u8) -> u64 {
-    if (value <= 57u8) {
-        return (u64) (value - 48u8);
+    if (value <= '9') {
+        return (u64) (value - '0');
     }
-    return (u64) (value - 87u8);
+    return (u64) (value - 'a') + 10u;
 }
 
 fn _try_small_decimal_f64(
@@ -522,7 +522,7 @@ fn _try_small_decimal_f64(
     }
     if (
         adjusted_exponent < -22
-        || adjusted_significand > 9007199254740992u
+        || adjusted_significand > 0x0020000000000000u
     ) {
         return none;
     }
@@ -570,11 +570,11 @@ fn _parse_decimal_f64_exact(
 
     while (index < length) {
         var byte_value: u8 = storage[start + (i64) index];
-        if (byte_value == 101u8 || byte_value == 69u8) {
+        if (byte_value == 'e' || byte_value == 'E') {
             break;
         }
-        if (byte_value >= 48u8 && byte_value <= 57u8) {
-            var digit: u64 = (u64) (byte_value - 48u8);
+        if (byte_value >= '0' && byte_value <= '9') {
+            var digit: u64 = (u64) (byte_value - '0');
             if (!saw_nonzero && digit != 0u) {
                 saw_nonzero = true;
             }
@@ -707,7 +707,7 @@ fn _round_decimal_f64(
             if (!remainder.subtract_shifted(divisor, shift)) {
                 return none;
             }
-            quotient = quotient | (1u << shift);
+            quotient = quotient | (0x1u << shift);
         }
         quotient_shift = quotient_shift - 1;
     }
@@ -726,11 +726,11 @@ fn _round_decimal_f64(
         quotient = quotient + 1u;
     }
 
-    if (quotient == 9007199254740992u) {
+    if (quotient == 0x0020000000000000u) {
         if (binary_exponent == 1023) {
             return none;
         }
-        quotient = 4503599627370496u;
+        quotient = 0x0010000000000000u;
         unit_exponent = unit_exponent + 1;
     }
 
@@ -763,14 +763,14 @@ fn _compose_binary_f64(
     significand: u64,
     exponent: i64
 ) -> f64 {
-    if (exponent == -1074 && significand < 4503599627370496u) {
+    if (exponent == -1074 && significand < 0x0010000000000000u) {
         return std::f64::from_bits(significand);
     }
 
     var unbiased_exponent: i64 = exponent + 52;
     var bits: u64 = (
         ((u64) (unbiased_exponent + 1023) << 52u)
-        | (significand & 4503599627370495u)
+        | (significand & 0x000fffffffffffffu)
     );
     return std::f64::from_bits(bits);
 }
@@ -825,7 +825,7 @@ public class BigUnsigned {
         if (value != 0u) {
             required = 1u;
         }
-        if (value > 4294967295u) {
+        if (value > 0xffffffffu) {
             required = 2u;
         }
         if (required > self._limbs.len()) {
@@ -835,7 +835,7 @@ public class BigUnsigned {
         self._length = 0u;
         var remaining: u64 = value;
         while (remaining != 0u) {
-            self._limbs[(i64) self._length] = remaining & 4294967295u;
+            self._limbs[(i64) self._length] = remaining & 0xffffffffu;
             self._length = self._length + 1u;
             remaining = remaining >> 32u;
         }
@@ -854,7 +854,7 @@ public class BigUnsigned {
         var index: u64 = 0u;
         while (index < self._length) {
             var product: u64 = self._limbs[(i64) index] * multiplier + carry;
-            self._limbs[(i64) index] = product & 4294967295u;
+            self._limbs[(i64) index] = product & 0xffffffffu;
             carry = product >> 32u;
             index = index + 1u;
         }
@@ -863,7 +863,7 @@ public class BigUnsigned {
             if (self._length == self._limbs.len()) {
                 return false;
             }
-            self._limbs[(i64) self._length] = carry & 4294967295u;
+            self._limbs[(i64) self._length] = carry & 0xffffffffu;
             self._length = self._length + 1u;
             carry = carry >> 32u;
         }
@@ -919,7 +919,7 @@ public class BigUnsigned {
             while (index < self._length) {
                 var value: u64 = self._limbs[(i64) index];
                 self._limbs[(i64) index] = (
-                    ((value << bit_shift) & 4294967295u) | carry
+                    ((value << bit_shift) & 0xffffffffu) | carry
                 );
                 carry = value >> (32u - bit_shift);
                 index = index + 1u;
@@ -1011,7 +1011,7 @@ public class BigUnsigned {
                 self._limbs[(i64) index] = current - subtrahend;
                 borrow = 0u;
             } else {
-                self._limbs[(i64) index] = 4294967296u + current - subtrahend;
+                self._limbs[(i64) index] = 0x100000000u + current - subtrahend;
                 borrow = 1u;
             }
             index = index + 1u;
@@ -1022,7 +1022,7 @@ public class BigUnsigned {
                 self._limbs[(i64) index] = current - 1u;
                 borrow = 0u;
             } else {
-                self._limbs[(i64) index] = 4294967295u;
+                self._limbs[(i64) index] = 0xffffffffu;
             }
             index = index + 1u;
         }
@@ -1050,7 +1050,7 @@ public class BigUnsigned {
         var result: u64 = 0u;
         if (source < self._length) {
             result = (
-                (self._limbs[(i64) source] << bit_shift) & 4294967295u
+                (self._limbs[(i64) source] << bit_shift) & 0xffffffffu
             );
         }
         if (bit_shift != 0u && source > 0u && source - 1u < self._length) {

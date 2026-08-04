@@ -48,7 +48,7 @@ fn shift_precedence_is_between_additive_and_bitwise_tiers() {
 fn shift_composes_with_prefix_postfix_presence_and_logical_tiers() {
     let source = concat!(
         "fn inspect(value: u8?, count: u64, flag: bool) -> bool {\n",
-        "  return ~value! + 1u8 << count & 255u8 ^ 1u8 | 2u8 is some && flag || false;\n",
+        "  return ~value! + 0x01u8 << count & 0xffu8 ^ 0x01u8 | 0x02u8 is some && flag || false;\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     );

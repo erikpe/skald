@@ -10,8 +10,8 @@ from std::str import Str;
 public fn format(value: f64) -> shared u8[] {
     var bits: u64 = std::f64::to_bits(value);
     var negative: bool = (bits >> 63u) != 0u;
-    var ieee_mantissa: u64 = bits & 4503599627370495u;
-    var ieee_exponent: u64 = (bits >> 52u) & 2047u;
+    var ieee_mantissa: u64 = bits & 0x000fffffffffffffu;
+    var ieee_exponent: u64 = (bits >> 52u) & 0x7ffu;
 
     if (ieee_exponent == 0u && ieee_mantissa == 0u) {
         return _zero(negative);
@@ -50,9 +50,9 @@ fn _small_integer(
         return _RyuDecimal();
     }
 
-    var mantissa: u64 = 4503599627370496u | ieee_mantissa;
+    var mantissa: u64 = 0x0010000000000000u | ieee_mantissa;
     var shift: u64 = (u64) (-binary_exponent);
-    var mask: u64 = (1u << shift) - 1u;
+    var mask: u64 = (0x1u << shift) - 0x1u;
     if ((mantissa & mask) != 0u) {
         return _RyuDecimal();
     }
@@ -77,7 +77,7 @@ fn _to_shortest_decimal(
         binary_mantissa = ieee_mantissa;
     } else {
         binary_exponent = (i64) ieee_exponent - 1077;
-        binary_mantissa = 4503599627370496u | ieee_mantissa;
+        binary_mantissa = 0x0010000000000000u | ieee_mantissa;
     }
 
     var accept_bounds: bool = binary_mantissa % 2u == 0u;
@@ -239,7 +239,7 @@ fn _mul_shift(mantissa: u64, ref power: _RyuPower, shift: i64) -> u64 {
 }
 
 fn _multiply_high(left: u64, right: u64) -> u64 {
-    var mask: u64 = 4294967295u;
+    var mask: u64 = 0xffffffffu;
     var left_low: u64 = left & mask;
     var left_high: u64 = left >> 32u;
     var right_low: u64 = right & mask;
@@ -284,7 +284,7 @@ fn _multiple_of_power5(value: u64, exponent: u64) -> bool {
 }
 
 fn _multiple_of_power2(value: u64, exponent: u64) -> bool {
-    return (value & ((1u << exponent) - 1u)) == 0u;
+    return (value & ((0x1u << exponent) - 0x1u)) == 0u;
 }
 
 fn _render(
@@ -326,12 +326,12 @@ fn _render_plain(
             sign_length + 2u + leading_zeroes + digit_count
         );
         var output: u64 = _write_sign(*result, negative);
-        result->[(i64) output] = 48u8;
-        result->[(i64) (output + 1u)] = 46u8;
+        result->[(i64) output] = '0';
+        result->[(i64) (output + 1u)] = '.';
         output = output + 2u;
         var zero: u64 = 0u;
         while (zero < leading_zeroes) {
-            result->[(i64) output] = 48u8;
+            result->[(i64) output] = '0';
             output = output + 1u;
             zero = zero + 1u;
         }
@@ -350,12 +350,12 @@ fn _render_plain(
         output = output + digit_count;
         var zero: u64 = 0u;
         while (zero < trailing_zeroes) {
-            result->[(i64) output] = 48u8;
+            result->[(i64) output] = '0';
             output = output + 1u;
             zero = zero + 1u;
         }
-        result->[(i64) output] = 46u8;
-        result->[(i64) (output + 1u)] = 48u8;
+        result->[(i64) output] = '.';
+        result->[(i64) (output + 1u)] = '0';
         return result;
     }
 
@@ -404,9 +404,9 @@ fn _render_scientific(
     );
     var output: u64 = _write_sign(*result, negative);
     if (digit_count == 1u) {
-        result->[(i64) output] = (u8) (significand + 48u);
-        result->[(i64) (output + 1u)] = 46u8;
-        result->[(i64) (output + 2u)] = 48u8;
+        result->[(i64) output] = (u8) (significand + (u64) '0');
+        result->[(i64) (output + 1u)] = '.';
+        result->[(i64) (output + 2u)] = '0';
         output = output + 3u;
     } else {
         _write_digits_with_point(
@@ -418,10 +418,10 @@ fn _render_scientific(
         );
         output = output + digit_count + 1u;
     }
-    result->[(i64) output] = 69u8;
+    result->[(i64) output] = 'E';
     output = output + 1u;
     if (exponent_negative) {
-        result->[(i64) output] = 45u8;
+        result->[(i64) output] = '-';
         output = output + 1u;
     }
     _write_digits(
@@ -435,7 +435,7 @@ fn _render_scientific(
 
 fn _write_sign(mut ref destination: u8[], negative: bool) -> u64 {
     if (negative) {
-        destination[0] = 45u8;
+        destination[0] = '-';
         return 1u;
     }
     return 0u;
@@ -452,7 +452,7 @@ fn _write_digits(
     var index: u64 = 0u;
     while (divisor > 0u) {
         destination[(i64) (start + index)] = (
-            (u8) (remaining / divisor + 48u)
+            (u8) (remaining / divisor + (u64) '0')
         );
         remaining = remaining % divisor;
         divisor = divisor / 10u;
@@ -472,13 +472,15 @@ fn _write_digits_with_point(
     var digit: u64 = 0u;
     var output: u64 = start;
     while (divisor > 0u) {
-        destination[(i64) output] = (u8) (remaining / divisor + 48u);
+        destination[(i64) output] = (
+            (u8) (remaining / divisor + (u64) '0')
+        );
         remaining = remaining % divisor;
         divisor = divisor / 10u;
         digit = digit + 1u;
         output = output + 1u;
         if (digit == point_after) {
-            destination[(i64) output] = 46u8;
+            destination[(i64) output] = '.';
             output = output + 1u;
         }
     }
@@ -512,12 +514,12 @@ fn _zero(negative: bool) -> shared u8[] {
     var result: shared u8[] = new u8[](length);
     var start: i64 = 0;
     if (negative) {
-        result->[0] = 45u8;
+        result->[0] = '-';
         start = 1;
     }
-    result->[start] = 48u8;
-    result->[start + 1] = 46u8;
-    result->[start + 2] = 48u8;
+    result->[start] = '0';
+    result->[start + 1] = '.';
+    result->[start + 2] = '0';
     return result;
 }
 
@@ -621,7 +623,7 @@ class _RyuTables {
             (i64) (start + index / 32u)
         ];
         var shift: u64 = (index % 32u) * 2u;
-        return (packed >> shift) & 3u;
+        return (packed >> shift) & 0x3u;
     }
 
     private static fn _ensure() -> unit {

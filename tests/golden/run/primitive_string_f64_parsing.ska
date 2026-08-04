@@ -35,7 +35,7 @@ fn main() -> i64 {
     var start: u64 = 0u;
     var index: u64 = 0u;
     while (index < corpus.len()) {
-        if (corpus.byte((i64) index) == 10u8) {
+        if (corpus.byte((i64) index) == '\n') {
             observe(corpus.slice((i64) start, (i64) index));
             start = index + 1u;
         }

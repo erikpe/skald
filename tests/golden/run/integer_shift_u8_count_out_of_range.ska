@@ -1,4 +1,4 @@
 fn main() -> i64 {
-    var result: u8 = 1u8 << 8u;
+    var result: u8 = 0x01u8 << 8u;
     return (i64) result;
 }

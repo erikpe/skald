@@ -44,12 +44,12 @@ fn main() -> i64 {
     values[1] = 3.0;
     var optional: f64? = 2.0;
     var flags: bool[] = bool[](1u);
-    var byte: u8 = ((~1u8 & 15u8) | (16u8 ^ 2u8)) >> 2u;
+    var byte: u8 = ((~0x01u8 & 0x0fu8) | (0x10u8 ^ 0x02u8)) >> 2u;
 
     var selected: bool = values[0] / optional! + values[1] * 2.0 - 1.0 == 8.0
         && floor_quotient(-7, 3) == -3
         && -7 % 3 == 2
-        && byte == 7u8
+        && byte == 0x07u8
         && -8 >> 2u == -2
         && 1u << 63u > 0u
         && optional is some
@@ -101,6 +101,6 @@ fn main() -> i64 {
     std::io::println_bool(selected);
 
     std::io::println_bool(true || floor_quotient(1, 0) == 0);
-    std::io::println_bool(false && 1u8 << 8u == 0u8);
+    std::io::println_bool(false && 0x01u8 << 8u == 0x00u8);
     return 0;
 }

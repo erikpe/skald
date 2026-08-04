@@ -162,6 +162,12 @@ fixtures belong in a responsibility-named test module, not a general bag of
 defaults. Test-only compiler pipelines stop at the boundary named by the
 helper and assert only that earlier phases succeeded.
 
+Choose primitive literal spellings that communicate the fixture's intent.
+Use single-quoted `u8` literals for textual bytes, hexadecimal integers for
+masks and bit patterns, and decimal integers for counts, arithmetic examples,
+range-focused cases, and tests that deliberately cover decimal syntax. Tests
+of literal equivalence may retain multiple spellings side by side.
+
 MIR verifier tests may use the crate-visible constructors and mutation
 accessors under `cfg(test)`. These deliberately preserve explicit identities,
 types, ownership modes, and spans; they are not production API. Start from the

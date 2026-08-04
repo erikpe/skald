@@ -23,11 +23,11 @@ public fn compiler_probe() -> i64 {
     }
 
     var text: u8[] = u8[](5u);
-    text[0] = 88u8;
-    text[1] = 88u8;
-    text[2] = 79u8;
-    text[3] = 75u8;
-    text[4] = 10u8;
+    text[0] = 'X';
+    text[1] = 'X';
+    text[2] = 'O';
+    text[3] = 'K';
+    text[4] = '\n';
     if (_io_write(output, text, dynamic_offset()) != 3) {
         return 3;
     }
@@ -38,30 +38,30 @@ public fn compiler_probe() -> i64 {
     }
 
     var missing: u8[] = u8[](11u);
-    missing[0] = 109u8;
-    missing[1] = 105u8;
-    missing[2] = 115u8;
-    missing[3] = 115u8;
-    missing[4] = 105u8;
-    missing[5] = 110u8;
-    missing[6] = 103u8;
-    missing[7] = 46u8;
-    missing[8] = 116u8;
-    missing[9] = 120u8;
-    missing[10] = 116u8;
+    missing[0] = 'm';
+    missing[1] = 'i';
+    missing[2] = 's';
+    missing[3] = 's';
+    missing[4] = 'i';
+    missing[5] = 'n';
+    missing[6] = 'g';
+    missing[7] = '.';
+    missing[8] = 't';
+    missing[9] = 'x';
+    missing[10] = 't';
     if (_io_open(missing, 0u8) >= 0) {
         return 5;
     }
 
     var path: u8[] = u8[](8u);
-    path[0] = 100u8;
-    path[1] = 97u8;
-    path[2] = 116u8;
-    path[3] = 97u8;
-    path[4] = 46u8;
-    path[5] = 116u8;
-    path[6] = 120u8;
-    path[7] = 116u8;
+    path[0] = 'd';
+    path[1] = 'a';
+    path[2] = 't';
+    path[3] = 'a';
+    path[4] = '.';
+    path[5] = 't';
+    path[6] = 'x';
+    path[7] = 't';
     var handle: i64 = _io_open(path, 0u8);
     if (handle < 0) {
         return 6;
@@ -71,7 +71,7 @@ public fn compiler_probe() -> i64 {
     if (_io_read(handle, destination, 2u) != 4) {
         return 7;
     }
-    if (destination[2] != 97u8 || destination[3] != 98u8 || destination[4] != 99u8 || destination[5] != 10u8) {
+    if (destination[2] != 'a' || destination[3] != 'b' || destination[4] != 'c' || destination[5] != '\n') {
         return 8;
     }
     if (_io_close(handle) != 0) {

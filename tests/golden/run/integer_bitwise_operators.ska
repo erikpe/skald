@@ -30,37 +30,37 @@ fn byte_identity(value: u8) -> u8 {
 fn main() -> i64 {
     std::io::println_i64(~0);
     std::io::println_i64(~-1);
-    std::io::println_i64(-9223372036854775808 ^ 9223372036854775807);
+    std::io::println_i64(-0x8000000000000000 ^ 0x7fffffffffffffff);
 
     std::io::println_u64(~0u);
-    std::io::println_u64(18446744073709551615u & 255u);
-    std::io::println_u64(9223372036854775808u | 255u);
-    std::io::println_u64(18446744073709551615u ^ 12297829382473034410u);
-    std::io::println_u64(combine(18446744073709551615u, 12297829382473034410u));
+    std::io::println_u64(0xffffffffffffffffu & 0xffu);
+    std::io::println_u64(0x8000000000000000u | 0xffu);
+    std::io::println_u64(0xffffffffffffffffu ^ 0xaaaaaaaaaaaaaaaau);
+    std::io::println_u64(combine(0xffffffffffffffffu, 0xaaaaaaaaaaaaaaaau));
 
-    std::io::println_u8(~0u8);
-    std::io::println_u8(243u8 & 63u8);
-    std::io::println_u8(128u8 | 15u8);
-    std::io::println_u8(255u8 ^ 165u8);
-    std::io::println_u8(240u8 & 204u8 ^ 15u8 | 1u8);
-    std::io::println_u8(byte_identity(85u8));
+    std::io::println_u8(~0x00u8);
+    std::io::println_u8(0xf3u8 & 0x3fu8);
+    std::io::println_u8(0x80u8 | 0x0fu8);
+    std::io::println_u8(0xffu8 ^ 0xa5u8);
+    std::io::println_u8(0xf0u8 & 0xccu8 ^ 0x0fu8 | 0x01u8);
+    std::io::println_u8(byte_identity(0x55u8));
 
     var assigned: u64 = 0u;
-    assigned = 61680u | 3855u;
+    assigned = 0xf0f0u | 0x0f0fu;
     std::io::println_u64(assigned);
 
-    var optional: u8? = 170u8;
+    var optional: u8? = 0xaau8;
     std::io::println_u8(~optional!);
 
     var values: u8[] = u8[](2u);
-    values[0] = 240u8;
-    values[1] = 15u8;
+    values[0] = 0xf0u8;
+    values[1] = 0x0fu8;
     std::io::println_u8(values[0] & values[1]);
     values[1] = ~values[0];
     std::io::println_u8(values[1]);
 
-    var probe: Probe = Probe(240u8);
-    std::io::println_u8(probe.masked(63u8));
+    var probe: Probe = Probe(0xf0u8);
+    std::io::println_u8(probe.masked(0x3fu8));
     probe.bits = ~probe.bits;
     std::io::println_u8(probe.bits);
 
@@ -72,9 +72,9 @@ fn main() -> i64 {
     std::io::println_i64(probe.sequence);
 
     std::io::println_bool(
-        (1u & 1u) == 1u && (~0u == 18446744073709551615u)
+        (0x1u & 0x1u) == 0x1u && (~0u == 0xffffffffffffffffu)
     );
-    if (((u8) (255u & 170u)) == 170u8) {
+    if (((u8) (0xffu & 0xaau)) == 0xaau8) {
         return 91;
     }
     return 1;

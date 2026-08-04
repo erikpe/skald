@@ -6,7 +6,7 @@ fn lowers_u64_payloads_arithmetic_and_integer_class_calls() {
         "fn seventh(a: u64, b: u64, c: u64, d: u64, e: u64, f: u64, g: u64) -> u64 {\n",
         "  return (a + b) * c - g;\n",
         "}\n",
-        "fn main() -> i64 { var value: u64 = seventh(18446744073709551615u, 2u, 3u, 4u, 5u, 6u, 7u); return 0; }",
+        "fn main() -> i64 { var value: u64 = seventh(0xffffffffffffffffu, 2u, 3u, 4u, 5u, 6u, 7u); return 0; }",
     ));
 
     assert!(output.contains("mov rax, 0xffffffffffffffff"));
@@ -23,7 +23,7 @@ fn lowers_u64_payloads_arithmetic_and_integer_class_calls() {
 fn external_u64_calls_use_rax_for_the_full_width_result() {
     let output = assembly(concat!(
         "extern fn foreign_u64(value: u64) -> u64;\n",
-        "fn main() -> i64 { var value: u64 = foreign_u64(18446744073709551615u); return 0; }",
+        "fn main() -> i64 { var value: u64 = foreign_u64(0xffffffffffffffffu); return 0; }",
     ));
 
     assert!(output.contains("mov rax, 0xffffffffffffffff"));
@@ -37,7 +37,7 @@ fn canonicalizes_u8_arithmetic_parameters_calls_and_returns() {
         "fn seventh(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8) -> u8 {\n",
         "  return (a + b) * c - g;\n",
         "}\n",
-        "fn main() -> i64 { var value: u8 = seventh(255u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8); return 0; }",
+        "fn main() -> i64 { var value: u8 = seventh(0xffu8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8); return 0; }",
     ));
 
     assert!(output.contains("mov rax, rdi\n    movzx rax, al"));
@@ -53,7 +53,7 @@ fn canonicalizes_u8_arithmetic_parameters_calls_and_returns() {
 fn external_u8_results_are_zero_extended_before_storage() {
     let output = assembly(concat!(
         "extern fn foreign_u8(value: u8) -> u8;\n",
-        "fn main() -> i64 { var value: u8 = foreign_u8(255u8); return 0; }",
+        "fn main() -> i64 { var value: u8 = foreign_u8(0xffu8); return 0; }",
     ));
 
     assert!(output.contains("call foreign_u8\n    movzx rax, al\n    mov qword ptr [rbp"));

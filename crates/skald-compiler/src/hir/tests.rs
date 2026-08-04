@@ -229,8 +229,8 @@ fn integer_bitwise_operations_retain_exact_types_and_dump_vocabulary() {
     }
 
     let mut hir = type_check_source(concat!(
-        "fn complement() -> u8 { return 85u8; }\n",
-        "fn combine() -> u8 { return 240u8 + 15u8; }\n",
+        "fn complement() -> u8 { return 0x55u8; }\n",
+        "fn combine() -> u8 { return 0xf0u8 + 0x0fu8; }\n",
         "fn main() -> i64 { return 0; }\n",
     ))
     .hir
