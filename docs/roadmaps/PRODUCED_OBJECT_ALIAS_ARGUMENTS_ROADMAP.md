@@ -1,6 +1,6 @@
 # Produced Object Alias Arguments Roadmap
 
-Status: in progress; PAA0 through PAA2 are complete, and PAA3 is next.
+Status: in progress; PAA0 through PAA3 are complete, and PAA4 is next.
 
 This roadmap generalizes class alias arguments so a produced exact-class
 object can bind directly to a read-only `ref` parameter. The compiler
@@ -10,11 +10,11 @@ full-expression temporaries. The feature removes source-only staging locals
 such as the one currently needed for `text.equals("NaN")` without weakening
 the language's alias non-escape or ownership rules.
 
-The completed first three tasks publish the source-visible contract, accept
-the source through type checking and HIR, and prove its temporary lifetime in
-MIR. This roadmap records that frozen contract and the remaining native-
-execution and adoption order; verified MIR alone does not publish the feature
-as an implemented language contract.
+The completed first four tasks publish the source-visible contract, accept the
+source through type checking and HIR, prove its temporary lifetime in MIR, and
+demonstrate polymorphic native execution through the unchanged internal alias
+ABI. PAA4 still owns standard-library adoption and publication as an
+implemented language contract.
 
 ## Scope and invariants
 
@@ -94,7 +94,7 @@ rather than introduce a second temporary or alias pipeline.
 - [x] PAA0 — Freeze the produced read-only alias contract
 - [x] PAA1 — Accept and represent produced object alias arguments
 - [x] PAA2 — Verify temporary lifetime and source-ordered lowering
-- [ ] PAA3 — Prove polymorphic native execution and diagnostics
+- [x] PAA3 — Prove polymorphic native execution and diagnostics
 - [ ] PAA4 — Adopt the feature and publish the implemented boundary
 
 Every implementation task runs focused type-check, HIR, MIR, verifier, and
@@ -242,25 +242,25 @@ Focused deterministic and mutation tests pass; `make check` and
 carries produced complete objects across every supported static view without
 introducing a target or runtime special case.
 
-- [ ] Exercise exact-class, ancestor, interface, and `Obj` alias targets from
+- [x] Exercise exact-class, ancestor, interface, and `Obj` alias targets from
       produced derived objects, including virtual/interface dispatch and
       type/identity observations that prove the object was not sliced or
       copied.
-- [ ] Cover direct, static, method, interface, and initializer calls on the
+- [x] Cover direct, static, method, interface, and initializer calls on the
       native target, with receiver and later-argument side effects that expose
       any evaluation-order regression.
-- [ ] Trace construction and destruction for several produced arguments and
+- [x] Trace construction and destruction for several produced arguments and
       nested calls, proving that callee return precedes reverse
       full-expression cleanup.
-- [ ] Prove that an owning copy or result made from the alias remains valid
+- [x] Prove that an owning copy or result made from the alias remains valid
       after the temporary is destroyed and has its own single lifecycle.
-- [ ] Retain native compile failures for produced `mut ref` arguments and the
+- [x] Retain native compile failures for produced `mut ref` arguments and the
       excluded value families, matching the type-check diagnostics rather
       than failing in MIR or code generation.
-- [ ] Audit backend lowering and assembly to confirm it consumes ordinary
+- [x] Audit backend lowering and assembly to confirm it consumes ordinary
       `MirArgument::View` data and requires no new calling-convention branch,
       runtime symbol, layout rule, or ABI-version change.
-- [ ] Add deterministic HIR, MIR, assembly, stdout, and destruction-trace
+- [x] Add deterministic HIR, MIR, assembly, stdout, and destruction-trace
       comparisons where each phase product materially proves the contract.
 
 **Tests:** Focused source-to-native success and compile-failure goldens;

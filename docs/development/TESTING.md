@@ -447,6 +447,27 @@ consumer and its selected identity at the nearest lower-phase verifier. Do not
 make a global array capability table caller-dependent: authorize its stable
 default plan where the source array expression is checked.
 
+## Produced object alias argument coverage
+
+Produced read-only object alias arguments have evidence at each owning
+boundary. Type-check and HIR tests own accepted producer families, static
+class/interface/`Obj` relations, the read-only restriction, and exclusions.
+MIR tests own one-time materialization, ordinary `MirArgument::View` origins,
+source order, liveness, and reverse full-expression cleanup. The x86-64
+backend test owns ordinary object-alias marshaling, assembler acceptance,
+native dispatch, and the unchanged runtime symbol/version boundary.
+
+The `produced_alias_arguments` native golden composes exact-class, ancestor,
+interface, and `Obj` targets across direct, static, instance, interface, and
+initializer calls. Its exact stdout records construction effects, later
+arguments, callee observations, nested reverse cleanup, and an owning copy
+that outlives its source. The existing `produced_alias_invalid_sources`
+compile-failure golden keeps mutable aliases and excluded producer families at
+their type-check diagnostics. `pipeline_determinism` compares the successful
+case's token-through-assembly products across independent compiler processes;
+the golden runner separately compares assembly, stdout, stderr, and status
+across repeated compiles and executions.
+
 ## String coverage
 
 String coverage follows the

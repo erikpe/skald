@@ -574,6 +574,15 @@ components immediately follow its static address. Explicit scalar/value
 arguments otherwise retain source order, SSE arguments retain their
 independent sequence, and overflow components share one aligned stack area.
 
+A read-only alias bound to a produced exact-class object reaches the backend
+as the same ordinary `MirArgument::View` used for an existing place. Its
+source is the selected static subobject in caller-owned temporary storage; its
+origin supplies the exact complete-object and metadata addresses. The normal
+three-component classifier and marshaler consume those fields without a
+produced-value branch. Construction, liveness, reverse full-expression
+cleanup, and any owning copy made by the callee are already explicit in
+verified MIR and add no target layout or calling-convention rule.
+
 The verified definition's optional receiver storage is the sole authority for
 incoming receiver classification, spilling, frame homes, and object-origin
 homes. Class ownership alone does not add receiver ABI components. Target
@@ -652,7 +661,9 @@ loads the witness entry for its requirement. Both pass the complete object as
 the selected method receiver and call indirectly through the ordinary ABI.
 This is valid for the current single-inheritance layout because every base
 subobject begins at offset zero. Direct calls continue to pass their statically
-selected place.
+selected place. Produced aliases use this same metadata path, so ancestor,
+interface, and `Obj` views retain the derived object's dispatch and identity
+without slicing or copying.
 
 Runtime membership checks compare the forwarded table address with the
 deterministic set of declared classes that provide the requested class or

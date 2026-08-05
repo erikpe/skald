@@ -28,6 +28,9 @@ const OBJECT_TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic
 const POLYMORPHISM_HELPER_OUTPUT: &str = "SKALD_POLYMORPHISM_DETERMINISM_OUTPUT";
 const POLYMORPHISM_TEST_NAME: &str =
     "polymorphism_phase_products_are_deterministic_across_processes";
+const PRODUCED_ALIAS_HELPER_OUTPUT: &str = "SKALD_PRODUCED_ALIAS_DETERMINISM_OUTPUT";
+const PRODUCED_ALIAS_TEST_NAME: &str =
+    "produced_alias_phase_products_are_deterministic_across_processes";
 const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
 const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
 const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
@@ -135,6 +138,16 @@ fn polymorphism_phase_products_are_deterministic_across_processes() {
         POLYMORPHISM_HELPER_OUTPUT,
         POLYMORPHISM_TEST_NAME,
         polymorphism_phase_dump,
+    );
+}
+
+#[test]
+fn produced_alias_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "produced-aliases",
+        PRODUCED_ALIAS_HELPER_OUTPUT,
+        PRODUCED_ALIAS_TEST_NAME,
+        produced_alias_phase_dump,
     );
 }
 
@@ -803,6 +816,12 @@ fn object_phase_dump() -> String {
 
 fn polymorphism_phase_dump() -> String {
     complete_golden_phase_dump(include_str!("../../../tests/golden/run/polymorphism.ska"))
+}
+
+fn produced_alias_phase_dump() -> String {
+    complete_golden_phase_dump(include_str!(
+        "../../../tests/golden/run/produced_alias_arguments.ska"
+    ))
 }
 
 fn shared_ownership_phase_dump() -> String {

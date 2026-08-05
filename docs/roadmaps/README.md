@@ -10,8 +10,9 @@ progress. Completed roadmaps and resolved discovery records move to
   — allow exact-class-producing expressions to bind directly to read-only
   `ref` parameters through verified caller-owned full-expression temporaries;
   PAA1 accepts and represents produced object alias arguments after the frozen
-  source and compiler contract, and PAA2 now proves temporary lifetime and
-  source-ordered lowering; PAA3 is next. It depends on the
+  source and compiler contract, PAA2 proves temporary lifetime and
+  source-ordered lowering, and PAA3 proves polymorphic native execution and
+  the unchanged backend/runtime boundary; PAA4 is next. It depends on the
   implemented alias, object-temporary, full-expression cleanup, polymorphism,
   checked-cast, and internal-call contracts.
 

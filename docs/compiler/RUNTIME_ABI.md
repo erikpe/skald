@@ -217,6 +217,15 @@ operations above. It has no public ABI for:
 - runtime traces;
 - recoverable or checked exceptions.
 
+Produced exact-class objects passed to read-only class, interface, or `Obj`
+aliases remain entirely compiler-owned. The caller materializes and destroys
+the inline temporary, while the internal calling convention carries its
+selected address, complete-object address, and metadata address. No runtime
+allocation, lifetime service, object symbol, or ABI-version change is
+involved; checked type operations may still use the existing generic panic
+reporter on their ordinary failure path. The compatibility marker remains
+`ska_rt_abi_v8`.
+
 Future language designs may require more of these responsibilities, but they
 do not exist merely because a runtime library is present.
 

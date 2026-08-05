@@ -1,0 +1,161 @@
+import std::io;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+interface Runner {
+    fn run(ref value: Obj, later: i64) -> i64;
+}
+
+fn mark(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+fn traced(marker: i64, value: i64) -> i64 {
+    std::io::println_i64(marker);
+    return value;
+}
+
+class Root implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = traced(1000 + value, value);
+    }
+
+    copy(ref other: Root) {
+        self.value = traced(6000 + other.value, other.value + 100);
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+
+    destroy {
+        std::io::println_i64(4000 + self.value);
+    }
+}
+
+class Leaf extends Root {
+    extra: i64;
+
+    init(value: i64, extra: i64) {
+        super(value);
+        self.extra = traced(2000 + extra, extra);
+    }
+
+    override fn read() -> i64 {
+        return self.value + self.extra;
+    }
+
+    destroy {
+        std::io::println_i64(3000 + self.extra);
+    }
+}
+
+class Caller implements Runner {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = traced(7000 + marker, marker);
+    }
+
+    static fn inspect(ref value: Root, later: i64) -> i64 {
+        std::io::println_i64(5100);
+        return value.read() + later;
+    }
+
+    fn invoke(ref value: Readable, later: i64) -> i64 {
+        std::io::println_i64(7200);
+        return value.read() + later;
+    }
+
+    fn run(ref value: Obj, later: i64) -> i64 {
+        std::io::println_i64(7100);
+        return ((Leaf) value).read() + later;
+    }
+
+    destroy {
+        std::io::println_i64(7300 + self.marker);
+    }
+}
+
+class Capture {
+    observed: i64;
+
+    init(ref value: Root, later: i64) {
+        self.observed = traced(7400, value.read() + later);
+    }
+
+    fn read() -> i64 {
+        return self.observed;
+    }
+
+    destroy {
+        std::io::println_i64(7500 + self.observed);
+    }
+}
+
+fn inspect(
+    ref exact: Leaf,
+    ref ancestor: Root,
+    ref readable: Readable,
+    ref object: Obj,
+    later: i64
+) -> i64 {
+    std::io::println_i64(5000);
+    if (object is Leaf) {
+        return exact.read()
+            + ancestor.read()
+            + readable.read()
+            + ((Leaf) object).read()
+            + later
+            + 100;
+    } else {
+        return 0;
+    }
+}
+
+fn call_runner(ref runner: Runner) -> i64 {
+    std::io::println_i64(8000);
+    return runner.run(Leaf(mark(31), mark(32)), mark(33));
+}
+
+fn copy_root(ref value: Root) -> Root {
+    std::io::println_i64(7600);
+    return value;
+}
+
+fn main() -> i64 {
+    std::io::println_i64(inspect(
+        Leaf(mark(1), mark(2)),
+        Leaf(mark(3), mark(4)),
+        Leaf(mark(5), mark(6)),
+        Leaf(mark(7), mark(8)),
+        mark(9)
+    ));
+
+    std::io::println_i64(Caller.inspect(
+        Leaf(mark(10), mark(11)),
+        mark(12)
+    ));
+
+    std::io::println_i64(new Caller(mark(20))->invoke(
+        Leaf(mark(21), mark(22)),
+        mark(23)
+    ));
+
+    std::io::println_i64(call_runner(Caller(mark(30))));
+
+    var capture: Capture = Capture(
+        Leaf(mark(41), mark(42)),
+        mark(43)
+    );
+    std::io::println_i64(capture.read());
+
+    var retained: Root = copy_root(Leaf(mark(51), mark(52)));
+    std::io::println_i64(retained.read());
+    return 0;
+}
