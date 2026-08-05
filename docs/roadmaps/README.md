@@ -10,7 +10,12 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md) — **planned**; add an
+  explicitly imported raw-byte `std::process::args() -> Str[]` API over the
+  implemented Linux whole-file I/O and string-slice profiles. PA0, freezing the
+  source and host contract, is next. The roadmap depends on the implemented
+  standard I/O, string, array, and module-system contracts and has no active
+  roadmap dependency.
 
 ## Design proposals
 
