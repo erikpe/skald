@@ -1,9 +1,10 @@
 //! Loading and comparison of native golden-test expectations.
 
-use std::{fs, io::ErrorKind, path::Path};
+use std::{ffi::OsString, fs, io::ErrorKind, os::unix::ffi::OsStringExt, path::Path};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NativeExpectations {
+    arguments: Vec<OsString>,
     exit_status: ExpectedExitStatus,
     stdin: Vec<u8>,
     stdout: Vec<u8>,
@@ -11,6 +12,10 @@ pub struct NativeExpectations {
 }
 
 impl NativeExpectations {
+    pub fn arguments(&self) -> &[OsString] {
+        &self.arguments
+    }
+
     pub fn stdin(&self) -> &[u8] {
         &self.stdin
     }
@@ -30,28 +35,50 @@ enum ExpectedExitStatus {
     Failure,
 }
 
-/// Loads the required `.exit` sidecar and optional exact output sidecars.
+/// Loads the required `.exit` sidecar and optional exact process sidecars.
 ///
 /// An exit sidecar contains either one exact status in `0..=255` or `failure`
 /// when the contract promises only unsuccessful termination. A missing
 /// `.stdin`, `.stdout`, or `.stderr` sidecar means the corresponding stream
-/// must be empty.
+/// must be empty. A missing or empty `.argv` supplies no additional executable
+/// arguments.
 pub fn load_native_expectations(source: &Path) -> Result<NativeExpectations, String> {
     let exit_path = source.with_extension("exit");
     let exit_text = fs::read_to_string(&exit_path)
         .map_err(|error| format!("could not read {}: {error}", exit_path.display()))?;
     let exit_status = parse_exit_status(exit_text.trim())?;
 
+    let arguments = read_optional_arguments(source)?;
     let stdin = read_optional_sidecar(source, "stdin")?;
     let stdout = read_optional_sidecar(source, "stdout")?;
     let stderr = read_optional_sidecar(source, "stderr")?;
 
     Ok(NativeExpectations {
+        arguments,
         exit_status,
         stdin,
         stdout,
         stderr,
     })
+}
+
+fn read_optional_arguments(source: &Path) -> Result<Vec<OsString>, String> {
+    let path = source.with_extension("argv");
+    let bytes = read_optional_sidecar(source, "argv")?;
+    if bytes.is_empty() {
+        return Ok(Vec::new());
+    }
+    if bytes.last() != Some(&0) {
+        return Err(format!(
+            "invalid executable argument sidecar {}: nonempty file must end with NUL",
+            path.display()
+        ));
+    }
+
+    Ok(bytes[..bytes.len() - 1]
+        .split(|byte| *byte == 0)
+        .map(|argument| OsString::from_vec(argument.to_owned()))
+        .collect())
 }
 
 fn read_optional_sidecar(source: &Path, extension: &str) -> Result<Vec<u8>, String> {

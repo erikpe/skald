@@ -1,6 +1,6 @@
 # Program Arguments Roadmap
 
-Status: in progress; PA1 is next.
+Status: in progress; PA2 is next.
 
 This roadmap gives native Skald applications an explicitly imported
 `std::process::args() -> Str[]` API while preserving the established
@@ -99,7 +99,7 @@ copying Niflheim's `std.io` placement or vector-based splitting machinery.
 ## Progress
 
 - [x] PA0 — Freeze the process-argument source and host contract
-- [ ] PA1 — Add exact executable arguments to native goldens
+- [x] PA1 — Add exact executable arguments to native goldens
 - [ ] PA2 — Implement and harden `std::process::args`
 
 ## PR-sized implementation sequence
@@ -144,26 +144,26 @@ living documentation accurately identifies the feature as frozen and leaves
 **Purpose:** Establish a deterministic, byte-exact observation path for
 command-line arguments before the standard-library API relies on it.
 
-- [ ] Extend the native golden input model and sidecar loader with optional
+- [x] Extend the native golden input model and sidecar loader with optional
       `.argv` bytes, parsing NUL-terminated records into `OsString` values by
       using the Linux/Unix byte-preserving conversion API.
-- [ ] Reject a nonempty `.argv` file without a final NUL with a focused fixture
+- [x] Reject a nonempty `.argv` file without a final NUL with a focused fixture
       error. Preserve consecutive delimiters, leading/trailing empty arguments,
       spaces, line feeds, and non-UTF-8 bytes exactly.
-- [ ] Pass only the decoded additional arguments to `Command`; leave the
+- [x] Pass only the decoded additional arguments to `Command`; leave the
       operating system and Rust process API responsible for element zero.
       Apply the same arguments to both repeated executions and retain the
       existing working-directory, piped-stdin, output-capture, and deadlock
       protections.
-- [ ] Keep native input parsing with the existing native-expectation owner and
+- [x] Keep native input parsing with the existing native-expectation owner and
       process orchestration in the golden runner. Extract a new module only if
       the resulting files mix independently understandable parsing and
       execution responsibilities; do not create a one-function namespace.
-- [ ] Add focused Rust tests for missing and empty sidecars, one empty
+- [x] Add focused Rust tests for missing and empty sidecars, one empty
       argument, multiple arguments with whitespace, consecutive empty
       arguments, exact non-UTF-8 bytes, malformed missing termination, and
       independence from `case.args`.
-- [ ] Update the golden fixture guide and testing authority with the `.argv`
+- [x] Update the golden fixture guide and testing authority with the `.argv`
       format, single-file and `case.argv` naming, exact-byte guarantees, and
       the distinction between compiler and executable arguments.
 

@@ -3,6 +3,7 @@ mod native_expectations;
 
 use std::{
     fs, io,
+    os::unix::ffi::OsStrExt,
     path::{Path, PathBuf},
     process,
     sync::atomic::{AtomicUsize, Ordering},
@@ -11,6 +12,122 @@ use std::{
 use native_expectations::{load_native_expectations, verify_native_execution};
 
 static NEXT_TEMPORARY_DIRECTORY: AtomicUsize = AtomicUsize::new(0);
+
+#[test]
+fn missing_argv_sidecar_means_no_additional_arguments() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert!(expected.arguments().is_empty());
+}
+
+#[test]
+fn empty_argv_sidecar_means_no_additional_arguments() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+    fs::write(source.with_extension("argv"), b"").unwrap();
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert!(expected.arguments().is_empty());
+}
+
+#[test]
+fn one_nul_in_argv_encodes_one_empty_argument() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+    fs::write(source.with_extension("argv"), b"\0").unwrap();
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(argument_bytes(&expected), vec![b"".as_slice()]);
+}
+
+#[test]
+fn argv_preserves_multiple_arguments_and_whitespace() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+    fs::write(
+        source.with_extension("argv"),
+        b"plain\0space arg\0tab\targ\0line\nfeed\0",
+    )
+    .unwrap();
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(
+        argument_bytes(&expected),
+        vec![
+            b"plain".as_slice(),
+            b"space arg".as_slice(),
+            b"tab\targ".as_slice(),
+            b"line\nfeed".as_slice(),
+        ]
+    );
+}
+
+#[test]
+fn argv_preserves_leading_consecutive_and_trailing_empty_arguments() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+    fs::write(source.with_extension("argv"), b"\0middle\0\0").unwrap();
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(
+        argument_bytes(&expected),
+        vec![b"".as_slice(), b"middle".as_slice(), b"".as_slice()]
+    );
+}
+
+#[test]
+fn argv_preserves_non_utf8_bytes() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+    fs::write(source.with_extension("argv"), b"before\xffafter\0").unwrap();
+
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(
+        argument_bytes(&expected),
+        vec![b"before\xffafter".as_slice()]
+    );
+}
+
+#[test]
+fn nonempty_argv_without_final_nul_is_rejected() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"0\n", None, None, None);
+    let argv_path = source.with_extension("argv");
+    fs::write(&argv_path, b"unterminated").unwrap();
+
+    let error = load_native_expectations(&source).unwrap_err();
+
+    assert_eq!(
+        error,
+        format!(
+            "invalid executable argument sidecar {}: nonempty file must end with NUL",
+            argv_path.display()
+        )
+    );
+}
+
+#[test]
+fn case_argv_is_independent_of_compiler_case_args() {
+    let directory = TemporaryDirectory::new();
+    let arguments_manifest = directory.path().join("case.args");
+    fs::write(&arguments_manifest, b"--entry\napp::main\n").unwrap();
+    fs::write(arguments_manifest.with_extension("exit"), b"0\n").unwrap();
+
+    let without_argv = load_native_expectations(&arguments_manifest).unwrap();
+    assert!(without_argv.arguments().is_empty());
+
+    fs::write(arguments_manifest.with_extension("argv"), b"runtime arg\0").unwrap();
+    let with_argv = load_native_expectations(&arguments_manifest).unwrap();
+    assert_eq!(argument_bytes(&with_argv), vec![b"runtime arg".as_slice()]);
+}
 
 #[test]
 fn missing_stdin_sidecar_means_empty_input() {
@@ -193,6 +310,14 @@ fn exit_stdout_and_stderr_mismatches_are_reported_together() {
     assert!(error.contains("exit status mismatch: expected 5, found 6"));
     assert!(error.contains("stdout mismatch"));
     assert!(error.contains("stderr mismatch"));
+}
+
+fn argument_bytes(expected: &native_expectations::NativeExpectations) -> Vec<&[u8]> {
+    expected
+        .arguments()
+        .iter()
+        .map(|argument| argument.as_os_str().as_bytes())
+        .collect()
 }
 
 fn write_case(

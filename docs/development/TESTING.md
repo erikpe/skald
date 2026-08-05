@@ -191,15 +191,19 @@ files, binary partial transfers, invalid progress, close behavior, and stable
 failures. A source-native golden covers every primitive `println_<type>` helper,
 including extrema, signed zero, infinities, and NaN, through exact stdout bytes
 without a scalar runtime observer. The golden harness accepts exact-byte stdin,
-stdout, stderr, and exit sidecars and feeds the same stdin bytes to both
-deterministic executions.
+executable-argument, stdout, stderr, and exit sidecars and feeds the same
+arguments and stdin bytes to both deterministic executions. The
+[golden fixture guide](../../tests/golden/README.md) owns `.argv` encoding and
+naming.
 
 Multi-file golden directories contain one `case.args` manifest plus their
 entry and supporting trees. The manifest records one exact command argument
 per line, including entry mode, module roots, and standard-library selection;
 its directory is the compiler working directory. Discovery treats the whole
 directory as one case and never promotes supporting `.ska` files into
-independent fixtures.
+independent fixtures. The distinct optional `case.argv` sidecar supplies
+NUL-terminated exact-byte arguments to the generated executable, never to
+`skac`.
 
 Exact dump and diagnostic expectations should remain readable and intentional.
 When an expectation changes, inspect the semantic difference before updating
@@ -530,7 +534,9 @@ successful assembly and every compile failure, comparing assembly or
 diagnostic bytes. It also executes every native case twice and compares
 status, stdout, and stderr before evaluating the checked-in expectations.
 Native `.stdout` and `.stderr` sidecars are exact byte expectations; a missing
-sidecar requires its stream to be empty. The focused
+sidecar requires its stream to be empty. Optional `.argv` records are converted
+to byte-preserving Unix arguments and applied identically to both executions;
+the operating system remains responsible for element zero. The focused
 `make golden-expectations-test` suite owns sidecar loading and escaped
 byte-mismatch rendering independently of compiler execution.
 

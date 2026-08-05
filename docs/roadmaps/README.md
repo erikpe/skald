@@ -6,11 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md) — **in progress**; PA0
-  froze the source and Linux host contract. PA1, adding exact executable
-  arguments to native goldens, is next. The roadmap depends on the implemented
-  standard I/O, string, array, and module-system contracts and has no active
-  roadmap dependency.
+- [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md) — **in progress**; the
+  source and Linux host contract are frozen, and native goldens accept exact
+  executable arguments. PA2, implementing and hardening `std::process::args`,
+  is next. The roadmap depends on the implemented standard I/O, string, array,
+  and module-system contracts and has no active roadmap dependency.
 
 ## Planned
 

@@ -186,8 +186,18 @@ fn run_native_case(
         .map_err(|error| format!("could not start skac: {error}"))?;
     require_successful_compilation(&compilation)?;
 
-    let execution = run_executable(&executable, &case.working_directory, expected.stdin())?;
-    let repeated = run_executable(&executable, &case.working_directory, expected.stdin())?;
+    let execution = run_executable(
+        &executable,
+        &case.working_directory,
+        expected.arguments(),
+        expected.stdin(),
+    )?;
+    let repeated = run_executable(
+        &executable,
+        &case.working_directory,
+        expected.arguments(),
+        expected.stdin(),
+    )?;
     if (
         execution.status.code(),
         &execution.stdout,
@@ -207,10 +217,12 @@ fn run_native_case(
 fn run_executable(
     executable: &Path,
     working_directory: &Path,
+    arguments: &[OsString],
     input: &[u8],
 ) -> Result<Output, String> {
     let mut child = Command::new(executable)
         .current_dir(working_directory)
+        .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
