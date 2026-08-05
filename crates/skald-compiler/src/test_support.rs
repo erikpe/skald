@@ -38,6 +38,7 @@ pub(crate) const CANONICAL_ERROR_SOURCE: &str = include_str!("../../../std/std/e
 pub(crate) const CANONICAL_F64_SOURCE: &str = include_str!("../../../std/std/f64.ska");
 pub(crate) const CANONICAL_IO_SOURCE: &str = include_str!("../../../std/std/io.ska");
 pub(crate) const CANONICAL_PROCESS_SOURCE: &str = include_str!("../../../std/std/process.ska");
+pub(crate) const CANONICAL_TEST_SOURCE: &str = include_str!("../../../std/std/test.ska");
 
 pub(crate) const INLINE_FIELD_SOURCE: &str = concat!(
     "class Root {\n",
@@ -156,7 +157,7 @@ pub(crate) fn load_module_sources_with_standard_library(
     entry: &str,
     sources: &[(&str, &str)],
 ) -> (TemporaryDirectory, ModuleGraph) {
-    let mut complete_sources = Vec::with_capacity(sources.len() + 9);
+    let mut complete_sources = Vec::with_capacity(sources.len() + 10);
     complete_sources.extend_from_slice(sources);
     complete_sources.extend([
         ("std/str.ska", CANONICAL_STR_SOURCE),
@@ -174,6 +175,7 @@ pub(crate) fn load_module_sources_with_standard_library(
         ("std/f64.ska", CANONICAL_F64_SOURCE),
         ("std/io.ska", CANONICAL_IO_SOURCE),
         ("std/process.ska", CANONICAL_PROCESS_SOURCE),
+        ("std/test.ska", CANONICAL_TEST_SOURCE),
     ]);
     load_module_sources(entry, &complete_sources)
 }

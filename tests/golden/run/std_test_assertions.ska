@@ -1,0 +1,17 @@
+from std::test import assert_eq_f64, assert_eq_i64, assert_eq_str, assert_eq_u64, assert_eq_u8, assert_false, assert_true;
+
+fn main() -> i64 {
+    assert_eq_i64(-9223372036854775808, -9223372036854775808);
+    assert_eq_i64(9223372036854775807, 9223372036854775807);
+    assert_eq_u64(0u, 0u);
+    assert_eq_u64(18446744073709551615u, 18446744073709551615u);
+    assert_eq_u8(0u8, 0u8);
+    assert_eq_u8(255u8, 255u8);
+    assert_eq_f64(-0.0, 0.0);
+    assert_eq_f64(1.0 / 0.0, 1.0 / 0.0);
+    assert_eq_str("", "");
+    assert_eq_str("same\0\xffbytes", "same\0\xffbytes");
+    assert_true(true);
+    assert_false(false);
+    return 0;
+}

@@ -1,0 +1,67 @@
+from std::error import panic;
+from std::str import Str;
+
+fn _not_equal_message(ref left: Str, ref right: Str) -> Str {
+    var prefix: Str = "Assert failed: '";
+    var separator: Str = "' != '";
+    var suffix: Str = "'";
+
+    var message: Str = prefix.concat(left);
+    message = message.concat(separator);
+    message = message.concat(right);
+    return message.concat(suffix);
+}
+
+public fn assert_eq_i64(left: i64, right: i64) -> unit {
+    if (left != right) {
+        panic(_not_equal_message(Str.from_i64(left), Str.from_i64(right)));
+    }
+    return;
+}
+
+public fn assert_eq_u64(left: u64, right: u64) -> unit {
+    if (left != right) {
+        panic(_not_equal_message(Str.from_u64(left), Str.from_u64(right)));
+    }
+    return;
+}
+
+public fn assert_eq_u8(left: u8, right: u8) -> unit {
+    if (left != right) {
+        panic(_not_equal_message(Str.from_u8(left), Str.from_u8(right)));
+    }
+    return;
+}
+
+public fn assert_eq_f64(left: f64, right: f64) -> unit {
+    if (left != right) {
+        panic(_not_equal_message(Str.from_f64(left), Str.from_f64(right)));
+    }
+    return;
+}
+
+public fn assert_eq_str(ref left: Str, ref right: Str) -> unit {
+    if (!left.equals_str(right)) {
+        panic(_not_equal_message(left, right));
+    }
+    return;
+}
+
+public fn assert_true(condition: bool) -> unit {
+    if (!condition) {
+        panic("Assert failed: expected true");
+    }
+    return;
+}
+
+public fn assert_false(condition: bool) -> unit {
+    if (condition) {
+        panic("Assert failed: expected false");
+    }
+    return;
+}
+
+public fn fail(ref message: Str) -> unit {
+    var prefix: Str = "Test failed: ";
+    panic(prefix.concat(message));
+}

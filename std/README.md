@@ -46,6 +46,15 @@ explicitly. Call statements execute through the compiler's non-returning panic
 terminator and the length-delimited runtime reporter. It is not an external
 function or an exception API.
 
+The `std::test` module provides ordinary source-level assertions for golden
+and application tests. It exports exact equality helpers for `i64`, `u64`,
+`u8`, `f64`, and `Str`, boolean truth helpers, and an unconditional `fail`
+helper. Assertion failures format values through the canonical `Str`
+conversions and terminate through `std::error::panic`; the module adds no
+compiler intrinsic or runtime ABI surface. Floating-point equality uses
+ordinary exact `f64` equality, so signed zeroes compare equal and NaN values
+do not.
+
 `std::str` selectively imports that panic declaration for invalid byte and
 slice bounds, forming an ordinary two-module cycle with `std::error`. It also
 imports the integer and binary64 formatting and parsing descendant modules in
