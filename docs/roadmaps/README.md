@@ -14,7 +14,12 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
-No design proposals are currently awaiting decisions or promotion.
+- [Golden test runner redesign](GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md) —
+  proposed; replace the serial sidecar-discovered harness with a spec-driven
+  Rust runner that supports reusable run data, compiler variants, bounded
+  parallelism, strict byte expectations, filtering, isolation, and gradual
+  fixture migration. Review and confirm decisions G1 through G12 before
+  creating an implementation roadmap.
 
 ## Pending discoveries
 
