@@ -60,4 +60,4 @@ error[TYP034]: shared owner must be explicitly dereferenced for object-place use
    |
 5 | fn unrelated(ref value: Other) -> unit {}
    |              ---------------- alias parameter declared here
-  = note: alias argument must be an existing object place
+  = note: alias argument must use an object place, an explicit shared dereference, or a compatible produced object

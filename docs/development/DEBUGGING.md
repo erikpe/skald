@@ -165,6 +165,17 @@ the destination of exactly one `copy-construct`, followed by
 full-expression cleanup. Allocation before a required check or publication
 before copy completion is malformed MIR.
 
+For a produced read-only object alias argument, HIR records a `Produced` view
+source rather than an existing place. MIR must create one exact-class
+`Temporary` at the argument's source position, complete the producer into it,
+and pass an ordinary `MirArgument::View` with exact complete-object origin.
+The temporary remains live through later arguments and the call, then enters
+reverse full-expression cleanup exactly once. Assembly should use the normal
+three-component object-alias convention with no produced-source branch. A
+corresponding `mut ref` argument must fail with `TYP020` before HIR. Compare
+the `produced_alias_arguments` and `produced_alias_invalid_sources` goldens
+when the failure crosses more than one phase.
+
 For an explicitly dereferenced shared receiver or alias argument, HIR distinguishes a stable
 `SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or
 adopted producer source. MIR declares each hidden owner as `shared-anchor`;

@@ -3,10 +3,9 @@
 Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
 semantics, including implemented `while` loops, `break`, `continue`, and
-short-circuit logical expressions with selected-path cleanup. It also records
-the frozen call-order boundary for produced exact-class read-only aliases,
-whose type-check/HIR representation is implemented while lifetime lowering
-verification remains staged. The
+short-circuit logical expressions with selected-path cleanup, including the
+implemented call-order and lifetime boundary for produced exact-class
+read-only aliases. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -42,15 +41,14 @@ binding category is separate from the declared type:
 | Source category | Implemented meaning |
 |---|---|
 | `name: T` | A value parameter owning callee-local parameter storage. Primitive arguments are copied as values; exact-class arguments are copy-constructed for the call. |
-| `ref name: T` | A call-scoped read-only alias to an eligible existing place. |
+| `ref name: T` | A call-scoped read-only alias to an eligible existing place or compatible produced exact-class object. |
 | `mut ref name: T` | A call-scoped mutable alias to an eligible existing place. |
 
-The frozen produced-object alias extension allows an exact-class
+The produced-object alias rule allows an exact-class
 producer to establish a hidden caller-owned place for a read-only `ref`.
-`mut ref` remains restricted to an existing mutable place. Type checking,
-HIR, and verified MIR implement this relaxation; its complete source and
-lifetime contract is defined by
-[aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
+`mut ref` remains restricted to an existing mutable place. Its complete source
+and lifetime contract is defined by
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments).
 
 Value parameters may use implemented primitive or exact-class types. Alias
 parameters support the implemented primitive, object-view, inline-optional,
@@ -320,8 +318,8 @@ expressions and calls plus the frozen logical-operator extension:
    arguments are evaluated left to right; a static call's class spelling and
    a static field's class selection are not evaluated;
 8. an exact-class value-argument copy completes before the next argument is
-   evaluated; under the frozen produced read-only alias extension, its hidden
-   temporary likewise completes before the next argument;
+   evaluated; a produced read-only alias temporary likewise completes before
+   the next argument;
 9. object destination storage is selected before construction or an
    object-producing call, then the receiver and explicit arguments follow the
    ordering above;
@@ -337,13 +335,13 @@ Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
 
-For a frozen produced read-only alias, the producer runs exactly once at its
+For a produced read-only alias, the producer runs exactly once at its
 argument position after any receiver and before every later argument. The
 materialized caller-owned object remains live through those later effects and
 the complete call, then joins ordinary reverse cleanup at the enclosing
 full-expression boundary. The detailed eligibility, forwarding, failure, and
 non-escape rules are owned by
-[aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments).
 
 Primitive binding reassignment uses item 4 without introducing
 an effectful destination computation: resolution selects the binding identity,

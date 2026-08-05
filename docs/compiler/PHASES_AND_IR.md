@@ -172,14 +172,13 @@ separate immediate-consumer guard analysis are unchanged.
 ## Produced exact-class alias representation
 
 The source-visible
-[produced read-only alias contract](../language/ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
-is frozen. Syntax and resolution reuse the ordinary producer path, while type
-checking and HIR now implement the source classification, compatibility,
-access, diagnostics, and produced-view representation. MIR lowering and
-verification now implement the temporary lifetime proof; native execution
-coverage remains staged. The extension uses the existing phase owners
-and object-view pipeline rather than introducing a reference-valued expression
-or a second alias representation:
+[produced read-only alias contract](../language/ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments)
+is implemented through syntax, type checking, HIR, verified MIR, and native
+x86-64 execution. Syntax and resolution reuse the ordinary producer path;
+later phases classify the source, prove its hidden lifetime, and consume the
+ordinary object-view representation. The extension uses the existing phase
+owners and object-view pipeline rather than introducing a reference-valued
+expression or a second alias representation:
 
 - Syntax retains the producer as an ordinary call argument expression. No AST
   node, grammar form, binding mode, or lifetime annotation is added.
@@ -221,10 +220,10 @@ or a second alias representation:
   object and alias signatures remain invalid, and no runtime service or ABI
   version change is introduced.
 
-The syntax through verifier bullets above describe the current compiler
-boundary. Native backend behavior and exhaustive ABI evidence remain the
-required contract for the later execution roadmap stage; the backend bullet
-is not yet a native-completion claim.
+The native backend consumes that verified view through the unchanged
+three-component internal object-alias convention. Deterministic HIR, MIR,
+assembly, stdout, and destruction-trace coverage establishes the complete
+compiler boundary without a produced-source target branch or runtime service.
 
 Type-check diagnostics preserve the distinction between provenance and type:
 an incompatible exact-class producer reports a type mismatch with producer

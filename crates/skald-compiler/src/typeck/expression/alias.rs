@@ -61,7 +61,9 @@ impl ViewSourceUse {
 
     const fn place_message(self) -> &'static str {
         match self {
-            Self::AliasArgument => "alias argument must be an existing object place",
+            Self::AliasArgument => {
+                "alias argument must use an object place, an explicit shared dereference, or a compatible produced object"
+            }
             Self::TypeTest => "type-test source must be an existing object place",
             Self::Cast => "object-cast source must be an existing object place",
             Self::CopyConstruction => {

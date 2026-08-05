@@ -265,13 +265,17 @@ Parsing helpers accept a validated `(ref storage, start, length)` range and
 perform checked decimal accumulation without allocation. The borrowed array
 is available only for the helper call and is never returned or retained.
 
-`Str.to_f64` recognizes the three exact special spellings through
-`Str.equals`, then borrows its private backing array into the decimal parser's
-public implementation helper
+`Str.to_bool` compares directly with the literal-produced `Str` values
+`"true"` and `"false"`. `Str.to_f64` likewise recognizes `"NaN"`,
+`"Infinity"`, and `"-Infinity"` through direct `Str.equals_str` calls, then
+borrows its private backing array into the decimal parser's public
+implementation helper
 `std::str::parse_f64::parse(ref storage: u8[], start: i64, length: u64) ->
-f64?`. The helper validates the requested range and returns `none` for invalid
-bounds or non-decimal text. Its call-scoped read-only alias neither copies the
-bytes nor exposes a string's private backing to the caller.
+f64?`. Each literal is materialized once in caller-owned full-expression
+storage, borrowed without a copy for the comparison, and cleaned immediately
+afterward. The parser helper validates the requested range and returns `none`
+for invalid bounds or non-decimal text. Its call-scoped read-only alias neither
+copies the bytes nor exposes a string's private backing to the caller.
 
 `Str.from_f64` recognizes NaN and both infinities at the facade and returns the
 corresponding literal-backed `Str`. Finite values delegate to

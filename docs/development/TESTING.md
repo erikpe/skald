@@ -466,7 +466,9 @@ compile-failure golden keeps mutable aliases and excluded producer families at
 their type-check diagnostics. `pipeline_determinism` compares the successful
 case's token-through-assembly products across independent compiler processes;
 the golden runner separately compares assembly, stdout, stderr, and status
-across repeated compiles and executions.
+across repeated compiles and executions. Primitive parsing and standard-I/O
+goldens additionally exercise the standard library's direct literal and
+factory-result aliases, preventing a return to source-only staging locals.
 
 ## String coverage
 

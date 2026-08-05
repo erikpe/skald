@@ -35,8 +35,8 @@ Use the authority closest to the behavior:
 - exact classes, inline containment, receivers, ordinary initializer
   overloading, explicit copy construction, and object places belong in
   [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
-- implemented call-scoped alias access and lifetime plus the frozen produced
-  exact-class read-only alias extension belong in
+- implemented call-scoped alias access and lifetime, including produced
+  exact-class read-only sources, belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
 - implemented non-null shared values, heap allocation, strong ownership,
   exact-class copy allocation, last-owner destruction, and borrow-anchor

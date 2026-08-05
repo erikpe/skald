@@ -73,7 +73,8 @@ argument-area limits, frame limits, and displacement limits—also return
 callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
-owning slices, class/interface/`Obj` alias views, virtual-family calls, and
+owning slices, and class/interface/`Obj` alias views from existing places or
+caller-owned produced exact-class temporaries, plus virtual-family and
 interface calls. Runtime class/interface tests compare the forwarded dynamic
 class metadata identity against the verified target set. Checked object casts
 use the same check, materialize a successful full-expression view, and report

@@ -223,12 +223,14 @@ rules and metadata.
 Alias parameters extend to class, interface, and `Obj` targets. They remain
 call-scoped, non-owning, non-storable, non-returnable, non-rebindable, and
 non-exclusive. Eligible sources include live object places and forwarded
-aliases. The frozen
-[produced read-only alias extension](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments)
-is implemented through verified MIR: it first represents an
+aliases. The
+[produced read-only alias rule](ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments)
+first represents an
 exact-class producer in hidden caller-owned storage and then permits these same
 non-owning conversions for `ref`, without admitting the producer for `mut
-ref`. Native polymorphic execution coverage remains staged.
+ref`. Exact-class, ancestor, interface, and `Obj` views preserve the produced
+complete object's dynamic metadata through native virtual and interface
+dispatch.
 
 These implicit view conversions are available:
 

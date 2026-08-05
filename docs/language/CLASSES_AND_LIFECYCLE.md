@@ -3,10 +3,9 @@
 Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
-how the frozen produced read-only alias extension, implemented through
-verified MIR, composes with initializer selection and owning full-expression
-temporaries. The [status matrix](STATUS.md) records the current compiler
-boundary.
+how implemented produced read-only aliases compose with initializer selection
+and owning full-expression temporaries. The [status matrix](STATUS.md) records
+the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -363,13 +362,12 @@ profile. Every derived ordinary initializer still begins with exactly one
 `super(arguments);`, and that call independently selects one overload from
 the direct base.
 
-Under the frozen produced read-only alias extension, an exact-class producer
+Under the produced read-only alias rule, an exact-class producer
 makes a compatible `ref` candidate applicable under these same static rules;
 it never makes a `mut ref` candidate applicable. Applicability analysis does
 not evaluate or materialize the producer. After unique selection and access
 checking, execution evaluates the source exactly once while binding the
-selected initializer argument. Type checking and HIR now implement this
-selection, and verified MIR now proves its hidden argument lifetime.
+selected initializer argument.
 
 ## Fresh construction
 
@@ -611,7 +609,7 @@ before its initializer temporaries are cleaned. On return, the result is
 completed first, then expression temporaries are destroyed, followed by
 lexical locals and owning value parameters.
 
-The frozen produced read-only alias extension uses this same temporary
+Produced read-only aliases use this same temporary
 category and boundary. Its exact-class producer initializes one hidden
 caller-owned temporary directly at the argument position; alias binding adds
 no copy and no callee-owned parameter object. The temporary remains live
@@ -619,7 +617,7 @@ through later arguments and the complete call, then is destroyed with other
 full-expression temporaries. `mut ref`, produced primitives, optional
 containers, arrays, and raw shared handles do not acquire this rule. The
 complete eligibility and non-escape contract is defined by
-[aliases and ownership](ALIASES_AND_OWNERSHIP.md#frozen-produced-read-only-alias-arguments).
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md#implemented-produced-read-only-alias-arguments).
 
 Grouping does not change an existing place, but it does change whether a fresh
 construction matches the restricted elision forms below.
@@ -667,11 +665,11 @@ materialized class temporaries. A completed object result becomes caller-owned.
 Receivers and aliases are non-owning. An inline class field is destroyed with
 its containing object rather than registered as a separate lexical owner.
 
-The frozen produced read-only alias extension specifies its hidden exact-class
-storage as one of these ordinary materialized class temporaries. Type checking
-and HIR identify that source, and verified MIR establishes the registration
-described here. The alias parameter itself remains non-owning and receives no
-independent registration.
+The produced read-only alias rule specifies its hidden exact-class storage as
+one of these ordinary materialized class temporaries. Type checking and HIR
+identify that source, and verified MIR establishes the registration described
+here. The alias parameter itself remains non-owning and receives no independent
+registration.
 
 An owning place is registered only after its complete initialization or copy
 construction finishes. On normal fallthrough, each scope destroys registered

@@ -1,6 +1,6 @@
 # Produced Object Alias Arguments Roadmap
 
-Status: in progress; PAA0 through PAA3 are complete, and PAA4 is next.
+Status: complete; PAA0 through PAA4 are implemented and published.
 
 This roadmap generalizes class alias arguments so a produced exact-class
 object can bind directly to a read-only `ref` parameter. The compiler
@@ -10,11 +10,11 @@ full-expression temporaries. The feature removes source-only staging locals
 such as the one currently needed for `text.equals("NaN")` without weakening
 the language's alias non-escape or ownership rules.
 
-The completed first four tasks publish the source-visible contract, accept the
-source through type checking and HIR, prove its temporary lifetime in MIR, and
-demonstrate polymorphic native execution through the unchanged internal alias
-ABI. PAA4 still owns standard-library adoption and publication as an
-implemented language contract.
+The completed roadmap publishes the source-visible contract, accepts the
+source through type checking and HIR, proves its temporary lifetime in MIR,
+demonstrates polymorphic native execution through the unchanged internal alias
+ABI, adopts direct produced aliases in the standard library, and publishes the
+result as an implemented language contract.
 
 ## Scope and invariants
 
@@ -95,7 +95,7 @@ rather than introduce a second temporary or alias pipeline.
 - [x] PAA1 — Accept and represent produced object alias arguments
 - [x] PAA2 — Verify temporary lifetime and source-ordered lowering
 - [x] PAA3 — Prove polymorphic native execution and diagnostics
-- [ ] PAA4 — Adopt the feature and publish the implemented boundary
+- [x] PAA4 — Adopt the feature and publish the implemented boundary
 
 Every implementation task runs focused type-check, HIR, MIR, verifier, and
 native tests appropriate to its layer, then `make check` and
@@ -278,23 +278,23 @@ backend/runtime boundary remains unchanged.
 documented current behavior, and close the roadmap with repository-wide
 evidence.
 
-- [ ] Replace standard-library staging locals that exist only to pass a
+- [x] Replace standard-library staging locals that exist only to pass a
       produced object to `ref`, beginning with direct special-string
       comparisons in `Str.to_f64`; retain locals that clarify logic or serve
       another lifetime purpose.
-- [ ] Add a compact conformance example showing a literal, construction, and
+- [x] Add a compact conformance example showing a literal, construction, and
       object-returning call passed directly to `ref`, plus the diagnostic for
       the corresponding `mut ref` case.
-- [ ] Update the language status, aliases, functions, lifecycle,
+- [x] Update the language status, aliases, functions, lifecycle,
       polymorphism, strings, compiler phase/IR, backend, testing, and debugging
       documentation to describe implemented behavior and inspection points.
-- [ ] Audit living documentation, standard-library code, compiler
+- [x] Audit living documentation, standard-library code, compiler
       diagnostics, and tests for stale claims that every object alias argument
       must already be a source-level place.
-- [ ] Record any non-trivial optional-container, array, mutable-temporary, or
+- [x] Record any non-trivial optional-container, array, mutable-temporary, or
       local-alias opportunity in a discovery file rather than expanding this
       roadmap's implemented surface.
-- [ ] Run the complete repository, MSRV, documentation-link, deterministic
+- [x] Run the complete repository, MSRV, documentation-link, deterministic
       process, native, and runtime gates; then archive the completed roadmap
       and advance the active-roadmap index.
 

@@ -69,6 +69,7 @@ Archived plans:
 - [Efficient binary64 parsing](EFFICIENT_F64_PARSING_ROADMAP.md)
 - [Integer string helper modules](INTEGER_STRING_HELPER_MODULES_ROADMAP.md)
 - [Hexadecimal integer and byte literals](HEXADECIMAL_INTEGER_AND_BYTE_LITERALS_ROADMAP.md)
+- [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
 
 Resolved string-design inputs:
 

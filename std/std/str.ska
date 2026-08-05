@@ -138,12 +138,10 @@ public class Str {
     }
 
     fn to_bool() -> bool? {
-        var true_text: Str = "true";
-        if (self.equals_str(true_text)) {
+        if (self.equals_str("true")) {
             return true;
         }
-        var false_text: Str = "false";
-        if (self.equals_str(false_text)) {
+        if (self.equals_str("false")) {
             return false;
         }
         return none;
@@ -162,16 +160,13 @@ public class Str {
     }
 
     fn to_f64() -> f64? {
-        var nan: Str = "NaN";
-        if (self.equals_str(nan)) {
+        if (self.equals_str("NaN")) {
             return 0.0 / 0.0;
         }
-        var infinity: Str = "Infinity";
-        if (self.equals_str(infinity)) {
+        if (self.equals_str("Infinity")) {
             return 1.0 / 0.0;
         }
-        var negative_infinity: Str = "-Infinity";
-        if (self.equals_str(negative_infinity)) {
+        if (self.equals_str("-Infinity")) {
             return -(1.0 / 0.0);
         }
         return parse_f64::parse(*self._storage, self._start, self._length);

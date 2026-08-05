@@ -7,11 +7,10 @@ execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
 call borrows and their hidden owner anchors are implemented as specified by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Local aliases and
 aliases into other future value families remain unfrozen. The produced
-exact-class read-only alias extension is frozen here; type checking and HIR
-now accept and represent it, while verified MIR lifetime and native-execution
-coverage remain staged. Array-specific descriptor and detached-backing behavior
-belongs to [Arrays](ARRAYS.md). Feature maturity is authoritative in the
-[status matrix](STATUS.md).
+exact-class read-only alias extension is implemented through type checking,
+HIR, verified MIR, and native x86-64 execution. Array-specific descriptor and
+detached-backing behavior belongs to [Arrays](ARRAYS.md). Feature maturity is
+authoritative in the [status matrix](STATUS.md).
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -21,10 +20,11 @@ defines object places, copying, and owning-object lifetime.
 
 ## Binding modes
 
-An implemented alias parameter is a non-owning name for an eligible existing
-place. Its binding mode is separate from the static target. The frozen
-produced-object extension below first materializes an owning place in hidden
-caller storage and then applies the same non-owning binding model:
+An implemented alias parameter is a non-owning name for an eligible place.
+Its binding mode is separate from the static target. Existing-place sources
+select storage directly; an accepted produced-object source first materializes
+an owning place in hidden caller storage and then applies the same non-owning
+binding model:
 
 ```ska
 fn inspect(ref value: Item) -> i64 {
@@ -59,10 +59,10 @@ universal non-owning target with no members or inline storage. Interfaces
 expose only their declared requirements. Alias modifiers are not accepted on
 locals, fields, results, elements, statics, or captures.
 
-## Implemented eligible argument places
+## Implemented eligible argument sources
 
-An object alias argument must designate an existing, already-live object place
-or a forwarded interface/`Obj` view. Its root may be:
+An existing object alias source designates an already-live object place or a
+forwarded interface/`Obj` view. Its root may be:
 
 - an owning exact-class local;
 - an owning exact-class value parameter;
@@ -100,7 +100,7 @@ values are not yet primitive alias sources.
 A fresh inline construction, exact-class object-returning call, canonical
 class literal, or supported cast composition is now an object alias source for
 read-only `ref` during type checking and HIR construction. The
-[frozen extension](#frozen-produced-read-only-alias-arguments) changes only
+[produced-object rule](#implemented-produced-read-only-alias-arguments) changes only
 this exact-class restriction; `mut ref` remains place-based. A
 dereferenced produced shared allocation or shared-returning call is eligible
 because its owner is adopted into call-scoped anchor storage. A raw shared
@@ -112,14 +112,13 @@ initializer-body rules permit.
 Alias binding does not copy the object or begin a new object lifetime. The
 callee operates on the same place selected by the caller.
 
-## Frozen produced read-only alias arguments
+## Implemented produced read-only alias arguments
 
-The following source contract is frozen. Type checking, HIR, MIR lowering,
-and MIR verification implement its source classification, compatibility,
-access, produced-view representation, and hidden temporary lifetime.
-Native-execution coverage remains staged. An ordinary expression that
-produces one complete inline object of a known exact class may bind directly
-to a compatible read-only `ref` parameter.
+An ordinary expression that produces one complete inline object of a known
+exact class may bind directly to a compatible read-only `ref` parameter. Type
+checking, HIR, MIR lowering and verification, and x86-64 execution implement
+its source classification, compatibility, access, produced-view
+representation, hidden temporary lifetime, and ordinary internal alias ABI.
 Accepted producers are:
 
 - a fresh exact-class construction;
@@ -158,6 +157,34 @@ borrowing continues to require explicit `*` or `->` selection and follows its
 existing stable-owner or hidden-anchor rules. The extension also creates no
 local alias, stored reference, alias result, capture, external alias
 signature, or independently storable reference type.
+
+This compact example covers a canonical class literal, fresh construction,
+and object-returning call without staging locals:
+
+```ska
+class Item {
+    value: i64;
+    init(value: i64) { self.value = value; }
+}
+
+fn make() -> Item { return Item(2); }
+fn inspect(ref value: Obj) -> unit {}
+fn mutate(mut ref value: Item) -> unit {}
+
+fn example() -> unit {
+    inspect("literal");
+    inspect(Item(1));
+    inspect(make());
+
+    // error[TYP020]: mutable alias argument requires an existing object place
+    mutate(Item(3));
+}
+```
+
+The first three calls create one caller-owned temporary apiece. The final call
+is rejected because implicit produced binding is read-only; assigning the
+object to a mutable local first is the supported spelling when mutation is
+intended.
 
 ### Production, ownership, and lifetime
 
@@ -216,7 +243,7 @@ Projecting an inline class field or direct base preserves that access. A view
 conversion may restrict mutable access when forwarding to `ref`; read-only
 access cannot satisfy a `mut ref` parameter.
 
-Under the frozen produced-object extension, the compiler-created temporary
+For a produced object alias, the compiler-created temporary
 supplies read-only alias access regardless of the temporary's internal
 initialization capability. It therefore forwards only to another `ref`.
 
@@ -291,8 +318,8 @@ An alias parameter is valid only for the dynamic execution of its call. The
 caller retains ownership of every directly supplied inline place for that
 complete call. Forwarding relies on the enclosing call's same guarantee.
 
-Under the frozen produced-object extension, hidden caller storage instead
-owns the materialized place through the enclosing full expression. The alias
+For a produced object alias, hidden caller storage owns the materialized place
+through the enclosing full expression. The alias
 still cannot outlive its dynamic call; the slightly longer owner lifetime
 only supplies deterministic cleanup and does not create an escaping view.
 
@@ -367,11 +394,10 @@ evaluation order, and source lifetime. It does not require a raw-pointer type,
 object address to be source-visible, a particular parameter representation,
 frame home, register class, field offset, or calling convention.
 
-The frozen produced-object extension changes only how the caller establishes
-the aliased place. It adds no external object or alias ABI, changes no internal
-alias calling convention, and requires no runtime service. Once implemented,
-the backend receives the same verified non-owning alias representation used
-for an existing place.
+Produced object aliases change only how the caller establishes the aliased
+place. They add no external object or alias ABI, change no internal alias
+calling convention, and require no runtime service. The backend receives the
+same verified non-owning alias representation used for an existing place.
 
 The current target realization is an implementation concern recorded in the
 [backend and target contract](../compiler/BACKEND.md). Allocation, reference
