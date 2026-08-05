@@ -1,6 +1,6 @@
 # Program Arguments Roadmap
 
-Status: in progress; PA2 is next.
+Status: complete.
 
 This roadmap gives native Skald applications an explicitly imported
 `std::process::args() -> Str[]` API while preserving the established
@@ -100,7 +100,7 @@ copying Niflheim's `std.io` placement or vector-based splitting machinery.
 
 - [x] PA0 — Freeze the process-argument source and host contract
 - [x] PA1 — Add exact executable arguments to native goldens
-- [ ] PA2 — Implement and harden `std::process::args`
+- [x] PA2 — Implement and harden `std::process::args`
 
 ## PR-sized implementation sequence
 
@@ -182,33 +182,33 @@ all existing cases behave unchanged when `.argv` is absent.
 the now-testable Linux process record and reconcile all living documentation
 with executable behavior.
 
-- [ ] Add `std/std/process.ska` with ordinary imports of `std::io` and
+- [x] Add `std/std/process.ska` with ordinary imports of `std::io` and
       `std::str` and the exact public function frozen in PA0. Add no intrinsic,
       external declaration, static state, or private compiler convention.
-- [ ] Read `/proc/self/cmdline` through a named `Str` local eligible for the
+- [x] Read `/proc/self/cmdline` through a named `Str` local eligible for the
       existing `ref` parameter, count NUL terminators with checked byte access,
       allocate the exact `Str[]` length, and fill it in source order with
       checked shared-backing slices.
-- [ ] Preserve an empty procfs record as an empty vector, leading and
+- [x] Preserve an empty procfs record as an empty vector, leading and
       consecutive NULs as empty arguments, and the final terminator as the end
       of the last argument rather than a new argument. Keep all scan indices
       within the established `Str`/array `i64` position boundary.
-- [ ] Add the canonical module source to only those compiler test fixtures
+- [x] Add the canonical module source to only those compiler test fixtures
       that promise the complete installed standard-library closure or directly
       exercise `std::process`. Do not expand this task into the separately
       tracked canonical-fixture centralization cleanup.
-- [ ] Add focused provider/pipeline coverage proving that the installed module
+- [x] Add focused provider/pipeline coverage proving that the installed module
       is reached through ordinary imports and compiles through verified MIR to
       assembly without a new runtime symbol, entry-wrapper call, or ABI marker.
-- [ ] Add native goldens for no additional arguments and for a vector
+- [x] Add native goldens for no additional arguments and for a vector
       containing ordinary text, whitespace, empty, and non-UTF-8 arguments.
       Avoid asserting the build-directory spelling of element zero; assert its
       vector position/count and the exact supplied suffix.
-- [ ] Promote process arguments to implemented status and update
+- [x] Promote process arguments to implemented status and update
       `docs/language/PROCESS.md`, the status and language indexes,
       modules/entry-point prose, standard I/O cross-reference, standard-library
       guide, and testing guide to describe only current behavior.
-- [ ] Audit generated assembly and the public runtime header to confirm that
+- [x] Audit generated assembly and the public runtime header to confirm that
       runtime ABI version 8 and the parameterless internal Skald entry call are
       byte-for-byte unchanged. Remove any stale frozen-rollout wording outside
       the roadmap.

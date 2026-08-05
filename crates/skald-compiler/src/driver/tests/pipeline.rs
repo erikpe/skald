@@ -26,6 +26,7 @@ fn write_canonical_standard_library(root: &Path) {
     fs::write(root.join("std/error.ska"), CANONICAL_ERROR_SOURCE).unwrap();
     fs::write(root.join("std/f64.ska"), CANONICAL_F64_SOURCE).unwrap();
     fs::write(root.join("std/io.ska"), CANONICAL_IO_SOURCE).unwrap();
+    fs::write(root.join("std/process.ska"), CANONICAL_PROCESS_SOURCE).unwrap();
 }
 
 fn module_request(
@@ -351,6 +352,63 @@ fn canonical_io_obeys_default_replacement_and_disabled_selection() {
     };
     assert!(render_diagnostics(&report.sources, &report.diagnostics)
         .contains("module `std::io` was not found"));
+}
+
+#[test]
+fn installed_process_arguments_reach_verified_assembly_as_ordinary_library_source() {
+    let directory = TemporaryDirectory::new("request-process-arguments").unwrap();
+    let application = directory.join("application");
+    let installed = directory.join("installed");
+    fs::create_dir_all(&application).unwrap();
+    fs::write(
+        application.join("app.ska"),
+        concat!(
+            "from std::process import args;\n",
+            "import std::str;\n",
+            "fn main() -> i64 {\n",
+            "  var values: std::str::Str[] = args();\n",
+            "  return (i64) values.len();\n",
+            "}\n",
+        ),
+    )
+    .unwrap();
+    write_canonical_standard_library(&installed);
+    let request = CompilationRequest::new(
+        EntrySelector::Module("app".parse().unwrap()),
+        vec![application],
+        StandardLibrarySelection::Default,
+        Target::X86_64SysV,
+        ArtifactOptions::new(ArtifactKind::Assembly, None),
+        CompilationEnvironment::new(directory.path().to_owned(), installed),
+    );
+
+    let artifact = compile_request_to_assembly(&request).unwrap();
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(artifact.report.sources.len(), 10);
+    assert!(artifact.assembly.contains(".Lska.fn.std.process.args."));
+    assert!(artifact
+        .assembly
+        .contains("call .Lska.fn.std.io.read_file."));
+    assert_eq!(artifact.assembly.matches("call ska_rt_abi_v8\n").count(), 1);
+    assert!(artifact.assembly.contains(concat!(
+        "main:\n",
+        "    push rbp\n",
+        "    mov rbp, rsp\n",
+        "    call ska_rt_abi_v8\n",
+        "    call .Lska.fn.app.main.",
+    )));
+    for runtime_symbol in [
+        "ska_rt_io_standard_handle",
+        "ska_rt_io_open",
+        "ska_rt_io_read",
+        "ska_rt_io_write",
+        "ska_rt_io_close",
+    ] {
+        assert!(artifact
+            .assembly
+            .contains(&format!("call {runtime_symbol}")));
+    }
 }
 
 #[test]

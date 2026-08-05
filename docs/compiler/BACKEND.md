@@ -753,10 +753,10 @@ and returns its low C `int` result. Runtime marker ownership belongs to the
 [runtime ABI](RUNTIME_ABI.md#version-and-link-compatibility) rather than the
 internal symbol scheme.
 
-The frozen [process-argument contract](../language/PROCESS.md) does not change
-this wrapper or the parameterless internal entry call. The future
+The implemented [process-argument contract](../language/PROCESS.md) does not
+change this wrapper or the parameterless internal entry call. The
 `std::process` module reads the Linux host record through ordinary library I/O;
-there is no backend argument-capture path or new target ABI surface.
+there is no backend argument-capture path or target ABI addition.
 
 ## Assembly emission and verification
 

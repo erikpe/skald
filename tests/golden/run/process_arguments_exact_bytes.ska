@@ -1,0 +1,25 @@
+import std::process;
+import std::str;
+
+fn main() -> i64 {
+    var values: std::str::Str[] = std::process::args();
+    if (values.len() != 5u) {
+        return 1;
+    }
+    if (values[0].len() == 0u) {
+        return 2;
+    }
+    if (!values[1].equals("plain")) {
+        return 3;
+    }
+    if (!values[2].equals("space arg\tline\n")) {
+        return 4;
+    }
+    if (values[3].len() != 0u) {
+        return 5;
+    }
+    if (!values[4].equals("raw\xffbytes")) {
+        return 6;
+    }
+    return 0;
+}

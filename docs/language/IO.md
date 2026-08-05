@@ -107,7 +107,7 @@ Messages do not include the path or host error number. A panic aborts execution,
 so this first API does not promise cleanup after an earlier operation fails.
 `read_file` does close its handle on the normal success path before returning.
 
-The frozen [process-argument contract](PROCESS.md) will reuse `read_file` to
+The implemented [process-argument contract](PROCESS.md) reuses `read_file` to
 read Linux `/proc/self/cmdline`. Process arguments remain a separate
 `std::process` surface: they add no tenth public I/O function, private I/O
 intrinsic, or runtime operation, and inherit these file-read failures exactly.

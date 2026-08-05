@@ -771,9 +771,9 @@ This grammar therefore already describes its source shapes. The `std::io`
 module installs its private canonical intrinsic declarations and implements
 all nine public functions using existing language forms.
 
-The frozen [process-argument API](PROCESS.md) likewise composes existing
-declarations, calls, arrays, loops, strings, modules, and I/O. Its future
-`std::process` module adds no syntax or parser work; it is not yet installed.
+The implemented [process-argument API](PROCESS.md) likewise composes existing
+declarations, calls, arrays, loops, strings, modules, and I/O. Its
+`std::process` module adds no syntax or parser work.
 
 The implemented
 [primitive string conversion API](STRINGS.md#frozen-primitive-textual-conversions)

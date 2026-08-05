@@ -1,0 +1,19 @@
+import std::process;
+import std::str;
+
+fn main() -> i64 {
+    var first: std::str::Str[] = std::process::args();
+    var second: std::str::Str[] = std::process::args();
+    if (first.len() != 1u || second.len() != 1u) {
+        return 1;
+    }
+    if (first[0].len() == 0u || second[0].len() == 0u) {
+        return 2;
+    }
+
+    first[0] = "";
+    if (second[0].len() == 0u) {
+        return 3;
+    }
+    return 0;
+}

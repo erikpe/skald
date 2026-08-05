@@ -31,11 +31,11 @@ marker, and the generated process-entry wrapper remain unchanged. Static
 fields do not alter instance object layouts, dispatch metadata, internal call
 classification, or the primitive-only external ABI.
 
-The frozen [process-argument contract](../language/PROCESS.md) also leaves this
-surface unchanged. Its initial Linux implementation is ordinary Skald source
+The implemented [process-argument contract](../language/PROCESS.md) also leaves
+this surface unchanged. Its Linux implementation is ordinary Skald source
 over `std::io::read_file`; runtime ABI version 8 and the parameterless process
-wrapper remain current. No C `argc`/`argv` capture, retained host pointer,
-runtime global, public symbol, or compatibility-marker change is planned.
+wrapper remain current. It adds no C `argc`/`argv` capture, retained host
+pointer, runtime global, public symbol, or compatibility-marker change.
 
 The current public surface is:
 

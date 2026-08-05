@@ -194,7 +194,9 @@ without a scalar runtime observer. The golden harness accepts exact-byte stdin,
 executable-argument, stdout, stderr, and exit sidecars and feeds the same
 arguments and stdin bytes to both deterministic executions. The
 [golden fixture guide](../../tests/golden/README.md) owns `.argv` encoding and
-naming.
+naming. Process-argument goldens cover a no-suffix invocation, repeated fresh
+snapshots, element-zero position without freezing its path, and exact ordinary,
+whitespace, empty, and non-UTF-8 suffix values.
 
 Multi-file golden directories contain one `case.args` manifest plus their
 entry and supporting trees. The manifest records one exact command argument

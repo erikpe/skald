@@ -101,7 +101,7 @@ absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
 access. Exceptional control flow remains unimplemented and exploratory.
 The separate uncatchable panic and common unrecoverable-failure reporting
-contract is frozen but not yet implemented.
+contract is implemented.
 
 External function declarations are trusted ABI assertions. They form a focused
 interoperation boundary rather than a proof that foreign code satisfies Skald
@@ -148,12 +148,11 @@ makes a result source-observable.
   deliberate exclusions. Its private compiler/runtime foundation, x86-64
   lowering, exact standard-stream writes, and growable whole-input reads all
   execute through ordinary Skald library code over the private byte boundary.
-- [Process arguments](PROCESS.md) freezes the explicitly imported future
+- [Process arguments](PROCESS.md) defines the implemented, explicitly imported
   `std::process::args() -> Str[]` contract: a fresh raw-byte invocation-vector
   snapshot, including the host invocation name at index zero, decoded from
-  Linux `/proc/self/cmdline` by ordinary standard-library code. It is not yet
-  implemented and does not change the parameterless entry function or runtime
-  ABI.
+  Linux `/proc/self/cmdline` by ordinary standard-library code. It does not
+  change the parameterless entry function or runtime ABI.
 - [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
   construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
   and failure contract.

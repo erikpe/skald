@@ -34,11 +34,11 @@ contract are documented in
 and its completed rollout is recorded in the archived
 [primitive string conversions roadmap](../docs/archive/PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md).
 
-The future `std::process` module has a frozen but not yet implemented
-[process-argument contract](../docs/language/PROCESS.md). It will compose
-existing `std::io`, raw-byte strings, arrays, loops, and modules to read the
-Linux invocation vector. It introduces no compiler intrinsic, entry-function
-parameter, or runtime ABI addition.
+The `std::process` module has an implemented
+[process-argument contract](../docs/language/PROCESS.md). Its `args()` function
+composes existing `std::io`, raw-byte strings, arrays, loops, and modules to
+read the Linux invocation vector. It introduces no compiler intrinsic,
+entry-function parameter, static cache, or runtime ABI addition.
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`

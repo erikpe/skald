@@ -1,16 +1,15 @@
 # Process Arguments
 
-**Status:** frozen design; not yet implemented.
+**Status:** implemented initial Linux profile.
 
 This document defines the source-level contract for reading the invocation
-vector of a Skald process. The initial implementation will be ordinary Skald
+vector of a Skald process. The installed implementation is ordinary Skald
 standard-library source for the current Linux target. Availability is tracked
-in [Language status](STATUS.md), and implementation order remains in the
-[program arguments roadmap](../roadmaps/PROGRAM_ARGUMENTS_ROADMAP.md).
+in [Language status](STATUS.md).
 
 ## Public surface
 
-The standard library will expose exactly this initial process API:
+The standard library exposes exactly this initial process API:
 
 ```ska
 public fn args() -> std::str::Str[];
@@ -24,7 +23,7 @@ import std::process::args;
 
 fn main() -> i64 {
     var invocation: std::str::Str[] = args();
-    return invocation.len();
+    return (i64) invocation.len();
 }
 ```
 
@@ -51,7 +50,7 @@ Each call reads and parses the host record anew and returns a fresh owning
 cache or other process-global library state. Consequently, callers may replace
 their own array elements without changing a result returned by another call.
 
-The initial implementation counts records before allocating the exact-length
+The implementation counts records before allocating the exact-length
 result array, then scans the same captured `Str` and assigns one checked
 `Str.slice` for each record. Element strings may share that captured string's
 backing storage. Ordinary synthesized ownership keeps the backing alive as
@@ -66,7 +65,7 @@ unobservable copies without changing this contract.
 
 ## Current Linux host contract
 
-The initial implementation requires the Linux `/proc/self/cmdline` record and
+The implementation requires the Linux `/proc/self/cmdline` record and
 reads it with `std::io::read_file`. That record is decoded as a sequence of
 NUL-terminated arguments:
 
