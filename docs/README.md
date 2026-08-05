@@ -24,6 +24,9 @@ Use the authority closest to the behavior:
   [strings](language/STRINGS.md);
 - the implemented nine-function `std::io` source contract belongs in
   [standard I/O](language/IO.md);
+- the frozen source-visible invocation-vector, byte, snapshot, ownership, and
+  Linux discovery contract belongs in
+  [process arguments](language/PROCESS.md);
 - the frozen source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
   [arrays](language/ARRAYS.md);

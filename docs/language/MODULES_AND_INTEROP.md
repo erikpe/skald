@@ -55,6 +55,11 @@ missing `main`, a different parameter or result signature, and an external
 declaration named `main` are compile-time errors. How a target exposes this
 source function to its host process is an implementation concern.
 
+The frozen [process-argument contract](PROCESS.md) preserves this signature.
+Programs will obtain the host invocation vector through an ordinary,
+explicitly imported `std::process::args()` call rather than entry parameters.
+That library surface is not yet implemented.
+
 ## External-function declarations
 
 The implemented external form is a top-level declaration with no Skald body:

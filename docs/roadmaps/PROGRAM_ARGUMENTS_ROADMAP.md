@@ -1,6 +1,6 @@
 # Program Arguments Roadmap
 
-Status: planned; PA0 is next.
+Status: in progress; PA1 is next.
 
 This roadmap gives native Skald applications an explicitly imported
 `std::process::args() -> Str[]` API while preserving the established
@@ -98,7 +98,7 @@ copying Niflheim's `std.io` placement or vector-based splitting machinery.
 
 ## Progress
 
-- [ ] PA0 — Freeze the process-argument source and host contract
+- [x] PA0 — Freeze the process-argument source and host contract
 - [ ] PA1 — Add exact executable arguments to native goldens
 - [ ] PA2 — Implement and harden `std::process::args`
 
@@ -111,22 +111,22 @@ behavior, Linux discovery mechanism, ownership, failure policy, and unchanged
 compiler/runtime boundary before test or library representations depend on
 them.
 
-- [ ] Add `docs/language/PROCESS.md` as the source authority for
+- [x] Add `docs/language/PROCESS.md` as the source authority for
       `std::process::args()`, explicit import, element-zero meaning, byte
       preservation, empty arguments, repeated snapshots, ownership, procfs
       decoding, inherited I/O failures, costs, and the exclusions above.
-- [ ] Record clearly that the current implementation requires the existing
+- [x] Record clearly that the current implementation requires the existing
       Linux `/proc/self/cmdline` record and that a later target may replace the
       library implementation only while preserving the public vector and byte
       semantics.
-- [ ] Update the documentation authority index, language overview, status
+- [x] Update the documentation authority index, language overview, status
       matrix, modules/entry-point contract, standard I/O cross-reference, and
       standard-library guide. Mark the feature as a frozen design rather than
       implemented until PA2 completes.
-- [ ] State in the appropriate living authorities that the feature composes
+- [x] State in the appropriate living authorities that the feature composes
       existing declarations, calls, arrays, loops, strings, modules, and I/O;
       it changes neither the implemented grammar nor any compiler phase.
-- [ ] Reconcile runtime/backend prose only where needed to make the unchanged
+- [x] Reconcile runtime/backend prose only where needed to make the unchanged
       ABI version 8 and unchanged parameterless process wrapper explicit. Do
       not add a speculative C argument API.
 

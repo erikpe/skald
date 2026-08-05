@@ -6,16 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+- [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md) — **in progress**; PA0
+  froze the source and Linux host contract. PA1, adding exact executable
+  arguments to native goldens, is next. The roadmap depends on the implemented
+  standard I/O, string, array, and module-system contracts and has no active
+  roadmap dependency.
 
 ## Planned
 
-- [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md) — **planned**; add an
-  explicitly imported raw-byte `std::process::args() -> Str[]` API over the
-  implemented Linux whole-file I/O and string-slice profiles. PA0, freezing the
-  source and host contract, is next. The roadmap depends on the implemented
-  standard I/O, string, array, and module-system contracts and has no active
-  roadmap dependency.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
