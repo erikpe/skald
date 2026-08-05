@@ -89,6 +89,10 @@ Resolved module-system design inputs:
 - [Niflheim module-system audit](MODULE_SYSTEM_NIFLHEIM_AUDIT.md)
 - [Initial Skald module-system design record](SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
 
+Resolved golden-test-runner design inputs:
+
+- [Spec-driven parallel golden test runner design](GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md)
+
 Supporting records for the documentation overhaul:
 
 - [migration inventory](DOCUMENTATION_OVERHAUL_INVENTORY.md)

@@ -1,7 +1,9 @@
 # Golden Test Runner Design Proposal
 
-Status: proposed on 2026-08-05; awaiting review and confirmation before an
-implementation roadmap is written.
+Status: G1 through G12 confirmed, frozen, and promoted on 2026-08-05. The
+[implementation roadmap](../roadmaps/GOLDEN_TEST_RUNNER_ROADMAP.md) owns
+delivery. This archived proposal remains the durable design and decision
+record until implemented behavior is transferred to living documentation.
 
 This proposal replaces Skald's organically grown golden-test harness with a
 spec-driven Rust runner. The design adopts the useful organization and
@@ -9,7 +11,7 @@ execution features demonstrated by the sibling Niflheim repository while
 preserving Skald's stronger exact-byte, diagnostic, process, and determinism
 contracts.
 
-The proposed runner is a repository tool, not part of the Skald language or a
+The designed runner is a repository tool, not part of the Skald language or a
 new compiler API. Current behavior remains authoritative in
 [`tests/golden/README.md`](../../tests/golden/README.md) until an approved
 implementation changes it and updates the living testing guide.
@@ -190,30 +192,30 @@ This proposal does not:
 
 ## Decision register
 
-Every direction below is proposed and requires confirmation before promotion
-to an implementation roadmap.
+Every direction below was confirmed on 2026-08-05. The implementation roadmap
+must deliver the complete design without reopening these decisions implicitly.
 
-| ID | Decision | Proposed direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [G1](#g1--runner-ownership) | Runner ownership | Separate `skald-golden` workspace tool invoking real `skac` processes | Proposed |
-| [G2](#g2--specification-format) | Specification format | Strict, versioned TOML in `*.golden.toml` files | Proposed |
-| [G3](#g3--dependency-policy) | Dependency policy | Permit narrowly scoped schema and machine-report dependencies only in the runner tool | Proposed |
-| [G4](#g4--fixture-organization) | Fixture organization | Organize by feature, mixing successful and failing cases in one collection | Proposed |
-| [G5](#g5--build-variants) | Compiler configurations | Named repository variants plus test-local compiler arguments | Proposed |
-| [G6](#g6--input-and-expectation-semantics) | Inputs and expectations | Byte-oriented exact or stable partial matching; inline UTF-8 or external byte files | Proposed |
-| [G7](#g7--execution-planning-and-parallelism) | Parallelism | Dependency-aware leaf scheduling under one bounded worker budget | Proposed |
-| [G8](#g8--runtime-and-link-ownership) | Runtime and linking | Build runtime once; link the first checked assembly through the shared toolchain owner | Proposed |
-| [G9](#g9--determinism-modes) | Determinism | Default to one observation; run compile or full audits explicitly when warranted | Proposed |
-| [G10](#g10--filtering-and-identities) | Filtering | Stable leaf IDs with repeatable include/exclude globs and exact selection | Proposed |
-| [G11](#g11--process-isolation-and-timeouts) | Isolation | Per-run temporary roots, unique build roots, bounded execution, explicit shared resources | Proposed |
-| [G12](#g12--migration-boundary) | Migration | Legacy adapter first, then feature-by-feature spec migration | Proposed |
+| [G1](#g1--runner-ownership) | Runner ownership | Separate `skald-golden` workspace tool invoking real `skac` processes | **Confirmed** |
+| [G2](#g2--specification-format) | Specification format | Strict, versioned TOML in `*.golden.toml` files | **Confirmed** |
+| [G3](#g3--dependency-policy) | Dependency policy | Permit narrowly scoped schema and machine-report dependencies only in the runner tool | **Confirmed** |
+| [G4](#g4--fixture-organization) | Fixture organization | Organize by feature, mixing successful and failing cases in one collection | **Confirmed** |
+| [G5](#g5--build-variants) | Compiler configurations | Named repository variants plus test-local compiler arguments | **Confirmed** |
+| [G6](#g6--input-and-expectation-semantics) | Inputs and expectations | Byte-oriented exact or stable partial matching; inline UTF-8 or external byte files | **Confirmed** |
+| [G7](#g7--execution-planning-and-parallelism) | Parallelism | Dependency-aware leaf scheduling under one bounded worker budget | **Confirmed** |
+| [G8](#g8--runtime-and-link-ownership) | Runtime and linking | Build runtime once; link the first checked assembly through the shared toolchain owner | **Confirmed** |
+| [G9](#g9--determinism-modes) | Determinism | Default to one observation; run compile or full audits explicitly when warranted | **Confirmed** |
+| [G10](#g10--filtering-and-identities) | Filtering | Stable leaf IDs with repeatable include/exclude globs and exact selection | **Confirmed** |
+| [G11](#g11--process-isolation-and-timeouts) | Isolation | Per-run temporary roots, unique build roots, bounded execution, explicit shared resources | **Confirmed** |
+| [G12](#g12--migration-boundary) | Migration | Legacy adapter first, then feature-by-feature spec migration | **Confirmed** |
 
 ## G1 — Runner ownership
 
 **Question:** Where should the runner live, and how should it reach the
 compiler?
 
-**Proposed decision:** Add a separate `crates/skald-golden` workspace package
+**Confirmed decision:** Add a separate `crates/skald-golden` workspace package
 with a reusable library and a thin binary. The package is repository tooling,
 not a production compiler dependency. It invokes the real `skac` executable
 rather than compiling through an in-process compiler API.
@@ -223,7 +225,7 @@ The default executable lookup is a sibling `skac` binary beside the running
 builds `skac` before launching the runner, preserving the Makefile as the
 shared local and external automation interface.
 
-The proposed internal facade is:
+The confirmed internal facade is:
 
 ```text
 skald-golden
@@ -247,12 +249,12 @@ responsibility-named submodules rather than accumulating in one runner file.
 **Question:** Which file format should describe collections, tests, variants,
 and runs?
 
-**Proposed decision:** Discover `tests/golden/**/*.golden.toml`. Every spec
+**Confirmed decision:** Discover `tests/golden/**/*.golden.toml`. Every spec
 contains `schema = 1` and one or more `[[test]]` entries. TOML provides
 multiline strings, inline tables for short runs, arrays of tables for longer
 runs, familiar Cargo-adjacent syntax, and predictable typed deserialization.
 
-YAML is not proposed. Its anchors are convenient for Niflheim's repeated run
+YAML is excluded. Its anchors are convenient for Niflheim's repeated run
 lists, but named variants remove that repetition directly. YAML's implicit
 typing, aliases, permissive unknown structure, and need for a separate
 normalizer do not improve Skald's contract.
@@ -278,7 +280,7 @@ They exit with status 2, distinct from test failure status 1.
 **Question:** May a repository tool add third-party Rust dependencies when the
 current workspace has none?
 
-**Proposed decision:** Permit maintained TOML parsing, typed
+**Confirmed decision:** Permit maintained TOML parsing, typed
 serialization/deserialization, and machine-report encoding dependencies only
 in `skald-golden`. Production compiler and documentation crates remain free of
 a new dependency on the runner or its schema and reporting libraries.
@@ -288,7 +290,7 @@ temporary-directory ownership, glob matching, and human diff rendering should
 use the standard library unless implementation evidence demonstrates that a
 small focused dependency materially reduces risk.
 
-Approving G3 changes the current repository-wide statement that the workspace
+Implementing G3 changes the current repository-wide statement that the workspace
 has no third-party crate dependencies. The implementation task that changes
 the manifests must update the development workflow to state the narrower
 production-versus-tooling boundary and must run `make msrv-check`.
@@ -302,7 +304,7 @@ development tool.
 **Question:** Should successful and failing tests remain in separate global
 trees?
 
-**Proposed decision:** Organize new specs by feature and allow one spec to
+**Confirmed decision:** Organize new specs by feature and allow one spec to
 contain run and compile-fail entries together.
 
 The intended shape is:
@@ -340,7 +342,7 @@ tests.
 **Question:** How should one program and run list be checked under multiple
 compiler flag sets?
 
-**Proposed decision:** Define reusable named variants in
+**Confirmed decision:** Define reusable named variants in
 `tests/golden/config.toml`. A test selects one or more variant names. Its base
 compiler arguments are followed by the selected variant's arguments and then
 explicit command-line arguments supplied to the runner.
@@ -388,7 +390,7 @@ expectations unless a later proposal introduces variant-specific output.
 **Question:** How are program data and expected observations represented
 without losing Skald's byte contracts?
 
-**Proposed decision:** Every stream-like value uses one of:
+**Confirmed decision:** Every stream-like value uses one of:
 
 ```toml
 stdin = { inline = "sample input\n" }
@@ -533,7 +535,7 @@ environment values; inherited environment remains controlled by G11.
 
 **Question:** What is the unit of concurrency?
 
-**Proposed decision:** Discovery and validation produce an immutable expanded
+**Confirmed decision:** Discovery and validation produce an immutable expanded
 plan. The plan contains dependency nodes rather than one opaque task per spec:
 
 ```text
@@ -570,7 +572,7 @@ read-only.
 **Question:** How should native cases avoid rebuilding runtime code and avoid a
 third successful compiler invocation solely for linking?
 
-**Proposed decision:** After selection, the runner prepares the runtime archive
+**Confirmed decision:** After selection, the runner prepares the runtime archive
 exactly once if and only if the plan contains native run nodes. It invokes the
 repository's ordinary runtime Make target and validates the expected archive.
 Compile-fail-only selections never build the runtime.
@@ -586,16 +588,17 @@ Focused `skac` binary integration tests continue to own direct executable
 artifact creation through the CLI. Golden tests own source-to-assembly,
 linkage through the same toolchain owner, and native observation.
 
-If review rejects a runner dependency on `skald-compiler`, the alternative is
-to retain a third `skac -o <executable>` process. Duplicating the link command
-in `skald-golden` is not proposed.
+If implementation evidence shows that a runner dependency on `skald-compiler`
+is untenable, stop and amend this design explicitly rather than silently
+retaining a third `skac -o <executable>` process or duplicating the link command
+in `skald-golden`.
 
 ## G9 — Determinism modes
 
 **Question:** Which determinism policy belongs in ordinary runs, and how are
 the repeated-process checks retained?
 
-**Proposed decision:** Support three explicit modes:
+**Confirmed decision:** Support three explicit modes:
 
 | Mode | Successful compilation | Compile failure | Native run |
 |---|---|---|---|
@@ -635,7 +638,7 @@ runtime temporary directory.
 
 **Question:** How can contributors select a useful scope unambiguously?
 
-**Proposed decision:** Every leaf has a canonical ID:
+**Confirmed decision:** Every leaf has a canonical ID:
 
 ```text
 <spec path without .golden.toml>::<test>::<variant>::<run>
@@ -672,7 +675,7 @@ fails discovery rather than silently rotting.
 
 **Question:** How are parallel cases kept hermetic and bounded?
 
-**Proposed decision:** Every build variant receives a unique directory below
+**Confirmed decision:** Every build variant receives a unique directory below
 `build/golden/cases/`. Its readable prefix derives from the canonical build ID
 and its suffix is a stable hash of the complete ID. Flattened names alone are
 insufficient because path separators and legal underscores can collide.
@@ -706,7 +709,7 @@ in the spec. This prevents ambient test-order dependencies.
 
 **Question:** How can 288 cases move without one risky fixture rewrite?
 
-**Proposed decision:** The first runner version includes a legacy loader that
+**Confirmed decision:** The first runner version includes a legacy loader that
 maps the existing tree into the new internal model:
 
 - one ordinary `run/**/*.ska` fixture becomes one test, the implicit `default`
@@ -771,7 +774,7 @@ scripts/golden.sh --list --filter 'modules/**'
 scripts/golden.sh --determinism compile --filter 'language/strings/**'
 ```
 
-The complete proposed surface is:
+The complete confirmed surface is:
 
 | Option | Meaning |
 |---|---|
@@ -881,10 +884,9 @@ run of at most 15 seconds and a warm `full` run of at most 30 seconds on the
 16-logical-CPU audit host. Performance reporting should also record compiler,
 linker, and run stage totals so later regressions have an owner.
 
-## Promotion and implementation boundary
+## Promotion result and implementation boundary
 
-This proposal should be promoted only after review confirms G1 through G12,
-especially:
+Review confirmed G1 through G12 on 2026-08-05, including:
 
 - TOML rather than YAML;
 - the narrowly scoped third-party dependency exception;
@@ -897,10 +899,10 @@ especially:
 - per-run temporary working directories for new fixtures; and
 - a legacy adapter rather than a big-bang migration.
 
-Promotion does not implement the design. After confirmation, write a separate
-implementation roadmap divided by stable boundaries: typed model and parser,
-legacy parity, selection and planning, process execution, runtime/link
-integration, parallel scheduling, reporting, Makefile cutover, feature-group
-migrations, and legacy removal. Each task must keep the complete suite runnable
-and update the living testing documentation when its user-visible contract
-changes.
+Freezing this design does not make it implemented. The active
+[golden test runner roadmap](../roadmaps/GOLDEN_TEST_RUNNER_ROADMAP.md) divides
+delivery by stable boundaries: typed model and parser, selection and planning,
+process execution, runtime/link integration, parallel scheduling, reporting,
+legacy parity, Makefile cutover, feature-group migrations, and legacy removal.
+Each task keeps the complete suite runnable and updates living testing
+documentation when its user-visible contract changes.

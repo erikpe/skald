@@ -10,16 +10,15 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md) —
+  planned; implement the frozen Rust runner design, prove parity with all 288
+  legacy cases, cut repository commands over, migrate fixtures by feature, and
+  remove legacy discovery. GR0, the runner package and frozen schema, is next;
+  the archived design record is its only material design dependency.
 
 ## Design proposals
 
-- [Golden test runner redesign](GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md) —
-  proposed; replace the serial sidecar-discovered harness with a spec-driven
-  Rust runner that supports reusable run data, compiler variants, bounded
-  parallelism, strict byte expectations, filtering, isolation, and gradual
-  fixture migration. Review and confirm decisions G1 through G12 before
-  creating an implementation roadmap.
+No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
