@@ -31,6 +31,43 @@ Legacy cases are not part of spec discovery, so an empty spec selection still
 requires the explicit `--allow-empty` policy. The legacy runner and sidecar
 contract below remain the executable golden-test authority.
 
+## New-format process and expectation contract
+
+The Rust runner's compiler-independent execution layer implements the process
+semantics used by new-format runs. Inline stream data is UTF-8 from TOML;
+external data files and Unix argument manifests are loaded byte for byte.
+Nothing normalizes newlines, encoding, zero bytes, whitespace, or terminal
+escapes. Omitted stdout and stderr expectations mean exact empty bytes.
+Explicit stream expectations support `exact` (the default), `starts-with`,
+`contains`, or `ignore = true`; partial fragments must be nonempty. Both inline
+and file data work with every matching policy.
+
+An `argv_file` is a sequence of NUL-terminated byte strings. Its empty form has
+no arguments, while consecutive delimiters preserve empty arguments. Every
+nonempty file must end in NUL. This representation preserves non-UTF-8 Unix
+arguments and is the same encoding described for legacy `.argv` sidecars
+below.
+
+Each run gets a mode-`0700` private directory under the configured temporary
+root. Named input files are written there before execution, named output files
+are compared as exact bytes afterward, and `{tmp:name}` in arguments or stdin
+expands to the absolute named path. The private directory is the default
+working directory. `cwd = { fixture = "..." }` instead selects a contained
+fixture directory that the case must treat as read-only; the runner never
+populates or modifies that shared directory.
+
+Child environments are cleared and reconstructed from the toolchain allowlist
+(`PATH`, `CC`, `SKALD_RUNTIME_ARCHIVE`, and `SKALD_STDLIB_ROOT`), the private
+`TMPDIR`, and declared per-run values. Stdin writing and stdout/stderr capture
+run concurrently. Each process has its own timeout; on Linux a timeout kills
+the complete child process group and remains distinct from an exit code or
+signal. Passing sandboxes are deleted unless all artifacts were requested;
+failed or incompletely prepared sandboxes are retained for inspection.
+
+These semantics are available to the runner library and its process tests.
+The command-line runner remains read-only until compiler and linker execution
+are composed in the next implementation stage.
+
 The runner recursively discovers two case families:
 
 - `run/**/*.ska` requires a same-named `.exit` sidecar containing either an

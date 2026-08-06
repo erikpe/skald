@@ -19,11 +19,13 @@ Skald development currently requires:
 Production compiler crates and the documentation checker have no third-party
 crate dependencies. The `skald-golden` repository tool is the narrow
 exception: it uses maintained TOML and Serde crates to decode the versioned
-golden-test schema and report precise field paths. Those dependencies and
-their complete transitive graph are recorded in `Cargo.lock`; they do not flow
-into `skac`, `skald-compiler`, generated programs, or the runtime. Native
-compilation and runtime tests require the host C tools even when a change
-touches only Rust code.
+golden-test schema and report precise field paths, plus the narrowly scoped
+`nix` process/signal API to terminate complete Linux child process groups
+without repository-owned unsafe code. Those dependencies and their complete
+transitive graph are recorded in `Cargo.lock`; they do not flow into `skac`,
+`skald-compiler`, generated programs, or the runtime. Native compilation and
+runtime tests require the host C tools even when a change touches only Rust
+code.
 
 ## Makefile interface
 

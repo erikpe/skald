@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR2 is next.
+Status: in progress; GR3 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -52,7 +52,7 @@ implicitly.
 
 - [x] GR0 — Establish the Rust tool and frozen schema
 - [x] GR1 — Discover, validate, expand, and select spec cases
-- [ ] GR2 — Implement byte expectations and isolated process execution
+- [x] GR2 — Implement byte expectations and isolated process execution
 - [ ] GR3 — Compile, link, and execute sequential plans
 - [ ] GR4 — Schedule the dependency graph in parallel
 - [ ] GR5 — Complete reporting and the command-line surface
@@ -143,25 +143,25 @@ side-effect free, and invalid paths or schemas fail before selection.
 **Purpose:** Establish one reliable subprocess and byte-observation substrate
 before compiler-specific stages or parallel scheduling use it.
 
-- [ ] Implement inline UTF-8 and external exact-byte loading with no newline,
+- [x] Implement inline UTF-8 and external exact-byte loading with no newline,
       encoding, zero-byte, or terminal-escape normalization.
-- [ ] Implement exact, starts-with, contains, and ignored stream policies;
+- [x] Implement exact, starts-with, contains, and ignored stream policies;
       preserve strict empty defaults and reject empty partial fragments.
-- [ ] Decode the existing NUL-terminated exact-byte Unix argument format and
+- [x] Decode the existing NUL-terminated exact-byte Unix argument format and
       retain whitespace, line-feed, empty, and non-UTF-8 arguments.
-- [ ] Create private per-run temporary directories, write declared byte input
+- [x] Create private per-run temporary directories, write declared byte input
       files, substitute `{tmp:name}` paths in arguments and stdin, and compare
       declared byte output files after execution.
-- [ ] Support the default private working directory and explicit read-only
+- [x] Support the default private working directory and explicit read-only
       fixture working directories below the golden root.
-- [ ] Construct an allowlisted inherited environment plus declared per-case
+- [x] Construct an allowlisted inherited environment plus declared per-case
       values without ambient test-order state.
-- [ ] Feed stdin concurrently while capturing stdout and stderr so input or
+- [x] Feed stdin concurrently while capturing stdout and stderr so input or
       output beyond host pipe capacity cannot deadlock.
-- [ ] Enforce a separate timeout for each child process, terminate its Linux
+- [x] Enforce a separate timeout for each child process, terminate its Linux
       process group, close owned pipes, collect available observations, and
       report timeout distinctly from code or signal termination.
-- [ ] Add a Rust fake-process test helper with modes for arguments, binary
+- [x] Add a Rust fake-process test helper with modes for arguments, binary
       streams, large pipes, output files, sleep, signals, descendants, and
       controlled failures.
 

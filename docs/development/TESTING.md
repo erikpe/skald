@@ -168,6 +168,18 @@ cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 The [golden fixture guide](../../tests/golden/README.md#spec-planning-and-inspection)
 owns the current filtering and canonical-ID contract.
 
+The runner's compiler-independent process tests use its Rust fake-process
+binary to cover exact and partial byte expectations, non-UTF-8 Unix arguments,
+temporary files, environment isolation, large simultaneous pipes, signals,
+timeouts, and Linux descendant termination:
+
+```text
+cargo test --locked -p skald-golden --test process_execution
+```
+
+The command-line runner remains inspection-only until compiler, linker, and
+native-run planning are composed by the next implementation stage.
+
 ## Fixtures and expectations
 
 Keep small source fixtures in the test module that consumes them. Shared Rust
