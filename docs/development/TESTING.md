@@ -156,6 +156,18 @@ Rust test-name filters match substrings and may select more than one test; use
 Before handoff, run the full validation described in the
 [development workflow](README.md#change-validation).
 
+The Rust golden runner can validate and inspect new-format specs without
+starting compiler or test processes:
+
+```text
+cargo run --locked -p skald-golden -- --list --allow-empty
+cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allow-empty
+cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
+```
+
+The [golden fixture guide](../../tests/golden/README.md#spec-planning-and-inspection)
+owns the current filtering and canonical-ID contract.
+
 ## Fixtures and expectations
 
 Keep small source fixtures in the test module that consumes them. Shared Rust

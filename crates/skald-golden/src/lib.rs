@@ -16,6 +16,13 @@ mod selection;
 mod spec;
 
 pub use cli::run_cli;
+pub use plan::{
+    build_plan, PlanError, PlannedBuild, PlannedLeaf, PlannedLeafKind, PlannedRun, PlannedSpec,
+    PlannedTest, ResolvedArgs, ResolvedByteSource, ResolvedCompileExpectation, ResolvedInputFile,
+    ResolvedOutputFile, ResolvedRunExpectation, ResolvedStreamExpectation,
+    ResolvedWorkingDirectory, TestPlan,
+};
+pub use selection::{select, SelectedPlan, SelectionError, SelectionOptions};
 pub use spec::{
     parse_config, parse_spec, ArgSource, ByteSource, CompileExpectation, CompileFailTest,
     ExitExpectation, InputFile, MatchMode, OutputFileExpectation, RepositoryConfig, Run,

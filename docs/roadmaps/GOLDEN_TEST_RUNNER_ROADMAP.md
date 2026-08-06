@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR1 is next.
+Status: in progress; GR2 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -51,7 +51,7 @@ implicitly.
 ## Progress
 
 - [x] GR0 — Establish the Rust tool and frozen schema
-- [ ] GR1 — Discover, validate, expand, and select spec cases
+- [x] GR1 — Discover, validate, expand, and select spec cases
 - [ ] GR2 — Implement byte expectations and isolated process execution
 - [ ] GR3 — Compile, link, and execute sequential plans
 - [ ] GR4 — Schedule the dependency graph in parallel
@@ -108,24 +108,24 @@ external process is executed yet.
 **Purpose:** Turn validated specs into stable executable identities before
 process execution or concurrency is introduced.
 
-- [ ] Discover `tests/golden/**/*.golden.toml` in deterministic path order and
+- [x] Discover `tests/golden/**/*.golden.toml` in deterministic path order and
       load `tests/golden/config.toml` separately from discovered specs.
-- [ ] Canonicalize every source, data file, expected file, and fixture working
+- [x] Canonicalize every source, data file, expected file, and fixture working
       directory; reject lexical and symlink escapes from the golden root.
-- [ ] Resolve source shorthand and recognized path-bearing compiler arguments
+- [x] Resolve source shorthand and recognized path-bearing compiler arguments
       relative to the spec directory while leaving unknown compiler arguments
       byte-for-byte unchanged for `skac` validation.
-- [ ] Expand test base arguments, repository variants, command-line arguments,
+- [x] Expand test base arguments, repository variants, command-line arguments,
       named runs, and compile leaves into one immutable plan model.
-- [ ] Assign stable spec, test, build, and leaf IDs and collision-resistant
+- [x] Assign stable spec, test, build, and leaf IDs and collision-resistant
       artifact directory names with readable prefixes and stable full-ID
       hashes.
-- [ ] Implement repeatable include and exclude globs, exact leaf selection,
+- [x] Implement repeatable include and exclude globs, exact leaf selection,
       variant restriction, empty-selection rejection, and explicit
       `--allow-empty`.
-- [ ] Implement read-only `--list`, `--list-tests`, and `--explain` operations
+- [x] Implement read-only `--list`, `--list-tests`, and `--explain` operations
       over the resolved plan without preparing runtime or starting processes.
-- [ ] Validate all discovered specs before applying filters so malformed
+- [x] Validate all discovered specs before applying filters so malformed
       unselected fixtures cannot rot silently.
 
 **Tests:** Focused discovery trees covering deterministic order, nested specs,

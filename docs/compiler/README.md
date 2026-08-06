@@ -40,6 +40,9 @@ optimization.
   backend dispatch, and driver orchestration.
 - `crates/skald-docs-check` validates the repository documentation structure;
   it is tooling, not a compiler phase.
+- `crates/skald-golden` owns strict golden-spec decoding, contained fixture
+  resolution, immutable plan expansion, selection, and read-only inspection;
+  it is repository tooling and has no production dependency edge.
 - `runtime/` provides the separately built C runtime archive behind a
   versioned ABI.
 - `tests/` contains reusable non-Rust corpora, end-to-end goldens, and direct
