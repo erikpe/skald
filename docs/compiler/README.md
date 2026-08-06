@@ -42,8 +42,9 @@ optimization.
   it is tooling, not a compiler phase.
 - `crates/skald-golden` owns strict golden-spec decoding, contained fixture
   resolution, immutable plan expansion, selection, read-only inspection,
-  exact-byte expectations, deterministic sequential orchestration, and
-  isolated bounded compiler, linker, and native child processes. It reuses
+  exact-byte expectations, deterministic dependency scheduling, and isolated
+  compiler, linker, and native child processes under one bounded worker pool.
+  It reuses
   the repository-internal compiler driver facade for linkage but remains
   repository tooling; production compiler crates do not depend on it.
 - `runtime/` provides the separately built C runtime archive behind a

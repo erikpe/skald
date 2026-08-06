@@ -1,5 +1,7 @@
 //! Real-process host-linker double for golden-runner integration tests.
 
+mod support;
+
 use std::{
     env,
     ffi::{OsStr, OsString},
@@ -18,6 +20,7 @@ fn main() {
 }
 
 fn run(arguments: Vec<OsString>) -> Result<(), String> {
+    let activity = support::ActivityGuard::from_environment()?;
     let output = option(&arguments, "-o")
         .map(PathBuf::from)
         .ok_or_else(|| "missing -o output".to_owned())?;
@@ -39,6 +42,7 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
         }
         "failure" => {
             eprintln!("fake linker rejected assembly");
+            drop(activity);
             process::exit(9)
         }
         "sleep" => {

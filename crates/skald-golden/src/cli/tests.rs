@@ -46,6 +46,9 @@ fn parses_compiler_and_determinism_execution_options() {
             "tools/skac",
             "--determinism",
             "full",
+            "--jobs",
+            "3",
+            "--fail-fast",
         ]
         .map(Into::into),
     )
@@ -53,6 +56,8 @@ fn parses_compiler_and_determinism_execution_options() {
 
     assert_eq!(options.compiler, Some(PathBuf::from("tools/skac")));
     assert_eq!(options.determinism, Determinism::Full);
+    assert_eq!(options.jobs.unwrap().get(), 3);
+    assert!(options.fail_fast);
 }
 
 #[test]
@@ -65,6 +70,16 @@ fn rejects_unknown_determinism_modes() {
         error,
         "unknown determinism mode \"sometimes\"; expected off, compile, or full"
     );
+}
+
+#[test]
+fn rejects_zero_or_non_numeric_job_limits() {
+    for value in ["0", "many"] {
+        let error = Options::parse(["skald-golden", "--jobs", value].map(Into::into))
+            .err()
+            .unwrap();
+        assert_eq!(error, "--jobs requires a positive integer");
+    }
 }
 
 #[test]

@@ -1,5 +1,7 @@
 //! Test-only process behaviors used to verify the golden runner boundary.
 
+mod support;
+
 use std::{
     env,
     ffi::OsString,
@@ -21,6 +23,7 @@ fn main() {
 }
 
 fn run(mut arguments: Vec<OsString>) -> Result<(), String> {
+    let _activity = support::ActivityGuard::from_environment()?;
     if arguments.is_empty() {
         return Err("missing mode".to_owned());
     }

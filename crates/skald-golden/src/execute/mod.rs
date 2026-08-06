@@ -4,6 +4,7 @@ mod environment;
 mod error;
 mod model;
 mod sandbox;
+mod scheduler;
 mod sequential;
 mod suite_model;
 mod template;
@@ -15,10 +16,12 @@ pub use model::{
     SandboxRetention,
 };
 pub use sandbox::execute_run;
+pub use scheduler::execute_parallel;
 pub use sequential::execute_sequential;
 pub use suite_model::{
-    BuildExecution, LeafExecution, LinkExecution, RuntimeExecution, RuntimePreparation,
-    SequentialExecution, SequentialOptions, StageStatus,
+    BuildExecution, LeafExecution, LinkExecution, PlanExecution, RuntimeExecution,
+    RuntimePreparation, SchedulerFailure, SchedulerOptions, SequentialExecution, SequentialOptions,
+    StageOptions, StageStatus,
 };
 
 pub(crate) use sandbox::remove_run_sandbox;

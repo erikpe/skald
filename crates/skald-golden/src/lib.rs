@@ -21,10 +21,11 @@ pub use compile::{
     CompilerLocationError, CompilerObservation, Determinism,
 };
 pub use execute::{
-    allowlisted_environment, execute_run, execute_sequential, BuildExecution, ExecutionError,
-    ExecutionOptions, LeafExecution, LinkExecution, OutputFileMismatch, OutputFileObservation,
-    RunExecution, RunMismatch, RuntimeExecution, RuntimePreparation, SandboxRetention,
-    SequentialExecution, SequentialOptions, StageStatus,
+    allowlisted_environment, execute_parallel, execute_run, execute_sequential, BuildExecution,
+    ExecutionError, ExecutionOptions, LeafExecution, LinkExecution, OutputFileMismatch,
+    OutputFileObservation, PlanExecution, RunExecution, RunMismatch, RuntimeExecution,
+    RuntimePreparation, SandboxRetention, SchedulerFailure, SchedulerOptions, SequentialExecution,
+    SequentialOptions, StageOptions, StageStatus,
 };
 pub use expectation::{
     compare_exit, compare_stream, decode_arguments, load_bytes, ExpectationError, StreamMatch,

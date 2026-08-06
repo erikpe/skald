@@ -3,7 +3,7 @@ use crate::{
     ProcessEnvironment, ProcessObservation, RunExecution,
 };
 use skald_compiler::driver::Toolchain;
-use std::{path::PathBuf, time::Duration};
+use std::{num::NonZeroUsize, path::PathBuf, time::Duration};
 
 /// A stage's semantic result independent of final report formatting.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,6 +11,41 @@ pub enum StageStatus {
     Passed,
     Failed(String),
     Cancelled { dependency: String },
+}
+
+/// Controls bounded dependency-graph scheduling independently of stage policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SchedulerOptions {
+    jobs: NonZeroUsize,
+    fail_fast: bool,
+}
+
+impl SchedulerOptions {
+    pub fn new(jobs: NonZeroUsize) -> Self {
+        Self {
+            jobs,
+            fail_fast: false,
+        }
+    }
+
+    pub fn with_fail_fast(mut self, fail_fast: bool) -> Self {
+        self.fail_fast = fail_fast;
+        self
+    }
+
+    pub fn jobs(self) -> NonZeroUsize {
+        self.jobs
+    }
+
+    pub fn fail_fast(self) -> bool {
+        self.fail_fast
+    }
+}
+
+impl Default for SchedulerOptions {
+    fn default() -> Self {
+        Self::new(std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))
+    }
 }
 
 impl StageStatus {
@@ -43,9 +78,9 @@ impl RuntimePreparation {
     }
 }
 
-/// Configuration for deterministic single-threaded plan execution.
+/// Shared compiler, runtime, linker, and native-run stage policy.
 #[derive(Clone, Debug)]
-pub struct SequentialOptions {
+pub struct StageOptions {
     compiler: CompilerConfig,
     runtime: RuntimePreparation,
     toolchain: Toolchain,
@@ -55,7 +90,7 @@ pub struct SequentialOptions {
     determinism: Determinism,
 }
 
-impl SequentialOptions {
+impl StageOptions {
     pub fn new(
         compiler: CompilerConfig,
         runtime: RuntimePreparation,
@@ -269,24 +304,30 @@ impl LeafExecution {
     }
 }
 
-/// Complete canonical-order result from the sequential dependency plan.
+/// Backward-compatible name for the stage policy introduced with sequential execution.
+pub type SequentialOptions = StageOptions;
+
+/// Complete canonical-order result from the dependency plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SequentialExecution {
+pub struct PlanExecution {
     runtime: Option<RuntimeExecution>,
     builds: Vec<BuildExecution>,
     leaves: Vec<LeafExecution>,
+    scheduler_failure: Option<SchedulerFailure>,
 }
 
-impl SequentialExecution {
+impl PlanExecution {
     pub(super) fn new(
         runtime: Option<RuntimeExecution>,
         builds: Vec<BuildExecution>,
         leaves: Vec<LeafExecution>,
+        scheduler_failure: Option<SchedulerFailure>,
     ) -> Self {
         Self {
             runtime,
             builds,
             leaves,
+            scheduler_failure,
         }
     }
 
@@ -302,11 +343,54 @@ impl SequentialExecution {
         &self.leaves
     }
 
+    pub fn scheduler_failure(&self) -> Option<&SchedulerFailure> {
+        self.scheduler_failure.as_ref()
+    }
+
     pub fn passed(&self) -> bool {
-        self.runtime
-            .as_ref()
-            .is_none_or(|runtime| runtime.status().passed())
+        self.scheduler_failure.is_none()
+            && self
+                .runtime
+                .as_ref()
+                .is_none_or(|runtime| runtime.status().passed())
             && self.builds.iter().all(|build| build.status().passed())
             && self.leaves.iter().all(|leaf| leaf.status().passed())
+    }
+}
+
+/// Backward-compatible name for the result introduced with sequential execution.
+pub type SequentialExecution = PlanExecution;
+
+/// A scheduler infrastructure failure with a stable snapshot of unfinished work.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SchedulerFailure {
+    message: String,
+    active_nodes: Vec<String>,
+    pending_nodes: Vec<String>,
+}
+
+impl SchedulerFailure {
+    pub(super) fn new(
+        message: impl Into<String>,
+        active_nodes: Vec<String>,
+        pending_nodes: Vec<String>,
+    ) -> Self {
+        Self {
+            message: message.into(),
+            active_nodes,
+            pending_nodes,
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    pub fn active_nodes(&self) -> &[String] {
+        &self.active_nodes
+    }
+
+    pub fn pending_nodes(&self) -> &[String] {
+        &self.pending_nodes
     }
 }

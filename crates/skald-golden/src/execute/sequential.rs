@@ -1,16 +1,15 @@
 use super::{
-    remove_run_sandbox, BuildExecution, LeafExecution, LinkExecution, RuntimeExecution,
+    remove_run_sandbox, LeafExecution, LinkExecution, RuntimeExecution, SchedulerOptions,
     SequentialExecution, SequentialOptions, StageStatus,
 };
 use crate::{
-    compile::{compile_build, CompilationPurpose},
     execute_run, run_process, PlannedLeaf, PlannedLeafKind, ProcessCommand, ProcessTermination,
     SandboxRetention, SelectedPlan,
 };
 use skald_compiler::driver::{LinkObservation, ToolchainError};
 use std::{
-    collections::BTreeMap,
     fs,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
 };
 
@@ -19,123 +18,10 @@ pub fn execute_sequential(
     selected: &SelectedPlan<'_>,
     options: &SequentialOptions,
 ) -> SequentialExecution {
-    let grouped = group_leaves(selected.leaves());
-    let needs_runtime = selected
-        .leaves()
-        .iter()
-        .any(|leaf| matches!(leaf.kind(), PlannedLeafKind::Run(_)));
-    let runtime = needs_runtime.then(|| prepare_runtime(options));
-    let runtime_passed = runtime
-        .as_ref()
-        .is_none_or(|runtime| runtime.status().passed());
-    let mut builds = Vec::new();
-    let mut leaves = Vec::new();
-
-    for (build_id, selected_leaves) in grouped {
-        let build = selected
-            .plan()
-            .build(build_id)
-            .expect("selected leaf must reference a planned build");
-        let first = selected_leaves[0];
-        let purpose = match first.kind() {
-            PlannedLeafKind::Run(_) => CompilationPurpose::Success,
-            PlannedLeafKind::Compile(expectation) => CompilationPurpose::CompileFail(expectation),
-        };
-        let compilation = compile_build(build, purpose, options.compiler(), options.determinism());
-
-        match first.kind() {
-            PlannedLeafKind::Compile(_) => {
-                let status = compilation_status(&compilation);
-                for leaf in selected_leaves {
-                    leaves.push(LeafExecution::new(
-                        leaf.id().to_owned(),
-                        Vec::new(),
-                        status.clone(),
-                    ));
-                }
-                builds.push(BuildExecution::new(
-                    build.id().to_owned(),
-                    compilation,
-                    None,
-                    status,
-                ));
-            }
-            PlannedLeafKind::Run(_) => {
-                let (link, build_status) = if !compilation.passed() {
-                    (
-                        Some(LinkExecution::new(
-                            build.artifact_directory().join("program"),
-                            None,
-                            StageStatus::Cancelled {
-                                dependency: format!("{}::compile", build.id()),
-                            },
-                        )),
-                        compilation_status(&compilation),
-                    )
-                } else if !runtime_passed {
-                    let status = StageStatus::Cancelled {
-                        dependency: "runtime".to_owned(),
-                    };
-                    (
-                        Some(LinkExecution::new(
-                            build.artifact_directory().join("program"),
-                            None,
-                            status.clone(),
-                        )),
-                        status,
-                    )
-                } else {
-                    let link = link_build(build, &compilation, options);
-                    let status = link.status().clone();
-                    (Some(link), status)
-                };
-
-                let executable = link
-                    .as_ref()
-                    .expect("native builds always have a link result")
-                    .executable()
-                    .to_path_buf();
-                for leaf in selected_leaves {
-                    let leaf_execution = if build_status.passed() {
-                        execute_native_leaf(leaf, &executable, options)
-                    } else {
-                        LeafExecution::new(
-                            leaf.id().to_owned(),
-                            Vec::new(),
-                            StageStatus::Cancelled {
-                                dependency: format!("{}::link", build.id()),
-                            },
-                        )
-                    };
-                    leaves.push(leaf_execution);
-                }
-                builds.push(BuildExecution::new(
-                    build.id().to_owned(),
-                    compilation,
-                    link,
-                    build_status,
-                ));
-            }
-        }
-    }
-
-    builds.sort_by(|left, right| left.build_id().cmp(right.build_id()));
-    leaves.sort_by(|left, right| left.leaf_id().cmp(right.leaf_id()));
-    SequentialExecution::new(runtime, builds, leaves)
+    super::scheduler::execute_parallel(selected, options, SchedulerOptions::new(NonZeroUsize::MIN))
 }
 
-fn group_leaves<'a>(leaves: &[&'a PlannedLeaf]) -> BTreeMap<&'a str, Vec<&'a PlannedLeaf>> {
-    let mut grouped = BTreeMap::new();
-    for leaf in leaves {
-        grouped
-            .entry(leaf.build_id())
-            .or_insert_with(Vec::new)
-            .push(*leaf);
-    }
-    grouped
-}
-
-fn prepare_runtime(options: &SequentialOptions) -> RuntimeExecution {
+pub(crate) fn prepare_runtime(options: &SequentialOptions) -> RuntimeExecution {
     let preparation = options.runtime();
     match run_process(preparation.command()) {
         Ok(process) => {
@@ -170,7 +56,7 @@ fn prepare_runtime(options: &SequentialOptions) -> RuntimeExecution {
     }
 }
 
-fn compilation_status(compilation: &crate::CompilationExecution) -> StageStatus {
+pub(crate) fn compilation_status(compilation: &crate::CompilationExecution) -> StageStatus {
     if compilation.passed() {
         StageStatus::Passed
     } else {
@@ -181,7 +67,7 @@ fn compilation_status(compilation: &crate::CompilationExecution) -> StageStatus 
     }
 }
 
-fn link_build(
+pub(crate) fn link_build(
     build: &crate::PlannedBuild,
     compilation: &crate::CompilationExecution,
     options: &SequentialOptions,
@@ -251,7 +137,7 @@ fn link_build(
     LinkExecution::new(executable, process, status)
 }
 
-fn execute_native_leaf(
+pub(crate) fn execute_native_leaf(
     leaf: &PlannedLeaf,
     executable: &Path,
     options: &SequentialOptions,

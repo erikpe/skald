@@ -266,13 +266,14 @@ are useful for comparison but are not an ABI promise. The
 [driver guide](../compiler/DRIVER_AND_ARTIFACTS.md) owns toolchain selection,
 runtime selection, artifact publication, diagnostics, and process status.
 
-For complete behavior, use the golden runner. It keeps deterministic assembly
-or diagnostic checks separate from link and execution observations, compares
-two native executions, and reports stdout, stderr, and exit-status mismatches
-independently. Native `.stdout` and `.stderr` sidecars contain exact bytes; a
-missing sidecar requires an empty stream. Mismatch reports escape non-printing
-bytes and retain length and trailing-line-feed differences. Build artifacts
-are under `build/golden/`; they are disposable debugging output.
+For complete behavior, use the golden runner. It keeps compiler observations
+separate from link and execution observations and reports stdout, stderr, and
+exit-status mismatches independently. Ordinary execution observes each stage
+once; `--determinism compile` or `full` enables repeated compiler or complete
+native checks. Use `--jobs 1` to remove process overlap while diagnosing a
+case. New-format expectations may use exact or reviewed partial byte matches;
+legacy `.stdout` and `.stderr` sidecars remain exact. Build artifacts are under
+`build/golden/`; they are disposable debugging output.
 
 ## Symptom to owner
 

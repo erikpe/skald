@@ -1,12 +1,15 @@
 //! Real-process compiler double for golden-runner integration tests.
 
+mod support;
+
 use std::{
     env,
     ffi::{OsStr, OsString},
     fs::{self, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
-    process,
+    process, thread,
+    time::Duration,
 };
 
 fn main() {
@@ -17,6 +20,7 @@ fn main() {
 }
 
 fn run(arguments: Vec<OsString>) -> Result<(), String> {
+    let activity = support::ActivityGuard::from_environment()?;
     let mode = option(&arguments, "--fake-mode")
         .and_then(OsStr::to_str)
         .unwrap_or("success");
@@ -25,6 +29,25 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
         .ok_or_else(|| "missing -o output".to_owned())?;
     if let Some(log) = option(&arguments, "--fake-log") {
         append_arguments(Path::new(log), &arguments)?;
+    }
+    if let Some(delay) = option(&arguments, "--fake-delay-ms") {
+        let milliseconds = delay
+            .to_str()
+            .ok_or_else(|| "--fake-delay-ms must be UTF-8".to_owned())?
+            .parse::<u64>()
+            .map_err(display)?;
+        thread::sleep(Duration::from_millis(milliseconds));
+    }
+    if let Some(log) = option(&arguments, "--fake-completion-log") {
+        let label = option(&arguments, "--fake-label")
+            .and_then(OsStr::to_str)
+            .ok_or_else(|| "--fake-completion-log requires --fake-label".to_owned())?;
+        let mut output = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log)
+            .map_err(display)?;
+        writeln!(output, "{label}").map_err(display)?;
     }
     let repeated = output
         .file_name()
@@ -43,6 +66,7 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
         }
         "compile-fail" => {
             eprint!("error[FAKE001]: rejected source\n --> fake.ska:1:1\n");
+            drop(activity);
             process::exit(1)
         }
         "nondeterministic-diagnostic" => {
@@ -50,9 +74,13 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
                 "error[FAKE001]: {} diagnostic",
                 if repeated { "repeat" } else { "first" }
             );
+            drop(activity);
             process::exit(1)
         }
-        "status-two" => process::exit(2),
+        "status-two" => {
+            drop(activity);
+            process::exit(2)
+        }
         _ => Err(format!("unknown fake compiler mode {mode:?}")),
     }
 }

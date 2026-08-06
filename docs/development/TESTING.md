@@ -156,16 +156,18 @@ Rust test-name filters match substrings and may select more than one test; use
 Before handoff, run the full validation described in the
 [development workflow](README.md#change-validation).
 
-The Rust golden runner can inspect or sequentially execute new-format specs:
+The Rust golden runner can inspect or execute new-format specs through a
+bounded dependency scheduler:
 
 ```text
 cargo run --locked -p skald-golden -- --list --allow-empty
 cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allow-empty
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
+cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
 ```
 
-The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-sequential-execution)
+The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)
 owns the current filtering and canonical-ID contract.
 
 The runner's compiler-independent process tests use its Rust fake-process
@@ -182,13 +184,17 @@ two compiler products or `--determinism full` to compare both compiler and
 native-process observations. Native selections prepare the runtime once,
 link checked assembly through the compiler driver's `Toolchain`, and retain
 failed sandboxes for inspection. Compile-fail-only selections do not prepare
-the runtime. Parallel scheduling and complete reporting remain later stages.
+the runtime. The scheduler defaults to host available parallelism under one
+process budget. Use `--jobs 1` for single-worker diagnosis, `--fail-fast` to
+stop starting unrelated work after an observed failure, and spec `serial` or
+named `resources` for explicit exclusion. Results remain in canonical ID order.
 
-The focused sequential orchestration suite uses bounded fake compiler, runtime,
-linker, and native processes:
+The focused orchestration suites use bounded fake compiler, runtime, linker,
+and native processes:
 
 ```text
 cargo test --locked -p skald-golden --test sequential_execution
+cargo test --locked -p skald-golden --test parallel_execution
 ```
 
 ## Fixtures and expectations

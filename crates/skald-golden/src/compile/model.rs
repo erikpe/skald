@@ -185,6 +185,19 @@ impl CompilationExecution {
         }
     }
 
+    pub(crate) fn cancelled(
+        build_id: String,
+        kind: CompilationKind,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            build_id,
+            kind,
+            Vec::new(),
+            vec![CompilationIssue::Process(reason.into())],
+        )
+    }
+
     pub fn build_id(&self) -> &str {
         &self.build_id
     }

@@ -4,7 +4,7 @@ Golden tests exercise complete compiler behavior. General guidance on when to
 use this layer is in the [testing guide](../../docs/development/TESTING.md);
 this file defines discovery and expectation formats.
 
-## Spec planning, inspection, and sequential execution
+## Spec planning, inspection, and parallel execution
 
 The Rust `skald-golden` tool discovers `**/*.golden.toml` files below this
 directory and loads repository variants from `config.toml`. It validates every
@@ -19,6 +19,7 @@ cargo run --locked -p skald-golden -- --list --allow-empty
 cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allow-empty
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
+cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
 ```
 
 `--filter` and `--exclude` are repeatable. `*` stays within a path or identity
@@ -32,7 +33,11 @@ Execution locates `skac` beside `skald-golden` by default or accepts an
 explicit `--compiler PATH`. `--compiler-arg` appends an argument after spec
 and variant arguments. `--determinism off` is the default; `compile` repeats
 compiler processes and compares assembly or diagnostics, while `full` also
-repeats native processes and compares their complete observations.
+repeats native processes and compares their complete observations. `--jobs N`
+bounds all active compiler, runtime-preparation, linker, and generated-program
+processes. It defaults to host available parallelism; `--jobs 1` is the stable
+single-worker debugging mode. `--fail-fast` stops starting unrelated work after
+the first observed failure while already active work completes or times out.
 
 Legacy cases are not part of spec discovery. The legacy runner and sidecar
 contract below remain the repository-wide golden-test authority until the
@@ -71,13 +76,20 @@ the complete child process group and remains distinct from an exit code or
 signal. Passing sandboxes are deleted unless all artifacts were requested;
 failed or incompletely prepared sandboxes are retained for inspection.
 
-The sequential coordinator prepares the runtime through `make runtime` once
-and only when native leaves are selected. It compiles each selected build,
-links the first checked assembly through the compiler driver's `Toolchain`,
-then runs every named case. A failed prerequisite cancels only its dependent
-link or run; unrelated builds continue. Passing run sandboxes are removed,
-while unique build products and failed sandboxes remain under `build/golden/`.
-Parallel scheduling and complete failure reporting are later roadmap stages.
+The dependency coordinator prepares the runtime through `make runtime` once
+and only when native leaves are selected. Independent compiler nodes, links,
+and named runs enter one fixed worker pool as their prerequisites become ready.
+A failed prerequisite cancels only its dependent link or run; unrelated builds
+continue unless `--fail-fast` was selected. Final results remain in canonical
+leaf-ID order regardless of completion order.
+
+`serial = true` gives its compiler/link or run node exclusive use of the worker
+pool. A node declaring `resources = ["name"]` cannot overlap another active
+node holding the same name, but may overlap nodes using unrelated resources.
+The coordinator never holds its scheduling state while a worker executes a
+process. Passing run sandboxes are removed, while unique build products and
+failed sandboxes remain under `build/golden/`. Complete failure reporting is a
+later roadmap stage.
 
 The runner recursively discovers two case families:
 

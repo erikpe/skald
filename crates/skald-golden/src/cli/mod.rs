@@ -1,10 +1,10 @@
-//! Command-line parsing, inspection, and sequential execution.
+//! Command-line parsing, inspection, and bounded parallel execution.
 
 mod options;
 
 use crate::{
-    allowlisted_environment, build_plan, execute_sequential, locate_compiler, select,
-    CompilerConfig, ExecutionOptions, ProcessCommand, RuntimePreparation, SequentialOptions,
+    allowlisted_environment, build_plan, execute_parallel, locate_compiler, select, CompilerConfig,
+    ExecutionOptions, ProcessCommand, RuntimePreparation, SchedulerOptions, SequentialOptions,
 };
 use options::{Inspection, Options};
 use skald_compiler::driver::{Toolchain, C_COMPILER_ENV, RUNTIME_ARCHIVE_ENV};
@@ -30,12 +30,14 @@ Execution and read-only inspection:\n\
   --compiler PATH        Use this skac executable\n\
   --compiler-arg ARG     Append a compiler argument; repeatable\n\
   --determinism MODE     Use off (default), compile, or full\n\
+  --jobs N               Bound active processes; defaults to host parallelism\n\
+  --fail-fast            Stop starting unrelated work after a failure\n\
   --allow-empty          Permit an empty selection\n";
 
 /// Runs the command-line entry point.
 ///
-/// Discovery, inspection, and deterministic sequential execution are
-/// available. Parallel scheduling and complete reporting arrive later.
+/// Discovery, inspection, and bounded dependency scheduling are available.
+/// Complete reporting arrives later.
 pub fn run_cli(arguments: impl IntoIterator<Item = OsString>) -> ExitCode {
     let stdout = std::io::stdout();
     let stderr = std::io::stderr();
@@ -95,8 +97,13 @@ fn run_cli_with_context(
         Ok(compiler) => compiler,
         Err(error) => return usage_error(stderr, &error.to_string()),
     };
-    let execution_options = sequential_options(compiler, repository_root, options.determinism);
-    let execution = execute_sequential(&selected, &execution_options);
+    let execution_options = stage_options(compiler, repository_root, options.determinism);
+    let scheduler_options = options
+        .jobs
+        .map(SchedulerOptions::new)
+        .unwrap_or_default()
+        .with_fail_fast(options.fail_fast);
+    let execution = execute_parallel(&selected, &execution_options, scheduler_options);
     let mut output = String::new();
     for leaf in execution.leaves() {
         let label = if leaf.status().passed() {
@@ -115,7 +122,7 @@ fn run_cli_with_context(
     u8::from(!execution.passed())
 }
 
-fn sequential_options(
+fn stage_options(
     compiler: PathBuf,
     repository_root: &Path,
     determinism: crate::Determinism,

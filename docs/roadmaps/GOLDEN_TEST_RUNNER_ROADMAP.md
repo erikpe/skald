@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR4 is next.
+Status: in progress; GR5 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -54,7 +54,7 @@ implicitly.
 - [x] GR1 — Discover, validate, expand, and select spec cases
 - [x] GR2 — Implement byte expectations and isolated process execution
 - [x] GR3 — Compile, link, and execute sequential plans
-- [ ] GR4 — Schedule the dependency graph in parallel
+- [x] GR4 — Schedule the dependency graph in parallel
 - [ ] GR5 — Complete reporting and the command-line surface
 - [ ] GR6 — Adapt legacy fixtures and prove behavioral parity
 - [ ] GR7 — Cut repository commands over to the Rust runner
@@ -220,22 +220,22 @@ produce correct structured results for every determinism mode.
 **Purpose:** Reduce elapsed time without changing leaf meaning, artifact
 ownership, failure propagation, or final result ordering.
 
-- [ ] Implement a fixed worker pool, stable ready queue, dependency counts,
+- [x] Implement a fixed worker pool, stable ready queue, dependency counts,
       dependent-node lists, and one structured result channel to the
       coordinator.
-- [ ] Bound all compiler, linker, and generated-program processes under the
+- [x] Bound all compiler, linker, and generated-program processes under the
       single `--jobs` limit and default it to host available parallelism.
-- [ ] Allow independent sources in one spec and independent runs of one linked
+- [x] Allow independent sources in one spec and independent runs of one linked
       executable to proceed concurrently.
-- [ ] Cancel dependent work after prerequisite failure while continuing
+- [x] Cancel dependent work after prerequisite failure while continuing
       unrelated work by default.
-- [ ] Implement `--fail-fast` so no new unrelated work starts after the first
+- [x] Implement `--fail-fast` so no new unrelated work starts after the first
       observed failure while already active processes finish or time out.
-- [ ] Implement named resource locks and `serial = true` without holding
+- [x] Implement named resource locks and `serial = true` without holding
       scheduler-global locks during external process execution.
-- [ ] Keep workers silent and collect results independently of completion
+- [x] Keep workers silent and collect results independently of completion
       order for deterministic coordinator reporting.
-- [ ] Convert worker panic or channel failure into an internal runner failure
+- [x] Convert worker panic or channel failure into an internal runner failure
       with active and pending node IDs rather than hanging.
 
 **Tests:** Deterministic fake workloads that prove the process bound, dependency

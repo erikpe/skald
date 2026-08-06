@@ -1,5 +1,5 @@
 use crate::{Determinism, SelectionOptions};
-use std::{ffi::OsString, path::PathBuf};
+use std::{ffi::OsString, num::NonZeroUsize, path::PathBuf};
 
 pub(super) struct Options {
     pub(super) inspection: Option<Inspection>,
@@ -7,6 +7,8 @@ pub(super) struct Options {
     pub(super) compiler_args: Vec<OsString>,
     pub(super) compiler: Option<PathBuf>,
     pub(super) determinism: Determinism,
+    pub(super) jobs: Option<NonZeroUsize>,
+    pub(super) fail_fast: bool,
     pub(super) help: bool,
 }
 
@@ -25,6 +27,8 @@ impl Options {
         let mut compiler_args = Vec::new();
         let mut compiler = None;
         let mut determinism = Determinism::Off;
+        let mut jobs = None;
+        let mut fail_fast = false;
         let mut help = false;
 
         while let Some(argument) = arguments.next() {
@@ -59,6 +63,13 @@ impl Options {
                 Some("--determinism") => {
                     determinism = utf8_value(&mut arguments, "--determinism")?.parse()?;
                 }
+                Some("--jobs") => {
+                    jobs = Some(positive_usize(
+                        &utf8_value(&mut arguments, "--jobs")?,
+                        "--jobs",
+                    )?);
+                }
+                Some("--fail-fast") => fail_fast = true,
                 Some("--allow-empty") => selection = selection.allow_empty(true),
                 Some(value) => return Err(format!("unknown option {value:?}")),
                 None => return Err("runner options must be valid UTF-8".to_owned()),
@@ -71,9 +82,19 @@ impl Options {
             compiler_args,
             compiler,
             determinism,
+            jobs,
+            fail_fast,
             help,
         })
     }
+}
+
+fn positive_usize(value: &str, option: &str) -> Result<NonZeroUsize, String> {
+    value
+        .parse::<usize>()
+        .ok()
+        .and_then(NonZeroUsize::new)
+        .ok_or_else(|| format!("{option} requires a positive integer"))
 }
 
 fn os_value(
