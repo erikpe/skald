@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: planned; GR0 is next.
+Status: in progress; GR1 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -50,7 +50,7 @@ implicitly.
 
 ## Progress
 
-- [ ] GR0 — Establish the Rust tool and frozen schema
+- [x] GR0 — Establish the Rust tool and frozen schema
 - [ ] GR1 — Discover, validate, expand, and select spec cases
 - [ ] GR2 — Implement byte expectations and isolated process execution
 - [ ] GR3 — Compile, link, and execute sequential plans
@@ -73,24 +73,24 @@ implicitly.
 **Purpose:** Create the isolated repository-tool boundary and encode the frozen
 TOML contract before discovery or process behavior depends on it.
 
-- [ ] Add `crates/skald-golden` to the workspace with a library, thin binary,
+- [x] Add `crates/skald-golden` to the workspace with a library, thin binary,
       workspace lints, and Rust 1.82-compatible syntax.
-- [ ] Establish facade-oriented modules for CLI, spec, discovery, selection,
+- [x] Establish facade-oriented modules for CLI, spec, discovery, selection,
       plan, process, compile, execute, expectation, and report responsibilities;
       leave unimplemented owners narrow rather than placing logic in `main.rs`.
-- [ ] Add maintained TOML parsing and typed serialization/deserialization
+- [x] Add maintained TOML parsing and typed serialization/deserialization
       dependencies confined to the runner package and record the complete
       locked dependency graph.
-- [ ] Represent schema version 1, repository variants, run and compile-fail
+- [x] Represent schema version 1, repository variants, run and compile-fail
       tests, compiler arguments, named runs, byte sources, stream match modes,
       temporary files, working directories, environment entries, timeouts,
       serial/resource declarations, and expectations as typed data.
-- [ ] Reject unknown keys through typed deserialization and validate duplicate
+- [x] Reject unknown keys through typed deserialization and validate duplicate
       names, empty collections, mode-incompatible fields, mutually exclusive
       unions, missing expected data, and empty partial matchers.
-- [ ] Parse every TOML example from the frozen design as a focused test and add
+- [x] Parse every TOML example from the frozen design as a focused test and add
       malformed counterparts for every schema boundary.
-- [ ] Update the development workflow's dependency statement to distinguish
+- [x] Update the development workflow's dependency statement to distinguish
       dependency-free production crates from narrowly scoped repository-tool
       dependencies.
 

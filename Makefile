@@ -1,8 +1,9 @@
 MSRV := $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
-	compiler-test cli-test docs-test golden-expectations-test golden-run-test \
-	golden-test runtime-test test msrv-check robustness-long check
+	compiler-test cli-test docs-test golden-runner-test \
+	golden-expectations-test golden-run-test golden-test runtime-test test \
+	msrv-check robustness-long check
 
 help:
 	@echo "Skald repository commands:"
@@ -23,6 +24,7 @@ help:
 	@echo "  make compiler-test    Run all skald-compiler tests"
 	@echo "  make cli-test         Run skac binary and CLI tests"
 	@echo "  make docs-test        Run skald-docs-check unit and documentation tests"
+	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
 	@echo "  make golden-test      Run golden expectation and end-to-end tests"
 	@echo "  make golden-expectations-test Run golden sidecar and mismatch-reporting tests"
 	@echo "  make golden-run-test  Run source-to-executable and compile-failure goldens"
@@ -58,7 +60,7 @@ docs-check:
 	cargo run --quiet --locked -p skald-docs-check -- .
 
 # Ordinary behavioral suites included in test.
-test: cli-test golden-test runtime-test docs-test compiler-test
+test: cli-test golden-runner-test golden-test runtime-test docs-test compiler-test
 
 compiler-test:
 	cargo test --locked -p skald-compiler
@@ -68,6 +70,9 @@ cli-test:
 
 docs-test:
 	cargo test --locked -p skald-docs-check
+
+golden-runner-test:
+	cargo test --locked -p skald-golden
 
 golden-expectations-test:
 	cargo test --locked -p skac --test golden-expectations

@@ -144,6 +144,7 @@ payloads, both zero signs, infinities, and absence of runtime helpers.
 cargo test --locked -p skald-compiler lexer::tests
 cargo test --locked -p skald-compiler mir::verify
 cargo test --locked -p skald-compiler --test public_api
+make golden-runner-test
 make cli-test
 make golden-test
 make runtime-test

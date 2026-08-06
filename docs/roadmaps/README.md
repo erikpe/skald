@@ -6,15 +6,16 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+- [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md) —
+  in progress; implement the frozen Rust runner design, prove parity with all
+  288 legacy cases, cut repository commands over, migrate fixtures by feature,
+  and remove legacy discovery. GR1, deterministic discovery, validation,
+  expansion, and selection, is next; the archived design record is the only
+  material design dependency.
 
 ## Planned
 
-- [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md) —
-  planned; implement the frozen Rust runner design, prove parity with all 288
-  legacy cases, cut repository commands over, migrate fixtures by feature, and
-  remove legacy discovery. GR0, the runner package and frozen schema, is next;
-  the archived design record is its only material design dependency.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

@@ -16,9 +16,14 @@ Skald development currently requires:
 - a C11 compiler driver; and
 - a static archiver.
 
-The Rust workspace has no third-party crate dependencies. Native compilation
-and runtime tests require the host C tools even when a change touches only Rust
-code.
+Production compiler crates and the documentation checker have no third-party
+crate dependencies. The `skald-golden` repository tool is the narrow
+exception: it uses maintained TOML and Serde crates to decode the versioned
+golden-test schema and report precise field paths. Those dependencies and
+their complete transitive graph are recorded in `Cargo.lock`; they do not flow
+into `skac`, `skald-compiler`, generated programs, or the runtime. Native
+compilation and runtime tests require the host C tools even when a change
+touches only Rust code.
 
 ## Makefile interface
 
@@ -33,10 +38,11 @@ for the current detailed command inventory. Focused targets are useful while
 iterating; `make check` is the complete ordinary gate for the selected stable
 toolchain. Its dependency graph is explicit: `static-check` combines
 formatting, workspace checks, Clippy, and documentation validation, while
-`test` combines compiler, CLI, golden, direct C runtime, and documentation
-tests. The bounded robustness cases are part of the compiler suite; only the
-larger scheduled robustness run and the minimum-supported-Rust check remain
-outside the ordinary gate for less frequent external validation.
+`test` combines compiler, CLI, golden-runner, end-to-end golden, direct C
+runtime, and documentation tests. The bounded robustness cases are part of
+the compiler suite; only the larger scheduled robustness run and the
+minimum-supported-Rust check remain outside the ordinary gate for less
+frequent external validation.
 
 Commands should remain independently runnable through the Makefile. A helper
 script may implement a repeated workflow, but it must not become the only way
@@ -56,8 +62,10 @@ make msrv-check
 `make msrv-check` reads the declared version from the workspace manifest and
 checks every workspace target with the lockfile. It does not install a
 toolchain or mutate contributor configuration. Run it whenever manifests,
-supported Rust syntax, or the toolchain contract changes; it is also part of
-release or roadmap closeout when requested.
+the locked dependency graph, supported Rust syntax, or the toolchain contract
+changes; it is also part of release or roadmap closeout when requested. In
+particular, runner dependency updates must retain Rust-1.82-compatible
+transitive releases in `Cargo.lock`.
 
 ## Change validation
 
