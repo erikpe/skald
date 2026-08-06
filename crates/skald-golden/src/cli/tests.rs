@@ -1,4 +1,5 @@
-use super::run_cli_with_context;
+use super::{options::Options, run_cli_with_context};
+use crate::Determinism;
 use std::{
     fs,
     path::PathBuf,
@@ -37,6 +38,36 @@ impl Drop for Fixture {
 }
 
 #[test]
+fn parses_compiler_and_determinism_execution_options() {
+    let options = Options::parse(
+        [
+            "skald-golden",
+            "--compiler",
+            "tools/skac",
+            "--determinism",
+            "full",
+        ]
+        .map(Into::into),
+    )
+    .unwrap();
+
+    assert_eq!(options.compiler, Some(PathBuf::from("tools/skac")));
+    assert_eq!(options.determinism, Determinism::Full);
+}
+
+#[test]
+fn rejects_unknown_determinism_modes() {
+    let error = Options::parse(["skald-golden", "--determinism", "sometimes"].map(Into::into))
+        .err()
+        .unwrap();
+
+    assert_eq!(
+        error,
+        "unknown determinism mode \"sometimes\"; expected off, compile, or full"
+    );
+}
+
+#[test]
 fn read_only_cli_operations_render_the_validated_plan() {
     let fixture = Fixture::new();
     let artifact_root = fixture.root.with_extension("artifacts");
@@ -46,6 +77,7 @@ fn read_only_cli_operations_render_the_validated_plan() {
         ["skald-golden", "--list"].map(Into::into),
         &fixture.root,
         &artifact_root,
+        &fixture.root,
         &mut stdout,
         &mut stderr,
     );
@@ -59,20 +91,21 @@ fn read_only_cli_operations_render_the_validated_plan() {
 }
 
 #[test]
-fn execution_remains_unavailable() {
+fn empty_execution_does_not_require_a_compiler_or_prepare_artifacts() {
     let fixture = Fixture::new();
+    let artifact_root = fixture.root.with_extension("artifacts");
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     let status = run_cli_with_context(
-        ["skald-golden"].map(Into::into),
+        ["skald-golden", "--filter", "absent/**", "--allow-empty"].map(Into::into),
         &fixture.root,
-        &fixture.root.with_extension("artifacts"),
+        &artifact_root,
+        &fixture.root,
         &mut stdout,
         &mut stderr,
     );
-    assert_eq!(status, 2);
-    assert!(stdout.is_empty());
-    assert!(String::from_utf8(stderr)
-        .unwrap()
-        .contains("not implemented"));
+    assert_eq!(status, 0);
+    assert_eq!(stdout, b"golden: no selected leaves\n");
+    assert!(stderr.is_empty());
+    assert!(!artifact_root.exists());
 }

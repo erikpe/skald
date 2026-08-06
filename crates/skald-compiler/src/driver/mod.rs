@@ -21,7 +21,8 @@ pub use request::{
     EntrySelector, StandardLibrarySelection, StandardLibrarySelectionError,
 };
 pub use toolchain::{
-    Toolchain, ToolchainError, C_COMPILER_ENV, RUNTIME_ARCHIVE_ENV, STANDARD_LIBRARY_ROOT_ENV,
+    LinkInvocation, LinkObservation, Toolchain, ToolchainError, C_COMPILER_ENV,
+    RUNTIME_ARCHIVE_ENV, STANDARD_LIBRARY_ROOT_ENV,
 };
 
 #[cfg(test)]

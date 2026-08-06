@@ -191,4 +191,8 @@ impl RunExecution {
     pub fn passed(&self) -> bool {
         self.mismatches.is_empty()
     }
+
+    pub(super) fn mark_removed(&mut self) {
+        self.retained = false;
+    }
 }

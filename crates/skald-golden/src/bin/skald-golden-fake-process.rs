@@ -31,6 +31,9 @@ fn run(mut arguments: Vec<OsString>) -> Result<(), String> {
         Some("large-pipes") => large_pipes(&arguments),
         Some("copy-file") => copy_file(&arguments),
         Some("write-file") => write_file(&arguments),
+        Some("write-vary-file") => write_vary_file(&arguments),
+        Some("prepare-runtime") => prepare_runtime(&arguments),
+        Some("vary") => vary(&arguments),
         Some("cwd") => write_os_value(env::current_dir().map_err(display)?.as_os_str()),
         Some("env") => write_environment(&arguments),
         Some("sleep") => sleep(&arguments),
@@ -91,6 +94,46 @@ fn copy_file(arguments: &[OsString]) -> Result<(), String> {
         .get(1)
         .ok_or_else(|| "missing output file path".to_owned())?;
     fs::copy(input, output).map(|_| ()).map_err(display)
+}
+
+fn write_vary_file(arguments: &[OsString]) -> Result<(), String> {
+    let output = arguments
+        .first()
+        .ok_or_else(|| "missing output file path".to_owned())?;
+    let counter = arguments
+        .get(1)
+        .ok_or_else(|| "missing counter file path".to_owned())?;
+    let value = next_counter(counter)?;
+    fs::write(output, value.to_string()).map_err(display)
+}
+
+fn prepare_runtime(arguments: &[OsString]) -> Result<(), String> {
+    let archive = arguments
+        .first()
+        .ok_or_else(|| "missing runtime archive path".to_owned())?;
+    let counter = arguments
+        .get(1)
+        .ok_or_else(|| "missing runtime counter path".to_owned())?;
+    let _ = next_counter(counter)?;
+    fs::write(archive, b"!<arch>\n").map_err(display)
+}
+
+fn vary(arguments: &[OsString]) -> Result<(), String> {
+    let counter = arguments
+        .first()
+        .ok_or_else(|| "missing counter file path".to_owned())?;
+    let value = next_counter(counter)?;
+    write!(io::stdout(), "{value}").map_err(display)
+}
+
+fn next_counter(path: &std::ffi::OsStr) -> Result<u64, String> {
+    let value = fs::read_to_string(path)
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0)
+        + 1;
+    fs::write(path, value.to_string()).map_err(display)?;
+    Ok(value)
 }
 
 fn write_environment(arguments: &[OsString]) -> Result<(), String> {

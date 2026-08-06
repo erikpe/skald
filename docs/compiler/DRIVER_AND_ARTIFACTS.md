@@ -11,7 +11,7 @@ is owned by the
 
 ## Driver facade
 
-The repository-internal `skald_compiler::driver` facade exposes four ways to
+The repository-internal `skald_compiler::driver` facade exposes five ways to
 compose the compiler:
 
 - `compile_request_to_assembly` loads and compiles the selected entry's
@@ -19,7 +19,10 @@ compose the compiler:
 - `compile_source_to_assembly` runs one in-memory source through the complete
   semantic, MIR, backend, and assembly pipeline without filesystem discovery;
 - `Toolchain::link_assembly` sends assembly to a configured host compiler
-  driver and publishes the linked executable; and
+  driver and publishes the linked executable;
+- `Toolchain::link_assembly_with` preserves the same link command, runtime
+  validation, failure interpretation, and publication policy while allowing
+  repository tooling to supply a bounded process executor; and
 - `run_cli` owns process arguments, source and output I/O, diagnostic
   rendering, toolchain selection, and process exit status.
 
@@ -126,6 +129,12 @@ The driver captures tool stdout and stderr. Start, input-write, wait, nonzero
 termination, and publication failures are returned as structured
 `ToolchainError` categories. A nonzero tool result includes its exit status or
 signal state and captured details in the user-facing error.
+
+The golden runner uses the bounded executor form so compiler, linker, and
+generated-program timeouts share one process-group policy. `Toolchain` still
+constructs the exact host command, owns its pending output, interprets the
+captured result, and publishes the executable atomically; the runner does not
+reimplement those driver responsibilities.
 
 ## Input protection and artifact publication
 

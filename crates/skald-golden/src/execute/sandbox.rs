@@ -55,6 +55,14 @@ pub fn execute_run(
     }
 }
 
+pub(crate) fn remove_run_sandbox(execution: &mut RunExecution) -> Result<(), ExecutionError> {
+    if execution.sandbox().exists() {
+        remove_sandbox(execution.sandbox())?;
+    }
+    execution.mark_removed();
+    Ok(())
+}
+
 fn execute_in_sandbox(
     executable: &Path,
     run: &PlannedRun,

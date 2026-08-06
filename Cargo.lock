@@ -156,6 +156,7 @@ dependencies = [
  "nix",
  "serde",
  "serde_path_to_error",
+ "skald-compiler",
  "toml",
 ]
 

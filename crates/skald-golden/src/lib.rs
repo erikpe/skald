@@ -16,9 +16,15 @@ mod selection;
 mod spec;
 
 pub use cli::run_cli;
+pub use compile::{
+    locate_compiler, CompilationExecution, CompilationIssue, CompilationKind, CompilerConfig,
+    CompilerLocationError, CompilerObservation, Determinism,
+};
 pub use execute::{
-    allowlisted_environment, execute_run, ExecutionError, ExecutionOptions, OutputFileMismatch,
-    OutputFileObservation, RunExecution, RunMismatch, SandboxRetention,
+    allowlisted_environment, execute_run, execute_sequential, BuildExecution, ExecutionError,
+    ExecutionOptions, LeafExecution, LinkExecution, OutputFileMismatch, OutputFileObservation,
+    RunExecution, RunMismatch, RuntimeExecution, RuntimePreparation, SandboxRetention,
+    SequentialExecution, SequentialOptions, StageStatus,
 };
 pub use expectation::{
     compare_exit, compare_stream, decode_arguments, load_bytes, ExpectationError, StreamMatch,

@@ -156,16 +156,16 @@ Rust test-name filters match substrings and may select more than one test; use
 Before handoff, run the full validation described in the
 [development workflow](README.md#change-validation).
 
-The Rust golden runner can validate and inspect new-format specs without
-starting compiler or test processes:
+The Rust golden runner can inspect or sequentially execute new-format specs:
 
 ```text
 cargo run --locked -p skald-golden -- --list --allow-empty
 cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allow-empty
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
+cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
 ```
 
-The [golden fixture guide](../../tests/golden/README.md#spec-planning-and-inspection)
+The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-sequential-execution)
 owns the current filtering and canonical-ID contract.
 
 The runner's compiler-independent process tests use its Rust fake-process
@@ -177,8 +177,19 @@ timeouts, and Linux descendant termination:
 cargo test --locked -p skald-golden --test process_execution
 ```
 
-The command-line runner remains inspection-only until compiler, linker, and
-native-run planning are composed by the next implementation stage.
+Execution defaults to determinism `off`. Use `--determinism compile` to compare
+two compiler products or `--determinism full` to compare both compiler and
+native-process observations. Native selections prepare the runtime once,
+link checked assembly through the compiler driver's `Toolchain`, and retain
+failed sandboxes for inspection. Compile-fail-only selections do not prepare
+the runtime. Parallel scheduling and complete reporting remain later stages.
+
+The focused sequential orchestration suite uses bounded fake compiler, runtime,
+linker, and native processes:
+
+```text
+cargo test --locked -p skald-golden --test sequential_execution
+```
 
 ## Fixtures and expectations
 

@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR3 is next.
+Status: in progress; GR4 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -53,7 +53,7 @@ implicitly.
 - [x] GR0 — Establish the Rust tool and frozen schema
 - [x] GR1 — Discover, validate, expand, and select spec cases
 - [x] GR2 — Implement byte expectations and isolated process execution
-- [ ] GR3 — Compile, link, and execute sequential plans
+- [x] GR3 — Compile, link, and execute sequential plans
 - [ ] GR4 — Schedule the dependency graph in parallel
 - [ ] GR5 — Complete reporting and the command-line surface
 - [ ] GR6 — Adapt legacy fixtures and prove behavioral parity
@@ -181,27 +181,27 @@ compares every frozen input and expectation policy without compiler knowledge.
 **Purpose:** Compose the typed plan and process substrate into a complete
 sequential golden runner before introducing concurrency.
 
-- [ ] Locate a sibling `skac` by default, accept `--compiler`, and fail clearly
+- [x] Locate a sibling `skac` by default, accept `--compiler`, and fail clearly
       when the selected executable is absent or unusable.
-- [ ] Construct real compiler commands for positional sources and logical
+- [x] Construct real compiler commands for positional sources and logical
       entries from base, variant, and command-line compiler arguments.
-- [ ] Implement compile-fail execution with exact compiler status 1, empty
+- [x] Implement compile-fail execution with exact compiler status 1, empty
       stdout, selected stderr matching, and deterministic diagnostic comparison
       in `compile` and `full` modes.
-- [ ] Emit successful assembly once in `off` mode and twice in `compile` or
+- [x] Emit successful assembly once in `off` mode and twice in `compile` or
       `full` mode; reject unexpected compiler output and compare repeated
       assembly bytes before linkage.
-- [ ] Prepare the runtime through the repository Make target exactly once and
+- [x] Prepare the runtime through the repository Make target exactly once and
       only when the selected plan contains native runs.
-- [ ] Link the first emitted assembly through an explicitly configured
+- [x] Link the first emitted assembly through an explicitly configured
       `skald_compiler::driver::Toolchain` and the prepared runtime archive;
       retain atomic artifact publication and captured linker failures.
-- [ ] Execute each selected run once in `off` and `compile` modes or twice in
+- [x] Execute each selected run once in `off` and `compile` modes or twice in
       `full`; compare repeated exit, stdout, stderr, and output-file
       observations before expectation matching.
-- [ ] Retain unique build products and failed-run sandboxes under
+- [x] Retain unique build products and failed-run sandboxes under
       `build/golden/` while deleting passing temporary run directories.
-- [ ] Execute the complete dependency plan sequentially and cancel only nodes
+- [x] Execute the complete dependency plan sequentially and cancel only nodes
       whose prerequisite failed.
 
 **Tests:** Fake-compiler tests for argument ordering, compile success/failure,

@@ -59,49 +59,47 @@ impl Toolchain {
     }
 
     pub fn link_assembly(&self, assembly: &str, output: &Path) -> Result<(), ToolchainError> {
+        self.link_assembly_with(assembly, output, execute_link)
+    }
+
+    /// Links assembly through a caller-provided process executor.
+    ///
+    /// The toolchain retains command construction, runtime validation, pending
+    /// artifact ownership, failure interpretation, and atomic publication.
+    /// Repository tooling may inject a bounded executor without duplicating
+    /// those policies.
+    pub fn link_assembly_with(
+        &self,
+        assembly: &str,
+        output: &Path,
+        execute: impl FnOnce(&LinkInvocation) -> Result<LinkObservation, ToolchainError>,
+    ) -> Result<(), ToolchainError> {
         if !self.runtime_archive.is_file() {
             return Err(ToolchainError::RuntimeArchiveMissing);
         }
 
         let pending = PendingArtifact::new(output)
             .map_err(|source| ToolchainError::PrepareOutput { source })?;
-        let mut child = Command::new(&self.c_compiler)
-            .args([OsStr::new("-x"), OsStr::new("assembler"), OsStr::new("-")])
-            .args([OsStr::new("-x"), OsStr::new("none")])
-            .arg(&self.runtime_archive)
-            .arg("-o")
-            .arg(pending.path())
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|source| ToolchainError::Start {
-                tool: self.c_compiler.clone(),
-                source,
-            })?;
-
-        let write_result = child
-            .stdin
-            .take()
-            .expect("piped toolchain stdin must be available")
-            .write_all(assembly.as_bytes());
-        let result = child
-            .wait_with_output()
-            .map_err(|source| ToolchainError::Wait {
-                tool: self.c_compiler.clone(),
-                source,
-            })?;
-        if !result.status.success() {
+        let invocation = LinkInvocation {
+            program: self.c_compiler.clone(),
+            arguments: vec![
+                OsString::from("-x"),
+                OsString::from("assembler"),
+                OsString::from("-"),
+                OsString::from("-x"),
+                OsString::from("none"),
+                self.runtime_archive.as_os_str().to_owned(),
+                OsString::from("-o"),
+                pending.path().as_os_str().to_owned(),
+            ],
+            stdin: assembly.as_bytes().to_vec(),
+        };
+        let result = execute(&invocation)?;
+        if result.exit_code != Some(0) {
             return Err(ToolchainError::Failed {
                 tool: self.c_compiler.clone(),
-                exit_code: result.status.code(),
+                exit_code: result.exit_code,
                 details: captured_output(&result.stderr, &result.stdout),
-            });
-        }
-        if let Err(source) = write_result {
-            return Err(ToolchainError::WriteAssembly {
-                tool: self.c_compiler.clone(),
-                source,
             });
         }
 
@@ -109,6 +107,82 @@ impl Toolchain {
             .publish()
             .map_err(|source| ToolchainError::Publish { source })
     }
+}
+
+/// One fully constructed host-linker invocation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LinkInvocation {
+    program: OsString,
+    arguments: Vec<OsString>,
+    stdin: Vec<u8>,
+}
+
+impl LinkInvocation {
+    pub fn program(&self) -> &OsStr {
+        &self.program
+    }
+
+    pub fn arguments(&self) -> &[OsString] {
+        &self.arguments
+    }
+
+    pub fn stdin(&self) -> &[u8] {
+        &self.stdin
+    }
+}
+
+/// Process observations required by the Toolchain publication policy.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LinkObservation {
+    exit_code: Option<i32>,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+
+impl LinkObservation {
+    pub fn new(exit_code: Option<i32>, stdout: Vec<u8>, stderr: Vec<u8>) -> Self {
+        Self {
+            exit_code,
+            stdout,
+            stderr,
+        }
+    }
+}
+
+fn execute_link(invocation: &LinkInvocation) -> Result<LinkObservation, ToolchainError> {
+    let mut child = Command::new(invocation.program())
+        .args(invocation.arguments())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|source| ToolchainError::Start {
+            tool: invocation.program().to_owned(),
+            source,
+        })?;
+
+    let write_result = child
+        .stdin
+        .take()
+        .expect("piped toolchain stdin must be available")
+        .write_all(invocation.stdin());
+    let result = child
+        .wait_with_output()
+        .map_err(|source| ToolchainError::Wait {
+            tool: invocation.program().to_owned(),
+            source,
+        })?;
+    if let Err(source) = write_result {
+        return Err(ToolchainError::WriteAssembly {
+            tool: invocation.program().to_owned(),
+            source,
+        });
+    }
+    Ok(LinkObservation::new(
+        result.status.code(),
+        result.stdout,
+        result.stderr,
+    ))
 }
 
 #[derive(Debug)]
@@ -120,6 +194,10 @@ pub enum ToolchainError {
     Start {
         tool: OsString,
         source: io::Error,
+    },
+    Execute {
+        tool: OsString,
+        details: String,
     },
     WriteAssembly {
         tool: OsString,
@@ -159,6 +237,11 @@ impl fmt::Display for ToolchainError {
                 "could not send assembly to toolchain `{}`: {source}",
                 tool.to_string_lossy()
             ),
+            Self::Execute { tool, details } => write!(
+                formatter,
+                "could not execute toolchain `{}`: {details}",
+                tool.to_string_lossy()
+            ),
             Self::Wait { tool, source } => write!(
                 formatter,
                 "could not wait for toolchain `{}`: {source}",
@@ -195,7 +278,7 @@ impl std::error::Error for ToolchainError {
             | Self::WriteAssembly { source, .. }
             | Self::Wait { source, .. }
             | Self::Publish { source } => Some(source),
-            Self::RuntimeArchiveMissing | Self::Failed { .. } => None,
+            Self::RuntimeArchiveMissing | Self::Execute { .. } | Self::Failed { .. } => None,
         }
     }
 }

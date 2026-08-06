@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{ffi::OsStr, process::Command};
 
 use super::*;
 
@@ -11,6 +11,38 @@ fn standard_library_installation_is_explicitly_injectable() {
         toolchain.standard_library_root(),
         Path::new("/test/install/std")
     );
+}
+
+#[test]
+fn injected_executor_preserves_toolchain_command_and_atomic_publication() {
+    let directory = TemporaryDirectory::new("driver-injected-toolchain").unwrap();
+    let runtime = directory.join("runtime.a");
+    let output = directory.join("program");
+    fs::write(&runtime, "runtime").unwrap();
+
+    Toolchain::new("test-cc", &runtime)
+        .link_assembly_with("assembly\n", &output, |invocation| {
+            assert_eq!(invocation.program(), OsStr::new("test-cc"));
+            assert_eq!(invocation.stdin(), b"assembly\n");
+            assert_eq!(
+                invocation.arguments()[..6],
+                [
+                    "-x",
+                    "assembler",
+                    "-",
+                    "-x",
+                    "none",
+                    runtime.to_str().unwrap(),
+                ]
+            );
+            assert_eq!(invocation.arguments()[6], "-o");
+            fs::write(&invocation.arguments()[7], "linked executable").unwrap();
+            Ok(LinkObservation::new(Some(0), Vec::new(), Vec::new()))
+        })
+        .unwrap();
+
+    assert_eq!(fs::read_to_string(&output).unwrap(), "linked executable");
+    assert!(temporary_artifacts(directory.path()).is_empty());
 }
 
 #[test]

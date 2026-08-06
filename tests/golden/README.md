@@ -4,7 +4,7 @@ Golden tests exercise complete compiler behavior. General guidance on when to
 use this layer is in the [testing guide](../../docs/development/TESTING.md);
 this file defines discovery and expectation formats.
 
-## Spec planning and inspection
+## Spec planning, inspection, and sequential execution
 
 The Rust `skald-golden` tool discovers `**/*.golden.toml` files below this
 directory and loads repository variants from `config.toml`. It validates every
@@ -12,12 +12,13 @@ discovered spec and referenced fixture before applying filters, resolves all
 fixture paths below this golden root, and expands stable spec, test, build, and
 leaf IDs without creating artifacts or starting processes.
 
-The currently implemented interface is read-only:
+The runner can inspect or execute new-format specs:
 
 ```text
 cargo run --locked -p skald-golden -- --list --allow-empty
 cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allow-empty
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
+cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
 ```
 
 `--filter` and `--exclude` are repeatable. `*` stays within a path or identity
@@ -27,9 +28,15 @@ error unless `--allow-empty` is explicit. Canonical leaf IDs have the form
 `<spec-without-.golden.toml>::<test>::<variant>::<run>`; compile-fail leaves
 end in `::<compile>`.
 
-Legacy cases are not part of spec discovery, so an empty spec selection still
-requires the explicit `--allow-empty` policy. The legacy runner and sidecar
-contract below remain the executable golden-test authority.
+Execution locates `skac` beside `skald-golden` by default or accepts an
+explicit `--compiler PATH`. `--compiler-arg` appends an argument after spec
+and variant arguments. `--determinism off` is the default; `compile` repeats
+compiler processes and compares assembly or diagnostics, while `full` also
+repeats native processes and compares their complete observations.
+
+Legacy cases are not part of spec discovery. The legacy runner and sidecar
+contract below remain the repository-wide golden-test authority until the
+later cutover roadmap stage.
 
 ## New-format process and expectation contract
 
@@ -64,9 +71,13 @@ the complete child process group and remains distinct from an exit code or
 signal. Passing sandboxes are deleted unless all artifacts were requested;
 failed or incompletely prepared sandboxes are retained for inspection.
 
-These semantics are available to the runner library and its process tests.
-The command-line runner remains read-only until compiler and linker execution
-are composed in the next implementation stage.
+The sequential coordinator prepares the runtime through `make runtime` once
+and only when native leaves are selected. It compiles each selected build,
+links the first checked assembly through the compiler driver's `Toolchain`,
+then runs every named case. A failed prerequisite cancels only its dependent
+link or run; unrelated builds continue. Passing run sandboxes are removed,
+while unique build products and failed sandboxes remain under `build/golden/`.
+Parallel scheduling and complete failure reporting are later roadmap stages.
 
 The runner recursively discovers two case families:
 

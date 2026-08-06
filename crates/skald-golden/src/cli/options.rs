@@ -1,10 +1,12 @@
-use crate::SelectionOptions;
-use std::ffi::OsString;
+use crate::{Determinism, SelectionOptions};
+use std::{ffi::OsString, path::PathBuf};
 
 pub(super) struct Options {
     pub(super) inspection: Option<Inspection>,
     pub(super) selection: SelectionOptions,
     pub(super) compiler_args: Vec<OsString>,
+    pub(super) compiler: Option<PathBuf>,
+    pub(super) determinism: Determinism,
     pub(super) help: bool,
 }
 
@@ -21,6 +23,8 @@ impl Options {
         let mut inspection = None;
         let mut selection = SelectionOptions::default();
         let mut compiler_args = Vec::new();
+        let mut compiler = None;
+        let mut determinism = Determinism::Off;
         let mut help = false;
 
         while let Some(argument) = arguments.next() {
@@ -49,6 +53,12 @@ impl Options {
                         .next()
                         .ok_or_else(|| "expected an argument after --compiler-arg".to_owned())?,
                 ),
+                Some("--compiler") => {
+                    compiler = Some(PathBuf::from(os_value(&mut arguments, "--compiler")?));
+                }
+                Some("--determinism") => {
+                    determinism = utf8_value(&mut arguments, "--determinism")?.parse()?;
+                }
                 Some("--allow-empty") => selection = selection.allow_empty(true),
                 Some(value) => return Err(format!("unknown option {value:?}")),
                 None => return Err("runner options must be valid UTF-8".to_owned()),
@@ -59,9 +69,20 @@ impl Options {
             inspection,
             selection,
             compiler_args,
+            compiler,
+            determinism,
             help,
         })
     }
+}
+
+fn os_value(
+    arguments: &mut impl Iterator<Item = OsString>,
+    option: &str,
+) -> Result<OsString, String> {
+    arguments
+        .next()
+        .ok_or_else(|| format!("expected a value after {option}"))
 }
 
 fn set_inspection(current: &mut Option<Inspection>, next: Inspection) -> Result<(), String> {
