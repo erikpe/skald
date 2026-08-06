@@ -77,6 +77,7 @@ pub(super) fn assemble(
                             .artifact_directory()
                             .join("program"),
                         None,
+                        None,
                         cancelled_status(&output, link_node),
                     )
                 });
@@ -112,7 +113,13 @@ pub(super) fn assemble(
 
     builds.sort_by(|left, right| left.build_id().cmp(right.build_id()));
     leaves.sort_by(|left, right| left.leaf_id().cmp(right.leaf_id()));
-    SequentialExecution::new(runtime, builds, leaves, output.scheduler_failure)
+    SequentialExecution::new(
+        runtime,
+        builds,
+        leaves,
+        output.scheduler_failure,
+        output.elapsed,
+    )
 }
 
 fn cancellation_message(output: &CoordinatorOutput, node: usize) -> String {

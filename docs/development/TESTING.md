@@ -165,6 +165,8 @@ cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allo
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
+cargo run --locked -p skald-golden -- --format json --filter 'language/**'
+cargo run --locked -p skald-golden -- --slowest 10 --show-output --filter 'runner/**'
 ```
 
 The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)
@@ -188,6 +190,14 @@ the runtime. The scheduler defaults to host available parallelism under one
 process budget. Use `--jobs 1` for single-worker diagnosis, `--fail-fast` to
 stop starting unrelated work after an observed failure, and spec `serial` or
 named `resources` for explicit exclusion. Results remain in canonical ID order.
+`--timeout SECONDS` changes the default bound for compiler, linker, and native
+processes; an explicit per-test timeout remains authoritative. Human output is
+the default, while `--format json` and `--format junit` emit single
+machine-readable documents with the same canonical leaf IDs, stages, statuses,
+durations, and failures. `--show-output` includes passing streams in human
+reports, `--slowest N` ranks completed leaves with stable ID tie-breaking, and
+`--keep-all-artifacts` retains passing run sandboxes. Ordinary execution never
+updates expectations.
 
 The focused orchestration suites use bounded fake compiler, runtime, linker,
 and native processes:
@@ -195,6 +205,7 @@ and native processes:
 ```text
 cargo test --locked -p skald-golden --test sequential_execution
 cargo test --locked -p skald-golden --test parallel_execution
+cargo test --locked -p skald-golden --test reporting
 ```
 
 ## Fixtures and expectations

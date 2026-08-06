@@ -20,6 +20,8 @@ cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allo
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
+cargo run --locked -p skald-golden -- --format json --filter 'language/**'
+cargo run --locked -p skald-golden -- --slowest 10 --show-output --filter 'runner/**'
 ```
 
 `--filter` and `--exclude` are repeatable. `*` stays within a path or identity
@@ -38,6 +40,23 @@ bounds all active compiler, runtime-preparation, linker, and generated-program
 processes. It defaults to host available parallelism; `--jobs 1` is the stable
 single-worker debugging mode. `--fail-fast` stops starting unrelated work after
 the first observed failure while already active work completes or times out.
+`--timeout SECONDS` overrides the default compiler, linker, and native-process
+bound; a timeout declared by a test still takes precedence. Use
+`--keep-all-artifacts` to retain passing run sandboxes as well as the failed
+sandboxes and build products retained by default.
+
+Human reports print the determinism mode and resolved ownership counts before
+execution, then emit canonical-ID-ordered results and distinct spec, source
+test, build, run, compiler-process, link, execution, failure, cancellation, and
+duration counts. Failures include the stage, byte-safe command, working and
+artifact directories, termination, every mismatch, exact byte lengths, match
+policy and successful partial-match offset, escaped binary data, and bounded
+UTF-8 diffs. `--show-output` expands passing stage observations and
+`--slowest N` prints a stable duration ranking. `--format json` and
+`--format junit` encode the same IDs, stages, durations, statuses, and failure
+details as single machine-readable documents. An early pipe consumer exit is
+treated as successful output termination. The runner has no blessing or
+implicit expectation-update mode.
 
 Legacy cases are not part of spec discovery. The legacy runner and sidecar
 contract below remain the repository-wide golden-test authority until the
@@ -88,8 +107,8 @@ pool. A node declaring `resources = ["name"]` cannot overlap another active
 node holding the same name, but may overlap nodes using unrelated resources.
 The coordinator never holds its scheduling state while a worker executes a
 process. Passing run sandboxes are removed, while unique build products and
-failed sandboxes remain under `build/golden/`. Complete failure reporting is a
-later roadmap stage.
+failed sandboxes remain under `build/golden/` and are identified in failure
+reports.
 
 The runner recursively discovers two case families:
 

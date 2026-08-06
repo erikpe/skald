@@ -1,5 +1,5 @@
-use crate::{Determinism, SelectionOptions};
-use std::{ffi::OsString, num::NonZeroUsize, path::PathBuf};
+use crate::{Determinism, ReportFormat, SelectionOptions};
+use std::{ffi::OsString, num::NonZeroUsize, path::PathBuf, time::Duration};
 
 pub(super) struct Options {
     pub(super) inspection: Option<Inspection>,
@@ -9,6 +9,11 @@ pub(super) struct Options {
     pub(super) determinism: Determinism,
     pub(super) jobs: Option<NonZeroUsize>,
     pub(super) fail_fast: bool,
+    pub(super) timeout: Option<Duration>,
+    pub(super) show_output: bool,
+    pub(super) slowest: Option<NonZeroUsize>,
+    pub(super) format: ReportFormat,
+    pub(super) keep_all_artifacts: bool,
     pub(super) help: bool,
 }
 
@@ -29,6 +34,11 @@ impl Options {
         let mut determinism = Determinism::Off;
         let mut jobs = None;
         let mut fail_fast = false;
+        let mut timeout = None;
+        let mut show_output = false;
+        let mut slowest = None;
+        let mut format = ReportFormat::Human;
+        let mut keep_all_artifacts = false;
         let mut help = false;
 
         while let Some(argument) = arguments.next() {
@@ -70,6 +80,20 @@ impl Options {
                     )?);
                 }
                 Some("--fail-fast") => fail_fast = true,
+                Some("--timeout") => {
+                    timeout = Some(positive_seconds(&utf8_value(&mut arguments, "--timeout")?)?);
+                }
+                Some("--show-output") => show_output = true,
+                Some("--slowest") => {
+                    slowest = Some(positive_usize(
+                        &utf8_value(&mut arguments, "--slowest")?,
+                        "--slowest",
+                    )?);
+                }
+                Some("--format") => {
+                    format = utf8_value(&mut arguments, "--format")?.parse()?;
+                }
+                Some("--keep-all-artifacts") => keep_all_artifacts = true,
                 Some("--allow-empty") => selection = selection.allow_empty(true),
                 Some(value) => return Err(format!("unknown option {value:?}")),
                 None => return Err("runner options must be valid UTF-8".to_owned()),
@@ -84,9 +108,23 @@ impl Options {
             determinism,
             jobs,
             fail_fast,
+            timeout,
+            show_output,
+            slowest,
+            format,
+            keep_all_artifacts,
             help,
         })
     }
+}
+
+fn positive_seconds(value: &str) -> Result<Duration, String> {
+    let seconds = value
+        .parse::<u64>()
+        .ok()
+        .filter(|seconds| *seconds > 0)
+        .ok_or_else(|| "--timeout requires a positive integer number of seconds".to_owned())?;
+    Ok(Duration::from_secs(seconds))
 }
 
 fn positive_usize(value: &str, option: &str) -> Result<NonZeroUsize, String> {

@@ -74,11 +74,12 @@ pub(crate) fn link_build(
 ) -> LinkExecution {
     let executable = build.artifact_directory().join("program");
     if let Err(error) = remove_stale(&executable) {
-        return LinkExecution::new(executable, None, StageStatus::Failed(error));
+        return LinkExecution::new(executable, None, None, StageStatus::Failed(error));
     }
     let Some(assembly) = compilation.first_assembly() else {
         return LinkExecution::new(
             executable,
+            None,
             None,
             StageStatus::Failed("successful compilation has no assembly bytes".to_owned()),
         );
@@ -87,10 +88,12 @@ pub(crate) fn link_build(
         return LinkExecution::new(
             executable,
             None,
+            None,
             StageStatus::Failed("compiler assembly is not UTF-8".to_owned()),
         );
     };
     let mut process = None;
+    let mut link_command = None;
     let result = options
         .toolchain()
         .link_assembly_with(assembly, &executable, |invocation| {
@@ -102,6 +105,7 @@ pub(crate) fn link_build(
             .with_stdin(invocation.stdin().to_vec())
             .with_environment(options.linker_environment().clone())
             .with_timeout(options.linker_timeout());
+            link_command = Some(command.clone());
             let observed = run_process(&command).map_err(|error| ToolchainError::Execute {
                 tool: invocation.program().to_owned(),
                 details: error.to_string(),
@@ -134,7 +138,7 @@ pub(crate) fn link_build(
         Ok(()) => StageStatus::Passed,
         Err(error) => StageStatus::Failed(error.to_string()),
     };
-    LinkExecution::new(executable, process, status)
+    LinkExecution::new(executable, link_command, process, status)
 }
 
 pub(crate) fn execute_native_leaf(

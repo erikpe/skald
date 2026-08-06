@@ -1,7 +1,7 @@
 use super::{
     model::{
-        ExecutionOptions, OutputFileMismatch, OutputFileObservation, RunExecution, RunMismatch,
-        SandboxRetention,
+        ExecutionOptions, OutputFileMismatch, OutputFileObservation, RunExecution,
+        RunExecutionParts, RunMismatch, SandboxRetention,
     },
     template::TemporaryPaths,
     ExecutionError,
@@ -20,6 +20,7 @@ use std::{
 static NEXT_SANDBOX: AtomicU64 = AtomicU64::new(0);
 
 struct ObservedRun {
+    command: ProcessCommand,
     process: crate::ProcessObservation,
     stdout: Result<crate::StreamMatch, crate::StreamMismatch>,
     stderr: Result<crate::StreamMatch, crate::StreamMismatch>,
@@ -41,15 +42,16 @@ pub fn execute_run(
             if !retained {
                 remove_sandbox(&sandbox)?;
             }
-            Ok(RunExecution::new(
+            Ok(RunExecution::from_parts(RunExecutionParts {
+                command: execution.command,
                 sandbox,
                 retained,
-                execution.process,
-                execution.stdout,
-                execution.stderr,
-                execution.output_files,
-                execution.mismatches,
-            ))
+                observation: execution.process,
+                stdout_comparison: execution.stdout,
+                stderr_comparison: execution.stderr,
+                output_files: execution.output_files,
+                mismatches: execution.mismatches,
+            }))
         }
         Err(error) => Err(error.with_sandbox(sandbox)),
     }
@@ -149,6 +151,7 @@ fn execute_in_sandbox(
     }
     let output_files = compare_output_files(run, &temporary_paths, &mut mismatches)?;
     Ok(ObservedRun {
+        command: request,
         process: observation,
         stdout,
         stderr,

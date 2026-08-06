@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR5 is next.
+Status: in progress; GR6 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -55,7 +55,7 @@ implicitly.
 - [x] GR2 — Implement byte expectations and isolated process execution
 - [x] GR3 — Compile, link, and execute sequential plans
 - [x] GR4 — Schedule the dependency graph in parallel
-- [ ] GR5 — Complete reporting and the command-line surface
+- [x] GR5 — Complete reporting and the command-line surface
 - [ ] GR6 — Adapt legacy fixtures and prove behavioral parity
 - [ ] GR7 — Cut repository commands over to the Rust runner
 - [ ] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
@@ -254,25 +254,25 @@ deadlock when work fails, times out, or panics.
 **Purpose:** Make the runner practical for focused development, external
 automation, and failure diagnosis before it becomes the repository default.
 
-- [ ] Complete command parsing and help for jobs, include/exclude/exact
+- [x] Complete command parsing and help for jobs, include/exclude/exact
       selection, variants, compiler and compiler arguments, determinism,
       timeout, fail-fast, list/explain, output display, slowest results, report
       format, empty selection, and artifact retention.
-- [ ] Print the selected determinism mode and resolved counts before execution.
-- [ ] Emit final human results in canonical ID order with stage, safely escaped
+- [x] Print the selected determinism mode and resolved counts before execution.
+- [x] Emit final human results in canonical ID order with stage, safely escaped
       command, working/artifact directories, status or signal, timeout, all
       mismatches, byte lengths, match policy and offset, binary escaping, and
       bounded UTF-8 unified diffs.
-- [ ] Report spec, source test, compile-fail build, successful build, named run,
+- [x] Report spec, source test, compile-fail build, successful build, named run,
       compiler process, link, execution, failure, cancellation, and duration
       counts without conflating them.
-- [ ] Record stage durations and implement `--slowest N` over stable leaf IDs.
-- [ ] Add narrowly scoped machine-report encoding dependencies if needed and
+- [x] Record stage durations and implement `--slowest N` over stable leaf IDs.
+- [x] Add narrowly scoped machine-report encoding dependencies if needed and
       emit JSON and JUnit with the same IDs, stages, durations, status, and
       failure details as the human model.
-- [ ] Keep ordinary execution read-only; do not add blessing or implicit
+- [x] Keep ordinary execution read-only; do not add blessing or implicit
       expectation updates.
-- [ ] Test broken-pipe behavior so piping list or report output to an early
+- [x] Test broken-pipe behavior so piping list or report output to an early
       consumer exit does not produce a misleading test failure.
 
 **Tests:** Golden-runner unit and snapshot tests for help, every option

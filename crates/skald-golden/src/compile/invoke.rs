@@ -51,6 +51,7 @@ pub(crate) fn compile_build(
             build.id().to_owned(),
             purpose.kind(),
             observations,
+            None,
             issues,
         );
     }
@@ -121,16 +122,27 @@ pub(crate) fn compile_build(
     if observations.len() == 2 {
         check_determinism(&observations, &purpose, &mut issues);
     }
+    let mut stderr_comparison = None;
     if let CompilationPurpose::CompileFail(expectation) = &purpose {
         if let Some(process) = observations.first().and_then(CompilerObservation::process) {
             match compare_stream(expectation.stderr(), process.stderr()) {
-                Ok(Ok(_)) => {}
-                Ok(Err(mismatch)) => issues.push(CompilationIssue::StderrExpectation(mismatch)),
+                Ok(comparison) => {
+                    if let Err(mismatch) = &comparison {
+                        issues.push(CompilationIssue::StderrExpectation(mismatch.clone()));
+                    }
+                    stderr_comparison = Some(comparison);
+                }
                 Err(error) => issues.push(CompilationIssue::ExpectationLoad(error.to_string())),
             }
         }
     }
-    CompilationExecution::new(build.id().to_owned(), purpose.kind(), observations, issues)
+    CompilationExecution::new(
+        build.id().to_owned(),
+        purpose.kind(),
+        observations,
+        stderr_comparison,
+        issues,
+    )
 }
 
 fn check_process(

@@ -41,6 +41,10 @@ pub use process::{
     run_process, PipeFailure, ProcessCommand, ProcessEnvironment, ProcessError, ProcessObservation,
     ProcessPipe, ProcessTermination,
 };
+pub use report::{
+    render as render_report, CaseReport, FailureReport, ProcessReport, Report, ReportCounts,
+    ReportFormat, ReportOptions, SchedulerFailureReport, StageReport, StreamReport,
+};
 pub use selection::{select, SelectedPlan, SelectionError, SelectionOptions};
 pub use spec::{
     parse_config, parse_spec, ArgSource, ByteSource, CompileExpectation, CompileFailTest,

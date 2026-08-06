@@ -14,6 +14,7 @@ use std::{
     panic::{catch_unwind, AssertUnwindSafe},
     sync::{mpsc, Arc, Mutex},
     thread,
+    time::Instant,
 };
 
 /// Executes an immutable selected plan through a bounded fixed worker pool.
@@ -34,8 +35,10 @@ pub(super) fn execute_with<F>(
 where
     F: Fn(ScheduledTask, &SequentialOptions) -> TaskResult + Sync,
 {
+    let started = Instant::now();
     let graph = ExecutionGraph::new(selected);
-    let output = coordinate(&graph, stage_options, scheduler_options, executor);
+    let mut output = coordinate(&graph, stage_options, scheduler_options, executor);
+    output.elapsed = started.elapsed();
     assemble(selected, stage_options, &graph, output)
 }
 
@@ -260,6 +263,7 @@ where
         results,
         cancellations,
         scheduler_failure,
+        elapsed: std::time::Duration::ZERO,
     }
 }
 
@@ -508,6 +512,7 @@ pub(super) struct CoordinatorOutput {
     pub(super) results: Vec<Option<TaskResult>>,
     pub(super) cancellations: BTreeMap<usize, String>,
     pub(super) scheduler_failure: Option<SchedulerFailure>,
+    pub(super) elapsed: std::time::Duration,
 }
 
 struct WorkItem {

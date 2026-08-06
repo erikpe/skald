@@ -1,6 +1,6 @@
 use crate::{
-    ExitExpectation, PipeFailure, ProcessEnvironment, ProcessObservation, ProcessTermination,
-    StreamMatch, StreamMismatch,
+    ExitExpectation, PipeFailure, ProcessCommand, ProcessEnvironment, ProcessObservation,
+    ProcessTermination, StreamMatch, StreamMismatch,
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -130,6 +130,7 @@ pub enum RunMismatch {
 /// A complete native execution and all independently observed mismatches.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunExecution {
+    command: ProcessCommand,
     sandbox: PathBuf,
     retained: bool,
     observation: ProcessObservation,
@@ -139,25 +140,33 @@ pub struct RunExecution {
     mismatches: Vec<RunMismatch>,
 }
 
+pub(super) struct RunExecutionParts {
+    pub(super) command: ProcessCommand,
+    pub(super) sandbox: PathBuf,
+    pub(super) retained: bool,
+    pub(super) observation: ProcessObservation,
+    pub(super) stdout_comparison: Result<StreamMatch, StreamMismatch>,
+    pub(super) stderr_comparison: Result<StreamMatch, StreamMismatch>,
+    pub(super) output_files: Vec<OutputFileObservation>,
+    pub(super) mismatches: Vec<RunMismatch>,
+}
+
 impl RunExecution {
-    pub(super) fn new(
-        sandbox: PathBuf,
-        retained: bool,
-        observation: ProcessObservation,
-        stdout_comparison: Result<StreamMatch, StreamMismatch>,
-        stderr_comparison: Result<StreamMatch, StreamMismatch>,
-        output_files: Vec<OutputFileObservation>,
-        mismatches: Vec<RunMismatch>,
-    ) -> Self {
+    pub(super) fn from_parts(parts: RunExecutionParts) -> Self {
         Self {
-            sandbox,
-            retained,
-            observation,
-            stdout_comparison,
-            stderr_comparison,
-            output_files,
-            mismatches,
+            command: parts.command,
+            sandbox: parts.sandbox,
+            retained: parts.retained,
+            observation: parts.observation,
+            stdout_comparison: parts.stdout_comparison,
+            stderr_comparison: parts.stderr_comparison,
+            output_files: parts.output_files,
+            mismatches: parts.mismatches,
         }
+    }
+
+    pub fn command(&self) -> &ProcessCommand {
+        &self.command
     }
 
     pub fn sandbox(&self) -> &std::path::Path {

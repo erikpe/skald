@@ -1,6 +1,6 @@
 use crate::{
     PipeFailure, ProcessCommand, ProcessEnvironment, ProcessObservation, ProcessTermination,
-    StreamMismatch,
+    StreamMatch, StreamMismatch,
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -167,6 +167,7 @@ pub struct CompilationExecution {
     build_id: String,
     kind: CompilationKind,
     observations: Vec<CompilerObservation>,
+    stderr_comparison: Option<Result<StreamMatch, StreamMismatch>>,
     issues: Vec<CompilationIssue>,
 }
 
@@ -175,12 +176,14 @@ impl CompilationExecution {
         build_id: String,
         kind: CompilationKind,
         observations: Vec<CompilerObservation>,
+        stderr_comparison: Option<Result<StreamMatch, StreamMismatch>>,
         issues: Vec<CompilationIssue>,
     ) -> Self {
         Self {
             build_id,
             kind,
             observations,
+            stderr_comparison,
             issues,
         }
     }
@@ -194,6 +197,7 @@ impl CompilationExecution {
             build_id,
             kind,
             Vec::new(),
+            None,
             vec![CompilationIssue::Process(reason.into())],
         )
     }
@@ -208,6 +212,10 @@ impl CompilationExecution {
 
     pub fn observations(&self) -> &[CompilerObservation] {
         &self.observations
+    }
+
+    pub fn stderr_comparison(&self) -> Option<&Result<StreamMatch, StreamMismatch>> {
+        self.stderr_comparison.as_ref()
     }
 
     pub fn issues(&self) -> &[CompilationIssue] {

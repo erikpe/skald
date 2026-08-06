@@ -199,6 +199,7 @@ impl RuntimeExecution {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkExecution {
     executable: PathBuf,
+    command: Option<ProcessCommand>,
     process: Option<ProcessObservation>,
     status: StageStatus,
 }
@@ -206,11 +207,13 @@ pub struct LinkExecution {
 impl LinkExecution {
     pub(super) fn new(
         executable: PathBuf,
+        command: Option<ProcessCommand>,
         process: Option<ProcessObservation>,
         status: StageStatus,
     ) -> Self {
         Self {
             executable,
+            command,
             process,
             status,
         }
@@ -218,6 +221,10 @@ impl LinkExecution {
 
     pub fn executable(&self) -> &std::path::Path {
         &self.executable
+    }
+
+    pub fn command(&self) -> Option<&ProcessCommand> {
+        self.command.as_ref()
     }
 
     pub fn process(&self) -> Option<&ProcessObservation> {
@@ -314,6 +321,7 @@ pub struct PlanExecution {
     builds: Vec<BuildExecution>,
     leaves: Vec<LeafExecution>,
     scheduler_failure: Option<SchedulerFailure>,
+    elapsed: Duration,
 }
 
 impl PlanExecution {
@@ -322,12 +330,14 @@ impl PlanExecution {
         builds: Vec<BuildExecution>,
         leaves: Vec<LeafExecution>,
         scheduler_failure: Option<SchedulerFailure>,
+        elapsed: Duration,
     ) -> Self {
         Self {
             runtime,
             builds,
             leaves,
             scheduler_failure,
+            elapsed,
         }
     }
 
@@ -345,6 +355,10 @@ impl PlanExecution {
 
     pub fn scheduler_failure(&self) -> Option<&SchedulerFailure> {
         self.scheduler_failure.as_ref()
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.elapsed
     }
 
     pub fn passed(&self) -> bool {
