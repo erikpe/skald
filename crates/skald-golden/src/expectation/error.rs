@@ -32,6 +32,25 @@ impl ExpectationError {
     pub fn message(&self) -> &str {
         &self.message
     }
+
+    pub(super) fn into_parts(self) -> (PathBuf, String, Option<(io::ErrorKind, String)>) {
+        let source = self
+            .source
+            .map(|source| (source.kind(), source.to_string()));
+        (self.path, self.message, source)
+    }
+
+    pub(super) fn from_parts(
+        path: PathBuf,
+        message: String,
+        source: Option<(io::ErrorKind, String)>,
+    ) -> Self {
+        Self {
+            path,
+            message,
+            source: source.map(|(kind, message)| io::Error::new(kind, message)),
+        }
+    }
 }
 
 impl fmt::Display for ExpectationError {

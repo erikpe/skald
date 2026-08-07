@@ -6,14 +6,13 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+- [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md) —
+  in progress; the independent matcher engine is complete and the symmetric
+  schema-2 stream contract is next. No active roadmap dependency.
 
 ## Planned
 
-- [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md) —
-  planned; GM0 is next. Add independent matcher collections symmetrically to
-  native stdout/stderr and compile-fail stdout/stderr while preserving the
-  frozen schema-1 singular syntax. No active roadmap dependency.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

@@ -1,6 +1,6 @@
 # Golden Stream Matcher Lists Roadmap
 
-Status: planned; GM0 is next.
+Status: in progress; GM1 is next.
 
 This roadmap lets one captured process stream own any number of independent
 byte-match contracts. It preserves the existing singular expectation syntax
@@ -83,7 +83,7 @@ matches = [
 
 ## Progress
 
-- [ ] GM0 — Build the independent matcher engine
+- [x] GM0 — Build the independent matcher engine
 - [ ] GM1 — Publish the symmetric schema-2 stream contract
 - [ ] GM2 — Complete matcher-aware planning and reporting
 - [ ] GM3 — Migrate multi-error compile-fail contracts
@@ -97,19 +97,19 @@ matches = [
 model before schema, compiler, native execution, or reporting depends on
 matcher collections.
 
-- [ ] Introduce cohesive matcher and matcher-outcome types under the
+- [x] Introduce cohesive matcher and matcher-outcome types under the
       expectation facade, including optional names, declaration indices,
       match mode, expected bytes, matched offsets, mismatches, and load
       failures.
-- [ ] Implement collection comparison as an AND operation over the same actual
+- [x] Implement collection comparison as an AND operation over the same actual
       bytes without short-circuiting, while preserving current exact,
       starts-with, contains, ignored, and binary-byte behavior.
-- [ ] Keep the current singular comparison entry point as a compatibility
+- [x] Keep the current singular comparison entry point as a compatibility
       wrapper until all consumers move to the collection result.
-- [ ] Define deterministic outcome ordering and make successful, mismatched,
+- [x] Define deterministic outcome ordering and make successful, mismatched,
       and unloadable matchers independently inspectable without duplicating
       captured actual bytes in every in-memory result.
-- [ ] Keep substantial comparison algorithms and tests in cohesive files
+- [x] Keep substantial comparison algorithms and tests in cohesive files
       behind the concise expectation-module facade; avoid compiler- or
       native-specific matching helpers.
 
