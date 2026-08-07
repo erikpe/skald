@@ -1,0 +1,94 @@
+schema = 1
+
+[[test]]
+name = "println_primitives"
+mode = "run"
+source = "std_io_println_primitives.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 0, stdout = { inline = """false
+true
+-9223372036854775808
+9223372036854775807
+0
+18446744073709551615
+0
+255
+-0.0
+1.25
+Infinity
+-Infinity
+NaN
+""" } }
+
+[[test]]
+name = "read_file_directory"
+mode = "run"
+source = "std_io_read_file_directory.ska"
+
+[[test.run]]
+name = "default"
+cwd = { fixture = "read_files" }
+expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to read file" } }
+
+[[test]]
+name = "read_file_embedded_zero"
+mode = "run"
+source = "std_io_read_file_embedded_zero.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
+
+[[test]]
+name = "read_file_missing"
+mode = "run"
+source = "std_io_read_file_missing.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
+
+[[test]]
+name = "read_stdin_empty"
+mode = "run"
+source = "std_io_read_stdin_empty.ska"
+
+[[test.run]]
+name = "default"
+stdin = { inline = "" }
+expect = { exit = 0 }
+
+[[test]]
+name = "read_stdin_growth"
+mode = "run"
+source = "std_io_read_stdin_growth.ska"
+
+[[test.run]]
+name = "default"
+stdin = { file = "data/stdin-growth.bin" }
+expect = { exit = 0, stdout = { file = "data/stdin-growth.bin" } }
+
+[[test]]
+name = "writes"
+mode = "run"
+source = "std_io_writes.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 0, stdout = { inline = "alphaomega\n" }, stderr = { inline = "betagamma\n" } }
+
+[[test]]
+name = "read_files"
+mode = "run"
+compiler_args = ["--entry", "app::main", "--module-root", "read_files/application"]
+
+[[test.run]]
+name = "temporary_paths"
+args = ["{tmp:empty}", "{tmp:payload}"]
+input_files = [
+  { name = "empty", contents = { file = "data/empty.bin" } },
+  { name = "payload", contents = { file = "data/file-payload.bin" } },
+]
+expect = { exit = 0, stdout = { file = "data/file-payload.bin" } }

@@ -167,6 +167,8 @@ make golden-exact GOLDEN_ID='run/strings::default::<run>'
 make golden-determinism-test
 scripts/golden.sh --list --filter 'runner/**'
 scripts/golden.sh --format json --filter 'compile_fail/**'
+scripts/golden.sh --filter 'standard_io/**'
+scripts/golden.sh --determinism full --filter 'runtime/panic/**'
 ```
 
 The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)

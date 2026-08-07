@@ -20,6 +20,8 @@ cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allo
 cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
+cargo run --locked -p skald-golden -- --filter 'standard_io/**'
+cargo run --locked -p skald-golden -- --determinism full --filter 'runtime/panic/**'
 cargo run --locked -p skald-golden -- --format json --filter 'language/**'
 cargo run --locked -p skald-golden -- --slowest 10 --show-output --filter 'runner/**'
 ```
@@ -74,6 +76,14 @@ removed before diagnostic determinism and expectation checks. Legacy native
 runs hold a resource lock for their shared working directory, preventing the
 parallel scheduler from exposing old fixtures to races. The adapter remains
 until every sidecar fixture has migrated to a feature spec.
+
+Migrated feature specs currently live in `process/`, `standard_io/`,
+`primitive_strings/`, `runtime/`, and `standard_test/`. Their local READMEs
+describe observation ownership and focused filters. The checked
+`migrations/gr8-process-runtime.tsv` mapping records the 38 legacy leaves they
+replace; an integration test requires every old leaf to be absent, every new
+leaf to be present exactly once, and the complete 290-leaf observation count
+to remain unchanged.
 
 ## New-format process and expectation contract
 

@@ -284,6 +284,49 @@ args=["echo", "{tmp:missing}"]
 }
 
 #[test]
+fn temporary_placeholders_are_absolute_with_a_relative_temporary_root() {
+    let fixture = Fixture::new();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write(
+        "temporary.golden.toml",
+        r#"schema=1
+[[test]]
+name="temporary"
+mode="run"
+source="program.ska"
+
+[[test.run]]
+name="absolute"
+args=["echo"]
+stdin={inline="{tmp:input}"}
+input_files=[{name="input", contents={inline="payload"}}]
+expect={stdout={ignore=true}, stderr={ignore=true}}
+"#,
+    );
+    let relative_root = PathBuf::from(format!(
+        "target/skald-golden-relative-temporary-{}-{}",
+        std::process::id(),
+        NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+    ));
+    assert!(!relative_root.is_absolute());
+
+    let execution = execute_run(
+        fake_process(),
+        run(&fixture.plan(), "absolute"),
+        &ExecutionOptions::new(&relative_root),
+    )
+    .unwrap();
+
+    assert!(execution.passed());
+    assert!(execution.sandbox().is_absolute());
+    assert_eq!(
+        execution.observation().stdout(),
+        path_bytes(&execution.sandbox().join("input"))
+    );
+    fs::remove_dir_all(relative_root).unwrap();
+}
+
+#[test]
 fn uses_fixture_working_directories_and_a_declared_environment() {
     let fixture = Fixture::new();
     fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");

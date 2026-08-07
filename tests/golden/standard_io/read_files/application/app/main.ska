@@ -1,0 +1,15 @@
+import std::io;
+import std::process;
+import std::str;
+
+fn main() -> i64 {
+    var arguments: std::str::Str[] = std::process::args();
+    if (arguments.len() != 3u) {
+        return 1;
+    }
+    var empty: std::str::Str = std::io::read_file(arguments[1]);
+    var payload: std::str::Str = std::io::read_file(arguments[2]);
+    std::io::write_stdout(empty);
+    std::io::write_stdout(payload);
+    return 0;
+}

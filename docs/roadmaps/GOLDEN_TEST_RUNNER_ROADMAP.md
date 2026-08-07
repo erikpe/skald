@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR8 is next.
+Status: in progress; GR9 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -32,8 +32,8 @@ implicitly.
   under one bounded process budget.
 - Keep result meaning and final reporting deterministic regardless of process
   completion order.
-- Preserve all 150 native and 138 compile-fail legacy cases at the recorded
-  baseline until their owning fixtures migrate.
+- Preserve the recorded 150-native and 138-compile-fail observation baseline;
+  remove legacy ownership only through checked one-for-one migration maps.
 - Keep every intermediate revision runnable; do not require a big-bang fixture
   move.
 - Keep third-party schema and report dependencies private to repository
@@ -58,7 +58,7 @@ implicitly.
 - [x] GR5 — Complete reporting and the command-line surface
 - [x] GR6 — Adapt legacy fixtures and prove behavioral parity
 - [x] GR7 — Cut repository commands over to the Rust runner
-- [ ] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
+- [x] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
 - [ ] GR9 — Migrate module and replacement-standard-library fixtures
 - [ ] GR10 — Migrate primitive, operator, call, and control-flow fixtures
 - [ ] GR11 — Migrate class, object, alias, and polymorphism fixtures
@@ -373,25 +373,37 @@ only implemented interfaces.
 **Purpose:** Exercise the new data, partial-stderr, temporary-file, and native
 process model on the fixtures that benefit most before broad mechanical moves.
 
-- [ ] Create feature-oriented specs for process arguments, standard I/O,
+- [x] Create feature-oriented specs for process arguments, standard I/O,
       primitive printing/parsing/formatting corpora, explicit panic behavior,
       allocation and bounds failures, and standard-test assertion failures.
-- [ ] Preserve exact binary stdin, stdout, argument, empty-stream, status, and
+- [x] Preserve exact binary stdin, stdout, argument, empty-stream, status, and
       signal observations through inline or external byte sources as
       appropriate.
-- [ ] Replace full native stderr snapshots with reviewed starts-with or contains
+- [x] Replace full native stderr snapshots with reviewed starts-with or contains
       fragments where the case owns a stable panic message but should permit
       later stack traces or richer context; retain exact mode when complete
       rendering is the assertion.
-- [ ] Move writable file behavior to named per-run temporary paths and express
+- [x] Move writable file behavior to named per-run temporary paths and express
       read-only fixture working directories explicitly.
-- [ ] Consolidate multiple data selections under one compiled source only when
+- [x] Consolidate multiple data selections under one compiled source only when
       named runs make the source and expectations clearer; retain focused
       programs otherwise.
-- [ ] Record the legacy-to-spec leaf mapping and assert that no observation is
+- [x] Record the legacy-to-spec leaf mapping and assert that no observation is
       lost or discovered twice.
-- [ ] Update feature-local fixture documentation and filtering examples in the
+- [x] Update feature-local fixture documentation and filtering examples in the
       same change.
+
+GR8 completed on 2026-08-07. Seven feature specs now own 38 process, standard
+I/O, primitive-string, panic, bounds, and standard-test observations. Binary
+arguments and large corpora remain external exact byte files, concise streams
+are inline, runtime failures use reviewed partial stderr matchers, file input
+uses named private paths, and the directory-error case declares a read-only
+fixture working directory. The checked migration map requires all 38 old IDs
+to be absent, all replacements to be present once, the remaining legacy
+boundary to be exactly 112 native and 138 compile-fail leaves, and the complete
+suite to remain at 290 observations. Exercising named paths exposed and fixed
+a runner defect where relative temporary roots produced relative `{tmp:name}`
+expansions; private sandbox paths are now canonicalized and regression-tested.
 
 **Tests:** Filters for each migrated process/runtime/std group in default and
 targeted full mode; exact binary argument and stream tests; large-input and

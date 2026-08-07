@@ -3,6 +3,7 @@ use skald_golden::{
     ResolvedStreamExpectation, ResolvedWorkingDirectory,
 };
 use std::{
+    collections::HashSet,
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
@@ -101,7 +102,7 @@ fn rejects_malformed_required_exit_and_exact_byte_argument_sidecars_during_plann
 }
 
 #[test]
-fn repository_corpus_matches_the_frozen_pre_migration_baseline() {
+fn repository_corpus_preserves_gr8_migrations_and_remaining_legacy_ownership() {
     let repository = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let plan = build_plan(
         repository.join("tests/golden"),
@@ -123,15 +124,46 @@ fn repository_corpus_matches_the_frozen_pre_migration_baseline() {
         .count();
     let compile_fail = legacy.len() - native;
 
-    assert_eq!(
-        native, 150,
-        "legacy native baseline changed before migration"
-    );
+    assert_eq!(native, 112, "unexpected remaining legacy native count");
     assert_eq!(
         compile_fail, 138,
-        "legacy compile-fail baseline changed before migration"
+        "unexpected remaining legacy compile-fail count"
     );
-    assert_eq!(legacy.len(), 288);
+    assert_eq!(legacy.len(), 250);
+
+    let mapping =
+        fs::read_to_string(repository.join("tests/golden/migrations/gr8-process-runtime.tsv"))
+            .unwrap();
+    let pairs = mapping
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| {
+            line.split_once('\t')
+                .expect("migration rows must contain one tab")
+        })
+        .collect::<Vec<_>>();
+    let old_ids = pairs.iter().map(|(old, _)| *old).collect::<HashSet<_>>();
+    let new_ids = pairs.iter().map(|(_, new)| *new).collect::<HashSet<_>>();
+
+    assert_eq!(pairs.len(), 38, "GR8 must map every migrated observation");
+    assert_eq!(old_ids.len(), pairs.len(), "legacy leaf mapped twice");
+    assert_eq!(
+        new_ids.len(),
+        pairs.len(),
+        "spec leaf owns two legacy observations"
+    );
+    for (old, new) in pairs {
+        assert!(
+            plan.leaf(old).is_none(),
+            "legacy leaf remains discovered: {old}"
+        );
+        assert!(plan.leaf(new).is_some(), "migrated leaf is missing: {new}");
+    }
+    assert_eq!(
+        plan.leaves().len(),
+        290,
+        "GR8 must preserve the complete pre-migration observation count"
+    );
 }
 
 fn assert_exact_bytes(expectation: &ResolvedStreamExpectation, expected: &[u8]) {

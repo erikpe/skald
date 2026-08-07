@@ -208,7 +208,9 @@ fn create_sandbox(root: &Path) -> Result<PathBuf, ExecutionError> {
         match fs::create_dir(&path) {
             Ok(()) => {
                 make_private(&path)?;
-                return Ok(path);
+                return fs::canonicalize(&path).map_err(|source| {
+                    ExecutionError::io(path, "could not resolve private run directory", source)
+                });
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(source) => {

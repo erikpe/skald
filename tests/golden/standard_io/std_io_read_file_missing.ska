@@ -1,0 +1,8 @@
+import std::io;
+import std::str;
+
+fn main() -> i64 {
+    var path: std::str::Str = "no-such-io6-file";
+    var contents: std::str::Str = std::io::read_file(path);
+    return 0;
+}

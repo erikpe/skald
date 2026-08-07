@@ -1,0 +1,28 @@
+schema = 1
+
+[[test]]
+name = "dynamic_slice"
+mode = "run"
+source = "panic_dynamic_slice.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: dynamic failure" } }
+
+[[test]]
+name = "empty"
+mode = "run"
+source = "panic_empty.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: " } }
+
+[[test]]
+name = "literal"
+mode = "run"
+source = "panic_literal.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: literal failure" } }

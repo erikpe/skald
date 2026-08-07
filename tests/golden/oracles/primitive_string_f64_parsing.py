@@ -3,8 +3,8 @@
 
 The oracle uses integer fractions and an explicit nearest/ties-to-even search;
 it deliberately does not call a host floating-point parser. Run it from the
-repository root and compare the two labelled sections with the golden stdin
-and stdout sidecars.
+repository root and compare the two labelled sections with the external stdin
+and stdout files referenced by `primitive_strings/conversions.golden.toml`.
 """
 
 from fractions import Fraction

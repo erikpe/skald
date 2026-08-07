@@ -1,0 +1,20 @@
+schema = 1
+
+[[test]]
+name = "exact_bytes"
+mode = "run"
+source = "process_arguments_exact_bytes.ska"
+
+[[test.run]]
+name = "default"
+argv_file = "data/exact-bytes.argv"
+expect = { exit = 0 }
+
+[[test]]
+name = "no_suffix"
+mode = "run"
+source = "process_arguments_no_suffix.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 0 }

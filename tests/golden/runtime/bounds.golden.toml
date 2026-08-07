@@ -1,0 +1,100 @@
+schema = 1
+
+[[test]]
+name = "array_allocation_failure"
+mode = "run"
+source = "array_allocation_failure.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed" } }
+
+[[test]]
+name = "array_allocation_overflow"
+mode = "run"
+source = "array_allocation_overflow.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array allocation failed" } }
+
+[[test]]
+name = "array_index_empty_out_of_bounds"
+mode = "run"
+source = "array_index_empty_out_of_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+
+[[test]]
+name = "array_index_minimum_out_of_bounds"
+mode = "run"
+source = "array_index_minimum_out_of_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+
+[[test]]
+name = "array_index_negative_out_of_bounds"
+mode = "run"
+source = "array_index_negative_out_of_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+
+[[test]]
+name = "array_index_positive_out_of_bounds"
+mode = "run"
+source = "array_index_positive_out_of_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+
+[[test]]
+name = "array_maximum_length"
+mode = "run"
+source = "array_maximum_length.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed" } }
+
+[[test]]
+name = "array_slice_invalid_bounds"
+mode = "run"
+source = "array_slice_invalid_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array slice bounds are invalid" } }
+
+[[test]]
+name = "array_slice_length_mismatch"
+mode = "run"
+source = "array_slice_length_mismatch.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array slice length mismatch" } }
+
+[[test]]
+name = "string_byte_out_of_bounds"
+mode = "run"
+source = "string_byte_out_of_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+
+[[test]]
+name = "string_slice_invalid_bounds"
+mode = "run"
+source = "string_slice_invalid_bounds.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }

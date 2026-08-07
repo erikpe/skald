@@ -1,0 +1,65 @@
+schema = 1
+
+[[test]]
+name = "bool"
+mode = "run"
+source = "println_bool.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 74, stdout = { inline = """false
+true
+false
+true
+""" } }
+
+[[test]]
+name = "i64"
+mode = "run"
+source = "println_i64.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 73, stdout = { inline = """0
+17
+-23
+42
+314
+-9223372036854775808
+9223372036854775807
+""" } }
+
+[[test]]
+name = "u64"
+mode = "run"
+source = "println_u64.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 0, stdout = { inline = """0
+1
+18446744073709551615
+0
+18446744073709551615
+9223372036854775808
+2
+7
+""" } }
+
+[[test]]
+name = "u8"
+mode = "run"
+source = "println_u8.ska"
+
+[[test.run]]
+name = "default"
+expect = { exit = 0, stdout = { inline = """0
+1
+255
+0
+255
+144
+11
+14
+7
+""" } }
