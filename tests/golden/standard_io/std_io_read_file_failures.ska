@@ -1,0 +1,16 @@
+import std::io;
+import std::process;
+from std::str import Str;
+
+fn main() -> i64 {
+    var args: Str[] = std::process::args();
+    var path: Str = "no-such-io6-file";
+    if (args[1].equals("directory")) {
+        path = ".";
+    }
+    if (args[1].equals("embedded-zero")) {
+        path = "invalid\0path";
+    }
+    var contents: Str = std::io::read_file(path);
+    return 0;
+}

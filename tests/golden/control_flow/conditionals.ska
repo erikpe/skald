@@ -15,6 +15,23 @@ fn third() -> bool {
     return true;
 }
 
+fn classify(outer: bool, inner: bool) -> i64 {
+    if (outer) {
+        if (inner) {
+            return 11;
+        }
+        else {
+            return 12;
+        }
+    }
+    elif (inner) {
+        return 21;
+    }
+    else {
+        return 22;
+    }
+}
+
 fn main() -> i64 {
     if (first()) {
         std::io::println_i64(10);
@@ -47,5 +64,9 @@ fn main() -> i64 {
         std::io::println_i64(60);
     }
     std::io::println_i64(70);
-    return 75;
+    std::io::println_i64(classify(true, true));
+    std::io::println_i64(classify(true, false));
+    std::io::println_i64(classify(false, true));
+    std::io::println_i64(classify(false, false));
+    return 0;
 }

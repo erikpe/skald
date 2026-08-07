@@ -1,9 +1,0 @@
-fn observe(value: i64) -> unit {
-    // O3 has no output primitive yet; the observable result is that this
-    // effect-only call returns normally before main supplies the exit status.
-}
-
-fn main() -> i64 {
-    observe(42);
-    return 7;
-}

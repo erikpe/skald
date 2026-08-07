@@ -1,5 +1,0 @@
-import std::error;
-
-fn main() -> i64 {
-    std::error::panic("literal failure");
-}

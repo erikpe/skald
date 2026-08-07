@@ -1,0 +1,95 @@
+from std::test import assert_eq_f64, assert_eq_i64, assert_eq_u64, assert_eq_u8, assert_true;
+
+class Value {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    fn read() -> i64 {
+        return self.marker;
+    }
+}
+
+class Holder {
+    value: i64?;
+
+    init(value: i64?) {
+        self.value = value;
+    }
+
+    mut fn replace(value: i64?) -> i64? {
+        self.value = value;
+        return self.value;
+    }
+}
+
+fn identity(value: i64?) -> i64? {
+    return value;
+}
+
+fn read(ref value: i64?) -> i64 {
+    if (value is some) {
+        return value!;
+    }
+    return 0;
+}
+
+fn clear(mut ref value: i64?) -> unit {
+    value = none;
+}
+
+fn replace_value(mut ref value: Value?) -> unit {
+    value = Value(35);
+}
+
+fn test_primitive_types() -> unit {
+    var signed: i64? = 40;
+    var unsigned: u64? = 7u;
+    var byte: u8? = 8u8;
+    var float: f64? = 1.5;
+    var flag: bool? = true;
+    assert_eq_i64(signed!, 40);
+    assert_eq_u64(unsigned!, 7u);
+    assert_eq_u8(byte!, 8u8);
+    assert_eq_f64(float!, 1.5);
+    assert_true(flag!);
+}
+
+fn test_presence_and_copy() -> unit {
+    var value: i64? = none;
+    var snapshot: i64? = value;
+    assert_true(snapshot is none);
+    value = 40;
+    snapshot = value;
+    assert_true(snapshot is some);
+    assert_eq_i64(snapshot!, 40);
+}
+
+fn test_boundaries() -> unit {
+    var holder: Holder = Holder(none);
+    var result: i64? = holder.replace(identity(42));
+    assert_eq_i64(result!, 42);
+    var snapshot: Holder = holder;
+    snapshot = holder;
+    assert_eq_i64(snapshot.value!, 42);
+}
+
+fn test_aliases() -> unit {
+    var number: i64? = 7;
+    var value: Value? = none;
+    replace_value(value);
+    assert_eq_i64(read(number), 7);
+    assert_eq_i64(value!.read(), 35);
+    clear(number);
+    assert_true(number is none);
+}
+
+fn main() -> i64 {
+    test_primitive_types();
+    test_presence_and_copy();
+    test_boundaries();
+    test_aliases();
+    return 0;
+}

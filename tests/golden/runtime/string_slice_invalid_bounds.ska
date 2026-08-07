@@ -1,7 +1,0 @@
-from std::str import Str;
-
-fn main() -> i64 {
-    var value: Str = "x";
-    var invalid: Str = value.slice(1, 0);
-    return (i64) invalid.len();
-}

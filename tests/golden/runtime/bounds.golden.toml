@@ -1,100 +1,61 @@
 schema = 1
 
 [[test]]
-name = "array_allocation_failure"
+name = "failures"
 mode = "run"
-source = "array_allocation_failure.ska"
+source = "runtime_bounds_failures.ska"
 
 [[test.run]]
-name = "default"
+name = "array_allocation_failure"
+args = ["array-allocation-failure"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed" } }
 
-[[test]]
-name = "array_allocation_overflow"
-mode = "run"
-source = "array_allocation_overflow.ska"
-
 [[test.run]]
-name = "default"
+name = "array_allocation_overflow"
+args = ["array-allocation-overflow"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array allocation failed" } }
 
-[[test]]
+[[test.run]]
 name = "array_index_empty_out_of_bounds"
-mode = "run"
-source = "array_index_empty_out_of_bounds.ska"
-
-[[test.run]]
-name = "default"
+args = ["array-index-empty"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
 
-[[test]]
+[[test.run]]
 name = "array_index_minimum_out_of_bounds"
-mode = "run"
-source = "array_index_minimum_out_of_bounds.ska"
-
-[[test.run]]
-name = "default"
+args = ["array-index-minimum"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
 
-[[test]]
+[[test.run]]
 name = "array_index_negative_out_of_bounds"
-mode = "run"
-source = "array_index_negative_out_of_bounds.ska"
-
-[[test.run]]
-name = "default"
+args = ["array-index-negative"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
 
-[[test]]
+[[test.run]]
 name = "array_index_positive_out_of_bounds"
-mode = "run"
-source = "array_index_positive_out_of_bounds.ska"
-
-[[test.run]]
-name = "default"
+args = ["array-index-positive"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
 
-[[test]]
-name = "array_maximum_length"
-mode = "run"
-source = "array_maximum_length.ska"
-
 [[test.run]]
-name = "default"
+name = "array_maximum_length"
+args = ["array-maximum-length"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed" } }
 
-[[test]]
-name = "array_slice_invalid_bounds"
-mode = "run"
-source = "array_slice_invalid_bounds.ska"
-
 [[test.run]]
-name = "default"
+name = "array_slice_invalid_bounds"
+args = ["array-slice-invalid"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array slice bounds are invalid" } }
 
-[[test]]
-name = "array_slice_length_mismatch"
-mode = "run"
-source = "array_slice_length_mismatch.ska"
-
 [[test.run]]
-name = "default"
+name = "array_slice_length_mismatch"
+args = ["array-slice-length-mismatch"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array slice length mismatch" } }
 
-[[test]]
-name = "string_byte_out_of_bounds"
-mode = "run"
-source = "string_byte_out_of_bounds.ska"
-
 [[test.run]]
-name = "default"
+name = "string_byte_out_of_bounds"
+args = ["string-byte"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
 
-[[test]]
-name = "string_slice_invalid_bounds"
-mode = "run"
-source = "string_slice_invalid_bounds.ska"
-
 [[test.run]]
-name = "default"
+name = "string_slice_invalid_bounds"
+args = ["string-slice"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }

@@ -1,8 +1,0 @@
-import std::io;
-import std::str;
-
-fn main() -> i64 {
-    var input: std::str::Str = std::io::read_stdin();
-    std::io::write_stdout(input);
-    return 0;
-}

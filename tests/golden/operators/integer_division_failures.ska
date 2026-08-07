@@ -1,0 +1,18 @@
+import std::process;
+from std::str import Str;
+
+fn zero() -> i64 {
+    return 0;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("division")) {
+        return 7 / zero();
+    }
+    if (arguments[1].equals("operand")) {
+        var absent: i64? = none;
+        return absent! / 0;
+    }
+    return 7 % zero();
+}

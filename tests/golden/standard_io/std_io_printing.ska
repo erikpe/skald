@@ -1,0 +1,82 @@
+import std::io;
+
+fn bool_through_parameter(value: bool) -> bool {
+    return value;
+}
+
+fn bool_function_value() -> bool {
+    return true;
+}
+
+fn i64_function_value() -> i64 {
+    return 314;
+}
+
+fn u64_seventh(a: u64, b: u64, c: u64, d: u64, e: u64, f: u64, g: u64) -> u64 {
+    return g;
+}
+
+fn u64_step(value: u64) -> u64 {
+    return value + 1u;
+}
+
+fn u8_seventh(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8) -> u8 {
+    return g;
+}
+
+fn u8_step(value: u8) -> u8 {
+    return value + 10u8;
+}
+
+fn main() -> i64 {
+    std::io::println_bool(false);
+    std::io::println_bool(true);
+    std::io::println_i64(-9223372036854775808);
+    std::io::println_i64(9223372036854775807);
+    std::io::println_u64(0u);
+    std::io::println_u64(18446744073709551615u);
+    std::io::println_u8(0u8);
+    std::io::println_u8(255u8);
+    std::io::println_f64(-0.0);
+    std::io::println_f64(1.25);
+    std::io::println_f64(1.0 / 0.0);
+    std::io::println_f64(-(1.0 / 0.0));
+    std::io::println_f64(0.0 / 0.0);
+
+    std::io::println_bool(false);
+    var local_bool: bool = true;
+    std::io::println_bool(local_bool);
+    std::io::println_bool(bool_through_parameter(false));
+    std::io::println_bool(bool_function_value());
+
+    std::io::println_i64(0);
+    std::io::println_i64(17);
+    std::io::println_i64(-23);
+    std::io::println_i64(6 * 7);
+    std::io::println_i64(i64_function_value());
+    std::io::println_i64(-9223372036854775808);
+    std::io::println_i64(9223372036854775807);
+
+    var one_u64: u64 = 1u;
+    var maximum_u64: u64 = 18446744073709551615u;
+    std::io::println_u64(0u);
+    std::io::println_u64(one_u64);
+    std::io::println_u64(maximum_u64);
+    std::io::println_u64(maximum_u64 + 1u);
+    std::io::println_u64(0u - 1u);
+    std::io::println_u64(9223372036854775808u * 3u);
+    std::io::println_u64(u64_step(one_u64));
+    std::io::println_u64(u64_seventh(1u, 2u, 3u, 4u, 5u, 6u, 7u));
+
+    var one_u8: u8 = 1u8;
+    std::io::println_u8(0u8);
+    std::io::println_u8(one_u8);
+    std::io::println_u8(255u8);
+    std::io::println_u8(255u8 + 1u8);
+    std::io::println_u8(0u8 - 1u8);
+    std::io::println_u8(200u8 * 2u8);
+    std::io::println_u8(u8_step(one_u8));
+    std::io::println_u8(u8_step(u8_step(250u8)));
+    std::io::println_u8(u8_seventh(1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8));
+    return 0;
+}

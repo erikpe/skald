@@ -6,15 +6,7 @@ mode = "run"
 source = "conditionals.ska"
 [[test.run]]
 name = "branch_matrix"
-expect = { exit = 75, stdout = { inline = "1\n2\n20\n40\n50\n70\n" } }
-
-[[test]]
-name = "nested_conditionals"
-mode = "run"
-source = "nested_conditionals.ska"
-[[test.run]]
-name = "nested_branches"
-expect = { exit = 76, stdout = { inline = "11\n12\n21\n22\n" } }
+expect = { exit = 0, stdout = { inline = "1\n2\n20\n40\n50\n70\n11\n12\n21\n22\n" } }
 
 [[test]]
 name = "conditional_branch_scope"

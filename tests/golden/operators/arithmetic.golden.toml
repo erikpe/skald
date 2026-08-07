@@ -9,20 +9,23 @@ name = "representative_values"
 expect = { exit = 0, stdout = { file = "data/floating_division.stdout" } }
 
 [[test]]
-name = "integer_division_by_zero"
+name = "integer_division_failures"
 mode = "run"
-source = "integer_division_by_zero.ska"
+source = "integer_division_failures.ska"
 [[test.run]]
-name = "zero_divisor"
+name = "division_by_zero"
+args = ["division"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer division by zero" } }
 
-[[test]]
-name = "integer_division_operand_failure"
-mode = "run"
-source = "integer_division_operand_failure.ska"
 [[test.run]]
 name = "operand_before_operator"
+args = ["operand"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+
+[[test.run]]
+name = "remainder_by_zero"
+args = ["remainder"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer remainder by zero" } }
 
 [[test]]
 name = "integer_division_operators"
@@ -31,14 +34,6 @@ source = "integer_division_operators.ska"
 [[test.run]]
 name = "type_matrix"
 expect = { exit = 0, stdout = { file = "data/integer_division_operators.stdout" } }
-
-[[test]]
-name = "integer_remainder_by_zero"
-mode = "run"
-source = "integer_remainder_by_zero.ska"
-[[test.run]]
-name = "zero_divisor"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer remainder by zero" } }
 
 [[test]]
 name = "primitive_operator_profile"

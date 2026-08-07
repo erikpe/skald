@@ -1,6 +1,0 @@
-from std::test import assert_eq_i64;
-
-fn main() -> i64 {
-    assert_eq_i64(-1, 2);
-    return 0;
-}

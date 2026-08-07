@@ -1,12 +1,12 @@
 schema = 1
 
 [[test]]
-name = "println_primitives"
+name = "printing"
 mode = "run"
-source = "std_io_println_primitives.ska"
+source = "std_io_printing.ska"
 
 [[test.run]]
-name = "default"
+name = "primitives_and_expressions"
 expect = { exit = 0, stdout = { inline = """false
 true
 -9223372036854775808
@@ -20,53 +20,69 @@ true
 Infinity
 -Infinity
 NaN
+false
+true
+false
+true
+0
+17
+-23
+42
+314
+-9223372036854775808
+9223372036854775807
+0
+1
+18446744073709551615
+0
+18446744073709551615
+9223372036854775808
+2
+7
+0
+1
+255
+0
+255
+144
+11
+14
+7
 """ } }
 
 [[test]]
-name = "read_file_directory"
+name = "read_file_failures"
 mode = "run"
-source = "std_io_read_file_directory.ska"
+source = "std_io_read_file_failures.ska"
 
 [[test.run]]
-name = "default"
+name = "directory"
+args = ["directory"]
 cwd = { fixture = "read_files" }
 expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to read file" } }
 
-[[test]]
-name = "read_file_embedded_zero"
-mode = "run"
-source = "std_io_read_file_embedded_zero.ska"
+[[test.run]]
+name = "embedded_zero"
+args = ["embedded-zero"]
+expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
 
 [[test.run]]
-name = "default"
+name = "missing"
+args = ["missing"]
 expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
 
 [[test]]
-name = "read_file_missing"
+name = "read_stdin"
 mode = "run"
-source = "std_io_read_file_missing.ska"
+source = "std_io_read_stdin.ska"
 
 [[test.run]]
-name = "default"
-expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
-
-[[test]]
-name = "read_stdin_empty"
-mode = "run"
-source = "std_io_read_stdin_empty.ska"
-
-[[test.run]]
-name = "default"
+name = "empty"
 stdin = { inline = "" }
 expect = { exit = 0 }
 
-[[test]]
-name = "read_stdin_growth"
-mode = "run"
-source = "std_io_read_stdin_growth.ska"
-
 [[test.run]]
-name = "default"
+name = "growth"
 stdin = { file = "data/stdin-growth.bin" }
 expect = { exit = 0, stdout = { file = "data/stdin-growth.bin" } }
 

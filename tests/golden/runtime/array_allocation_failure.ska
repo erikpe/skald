@@ -1,8 +1,0 @@
-fn enormous_length() -> u64 {
-    return 4611686018427387904u;
-}
-
-fn main() -> i64 {
-    var values: u8[] = u8[](enormous_length());
-    return 0;
-}

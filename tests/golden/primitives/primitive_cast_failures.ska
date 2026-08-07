@@ -1,4 +1,6 @@
 import std::io;
+import std::process;
+from std::str import Str;
 
 class Trace {
     value: f64;
@@ -26,6 +28,19 @@ fn later() -> i64 {
     return 0;
 }
 
+fn bad_u8() -> f64 {
+    return 256.0;
+}
+
 fn main() -> i64 {
-    return (i64) make()->read() + later();
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("i64")) {
+        return (i64) make()->read() + later();
+    }
+    if (arguments[1].equals("u64")) {
+        var unsigned: u64 = (u64) -1.0;
+        return (i64) unsigned;
+    }
+    var byte: u8 = (u8) bad_u8();
+    return (i64) byte;
 }

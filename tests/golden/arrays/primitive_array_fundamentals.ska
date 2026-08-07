@@ -1,0 +1,57 @@
+from std::test import assert_eq_f64, assert_eq_i64, assert_eq_u64, assert_eq_u8, assert_true;
+
+fn length_i64(length: u64) -> u64 {
+    var values: i64[] = i64[](length);
+    return values.len();
+}
+
+fn length_u64(length: u64) -> u64 {
+    var values: u64[] = u64[](length);
+    return values.len();
+}
+
+fn length_u8(length: u64) -> u64 {
+    var values: u8[] = u8[](length);
+    return values.len();
+}
+
+fn length_f64(length: u64) -> u64 {
+    var values: f64[] = f64[](length);
+    return values.len();
+}
+
+fn length_bool(length: u64) -> u64 {
+    var values: bool[] = bool[](length);
+    return values.len();
+}
+
+fn main() -> i64 {
+    var empty: i64[] = i64[]();
+    assert_eq_u64(empty.len(), 0u);
+    assert_eq_u64(length_i64(0u), 0u);
+    assert_eq_u64(length_i64(3u), 3u);
+    assert_eq_u64(length_u64(4u), 4u);
+    assert_eq_u64(length_u8(5u), 5u);
+    assert_eq_u64(length_f64(6u), 6u);
+    assert_eq_u64(length_bool(7u), 7u);
+
+    var signed: i64[] = i64[](3u);
+    var unsigned: u64[] = u64[](3u);
+    var bytes: u8[] = u8[](3u);
+    var floats: f64[] = f64[](3u);
+    var flags: bool[] = bool[](3u);
+    signed[0] = 10;
+    signed[-1] = -20;
+    unsigned[-2] = 30u;
+    bytes[1] = 40u8;
+    floats[-3] = 1.5;
+    flags[-1] = true;
+    assert_eq_i64(signed[-3], 10);
+    assert_eq_i64(signed[1], 0);
+    assert_eq_i64(signed[2], -20);
+    assert_eq_u64(unsigned[1], 30u);
+    assert_eq_u8(bytes[-2], 40u8);
+    assert_eq_f64(floats[0], 1.5);
+    assert_true(flags[2]);
+    return 0;
+}

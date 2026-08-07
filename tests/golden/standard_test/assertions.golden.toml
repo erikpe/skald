@@ -1,28 +1,21 @@
 schema = 1
 
 [[test]]
-name = "passing_assertions"
+name = "assertions"
 mode = "run"
 source = "std_test_assertions.ska"
 
 [[test.run]]
-name = "default"
+name = "passing"
+args = ["passing"]
 expect = { exit = 0 }
 
-[[test]]
-name = "equality_failure"
-mode = "run"
-source = "std_test_equality_failure.ska"
-
 [[test.run]]
-name = "default"
+name = "equality_failure"
+args = ["equality-failure"]
 expect = { exit = "failure", stderr = { match = "contains", inline = "Assert failed: '-1' != '2'" } }
 
-[[test]]
-name = "explicit_failure"
-mode = "run"
-source = "std_test_fail.ska"
-
 [[test.run]]
-name = "default"
+name = "explicit_failure"
+args = ["explicit-failure"]
 expect = { exit = "failure", stderr = { match = "contains", inline = "Test failed: unexpected branch" } }

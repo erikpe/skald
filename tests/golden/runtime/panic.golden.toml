@@ -1,30 +1,23 @@
 schema = 1
 
 [[test]]
-name = "dynamic_slice"
+name = "panic"
 mode = "run"
-source = "panic_dynamic_slice.ska"
+source = "panic_cases.ska"
 
 [[test.run]]
-name = "default"
+name = "dynamic_slice"
+args = ["dynamic-slice"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: dynamic failure" } }
 
-[[test]]
-name = "empty"
-mode = "run"
-source = "panic_empty.ska"
-
 [[test.run]]
-name = "default"
+name = "empty"
+args = ["empty"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: " } }
 
-[[test]]
-name = "literal"
-mode = "run"
-source = "panic_literal.ska"
-
 [[test.run]]
-name = "default"
+name = "literal"
+args = ["literal"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: literal failure" } }
 
 [[test]]

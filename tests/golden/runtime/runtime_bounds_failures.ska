@@ -1,0 +1,105 @@
+import std::process;
+from std::str import Str;
+
+fn enormous_length() -> u64 {
+    return 4611686018427387904u;
+}
+
+fn dynamic_maximum() -> u64 {
+    return 9223372036854775807u;
+}
+
+fn array_allocation_failure() -> i64 {
+    var values: u8[] = u8[](enormous_length());
+    return 0;
+}
+
+fn array_allocation_overflow() -> i64 {
+    var values: i64[] = i64[](dynamic_maximum());
+    return 0;
+}
+
+fn array_index_empty() -> i64 {
+    var values: i64[] = i64[]();
+    return values[-1];
+}
+
+fn array_index_minimum() -> i64 {
+    var values: i64[] = i64[](3u);
+    return values[-9223372036854775808];
+}
+
+fn array_index_negative() -> i64 {
+    var values: i64[] = i64[](3u);
+    return values[-4];
+}
+
+fn array_index_positive() -> i64 {
+    var values: i64[] = i64[](3u);
+    return values[3];
+}
+
+fn array_maximum_length() -> i64 {
+    var values: u8[] = u8[](dynamic_maximum());
+    return 0;
+}
+
+fn array_slice_invalid() -> i64 {
+    var values: i64[] = i64[](3u);
+    var invalid: i64[] = values[2:1];
+    return 0;
+}
+
+fn array_slice_length_mismatch() -> i64 {
+    var destination: i64[] = i64[](3u);
+    var source: i64[] = i64[](2u);
+    destination[:] = source;
+    return 0;
+}
+
+fn string_byte() -> i64 {
+    var value: Str = "x";
+    var invalid: u8 = value.byte(-9223372036854775808);
+    return (i64) invalid;
+}
+
+fn string_slice() -> i64 {
+    var value: Str = "x";
+    var invalid: Str = value.slice(1, 0);
+    return (i64) invalid.len();
+}
+
+fn main() -> i64 {
+    var args: Str[] = std::process::args();
+    if (args[1].equals("array-allocation-failure")) {
+        return array_allocation_failure();
+    }
+    if (args[1].equals("array-allocation-overflow")) {
+        return array_allocation_overflow();
+    }
+    if (args[1].equals("array-index-empty")) {
+        return array_index_empty();
+    }
+    if (args[1].equals("array-index-minimum")) {
+        return array_index_minimum();
+    }
+    if (args[1].equals("array-index-negative")) {
+        return array_index_negative();
+    }
+    if (args[1].equals("array-index-positive")) {
+        return array_index_positive();
+    }
+    if (args[1].equals("array-maximum-length")) {
+        return array_maximum_length();
+    }
+    if (args[1].equals("array-slice-invalid")) {
+        return array_slice_invalid();
+    }
+    if (args[1].equals("array-slice-length-mismatch")) {
+        return array_slice_length_mismatch();
+    }
+    if (args[1].equals("string-byte")) {
+        return string_byte();
+    }
+    return string_slice();
+}

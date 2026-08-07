@@ -1,44 +1,11 @@
 schema = 1
 
 [[test]]
-name = "direct_call"
+name = "execution"
 mode = "run"
-source = "direct_call.ska"
+source = "function_calls.ska"
 [[test.run]]
-name = "return_value"
-expect = { exit = 42 }
-
-[[test]]
-name = "local_unit_call"
-mode = "run"
-source = "local_unit_call.ska"
-[[test.run]]
-name = "statement_call"
-expect = { exit = 7 }
-
-[[test]]
-name = "nested_calls"
-mode = "run"
-source = "nested_calls.ska"
-[[test.run]]
-name = "nested_arguments"
-expect = { exit = 15 }
-
-[[test]]
-name = "register_arguments"
-mode = "run"
-source = "register_arguments.ska"
-[[test.run]]
-name = "register_abi"
-expect = { exit = 21 }
-
-[[test]]
-name = "stack_arguments"
-mode = "run"
-source = "stack_arguments.ska"
-[[test.run]]
-name = "stack_abi"
-expect = { exit = 8 }
+name = "direct_nested_unit_and_abi_calls"
 
 [[test]]
 name = "discarded_i64_call"

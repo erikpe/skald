@@ -9,19 +9,17 @@ name = "presence_replacement_and_cleanup"
 expect = { exit = 42, stdout = { file = "data/optional_inline_lifecycle.stdout" } }
 
 [[test]]
-name = "pinned_clear"
+name = "pinned_mutation"
 mode = "run"
-source = "optional_pinned_clear.ska"
+source = "optional_pinned_mutation.ska"
 [[test.run]]
-name = "guarded_clear"
+name = "clear"
+args = ["clear"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: cannot mutate a guarded optional value" } }
 
-[[test]]
-name = "pinned_replace"
-mode = "run"
-source = "optional_pinned_replace.ska"
 [[test.run]]
-name = "guarded_replace"
+name = "replace"
+args = ["replace"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: cannot mutate a guarded optional value" } }
 
 [[test]]

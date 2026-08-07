@@ -1,6 +1,0 @@
-fn main() -> i64 {
-    var destination: i64[] = i64[](3u);
-    var source: i64[] = i64[](2u);
-    destination[:] = source;
-    return 0;
-}

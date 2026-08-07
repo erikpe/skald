@@ -17,12 +17,11 @@ name = "register_and_stack_arguments"
 expect = { exit = 0, stdout = { file = "data/primitive_array_abi_pressure.stdout" } }
 
 [[test]]
-name = "primitive_indexing"
+name = "primitive_fundamentals"
 mode = "run"
-source = "primitive_array_indexing.ska"
+source = "primitive_array_fundamentals.ska"
 [[test.run]]
-name = "positive_and_negative_indices"
-expect = { exit = 0, stdout = { file = "data/primitive_array_indexing.stdout" } }
+name = "lengths_and_indices"
 
 [[test]]
 name = "primitive_values"
@@ -31,14 +30,6 @@ source = "primitive_array_values.ska"
 [[test.run]]
 name = "construction_copy_and_replacement"
 expect = { exit = 0, stdout = { file = "data/primitive_array_values.stdout" } }
-
-[[test]]
-name = "primitive_inline"
-mode = "run"
-source = "primitive_inline_arrays.ska"
-[[test.run]]
-name = "inline_storage"
-expect = { exit = 0, stdout = { file = "data/primitive_inline_arrays.stdout" } }
 
 [[test]]
 name = "static"

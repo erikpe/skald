@@ -9,36 +9,11 @@ name = "absent_value"
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
 
 [[test]]
-name = "aliases"
+name = "primitive_operations"
 mode = "run"
-source = "optional_aliases.ska"
+source = "optional_primitive_operations.ska"
 [[test.run]]
-name = "container_and_payload_access"
-expect = { exit = 42 }
-
-[[test]]
-name = "primitives"
-mode = "run"
-source = "optional_primitives.ska"
-[[test.run]]
-name = "primitive_matrix"
-expect = { exit = 42 }
-
-[[test]]
-name = "primitive_boundaries"
-mode = "run"
-source = "primitive_optional_boundaries.ska"
-[[test.run]]
-name = "boundary_values"
-expect = { exit = 42 }
-
-[[test]]
-name = "primitive_values"
-mode = "run"
-source = "primitive_optional_values.ska"
-[[test.run]]
-name = "presence_and_copy"
-expect = { exit = 42 }
+name = "values_boundaries_and_aliases"
 
 [[test]]
 name = "alias_access"

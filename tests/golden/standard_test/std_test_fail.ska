@@ -1,6 +1,0 @@
-from std::test import fail;
-
-fn main() -> i64 {
-    fail("unexpected branch");
-    return 0;
-}

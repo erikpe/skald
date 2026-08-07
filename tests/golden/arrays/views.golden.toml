@@ -1,20 +1,12 @@
 schema = 1
 
 [[test]]
-name = "aliases"
+name = "operations"
 mode = "run"
-source = "array_aliases.ska"
+source = "array_views.ska"
 [[test.run]]
-name = "replacement_and_element_identity"
-expect = { exit = 0, stdout = { file = "data/array_aliases.stdout" } }
-
-[[test]]
-name = "slices"
-mode = "run"
-source = "array_slices.ska"
-[[test.run]]
-name = "copy_and_assignment"
-expect = { exit = 0, stdout = { file = "data/array_slices.stdout" } }
+name = "alias_replacement_and_slices"
+expect = { exit = 0, stdout = { file = "data/array_views.stdout" } }
 
 [[test]]
 name = "access_exclusions"

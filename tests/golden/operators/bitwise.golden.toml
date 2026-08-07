@@ -9,28 +9,28 @@ name = "type_matrix"
 expect = { exit = 91, stdout = { file = "data/integer_bitwise_operators.stdout" } }
 
 [[test]]
-name = "integer_shift_dynamic_count_out_of_range"
+name = "integer_shift_failures"
 mode = "run"
-source = "integer_shift_dynamic_count_out_of_range.ska"
+source = "integer_shift_failures.ska"
 [[test.run]]
 name = "dynamic_count"
+args = ["dynamic"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
 
-[[test]]
-name = "integer_shift_literal_count_out_of_range"
-mode = "run"
-source = "integer_shift_literal_count_out_of_range.ska"
 [[test.run]]
 name = "literal_count"
+args = ["literal"]
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
 
-[[test]]
-name = "integer_shift_operand_failure"
-mode = "run"
-source = "integer_shift_operand_failure.ska"
 [[test.run]]
 name = "operand_before_count"
+args = ["operand"]
 expect = { exit = "failure", stdout = { inline = "1\n" }, stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+
+[[test.run]]
+name = "u8_count"
+args = ["u8"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
 
 [[test]]
 name = "integer_shift_operators"
@@ -39,14 +39,6 @@ source = "integer_shift_operators.ska"
 [[test.run]]
 name = "type_matrix"
 expect = { exit = 93, stdout = { file = "data/integer_shift_operators.stdout" } }
-
-[[test]]
-name = "integer_shift_u8_count_out_of_range"
-mode = "run"
-source = "integer_shift_u8_count_out_of_range.ska"
-[[test.run]]
-name = "u8_count"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
 
 [[test]]
 name = "integer_bitwise_operator_types"

@@ -1,5 +1,32 @@
 import std::io;
 
+class Item {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+
+    destroy {
+        std::io::println_i64(self.value + 1000);
+    }
+}
+
+class Holder {
+    items: Item[];
+
+    init(value: i64) {
+        self.items = Item[](1u);
+        self.items[0].value = value;
+    }
+
+    mut fn replace(value: i64) -> i64 {
+        self.items = Item[](1u);
+        self.items[0].value = value;
+        return 0;
+    }
+}
+
 class Trace {
     value: i64;
 
@@ -21,12 +48,26 @@ class Trace {
     }
 }
 
-fn main() -> i64 {
+fn observe_element(ref item: Item, ignored: i64) -> unit {
+    std::io::println_i64(item.value);
+}
+
+fn observe_array(ref items: Item[], ignored: i64) -> unit {
+    std::io::println_i64(items[0].value);
+}
+
+fn exercise_aliases() -> unit {
+    var element_holder: Holder = Holder(7);
+    var descriptor_holder: Holder = Holder(8);
+    observe_element(element_holder.items[0], element_holder.replace(20));
+    observe_array(descriptor_holder.items, descriptor_holder.replace(30));
+}
+
+fn exercise_slices() -> unit {
     var source: Trace[] = Trace[](3u);
     source[0].value = 1;
     source[1].value = 2;
     source[2].value = 3;
-
     var snapshot: Trace[] = source[:];
     var destination: Trace[] = Trace[](3u);
     destination[:] = snapshot;
@@ -38,12 +79,16 @@ fn main() -> i64 {
     values[3] = 4;
     values[4] = 5;
     values[1:4] = values[0:3];
-
     std::io::println_i64(destination[0].value);
     std::io::println_i64(destination[1].value);
     std::io::println_i64(destination[2].value);
     std::io::println_i64(values[1]);
     std::io::println_i64(values[2]);
     std::io::println_i64(values[3]);
+}
+
+fn main() -> i64 {
+    exercise_aliases();
+    exercise_slices();
     return 0;
 }

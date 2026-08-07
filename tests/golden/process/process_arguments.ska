@@ -1,0 +1,44 @@
+import std::process;
+import std::str;
+
+fn check_exact_bytes(ref values: std::str::Str[]) -> i64 {
+    if (values.len() != 5u) {
+        return 1;
+    }
+    if (values[0].len() == 0u) {
+        return 2;
+    }
+    if (!values[1].equals("plain")) {
+        return 3;
+    }
+    if (!values[2].equals("space arg\tline\n")) {
+        return 4;
+    }
+    if (values[3].len() != 0u) {
+        return 5;
+    }
+    if (!values[4].equals("raw\xffbytes")) {
+        return 6;
+    }
+    return 0;
+}
+
+fn main() -> i64 {
+    var values: std::str::Str[] = std::process::args();
+    if (values.len() == 1u) {
+        var second: std::str::Str[] = std::process::args();
+        if (second.len() != 1u) {
+            return 1;
+        }
+        if (values[0].len() == 0u || second[0].len() == 0u) {
+            return 2;
+        }
+
+        values[0] = "";
+        if (second[0].len() == 0u) {
+            return 3;
+        }
+        return 0;
+    }
+    return check_exact_bytes(values);
+}

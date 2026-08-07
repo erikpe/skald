@@ -1,0 +1,28 @@
+import std::io;
+import std::process;
+from std::str import Str;
+
+fn excessive_count() -> u64 {
+    return 18446744073709551615u;
+}
+
+fn left() -> u64 {
+    std::io::println_i64(1);
+    return 8u;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("dynamic")) {
+        return 1 >> excessive_count();
+    }
+    if (arguments[1].equals("literal")) {
+        return 1 << 64u;
+    }
+    if (arguments[1].equals("operand")) {
+        var missing: u64? = none;
+        return (i64) (left() >> missing!);
+    }
+    var result: u8 = 0x01u8 << 8u;
+    return (i64) result;
+}

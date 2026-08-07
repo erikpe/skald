@@ -25,12 +25,23 @@ name = "boundary_values"
 expect = { exit = 0, stdout = { file = "data/primitive_cast_checked_success.stdout" } }
 
 [[test]]
-name = "primitive_cast_i64_failure"
+name = "primitive_cast_failures"
 mode = "run"
-source = "primitive_cast_i64_failure.ska"
+source = "primitive_cast_failures.ska"
 [[test.run]]
-name = "failure_before_later_effect"
+name = "i64_before_later_effect"
+args = ["i64"]
 expect = { exit = "failure", stdout = { file = "data/primitive_cast_i64_failure.stdout" }, stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
+
+[[test.run]]
+name = "u64_out_of_range"
+args = ["u64"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
+
+[[test.run]]
+name = "u8_out_of_range"
+args = ["u8"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
 
 [[test]]
 name = "primitive_cast_matrix"
@@ -39,22 +50,6 @@ source = "primitive_cast_matrix.ska"
 [[test.run]]
 name = "type_matrix"
 expect = { exit = 44, stdout = { file = "data/primitive_cast_matrix.stdout" } }
-
-[[test]]
-name = "primitive_cast_u64_failure"
-mode = "run"
-source = "primitive_cast_u64_failure.ska"
-[[test.run]]
-name = "out_of_range"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
-
-[[test]]
-name = "primitive_cast_u8_failure"
-mode = "run"
-source = "primitive_cast_u8_failure.ska"
-[[test.run]]
-name = "out_of_range"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
 
 [[test]]
 name = "primitive_f64_bits"
