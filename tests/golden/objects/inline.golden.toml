@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "evaluation_order"
@@ -37,9 +37,24 @@ name = "field_access_and_values"
 mode = "compile-fail"
 source = "inline_field_access_and_values.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP018]: cannot assign through a read-only receiver
- --> tests/golden/objects/inline_field_access_and_values.ska:27:15"""
+matches = [
+  { name = "read-only nested field mutation", match = "contains", inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/objects/inline_field_access_and_values.ska:27:15""" },
+  { name = "read-only nested method mutation", match = "contains", inline = """error[TYP018]: mutable method `change` requires mutable receiver access
+ --> tests/golden/objects/inline_field_access_and_values.ska:28:15""" },
+  { name = "read-only mutable alias", match = "contains", inline = """error[TYP021]: read-only access cannot satisfy a mutable alias parameter
+ --> tests/golden/objects/inline_field_access_and_values.ska:29:12""" },
+  { name = "wrong nested alias type", match = "contains", inline = """error[TYP005]: alias argument has type `Leaf`, expected `Other`
+ --> tests/golden/objects/inline_field_access_and_values.ska:30:16""" },
+  { name = "nested field passed as value", match = "contains", inline = """error[TYP014]: class field `leaf` is not a value
+ --> tests/golden/objects/inline_field_access_and_values.ska:31:17""" },
+  { name = "alias-rooted replacement", match = "contains", inline = """error[TYP014]: an alias-rooted object cannot be replaced
+ --> tests/golden/objects/inline_field_access_and_values.ska:33:5""" },
+  { name = "read-only object replacement", match = "contains", inline = """error[TYP018]: cannot assign to a read-only object place
+ --> tests/golden/objects/inline_field_access_and_values.ska:33:5""" },
+  { name = "nested field returned as value", match = "contains", inline = """error[TYP014]: class field `leaf` is not a value
+ --> tests/golden/objects/inline_field_access_and_values.ska:34:17""" },
+]
 
 [[test]]
 name = "field_containment"
@@ -55,9 +70,24 @@ name = "field_initialization"
 mode = "compile-fail"
 source = "inline_field_initialization.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP015]: constructor type does not match class field `wrong`
- --> tests/golden/objects/inline_field_initialization.ska:23:22"""
+matches = [
+  { name = "wrong constructor type", match = "contains", inline = """error[TYP015]: constructor type does not match class field `wrong`
+ --> tests/golden/objects/inline_field_initialization.ska:23:22""" },
+  { name = "grouped construction", match = "contains", inline = """error[TYP015]: class field `grouped` requires direct construction
+ --> tests/golden/objects/inline_field_initialization.ska:24:24""" },
+  { name = "field used before initialization", match = "contains", inline = """error[TYP017]: field `child` is used before initialization
+ --> tests/golden/objects/inline_field_initialization.ska:25:22""" },
+  { name = "field initialized twice", match = "contains", inline = """error[TYP017]: field `child` is initialized more than once
+ --> tests/golden/objects/inline_field_initialization.ska:27:14""" },
+  { name = "wrong field remains uninitialized", match = "contains", inline = """error[TYP017]: field `wrong` is not initialized
+ --> tests/golden/objects/inline_field_initialization.ska:16:5""" },
+  { name = "grouped field remains uninitialized", match = "contains", inline = """error[TYP017]: field `grouped` is not initialized
+ --> tests/golden/objects/inline_field_initialization.ska:17:5""" },
+  { name = "first field remains uninitialized", match = "contains", inline = """error[TYP017]: field `first` is not initialized
+ --> tests/golden/objects/inline_field_initialization.ska:19:5""" },
+  { name = "missing field remains uninitialized", match = "contains", inline = """error[TYP017]: field `missing` is not initialized
+ --> tests/golden/objects/inline_field_initialization.ska:20:5""" },
+]
 
 [[test]]
 name = "field_types"

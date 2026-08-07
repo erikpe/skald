@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "private_members"
@@ -37,6 +37,17 @@ name = "static_method_rejections"
 mode = "compile-fail"
 source = "static_method_rejections.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[RES004]: instance method `instance` requires an object receiver
- --> tests/golden/objects/static_method_rejections.ska:27:11"""
+matches = [
+  { name = "class-selected instance method", match = "contains", inline = """error[RES004]: instance method `instance` requires an object receiver
+ --> tests/golden/objects/static_method_rejections.ska:27:11""" },
+  { name = "object-selected static method", match = "contains", inline = """error[RES004]: static method `utility` must be called through a class
+ --> tests/golden/objects/static_method_rejections.ska:28:11""" },
+  { name = "class-selected field", match = "contains", inline = """error[RES004]: field `value` requires an object receiver
+ --> tests/golden/objects/static_method_rejections.ska:29:11""" },
+  { name = "static method as value", match = "contains", inline = """error[RES009]: static method `utility` cannot be used as a value
+ --> tests/golden/objects/static_method_rejections.ska:30:11""" },
+  { name = "private static method", match = "contains", inline = """error[RES031]: member `hidden` is private to class `Tools`
+ --> tests/golden/objects/static_method_rejections.ska:31:18""" },
+  { name = "self in static method", match = "contains", inline = """error[RES010]: `self` is not available here
+ --> tests/golden/objects/static_method_rejections.ska:21:16""" },
+]

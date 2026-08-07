@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "floating_division"
@@ -48,15 +48,31 @@ name = "integer_division_operator_types"
 mode = "compile-fail"
 source = "integer_division_operator_types.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: binary `/` requires operands of the same numeric type
- --> tests/golden/operators/integer_division_operator_types.ska:12:7"""
+matches = [
+  { name = "mixed i64 and u64 division", match = "contains", inline = """error[TYP005]: binary `/` requires operands of the same numeric type
+ --> tests/golden/operators/integer_division_operator_types.ska:12:7""" },
+  { name = "mixed u64 and u8 remainder", match = "contains", inline = """error[TYP005]: integer `%` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_division_operator_types.ska:13:8""" },
+  { name = "boolean division", match = "contains", inline = """error[TYP005]: binary `/` requires operands of the same numeric type
+ --> tests/golden/operators/integer_division_operator_types.ska:14:10""" },
+  { name = "floating remainder", match = "contains", inline = """error[TYP005]: integer `%` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_division_operator_types.ska:15:9""" },
+  { name = "unit division", match = "contains", inline = """error[TYP005]: binary `/` requires operands of the same numeric type
+ --> tests/golden/operators/integer_division_operator_types.ska:16:14""" },
+  { name = "object remainder", match = "contains", inline = """error[TYP005]: integer `%` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_division_operator_types.ska:17:13""" },
+]
 
 [[test]]
 name = "integer_operation_types"
 mode = "compile-fail"
 source = "integer_operation_types.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: binary `<` requires operands of the same numeric type
- --> tests/golden/operators/integer_operation_types.ska:2:14"""
+matches = [
+  { name = "mixed integer comparison", match = "contains", inline = """error[TYP005]: binary `<` requires operands of the same numeric type
+ --> tests/golden/operators/integer_operation_types.ska:2:14""" },
+  { name = "array primitive cast", match = "contains", inline = """error[TYP005]: primitive cast requires a primitive value source
+ --> tests/golden/operators/integer_operation_types.ska:10:18""" },
+  { name = "implicit integer conversion", match = "contains", inline = """error[TYP005]: return value has type `u64` but `i64` is required
+ --> tests/golden/operators/integer_operation_types.ska:14:12""" },
+]

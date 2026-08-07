@@ -91,6 +91,19 @@ name = "integer_shift_operator_types"
 mode = "compile-fail"
 source = "integer_shift_operator_types.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: shift `<<` requires a primitive integer left operand and a `u64` count
- --> tests/golden/operators/integer_shift_operator_types.ska:10:7"""
+matches = [
+  { name = "i64 count", match = "contains", inline = """error[TYP005]: shift `<<` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:10:7""" },
+  { name = "u8 count", match = "contains", inline = """error[TYP005]: shift `>>` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:11:8""" },
+  { name = "boolean count", match = "contains", inline = """error[TYP005]: shift `<<` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:12:9""" },
+  { name = "boolean operand", match = "contains", inline = """error[TYP005]: shift `<<` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:13:10""" },
+  { name = "floating operand", match = "contains", inline = """error[TYP005]: shift `>>` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:14:9""" },
+  { name = "absent operand", match = "contains", inline = """error[TYP005]: shift `<<` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:15:10""" },
+  { name = "object operand", match = "contains", inline = """error[TYP005]: shift `>>` requires a primitive integer left operand and a `u64` count
+ --> tests/golden/operators/integer_shift_operator_types.ska:16:13""" },
+]

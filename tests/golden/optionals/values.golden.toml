@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "absent_unwrap"
@@ -20,9 +20,12 @@ name = "alias_access"
 mode = "compile-fail"
 source = "optional_alias_access.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP018]: cannot replace a read-only optional container
- --> tests/golden/optionals/optional_alias_access.ska:6:5"""
+matches = [
+  { name = "read-only container replacement", match = "contains", inline = """error[TYP018]: cannot replace a read-only optional container
+ --> tests/golden/optionals/optional_alias_access.ska:6:5""" },
+  { name = "read-only mutable alias", match = "contains", inline = """error[TYP021]: read-only optional access cannot satisfy a mutable alias parameter
+ --> tests/golden/optionals/optional_alias_access.ska:12:21""" },
+]
 
 [[test]]
 name = "containment_cycle"
@@ -38,18 +41,26 @@ name = "conversion_exclusions"
 mode = "compile-fail"
 source = "optional_conversion_exclusions.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: local initializer has type `i64?` but `i64` is required
- --> tests/golden/optionals/optional_conversion_exclusions.ska:3:29"""
+matches = [
+  { name = "optional to plain", match = "contains", inline = """error[TYP005]: local initializer has type `i64?` but `i64` is required
+ --> tests/golden/optionals/optional_conversion_exclusions.ska:3:29""" },
+  { name = "different optional payload", match = "contains", inline = """error[TYP005]: primitive optional local initializer requires `bool?`
+ --> tests/golden/optionals/optional_conversion_exclusions.ska:4:33""" },
+  { name = "optional arithmetic", match = "contains", inline = """error[TYP005]: binary arithmetic requires operands of the same numeric type
+ --> tests/golden/optionals/optional_conversion_exclusions.ska:5:28""" },
+]
 
 [[test]]
 name = "declaration_exclusions"
 mode = "compile-fail"
 source = "optional_declaration_exclusions.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR010]: aliases to shared owners are not supported
- --> tests/golden/optionals/optional_declaration_exclusions.ska:5:28"""
+matches = [
+  { name = "shared-owner alias", match = "contains", inline = """error[PAR010]: aliases to shared owners are not supported
+ --> tests/golden/optionals/optional_declaration_exclusions.ska:5:28""" },
+  { name = "uninitialized optional", match = "contains", inline = """error[PAR002]: expected `=` before the local initializer
+ --> tests/golden/optionals/optional_declaration_exclusions.ska:8:28""" },
+]
 
 [[test]]
 name = "external_signature"
@@ -65,18 +76,30 @@ name = "malformed_punctuation"
 mode = "compile-fail"
 source = "optional_malformed_punctuation.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR010]: nested optional types are not supported
- --> tests/golden/optionals/optional_malformed_punctuation.ska:6:23"""
+matches = [
+  { name = "nested primitive optional", match = "contains", inline = """error[PAR010]: nested optional types are not supported
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:6:23""" },
+  { name = "repeated shared optional marker", match = "contains", inline = """error[PAR002]: expected a class, interface, or `Obj` after `shared?`
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:7:23""" },
+  { name = "optional cast target", match = "contains", inline = """error[PAR002]: expected `)` after the expression
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:10:30""" },
+  { name = "punctuation after unwrap", match = "contains", inline = """error[PAR002]: expected `;` after the return statement
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:11:18""" },
+]
 
 [[test]]
 name = "semantic_exclusions"
 mode = "compile-fail"
 source = "optional_semantic_exclusions.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[RES022]: interface `Readable` cannot be an inline optional payload
- --> tests/golden/optionals/optional_semantic_exclusions.ska:22:26"""
+matches = [
+  { name = "inline optional interface", match = "contains", inline = """error[RES022]: interface `Readable` cannot be an inline optional payload
+ --> tests/golden/optionals/optional_semantic_exclusions.ska:22:26""" },
+  { name = "member access through optional", match = "contains", inline = """error[RES009]: binding `optional_value` is not an object
+ --> tests/golden/optionals/optional_semantic_exclusions.ska:28:23""" },
+  { name = "dereference optional owner", match = "contains", inline = """error[RES019]: dereference requires a shared owner
+ --> tests/golden/optionals/optional_semantic_exclusions.ska:29:44""" },
+]
 
 [[test]]
 name = "truthiness"
@@ -92,6 +115,17 @@ name = "type_exclusions"
 mode = "compile-fail"
 source = "optional_type_exclusions.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR010]: `unit?` is not a valid optional type
- --> tests/golden/optionals/optional_type_exclusions.ska:10:18"""
+matches = [
+  { name = "optional unit", match = "contains", inline = """error[PAR010]: `unit?` is not a valid optional type
+ --> tests/golden/optionals/optional_type_exclusions.ska:10:18""" },
+  { name = "optional object view", match = "contains", inline = """error[PAR010]: `Obj?` is not a valid inline optional type
+ --> tests/golden/optionals/optional_type_exclusions.ska:12:19""" },
+  { name = "nested optional", match = "contains", inline = """error[PAR010]: nested optional types are not supported
+ --> tests/golden/optionals/optional_type_exclusions.ska:13:20""" },
+  { name = "shared optional payload", match = "contains", inline = """error[PAR010]: shared boxes containing optional payloads are not supported
+ --> tests/golden/optionals/optional_type_exclusions.ska:14:35""" },
+  { name = "optional shared optional payload", match = "contains", inline = """error[PAR010]: optional shared boxes are not supported
+ --> tests/golden/optionals/optional_type_exclusions.ska:15:45""" },
+  { name = "optional reference", match = "contains", inline = """error[PAR010]: optional references are not supported
+ --> tests/golden/optionals/optional_type_exclusions.ska:18:26""" },
+]
