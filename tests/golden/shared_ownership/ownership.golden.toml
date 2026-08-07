@@ -1,0 +1,85 @@
+schema = 1
+
+[[test]]
+name = "explicit_consumers"
+mode = "run"
+source = "explicit_shared_consumers.ska"
+[[test.run]]
+name = "calls_and_cleanup"
+expect = { exit = 0, stdout = { file = "data/explicit_shared_consumers.stdout" } }
+
+[[test]]
+name = "explicit_dereference"
+mode = "run"
+source = "explicit_shared_dereference.ska"
+[[test.run]]
+name = "member_and_place_access"
+expect = { exit = 0, stdout = { file = "data/explicit_shared_dereference.stdout" } }
+
+[[test]]
+name = "calls_and_results"
+mode = "run"
+source = "shared_calls_and_results.ska"
+[[test.run]]
+name = "parameter_result_and_cleanup"
+expect = { exit = 0, stdout = { file = "data/shared_calls_and_results.stdout" } }
+
+[[test]]
+name = "exact_lifetime"
+mode = "run"
+source = "shared_exact_lifetime.ska"
+[[test.run]]
+name = "last_owner"
+expect = { exit = 42 }
+
+[[test]]
+name = "fields"
+mode = "run"
+source = "shared_fields.ska"
+[[test.run]]
+name = "field_replacement_and_cleanup"
+expect = { exit = 0, stdout = { file = "data/shared_fields.stdout" } }
+
+[[test]]
+name = "local_owners"
+mode = "run"
+source = "shared_local_owners.ska"
+[[test.run]]
+name = "copy_and_last_owner"
+expect = { exit = 0, stdout = { file = "data/shared_local_owners.stdout" } }
+
+[[test]]
+name = "dereference_rejections"
+mode = "compile-fail"
+source = "explicit_shared_dereference_rejections.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES019]: dereference requires a shared owner
+ --> tests/golden/shared_ownership/explicit_shared_dereference_rejections.ska:8:5"""
+
+[[test]]
+name = "implicit_member_access"
+mode = "compile-fail"
+source = "implicit_shared_member_access.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/shared_ownership/implicit_shared_member_access.ska:29:5"""
+
+[[test]]
+name = "implicit_place_use"
+mode = "compile-fail"
+source = "implicit_shared_place_use.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP034]: shared owner must be explicitly dereferenced for object-place use
+ --> tests/golden/shared_ownership/implicit_shared_place_use.ska:19:13"""
+
+[[test]]
+name = "excluded_operations"
+mode = "compile-fail"
+source = "shared_excluded_operations.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES003]: unknown function or class `release`
+ --> tests/golden/shared_ownership/shared_excluded_operations.ska:7:5"""

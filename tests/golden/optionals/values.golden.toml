@@ -1,0 +1,131 @@
+schema = 1
+
+[[test]]
+name = "absent_unwrap"
+mode = "run"
+source = "optional_absent_unwrap.ska"
+[[test.run]]
+name = "absent_value"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+
+[[test]]
+name = "aliases"
+mode = "run"
+source = "optional_aliases.ska"
+[[test.run]]
+name = "container_and_payload_access"
+expect = { exit = 42 }
+
+[[test]]
+name = "primitives"
+mode = "run"
+source = "optional_primitives.ska"
+[[test.run]]
+name = "primitive_matrix"
+expect = { exit = 42 }
+
+[[test]]
+name = "primitive_boundaries"
+mode = "run"
+source = "primitive_optional_boundaries.ska"
+[[test.run]]
+name = "boundary_values"
+expect = { exit = 42 }
+
+[[test]]
+name = "primitive_values"
+mode = "run"
+source = "primitive_optional_values.ska"
+[[test.run]]
+name = "presence_and_copy"
+expect = { exit = 42 }
+
+[[test]]
+name = "alias_access"
+mode = "compile-fail"
+source = "optional_alias_access.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP018]: cannot replace a read-only optional container
+ --> tests/golden/optionals/optional_alias_access.ska:6:5"""
+
+[[test]]
+name = "containment_cycle"
+mode = "compile-fail"
+source = "optional_containment_cycle.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP022]: recursive inline containment: `Recursive.next -> Recursive`
+ --> tests/golden/optionals/optional_containment_cycle.ska:2:11"""
+
+[[test]]
+name = "conversion_exclusions"
+mode = "compile-fail"
+source = "optional_conversion_exclusions.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: local initializer has type `i64?` but `i64` is required
+ --> tests/golden/optionals/optional_conversion_exclusions.ska:3:29"""
+
+[[test]]
+name = "declaration_exclusions"
+mode = "compile-fail"
+source = "optional_declaration_exclusions.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR010]: aliases to shared owners are not supported
+ --> tests/golden/optionals/optional_declaration_exclusions.ska:5:28"""
+
+[[test]]
+name = "external_signature"
+mode = "compile-fail"
+source = "optional_external_signature.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP009]: external function `inspect` has an unsupported signature
+ --> tests/golden/optionals/optional_external_signature.ska:1:1"""
+
+[[test]]
+name = "implicit_unwrap"
+mode = "compile-fail"
+source = "optional_implicit_unwrap.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: local initializer has type `i64?` but `i64` is required
+ --> tests/golden/optionals/optional_implicit_unwrap.ska:3:22"""
+
+[[test]]
+name = "malformed_punctuation"
+mode = "compile-fail"
+source = "optional_malformed_punctuation.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR010]: nested optional types are not supported
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:6:23"""
+
+[[test]]
+name = "semantic_exclusions"
+mode = "compile-fail"
+source = "optional_semantic_exclusions.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES022]: interface `Readable` cannot be an inline optional payload
+ --> tests/golden/optionals/optional_semantic_exclusions.ska:22:26"""
+
+[[test]]
+name = "truthiness"
+mode = "compile-fail"
+source = "optional_truthiness.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: conditional condition has type `i64?` but `bool` is required
+ --> tests/golden/optionals/optional_truthiness.ska:3:9"""
+
+[[test]]
+name = "type_exclusions"
+mode = "compile-fail"
+source = "optional_type_exclusions.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR010]: `unit?` is not a valid optional type
+ --> tests/golden/optionals/optional_type_exclusions.ska:10:18"""

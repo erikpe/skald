@@ -1,5 +1,0 @@
-error[TYP005]: local initializer has type `i64?` but `i64` is required
- --> tests/golden/compile_fail/optional_implicit_unwrap.ska:3:22
-   |
-3 |     var plain: i64 = value;
-   |                      ^^^^^ type mismatch

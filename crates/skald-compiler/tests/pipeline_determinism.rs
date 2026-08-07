@@ -822,18 +822,20 @@ fn produced_alias_phase_dump() -> String {
 
 fn shared_ownership_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/shared_copy_allocation.ska"
+        "../../../tests/golden/shared_ownership/shared_copy_allocation.ska"
     ))
 }
 
 fn optional_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/optional_shared_profile.ska"
+        "../../../tests/golden/optionals/optional_shared_profile.ska"
     ))
 }
 
 fn array_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
+    complete_golden_phase_dump(include_str!(
+        "../../../tests/golden/arrays/array_aliases.ska"
+    ))
 }
 
 fn static_field_phase_dump() -> String {

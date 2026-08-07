@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR12 is next.
+Status: in progress; GR13 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -62,7 +62,7 @@ implicitly.
 - [x] GR9 — Migrate module and replacement-standard-library fixtures
 - [x] GR10 — Migrate primitive, operator, call, and control-flow fixtures
 - [x] GR11 — Migrate class, object, alias, and polymorphism fixtures
-- [ ] GR12 — Migrate array, optional, and shared-ownership fixtures
+- [x] GR12 — Migrate array, optional, and shared-ownership fixtures
 - [ ] GR13 — Migrate remaining diagnostics and remove legacy discovery
 - [ ] GR14 — Harden, validate, document, and close
 
@@ -569,24 +569,41 @@ pin only their owned stable portions, and no migrated legacy fixture remains.
 **Purpose:** Move the resource-heavy corpus while preserving cleanup,
 allocation, anchor, cycle, bounds, ABI-pressure, and failure-order coverage.
 
-- [ ] Migrate primitive and object arrays, inline and shared array storage,
+- [x] Migrate primitive and object arrays, inline and shared array storage,
       indexing, slicing, aliases, allocation and length failures, and array ABI
       pressure.
-- [ ] Migrate primitive, inline, shared, pinned, alias, presence, unwrap,
+- [x] Migrate primitive, inline, shared, pinned, alias, presence, unwrap,
       conversion, lifecycle, and containment optional coverage.
-- [ ] Migrate shared calls/results, fields, owners, casts, checked places,
+- [x] Migrate shared calls/results, fields, owners, casts, checked places,
       allocation, exact lifetime, outer arrays, element ownership,
       polymorphism, and strong-cycle coverage.
-- [ ] Preserve exact lifecycle stdout, panic identity, status/failure,
+- [x] Preserve exact lifecycle stdout, panic identity, status/failure,
       skipped-effect, all-success cleanup, and failure-before-cleanup
       observations.
-- [ ] Use partial native stderr for stable panic messages that may gain stack
+- [x] Use partial native stderr for stable panic messages that may gain stack
       traces and partial compile stderr for owned diagnostic identity/message/
       location; retain exact mode where full output is intentional.
-- [ ] Keep ABI-pressure, graph, lifecycle-order, and selected-path sources
+- [x] Keep ABI-pressure, graph, lifecycle-order, and selected-path sources
       focused rather than over-consolidating them into selector programs.
-- [ ] Record mapping, filtered parity, and legacy count changes before deleting
+- [x] Record mapping, filtered parity, and legacy count changes before deleting
       each old fixture set.
+
+GR12 completed on 2026-08-07. Eight feature specs now own 48 former legacy
+observations: 31 native and 17 compile-fail leaves across array storage and
+views, optional values and lifecycle, and shared ownership, checked places,
+arrays, and graphs. Exact external expectations retain lifecycle, allocation,
+cleanup, ABI-pressure, anchor, and cycle traces. Stable panic prefixes and
+diagnostic identity, primary message, and repository-relative primary location
+use partial stderr matching so richer future context does not create unrelated
+fixture churn.
+
+Focused ABI-pressure, graph, guarded-lifecycle, and failure-order programs
+remain separate sources with semantic run names. The migrated specs use private
+run sandboxes and introduce no shared writable fixture state. The checked
+migration map preserves the 290-leaf suite and reduces the legacy boundary to
+one native and 22 compile-fail leaves. Compiler determinism tests that reuse
+array, optional, and shared-allocation programs now reference their feature
+owners.
 
 **Tests:** Array, optional, and shared filters in default mode; compile mode for
 diagnostic/code-generation groups; full mode for lifecycle, cycle, and failure

@@ -1,8 +1,0 @@
-error[RES020]: a complete shared pointee cannot be replaced
- --> tests/golden/compile_fail/array_whole_pointee_assignment.ska:3:5
-   |
-3 |     *owner = i64[](2u);
-   |     ^ whole-pointee assignment is not supported
-   |
-3 |     *owner = i64[](2u);
-   |            - replace the shared owner or assign one of the pointee's fields

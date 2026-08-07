@@ -1,0 +1,25 @@
+schema = 1
+
+[[test]]
+name = "casts"
+mode = "run"
+source = "shared_casts.ska"
+[[test.run]]
+name = "upcast_and_checked_downcast"
+expect = { exit = 0, stdout = { file = "data/shared_casts.stdout" } }
+
+[[test]]
+name = "checked_places"
+mode = "run"
+source = "shared_checked_places.ska"
+[[test.run]]
+name = "anchor_and_overlap"
+expect = { exit = 0, stdout = { file = "data/shared_checked_places.stdout" } }
+
+[[test]]
+name = "copy_allocation"
+mode = "run"
+source = "shared_copy_allocation.ska"
+[[test.run]]
+name = "allocation_and_cleanup"
+expect = { exit = 0, stdout = { file = "data/shared_copy_allocation.stdout" } }

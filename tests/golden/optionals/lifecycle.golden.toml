@@ -1,0 +1,33 @@
+schema = 1
+
+[[test]]
+name = "inline_lifecycle"
+mode = "run"
+source = "optional_inline_lifecycle.ska"
+[[test.run]]
+name = "presence_replacement_and_cleanup"
+expect = { exit = 42, stdout = { file = "data/optional_inline_lifecycle.stdout" } }
+
+[[test]]
+name = "pinned_clear"
+mode = "run"
+source = "optional_pinned_clear.ska"
+[[test.run]]
+name = "guarded_clear"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: cannot mutate a guarded optional value" } }
+
+[[test]]
+name = "pinned_replace"
+mode = "run"
+source = "optional_pinned_replace.ska"
+[[test.run]]
+name = "guarded_replace"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: cannot mutate a guarded optional value" } }
+
+[[test]]
+name = "shared_profile"
+mode = "run"
+source = "optional_shared_profile.ska"
+[[test.run]]
+name = "ownership_matrix"
+expect = { exit = 42 }

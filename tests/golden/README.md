@@ -77,12 +77,12 @@ runs hold a resource lock for their shared working directory, preventing the
 parallel scheduler from exposing old fixtures to races. The adapter remains
 until every sidecar fixture has migrated to a feature spec.
 
-Migrated feature specs currently live in `aliases/`, `calls/`, `control_flow/`,
-`modules/`, `objects/`, `operators/`, `polymorphism/`, `primitives/`,
-`private_initializers/`, `primitive_strings/`, `process/`, `runtime/`,
-`standard_io/`, `standard_library/`, `standard_test/`, and `static_fields/`.
-Their local READMEs describe observation ownership and focused filters. Checked
-files in
+Migrated feature specs currently live in `aliases/`, `arrays/`, `calls/`,
+`control_flow/`, `modules/`, `objects/`, `operators/`, `optionals/`,
+`polymorphism/`, `primitives/`, `private_initializers/`, `primitive_strings/`,
+`process/`, `runtime/`, `shared_ownership/`, `standard_io/`,
+`standard_library/`, `standard_test/`, and `static_fields/`. Their local READMEs
+describe observation ownership and focused filters. Checked files in
 `migrations/` map every replaced legacy leaf to its authoritative spec leaf;
 an integration test requires every old leaf to be absent, every replacement
 to be present exactly once, and the complete 290-leaf observation count to
