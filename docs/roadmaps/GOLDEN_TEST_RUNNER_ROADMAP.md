@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR7 is next.
+Status: in progress; GR8 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -57,7 +57,7 @@ implicitly.
 - [x] GR4 — Schedule the dependency graph in parallel
 - [x] GR5 — Complete reporting and the command-line surface
 - [x] GR6 — Adapt legacy fixtures and prove behavioral parity
-- [ ] GR7 — Cut repository commands over to the Rust runner
+- [x] GR7 — Cut repository commands over to the Rust runner
 - [ ] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
 - [ ] GR9 — Migrate module and replacement-standard-library fixtures
 - [ ] GR10 — Migrate primitive, operator, call, and control-flow fixtures
@@ -331,24 +331,32 @@ runner, and no fixture has moved or changed meaning.
 **Purpose:** Make the parity-proven runner the ordinary repository interface
 while retaining the legacy loader for incremental fixture migration.
 
-- [ ] Update the Makefile to build `skac` and `skald-golden`, run ordinary
+- [x] Update the Makefile to build `skac` and `skald-golden`, run ordinary
       goldens with determinism `off`, include that target in `make check`, and
       expose `make golden-determinism-test` for the `full` audit.
-- [ ] Add a thin `scripts/golden.sh` argument-forwarding convenience wrapper
+- [x] Add a thin `scripts/golden.sh` argument-forwarding convenience wrapper
       while keeping every validation responsibility available through Make.
-- [ ] Update `make help` with ordinary, expectation-focused, filtered, and
+- [x] Update `make help` with ordinary, expectation-focused, filtered, and
       determinism-audit commands without retaining stale Cargo-test syntax.
-- [ ] Delete the old harness-free runner and its superseded expectation test
+- [x] Delete the old harness-free runner and its superseded expectation test
       target only after their coverage is owned by `skald-golden`.
-- [ ] Update the living development workflow, testing guide, golden fixture
+- [x] Update the living development workflow, testing guide, golden fixture
       guide, scripts guide, and driver/toolchain references for the implemented
       runner, default determinism policy, filtering, artifacts, and legacy
       compatibility boundary.
-- [ ] Measure warm default and `full` elapsed time and stage counts on the
+- [x] Measure warm default and `full` elapsed time and stage counts on the
       16-logical-CPU audit host; meet or explain deviations from the 15-second
       default and 30-second full goals before cutover.
-- [ ] Confirm compile-fail-only filtered execution does not build the runtime
+- [x] Confirm compile-fail-only filtered execution does not build the runtime
       and every selected native execution shares one runtime build.
+
+Warm measurements on the 16-logical-CPU audit host completed on 2026-08-07.
+The 290-leaf mixed suite took 6.29 seconds in default mode with 290 compiler
+processes, 151 links, and 151 executions, and 11.56 seconds in full mode with
+580 compiler processes, 151 links, and 302 executions. Both are within the
+15-second and 30-second goals. A filtered 138-leaf compile-fail run reported no
+runtime stage, links, or executions; a two-native-leaf run reported exactly one
+shared runtime stage.
 
 **Tests:** `cargo test --locked -p skald-golden`; representative filtered and
 exact commands through the script and Makefile; complete default and full

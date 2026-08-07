@@ -72,9 +72,8 @@ sources use the repository as compiler and executable working directory,
 exact empty bytes when absent, and compile-fail case-directory prefixes are
 removed before diagnostic determinism and expectation checks. Legacy native
 runs hold a resource lock for their shared working directory, preventing the
-parallel scheduler from exposing old fixtures to races. The existing runner
-remains the repository command used by `make golden-test` until GR7 cuts that
-interface over; GR6 keeps both engines available for parity auditing.
+parallel scheduler from exposing old fixtures to races. The adapter remains
+until every sidecar fixture has migrated to a feature spec.
 
 ## New-format process and expectation contract
 
@@ -188,18 +187,17 @@ corpora whose expected values need an implementation independent of the code
 under test. Generators print labelled fixture sections and never participate
 in ordinary golden discovery.
 
-The root Makefile builds the runtime before the runner invokes the real `skac`
-binary. Single-file cases compile and run from the repository root; multi-file
-cases compile and run from the directory containing `case.args`, so relative
-fixture resources have one deterministic base. The runner compiles each run
-case to assembly in two independent processes and compares the bytes before
-linking and execution. It likewise compiles each failure twice and compares
-stderr before checking its snapshot. Each native executable runs twice with
-the same working directory, exact arguments, and stdin; both status and output
-must agree before stdout, stderr, and process status are checked independently.
-Nonempty stdin is written concurrently with output collection, so inputs
-larger than host pipe capacity cannot deadlock the runner.
-Disposable artifacts are written under `build/golden/`.
+The root Makefile builds `skac` and `skald-golden`; native selections then
+prepare the runtime archive exactly once. Single-file cases compile and run
+from the repository root; multi-file cases compile and run from the directory
+containing `case.args`, so relative fixture resources have one deterministic
+base. Ordinary execution observes every compiler and native process once.
+`make golden-determinism-test` repeats successful and failing compiler
+processes, compares assembly or diagnostic bytes, and repeats native
+executions with the same working directory, arguments, and stdin before
+checking expectations. Nonempty stdin is written concurrently with output
+collection, so inputs larger than host pipe capacity cannot deadlock the
+runner. Disposable artifacts are written under `build/golden/`.
 
 Keep each source focused and give related cases descriptive names. Put
 source-visible, target-independent expectations in the source and sidecars;
@@ -210,9 +208,19 @@ from the repository root with:
 make golden-test
 ```
 
-`make golden-test` includes the sidecar loader and mismatch-reporting suite.
-Run only that focused suite with:
+Run the focused byte, sidecar-adaptation, and mismatch-reporting tests with:
 
 ```text
 make golden-expectations-test
 ```
+
+Run common filtered or exact selections through Make:
+
+```text
+make golden-filter GOLDEN_FILTER='compile_fail/**'
+make golden-exact GOLDEN_ID='run/strings::default::<run>'
+```
+
+For multiple filters, inspection, machine reports, or other runner options,
+use the argument-forwarding wrapper documented in
+[`scripts/README.md`](../../scripts/README.md).

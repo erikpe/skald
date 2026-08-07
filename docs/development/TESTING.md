@@ -128,8 +128,8 @@ with exact panic output and status, selected-path behavior, later-effect
 suppression, and successful full-expression cleanup. Cross-process tests cover
 token, AST, resolved, HIR, MIR, diagnostic, and assembly products; the golden
 runner repeats compilation and execution to compare stdout, stderr, and
-status. Generated-object inspection owns the unchanged runtime marker,
-reporter, and absence of conversion helpers.
+status in full-determinism audits. Generated-object inspection owns the
+unchanged runtime marker, reporter, and absence of conversion helpers.
 Exact binary64 bit-representation coverage separately checks the canonical
 `std::f64` intrinsic identities and signatures, primitive-keyword module path,
 distinct HIR/MIR bit-reinterpretation semantics, verifier type relation,
@@ -156,17 +156,17 @@ Rust test-name filters match substrings and may select more than one test; use
 Before handoff, run the full validation described in the
 [development workflow](README.md#change-validation).
 
-The Rust golden runner can inspect or execute new-format specs and adapted
-legacy sidecar cases through a bounded dependency scheduler:
+The Rust golden runner executes new-format specs and adapted legacy sidecar
+cases through a bounded dependency scheduler. The ordinary and common focused
+interfaces are:
 
 ```text
-cargo run --locked -p skald-golden -- --list --allow-empty
-cargo run --locked -p skald-golden -- --list-tests --filter 'language/**' --allow-empty
-cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
-cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
-cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
-cargo run --locked -p skald-golden -- --format json --filter 'language/**'
-cargo run --locked -p skald-golden -- --slowest 10 --show-output --filter 'runner/**'
+make golden-test
+make golden-filter GOLDEN_FILTER='run/**'
+make golden-exact GOLDEN_ID='run/strings::default::<run>'
+make golden-determinism-test
+scripts/golden.sh --list --filter 'runner/**'
+scripts/golden.sh --format json --filter 'compile_fail/**'
 ```
 
 The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)
@@ -351,7 +351,7 @@ parser boundary. Native goldens own zero, one, and repeated iterations,
 immediate and conditional exits, nested blocks and loops, enclosing mutation,
 condition/body/break/continue cleanup, ownership-heavy exits, mixed
 fallthrough/return/panic behavior, and return from a body. The golden runner's
-repeated assembly comparison remains the source-to-target determinism check.
+full audit retains repeated assembly as the source-to-target determinism check.
 
 The complete source-observation matrix has these owners:
 
@@ -402,9 +402,9 @@ edge results, and exact excessive-count stderr. Native goldens additionally
 own arbitrary operands, every consumer, evaluation and cleanup order, and
 failure-before-check behavior. A combined independent-process snapshot covers
 tokens, AST, resolved IR, typed HIR, verified MIR, assembly, and focused type
-diagnostics. The golden runner independently recompiles every case before
-comparing assembly and independently executes native cases twice before
-checking values, panic bytes, and process status.
+diagnostics. The golden runner's full audit independently recompiles every
+case before comparing assembly and independently executes native cases twice
+before checking values, panic bytes, and process status.
 
 Checked integer-division coverage follows the same source-to-control-flow
 boundary. Lexer tests distinguish `/`, `%`, `//`, and spaced `/ /`; parser and
@@ -584,16 +584,18 @@ two independent test processes. Its module cases additionally permute root
 option order, equivalent root spellings, source creation order, import
 declaration order, and logical versus positional selection of the same rooted
 entry, then compare canonical graph, resolved, HIR, MIR, assembly, and
-diagnostic products. The golden runner invokes `skac` twice for every
-successful assembly and every compile failure, comparing assembly or
-diagnostic bytes. It also executes every native case twice and compares
-status, stdout, and stderr before evaluating the checked-in expectations.
+diagnostic products. The ordinary golden target invokes each compiler and
+native process once. `make golden-determinism-test` invokes `skac` twice for
+every successful assembly and compile failure, comparing assembly or
+diagnostic bytes, and executes every native case twice before evaluating the
+checked-in expectations.
 Native `.stdout` and `.stderr` sidecars are exact byte expectations; a missing
 sidecar requires its stream to be empty. Optional `.argv` records are converted
 to byte-preserving Unix arguments and applied identically to both executions;
 the operating system remains responsible for element zero. The focused
-`make golden-expectations-test` suite owns sidecar loading and escaped
-byte-mismatch rendering independently of compiler execution.
+`make golden-expectations-test` suite owns byte matching, legacy sidecar
+adaptation, argument decoding, and escaped mismatch reporting independently of
+real compiler execution.
 
 Panic goldens cover every failure that a compact source program can trigger,
 including explicit dynamic messages, cast and optional failures, array and
@@ -663,5 +665,5 @@ owning phase's diagnostics, while native goldens cover zero defaults,
 replacement cleanup, final retention, arrays, inheritance, module aliases,
 and cyclic imports. The pipeline determinism suite compares static AST,
 resolved IR, HIR, MIR, diagnostics, symbols, and assembly across processes and
-module-source permutations; the golden runner independently compares assembly
-and repeated stdout, stderr, and status.
+module-source permutations; the golden runner's full audit independently
+compares assembly and repeated stdout, stderr, and status.

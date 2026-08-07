@@ -249,7 +249,7 @@ The focused checks are:
 ```text
 cargo test --locked -p skald-compiler private_initializer
 cargo test --locked -p skald-compiler --test pipeline_determinism private_initializer
-cargo test --locked -p skac --test golden
+make golden-filter GOLDEN_FILTER='**private_initializer**'
 ```
 
 ## Inspect assembly and native behavior
@@ -274,6 +274,11 @@ native checks. Use `--jobs 1` to remove process overlap while diagnosing a
 case. New-format expectations may use exact or reviewed partial byte matches;
 legacy `.stdout` and `.stderr` sidecars remain exact. Build artifacts are under
 `build/golden/`; they are disposable debugging output.
+
+Use `make golden-filter GOLDEN_FILTER='<glob>'` or
+`make golden-exact GOLDEN_ID='<canonical-id>'` for common focused runs. Use
+`scripts/golden.sh` when combining multiple filters, exclusions, report
+formats, or debugging options.
 
 ## Symptom to owner
 
@@ -339,7 +344,7 @@ Use the string-focused tests for the nearest reproduction:
 ```text
 cargo test --locked -p skald-compiler strings
 cargo test --locked -p skald-compiler --test pipeline_determinism string
-cargo test --locked -p skac --test golden
+make golden-filter GOLDEN_FILTER='**string**'
 ```
 
 ## Optional-value frontend inspection

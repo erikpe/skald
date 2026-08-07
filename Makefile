@@ -1,8 +1,11 @@
 MSRV := $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+GOLDEN_RUNNER := target/debug/skald-golden
+GOLDEN_COMPILER := target/debug/skac
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
-	compiler-test cli-test docs-test golden-runner-test \
-	golden-expectations-test golden-run-test golden-test runtime-test test \
+	compiler-test cli-test docs-test golden-runner-test golden-tools \
+	golden-expectations-test golden-test golden-filter golden-exact \
+	golden-determinism-test runtime-test test \
 	msrv-check robustness-long check
 
 help:
@@ -25,12 +28,14 @@ help:
 	@echo "  make cli-test         Run skac binary and CLI tests"
 	@echo "  make docs-test        Run skald-docs-check unit and documentation tests"
 	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
-	@echo "  make golden-test      Run golden expectation and end-to-end tests"
-	@echo "  make golden-expectations-test Run golden sidecar and mismatch-reporting tests"
-	@echo "  make golden-run-test  Run source-to-executable and compile-failure goldens"
+	@echo "  make golden-test      Run all goldens in default determinism-off mode"
+	@echo "  make golden-expectations-test Run focused byte, sidecar, and report tests"
+	@echo "  make golden-filter GOLDEN_FILTER='run/**'  Run matching golden leaves"
+	@echo "  make golden-exact GOLDEN_ID='run/strings::default::<run>'  Run one leaf"
 	@echo "  make runtime-test     Build and run C runtime tests"
 	@echo ""
 	@echo "Extended validation:"
+	@echo "  make golden-determinism-test Run all goldens in full determinism mode"
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
 	@echo ""
@@ -75,12 +80,24 @@ golden-runner-test:
 	cargo test --locked -p skald-golden
 
 golden-expectations-test:
-	cargo test --locked -p skac --test golden-expectations
+	cargo test --locked -p skald-golden --test legacy_planning --test process_execution --test reporting
 
-golden-run-test: runtime
-	cargo test --locked -p skac --test golden
+golden-tools:
+	cargo build --locked -p skac -p skald-golden
 
-golden-test: golden-expectations-test golden-run-test
+golden-test: golden-tools
+	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism off
+
+golden-filter: golden-tools
+	@test -n "$(GOLDEN_FILTER)" || { echo "set GOLDEN_FILTER to a golden glob" >&2; exit 1; }
+	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism off --filter '$(GOLDEN_FILTER)'
+
+golden-exact: golden-tools
+	@test -n "$(GOLDEN_ID)" || { echo "set GOLDEN_ID to a canonical golden leaf ID" >&2; exit 1; }
+	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism off --exact '$(GOLDEN_ID)'
+
+golden-determinism-test: golden-tools
+	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism full
 
 runtime-test: runtime
 	$(MAKE) -C runtime test

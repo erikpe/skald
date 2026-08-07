@@ -51,6 +51,14 @@ Commands should remain independently runnable through the Makefile. A helper
 script may implement a repeated workflow, but it must not become the only way
 to invoke a compiler or validation responsibility.
 
+`make golden-test` builds `skac` and `skald-golden` and runs the complete suite
+in the default determinism-off mode. Use `make golden-filter` or
+`make golden-exact` for common focused runs and
+`make golden-determinism-test` for the complete repeated-process audit. The
+[`scripts/golden.sh`](../../scripts/README.md) convenience wrapper exposes the
+runner's full filtering and reporting surface while preserving those Makefile
+validation entry points.
+
 ## Minimum supported Rust version
 
 `Cargo.toml` is authoritative for `workspace.package.rust-version`, currently

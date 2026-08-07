@@ -134,7 +134,10 @@ The golden runner uses the bounded executor form so compiler, linker, and
 generated-program timeouts share one process-group policy. `Toolchain` still
 constructs the exact host command, owns its pending output, interprets the
 captured result, and publishes the executable atomically; the runner does not
-reimplement those driver responsibilities.
+reimplement those driver responsibilities. Native selections prepare one
+runtime archive, compile each selected build to checked assembly, and ask the
+same `Toolchain` API to link each assembly into its independently owned golden
+artifact directory.
 
 ## Input protection and artifact publication
 
