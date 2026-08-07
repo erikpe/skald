@@ -21,7 +21,7 @@ cargo run --locked -p skald-golden -- --explain '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --compiler target/debug/skac --exact '<canonical-leaf-id>'
 cargo run --locked -p skald-golden -- --jobs 1 --filter 'runner/**'
 cargo run --locked -p skald-golden -- --filter 'standard_io/**'
-cargo run --locked -p skald-golden -- --determinism full --filter 'runtime/panic/**'
+cargo run --locked -p skald-golden -- --determinism full --filter 'runtime/panic**'
 cargo run --locked -p skald-golden -- --format json --filter 'language/**'
 cargo run --locked -p skald-golden -- --slowest 10 --show-output --filter 'runner/**'
 ```
@@ -77,10 +77,11 @@ runs hold a resource lock for their shared working directory, preventing the
 parallel scheduler from exposing old fixtures to races. The adapter remains
 until every sidecar fixture has migrated to a feature spec.
 
-Migrated feature specs currently live in `modules/`, `private_initializers/`,
-`primitive_strings/`, `process/`, `runtime/`, `standard_io/`,
-`standard_library/`, `standard_test/`, and `static_fields/`. Their local
-READMEs describe observation ownership and focused filters. Checked files in
+Migrated feature specs currently live in `calls/`, `control_flow/`, `modules/`,
+`operators/`, `primitives/`, `private_initializers/`, `primitive_strings/`,
+`process/`, `runtime/`, `standard_io/`, `standard_library/`, `standard_test/`,
+and `static_fields/`. Their local READMEs describe observation ownership and
+focused filters. Checked files in
 `migrations/` map every replaced legacy leaf to its authoritative spec leaf;
 an integration test requires every old leaf to be absent, every replacement
 to be present exactly once, and the complete 290-leaf observation count to

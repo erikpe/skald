@@ -1,5 +1,0 @@
-error[PAR003]: `elif` has no matching `if`
- --> tests/golden/compile_fail/standalone_elif.ska:2:5
-   |
-2 |     elif (true) {
-   |     ^^^^ standalone `elif` is not a statement

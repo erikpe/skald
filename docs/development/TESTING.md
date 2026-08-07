@@ -162,14 +162,15 @@ interfaces are:
 
 ```text
 make golden-test
-make golden-filter GOLDEN_FILTER='run/**'
-make golden-exact GOLDEN_ID='run/strings::default::<run>'
+make golden-filter GOLDEN_FILTER='operators/**'
+make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'
 make golden-determinism-test
 scripts/golden.sh --list --filter 'runner/**'
 scripts/golden.sh --format json --filter 'compile_fail/**'
 scripts/golden.sh --filter 'standard_io/**'
-scripts/golden.sh --determinism full --filter 'runtime/panic/**'
+scripts/golden.sh --determinism full --filter 'runtime/panic**'
 scripts/golden.sh --determinism compile --filter 'modules/**'
+scripts/golden.sh --determinism compile --filter 'primitives/**'
 ```
 
 The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)

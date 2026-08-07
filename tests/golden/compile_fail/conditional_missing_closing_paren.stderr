@@ -1,5 +1,0 @@
-error[PAR002]: expected `)` after the `if` condition
- --> tests/golden/compile_fail/conditional_missing_closing_paren.ska:2:14
-   |
-2 |     if (true {
-   |              ^ found LEFT_BRACE

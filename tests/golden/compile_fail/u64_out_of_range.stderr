@@ -1,6 +1,0 @@
-error[TYP010]: integer literal `18446744073709551616u` is out of range for `u64`
- --> tests/golden/compile_fail/u64_out_of_range.ska:2:12
-   |
-2 |     return 18446744073709551616u;
-   |            ^^^^^^^^^^^^^^^^^^^^^ value is not representable as `u64`
-  = note: the inclusive `u64` range is 0 through 18446744073709551615

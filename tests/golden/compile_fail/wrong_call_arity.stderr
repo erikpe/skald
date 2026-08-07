@@ -1,8 +1,0 @@
-error[TYP004]: function `identity` expects 1 argument but received 0
- --> tests/golden/compile_fail/wrong_call_arity.ska:6:12
-   |
-6 |     return identity();
-   |            ^^^^^^^^ called with the wrong number of arguments
-   |
-1 | fn identity(value: i64) -> i64 {
-   |    -------- function declared here

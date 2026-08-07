@@ -1,5 +1,0 @@
-error[PAR002]: expected `(` after `while`
- --> tests/golden/compile_fail/while_malformed.ska:2:11
-   |
-2 |     while true) {}
-   |           ^^^^ found TRUE

@@ -1,0 +1,83 @@
+schema = 1
+
+[[test]]
+name = "call_arithmetic"
+mode = "run"
+source = "call_arithmetic.ska"
+[[test.run]]
+name = "return_value"
+expect = { exit = 42 }
+
+[[test]]
+name = "floating_division"
+mode = "run"
+source = "floating_division.ska"
+[[test.run]]
+name = "representative_values"
+expect = { exit = 0, stdout = { file = "data/floating_division.stdout" } }
+
+[[test]]
+name = "integer_division_by_zero"
+mode = "run"
+source = "integer_division_by_zero.ska"
+[[test.run]]
+name = "zero_divisor"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer division by zero" } }
+
+[[test]]
+name = "integer_division_operand_failure"
+mode = "run"
+source = "integer_division_operand_failure.ska"
+[[test.run]]
+name = "operand_before_operator"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+
+[[test]]
+name = "integer_division_operators"
+mode = "run"
+source = "integer_division_operators.ska"
+[[test.run]]
+name = "type_matrix"
+expect = { exit = 0, stdout = { file = "data/integer_division_operators.stdout" } }
+
+[[test]]
+name = "integer_remainder_by_zero"
+mode = "run"
+source = "integer_remainder_by_zero.ska"
+[[test.run]]
+name = "zero_divisor"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer remainder by zero" } }
+
+[[test]]
+name = "primitive_operator_profile"
+mode = "run"
+source = "primitive_operator_profile.ska"
+[[test.run]]
+name = "operator_matrix"
+expect = { exit = 0, stdout = { file = "data/primitive_operator_profile.stdout" } }
+
+[[test]]
+name = "unary_negative"
+mode = "run"
+source = "unary_negative.ska"
+[[test.run]]
+name = "return_value"
+expect = { exit = 5 }
+
+[[test]]
+name = "integer_division_operator_types"
+mode = "compile-fail"
+source = "integer_division_operator_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: binary `/` requires operands of the same numeric type
+ --> tests/golden/operators/integer_division_operator_types.ska:12:7"""
+
+[[test]]
+name = "integer_operation_types"
+mode = "compile-fail"
+source = "integer_operation_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: binary `<` requires operands of the same numeric type
+ --> tests/golden/operators/integer_operation_types.ska:2:14"""

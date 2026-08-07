@@ -1,0 +1,107 @@
+schema = 1
+
+[[test]]
+name = "conditionals"
+mode = "run"
+source = "conditionals.ska"
+[[test.run]]
+name = "branch_matrix"
+expect = { exit = 75, stdout = { inline = "1\n2\n20\n40\n50\n70\n" } }
+
+[[test]]
+name = "nested_conditionals"
+mode = "run"
+source = "nested_conditionals.ska"
+[[test.run]]
+name = "nested_branches"
+expect = { exit = 76, stdout = { inline = "11\n12\n21\n22\n" } }
+
+[[test]]
+name = "conditional_branch_scope"
+mode = "compile-fail"
+source = "conditional_branch_scope.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES003]: unknown name `hidden`
+ --> tests/golden/control_flow/conditional_branch_scope.ska:8:12"""
+
+[[test]]
+name = "conditional_missing_block"
+mode = "compile-fail"
+source = "conditional_missing_block.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected `{` to start a block
+ --> tests/golden/control_flow/conditional_missing_block.ska:3:5"""
+
+[[test]]
+name = "conditional_missing_closing_paren"
+mode = "compile-fail"
+source = "conditional_missing_closing_paren.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected `)` after the `if` condition
+ --> tests/golden/control_flow/conditional_missing_closing_paren.ska:2:14"""
+
+[[test]]
+name = "conditional_missing_condition"
+mode = "compile-fail"
+source = "conditional_missing_condition.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR004]: expected a condition after `if (`
+ --> tests/golden/control_flow/conditional_missing_condition.ska:2:9"""
+
+[[test]]
+name = "conditional_missing_delimiter"
+mode = "compile-fail"
+source = "conditional_missing_delimiter.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected `(` after `if`
+ --> tests/golden/control_flow/conditional_missing_delimiter.ska:2:8"""
+
+[[test]]
+name = "else_if"
+mode = "compile-fail"
+source = "else_if.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected `{` to start a block
+ --> tests/golden/control_flow/else_if.ska:5:10"""
+
+[[test]]
+name = "i64_condition"
+mode = "compile-fail"
+source = "i64_condition.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: conditional condition has type `i64` but `bool` is required
+ --> tests/golden/control_flow/i64_condition.ska:2:9"""
+
+[[test]]
+name = "non_exhaustive_conditional"
+mode = "compile-fail"
+source = "non_exhaustive_conditional.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP006]: function `main` does not return a value
+ --> tests/golden/control_flow/non_exhaustive_conditional.ska:1:18"""
+
+[[test]]
+name = "standalone_elif"
+mode = "compile-fail"
+source = "standalone_elif.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR003]: `elif` has no matching `if`
+ --> tests/golden/control_flow/standalone_elif.ska:2:5"""
+
+[[test]]
+name = "standalone_else"
+mode = "compile-fail"
+source = "standalone_else.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR003]: `else` has no matching `if`
+ --> tests/golden/control_flow/standalone_else.ska:2:5"""

@@ -1,0 +1,122 @@
+schema = 1
+
+[[test]]
+name = "direct_call"
+mode = "run"
+source = "direct_call.ska"
+[[test.run]]
+name = "return_value"
+expect = { exit = 42 }
+
+[[test]]
+name = "local_unit_call"
+mode = "run"
+source = "local_unit_call.ska"
+[[test.run]]
+name = "statement_call"
+expect = { exit = 7 }
+
+[[test]]
+name = "nested_calls"
+mode = "run"
+source = "nested_calls.ska"
+[[test.run]]
+name = "nested_arguments"
+expect = { exit = 15 }
+
+[[test]]
+name = "register_arguments"
+mode = "run"
+source = "register_arguments.ska"
+[[test.run]]
+name = "register_abi"
+expect = { exit = 21 }
+
+[[test]]
+name = "stack_arguments"
+mode = "run"
+source = "stack_arguments.ska"
+[[test.run]]
+name = "stack_abi"
+expect = { exit = 8 }
+
+[[test]]
+name = "discarded_i64_call"
+mode = "compile-fail"
+source = "discarded_i64_call.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP008]: a call statement must call a function returning `unit`
+ --> tests/golden/calls/discarded_i64_call.ska:6:5"""
+
+[[test]]
+name = "function_used_as_value"
+mode = "compile-fail"
+source = "function_used_as_value.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES005]: function `helper` cannot be used as a value
+ --> tests/golden/calls/function_used_as_value.ska:6:12"""
+
+[[test]]
+name = "invalid_call_target"
+mode = "compile-fail"
+source = "invalid_call_target.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES004]: binding `value` is not callable
+ --> tests/golden/calls/invalid_call_target.ska:3:12"""
+
+[[test]]
+name = "missing_return"
+mode = "compile-fail"
+source = "missing_return.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP006]: function `main` does not return a value
+ --> tests/golden/calls/missing_return.ska:1:18"""
+
+[[test]]
+name = "missing_return_expression"
+mode = "compile-fail"
+source = "missing_return_expression.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP007]: an `i64` function must return a value
+ --> tests/golden/calls/missing_return_expression.ska:2:5"""
+
+[[test]]
+name = "unit_call_as_value"
+mode = "compile-fail"
+source = "unit_call_as_value.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: return value has type `unit` but `i64` is required
+ --> tests/golden/calls/unit_call_as_value.ska:5:12"""
+
+[[test]]
+name = "unknown_function"
+mode = "compile-fail"
+source = "unknown_function.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES003]: unknown function or class `absent`
+ --> tests/golden/calls/unknown_function.ska:2:12"""
+
+[[test]]
+name = "value_return_from_unit"
+mode = "compile-fail"
+source = "value_return_from_unit.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP007]: function `bad` cannot return a value
+ --> tests/golden/calls/value_return_from_unit.ska:2:5"""
+
+[[test]]
+name = "wrong_call_arity"
+mode = "compile-fail"
+source = "wrong_call_arity.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP004]: function `identity` expects 1 argument but received 0
+ --> tests/golden/calls/wrong_call_arity.ska:6:12"""

@@ -1,0 +1,70 @@
+schema = 1
+
+[[test]]
+name = "constant"
+mode = "run"
+source = "constant.ska"
+[[test.run]]
+name = "return_value"
+expect = { exit = 42 }
+
+[[test]]
+name = "local"
+mode = "run"
+source = "local.ska"
+[[test.run]]
+name = "return_value"
+expect = { exit = 37 }
+
+[[test]]
+name = "primitive_binding_reassignment"
+mode = "run"
+source = "primitive_binding_reassignment.ska"
+[[test.run]]
+name = "type_matrix"
+expect = { exit = 0, stdout = { file = "data/primitive_binding_reassignment.stdout" } }
+
+[[test]]
+name = "bool_i64_mismatch"
+mode = "compile-fail"
+source = "bool_i64_mismatch.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: return value has type `i64` but `bool` is required
+ --> tests/golden/primitives/bool_i64_mismatch.ska:2:12"""
+
+[[test]]
+name = "i64_u64_mismatch"
+mode = "compile-fail"
+source = "i64_u64_mismatch.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: local initializer has type `i64` but `u64` is required
+ --> tests/golden/primitives/i64_u64_mismatch.ska:2:22"""
+
+[[test]]
+name = "primitive_binding_reassignment_types"
+mode = "compile-fail"
+source = "primitive_binding_reassignment_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: primitive binding assignment has type `u64` but `i64` is required
+ --> tests/golden/primitives/primitive_binding_reassignment_types.ska:8:14"""
+
+[[test]]
+name = "primitive_type_errors"
+mode = "compile-fail"
+source = "primitive_type_errors.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: return value has type `i64` but `f64` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:4:12"""
+
+[[test]]
+name = "unknown_local"
+mode = "compile-fail"
+source = "unknown_local.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES003]: unknown name `absent`
+ --> tests/golden/primitives/unknown_local.ska:2:12"""

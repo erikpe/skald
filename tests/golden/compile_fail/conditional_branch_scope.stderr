@@ -1,5 +1,0 @@
-error[RES003]: unknown name `hidden`
- --> tests/golden/compile_fail/conditional_branch_scope.ska:8:12
-   |
-8 |     return hidden;
-   |            ^^^^^^ not declared in this scope

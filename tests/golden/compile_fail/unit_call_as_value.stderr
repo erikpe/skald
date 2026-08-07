@@ -1,5 +1,0 @@
-error[TYP005]: return value has type `unit` but `i64` is required
- --> tests/golden/compile_fail/unit_call_as_value.ska:5:12
-   |
-5 |     return notify();
-   |            ^^^^^^^^ type mismatch

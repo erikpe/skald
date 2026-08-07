@@ -8,4 +8,4 @@ explicit read-only working directory.
 
 Run this group with `scripts/golden.sh --filter 'standard_io/**'`, or select
 only primitive printing with `scripts/golden.sh --filter
-'standard_io/printing/**'`.
+'standard_io/printing**'`.

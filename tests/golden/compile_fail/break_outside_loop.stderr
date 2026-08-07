@@ -1,5 +1,0 @@
-error[RES035]: `break` requires an enclosing loop
- --> tests/golden/compile_fail/break_outside_loop.ska:2:5
-   |
-2 |     break;
-   |     ^^^^^ no enclosing loop is active here

@@ -1,0 +1,59 @@
+schema = 1
+
+[[test]]
+name = "eager_boolean_operators"
+mode = "run"
+source = "eager_boolean_operators.ska"
+[[test.run]]
+name = "evaluation_order"
+expect = { exit = 0, stdout = { file = "data/eager_boolean_operators.stdout" } }
+
+[[test]]
+name = "short_circuit_boolean_expressions"
+mode = "run"
+source = "short_circuit_boolean_expressions.ska"
+[[test.run]]
+name = "operator_matrix"
+expect = { exit = 0, stdout = { file = "data/short_circuit_boolean_expressions.stdout" } }
+
+[[test]]
+name = "short_circuit_lifetimes"
+mode = "run"
+source = "short_circuit_lifetimes.ska"
+[[test.run]]
+name = "cleanup_order"
+expect = { exit = 0, stdout = { file = "data/short_circuit_lifetimes.stdout" } }
+
+[[test]]
+name = "short_circuit_selected_failure"
+mode = "run"
+source = "short_circuit_selected_failure.ska"
+[[test.run]]
+name = "selected_operand"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+
+[[test]]
+name = "short_circuit_skipped_failures"
+mode = "run"
+source = "short_circuit_skipped_failures.ska"
+[[test.run]]
+name = "skipped_operands"
+expect = { exit = 0, stdout = { file = "data/short_circuit_skipped_failures.stdout" } }
+
+[[test]]
+name = "eager_boolean_operator_types"
+mode = "compile-fail"
+source = "eager_boolean_operator_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:8:12"""
+
+[[test]]
+name = "short_circuit_boolean_operator_types"
+mode = "compile-fail"
+source = "short_circuit_boolean_operator_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:8:18"""

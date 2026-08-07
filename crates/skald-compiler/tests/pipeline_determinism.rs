@@ -933,7 +933,7 @@ fn static_field_module_phase_dump(variant: usize) -> String {
 
 fn integer_operation_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/integer_string_range_guards.ska"
+        "../../../tests/golden/primitives/integer_string_range_guards.ska"
     ))
 }
 
@@ -973,20 +973,20 @@ fn integer_bitwise_and_shift_diagnostic_dump() -> String {
 
 fn integer_division_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/integer_division_operators.ska"
+        "../../../tests/golden/operators/integer_division_operators.ska"
     ))
 }
 
 fn integer_division_diagnostic_dump() -> String {
     type_error_phase_dump(
         "integer-division-diagnostics.ska",
-        include_str!("../../../tests/golden/compile_fail/integer_division_operator_types.ska"),
+        include_str!("../../../tests/golden/operators/integer_division_operator_types.ska"),
     )
 }
 
 fn floating_division_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/floating_division.ska"
+        "../../../tests/golden/operators/floating_division.ska"
     ))
 }
 
@@ -1007,7 +1007,7 @@ fn floating_division_diagnostic_dump() -> String {
 
 fn floating_comparison_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/floating_comparisons.ska"
+        "../../../tests/golden/operators/floating_comparisons.ska"
     ))
 }
 
@@ -1027,13 +1027,13 @@ fn floating_comparison_diagnostic_dump() -> String {
 
 fn primitive_operator_profile_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/primitive_operator_profile.ska"
+        "../../../tests/golden/operators/primitive_operator_profile.ska"
     ))
 }
 
 fn primitive_cast_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/primitive_cast_matrix.ska"
+        "../../../tests/golden/primitives/primitive_cast_matrix.ska"
     ))
 }
 
@@ -1050,14 +1050,14 @@ fn primitive_cast_diagnostic_dump() -> String {
 
 fn eager_boolean_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/eager_boolean_operators.ska"
+        "../../../tests/golden/operators/eager_boolean_operators.ska"
     ))
 }
 
 fn eager_boolean_diagnostic_dump() -> String {
     type_error_phase_dump(
         "eager-boolean-diagnostics.ska",
-        include_str!("../../../tests/golden/compile_fail/eager_boolean_operator_types.ska"),
+        include_str!("../../../tests/golden/operators/eager_boolean_operator_types.ska"),
     )
 }
 

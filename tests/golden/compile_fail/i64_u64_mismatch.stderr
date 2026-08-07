@@ -1,5 +1,0 @@
-error[TYP005]: local initializer has type `i64` but `u64` is required
- --> tests/golden/compile_fail/i64_u64_mismatch.ska:2:22
-   |
-2 |     var value: u64 = 1;
-   |                      ^ type mismatch

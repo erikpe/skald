@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR10 is next.
+Status: in progress; GR11 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -60,7 +60,7 @@ implicitly.
 - [x] GR7 — Cut repository commands over to the Rust runner
 - [x] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
 - [x] GR9 — Migrate module and replacement-standard-library fixtures
-- [ ] GR10 — Migrate primitive, operator, call, and control-flow fixtures
+- [x] GR10 — Migrate primitive, operator, call, and control-flow fixtures
 - [ ] GR11 — Migrate class, object, alias, and polymorphism fixtures
 - [ ] GR12 — Migrate array, optional, and shared-ownership fixtures
 - [ ] GR13 — Migrate remaining diagnostics and remove legacy discovery
@@ -468,24 +468,43 @@ spelling, and affected compiler tests reference their new stable owners.
 and use named runs where they remove redundant compilation without obscuring
 the source behavior.
 
-- [ ] Migrate primitive literals, conversions, arithmetic, comparisons,
+- [x] Migrate primitive literals, conversions, arithmetic, comparisons,
       bitwise operations, shifts, division, remainder, booleans, locals,
       reassignment, direct and nested calls, register/stack arguments,
       conditionals, loops, break, continue, and short-circuit fixtures.
-- [ ] Place accepted and rejected cases together under feature-oriented specs
+- [x] Place accepted and rejected cases together under feature-oriented specs
       while keeping compile-fail sources focused on one diagnostic owner.
-- [ ] Use external corpus data for large byte expectations and inline data for
+- [x] Use external corpus data for large byte expectations and inline data for
       short readable runs.
-- [ ] Convert rich compile diagnostics to stable prefix or contained fragments
+- [x] Convert rich compile diagnostics to stable prefix or contained fragments
       where full renderer ownership is unnecessary; retain exact snapshots for
       intentional renderer coverage.
-- [ ] Use named runs for meaningful data matrices and preserve separate sources
+- [x] Use named runs for meaningful data matrices and preserve separate sources
       for distinct evaluation-order, cleanup, ABI-pressure, or failure paths.
-- [ ] Exercise repository build variants only with compiler flags that actually
+- [x] Exercise repository build variants only with compiler flags that actually
       exist at migration time; do not invent optimization behavior to satisfy
       the runner design.
-- [ ] Record the legacy-to-spec mapping and remove migrated legacy sidecars only
+- [x] Record the legacy-to-spec mapping and remove migrated legacy sidecars only
       after filtered parity.
+
+GR10 completed on 2026-08-07. Ten feature specs now own 91 former legacy
+observations: 46 native and 45 compile-fail leaves across primitive literals,
+conversions, bindings, arithmetic, comparisons, bitwise and shift operations,
+boolean evaluation, calls, conditionals, and loops. Large value and lifecycle
+traces remain exact external byte files, while short readable traces and
+process statuses are inline. Native failures match stable panic prefixes so
+future stack traces remain compatible; compile failures match the diagnostic
+identity, primary message, and repository-relative primary location without
+freezing richer renderer context.
+
+Evaluation-order, cleanup, ABI-pressure, selected-failure, and operand-failure
+programs remain separate sources with semantic run names. The corpus contained
+no repeated-input cases that could be combined without weakening those
+boundaries, and repository configuration still exposes only the real
+`default` variant, so no speculative optimization variant was added. The
+checked migration map preserves the 290-leaf suite and reduces the legacy
+boundary to 58 native and 79 compile-fail leaves. Compiler determinism tests
+that reuse migrated sources now reference their feature owners.
 
 **Tests:** Feature filters in default mode, compile-determinism filters for
 diagnostic and code-generation-sensitive groups, representative full runs for

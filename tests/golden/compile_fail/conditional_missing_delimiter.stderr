@@ -1,5 +1,0 @@
-error[PAR002]: expected `(` after `if`
- --> tests/golden/compile_fail/conditional_missing_delimiter.ska:2:8
-   |
-2 |     if true) {
-   |        ^^^^ found TRUE

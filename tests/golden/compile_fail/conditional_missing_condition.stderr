@@ -1,5 +1,0 @@
-error[PAR004]: expected a condition after `if (`
- --> tests/golden/compile_fail/conditional_missing_condition.ska:2:9
-   |
-2 |     if () {
-   |         ^ expected a boolean expression here

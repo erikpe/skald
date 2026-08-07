@@ -1,0 +1,17 @@
+schema = 1
+
+[[test]]
+name = "floating_comparisons"
+mode = "run"
+source = "floating_comparisons.ska"
+[[test.run]]
+name = "ordered_and_nan_values"
+expect = { exit = 0, stdout = { file = "data/floating_comparisons.stdout" } }
+
+[[test]]
+name = "integer_comparisons"
+mode = "run"
+source = "integer_comparisons.ska"
+[[test.run]]
+name = "type_matrix"
+expect = { exit = 83, stdout = { file = "data/integer_comparisons.stdout" } }
