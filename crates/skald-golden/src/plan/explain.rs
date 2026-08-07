@@ -33,10 +33,7 @@ impl TestPlan {
         write_arguments(&mut output, "base-args", build.base_args());
         write_arguments(&mut output, "variant-args", build.variant_args());
         write_arguments(&mut output, "command-line-args", build.command_line_args());
-        match build.compiler_working_directory() {
-            Some(path) => writeln!(output, "compiler-cwd = {}", path.display()).unwrap(),
-            None => writeln!(output, "compiler-cwd = <runner-default>").unwrap(),
-        }
+        writeln!(output, "compiler-cwd = <runner-default>").unwrap();
         writeln!(output, "compile-timeout = {:?}", build.timeout_seconds()).unwrap();
         writeln!(output, "compile-serial = {}", build.serial()).unwrap();
         writeln!(output, "compile-resources = {:?}", build.resources()).unwrap();

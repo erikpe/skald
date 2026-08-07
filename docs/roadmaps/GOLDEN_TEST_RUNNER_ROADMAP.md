@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR13 is next.
+Status: in progress; GR14 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -63,7 +63,7 @@ implicitly.
 - [x] GR10 — Migrate primitive, operator, call, and control-flow fixtures
 - [x] GR11 — Migrate class, object, alias, and polymorphism fixtures
 - [x] GR12 — Migrate array, optional, and shared-ownership fixtures
-- [ ] GR13 — Migrate remaining diagnostics and remove legacy discovery
+- [x] GR13 — Migrate remaining diagnostics and remove legacy discovery
 - [ ] GR14 — Harden, validate, document, and close
 
 ## PR-sized implementation sequence
@@ -619,24 +619,46 @@ corresponding legacy fixtures are removed.
 **Purpose:** Finish the corpus, prove spec-only discovery completeness, and
 delete compatibility code only when nothing consumes it.
 
-- [ ] Inventory every remaining legacy source, sidecar, manifest, oracle, and
+- [x] Inventory every remaining legacy source, sidecar, manifest, oracle, and
       supporting file and assign it to a feature owner or documented
       non-discovered oracle role.
-- [ ] Migrate remaining parser, resolver, type, declaration, malformed-token,
+- [x] Migrate remaining parser, resolver, type, declaration, malformed-token,
       unsupported-form, and miscellaneous success/failure cases without
       weakening their owning observations.
-- [ ] Require every discovered test source to be referenced by exactly one
+- [x] Require every discovered test source to be referenced by exactly one
       spec and report unreferenced source/expectation candidates for audit.
-- [ ] Confirm legacy discovery reports zero native and zero compile-fail cases
+- [x] Confirm legacy discovery reports zero native and zero compile-fail cases
       and that no spec leaf duplicates a migrated legacy identity.
-- [ ] Remove the legacy loader, sidecar naming branches, working-directory
+- [x] Remove the legacy loader, sidecar naming branches, working-directory
       compatibility locks, baseline-count assertions, and old `run` and
       `compile_fail` directory assumptions.
-- [ ] Retain independent oracle generators as explicitly non-discovered tools
+- [x] Retain independent oracle generators as explicitly non-discovered tools
       and update their output instructions to the new owning specs.
-- [ ] Rewrite the golden fixture guide as a concise description of the current
+- [x] Rewrite the golden fixture guide as a concise description of the current
       spec-only format, feature organization, match policies, variants,
       filtering, determinism audits, artifacts, and migration-free commands.
+
+GR13 completed on 2026-08-07. Five new specs and three existing feature specs
+now own the final 23 observations: one native primitive-string value case and
+22 lexer, parser, declaration, entry-point, external-signature, module, panic,
+and type diagnostics. The complete corpus remains 290 leaves across 45 specs,
+with 151 native runs and 139 compile-fail leaves. Exact external stdout retains
+the string byte/value matrix; diagnostics match their stable identity, message,
+and repository-relative primary location.
+
+Planning now audits the complete fixture tree before selection. Direct sources
+and external data must have one spec owner, provider and read-only fixture
+roots own their contained support files, and only the documented independent
+`oracles/` tools are excluded. Deterministic failures list unreferenced files
+and files owned by multiple specs. Focused tests cover orphan ordering,
+duplicate ownership, provider support, and oracle exclusion.
+
+The legacy discovery and planning modules, compiler-working-directory
+override, shared compatibility resource lock, sidecar tests, migration maps,
+baseline assertions, and `run/` and `compile_fail/` fixture directories are
+gone. Living test, script, compiler, debugging, and language documentation now
+describe only spec-driven discovery. The independent binary64 generators name
+their owning spec and external corpus files.
 
 **Tests:** Complete default, compile, and full suites; source/spec/orphan audit;
 zero-legacy assertions; every runner unit test; `make golden-test`;

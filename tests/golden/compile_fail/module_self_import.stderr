@@ -1,6 +1,0 @@
-error[MOD007]: module `module_self_import` cannot import itself
- --> tests/golden/compile_fail/module_self_import.ska:1:8
-   |
-1 | import module_self_import;
-   |        ^^^^^^^^^^^^^^^^^^ remove this redundant import
-  = note: a module's own declarations are available without importing it

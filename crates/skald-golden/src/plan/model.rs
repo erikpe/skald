@@ -132,7 +132,6 @@ pub struct PlannedBuild {
     pub(super) base_args: Vec<OsString>,
     pub(super) variant_args: Vec<OsString>,
     pub(super) command_line_args: Vec<OsString>,
-    pub(super) compiler_working_directory: Option<PathBuf>,
     pub(super) artifact_directory: PathBuf,
     pub(super) timeout_seconds: Option<u64>,
     pub(super) serial: bool,
@@ -167,11 +166,6 @@ impl PlannedBuild {
 
     pub fn command_line_args(&self) -> &[OsString] {
         &self.command_line_args
-    }
-
-    /// Overrides the runner-wide compiler working directory for legacy cases.
-    pub fn compiler_working_directory(&self) -> Option<&Path> {
-        self.compiler_working_directory.as_deref()
     }
 
     pub fn artifact_directory(&self) -> &Path {

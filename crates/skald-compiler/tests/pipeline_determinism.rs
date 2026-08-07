@@ -1122,7 +1122,7 @@ fn string_phase_dump(variant: usize) -> String {
     let sources = [
         (
             application.join("app.ska"),
-            include_str!("../../../tests/golden/run/strings.ska"),
+            include_str!("../../../tests/golden/primitive_strings/string_values.ska"),
         ),
         (
             standard_library.join("std/str.ska"),

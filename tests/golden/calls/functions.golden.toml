@@ -120,3 +120,12 @@ source = "wrong_call_arity.ska"
 match = "starts-with"
 inline = """error[TYP004]: function `identity` expects 1 argument but received 0
  --> tests/golden/calls/wrong_call_arity.ska:6:12"""
+
+[[test]]
+name = "invalid_external_parameter"
+mode = "compile-fail"
+source = "invalid_external_parameter.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool`, a named class type, or a shared object type
+ --> tests/golden/calls/invalid_external_parameter.ska:1:23"""

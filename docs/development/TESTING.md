@@ -156,9 +156,8 @@ Rust test-name filters match substrings and may select more than one test; use
 Before handoff, run the full validation described in the
 [development workflow](README.md#change-validation).
 
-The Rust golden runner executes new-format specs and adapted legacy sidecar
-cases through a bounded dependency scheduler. The ordinary and common focused
-interfaces are:
+The Rust golden runner executes versioned feature specs through a bounded
+dependency scheduler. The ordinary and common focused interfaces are:
 
 ```text
 make golden-test
@@ -166,14 +165,14 @@ make golden-filter GOLDEN_FILTER='operators/**'
 make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'
 make golden-determinism-test
 scripts/golden.sh --list --filter 'runner/**'
-scripts/golden.sh --format json --filter 'compile_fail/**'
+scripts/golden.sh --format json --filter 'syntax/**'
 scripts/golden.sh --filter 'standard_io/**'
 scripts/golden.sh --determinism full --filter 'runtime/panic**'
 scripts/golden.sh --determinism compile --filter 'modules/**'
 scripts/golden.sh --determinism compile --filter 'primitives/**'
 ```
 
-The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)
+The [golden fixture guide](../../tests/golden/README.md#selection-and-determinism)
 owns the current filtering and canonical-ID contract.
 
 The runner's compiler-independent process tests use its Rust fake-process
@@ -231,10 +230,10 @@ types, ownership modes, and spans; they are not production API. Start from the
 smallest valid MIR, mutate one invariant, and assert the structured verifier
 failure and, where relevant, backend rejection.
 
-Top-level corpus and sidecar formats are documented locally:
+Top-level corpus and fixture formats are documented locally:
 
 - [compiler and robustness corpus](../../tests/compiler/README.md);
-- [golden discovery and sidecars](../../tests/golden/README.md); and
+- [golden specs and discovery](../../tests/golden/README.md); and
 - [runtime harnesses](../../tests/runtime/README.md).
 
 The implemented [standard I/O compiler contract](../compiler/IO.md#verification-obligations)
@@ -247,22 +246,18 @@ native probes cover exact writes, EOF, geometric read growth, working-directory
 files, binary partial transfers, invalid progress, close behavior, and stable
 failures. A source-native golden covers every primitive `println_<type>` helper,
 including extrema, signed zero, infinities, and NaN, through exact stdout bytes
-without a scalar runtime observer. The golden harness accepts exact-byte stdin,
-executable-argument, stdout, stderr, and exit sidecars and feeds the same
-arguments and stdin bytes to both deterministic executions. The
-[golden fixture guide](../../tests/golden/README.md) owns `.argv` encoding and
-naming. Process-argument goldens cover a no-suffix invocation, repeated fresh
-snapshots, element-zero position without freezing its path, and exact ordinary,
-whitespace, empty, and non-UTF-8 suffix values.
+without a scalar runtime observer. Golden specs accept inline or external
+exact-byte stdin, arguments, and expectations and feed the same inputs to both
+deterministic executions. The [golden fixture guide](../../tests/golden/README.md)
+owns the NUL-terminated `argv_file` encoding. Process-argument goldens cover a
+no-suffix invocation, repeated fresh snapshots, element-zero position without
+freezing its path, and exact ordinary, whitespace, empty, and non-UTF-8 suffix
+values.
 
-Multi-file golden directories contain one `case.args` manifest plus their
-entry and supporting trees. The manifest records one exact command argument
-per line, including entry mode, module roots, and standard-library selection;
-its directory is the compiler working directory. Discovery treats the whole
-directory as one case and never promotes supporting `.ska` files into
-independent fixtures. The distinct optional `case.argv` sidecar supplies
-NUL-terminated exact-byte arguments to the generated executable, never to
-`skac`.
+Multi-file goldens declare logical entries, module roots, and standard-library
+roots directly in their owning spec. Provider trees live below feature-local
+`cases/` directories; the ownership audit associates their supporting `.ska`
+files with the spec rather than treating them as independent test programs.
 
 Exact dump and diagnostic expectations should remain readable and intentional.
 When an expectation changes, inspect the semantic difference before updating
@@ -288,7 +283,7 @@ have explicit owners:
 |---|---|
 | Entry selectors, logical spelling, root/standard-library options, suffixes, output defaults, and process status | driver CLI unit tests and `crates/skac/tests/cli.rs` through the real binary |
 | Root equivalence, provider ambiguity independent of contents or physical target, symlink traversal and failure, exact case, unreadable/non-regular candidates, and positional containment | `module::provider::tests` and `module::graph::tests` filesystem matrices |
-| Missing and ambiguous imports, import-source aliases, direct self-imports, malformed reached sources, binding conflicts, privacy, direct-import enforcement, unknown/wrong-kind declarations, selected `main`, and incompatible external ABI declarations | exact single- and multi-file snapshots under `tests/golden/compile_fail/`, plus structured graph and resolver tests |
+| Missing and ambiguous imports, import-source aliases, direct self-imports, malformed reached sources, binding conflicts, privacy, direct-import enforcement, unknown/wrong-kind declarations, selected `main`, and incompatible external ABI declarations | feature-owned partial or exact diagnostics under `tests/golden/modules/`, plus structured graph and resolver tests |
 | Two-module, longer, selected-entry, synthetic string, and deep cyclic dependency graphs | successful native goldens plus structured `module::graph::tests` coverage |
 | Qualified/selective lookup, opposite-side declarations, non-module semantic cycles, and access diagnostics inside cyclic graphs | `resolve::tests::cyclic_imports`, the `modules_cycle` native golden, and the `modules_cycle_diagnostics` exact compile-failure golden |
 | Multi-segment aliases, wildcard imports, and trailing selective-import commas | exact parser goldens and syntax recovery tests |
@@ -338,8 +333,9 @@ storage, ownership, projection, slice-order, and anchor invariants one at a
 time. Backend tests own checked byte arithmetic, layout, helper labels,
 internal ABI pressure, every terminating failure family, and native lifecycle.
 Golden cases own complete successful and unsuccessful process observations.
-Because array failures promise only non-return, `.exit` sidecars use
-`failure`; tests must not depend on a particular signal or numeric status.
+Because array failures promise only non-return, their specs use
+`exit = "failure"`; tests must not depend on a particular signal or numeric
+status.
 
 While-loop coverage follows the phase boundary that owns each invariant.
 Lexer tests keep `while`, `break`, and `continue` reserved without reserving
@@ -593,13 +589,13 @@ native process once. `make golden-determinism-test` invokes `skac` twice for
 every successful assembly and compile failure, comparing assembly or
 diagnostic bytes, and executes every native case twice before evaluating the
 checked-in expectations.
-Native `.stdout` and `.stderr` sidecars are exact byte expectations; a missing
-sidecar requires its stream to be empty. Optional `.argv` records are converted
-to byte-preserving Unix arguments and applied identically to both executions;
-the operating system remains responsible for element zero. The focused
-`make golden-expectations-test` suite owns byte matching, legacy sidecar
-adaptation, argument decoding, and escaped mismatch reporting independently of
-real compiler execution.
+External stdout and stderr files are exact byte expectations unless their spec
+selects a reviewed partial matcher; an omitted stream expectation requires
+empty output. `argv_file` records become byte-preserving Unix arguments and are
+applied identically to both executions; the operating system remains
+responsible for element zero. The focused `make golden-expectations-test` suite
+owns byte matching, fixture ownership, argument decoding, and escaped mismatch
+reporting independently of real compiler execution.
 
 Panic goldens cover every failure that a compact source program can trigger,
 including explicit dynamic messages, cast and optional failures, array and
@@ -650,7 +646,7 @@ destinations, register/stack pressure, traps, and native execution.
 Optional-owner coverage includes shared class/interface/`Obj` up-views,
 zero-niche realization, secured-owner unwrap, and virtual/interface dispatch
 while preserving the inline optional and checked-view matrix.
-Native golden `.exit` sidecars use `failure` when the contract requires only
+Native golden specs use `exit = "failure"` when the contract requires only
 unsuccessful termination; exact trap signals and shell-normalized statuses are
 not portable language observations. Optional full-phase determinism and the
 MIR mutation corpus cover dumps, verification, and backend rejection, while

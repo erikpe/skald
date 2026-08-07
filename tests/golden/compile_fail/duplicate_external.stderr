@@ -1,8 +1,0 @@
-error[RES001]: duplicate function `emit`
- --> tests/golden/compile_fail/duplicate_external.ska:2:4
-   |
-2 | fn emit(value: i64) -> unit {
-   |    ^^^^ redeclared here
-   |
-1 | extern fn emit(value: i64) -> unit;
-   |           ---- first declared here

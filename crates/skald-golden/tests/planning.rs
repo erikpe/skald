@@ -120,6 +120,82 @@ fn discovers_nested_specs_in_stable_identity_order() {
 }
 
 #[test]
+fn rejects_unreferenced_fixture_candidates_in_stable_path_order() {
+    let fixture = Fixture::new();
+    fixture.write("feature/program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write(
+        "feature/case.golden.toml",
+        &simple_run("owned", "program.ska", "default"),
+    );
+    fixture.write("feature/orphan.ska", "fn unused() -> unit {}\n");
+    fixture.bytes("feature/data/orphan.stdout", b"unused\n");
+
+    let error = build_plan(&fixture.root, &fixture.artifacts, &[]).unwrap_err();
+
+    assert!(error
+        .message_text()
+        .contains("golden fixture ownership audit failed"));
+    let data = error
+        .message_text()
+        .find("feature/data/orphan.stdout")
+        .unwrap();
+    let source = error.message_text().find("feature/orphan.ska").unwrap();
+    assert!(
+        data < source,
+        "audit candidates must be reported in path order"
+    );
+}
+
+#[test]
+fn rejects_sources_owned_by_multiple_specs() {
+    let fixture = Fixture::new();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write(
+        "first.golden.toml",
+        &simple_run("first", "program.ska", "run"),
+    );
+    fixture.write(
+        "second.golden.toml",
+        &simple_run("second", "program.ska", "run"),
+    );
+
+    let error = build_plan(&fixture.root, &fixture.artifacts, &[]).unwrap_err();
+
+    assert!(error
+        .message_text()
+        .contains("fixture candidates owned by multiple specs"));
+    assert!(error.message_text().contains("program.ska: first, second"));
+}
+
+#[test]
+fn provider_trees_and_oracle_tools_have_explicit_non_direct_ownership() {
+    let fixture = Fixture::new();
+    fixture.directory("feature/cases/modules");
+    fixture.write(
+        "feature/cases/modules/app.ska",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    fixture.write("oracles/generate.py", "print('independent oracle')\n");
+    fixture.write(
+        "feature/modules.golden.toml",
+        r#"
+schema = 1
+[[test]]
+name = "logical"
+mode = "run"
+compiler_args = ["--entry", "app", "--module-root", "cases/modules"]
+[[test.run]]
+name = "default"
+"#,
+    );
+
+    let plan = fixture.plan();
+
+    assert_eq!(plan.tests().len(), 1);
+    assert!(plan.tests()[0].source().is_none());
+}
+
+#[test]
 fn expands_variants_runs_and_compiler_arguments_in_contract_order() {
     let fixture = Fixture::new();
     fixture.configure(

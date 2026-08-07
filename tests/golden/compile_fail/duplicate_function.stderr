@@ -1,8 +1,0 @@
-error[RES001]: duplicate function `main`
- --> tests/golden/compile_fail/duplicate_function.ska:5:4
-   |
-5 | fn main() -> i64 {
-   |    ^^^^ redeclared here
-   |
-1 | fn main() -> i64 {
-   |    ---- first declared here

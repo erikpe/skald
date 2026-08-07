@@ -179,6 +179,5 @@ Resolver and type-check tests already cover canonical identity,
 exact-signature and private-access diagnostics, array-alias eligibility,
 dedicated HIR, replacement providers, and deterministic resolved/HIR products.
 
-The golden harness accepts an optional exact-byte `.stdin` sidecar, supplies it
-to both deterministic native executions, and treats a missing sidecar as
-immediate EOF.
+Golden specs accept inline or external exact-byte stdin, supply the same bytes
+to deterministic native executions, and treat omitted stdin as immediate EOF.

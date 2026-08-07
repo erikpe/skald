@@ -26,3 +26,12 @@ source = "panic_literal.ska"
 [[test.run]]
 name = "default"
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: literal failure" } }
+
+[[test]]
+name = "expression"
+mode = "compile-fail"
+source = "panic_expression.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP041]: `std::error::panic` can only be used as a call statement
+ --> tests/golden/runtime/panic_expression.ska:4:12"""

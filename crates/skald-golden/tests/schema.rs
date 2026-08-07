@@ -130,7 +130,7 @@ source = "alias_exact_type_mismatch.ska"
 [test.expect.stderr]
 match = "starts-with"
 inline = """error[TYP005]: alias argument has type `Right`, expected `Left`
- --> tests/golden/compile_fail/alias_exact_type_mismatch.ska:8:13"""
+ --> tests/golden/aliases/alias_exact_type_mismatch.ska:8:13"""
 "#,
     );
 

@@ -1,5 +1,0 @@
-error[PAR001]: expected a top-level declaration
- --> tests/golden/compile_fail/expected_declaration.ska:1:1
-   |
-1 | var value: i64 = 1;
-   | ^^^ expected `fn`, `intrinsic fn`, `extern fn`, `class`, or `interface` at file scope

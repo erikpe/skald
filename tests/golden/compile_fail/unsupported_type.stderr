@@ -1,5 +1,0 @@
-error[RES007]: unknown type `string`
- --> tests/golden/compile_fail/unsupported_type.ska:1:14
-   |
-1 | fn main() -> string {
-   |              ^^^^^^ no class with this name is declared

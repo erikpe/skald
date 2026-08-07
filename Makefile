@@ -29,9 +29,9 @@ help:
 	@echo "  make docs-test        Run skald-docs-check unit and documentation tests"
 	@echo "  make golden-runner-test Run skald-golden schema and runner-library tests"
 	@echo "  make golden-test      Run all goldens in default determinism-off mode"
-	@echo "  make golden-expectations-test Run focused byte, sidecar, and report tests"
-	@echo "  make golden-filter GOLDEN_FILTER='run/**'  Run matching golden leaves"
-	@echo "  make golden-exact GOLDEN_ID='run/strings::default::<run>'  Run one leaf"
+	@echo "  make golden-expectations-test Run focused byte, ownership, and report tests"
+	@echo "  make golden-filter GOLDEN_FILTER='syntax/**'  Run matching golden leaves"
+	@echo "  make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'  Run one leaf"
 	@echo "  make runtime-test     Build and run C runtime tests"
 	@echo ""
 	@echo "Extended validation:"
@@ -80,7 +80,7 @@ golden-runner-test:
 	cargo test --locked -p skald-golden
 
 golden-expectations-test:
-	cargo test --locked -p skald-golden --test legacy_planning --test process_execution --test reporting
+	cargo test --locked -p skald-golden --test planning --test process_execution --test reporting
 
 golden-tools:
 	cargo build --locked -p skac -p skald-golden

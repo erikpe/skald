@@ -1,0 +1,10 @@
+schema = 1
+
+[[test]]
+name = "values"
+mode = "run"
+source = "string_values.ska"
+
+[[test.run]]
+name = "bytes_slices_and_concatenation"
+expect = { exit = 0, stdout = { file = "data/string-values.stdout" } }

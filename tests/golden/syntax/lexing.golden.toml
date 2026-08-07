@@ -1,0 +1,19 @@
+schema = 1
+
+[[test]]
+name = "invalid_token"
+mode = "compile-fail"
+source = "invalid_token.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[LEX001]: unexpected character `@`
+ --> tests/golden/syntax/invalid_token.ska:2:12"""
+
+[[test]]
+name = "malformed_string_literal"
+mode = "compile-fail"
+source = "malformed_string_literal.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[LEX003]: unknown string escape
+ --> tests/golden/syntax/malformed_string_literal.ska:2:12"""

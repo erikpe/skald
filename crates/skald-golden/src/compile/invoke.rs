@@ -73,10 +73,7 @@ pub(crate) fn compile_build(
             OsString::from("-o"),
             assembly_path.as_os_str().to_owned(),
         ]);
-        let working_directory = build
-            .compiler_working_directory()
-            .unwrap_or_else(|| config.working_directory());
-        let command = ProcessCommand::new(config.executable(), working_directory)
+        let command = ProcessCommand::new(config.executable(), config.working_directory())
             .with_arguments(arguments)
             .with_environment(config.environment().clone())
             .with_timeout(timeout);

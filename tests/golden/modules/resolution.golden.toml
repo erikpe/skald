@@ -181,3 +181,12 @@ compiler_args = [
   "--no-stdlib",
 ]
 expect = { stderr = { file = "cases/unknown_qualified/expected.stderr" } }
+
+[[test]]
+name = "self_import"
+mode = "compile-fail"
+source = "module_self_import.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[MOD007]: module `module_self_import` cannot import itself
+ --> tests/golden/modules/module_self_import.ska:1:8"""

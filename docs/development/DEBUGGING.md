@@ -271,9 +271,8 @@ separate from link and execution observations and reports stdout, stderr, and
 exit-status mismatches independently. Ordinary execution observes each stage
 once; `--determinism compile` or `full` enables repeated compiler or complete
 native checks. Use `--jobs 1` to remove process overlap while diagnosing a
-case. New-format expectations may use exact or reviewed partial byte matches;
-legacy `.stdout` and `.stderr` sidecars remain exact. Build artifacts are under
-`build/golden/`; they are disposable debugging output.
+case. Expectations may use exact or reviewed partial byte matches. Build
+artifacts are under `build/golden/`; they are disposable debugging output.
 
 Use `make golden-filter GOLDEN_FILTER='<glob>'` or
 `make golden-exact GOLDEN_ID='<canonical-id>'` for common focused runs. Use

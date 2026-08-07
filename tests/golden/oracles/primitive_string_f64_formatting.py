@@ -6,7 +6,10 @@ significand neighborhoods at representative exponent fields. Python's
 binary64 ``repr`` supplies an implementation-independent shortest digit
 oracle independent of the Skald implementation; this script applies Skald's
 separately frozen presentation thresholds and verifies every emitted decimal
-by parsing it back to the original bits.
+by parsing it back to the original bits. Run it from the repository root and
+compare its labelled sections with `data/f64-formatting-corpus.stdin` and
+`data/f64-formatting-corpus.stdout`, owned by
+`primitive_strings/conversions.golden.toml`.
 """
 
 import struct

@@ -1,6 +1,0 @@
-error[TYP002]: entry function must have signature `fn main() -> i64`
- --> tests/golden/compile_fail/invalid_main.ska:1:4
-   |
-1 | fn main(argument: i64) -> i64 {
-   |    ^^^^ invalid entry signature
-  = note: found 1 parameter and return type `i64`

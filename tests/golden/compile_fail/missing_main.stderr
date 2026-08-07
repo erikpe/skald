@@ -1,5 +1,0 @@
-error[TYP001]: missing entry function `main`
- --> tests/golden/compile_fail/missing_main.ska:1:1
-   |
-1 | fn helper() -> i64 {
-   | ^ define `fn main() -> i64` in this file

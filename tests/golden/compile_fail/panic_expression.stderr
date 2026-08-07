@@ -1,6 +1,0 @@
-error[TYP041]: `std::error::panic` can only be used as a call statement
- --> tests/golden/compile_fail/panic_expression.ska:4:12
-   |
-4 |     return panic("cannot return");
-   |            ^^^^^^^^^^^^^^^^^^^^^^ panic cannot be used as a value-producing expression
-  = note: write `panic(message);` as a standalone statement

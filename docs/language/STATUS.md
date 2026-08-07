@@ -124,10 +124,9 @@ than copied from legacy prose:
   realization;
 - public API tests compose the intentional phase facades and the complete
   source-to-assembly entry point;
-- the golden runner discovers versioned feature specs plus the migration-only
-  `tests/golden/run/` and `tests/golden/compile_fail/` sidecar trees, executes
-  each selected stage once by default, and provides explicit compiler or full
-  determinism audits;
+- the golden runner discovers versioned feature specs, rejects unowned fixture
+  files, executes each selected stage once by default, and provides explicit
+  compiler or full determinism audits;
 - the runtime Makefile builds the contract, successful/failing allocation,
   and successful/failing output C harnesses documented in the
   [runtime test guide](../../tests/runtime/README.md);

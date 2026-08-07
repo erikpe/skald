@@ -12,7 +12,7 @@ pub fn load_bytes(source: &ResolvedByteSource) -> Result<Vec<u8>, ExpectationErr
     }
 }
 
-/// Decodes UTF-8 arguments or the legacy NUL-terminated exact-byte format.
+/// Decodes UTF-8 arguments or the NUL-terminated exact-byte argument format.
 pub fn decode_arguments(source: &ResolvedArgs) -> Result<Vec<OsString>, ExpectationError> {
     match source {
         ResolvedArgs::Utf8(arguments) => Ok(arguments.iter().map(OsString::from).collect()),

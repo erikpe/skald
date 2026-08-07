@@ -12,9 +12,9 @@ for inspection and combinations of filters that do not need a dedicated Make
 target:
 
 ```text
-scripts/golden.sh --list --filter 'run/**'
-scripts/golden.sh --exact 'run/strings::default::<run>' --show-output
-scripts/golden.sh --filter 'compile_fail/**' --determinism compile
+scripts/golden.sh --list --filter 'syntax/**'
+scripts/golden.sh --exact 'primitive_strings/values::values::default::bytes_slices_and_concatenation' --show-output
+scripts/golden.sh --filter 'declarations/**' --determinism compile
 ```
 
 The Makefile remains authoritative for complete ordinary and full-determinism
