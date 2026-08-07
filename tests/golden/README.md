@@ -77,13 +77,14 @@ runs hold a resource lock for their shared working directory, preventing the
 parallel scheduler from exposing old fixtures to races. The adapter remains
 until every sidecar fixture has migrated to a feature spec.
 
-Migrated feature specs currently live in `process/`, `standard_io/`,
-`primitive_strings/`, `runtime/`, and `standard_test/`. Their local READMEs
-describe observation ownership and focused filters. The checked
-`migrations/gr8-process-runtime.tsv` mapping records the 38 legacy leaves they
-replace; an integration test requires every old leaf to be absent, every new
-leaf to be present exactly once, and the complete 290-leaf observation count
-to remain unchanged.
+Migrated feature specs currently live in `modules/`, `private_initializers/`,
+`primitive_strings/`, `process/`, `runtime/`, `standard_io/`,
+`standard_library/`, `standard_test/`, and `static_fields/`. Their local
+READMEs describe observation ownership and focused filters. Checked files in
+`migrations/` map every replaced legacy leaf to its authoritative spec leaf;
+an integration test requires every old leaf to be absent, every replacement
+to be present exactly once, and the complete 290-leaf observation count to
+remain unchanged.
 
 ## New-format process and expectation contract
 
@@ -95,6 +96,12 @@ escapes. Omitted stdout and stderr expectations mean exact empty bytes.
 Explicit stream expectations support `exact` (the default), `starts-with`,
 `contains`, or `ignore = true`; partial fragments must be nonempty. Both inline
 and file data work with every matching policy.
+
+For compile-fail tests with module or replacement-standard-library roots, the
+planner removes the canonical common provider-owner prefix before determinism
+and expectation checks. Diagnostics therefore retain stable relative paths
+such as `modules/app.ska` and `first/shared.ska` even though compiler commands
+use canonical contained provider roots.
 
 An `argv_file` is a sequence of NUL-terminated byte strings. Its empty form has
 no arguments, while consecutive delimiters preserve empty arguments. Every

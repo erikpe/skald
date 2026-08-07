@@ -1,0 +1,15 @@
+schema = 1
+
+[[test]]
+name = "foreign_construction"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/foreign_construction/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP040]: initializer of class `Secret` is private
+ --> modules/app.ska:4:33"""

@@ -1,0 +1,183 @@
+schema = 1
+
+[[test]]
+name = "composed_roots"
+mode = "run"
+compiler_args = [
+  "--entry", "app::main",
+  "--module-root", "cases/composed/application",
+  "--module-root", "cases/composed/dependencies",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = 84 }
+
+[[test]]
+name = "semantic_cycle"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/cycle/modules",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = 42 }
+
+[[test]]
+name = "positional_entry"
+mode = "run"
+source = "cases/positional_entry/entry/main.ska"
+compiler_args = [
+  "--module-root", "cases/positional_entry/modules",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = 42 }
+
+[[test]]
+name = "alias_import_source"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/alias_import_source/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[MOD003]: module `Alias` was not found
+ --> modules/app.ska:2:6"""
+
+[[test]]
+name = "cycle_diagnostics"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/cycle_diagnostics/modules",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/cycle_diagnostics/expected.stderr" } }
+
+[[test]]
+name = "external_abi"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/external_abi/modules",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/external_abi/expected.stderr" } }
+
+[[test]]
+name = "import_bindings"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/import_bindings/modules",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/import_bindings/expected.stderr" } }
+
+[[test]]
+name = "malformed_source"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/malformed_source/modules",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/malformed_source/expected.stderr" } }
+
+[[test]]
+name = "missing_import"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/missing_import/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[MOD003]: module `absent::module` was not found
+ --> modules/app.ska:1:8"""
+
+[[test]]
+name = "missing_main"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/missing_main/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP001]: missing entry function `main`
+ --> modules/app.ska:1:1"""
+
+[[test]]
+name = "privacy"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/privacy/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES026]: declaration `dependency::hidden` is private
+ --> modules/app.ska:4:24"""
+
+[[test]]
+name = "provider_collision"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/provider_collision/application",
+  "--module-root", "cases/provider_collision/first",
+  "--module-root", "cases/provider_collision/second",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/provider_collision/expected.stderr" } }
+
+[[test]]
+name = "qualified_access"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/qualified_access/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES025]: unknown module binding `dependency`
+ --> modules/app.ska:2:12"""
+
+[[test]]
+name = "selective_access"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/selective_access/modules",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/selective_access/expected.stderr" } }
+
+[[test]]
+name = "unknown_qualified"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/unknown_qualified/modules",
+  "--no-stdlib",
+]
+expect = { stderr = { file = "cases/unknown_qualified/expected.stderr" } }

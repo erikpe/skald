@@ -102,7 +102,7 @@ fn rejects_malformed_required_exit_and_exact_byte_argument_sidecars_during_plann
 }
 
 #[test]
-fn repository_corpus_preserves_gr8_migrations_and_remaining_legacy_ownership() {
+fn repository_corpus_preserves_migrations_and_remaining_legacy_ownership() {
     let repository = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let plan = build_plan(
         repository.join("tests/golden"),
@@ -124,45 +124,112 @@ fn repository_corpus_preserves_gr8_migrations_and_remaining_legacy_ownership() {
         .count();
     let compile_fail = legacy.len() - native;
 
-    assert_eq!(native, 112, "unexpected remaining legacy native count");
+    assert_eq!(native, 104, "unexpected remaining legacy native count");
     assert_eq!(
-        compile_fail, 138,
+        compile_fail, 124,
         "unexpected remaining legacy compile-fail count"
     );
-    assert_eq!(legacy.len(), 250);
+    assert_eq!(legacy.len(), 228);
 
-    let mapping =
-        fs::read_to_string(repository.join("tests/golden/migrations/gr8-process-runtime.tsv"))
-            .unwrap();
-    let pairs = mapping
-        .lines()
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| {
-            line.split_once('\t')
-                .expect("migration rows must contain one tab")
-        })
-        .collect::<Vec<_>>();
-    let old_ids = pairs.iter().map(|(old, _)| *old).collect::<HashSet<_>>();
-    let new_ids = pairs.iter().map(|(_, new)| *new).collect::<HashSet<_>>();
-
-    assert_eq!(pairs.len(), 38, "GR8 must map every migrated observation");
-    assert_eq!(old_ids.len(), pairs.len(), "legacy leaf mapped twice");
-    assert_eq!(
-        new_ids.len(),
-        pairs.len(),
-        "spec leaf owns two legacy observations"
-    );
-    for (old, new) in pairs {
-        assert!(
-            plan.leaf(old).is_none(),
-            "legacy leaf remains discovered: {old}"
+    let mappings = [
+        ("process-runtime.tsv", 38),
+        ("modules-standard-library.tsv", 22),
+    ];
+    let mut old_ids = HashSet::new();
+    let mut new_ids = HashSet::new();
+    for (name, expected_count) in mappings {
+        let mapping =
+            fs::read_to_string(repository.join("tests/golden/migrations").join(name)).unwrap();
+        let pairs = mapping
+            .lines()
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .map(|line| {
+                line.split_once('\t')
+                    .expect("migration rows must contain one tab")
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            pairs.len(),
+            expected_count,
+            "incomplete migration map {name}"
         );
-        assert!(plan.leaf(new).is_some(), "migrated leaf is missing: {new}");
+        for (old, new) in pairs {
+            assert!(
+                old_ids.insert(old.to_owned()),
+                "legacy leaf mapped twice: {old}"
+            );
+            assert!(
+                new_ids.insert(new.to_owned()),
+                "spec leaf owns two legacy observations: {new}"
+            );
+            assert!(
+                plan.leaf(old).is_none(),
+                "legacy leaf remains discovered: {old}"
+            );
+            assert!(plan.leaf(new).is_some(), "migrated leaf is missing: {new}");
+        }
     }
+
+    assert_eq!(old_ids.len(), 60);
+    assert_eq!(new_ids.len(), 60);
+    assert!(
+        plan.specs().iter().all(|spec| {
+            !spec.relative_path().starts_with("modules/cases/")
+                && !spec.relative_path().starts_with("standard_library/cases/")
+                && !spec.relative_path().starts_with("static_fields/cases/")
+                && !spec
+                    .relative_path()
+                    .starts_with("private_initializers/cases/")
+        }),
+        "module provider sources must not be discovered as specs"
+    );
     assert_eq!(
         plan.leaves().len(),
         290,
-        "GR8 must preserve the complete pre-migration observation count"
+        "migration must preserve the complete observation count"
+    );
+}
+
+#[test]
+fn repository_module_provider_roots_are_canonical_and_contained() {
+    let repository = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let golden = fs::canonicalize(repository.join("tests/golden")).unwrap();
+    let plan = build_plan(&golden, repository.join("build/golden-rust"), &[]).unwrap();
+    let migrated_prefixes = [
+        "modules/resolution::",
+        "standard_library/replacement::",
+        "static_fields/modules::",
+        "private_initializers/modules::",
+    ];
+    let mut provider_roots = 0;
+
+    for build in plan.builds().iter().filter(|build| {
+        migrated_prefixes
+            .iter()
+            .any(|prefix| build.id().starts_with(prefix))
+    }) {
+        for pair in build.compiler_args().windows(2) {
+            let option = pair[0].to_str();
+            if !matches!(option, Some("--module-root" | "--stdlib-root")) {
+                continue;
+            }
+            provider_roots += 1;
+            let path = Path::new(&pair[1]);
+            assert!(
+                path.is_absolute(),
+                "provider root is not absolute: {path:?}"
+            );
+            assert!(
+                path.starts_with(&golden),
+                "provider root escaped golden tree: {path:?}"
+            );
+            assert_eq!(fs::canonicalize(path).unwrap(), path);
+        }
+    }
+
+    assert_eq!(
+        provider_roots, 28,
+        "unexpected migrated provider-root count"
     );
 }
 

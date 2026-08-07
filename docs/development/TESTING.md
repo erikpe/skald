@@ -169,6 +169,7 @@ scripts/golden.sh --list --filter 'runner/**'
 scripts/golden.sh --format json --filter 'compile_fail/**'
 scripts/golden.sh --filter 'standard_io/**'
 scripts/golden.sh --determinism full --filter 'runtime/panic/**'
+scripts/golden.sh --determinism compile --filter 'modules/**'
 ```
 
 The [golden fixture guide](../../tests/golden/README.md#spec-planning-inspection-and-parallel-execution)

@@ -1,5 +1,0 @@
-error[MOD003]: module `Alias` was not found
- --> modules/app.ska:2:6
-   |
-2 | from Alias import value;
-   |      ^^^^^ this import has no provider candidate

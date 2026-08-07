@@ -383,8 +383,8 @@ impl ResolvedCompileExpectation {
         &self.stderr
     }
 
-    /// A legacy absolute case-directory prefix removed before diagnostics are
-    /// checked for determinism or compared with their sidecar.
+    /// An absolute fixture prefix removed before diagnostics are checked for
+    /// determinism or compared with their expectation.
     pub fn stderr_prefix_to_strip(&self) -> Option<&[u8]> {
         self.stderr_prefix_to_strip.as_deref()
     }

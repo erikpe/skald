@@ -7,10 +7,11 @@ use crate::{
     typeck::{type_check, INVALID_INTERFACE_CONFORMANCE, RECURSIVE_INLINE_CONTAINMENT},
 };
 
-const APP: &str = include_str!("../../../../../tests/golden/run/modules_cycle/modules/app.ska");
-const FIRST: &str = include_str!("../../../../../tests/golden/run/modules_cycle/modules/first.ska");
+const APP: &str = include_str!("../../../../../tests/golden/modules/cases/cycle/modules/app.ska");
+const FIRST: &str =
+    include_str!("../../../../../tests/golden/modules/cases/cycle/modules/first.ska");
 const SECOND: &str =
-    include_str!("../../../../../tests/golden/run/modules_cycle/modules/second.ska");
+    include_str!("../../../../../tests/golden/modules/cases/cycle/modules/second.ska");
 
 fn semantic_cycle_sources() -> [(&'static str, &'static str); 3] {
     [

@@ -1,0 +1,14 @@
+schema = 1
+
+[[test]]
+name = "cross_module_access"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/cross_module_access/modules",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = 42 }

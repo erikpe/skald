@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR9 is next.
+Status: in progress; GR10 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -59,7 +59,7 @@ implicitly.
 - [x] GR6 — Adapt legacy fixtures and prove behavioral parity
 - [x] GR7 — Cut repository commands over to the Rust runner
 - [x] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
-- [ ] GR9 — Migrate module and replacement-standard-library fixtures
+- [x] GR9 — Migrate module and replacement-standard-library fixtures
 - [ ] GR10 — Migrate primitive, operator, call, and control-flow fixtures
 - [ ] GR11 — Migrate class, object, alias, and polymorphism fixtures
 - [ ] GR12 — Migrate array, optional, and shared-ownership fixtures
@@ -419,23 +419,39 @@ leaves no corresponding legacy case, and retains every prior observation.
 **Purpose:** Replace `case.args` manifests with typed feature specs while
 preserving hermetic multiple-file provider and diagnostic-path behavior.
 
-- [ ] Migrate successful and failing module entry, root, import, cycle,
+- [x] Migrate successful and failing module entry, root, import, cycle,
       visibility, provider-collision, positional-entry, no-standard-library,
       replacement-standard-library, static-field module, and I/O intrinsic
       fixture directories.
-- [ ] Express positional source or logical entry, module roots, standard-library
+- [x] Express positional source or logical entry, module roots, standard-library
       selection, and compiler arguments in the frozen spec model.
-- [ ] Keep supporting `.ska` files undiscovered and every provider tree below
+- [x] Keep supporting `.ska` files undiscovered and every provider tree below
       its feature directory.
-- [ ] Preserve relative rendered diagnostic paths and choose reviewed exact,
+- [x] Preserve relative rendered diagnostic paths and choose reviewed exact,
       starts-with, or contains stderr policies according to each case's owner.
-- [ ] Move and repair compiler unit-test `include_str!` references that reuse
+- [x] Move and repair compiler unit-test `include_str!` references that reuse
       module-cycle golden sources without creating a production dependency on
       the golden tree.
-- [ ] Remove each migrated `case.args` and sidecar set only after its spec leaf
+- [x] Remove each migrated `case.args` and sidecar set only after its spec leaf
       passes and the legacy count falls by the corresponding case.
-- [ ] Audit canonical paths and symlink containment for every moved provider
+- [x] Audit canonical paths and symlink containment for every moved provider
       root.
+
+GR9 completed on 2026-08-07. Four feature specs now own all 22 former
+`case.args` observations: eight native and fourteen compile-fail leaves across
+module resolution, replacement-standard-library behavior, module-qualified
+static fields, and private initializers. Provider trees remain undiscovered
+below their feature owners, and the repository contains no `case.args`
+manifest. The planner now derives a contained common provider-owner prefix
+from canonical module and standard-library roots and removes it before
+compile-fail determinism and expectation checks, preserving relative paths
+without weakening compiler command containment. Focused diagnostics use stable
+message/location prefixes; multi-diagnostic and multi-provider cases retain
+exact external output. The migration map preserves the 290-leaf suite while
+reducing the legacy boundary to 104 native and 124 compile-fail leaves. Tests
+also assert all 28 provider roots are canonical and contained, supporting
+sources are not discovered, and the reused cycle fixtures remain owned only by
+test code.
 
 **Tests:** Filtered module and replacement-standard-library specs in default,
 compile-determinism, and single-worker modes; affected resolver/compiler tests;

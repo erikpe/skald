@@ -1,0 +1,70 @@
+schema = 1
+
+[[test]]
+name = "disabled"
+mode = "run"
+compiler_args = [
+  "--entry", "app::main",
+  "--module-root", "cases/no_stdlib/modules",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = 7 }
+
+[[test]]
+name = "replacement_root"
+mode = "run"
+compiler_args = [
+  "--entry", "app::main",
+  "--module-root", "cases/replacement/application",
+  "--stdlib-root", "cases/replacement/replacement-sdk",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = 42 }
+
+[[test]]
+name = "io_intrinsics"
+mode = "run"
+compiler_args = [
+  "--entry", "app::main",
+  "--module-root", "cases/io_intrinsics/application",
+  "--stdlib-root", "cases/io_intrinsics/replacement-sdk",
+]
+
+[[test.run]]
+name = "private_data_file"
+input_files = [
+  { name = "data.txt", contents = { file = "cases/io_intrinsics/data.txt" } },
+]
+expect = { exit = 0, stdout = { inline = "OK\n" } }
+
+[[test]]
+name = "io_bounds_failure"
+mode = "run"
+compiler_args = [
+  "--entry", "app::main",
+  "--module-root", "cases/io_bounds_failure/application",
+  "--stdlib-root", "cases/io_bounds_failure/replacement-sdk",
+]
+
+[[test.run]]
+name = "default"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+
+[[test]]
+name = "string_language_item"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/string_language_item/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES033]: string descriptor field `_storage` must have type `shared u8[]`
+ --> modules/std/str.ska:2:23"""

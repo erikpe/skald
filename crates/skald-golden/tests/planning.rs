@@ -297,6 +297,49 @@ expect = { stdout = { file = "data/stdout.bin" }, stderr = { match = "contains",
 }
 
 #[test]
+fn derives_module_diagnostic_prefix_from_the_common_provider_owner() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "modules/case/application/app.ska",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    fixture.write(
+        "modules/case/dependencies/value.ska",
+        "public fn value() -> i64 { return 0; }\n",
+    );
+    fixture.write(
+        "modules/modules.golden.toml",
+        r#"
+schema = 1
+[[test]]
+name = "diagnostic_paths"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "case/application",
+  "--module-root", "case/dependencies",
+  "--no-stdlib",
+]
+expect = { stderr = { inline = "error" } }
+"#,
+    );
+
+    let plan = fixture.plan();
+    let PlannedLeafKind::Compile(expectation) = plan.leaves()[0].kind() else {
+        panic!("expected compile-fail leaf");
+    };
+    let expected = format!(
+        "{}{}",
+        fixture.canonical("modules/case").display(),
+        std::path::MAIN_SEPARATOR
+    );
+    assert_eq!(
+        expectation.stderr_prefix_to_strip(),
+        Some(expected.as_bytes())
+    );
+}
+
+#[test]
 fn rejects_missing_lexically_escaping_and_wrong_kind_paths() {
     let cases = [
         ("source='missing.ska'", "source"),

@@ -604,17 +604,17 @@ fn module_phase_dump(variant: usize) -> String {
             format!(
                 "{imports}\n{}",
                 source_body_after_imports(include_str!(
-                    "../../../tests/golden/run/modules_cycle/modules/app.ska"
+                    "../../../tests/golden/modules/cases/cycle/modules/app.ska"
                 ))
             ),
         ),
         (
             dependencies.join("first.ska"),
-            include_str!("../../../tests/golden/run/modules_cycle/modules/first.ska").to_owned(),
+            include_str!("../../../tests/golden/modules/cases/cycle/modules/first.ska").to_owned(),
         ),
         (
             dependencies.join("second.ska"),
-            include_str!("../../../tests/golden/run/modules_cycle/modules/second.ska").to_owned(),
+            include_str!("../../../tests/golden/modules/cases/cycle/modules/second.ska").to_owned(),
         ),
     ];
     for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
@@ -670,21 +670,15 @@ fn module_diagnostic_dump(variant: usize) -> String {
     let sources = [
         (
             modules.join("app.ska"),
-            include_str!(
-                "../../../tests/golden/compile_fail/modules_cycle_diagnostics/modules/app.ska"
-            ),
+            include_str!("../../../tests/golden/modules/cases/cycle_diagnostics/modules/app.ska"),
         ),
         (
             modules.join("left.ska"),
-            include_str!(
-                "../../../tests/golden/compile_fail/modules_cycle_diagnostics/modules/left.ska"
-            ),
+            include_str!("../../../tests/golden/modules/cases/cycle_diagnostics/modules/left.ska"),
         ),
         (
             modules.join("right.ska"),
-            include_str!(
-                "../../../tests/golden/compile_fail/modules_cycle_diagnostics/modules/right.ska"
-            ),
+            include_str!("../../../tests/golden/modules/cases/cycle_diagnostics/modules/right.ska"),
         ),
     ];
     for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {

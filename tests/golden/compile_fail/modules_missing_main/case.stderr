@@ -1,5 +1,0 @@
-error[TYP001]: missing entry function `main`
- --> modules/app.ska:1:1
-   |
-1 | import dependency;
-   | ^ define `fn main() -> i64` in this file

@@ -79,6 +79,25 @@ impl<'a> FixturePaths<'a> {
         Ok(resolved)
     }
 
+    pub(super) fn compiler_diagnostic_prefix(&self, arguments: &[OsString]) -> Option<Vec<u8>> {
+        let mut directories = arguments
+            .windows(2)
+            .filter(|pair| is_fixture_directory_option(&pair[0]))
+            .filter_map(|pair| Path::new(&pair[1]).parent());
+        let mut common = directories.next()?.to_path_buf();
+        for directory in directories {
+            while !directory.starts_with(&common) {
+                if !common.pop() {
+                    return None;
+                }
+            }
+        }
+        if !common.starts_with(self.spec_directory) {
+            return None;
+        }
+        Some(format!("{}{}", common.display(), std::path::MAIN_SEPARATOR).into_bytes())
+    }
+
     pub(super) fn relative(&self, canonical: &Path) -> Result<String, PlanError> {
         let relative = canonical
             .strip_prefix(self.root)

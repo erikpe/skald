@@ -1,5 +1,0 @@
-error[MOD003]: module `absent::module` was not found
- --> modules/app.ska:1:8
-   |
-1 | import absent::module;
-   |        ^^^^^^^^^^^^^^ this import has no provider candidate

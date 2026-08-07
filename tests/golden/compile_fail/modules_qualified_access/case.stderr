@@ -1,7 +1,0 @@
-error[RES025]: unknown module binding `dependency`
- --> modules/app.ska:2:12
-   |
-2 |     return dependency::value();
-   |            ^^^^^^^^^^^^^^^^^ qualified access requires an exact direct module import
-  = note: absolute logical paths and transitive imports do not create local bindings
-  = note: lookup occurred in module `app`
