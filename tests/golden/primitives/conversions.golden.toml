@@ -6,7 +6,7 @@ mode = "run"
 source = "integer_casts.ska"
 [[test.run]]
 name = "representative_values"
-expect = { exit = 84, stdout = { file = "data/integer_casts.stdout" } }
+expect = { stdout = { file = "data/integer_casts.stdout" } }
 
 [[test]]
 name = "integer_string_range_guards"
@@ -14,7 +14,7 @@ mode = "run"
 source = "integer_string_range_guards.ska"
 [[test.run]]
 name = "boundary_values"
-expect = { exit = 0, stdout = { file = "data/integer_string_range_guards.stdout" } }
+expect = { stdout = { file = "data/integer_string_range_guards.stdout" } }
 
 [[test]]
 name = "primitive_cast_checked_success"
@@ -22,7 +22,7 @@ mode = "run"
 source = "primitive_cast_checked_success.ska"
 [[test.run]]
 name = "boundary_values"
-expect = { exit = 0, stdout = { file = "data/primitive_cast_checked_success.stdout" } }
+expect = { stdout = { file = "data/primitive_cast_checked_success.stdout" } }
 
 [[test]]
 name = "primitive_cast_failures"
@@ -49,7 +49,7 @@ mode = "run"
 source = "primitive_cast_matrix.ska"
 [[test.run]]
 name = "type_matrix"
-expect = { exit = 44, stdout = { file = "data/primitive_cast_matrix.stdout" } }
+expect = { stdout = { file = "data/primitive_cast_matrix.stdout" } }
 
 [[test]]
 name = "primitive_f64_bits"
@@ -57,4 +57,4 @@ mode = "run"
 source = "primitive_f64_bits.ska"
 [[test.run]]
 name = "bit_patterns"
-expect = { exit = 0, stdout = { file = "data/primitive_f64_bits.stdout" } }
+expect = { stdout = { file = "data/primitive_f64_bits.stdout" } }

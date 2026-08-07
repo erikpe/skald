@@ -6,7 +6,7 @@ mode = "run"
 source = "polymorphism.ska"
 [[test.run]]
 name = "inheritance_and_virtual_calls"
-expect = { exit = 0, stdout = { file = "data/polymorphism.stdout" } }
+expect = { stdout = { file = "data/polymorphism.stdout" } }
 
 [[test]]
 name = "hierarchy"

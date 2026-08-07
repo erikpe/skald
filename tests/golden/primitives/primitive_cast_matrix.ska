@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_true;
 
 class Holder {
     enabled: bool;
@@ -96,8 +97,6 @@ fn main() -> i64 {
     std::io::println_f64((f64) (bool) 0u);
     std::io::println_bool((bool) make(40, 2.0)->read());
 
-    if ((bool) values[0]) {
-        return 44;
-    }
-    return 1;
+    assert_true((bool) values[0]);
+    return 0;
 }

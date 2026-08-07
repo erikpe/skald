@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_i64, assert_false, assert_true;
 
 class Item {
     value: i64;
@@ -30,9 +31,10 @@ fn increment(mut ref value: i64) -> unit {
 }
 
 fn main() -> i64 {
-    if (State.number != 0 || State.flag || State.maybe is some || State.owner is some) {
-        return 1;
-    }
+    assert_eq_i64(State.number, 0);
+    assert_false(State.flag);
+    assert_true(State.maybe is none);
+    assert_true(State.owner is none);
     State.number = 40;
     increment(State.number);
     State.maybe = Item(7);
@@ -45,8 +47,9 @@ fn main() -> i64 {
     State.owner = new Item(42);
     // The final static owner likewise does not print 42 at process exit.
     State.flag = true;
-    if (State.flag) {
-        return State.number + State.owner!->read() - 41;
-    }
-    return 2;
+    assert_true(State.flag);
+    assert_eq_i64(State.number, 41);
+    assert_true(State.owner is some);
+    assert_eq_i64(State.owner!->read(), 42);
+    return 0;
 }

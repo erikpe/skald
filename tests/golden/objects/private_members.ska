@@ -1,3 +1,5 @@
+from std::test import assert_eq_i64;
+
 class Secret {
     private value: i64;
 
@@ -21,5 +23,6 @@ fn clone(ref source: Secret) -> Secret {
 fn main() -> i64 {
     var original: Secret = Secret(40);
     var copied: Secret = clone(original);
-    return copied.reveal();
+    assert_eq_i64(copied.reveal(), 40);
+    return 0;
 }

@@ -6,7 +6,7 @@ mode = "run"
 source = "nontrivial_inline_arrays.ska"
 [[test.run]]
 name = "nested_lifecycle"
-expect = { exit = 0, stdout = { file = "data/nontrivial_inline_arrays.stdout" } }
+expect = { stdout = { file = "data/nontrivial_inline_arrays.stdout" } }
 
 [[test]]
 name = "primitive_abi_pressure"
@@ -14,7 +14,7 @@ mode = "run"
 source = "primitive_array_abi_pressure.ska"
 [[test.run]]
 name = "register_and_stack_arguments"
-expect = { exit = 0, stdout = { file = "data/primitive_array_abi_pressure.stdout" } }
+expect = { stdout = { file = "data/primitive_array_abi_pressure.stdout" } }
 
 [[test]]
 name = "primitive_fundamentals"
@@ -29,7 +29,7 @@ mode = "run"
 source = "primitive_array_values.ska"
 [[test.run]]
 name = "construction_copy_and_replacement"
-expect = { exit = 0, stdout = { file = "data/primitive_array_values.stdout" } }
+expect = { stdout = { file = "data/primitive_array_values.stdout" } }
 
 [[test]]
 name = "static"
@@ -37,4 +37,3 @@ mode = "run"
 source = "static_arrays.ska"
 [[test.run]]
 name = "static_storage"
-expect = { exit = 42 }

@@ -6,7 +6,7 @@ mode = "run"
 source = "explicit_shared_consumers.ska"
 [[test.run]]
 name = "calls_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/explicit_shared_consumers.stdout" } }
+expect = { stdout = { file = "data/explicit_shared_consumers.stdout" } }
 
 [[test]]
 name = "explicit_dereference"
@@ -14,7 +14,7 @@ mode = "run"
 source = "explicit_shared_dereference.ska"
 [[test.run]]
 name = "member_and_place_access"
-expect = { exit = 0, stdout = { file = "data/explicit_shared_dereference.stdout" } }
+expect = { stdout = { file = "data/explicit_shared_dereference.stdout" } }
 
 [[test]]
 name = "calls_and_results"
@@ -22,7 +22,7 @@ mode = "run"
 source = "shared_calls_and_results.ska"
 [[test.run]]
 name = "parameter_result_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/shared_calls_and_results.stdout" } }
+expect = { stdout = { file = "data/shared_calls_and_results.stdout" } }
 
 [[test]]
 name = "fields"
@@ -30,7 +30,7 @@ mode = "run"
 source = "shared_fields.ska"
 [[test.run]]
 name = "field_replacement_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/shared_fields.stdout" } }
+expect = { stdout = { file = "data/shared_fields.stdout" } }
 
 [[test]]
 name = "local_owners"
@@ -38,7 +38,7 @@ mode = "run"
 source = "shared_local_owners.ska"
 [[test.run]]
 name = "copy_and_last_owner"
-expect = { exit = 0, stdout = { file = "data/shared_local_owners.stdout" } }
+expect = { stdout = { file = "data/shared_local_owners.stdout" } }
 
 [[test]]
 name = "dereference_rejections"

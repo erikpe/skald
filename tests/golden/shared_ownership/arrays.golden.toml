@@ -6,7 +6,7 @@ mode = "run"
 source = "shared_outer_arrays.ska"
 [[test.run]]
 name = "inline_and_shared_outer_storage"
-expect = { exit = 0, stdout = { file = "data/shared_outer_arrays.stdout" } }
+expect = { stdout = { file = "data/shared_outer_arrays.stdout" } }
 
 [[test]]
 name = "owner_array_cycle"
@@ -14,7 +14,7 @@ mode = "run"
 source = "shared_owner_array_cycle.ska"
 [[test.run]]
 name = "cycle_cleanup_boundary"
-expect = { exit = 0, stdout = { file = "data/shared_owner_array_cycle.stdout" } }
+expect = { stdout = { file = "data/shared_owner_array_cycle.stdout" } }
 
 [[test]]
 name = "owner_array_elements"
@@ -22,4 +22,4 @@ mode = "run"
 source = "shared_owner_array_elements.ska"
 [[test.run]]
 name = "element_ownership_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/shared_owner_array_elements.stdout" } }
+expect = { stdout = { file = "data/shared_owner_array_elements.stdout" } }

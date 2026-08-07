@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_true;
 
 fn main() -> i64 {
     std::io::println_bool(-9223372036854775808 == -9223372036854775808);
@@ -41,8 +42,6 @@ fn main() -> i64 {
     std::io::println_bool(0u8 >= 255u8);
 
     var branch: bool = 255u8 >= 255u8;
-    if (branch) {
-        return 83;
-    }
-    return 1;
+    assert_true(branch);
+    return 0;
 }

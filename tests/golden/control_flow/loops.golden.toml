@@ -6,7 +6,7 @@ mode = "run"
 source = "break_loops.ska"
 [[test.run]]
 name = "nested_breaks"
-expect = { exit = 0, stdout = { inline = "1\n2\n36\n30\n20\n10\n4\n50\n40\n6\n" } }
+expect = { stdout = { inline = "1\n2\n36\n30\n20\n10\n4\n50\n40\n6\n" } }
 
 [[test]]
 name = "continue_loops"
@@ -14,7 +14,7 @@ mode = "run"
 source = "continue_loops.ska"
 [[test.run]]
 name = "nested_continues"
-expect = { exit = 0, stdout = { file = "data/continue_loops.stdout" } }
+expect = { stdout = { file = "data/continue_loops.stdout" } }
 
 [[test]]
 name = "loop_lifecycle_matrix"
@@ -22,7 +22,7 @@ mode = "run"
 source = "loop_lifecycle_matrix.ska"
 [[test.run]]
 name = "cleanup_order"
-expect = { exit = 0, stdout = { file = "data/loop_lifecycle_matrix.stdout" } }
+expect = { stdout = { file = "data/loop_lifecycle_matrix.stdout" } }
 
 [[test]]
 name = "while_loops"
@@ -30,7 +30,7 @@ mode = "run"
 source = "while_loops.ska"
 [[test.run]]
 name = "loop_matrix"
-expect = { exit = 0, stdout = { file = "data/while_loops.stdout" } }
+expect = { stdout = { file = "data/while_loops.stdout" } }
 
 [[test]]
 name = "break_outside_loop"

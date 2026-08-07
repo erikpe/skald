@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_u8;
 
 class Holder {
     bits: u64;
@@ -120,8 +121,7 @@ fn main() -> i64 {
         make_trace(51, 16u)->read() >> make_trace(52, 2u)->read()
     );
 
-    if ((0x01u8 << 7u) == 0x80u8 && (0xffu8 >> 7u) == 0x01u8) {
-        return 93;
-    }
-    return 1;
+    assert_eq_u8(0x01u8 << 7u, 0x80u8);
+    assert_eq_u8(0xffu8 >> 7u, 0x01u8);
+    return 0;
 }

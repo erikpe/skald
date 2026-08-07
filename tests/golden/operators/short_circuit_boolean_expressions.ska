@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_false, assert_true;
 
 interface Truth {
     fn truth() -> bool;
@@ -128,12 +129,9 @@ fn main() -> i64 {
     );
     std::io::println_i64(effects.sequence);
 
-    if (false && effects.observe(true, 8)) {
-        return 1;
-    }
-    elif (true || effects.observe(false, 9)) {
-        std::io::println_bool(true);
-    }
+    assert_false(false && effects.observe(true, 8));
+    assert_true(true || effects.observe(false, 9));
+    std::io::println_bool(true);
 
     var first: bool = true;
     var iterations: i64 = 0;

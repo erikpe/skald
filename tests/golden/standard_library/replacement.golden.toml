@@ -40,7 +40,7 @@ name = "private_data_file"
 input_files = [
   { name = "data.txt", contents = { file = "cases/io_intrinsics/data.txt" } },
 ]
-expect = { exit = 0, stdout = { inline = "OK\n" } }
+expect = { stdout = { inline = "OK\n" } }
 
 [[test]]
 name = "io_bounds_failure"

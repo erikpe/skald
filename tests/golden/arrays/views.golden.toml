@@ -6,7 +6,7 @@ mode = "run"
 source = "array_views.ska"
 [[test.run]]
 name = "alias_replacement_and_slices"
-expect = { exit = 0, stdout = { file = "data/array_views.stdout" } }
+expect = { stdout = { file = "data/array_views.stdout" } }
 
 [[test]]
 name = "access_exclusions"

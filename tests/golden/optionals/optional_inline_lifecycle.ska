@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_i64, assert_true;
 
 class Value {
     marker: i64;
@@ -30,8 +31,7 @@ fn main() -> i64 {
     first = none;
     first = forward(Value(42));
     var holder: Holder = Holder(first);
-    if (holder.value is some) {
-        return holder.value!.marker;
-    }
+    assert_true(holder.value is some);
+    assert_eq_i64(holder.value!.marker, 42);
     return 0;
 }

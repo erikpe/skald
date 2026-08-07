@@ -1,5 +1,6 @@
 import std::io;
 from std::str import Str;
+from std::test import assert_eq_u64, assert_true;
 
 fn write_line(text: Str) -> unit {
     var newline: Str = "\n";
@@ -48,20 +49,15 @@ fn observe_u8(text: Str) -> unit {
     return;
 }
 
-fn check_all_u8_round_trips() -> i64 {
+fn check_all_u8_round_trips() -> unit {
     var value: u64 = 0u;
     while (value <= 255u) {
         var text: Str = Str.from_u8((u8) value);
         var parsed: u8? = text.to_u8();
-        if (parsed is none) {
-            return 1;
-        }
-        if ((u64) parsed! != value) {
-            return 2;
-        }
+        assert_true(parsed is some);
+        assert_eq_u64((u64) parsed!, value);
         value = value + 1u;
     }
-    return 0;
 }
 
 fn main() -> i64 {
@@ -137,5 +133,6 @@ fn main() -> i64 {
     observe_u8("0000000000000000000000000000000000000000000000000000000000000000");
     observe_u8("9999999999999999999999999999999999999999999999999999999999999999");
 
-    return check_all_u8_round_trips();
+    check_all_u8_round_trips();
+    return 0;
 }

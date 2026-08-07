@@ -1,3 +1,5 @@
+from std::test import assert_eq_i64, assert_eq_u64;
+
 class Value {
     value: i64;
 
@@ -66,11 +68,13 @@ fn main() -> i64 {
     values[0] = 5;
     var copied_values: i64[] = Tools.array_value(values);
 
-    return Tools.primitive(1)
-        + copied.value
-        + forwarded->value
-        + optional!
-        + optional_owner!->value
-        + copied_values[0]
-        + Tools.recurse(6, true);
+    assert_eq_i64(Tools.primitive(1), 1);
+    assert_eq_i64(copied.value, 2);
+    assert_eq_i64(forwarded->value, 3);
+    assert_eq_i64(optional!, 4);
+    assert_eq_i64(optional_owner!->value, 3);
+    assert_eq_u64(copied_values.len(), 1u);
+    assert_eq_i64(copied_values[0], 5);
+    assert_eq_i64(Tools.recurse(6, true), 6);
+    return 0;
 }

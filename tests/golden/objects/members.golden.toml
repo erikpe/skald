@@ -6,7 +6,6 @@ mode = "run"
 source = "private_members.ska"
 [[test.run]]
 name = "class_local_access"
-expect = { exit = 40 }
 
 [[test]]
 name = "static_methods"
@@ -14,7 +13,6 @@ mode = "run"
 source = "static_methods.ska"
 [[test.run]]
 name = "receiverless_calls"
-expect = { exit = 24 }
 
 [[test]]
 name = "private_member_access"

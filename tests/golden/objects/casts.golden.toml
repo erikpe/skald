@@ -6,7 +6,7 @@ mode = "run"
 source = "object_casts.ska"
 [[test.run]]
 name = "upcast_and_checked_downcast"
-expect = { exit = 0, stdout = { file = "data/object_casts.stdout" } }
+expect = { stdout = { file = "data/object_casts.stdout" } }
 
 [[test]]
 name = "checked_failure"

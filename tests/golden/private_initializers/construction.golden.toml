@@ -6,4 +6,3 @@ mode = "run"
 source = "private_initializers.ska"
 [[test.run]]
 name = "private_initializer_access"
-expect = { exit = 42 }

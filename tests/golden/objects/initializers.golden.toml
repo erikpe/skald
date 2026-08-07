@@ -6,7 +6,7 @@ mode = "run"
 source = "base_initializer_overloads.ska"
 [[test.run]]
 name = "base_selection"
-expect = { exit = 0, stdout = { file = "data/base_initializer_overloads.stdout" } }
+expect = { stdout = { file = "data/base_initializer_overloads.stdout" } }
 
 [[test]]
 name = "overloads"
@@ -14,7 +14,7 @@ mode = "run"
 source = "initializer_overloads.ska"
 [[test.run]]
 name = "selection_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/initializer_overloads.stdout" } }
+expect = { stdout = { file = "data/initializer_overloads.stdout" } }
 
 [[test]]
 name = "base_initialization_placement"

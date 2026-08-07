@@ -1,3 +1,5 @@
+from std::test import assert_eq_i64;
+
 fn increment(mut ref value: i64) -> unit {
     value = value + 1;
 }
@@ -9,5 +11,6 @@ fn observe(ref value: i64) -> i64 {
 fn main() -> i64 {
     var value: i64 = 41;
     increment(value);
-    return observe(value);
+    assert_eq_i64(observe(value), 42);
+    return 0;
 }

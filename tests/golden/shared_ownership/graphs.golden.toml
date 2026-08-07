@@ -6,7 +6,7 @@ mode = "run"
 source = "shared_polymorphism.ska"
 [[test.run]]
 name = "dynamic_owner_dispatch"
-expect = { exit = 0, stdout = { file = "data/shared_polymorphism.stdout" } }
+expect = { stdout = { file = "data/shared_polymorphism.stdout" } }
 
 [[test]]
 name = "strong_cycle"
@@ -14,4 +14,4 @@ mode = "run"
 source = "shared_strong_cycle.ska"
 [[test.run]]
 name = "cycle_retention"
-expect = { exit = 0, stdout = { file = "data/shared_strong_cycle.stdout" } }
+expect = { stdout = { file = "data/shared_strong_cycle.stdout" } }

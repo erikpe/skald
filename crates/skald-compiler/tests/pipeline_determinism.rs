@@ -833,9 +833,7 @@ fn optional_phase_dump() -> String {
 }
 
 fn array_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/arrays/array_aliases.ska"
-    ))
+    complete_golden_phase_dump(include_str!("../../../tests/golden/arrays/array_views.ska"))
 }
 
 fn static_field_phase_dump() -> String {
@@ -1411,7 +1409,11 @@ fn complete_phase_dump(text: &str) -> String {
 }
 
 fn complete_golden_phase_dump(text: &str) -> String {
-    let mut source = text.replace("import std::io;\n\n", "");
+    let mut source = text
+        .lines()
+        .filter(|line| line != &"import std::io;")
+        .collect::<Vec<_>>()
+        .join("\n");
     let mut declarations = String::new();
     for (public_name, recorder_name, parameter_type) in [
         ("std::io::println_bool", "test_record_bool", "bool"),
@@ -1427,8 +1429,38 @@ fn complete_golden_phase_dump(text: &str) -> String {
             source = source.replace(public_name, recorder_name);
         }
     }
+    replace_standard_test_assertions(&mut source, &mut declarations);
     declarations.push_str(&source);
     complete_phase_dump(&declarations)
+}
+
+fn replace_standard_test_assertions(source: &mut String, declarations: &mut String) {
+    let imports_assertions = source
+        .lines()
+        .any(|line| line == "import std::test;" || line.starts_with("from std::test import "));
+    if !imports_assertions {
+        return;
+    }
+
+    *source = source
+        .lines()
+        .filter(|line| line != &"import std::test;" && !line.starts_with("from std::test import "))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    for (name, parameters) in [
+        ("assert_eq_f64", "left: f64, right: f64"),
+        ("assert_eq_i64", "left: i64, right: i64"),
+        ("assert_eq_u64", "left: u64, right: u64"),
+        ("assert_eq_u8", "left: u8, right: u8"),
+        ("assert_false", "value: bool"),
+        ("assert_true", "value: bool"),
+    ] {
+        *source = source.replace(&format!("std::test::{name}"), name);
+        if source.contains(&format!("{name}(")) {
+            declarations.push_str(&format!("extern fn {name}({parameters}) -> unit;\n"));
+        }
+    }
 }
 
 struct TemporaryArtifacts {

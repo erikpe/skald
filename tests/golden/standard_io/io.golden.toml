@@ -7,7 +7,7 @@ source = "std_io_printing.ska"
 
 [[test.run]]
 name = "primitives_and_expressions"
-expect = { exit = 0, stdout = { inline = """false
+expect = { stdout = { inline = """false
 true
 -9223372036854775808
 9223372036854775807
@@ -79,12 +79,11 @@ source = "std_io_read_stdin.ska"
 [[test.run]]
 name = "empty"
 stdin = { inline = "" }
-expect = { exit = 0 }
 
 [[test.run]]
 name = "growth"
 stdin = { file = "data/stdin-growth.bin" }
-expect = { exit = 0, stdout = { file = "data/stdin-growth.bin" } }
+expect = { stdout = { file = "data/stdin-growth.bin" } }
 
 [[test]]
 name = "writes"
@@ -93,7 +92,7 @@ source = "std_io_writes.ska"
 
 [[test.run]]
 name = "default"
-expect = { exit = 0, stdout = { inline = "alphaomega\n" }, stderr = { inline = "betagamma\n" } }
+expect = { stdout = { inline = "alphaomega\n" }, stderr = { inline = "betagamma\n" } }
 
 [[test]]
 name = "read_files"
@@ -107,4 +106,4 @@ input_files = [
   { name = "empty", contents = { file = "data/empty.bin" } },
   { name = "payload", contents = { file = "data/file-payload.bin" } },
 ]
-expect = { exit = 0, stdout = { file = "data/file-payload.bin" } }
+expect = { stdout = { file = "data/file-payload.bin" } }

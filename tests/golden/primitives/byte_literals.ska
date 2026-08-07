@@ -1,5 +1,6 @@
 import std::io;
 from std::str import Str;
+from std::test import assert_eq_u8;
 
 class ByteBox {
     value: u8;
@@ -36,8 +37,8 @@ fn main() -> i64 {
     std::io::println_i64((i64) '\'');
     std::io::println_bool(text.byte(1) == 'B');
 
-    if (bytes[0] == 65u8 && bytes[1] == 0x42u8 && text.byte(2) == 'C') {
-        return 0;
-    }
-    return 1;
+    assert_eq_u8(bytes[0], 65u8);
+    assert_eq_u8(bytes[1], 0x42u8);
+    assert_eq_u8(text.byte(2), 'C');
+    return 0;
 }

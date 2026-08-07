@@ -6,7 +6,7 @@ mode = "run"
 source = "inline_object_evaluation_order.ska"
 [[test.run]]
 name = "left_to_right"
-expect = { exit = 0, stdout = { file = "data/inline_object_evaluation_order.stdout" } }
+expect = { stdout = { file = "data/inline_object_evaluation_order.stdout" } }
 
 [[test]]
 name = "fields"
@@ -14,7 +14,7 @@ mode = "run"
 source = "inline_object_fields.ska"
 [[test.run]]
 name = "access_and_mutation"
-expect = { exit = 0, stdout = { file = "data/inline_object_fields.stdout" } }
+expect = { stdout = { file = "data/inline_object_fields.stdout" } }
 
 [[test]]
 name = "nested_fields"
@@ -22,7 +22,7 @@ mode = "run"
 source = "inline_object_nested_fields.ska"
 [[test.run]]
 name = "nested_access_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/inline_object_nested_fields.stdout" } }
+expect = { stdout = { file = "data/inline_object_nested_fields.stdout" } }
 
 [[test]]
 name = "receiver_abi"
@@ -30,7 +30,7 @@ mode = "run"
 source = "inline_object_receiver_abi.ska"
 [[test.run]]
 name = "register_and_stack_receivers"
-expect = { exit = 0, stdout = { file = "data/inline_object_receiver_abi.stdout" } }
+expect = { stdout = { file = "data/inline_object_receiver_abi.stdout" } }
 
 [[test]]
 name = "field_access_and_values"

@@ -6,7 +6,7 @@ mode = "run"
 source = "deterministic_destruction.ska"
 [[test.run]]
 name = "reverse_declaration_order"
-expect = { exit = 37, stdout = { file = "data/deterministic_destruction.stdout" } }
+expect = { stdout = { file = "data/deterministic_destruction.stdout" } }
 
 [[test]]
 name = "destruction_control_flow"
@@ -14,7 +14,7 @@ mode = "run"
 source = "deterministic_destruction_control_flow.ska"
 [[test.run]]
 name = "fallthrough_return_and_branch_cleanup"
-expect = { exit = 0, stdout = { file = "data/deterministic_destruction_control_flow.stdout" } }
+expect = { stdout = { file = "data/deterministic_destruction_control_flow.stdout" } }
 
 [[test]]
 name = "duplicate_destructor"

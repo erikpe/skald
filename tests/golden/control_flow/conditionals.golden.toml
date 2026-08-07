@@ -6,7 +6,7 @@ mode = "run"
 source = "conditionals.ska"
 [[test.run]]
 name = "branch_matrix"
-expect = { exit = 0, stdout = { inline = "1\n2\n20\n40\n50\n70\n11\n12\n21\n22\n" } }
+expect = { stdout = { inline = "1\n2\n20\n40\n50\n70\n11\n12\n21\n22\n" } }
 
 [[test]]
 name = "conditional_branch_scope"

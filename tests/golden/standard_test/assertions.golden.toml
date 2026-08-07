@@ -8,7 +8,6 @@ source = "std_test_assertions.ska"
 [[test.run]]
 name = "passing"
 args = ["passing"]
-expect = { exit = 0 }
 
 [[test.run]]
 name = "equality_failure"

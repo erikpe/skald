@@ -6,7 +6,7 @@ mode = "run"
 source = "static_fields_profile.ska"
 [[test.run]]
 name = "access_and_mutation"
-expect = { exit = 42, stdout = { file = "data/static_fields_profile.stdout" } }
+expect = { stdout = { file = "data/static_fields_profile.stdout" } }
 
 [[test]]
 name = "inheritance"
@@ -14,7 +14,7 @@ mode = "run"
 source = "static_inheritance.ska"
 [[test.run]]
 name = "selection_and_dispatch"
-expect = { exit = 0, stdout = { file = "data/static_inheritance.stdout" } }
+expect = { stdout = { file = "data/static_inheritance.stdout" } }
 
 [[test]]
 name = "selection"

@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_u8;
 
 class Holder {
     quotient: u64;
@@ -115,14 +116,13 @@ fn main() -> i64 {
     std::io::println_i64(probe.sequence);
 
     std::io::println_bool((20u / 3u) == 6u && (20u % 3u) == 2u);
-    if ((255u8 / 2u8) == 127u8 && (255u8 % 2u8) == 1u8) {
-        std::io::println_u64(
-            read_trace(produce_trace(41, 20u)) / read_trace(produce_trace(42, 3u))
-        );
-        std::io::println_u64(
-            make_trace(51, 20u)->read() % make_trace(52, 3u)->read()
-        );
-        return 0;
-    }
-    return 91;
+    assert_eq_u8(255u8 / 2u8, 127u8);
+    assert_eq_u8(255u8 % 2u8, 1u8);
+    std::io::println_u64(
+        read_trace(produce_trace(41, 20u)) / read_trace(produce_trace(42, 3u))
+    );
+    std::io::println_u64(
+        make_trace(51, 20u)->read() % make_trace(52, 3u)->read()
+    );
+    return 0;
 }

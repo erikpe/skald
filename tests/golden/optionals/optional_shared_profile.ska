@@ -1,3 +1,5 @@
+from std::test import assert_eq_i64, assert_true;
+
 interface Readable {
     fn read() -> i64;
 }
@@ -40,5 +42,7 @@ fn main() -> i64 {
     concrete = none;
     readable = none;
     object = none;
-    return holder.value!->read();
+    assert_true(holder.value is some);
+    assert_eq_i64(holder.value!->read(), 42);
+    return 0;
 }

@@ -1,69 +1,50 @@
 from std::str::parse_f64 import BigUnsigned;
+from std::test import assert_eq_i64, assert_eq_u64, assert_false, assert_true;
 
 fn main() -> i64 {
     var value: BigUnsigned = BigUnsigned(4u);
     var one: BigUnsigned = BigUnsigned(4u);
-    if (!value.set(3u) || !one.set(1u)) {
-        return 1;
-    }
-    if (value.compare_shifted(one, 1u) != 1) {
-        return 2;
-    }
-    if (!value.subtract_shifted(one, 1u) || value.compare(one) != 0) {
-        return 3;
-    }
-    if (
-        !value.multiply_add(10u, 0u)
-        || !value.multiply_add(10u, 0u)
-        || !value.multiply_add(10u, 0u)
-    ) {
-        return 4;
-    }
+    assert_true(value.set(3u));
+    assert_true(one.set(1u));
+    assert_eq_i64(value.compare_shifted(one, 1u), 1);
+    assert_true(value.subtract_shifted(one, 1u));
+    assert_eq_i64(value.compare(one), 0);
+    assert_true(value.multiply_add(10u, 0u));
+    assert_true(value.multiply_add(10u, 0u));
+    assert_true(value.multiply_add(10u, 0u));
 
     var thousand: BigUnsigned = BigUnsigned(4u);
-    if (!thousand.set(1000u) || value.compare(thousand) != 0) {
-        return 5;
-    }
-    if (!thousand.shift_left(33u)) {
-        return 6;
-    }
-    if (thousand.compare_shifted(value, 33u) != 0) {
-        return 7;
-    }
+    assert_true(thousand.set(1000u));
+    assert_eq_i64(value.compare(thousand), 0);
+    assert_true(thousand.shift_left(33u));
+    assert_eq_i64(thousand.compare_shifted(value, 33u), 0);
 
     var no_capacity: BigUnsigned = BigUnsigned(0u);
-    if (no_capacity.set(1u)) {
-        return 8;
-    }
-    if (value.multiply_add(11u, 0u) || value.multiply_add(1u, 10u)) {
-        return 9;
-    }
+    assert_false(no_capacity.set(1u));
+    assert_false(value.multiply_add(11u, 0u));
+    assert_false(value.multiply_add(1u, 10u));
 
     var copy: BigUnsigned = BigUnsigned(copy value);
-    if (!copy.subtract_shifted(value, 0u) || copy.bit_length() != 0u) {
-        return 10;
-    }
+    assert_true(copy.subtract_shifted(value, 0u));
+    assert_eq_u64(copy.bit_length(), 0u);
 
     var tight: BigUnsigned = BigUnsigned(1u);
     var two: BigUnsigned = BigUnsigned(1u);
-    if (!tight.set(1u) || !tight.shift_left(1u) || !two.set(2u)) {
-        return 11;
-    }
-    if (tight.compare(two) != 0 || !tight.multiply_add(0u, 7u)) {
-        return 12;
-    }
+    assert_true(tight.set(1u));
+    assert_true(tight.shift_left(1u));
+    assert_true(two.set(2u));
+    assert_eq_i64(tight.compare(two), 0);
+    assert_true(tight.multiply_add(0u, 7u));
     var seven: BigUnsigned = BigUnsigned(1u);
-    if (!seven.set(7u) || tight.compare(seven) != 0) {
-        return 13;
-    }
+    assert_true(seven.set(7u));
+    assert_eq_i64(tight.compare(seven), 0);
 
     var zero: BigUnsigned = BigUnsigned(0u);
-    if (
-        zero.compare_shifted(zero, 18446744073709551615u) != 0
-        || !seven.subtract_shifted(zero, 18446744073709551615u)
-        || seven.compare(tight) != 0
-    ) {
-        return 14;
-    }
+    assert_eq_i64(
+        zero.compare_shifted(zero, 18446744073709551615u),
+        0
+    );
+    assert_true(seven.subtract_shifted(zero, 18446744073709551615u));
+    assert_eq_i64(seven.compare(tight), 0);
     return 0;
 }

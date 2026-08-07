@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_u8;
 
 class Probe {
     sequence: i64;
@@ -74,8 +75,6 @@ fn main() -> i64 {
     std::io::println_bool(
         (0x1u & 0x1u) == 0x1u && (~0u == 0xffffffffffffffffu)
     );
-    if (((u8) (0xffu & 0xaau)) == 0xaau8) {
-        return 91;
-    }
-    return 1;
+    assert_eq_u8((u8) (0xffu & 0xaau), 0xaau8);
+    return 0;
 }

@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_i64, assert_eq_u64, assert_eq_u8;
 
 class CastFields {
     small: u8;
@@ -59,12 +60,8 @@ fn main() -> i64 {
     std::io::println_u64(fields.wide);
     std::io::println_u64((u64) ((u8) 258u + 40u8));
 
-    if ((i64) 18446744073709551615u == -1) {
-        if ((u8) -1 == 255u8) {
-            if ((u64) 128u8 == 128u) {
-                return 84;
-            }
-        }
-    }
-    return 1;
+    assert_eq_i64((i64) 18446744073709551615u, -1);
+    assert_eq_u8((u8) -1, 255u8);
+    assert_eq_u64((u64) 128u8, 128u);
+    return 0;
 }

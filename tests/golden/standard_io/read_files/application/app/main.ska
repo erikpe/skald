@@ -1,12 +1,11 @@
 import std::io;
 import std::process;
 import std::str;
+from std::test import assert_eq_u64;
 
 fn main() -> i64 {
     var arguments: std::str::Str[] = std::process::args();
-    if (arguments.len() != 3u) {
-        return 1;
-    }
+    assert_eq_u64(arguments.len(), 3u);
     var empty: std::str::Str = std::io::read_file(arguments[1]);
     var payload: std::str::Str = std::io::read_file(arguments[2]);
     std::io::write_stdout(empty);

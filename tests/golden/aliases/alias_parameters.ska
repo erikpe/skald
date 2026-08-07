@@ -1,4 +1,5 @@
 import std::io;
+from std::test import assert_eq_i64;
 
 class Counter {
     value: i64;
@@ -75,5 +76,6 @@ fn main() -> i64 {
 
     forward(counter, read(counter));
     std::io::println_i64(read(counter));
-    return 7;
+    assert_eq_i64(read(counter), 78);
+    return 0;
 }

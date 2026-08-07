@@ -48,12 +48,12 @@ variants = ["default"]
 name = "small"
 args = ["12"]
 stdin = { inline = "input" }
-expect = { exit = 0, stdout = { file = "data/small.stdout" } }
+expect = { stdout = { file = "data/small.stdout" } }
 
 [[test.run]]
 name = "large"
 argv_file = "data/large.argv"
-expect = { exit = 0, stdout = { match = "contains", inline = "done" } }
+expect = { stdout = { match = "contains", inline = "done" } }
 ```
 
 A compile-fail test requires compiler status 1 and empty stdout. Its stderr
@@ -86,7 +86,6 @@ compiler_args = [
 
 [[test.run]]
 name = "default"
-expect = { exit = 0 }
 ```
 
 Source, module-root, standard-library-root, working-directory, input, and
@@ -100,6 +99,11 @@ byte without newline, encoding, whitespace, zero-byte, or terminal-escape
 normalization. An argument file is a sequence of NUL-terminated byte strings;
 consecutive delimiters preserve empty arguments, and every nonempty file must
 end in NUL.
+
+An omitted run expectation defaults to exit code `0` with exact empty stdout
+and stderr. Within an explicit expectation, omitting `exit` likewise defaults
+to `0`, so successful cases should specify only the streams or output files
+they actually own.
 
 Omitted stdout and stderr expectations mean exact empty bytes. Stream
 expectations support `exact` (the default), `starts-with`, `contains`, or

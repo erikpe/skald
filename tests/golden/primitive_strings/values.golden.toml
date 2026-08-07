@@ -7,4 +7,4 @@ source = "string_values.ska"
 
 [[test.run]]
 name = "bytes_slices_and_concatenation"
-expect = { exit = 0, stdout = { file = "data/string-values.stdout" } }
+expect = { stdout = { file = "data/string-values.stdout" } }

@@ -6,7 +6,7 @@ mode = "run"
 source = "byte_literals.ska"
 [[test.run]]
 name = "representative_values"
-expect = { exit = 0, stdout = { inline = "65\n10\n255\n65\n67\n39\ntrue\n" } }
+expect = { stdout = { inline = "65\n10\n255\n65\n67\n39\ntrue\n" } }
 
 [[test]]
 name = "f64_values"
@@ -14,7 +14,7 @@ mode = "run"
 source = "f64_values.ska"
 [[test.run]]
 name = "representative_values"
-expect = { exit = 0, stdout = { file = "data/f64_values.stdout" } }
+expect = { stdout = { file = "data/f64_values.stdout" } }
 
 [[test]]
 name = "hexadecimal_integer_literals"
@@ -22,7 +22,7 @@ mode = "run"
 source = "hexadecimal_integer_literals.ska"
 [[test.run]]
 name = "representative_values"
-expect = { exit = 0, stdout = { file = "data/hexadecimal_integer_literals.stdout" } }
+expect = { stdout = { file = "data/hexadecimal_integer_literals.stdout" } }
 
 [[test]]
 name = "byte_literal_type_mismatch"

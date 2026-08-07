@@ -6,7 +6,7 @@ mode = "run"
 source = "optional_inline_lifecycle.ska"
 [[test.run]]
 name = "presence_replacement_and_cleanup"
-expect = { exit = 42, stdout = { file = "data/optional_inline_lifecycle.stdout" } }
+expect = { stdout = { file = "data/optional_inline_lifecycle.stdout" } }
 
 [[test]]
 name = "pinned_mutation"
@@ -28,4 +28,3 @@ mode = "run"
 source = "optional_shared_profile.ska"
 [[test.run]]
 name = "ownership_matrix"
-expect = { exit = 42 }

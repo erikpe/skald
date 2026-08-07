@@ -1,5 +1,6 @@
 import std::io as io;
 from std::str import Str;
+from std::test import assert_true;
 
 
 fn write_line(text: Str) -> unit {
@@ -8,22 +9,15 @@ fn write_line(text: Str) -> unit {
     io::write_stdout(newline);
 }
 
-fn observe(line: Str) -> i64 {
+fn observe(line: Str) -> unit {
     var parsed: f64? = line.to_f64();
-    if (parsed is none) {
-        write_line("invalid corpus input");
-        return 1;
-    }
+    assert_true(parsed is some);
     var formatted: Str = Str.from_f64(parsed!);
     write_line(formatted);
 
     var round_trip: f64? = formatted.to_f64();
-    if (round_trip is none) {
-        write_line("invalid formatter output");
-        return 1;
-    }
+    assert_true(round_trip is some);
     io::println_f64(round_trip!);
-    return 0;
 }
 
 fn main() -> i64 {
@@ -32,23 +26,13 @@ fn main() -> i64 {
     var index: u64 = 0u;
     while (index < corpus.len()) {
         if (corpus.byte((i64) index) == '\n') {
-            var status: i64 = observe(
-                corpus.slice((i64) start, (i64) index)
-            );
-            if (status != 0) {
-                return status;
-            }
+            observe(corpus.slice((i64) start, (i64) index));
             start = index + 1u;
         }
         index = index + 1u;
     }
     if (start < corpus.len()) {
-        var status: i64 = observe(
-            corpus.slice((i64) start, (i64) corpus.len())
-        );
-        if (status != 0) {
-            return status;
-        }
+        observe(corpus.slice((i64) start, (i64) corpus.len()));
     }
     return 0;
 }

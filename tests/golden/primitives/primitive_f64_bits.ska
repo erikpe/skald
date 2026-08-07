@@ -1,5 +1,6 @@
 import std::f64;
 import std::io as io;
+from std::test import assert_eq_f64;
 
 fn observe(bits: u64) -> unit {
     io::println_u64(std::f64::to_bits(std::f64::from_bits(bits)));
@@ -18,8 +19,6 @@ fn main() -> i64 {
     observe(9218868437227405313u);
     observe(9221120237041090626u);
 
-    if (std::f64::from_bits(4607182418800017408u) != 1.0) {
-        return 1;
-    }
+    assert_eq_f64(std::f64::from_bits(4607182418800017408u), 1.0);
     return 0;
 }

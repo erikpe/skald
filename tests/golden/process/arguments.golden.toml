@@ -8,8 +8,6 @@ source = "process_arguments.ska"
 [[test.run]]
 name = "exact_bytes"
 argv_file = "data/exact-bytes.argv"
-expect = { exit = 0 }
 
 [[test.run]]
 name = "no_suffix"
-expect = { exit = 0 }

@@ -63,5 +63,5 @@ fn main() -> i64 {
     {
         var inner: Root = Root(21, 22, 20, 200);
     }
-    return 37;
+    return 0;
 }

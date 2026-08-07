@@ -6,7 +6,7 @@ mode = "run"
 source = "explicit_copy_construction.ska"
 [[test.run]]
 name = "copy_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/explicit_copy_construction.stdout" } }
+expect = { stdout = { file = "data/explicit_copy_construction.stdout" } }
 
 [[test]]
 name = "copy"
@@ -14,7 +14,7 @@ mode = "run"
 source = "object_value_copy.ska"
 [[test.run]]
 name = "copy_and_assignment"
-expect = { exit = 0, stdout = { file = "data/object_value_copy.stdout" } }
+expect = { stdout = { file = "data/object_value_copy.stdout" } }
 
 [[test]]
 name = "parameters"
@@ -22,7 +22,7 @@ mode = "run"
 source = "object_value_parameters.ska"
 [[test.run]]
 name = "value_parameter_cleanup"
-expect = { exit = 0, stdout = { file = "data/object_value_parameters.stdout" } }
+expect = { stdout = { file = "data/object_value_parameters.stdout" } }
 
 [[test]]
 name = "results"
@@ -30,7 +30,7 @@ mode = "run"
 source = "object_value_results.ska"
 [[test.run]]
 name = "return_destination_and_cleanup"
-expect = { exit = 0, stdout = { file = "data/object_value_results.stdout" } }
+expect = { stdout = { file = "data/object_value_results.stdout" } }
 
 [[test]]
 name = "temporaries"
@@ -38,7 +38,7 @@ mode = "run"
 source = "object_value_temporaries.ska"
 [[test.run]]
 name = "full_expression_cleanup"
-expect = { exit = 0, stdout = { file = "data/object_value_temporaries.stdout" } }
+expect = { stdout = { file = "data/object_value_temporaries.stdout" } }
 
 [[test]]
 name = "explicit_copy_rejections"

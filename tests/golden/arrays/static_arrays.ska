@@ -1,3 +1,5 @@
+from std::test import assert_eq_i64, assert_eq_u64;
+
 fn replace() -> i64 {
     State.values = i64[](1u);
     State.values[0] = 2;
@@ -26,9 +28,8 @@ class State {
 }
 
 fn main() -> i64 {
-    if (State.values.len() != 0u || State.unavailable_default.len() != 0u) {
-        return 1;
-    }
+    assert_eq_u64(State.values.len(), 0u);
+    assert_eq_u64(State.unavailable_default.len(), 0u);
 
     State.values = i64[](3u);
     mutate(State.values);
@@ -39,5 +40,6 @@ fn main() -> i64 {
 
     var copied: i64[] = State.values[1:3];
     var detached: i64 = observe_detached(State.values[0], replace());
-    return detached + copied[1];
+    assert_eq_i64(detached + copied[1], 42);
+    return 0;
 }

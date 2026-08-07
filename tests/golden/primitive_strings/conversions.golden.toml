@@ -7,7 +7,6 @@ source = "primitive_string_bigunsigned_helper.ska"
 
 [[test.run]]
 name = "default"
-expect = { exit = 0 }
 
 [[test]]
 name = "f64_formatting"
@@ -16,7 +15,7 @@ source = "primitive_string_f64_formatting.ska"
 
 [[test.run]]
 name = "representative_values"
-expect = { exit = 0, stdout = { file = "data/f64-formatting.stdout" } }
+expect = { stdout = { file = "data/f64-formatting.stdout" } }
 
 [[test]]
 name = "f64_formatting_corpus"
@@ -26,7 +25,7 @@ source = "primitive_string_f64_formatting_corpus.ska"
 [[test.run]]
 name = "generated_corpus"
 stdin = { file = "data/f64-formatting-corpus.stdin" }
-expect = { exit = 0, stdout = { file = "data/f64-formatting-corpus.stdout" } }
+expect = { stdout = { file = "data/f64-formatting-corpus.stdout" } }
 
 [[test]]
 name = "f64_parsing"
@@ -36,7 +35,7 @@ source = "primitive_string_f64_parsing.ska"
 [[test.run]]
 name = "generated_corpus"
 stdin = { file = "data/f64-parsing.stdin" }
-expect = { exit = 0, stdout = { file = "data/f64-parsing.stdout" } }
+expect = { stdout = { file = "data/f64-parsing.stdout" } }
 
 [[test]]
 name = "formatting"
@@ -45,7 +44,7 @@ source = "primitive_string_formatting.ska"
 
 [[test.run]]
 name = "default"
-expect = { exit = 0, stdout = { file = "data/formatting.stdout" } }
+expect = { stdout = { file = "data/formatting.stdout" } }
 
 [[test]]
 name = "integer_helpers"
@@ -54,7 +53,7 @@ source = "primitive_string_integer_helpers.ska"
 
 [[test.run]]
 name = "default"
-expect = { exit = 0, stdout = { file = "data/integer-helpers.stdout" } }
+expect = { stdout = { file = "data/integer-helpers.stdout" } }
 
 [[test]]
 name = "parsing"
@@ -63,4 +62,4 @@ source = "primitive_string_parsing.ska"
 
 [[test.run]]
 name = "default"
-expect = { exit = 0, stdout = { file = "data/parsing.stdout" } }
+expect = { stdout = { file = "data/parsing.stdout" } }
