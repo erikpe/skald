@@ -449,37 +449,53 @@ fn lower_failure_logical(operation: HirLogicalOperation, left: &str, right: &str
 }
 
 #[test]
-fn failure_checks_exist_only_on_the_selected_right_path() {
-    for failure in [
-        "optional_failure",
-        "cast_failure",
-        "bounds_failure",
-        "allocation_failure",
-        "called_panic",
-    ] {
-        let skipped_and = lower_failure_logical(HirLogicalOperation::And, "always_false", failure);
-        verify_mir(&skipped_and).unwrap_or_else(|errors| panic!("{failure}: {errors}"));
-        assert_eq!(
-            native_output(&skipped_and).status.code(),
-            Some(0),
-            "{failure}"
-        );
+fn optional_failure_check_exists_only_on_the_selected_right_path() {
+    assert_failure_check_exists_only_on_selected_right_path("optional_failure");
+}
 
-        let skipped_or = lower_failure_logical(HirLogicalOperation::Or, "always_true", failure);
-        verify_mir(&skipped_or).unwrap_or_else(|errors| panic!("{failure}: {errors}"));
-        assert_eq!(
-            native_output(&skipped_or).status.code(),
-            Some(1),
-            "{failure}"
-        );
+#[test]
+fn cast_failure_check_exists_only_on_the_selected_right_path() {
+    assert_failure_check_exists_only_on_selected_right_path("cast_failure");
+}
 
-        let selected = lower_failure_logical(HirLogicalOperation::And, "always_true", failure);
-        verify_mir(&selected).unwrap_or_else(|errors| panic!("{failure}: {errors}"));
-        assert!(
-            !native_output(&selected).status.success(),
-            "{failure} must terminate when selected"
-        );
-    }
+#[test]
+fn bounds_failure_check_exists_only_on_the_selected_right_path() {
+    assert_failure_check_exists_only_on_selected_right_path("bounds_failure");
+}
+
+#[test]
+fn allocation_failure_check_exists_only_on_the_selected_right_path() {
+    assert_failure_check_exists_only_on_selected_right_path("allocation_failure");
+}
+
+#[test]
+fn called_panic_exists_only_on_the_selected_right_path() {
+    assert_failure_check_exists_only_on_selected_right_path("called_panic");
+}
+
+fn assert_failure_check_exists_only_on_selected_right_path(failure: &str) {
+    let skipped_and = lower_failure_logical(HirLogicalOperation::And, "always_false", failure);
+    verify_mir(&skipped_and).unwrap_or_else(|errors| panic!("{failure}: {errors}"));
+    assert_eq!(
+        native_output(&skipped_and).status.code(),
+        Some(0),
+        "{failure}"
+    );
+
+    let skipped_or = lower_failure_logical(HirLogicalOperation::Or, "always_true", failure);
+    verify_mir(&skipped_or).unwrap_or_else(|errors| panic!("{failure}: {errors}"));
+    assert_eq!(
+        native_output(&skipped_or).status.code(),
+        Some(1),
+        "{failure}"
+    );
+
+    let selected = lower_failure_logical(HirLogicalOperation::And, "always_true", failure);
+    verify_mir(&selected).unwrap_or_else(|errors| panic!("{failure}: {errors}"));
+    assert!(
+        !native_output(&selected).status.success(),
+        "{failure} must terminate when selected"
+    );
 }
 
 #[test]

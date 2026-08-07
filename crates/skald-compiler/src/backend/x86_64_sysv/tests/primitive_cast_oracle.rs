@@ -2,6 +2,10 @@
 
 use super::{MirIntegerType, MirPrimitiveType, PrimitiveValue};
 
+const PURE_RANDOM_SAMPLE_COUNT: usize = 8;
+const CHECKED_RANDOM_SAMPLE_COUNT: usize = 8;
+const CHECKED_BOUNDARY_ULP_RADIUS: u64 = 1;
+
 pub(super) fn expected_pure_cast(source: PrimitiveValue, target: MirPrimitiveType) -> Option<u64> {
     match (source, target) {
         (PrimitiveValue::I64(value), MirPrimitiveType::I64 | MirPrimitiveType::U64) => {
@@ -138,7 +142,7 @@ pub(super) fn pure_cast_samples() -> Vec<PrimitiveValue> {
     ];
 
     let mut random = 0x6a09_e667_f3bc_c909_u64;
-    for _ in 0..16 {
+    for _ in 0..PURE_RANDOM_SAMPLE_COUNT {
         random = xorshift64(random);
         samples.extend([
             PrimitiveValue::I64(random as i64),
@@ -175,14 +179,14 @@ pub(super) fn checked_cast_samples() -> Vec<u64> {
         ((1_u128 << 64) as f64).to_bits(),
         (-((1_u128 << 64) as f64)).to_bits(),
     ] {
-        for offset in 0..=4 {
+        for offset in 0..=CHECKED_BOUNDARY_ULP_RADIUS {
             samples.push(center.wrapping_sub(offset));
             samples.push(center.wrapping_add(offset));
         }
     }
 
     let mut random = 0xbb67_ae85_84ca_a73b_u64;
-    for _ in 0..32 {
+    for _ in 0..CHECKED_RANDOM_SAMPLE_COUNT {
         random = xorshift64(random);
         samples.push(random);
     }

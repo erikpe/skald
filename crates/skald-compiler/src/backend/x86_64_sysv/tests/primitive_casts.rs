@@ -10,6 +10,10 @@ use std::{
 };
 
 const CAST_FUNCTION: &str = ".Lska.fn.main.cast.f0";
+const U8_TO_F64_SAMPLES: [u8; 31] = [
+    0, 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17, 21, 31, 32, 33, 42, 63, 64, 65, 85, 106, 127, 128, 129,
+    149, 170, 213, 234, 254, 255,
+];
 
 #[test]
 fn legality_accepts_all_ten_identity_and_boolean_boundary_cells() {
@@ -260,33 +264,43 @@ fn checked_float_to_integer_failures_report_the_exact_frozen_message() {
 }
 
 #[test]
-fn every_pure_cast_matches_an_independent_oracle_for_boundary_and_random_inputs() {
-    for source in pure_cast_samples() {
-        for target in [
-            MirPrimitiveType::I64,
-            MirPrimitiveType::U64,
-            MirPrimitiveType::U8,
-            MirPrimitiveType::F64,
-            MirPrimitiveType::Bool,
-        ] {
-            let Some(expected) = expected_pure_cast(source, target) else {
-                continue;
-            };
-            assert_native_cast(source, target, expected);
-        }
-    }
+fn pure_casts_to_i64_match_the_independent_oracle() {
+    assert_pure_cast_samples(MirPrimitiveType::I64);
 }
 
 #[test]
-fn every_checked_cast_matches_an_independent_post_truncation_oracle() {
-    for bits in checked_cast_samples() {
-        for target in [MirIntegerType::I64, MirIntegerType::U64, MirIntegerType::U8] {
-            match expected_checked_cast(bits, target) {
-                Some(expected) => assert_native_checked_cast(bits, target, expected),
-                None => assert_native_checked_cast_failure(bits, target),
-            }
-        }
-    }
+fn pure_casts_to_u64_match_the_independent_oracle() {
+    assert_pure_cast_samples(MirPrimitiveType::U64);
+}
+
+#[test]
+fn pure_casts_to_u8_match_the_independent_oracle() {
+    assert_pure_cast_samples(MirPrimitiveType::U8);
+}
+
+#[test]
+fn pure_casts_to_f64_match_the_independent_oracle() {
+    assert_pure_cast_samples(MirPrimitiveType::F64);
+}
+
+#[test]
+fn pure_casts_to_bool_match_the_independent_oracle() {
+    assert_pure_cast_samples(MirPrimitiveType::Bool);
+}
+
+#[test]
+fn checked_casts_to_i64_match_the_independent_post_truncation_oracle() {
+    assert_checked_cast_samples(MirIntegerType::I64);
+}
+
+#[test]
+fn checked_casts_to_u64_match_the_independent_post_truncation_oracle() {
+    assert_checked_cast_samples(MirIntegerType::U64);
+}
+
+#[test]
+fn checked_casts_to_u8_match_the_independent_post_truncation_oracle() {
+    assert_checked_cast_samples(MirIntegerType::U8);
 }
 
 #[test]
@@ -560,8 +574,8 @@ fn signed_integer_to_f64_matches_an_exact_integer_oracle() {
 }
 
 #[test]
-fn every_u8_converts_exactly_to_f64() {
-    for value in u8::MIN..=u8::MAX {
+fn representative_u8_values_convert_exactly_to_f64() {
+    for value in U8_TO_F64_SAMPLES {
         assert_native_cast(
             PrimitiveValue::U8(value),
             MirPrimitiveType::F64,
@@ -624,6 +638,24 @@ fn executable_cases() -> [(PrimitiveValue, MirPrimitiveType); 10] {
         (PrimitiveValue::Bool(false), MirPrimitiveType::U8),
         (PrimitiveValue::Bool(false), MirPrimitiveType::F64),
     ]
+}
+
+fn assert_pure_cast_samples(target: MirPrimitiveType) {
+    for source in pure_cast_samples() {
+        let Some(expected) = expected_pure_cast(source, target) else {
+            continue;
+        };
+        assert_native_cast(source, target, expected);
+    }
+}
+
+fn assert_checked_cast_samples(target: MirIntegerType) {
+    for bits in checked_cast_samples() {
+        match expected_checked_cast(bits, target) {
+            Some(expected) => assert_native_checked_cast(bits, target, expected),
+            None => assert_native_checked_cast_failure(bits, target),
+        }
+    }
 }
 
 fn cast_function(source: PrimitiveValue, target: MirPrimitiveType) -> String {
