@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "integer_bitwise_operators"
@@ -45,9 +45,46 @@ name = "integer_bitwise_operator_types"
 mode = "compile-fail"
 source = "integer_bitwise_operator_types.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: bitwise complement requires a primitive integer operand
- --> tests/golden/operators/integer_bitwise_operator_types.ska:8:12"""
+matches = [
+  { name = "complement bool", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:8:12""" },
+  { name = "complement float", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:12:12""" },
+  { name = "complement optional", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:16:12""" },
+  { name = "complement array", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:20:12""" },
+  { name = "complement class", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:24:12""" },
+  { name = "complement shared", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:28:12""" },
+  { name = "complement object", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:32:12""" },
+  { name = "complement unit", match = "contains", inline = """error[TYP005]: bitwise complement requires a primitive integer operand
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:36:12""" },
+  { name = "binary bool", match = "contains", inline = """error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:40:17""" },
+  { name = "binary float", match = "contains", inline = """error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:44:17""" },
+  { name = "binary optional", match = "contains", inline = """error[TYP005]: bitwise `^` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:48:17""" },
+  { name = "binary array", match = "contains", inline = """error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:52:17""" },
+  { name = "binary class", match = "contains", inline = """error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:56:17""" },
+  { name = "binary shared", match = "contains", inline = """error[TYP005]: bitwise `^` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:60:17""" },
+  { name = "binary object", match = "contains", inline = """error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:64:17""" },
+  { name = "binary unit", match = "contains", inline = """error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:68:21""" },
+  { name = "mixed i64 and u64", match = "contains", inline = """error[TYP005]: bitwise `&` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:72:17""" },
+  { name = "mixed u64 and u8", match = "contains", inline = """error[TYP005]: bitwise `|` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:76:17""" },
+  { name = "mixed u8 and i64", match = "contains", inline = """error[TYP005]: bitwise `^` requires operands of the same primitive integer type
+ --> tests/golden/operators/integer_bitwise_operator_types.ska:80:17""" },
+]
 
 [[test]]
 name = "integer_shift_operator_types"

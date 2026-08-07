@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "byte_literals"
@@ -65,18 +65,46 @@ name = "malformed_byte_literals"
 mode = "compile-fail"
 source = "malformed_byte_literals.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[LEX004]: empty byte literal
- --> tests/golden/primitives/malformed_byte_literals.ska:2:12"""
+matches = [
+  { name = "empty byte literal", match = "contains", inline = """error[LEX004]: empty byte literal
+ --> tests/golden/primitives/malformed_byte_literals.ska:2:12""" },
+  { name = "multiple byte literal", match = "contains", inline = """error[LEX004]: multiple bytes in byte literal
+ --> tests/golden/primitives/malformed_byte_literals.ska:6:12""" },
+  { name = "unknown byte escape", match = "contains", inline = """error[LEX004]: unknown byte escape
+ --> tests/golden/primitives/malformed_byte_literals.ska:10:12""" },
+  { name = "short hexadecimal byte escape", match = "contains", inline = """error[LEX004]: malformed hexadecimal byte escape
+ --> tests/golden/primitives/malformed_byte_literals.ska:14:12""" },
+  { name = "invalid hexadecimal byte escape", match = "contains", inline = """error[LEX004]: malformed hexadecimal byte escape
+ --> tests/golden/primitives/malformed_byte_literals.ska:18:12""" },
+  { name = "non-ASCII byte literal", match = "contains", inline = """error[LEX004]: non-ASCII content in byte literal
+ --> tests/golden/primitives/malformed_byte_literals.ska:22:12""" },
+  { name = "non-printable byte literal", match = "contains", inline = """error[LEX004]: non-printable byte in byte literal
+ --> tests/golden/primitives/malformed_byte_literals.ska:26:12""" },
+  { name = "unescaped newline in byte literal", match = "contains", inline = """error[LEX004]: unescaped newline in byte literal
+ --> tests/golden/primitives/malformed_byte_literals.ska:30:12""" },
+]
 
 [[test]]
 name = "malformed_hexadecimal_literals"
 mode = "compile-fail"
 source = "malformed_hexadecimal_literals.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[LEX002]: malformed numeric literal `0x`
- --> tests/golden/primitives/malformed_hexadecimal_literals.ska:2:12"""
+matches = [
+  { name = "hexadecimal missing digits", match = "contains", inline = """error[LEX002]: malformed numeric literal `0x`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:2:12""" },
+  { name = "hexadecimal invalid first digit", match = "contains", inline = """error[LEX002]: malformed numeric literal `0xg`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:6:12""" },
+  { name = "hexadecimal invalid later digit", match = "contains", inline = """error[LEX002]: malformed numeric literal `0x1g`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:10:12""" },
+  { name = "hexadecimal unsupported suffix", match = "contains", inline = """error[LEX002]: malformed numeric literal `0xffu64`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:14:12""" },
+  { name = "hexadecimal separator", match = "contains", inline = """error[LEX002]: malformed numeric literal `0x_ff`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:18:12""" },
+  { name = "hexadecimal decimal point", match = "contains", inline = """error[LEX002]: malformed numeric literal `0x1.0`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:22:12""" },
+  { name = "hexadecimal recovery", match = "contains", inline = """error[LEX002]: malformed numeric literal `0xnope`
+ --> tests/golden/primitives/malformed_hexadecimal_literals.ska:26:26""" },
+]
 
 [[test]]
 name = "malformed_integer"
@@ -92,9 +120,18 @@ name = "malformed_numeric_literals"
 mode = "compile-fail"
 source = "malformed_numeric_literals.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[LEX002]: malformed numeric literal `42u64`
- --> tests/golden/primitives/malformed_numeric_literals.ska:2:12"""
+matches = [
+  { name = "numeric unsupported suffix", match = "contains", inline = """error[LEX002]: malformed numeric literal `42u64`
+ --> tests/golden/primitives/malformed_numeric_literals.ska:2:12""" },
+  { name = "numeric missing fraction", match = "contains", inline = """error[LEX002]: malformed numeric literal `1.`
+ --> tests/golden/primitives/malformed_numeric_literals.ska:6:12""" },
+  { name = "numeric missing integer", match = "contains", inline = """error[LEX002]: malformed numeric literal `.5`
+ --> tests/golden/primitives/malformed_numeric_literals.ska:10:12""" },
+  { name = "numeric forbidden suffix", match = "contains", inline = """error[LEX002]: malformed numeric literal `1.0f64`
+ --> tests/golden/primitives/malformed_numeric_literals.ska:14:12""" },
+  { name = "numeric incomplete exponent", match = "contains", inline = """error[LEX002]: malformed numeric literal `1e+`
+ --> tests/golden/primitives/malformed_numeric_literals.ska:18:12""" },
+]
 
 [[test]]
 name = "u64_out_of_range"

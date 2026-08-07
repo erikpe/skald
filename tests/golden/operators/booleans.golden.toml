@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "eager_boolean_operators"
@@ -45,15 +45,57 @@ name = "eager_boolean_operator_types"
 mode = "compile-fail"
 source = "eager_boolean_operator_types.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: logical negation requires a `bool` operand
- --> tests/golden/operators/eager_boolean_operator_types.ska:8:12"""
+matches = [
+  { name = "negate integer", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:8:12""" },
+  { name = "negate float", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:12:12""" },
+  { name = "negate optional", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:16:12""" },
+  { name = "negate class", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:20:12""" },
+  { name = "negate shared", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:24:12""" },
+  { name = "negate object", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:28:12""" },
+  { name = "negate array", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:32:12""" },
+  { name = "negate unit", match = "contains", inline = """error[TYP005]: logical negation requires a `bool` operand
+ --> tests/golden/operators/eager_boolean_operator_types.ska:36:12""" },
+  { name = "mixed equality", match = "contains", inline = """error[TYP005]: binary `==` requires operands of the same supported primitive type
+ --> tests/golden/operators/eager_boolean_operator_types.ska:40:17""" },
+  { name = "boolean ordering", match = "contains", inline = """error[TYP005]: binary `<` requires operands of the same numeric type
+ --> tests/golden/operators/eager_boolean_operator_types.ska:44:17""" },
+  { name = "optional equality", match = "contains", inline = """error[TYP005]: binary `==` requires operands of the same supported primitive type
+ --> tests/golden/operators/eager_boolean_operator_types.ska:52:17""" },
+  { name = "class equality", match = "contains", inline = """error[TYP005]: binary `==` requires operands of the same supported primitive type
+ --> tests/golden/operators/eager_boolean_operator_types.ska:56:17""" },
+]
 
 [[test]]
 name = "short_circuit_boolean_operator_types"
 mode = "compile-fail"
 source = "short_circuit_boolean_operator_types.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
- --> tests/golden/operators/short_circuit_boolean_operator_types.ska:8:18"""
+matches = [
+  { name = "integer left", match = "contains", inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:8:18""" },
+  { name = "integer right", match = "contains", inline = """error[TYP005]: logical operator `||` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:12:18""" },
+  { name = "float left", match = "contains", inline = """error[TYP005]: logical operator `||` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:16:18""" },
+  { name = "optional right", match = "contains", inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:20:17""" },
+  { name = "class left", match = "contains", inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:24:18""" },
+  { name = "shared right", match = "contains", inline = """error[TYP005]: logical operator `||` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:28:18""" },
+  { name = "object left", match = "contains", inline = """error[TYP005]: logical operator `||` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:32:18""" },
+  { name = "array right", match = "contains", inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:36:17""" },
+  { name = "unit left", match = "contains", inline = """error[TYP005]: logical operator `||` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:40:21""" },
+  { name = "mixed bool and integer", match = "contains", inline = """error[TYP005]: logical operator `&&` requires exact `bool` operands
+ --> tests/golden/operators/short_circuit_boolean_operator_types.ska:44:17""" },
+]

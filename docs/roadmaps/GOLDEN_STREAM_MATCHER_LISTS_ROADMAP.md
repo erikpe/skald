@@ -1,6 +1,6 @@
 # Golden Stream Matcher Lists Roadmap
 
-Status: in progress; GM3 is next.
+Status: in progress; GM4 is next.
 
 This roadmap lets one captured process stream own any number of independent
 byte-match contracts. It preserves the existing singular expectation syntax
@@ -86,7 +86,7 @@ matches = [
 - [x] GM0 — Build the independent matcher engine
 - [x] GM1 — Publish the symmetric schema-2 stream contract
 - [x] GM2 — Complete matcher-aware planning and reporting
-- [ ] GM3 — Migrate multi-error compile-fail contracts
+- [x] GM3 — Migrate multi-error compile-fail contracts
 - [ ] GM4 — Harden, validate, document, and close
 
 ## PR-sized implementation sequence
@@ -207,22 +207,22 @@ singular schema-1 reports retain their established meaning.
 every intentional error remains source-to-diagnostic coverage rather than
 being silently present after one asserted leading diagnostic.
 
-- [ ] Audit the complete compiler stderr for
+- [x] Audit the complete compiler stderr for
       `integer_bitwise_operator_types`, `eager_boolean_operator_types`, and
       `short_circuit_boolean_operator_types`; add one named contains matcher
       per intentional invalid operator case without deleting source cases.
-- [ ] Audit `malformed_byte_literals`, `malformed_hexadecimal_literals`, and
+- [x] Audit `malformed_byte_literals`, `malformed_hexadecimal_literals`, and
       `malformed_numeric_literals`; match every intended primary lexical or
       parse diagnostic while avoiding incidental recovery notes.
-- [ ] Audit `produced_alias_invalid_sources` and `primitive_type_errors`; match
+- [x] Audit `produced_alias_invalid_sources` and `primitive_type_errors`; match
       every intended primary type error while retaining their complete invalid
       matrices.
-- [ ] Upgrade only the owning specifications to schema 2 and keep unrelated
+- [x] Upgrade only the owning specifications to schema 2 and keep unrelated
       singular expectations unchanged.
-- [ ] Use stable fragments that own diagnostic code, primary message, and
+- [x] Use stable fragments that own diagnostic code, primary message, and
       source location while allowing richer labels, notes, suggestions, and
       stack-like context to evolve.
-- [ ] Confirm that the matcher set describes intentional diagnostics rather
+- [x] Confirm that the matcher set describes intentional diagnostics rather
       than merely snapshotting every cascading message emitted today; add
       lower-layer unit coverage if the audit exposes an unowned diagnostic
       matrix responsibility.

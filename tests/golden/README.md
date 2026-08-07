@@ -166,6 +166,13 @@ dominates them. Use exact matching for complete output ownership and reviewed
 partial matchers for stable diagnostic or panic fragments that may gain richer
 surrounding context.
 
+When one compile-fail source intentionally contains several independent
+invalid cases, give each intended primary diagnostic a named `contains`
+matcher. Include its diagnostic code, primary message, and source location so
+similar cases remain distinct. Do not match labels, notes, recovery messages,
+or secondary diagnostics unless those details are themselves part of the
+test's contract.
+
 Each run receives a private mode-`0700` temporary directory. Declared
 `input_files` are written there, `output_files` are compared afterward, and
 `{tmp:name}` in arguments or stdin expands to an absolute named path. The
