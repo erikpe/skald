@@ -7,8 +7,8 @@ use super::{
     ExecutionError,
 };
 use crate::{
-    compare_exit, compare_stream, decode_arguments, load_bytes, run_process, MatcherOutcome,
-    PlannedRun, ProcessCommand, ResolvedWorkingDirectory, StreamComparison,
+    compare_exit, compare_stream, decode_arguments, expectation::map_stream_failures, load_bytes,
+    run_process, PlannedRun, ProcessCommand, ResolvedWorkingDirectory, StreamComparison,
 };
 use std::{
     fs,
@@ -140,9 +140,17 @@ fn execute_in_sandbox(
         });
     }
     let stdout = compare_stream(expectation.stdout(), observation.stdout());
-    collect_stream_mismatches(&stdout, &mut mismatches, true);
+    mismatches.extend(map_stream_failures(
+        &stdout,
+        RunMismatch::Stdout,
+        RunMismatch::StdoutLoad,
+    ));
     let stderr = compare_stream(expectation.stderr(), observation.stderr());
-    collect_stream_mismatches(&stderr, &mut mismatches, false);
+    mismatches.extend(map_stream_failures(
+        &stderr,
+        RunMismatch::Stderr,
+        RunMismatch::StderrLoad,
+    ));
     let output_files = compare_output_files(run, &temporary_paths, &mut mismatches)?;
     Ok(ObservedRun {
         command: request,
@@ -152,28 +160,6 @@ fn execute_in_sandbox(
         output_files,
         mismatches,
     })
-}
-
-fn collect_stream_mismatches(
-    comparison: &StreamComparison,
-    mismatches: &mut Vec<RunMismatch>,
-    stdout: bool,
-) {
-    for outcome in comparison.outcomes() {
-        match outcome {
-            MatcherOutcome::Matched(_) => {}
-            MatcherOutcome::Mismatched(mismatch) => mismatches.push(if stdout {
-                RunMismatch::Stdout(mismatch.clone())
-            } else {
-                RunMismatch::Stderr(mismatch.clone())
-            }),
-            MatcherOutcome::LoadFailed(failure) => mismatches.push(if stdout {
-                RunMismatch::StdoutLoad(failure.clone())
-            } else {
-                RunMismatch::StderrLoad(failure.clone())
-            }),
-        }
-    }
 }
 
 fn compare_output_files(

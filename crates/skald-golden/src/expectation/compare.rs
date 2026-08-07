@@ -27,6 +27,24 @@ pub fn compare_stream(expectation: &ResolvedStreamExpectation, actual: &[u8]) ->
     }
 }
 
+/// Maps every failed matcher in declaration order without exposing matching
+/// policy to process-specific execution stages.
+pub(crate) fn map_stream_failures<T>(
+    comparison: &StreamComparison,
+    mut mismatch: impl FnMut(MatcherMismatch) -> T,
+    mut load_failure: impl FnMut(MatcherLoadFailure) -> T,
+) -> Vec<T> {
+    comparison
+        .outcomes()
+        .iter()
+        .filter_map(|outcome| match outcome {
+            MatcherOutcome::Matched(_) => None,
+            MatcherOutcome::Mismatched(failure) => Some(mismatch(failure.clone())),
+            MatcherOutcome::LoadFailed(failure) => Some(load_failure(failure.clone())),
+        })
+        .collect()
+}
+
 fn compare_matcher(
     index: usize,
     matcher: &StreamMatcher<crate::ResolvedByteSource>,

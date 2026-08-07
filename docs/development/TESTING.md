@@ -103,10 +103,12 @@ not repeat the same assertion at every layer.
 
 For a new accepted source form, normally cover its smallest phase-specific
 contract and its source-visible result. For a rejection, assert the diagnostic
-at the phase that owns it and add an exact compile-failure golden only when the
-complete rendered diagnostic is part of the regression. Backend tests should
-prefer assembly shape or legality assertions; native goldens are for behavior
-that assembly text alone does not establish.
+at the phase that owns it and add a compile-failure golden when the rendered
+diagnostic is part of the regression. Use exact matching when the complete
+output is the contract; use independently named partial matchers when one
+source owns several primary diagnostics whose labels, notes, or other context
+may evolve. Backend tests should prefer assembly shape or legality assertions;
+native goldens are for behavior that assembly text alone does not establish.
 
 Primitive binding reassignment is covered at each owning boundary: syntax tests
 retain direct and grouped assignment shapes; resolver tests pin `LocalId`
@@ -165,6 +167,7 @@ make golden-filter GOLDEN_FILTER='operators/**'
 make golden-exact GOLDEN_ID='calls/functions::direct_call::default::return_value'
 make golden-determinism-test
 scripts/golden.sh --list --filter 'runner/**'
+scripts/golden.sh --explain '<canonical-leaf-id>'
 scripts/golden.sh --format json --filter 'syntax/**'
 scripts/golden.sh --filter 'standard_io/**'
 scripts/golden.sh --determinism full --filter 'runtime/panic**'
@@ -172,8 +175,8 @@ scripts/golden.sh --determinism compile --filter 'modules/**'
 scripts/golden.sh --determinism compile --filter 'primitives/**'
 ```
 
-The [golden fixture guide](../../tests/golden/README.md#selection-and-determinism)
-owns the current filtering and canonical-ID contract.
+The [golden fixture guide](../../tests/golden/README.md) owns the versioned
+schema, stream-matcher semantics, filtering, and canonical-ID contracts.
 
 The runner's compiler-independent process tests use its Rust fake-process
 binary to cover exact and partial byte expectations, non-UTF-8 Unix arguments,

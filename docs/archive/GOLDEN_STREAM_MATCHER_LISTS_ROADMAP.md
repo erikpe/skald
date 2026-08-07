@@ -1,6 +1,6 @@
 # Golden Stream Matcher Lists Roadmap
 
-Status: in progress; GM4 is next.
+Status: complete.
 
 This roadmap lets one captured process stream own any number of independent
 byte-match contracts. It preserves the existing singular expectation syntax
@@ -87,7 +87,7 @@ matches = [
 - [x] GM1 — Publish the symmetric schema-2 stream contract
 - [x] GM2 — Complete matcher-aware planning and reporting
 - [x] GM3 — Migrate multi-error compile-fail contracts
-- [ ] GM4 — Harden, validate, document, and close
+- [x] GM4 — Harden, validate, document, and close
 
 ## PR-sized implementation sequence
 
@@ -241,28 +241,28 @@ unasserted trailing stderr, and the complete ordinary golden suite passes.
 **Purpose:** Audit the completed stream abstraction, document only current
 behavior, prove repository-wide compatibility, and archive the roadmap.
 
-- [ ] Audit the spec, plan, expectation, compile, execute, and report facades
+- [x] Audit the spec, plan, expectation, compile, execute, and report facades
       for duplicated collection traversal or process-specific matching logic;
       extract only cohesive repeated responsibilities and keep implementation
       modules private behind selective re-exports.
-- [ ] Stress arbitrary matcher counts, large captured streams, large external
+- [x] Stress arbitrary matcher counts, large captured streams, large external
       fragments, non-UTF-8 bytes, overlapping compatible matches, mixed exact
       and partial policies, missing external data, parallel completion, and
       deterministic final ordering.
-- [ ] Update the golden fixture guide as the authoritative schema-2 syntax and
+- [x] Update the golden fixture guide as the authoritative schema-2 syntax and
       semantics reference, including singular shorthand, independent AND
       behavior, naming, compile-fail stdout defaults, exact dominance, and
       appropriate partial-diagnostic ownership.
-- [ ] Update development testing and debugging guidance where matcher lists
+- [x] Update development testing and debugging guidance where matcher lists
       change contributor workflows; keep one authoritative schema description
       and link to it elsewhere.
-- [ ] Search code, tests, Make output, and living documentation for assumptions
+- [x] Search code, tests, Make output, and living documentation for assumptions
       that a stream has exactly one matcher or that compile-fail stdout is
       unconditionally empty; remove stale wording and compatibility helpers.
-- [ ] Run the complete repository gate, full determinism audit, MSRV check,
+- [x] Run the complete repository gate, full determinism audit, MSRV check,
       documentation check, formatting, Clippy, and diff hygiene from an
       artifact-free snapshot.
-- [ ] Mark every task complete, archive this roadmap, update active and archive
+- [x] Mark every task complete, archive this roadmap, update active and archive
       indexes and links, and record any genuinely deferred matcher algebra in
       a separate indexed discoveries document rather than expanding scope.
 

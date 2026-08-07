@@ -74,7 +74,7 @@ inline = """error[TYP005]: return value has the wrong type
  --> tests/golden/example/wrong_type.ska:2:12"""
 ```
 
-Schema 2 may match compiler stdout explicitly and may attach any number of
+Schema 2 may match compiler stdout explicitly and may attach one or more
 independent matchers to native stdout, native stderr, compile-fail stdout, or
 compile-fail stderr:
 

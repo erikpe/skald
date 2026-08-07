@@ -5,6 +5,7 @@ mod error;
 mod load;
 mod model;
 
+pub(crate) use compare::map_stream_failures;
 pub use compare::{compare_exit, compare_matchers, compare_stream};
 pub use error::ExpectationError;
 pub use load::{decode_arguments, load_bytes};

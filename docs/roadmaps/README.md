@@ -6,10 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md) —
-  in progress; multi-error compile-fail contracts now own every intentional
-  primary diagnostic and final hardening and closure are next. No active
-  roadmap dependency.
+No implementation roadmap is currently in progress.
 
 ## Planned
 

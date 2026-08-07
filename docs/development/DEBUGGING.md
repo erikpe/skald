@@ -277,7 +277,12 @@ artifacts are under `build/golden/`; they are disposable debugging output.
 Use `make golden-filter GOLDEN_FILTER='<glob>'` or
 `make golden-exact GOLDEN_ID='<canonical-id>'` for common focused runs. Use
 `scripts/golden.sh` when combining multiple filters, exclusions, report
-formats, or debugging options.
+formats, or debugging options. `scripts/golden.sh --explain '<canonical-id>'`
+shows each resolved matcher name or index, policy, and inline or external
+source. Add `--show-output` to a focused run to inspect the shared captured
+stream and every passing matcher result. The
+[golden fixture guide](../../tests/golden/README.md) is the authoritative
+schema and matching reference.
 
 ## Symptom to owner
 

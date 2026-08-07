@@ -1,5 +1,5 @@
 use super::{
-    compare::{compare_exit, find_bytes},
+    compare::{compare_exit, find_bytes, map_stream_failures},
     compare_matchers, compare_stream, MatcherOutcome, StreamMatcher, StreamMatcherSet,
 };
 use crate::{
@@ -191,6 +191,45 @@ fn retains_every_mismatch_and_load_failure_without_short_circuiting() {
         assert!(failure.to_string().contains("could not read"));
         assert!(failure.source_message().is_some());
     }
+    let failures = map_stream_failures(
+        &comparison,
+        |failure| format!("mismatch:{}", failure.index()),
+        |failure| format!("load:{}", failure.index()),
+    );
+    assert_eq!(failures, ["mismatch:0", "mismatch:1", "load:2", "load:3"]);
+}
+
+#[test]
+fn large_external_matchers_share_one_large_captured_stream() {
+    const STREAM_SIZE: usize = 2 * 1024 * 1024;
+    const FRAGMENT_SIZE: usize = 64 * 1024;
+    const FRAGMENT_OFFSET: usize = 1024 * 1024;
+
+    let mut actual = vec![b'a'; STREAM_SIZE];
+    actual[FRAGMENT_OFFSET..FRAGMENT_OFFSET + FRAGMENT_SIZE].fill(b'b');
+    let exact = ExpectationFile::new(&actual);
+    let prefix = ExpectationFile::new(&actual[..FRAGMENT_SIZE]);
+    let fragment = ExpectationFile::new(&actual[FRAGMENT_OFFSET..FRAGMENT_OFFSET + FRAGMENT_SIZE]);
+    let matchers = StreamMatcherSet::try_from(vec![
+        StreamMatcher::named("complete", MatchMode::Exact, exact.source()),
+        StreamMatcher::named("prefix", MatchMode::StartsWith, prefix.source()),
+        StreamMatcher::named("middle", MatchMode::Contains, fragment.source()),
+    ])
+    .unwrap();
+
+    let comparison = compare_matchers(&matchers, &actual);
+
+    assert!(comparison.passed());
+    assert_eq!(comparison.actual(), actual);
+    let offsets = comparison
+        .outcomes()
+        .iter()
+        .map(|outcome| match outcome {
+            MatcherOutcome::Matched(result) => result.offset(),
+            outcome => panic!("expected a successful matcher, got {outcome:?}"),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(offsets, [0, 0, FRAGMENT_OFFSET]);
 }
 
 #[test]

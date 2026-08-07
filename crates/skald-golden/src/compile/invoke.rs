@@ -3,8 +3,8 @@ use super::{
     Determinism,
 };
 use crate::{
-    compare_stream, run_process, MatcherOutcome, PlannedBuild, ProcessCommand, ProcessTermination,
-    ResolvedCompileExpectation, StreamComparison,
+    compare_stream, expectation::map_stream_failures, run_process, PlannedBuild, ProcessCommand,
+    ProcessTermination, ResolvedCompileExpectation,
 };
 use std::{
     ffi::OsString,
@@ -133,10 +133,18 @@ pub(crate) fn compile_build(
     if let CompilationPurpose::CompileFail(expectation) = &purpose {
         if let Some(process) = observations.first().and_then(CompilerObservation::process) {
             let stdout = compare_stream(expectation.stdout(), process.stdout());
-            collect_stream_issues(&stdout, &mut issues, true);
+            issues.extend(map_stream_failures(
+                &stdout,
+                CompilationIssue::StdoutExpectation,
+                CompilationIssue::StdoutExpectationLoad,
+            ));
             stdout_comparison = Some(stdout);
             let stderr = compare_stream(expectation.stderr(), process.stderr());
-            collect_stream_issues(&stderr, &mut issues, false);
+            issues.extend(map_stream_failures(
+                &stderr,
+                CompilationIssue::StderrExpectation,
+                CompilationIssue::StderrExpectationLoad,
+            ));
             stderr_comparison = Some(stderr);
         }
     }
@@ -148,28 +156,6 @@ pub(crate) fn compile_build(
         stderr_comparison,
         issues,
     )
-}
-
-fn collect_stream_issues(
-    comparison: &StreamComparison,
-    issues: &mut Vec<CompilationIssue>,
-    stdout: bool,
-) {
-    for outcome in comparison.outcomes() {
-        match outcome {
-            MatcherOutcome::Matched(_) => {}
-            MatcherOutcome::Mismatched(mismatch) => issues.push(if stdout {
-                CompilationIssue::StdoutExpectation(mismatch.clone())
-            } else {
-                CompilationIssue::StderrExpectation(mismatch.clone())
-            }),
-            MatcherOutcome::LoadFailed(failure) => issues.push(if stdout {
-                CompilationIssue::StdoutExpectationLoad(failure.clone())
-            } else {
-                CompilationIssue::StderrExpectationLoad(failure.clone())
-            }),
-        }
-    }
 }
 
 fn check_process(

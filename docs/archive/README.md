@@ -72,6 +72,7 @@ Archived plans:
 - [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
 - [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md)
 - [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md)
+- [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md)
 
 Resolved string-design inputs:
 
