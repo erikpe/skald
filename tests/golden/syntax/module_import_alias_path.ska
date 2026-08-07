@@ -1,5 +1,0 @@
-import dependency as nested::Alias;
-
-fn main() -> i64 {
-    return 0;
-}

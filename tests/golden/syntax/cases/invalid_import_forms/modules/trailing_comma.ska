@@ -1,0 +1,5 @@
+from dependency import value,;
+
+public fn value() -> i64 {
+    return 2;
+}

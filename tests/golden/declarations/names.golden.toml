@@ -1,22 +1,16 @@
-schema = 1
+schema = 2
 
 [[test]]
-name = "duplicate_function"
+name = "duplicate_declarations"
 mode = "compile-fail"
-source = "duplicate_function.ska"
+source = "duplicate_declarations.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[RES001]: duplicate function `main`
- --> tests/golden/declarations/duplicate_function.ska:5:4"""
-
-[[test]]
-name = "duplicate_local"
-mode = "compile-fail"
-source = "duplicate_local.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[RES002]: duplicate local binding `value`
- --> tests/golden/declarations/duplicate_local.ska:3:9"""
+matches = [
+  { name = "top-level function", match = "contains", inline = """error[RES001]: duplicate function `duplicate`
+ --> tests/golden/declarations/duplicate_declarations.ska:5:4""" },
+  { name = "local binding", match = "contains", inline = """error[RES002]: duplicate local binding `value`
+ --> tests/golden/declarations/duplicate_declarations.ska:11:9""" },
+]
 
 [[test]]
 name = "unknown_type"

@@ -1,0 +1,20 @@
+fn helper() -> i64 {
+    return 1;
+}
+
+fn function_as_value() -> i64 {
+    return helper;
+}
+
+fn invalid_call_target() -> i64 {
+    var value: i64 = 1;
+    return value();
+}
+
+fn unknown_function() -> i64 {
+    return absent();
+}
+
+fn main() -> i64 {
+    return 0;
+}

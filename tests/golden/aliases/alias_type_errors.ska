@@ -1,0 +1,37 @@
+class Left { init() {} }
+class Right { init() {} }
+class Value { init() {} }
+
+class Counter {
+    value: i64;
+    init() { self.value = 0; }
+    mut fn add(amount: i64) -> unit { self.value = self.value + amount; }
+}
+
+fn inspect_left(ref value: Left) -> unit {}
+fn inspect_two(ref value: Value, amount: i64) -> unit {}
+fn mutate(mut ref counter: Counter) -> unit {}
+fn consume(value: i64) -> unit {}
+
+fn forward_readonly(ref counter: Counter) -> unit {
+    mutate(counter);
+}
+
+fn misuse_object_value(ref value: Value) -> i64 {
+    consume(value);
+    var copy: Value = value;
+    return value;
+}
+
+fn mutate_readonly(ref counter: Counter) -> unit {
+    counter.value = 1;
+    counter.add(1);
+}
+
+fn main() -> i64 {
+    var right: Right = Right();
+    inspect_left(right);
+    var value: Value = Value();
+    inspect_two(value);
+    return 0;
+}

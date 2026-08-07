@@ -1,0 +1,11 @@
+fn invalid_token() -> i64 {
+    return @;
+}
+
+fn malformed_string() -> i64 {
+    return "bad\q";
+}
+
+fn main() -> i64 {
+    return 0;
+}

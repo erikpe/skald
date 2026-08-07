@@ -1,0 +1,37 @@
+fn value() -> i64 {
+    return 1;
+}
+
+fn notify() -> unit {}
+
+fn identity(value: i64) -> i64 {
+    return value;
+}
+
+fn discarded_call() -> unit {
+    value();
+}
+
+fn missing_return() -> i64 {
+    var value: i64 = 0;
+}
+
+fn missing_return_expression() -> i64 {
+    return;
+}
+
+fn unit_call_as_value() -> i64 {
+    return notify();
+}
+
+fn value_return_from_unit() -> unit {
+    return 1;
+}
+
+fn wrong_call_arity() -> i64 {
+    return identity();
+}
+
+fn main() -> i64 {
+    return 0;
+}

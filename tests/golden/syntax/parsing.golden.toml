@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "expected_declaration"
@@ -19,28 +19,19 @@ inline = """error[PAR002]: expected `;` after the return statement
  --> tests/golden/syntax/missing_semicolon.ska:3:1"""
 
 [[test]]
-name = "import_alias_path"
+name = "invalid_import_forms"
 mode = "compile-fail"
-source = "module_import_alias_path.ska"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/invalid_import_forms/modules",
+  "--no-stdlib",
+]
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR011]: import aliases must be one identifier
- --> tests/golden/syntax/module_import_alias_path.ska:1:28"""
-
-[[test]]
-name = "import_trailing_comma"
-mode = "compile-fail"
-source = "module_import_trailing_comma.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR011]: selective imports do not allow a trailing comma
- --> tests/golden/syntax/module_import_trailing_comma.ska:1:29"""
-
-[[test]]
-name = "import_wildcard"
-mode = "compile-fail"
-source = "module_import_wildcard.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR011]: wildcard imports are not supported
- --> tests/golden/syntax/module_import_wildcard.ska:1:24"""
+matches = [
+  { name = "alias path", match = "contains", inline = """error[PAR011]: import aliases must be one identifier
+ --> modules/alias_path.ska:1:28""" },
+  { name = "trailing comma", match = "contains", inline = """error[PAR011]: selective imports do not allow a trailing comma
+ --> modules/trailing_comma.ska:1:29""" },
+  { name = "wildcard", match = "contains", inline = """error[PAR011]: wildcard imports are not supported
+ --> modules/wildcard.ska:1:24""" },
+]

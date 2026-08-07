@@ -1,19 +1,13 @@
-schema = 1
+schema = 2
 
 [[test]]
-name = "invalid_token"
+name = "invalid_lexemes"
 mode = "compile-fail"
-source = "invalid_token.ska"
+source = "invalid_lexemes.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[LEX001]: unexpected character `@`
- --> tests/golden/syntax/invalid_token.ska:2:12"""
-
-[[test]]
-name = "malformed_string_literal"
-mode = "compile-fail"
-source = "malformed_string_literal.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[LEX003]: unknown string escape
- --> tests/golden/syntax/malformed_string_literal.ska:2:12"""
+matches = [
+  { name = "invalid token", match = "contains", inline = """error[LEX001]: unexpected character `@`
+ --> tests/golden/syntax/invalid_lexemes.ska:2:12""" },
+  { name = "malformed string escape", match = "contains", inline = """error[LEX003]: unknown string escape
+ --> tests/golden/syntax/invalid_lexemes.ska:6:12""" },
+]

@@ -1,4 +1,8 @@
-fn main() -> i64 {
+fn predicate() -> bool {
+    return 0;
+}
+
+fn invalid_reassignments() -> unit {
     var signed: i64 = 0;
     var unsigned: u64 = 0u;
     var byte: u8 = 0u8;
@@ -10,9 +14,12 @@ fn main() -> i64 {
     byte = 1;
     float = true;
     flag = 1.0;
-    return 0;
 }
 
 fn invalid_parameter(value: i64) -> unit {
     value = 1u;
+}
+
+fn main() -> i64 {
+    return 0;
 }

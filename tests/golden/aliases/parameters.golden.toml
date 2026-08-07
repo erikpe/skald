@@ -32,13 +32,26 @@ name = "source_and_lifetime_matrix"
 expect = { stdout = { file = "data/produced_alias_arguments.stdout" } }
 
 [[test]]
-name = "exact_type_mismatch"
+name = "type_errors"
 mode = "compile-fail"
-source = "alias_exact_type_mismatch.ska"
+source = "alias_type_errors.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: alias argument has type `Right`, expected `Left`
- --> tests/golden/aliases/alias_exact_type_mismatch.ska:8:13"""
+matches = [
+  { name = "read-only mutable forwarding", match = "contains", inline = """error[TYP021]: read-only access cannot satisfy a mutable alias parameter
+ --> tests/golden/aliases/alias_type_errors.ska:17:12""" },
+  { name = "object passed as scalar", match = "contains", inline = """error[TYP014]: an inline object cannot be used as an ordinary value
+ --> tests/golden/aliases/alias_type_errors.ska:21:13""" },
+  { name = "object returned as scalar", match = "contains", inline = """error[TYP014]: an inline object cannot be used as an ordinary value
+ --> tests/golden/aliases/alias_type_errors.ska:23:12""" },
+  { name = "read-only field mutation", match = "contains", inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/aliases/alias_type_errors.ska:27:13""" },
+  { name = "read-only mutable method", match = "contains", inline = """error[TYP018]: mutable method `add` requires mutable receiver access
+ --> tests/golden/aliases/alias_type_errors.ska:28:13""" },
+  { name = "exact alias type", match = "contains", inline = """error[TYP005]: alias argument has type `Right`, expected `Left`
+ --> tests/golden/aliases/alias_type_errors.ska:33:18""" },
+  { name = "alias call arity", match = "contains", inline = """error[TYP004]: function `inspect_two` expects 2 arguments but received 1
+ --> tests/golden/aliases/alias_type_errors.ska:35:5""" },
+]
 
 [[test]]
 name = "external_parameter"
@@ -66,42 +79,6 @@ source = "alias_malformed_modifiers.ska"
 match = "starts-with"
 inline = """error[PAR002]: `mut` must precede `ref` in a mutable alias parameter
  --> tests/golden/aliases/alias_malformed_modifiers.ska:3:18"""
-
-[[test]]
-name = "mutable_forwarding"
-mode = "compile-fail"
-source = "alias_mutable_forwarding.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP021]: read-only access cannot satisfy a mutable alias parameter
- --> tests/golden/aliases/alias_mutable_forwarding.ska:6:12"""
-
-[[test]]
-name = "object_value_misuse"
-mode = "compile-fail"
-source = "alias_object_value_misuse.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP014]: an inline object cannot be used as an ordinary value
- --> tests/golden/aliases/alias_object_value_misuse.ska:6:13"""
-
-[[test]]
-name = "readonly_mutation"
-mode = "compile-fail"
-source = "alias_readonly_mutation.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP018]: cannot assign through a read-only receiver
- --> tests/golden/aliases/alias_readonly_mutation.ska:8:13"""
-
-[[test]]
-name = "wrong_arity"
-mode = "compile-fail"
-source = "alias_wrong_arity.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP004]: function `inspect` expects 2 arguments but received 1
- --> tests/golden/aliases/alias_wrong_arity.ska:7:5"""
 
 [[test]]
 name = "produced_invalid_sources"

@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "break_loops"
@@ -33,22 +33,16 @@ name = "loop_matrix"
 expect = { stdout = { file = "data/while_loops.stdout" } }
 
 [[test]]
-name = "break_outside_loop"
+name = "loop_placement_errors"
 mode = "compile-fail"
-source = "break_outside_loop.ska"
+source = "loop_placement_errors.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[RES035]: `break` requires an enclosing loop
- --> tests/golden/control_flow/break_outside_loop.ska:2:5"""
-
-[[test]]
-name = "continue_outside_loop"
-mode = "compile-fail"
-source = "continue_outside_loop.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[RES035]: `continue` requires an enclosing loop
- --> tests/golden/control_flow/continue_outside_loop.ska:2:5"""
+matches = [
+  { name = "break outside loop", match = "contains", inline = """error[RES035]: `break` requires an enclosing loop
+ --> tests/golden/control_flow/loop_placement_errors.ska:2:5""" },
+  { name = "continue outside loop", match = "contains", inline = """error[RES035]: `continue` requires an enclosing loop
+ --> tests/golden/control_flow/loop_placement_errors.ska:3:5""" },
+]
 
 [[test]]
 name = "while_condition_type"

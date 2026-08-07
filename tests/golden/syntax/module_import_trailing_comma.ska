@@ -1,5 +1,0 @@
-from dependency import value,;
-
-fn main() -> i64 {
-    return 0;
-}

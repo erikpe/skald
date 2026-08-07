@@ -1,8 +1,0 @@
-fn value() -> i64 {
-    return 1;
-}
-
-fn main() -> i64 {
-    value();
-    return 0;
-}

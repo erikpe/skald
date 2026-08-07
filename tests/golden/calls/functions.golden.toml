@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "execution"
@@ -8,85 +8,38 @@ source = "function_calls.ska"
 name = "direct_nested_unit_and_abi_calls"
 
 [[test]]
-name = "discarded_i64_call"
+name = "resolution_errors"
 mode = "compile-fail"
-source = "discarded_i64_call.ska"
+source = "call_resolution_errors.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP008]: a call statement must call a function returning `unit`
- --> tests/golden/calls/discarded_i64_call.ska:6:5"""
+matches = [
+  { name = "function used as value", match = "contains", inline = """error[RES005]: function `helper` cannot be used as a value
+ --> tests/golden/calls/call_resolution_errors.ska:6:12""" },
+  { name = "binding called as function", match = "contains", inline = """error[RES004]: binding `value` is not callable
+ --> tests/golden/calls/call_resolution_errors.ska:11:12""" },
+  { name = "unknown function", match = "contains", inline = """error[RES003]: unknown function or class `absent`
+ --> tests/golden/calls/call_resolution_errors.ska:15:12""" },
+]
 
 [[test]]
-name = "function_used_as_value"
+name = "type_errors"
 mode = "compile-fail"
-source = "function_used_as_value.ska"
+source = "call_type_errors.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[RES005]: function `helper` cannot be used as a value
- --> tests/golden/calls/function_used_as_value.ska:6:12"""
-
-[[test]]
-name = "invalid_call_target"
-mode = "compile-fail"
-source = "invalid_call_target.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[RES004]: binding `value` is not callable
- --> tests/golden/calls/invalid_call_target.ska:3:12"""
-
-[[test]]
-name = "missing_return"
-mode = "compile-fail"
-source = "missing_return.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP006]: function `main` does not return a value
- --> tests/golden/calls/missing_return.ska:1:18"""
-
-[[test]]
-name = "missing_return_expression"
-mode = "compile-fail"
-source = "missing_return_expression.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP007]: an `i64` function must return a value
- --> tests/golden/calls/missing_return_expression.ska:2:5"""
-
-[[test]]
-name = "unit_call_as_value"
-mode = "compile-fail"
-source = "unit_call_as_value.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: return value has type `unit` but `i64` is required
- --> tests/golden/calls/unit_call_as_value.ska:5:12"""
-
-[[test]]
-name = "unknown_function"
-mode = "compile-fail"
-source = "unknown_function.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[RES003]: unknown function or class `absent`
- --> tests/golden/calls/unknown_function.ska:2:12"""
-
-[[test]]
-name = "value_return_from_unit"
-mode = "compile-fail"
-source = "value_return_from_unit.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP007]: function `bad` cannot return a value
- --> tests/golden/calls/value_return_from_unit.ska:2:5"""
-
-[[test]]
-name = "wrong_call_arity"
-mode = "compile-fail"
-source = "wrong_call_arity.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP004]: function `identity` expects 1 argument but received 0
- --> tests/golden/calls/wrong_call_arity.ska:6:12"""
+matches = [
+  { name = "discarded value call", match = "contains", inline = """error[TYP008]: a call statement must call a function returning `unit`
+ --> tests/golden/calls/call_type_errors.ska:12:5""" },
+  { name = "missing return", match = "contains", inline = """error[TYP006]: function `missing_return` does not return a value
+ --> tests/golden/calls/call_type_errors.ska:15:28""" },
+  { name = "missing return expression", match = "contains", inline = """error[TYP007]: an `i64` function must return a value
+ --> tests/golden/calls/call_type_errors.ska:20:5""" },
+  { name = "unit call used as value", match = "contains", inline = """error[TYP005]: return value has type `unit` but `i64` is required
+ --> tests/golden/calls/call_type_errors.ska:24:12""" },
+  { name = "value returned from unit", match = "contains", inline = """error[TYP007]: function `value_return_from_unit` cannot return a value
+ --> tests/golden/calls/call_type_errors.ska:28:5""" },
+  { name = "wrong call arity", match = "contains", inline = """error[TYP004]: function `identity` expects 1 argument but received 0
+ --> tests/golden/calls/call_type_errors.ska:32:12""" },
+]
 
 [[test]]
 name = "invalid_external_parameter"

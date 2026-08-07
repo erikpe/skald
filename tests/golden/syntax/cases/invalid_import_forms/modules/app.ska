@@ -1,0 +1,7 @@
+import alias_path;
+import trailing_comma;
+import wildcard;
+
+fn main() -> i64 {
+    return 0;
+}

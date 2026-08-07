@@ -1,4 +1,0 @@
-fn main() -> i64 {
-    var value: i64 = 1;
-    return value();
-}

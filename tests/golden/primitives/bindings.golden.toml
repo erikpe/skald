@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "primitive_binding_reassignment"
@@ -9,22 +9,26 @@ name = "type_matrix"
 expect = { stdout = { file = "data/primitive_binding_reassignment.stdout" } }
 
 [[test]]
-name = "bool_i64_mismatch"
+name = "primitive_type_errors"
 mode = "compile-fail"
-source = "bool_i64_mismatch.ska"
+source = "primitive_type_errors.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: return value has type `i64` but `bool` is required
- --> tests/golden/primitives/bool_i64_mismatch.ska:2:12"""
-
-[[test]]
-name = "primitive_binding_reassignment_types"
-mode = "compile-fail"
-source = "primitive_binding_reassignment_types.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: primitive binding assignment has type `u64` but `i64` is required
- --> tests/golden/primitives/primitive_binding_reassignment_types.ska:8:14"""
+matches = [
+  { name = "boolean return", match = "contains", inline = """error[TYP005]: return value has type `i64` but `bool` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:2:12""" },
+  { name = "i64 assignment", match = "contains", inline = """error[TYP005]: primitive binding assignment has type `u64` but `i64` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:12:14""" },
+  { name = "u64 assignment", match = "contains", inline = """error[TYP005]: primitive binding assignment has type `u8` but `u64` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:13:16""" },
+  { name = "u8 assignment", match = "contains", inline = """error[TYP005]: primitive binding assignment has type `i64` but `u8` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:14:12""" },
+  { name = "f64 assignment", match = "contains", inline = """error[TYP005]: primitive binding assignment has type `bool` but `f64` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:15:13""" },
+  { name = "bool assignment", match = "contains", inline = """error[TYP005]: primitive binding assignment has type `f64` but `bool` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:16:12""" },
+  { name = "parameter assignment", match = "contains", inline = """error[TYP005]: primitive binding assignment has type `u64` but `i64` is required
+ --> tests/golden/primitives/primitive_type_errors.ska:20:13""" },
+]
 
 [[test]]
 name = "unknown_local"
