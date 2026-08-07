@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR11 is next.
+Status: in progress; GR12 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -61,7 +61,7 @@ implicitly.
 - [x] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
 - [x] GR9 — Migrate module and replacement-standard-library fixtures
 - [x] GR10 — Migrate primitive, operator, call, and control-flow fixtures
-- [ ] GR11 — Migrate class, object, alias, and polymorphism fixtures
+- [x] GR11 — Migrate class, object, alias, and polymorphism fixtures
 - [ ] GR12 — Migrate array, optional, and shared-ownership fixtures
 - [ ] GR13 — Migrate remaining diagnostics and remove legacy discovery
 - [ ] GR14 — Harden, validate, document, and close
@@ -520,22 +520,40 @@ separate, and all previous observations remain represented.
 **Purpose:** Move object-model coverage without weakening lifecycle,
 evaluation-order, ABI, privacy, dispatch, or diagnostic observations.
 
-- [ ] Migrate inline and class object construction, fields, nested values,
+- [x] Migrate inline and class object construction, fields, nested values,
       initializers, explicit copy construction, object parameters/results,
       temporaries, destruction, private/static members, inheritance,
       polymorphism, virtual behavior, object casts, and checked failures.
-- [ ] Migrate alias parameter, produced-alias, primitive-alias, exact-type,
+- [x] Migrate alias parameter, produced-alias, primitive-alias, exact-type,
       access, mutability, external, and misuse coverage alongside the feature
       that owns each source behavior.
-- [ ] Preserve exact stdout lifecycle traces, process status, evaluation order,
+- [x] Preserve exact stdout lifecycle traces, process status, evaluation order,
       and failure-before-later-effect observations.
-- [ ] Use stable partial compile-fail stderr expectations for diagnostic code,
+- [x] Use stable partial compile-fail stderr expectations for diagnostic code,
       primary message, and primary location unless a case intentionally owns
       the complete multi-label renderer.
-- [ ] Keep source programs separate when combining them would hide ownership,
+- [x] Keep source programs separate when combining them would hide ownership,
       cleanup, register pressure, or dynamic dispatch boundaries.
-- [ ] Record mapping, filtered parity, and legacy count changes before deleting
+- [x] Record mapping, filtered parity, and legacy count changes before deleting
       each old fixture set.
+
+GR11 completed on 2026-08-07. Ten new feature specs now own 66 former legacy
+observations: 26 native and 40 compile-fail leaves across aliases, inline
+objects, object values, initialization, deterministic destruction, casts,
+private and static members, inheritance, and virtual dispatch. Related local
+private-initializer and static-field behavior now lives beside the module
+coverage migrated earlier.
+
+All construction, evaluation, copy, return-destination, cleanup, and dispatch
+traces remain byte-exact external expectations. ABI-pressure, lifecycle,
+full-expression, and selected-failure programs remain separate sources with
+semantic run names. Native cast failure matches its stable panic prefix, and
+all migrated compile failures match diagnostic identity, primary message, and
+repository-relative primary location without freezing richer renderer context.
+The checked migration map preserves the 290-leaf suite and reduces the legacy
+boundary to 32 native and 39 compile-fail leaves. Compiler determinism tests
+that reuse polymorphism and produced-alias sources now reference their feature
+owners.
 
 **Tests:** Feature filters in default and compile-determinism modes; full mode
 for lifecycle and failure-order groups; affected type-check, HIR, MIR,

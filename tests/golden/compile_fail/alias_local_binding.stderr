@@ -1,5 +1,0 @@
-error[PAR003]: local alias bindings are not supported
- --> tests/golden/compile_fail/alias_local_binding.ska:5:5
-   |
-5 |     ref alias: Value = value;
-   |     ^^^ `ref` and `mut ref` are supported only on parameters

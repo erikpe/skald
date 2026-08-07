@@ -1,5 +1,0 @@
-error[RES008]: class `Resource` has no member `destroy`
- --> tests/golden/compile_fail/destructor_explicit_call.ska:4:14
-   |
-4 |         self.destroy();
-   |              ^^^^^^^ unknown member

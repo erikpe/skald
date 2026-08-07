@@ -1,0 +1,9 @@
+schema = 1
+
+[[test]]
+name = "class_local_construction"
+mode = "run"
+source = "private_initializers.ska"
+[[test.run]]
+name = "private_initializer_access"
+expect = { exit = 42 }

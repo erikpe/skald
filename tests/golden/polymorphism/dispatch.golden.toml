@@ -1,0 +1,36 @@
+schema = 1
+
+[[test]]
+name = "dispatch"
+mode = "run"
+source = "polymorphism.ska"
+[[test.run]]
+name = "inheritance_and_virtual_calls"
+expect = { exit = 0, stdout = { file = "data/polymorphism.stdout" } }
+
+[[test]]
+name = "hierarchy"
+mode = "compile-fail"
+source = "polymorphism_hierarchy.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES013]: unknown base class `Missing`
+ --> tests/golden/polymorphism/polymorphism_hierarchy.ska:5:23"""
+
+[[test]]
+name = "method_types"
+mode = "compile-fail"
+source = "polymorphism_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP026]: method `resize` does not exactly implement `Shape.resize`
+ --> tests/golden/polymorphism/polymorphism_types.ska:17:8"""
+
+[[test]]
+name = "virtual_declarations"
+mode = "compile-fail"
+source = "polymorphism_virtuals.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES017]: method `direct` cannot override a non-virtual method
+ --> tests/golden/polymorphism/polymorphism_virtuals.ska:12:5"""

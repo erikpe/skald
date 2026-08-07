@@ -1,8 +1,0 @@
-error[TYP021]: read-only access cannot satisfy a mutable alias parameter
- --> tests/golden/compile_fail/alias_mutable_forwarding.ska:6:12
-   |
-6 |     mutate(counter);
-   |            ^^^^^^^ this place provides read-only access
-   |
-3 | fn mutate(mut ref counter: Counter) -> unit {}
-   |           ------------------------ mutable alias declared here

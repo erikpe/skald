@@ -1,5 +1,0 @@
-error[TYP015]: construction is not allowed in this expression context
- --> tests/golden/compile_fail/destructor_excluded_construction.ska:13:9
-    |
-13 |         Leaf();
-    |         ^^^^^^ use this object source in initialization, assignment, an object argument, or an object return

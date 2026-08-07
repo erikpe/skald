@@ -1,0 +1,77 @@
+schema = 1
+
+[[test]]
+name = "counter"
+mode = "run"
+source = "inline_object_counter.ska"
+[[test.run]]
+name = "construction_count"
+expect = { exit = 0, stdout = { file = "data/inline_object_counter.stdout" } }
+
+[[test]]
+name = "evaluation_order"
+mode = "run"
+source = "inline_object_evaluation_order.ska"
+[[test.run]]
+name = "left_to_right"
+expect = { exit = 0, stdout = { file = "data/inline_object_evaluation_order.stdout" } }
+
+[[test]]
+name = "fields"
+mode = "run"
+source = "inline_object_fields.ska"
+[[test.run]]
+name = "access_and_mutation"
+expect = { exit = 0, stdout = { file = "data/inline_object_fields.stdout" } }
+
+[[test]]
+name = "nested_fields"
+mode = "run"
+source = "inline_object_nested_fields.ska"
+[[test.run]]
+name = "nested_access_and_cleanup"
+expect = { exit = 0, stdout = { file = "data/inline_object_nested_fields.stdout" } }
+
+[[test]]
+name = "receiver_abi"
+mode = "run"
+source = "inline_object_receiver_abi.ska"
+[[test.run]]
+name = "register_and_stack_receivers"
+expect = { exit = 0, stdout = { file = "data/inline_object_receiver_abi.stdout" } }
+
+[[test]]
+name = "field_access_and_values"
+mode = "compile-fail"
+source = "inline_field_access_and_values.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/objects/inline_field_access_and_values.ska:27:15"""
+
+[[test]]
+name = "field_containment"
+mode = "compile-fail"
+source = "inline_field_containment.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP022]: recursive inline containment: `Direct.child -> Direct`
+ --> tests/golden/objects/inline_field_containment.ska:2:12"""
+
+[[test]]
+name = "field_initialization"
+mode = "compile-fail"
+source = "inline_field_initialization.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP015]: constructor type does not match class field `wrong`
+ --> tests/golden/objects/inline_field_initialization.ska:23:22"""
+
+[[test]]
+name = "field_types"
+mode = "compile-fail"
+source = "inline_field_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES007]: unknown type `Unknown`
+ --> tests/golden/objects/inline_field_types.ska:6:14"""

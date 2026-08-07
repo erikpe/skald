@@ -1,0 +1,26 @@
+schema = 1
+
+[[test]]
+name = "casts"
+mode = "run"
+source = "object_casts.ska"
+[[test.run]]
+name = "upcast_and_checked_downcast"
+expect = { exit = 0, stdout = { file = "data/object_casts.stdout" } }
+
+[[test]]
+name = "checked_failure"
+mode = "run"
+source = "object_cast_failure.ska"
+[[test.run]]
+name = "incompatible_runtime_class"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: checked object cast failed" } }
+
+[[test]]
+name = "static_rejections"
+mode = "compile-fail"
+source = "object_cast_rejections.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP029]: object cast can never succeed
+ --> tests/golden/objects/object_cast_rejections.ska:12:7"""

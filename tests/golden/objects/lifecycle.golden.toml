@@ -1,0 +1,71 @@
+schema = 1
+
+[[test]]
+name = "deterministic_destruction"
+mode = "run"
+source = "deterministic_destruction.ska"
+[[test.run]]
+name = "reverse_declaration_order"
+expect = { exit = 37, stdout = { file = "data/deterministic_destruction.stdout" } }
+
+[[test]]
+name = "destruction_control_flow"
+mode = "run"
+source = "deterministic_destruction_control_flow.ska"
+[[test.run]]
+name = "fallthrough_return_and_branch_cleanup"
+expect = { exit = 0, stdout = { file = "data/deterministic_destruction_control_flow.stdout" } }
+
+[[test]]
+name = "duplicate_destructor"
+mode = "compile-fail"
+source = "destructor_duplicate.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES006]: duplicate destructor in class `Resource`
+ --> tests/golden/objects/destructor_duplicate.ska:4:5"""
+
+[[test]]
+name = "destructor_excluded_construction"
+mode = "compile-fail"
+source = "destructor_excluded_construction.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP015]: construction is not allowed in this expression context
+ --> tests/golden/objects/destructor_excluded_construction.ska:13:9"""
+
+[[test]]
+name = "explicit_destructor_call"
+mode = "compile-fail"
+source = "destructor_explicit_call.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES008]: class `Resource` has no member `destroy`
+ --> tests/golden/objects/destructor_explicit_call.ska:4:14"""
+
+[[test]]
+name = "destructor_return_value"
+mode = "compile-fail"
+source = "destructor_invalid_return.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP007]: destructor for class `Resource` cannot return a value
+ --> tests/golden/objects/destructor_invalid_return.ska:4:9"""
+
+[[test]]
+name = "malformed_destructor"
+mode = "compile-fail"
+source = "destructor_malformed.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR006]: destruction members do not have a parameter list
+ --> tests/golden/objects/destructor_malformed.ska:3:12"""
+
+[[test]]
+name = "destructor_type_violation"
+mode = "compile-fail"
+source = "destructor_type_violation.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: call argument has type `i64` but `bool` is required
+ --> tests/golden/objects/destructor_type_violation.ska:11:31"""

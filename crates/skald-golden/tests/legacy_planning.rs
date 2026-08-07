@@ -124,17 +124,18 @@ fn repository_corpus_preserves_migrations_and_remaining_legacy_ownership() {
         .count();
     let compile_fail = legacy.len() - native;
 
-    assert_eq!(native, 58, "unexpected remaining legacy native count");
+    assert_eq!(native, 32, "unexpected remaining legacy native count");
     assert_eq!(
-        compile_fail, 79,
+        compile_fail, 39,
         "unexpected remaining legacy compile-fail count"
     );
-    assert_eq!(legacy.len(), 137);
+    assert_eq!(legacy.len(), 71);
 
     let mappings = [
         ("process-runtime.tsv", 38),
         ("modules-standard-library.tsv", 22),
         ("primitives-control-flow.tsv", 91),
+        ("object-model.tsv", 66),
     ];
     let mut old_ids = HashSet::new();
     let mut new_ids = HashSet::new();
@@ -171,8 +172,8 @@ fn repository_corpus_preserves_migrations_and_remaining_legacy_ownership() {
         }
     }
 
-    assert_eq!(old_ids.len(), 151);
-    assert_eq!(new_ids.len(), 151);
+    assert_eq!(old_ids.len(), 217);
+    assert_eq!(new_ids.len(), 217);
     assert!(
         plan.specs().iter().all(|spec| {
             !spec.relative_path().starts_with("modules/cases/")

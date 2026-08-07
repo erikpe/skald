@@ -1,8 +1,0 @@
-error[RES006]: duplicate destructor in class `Resource`
- --> tests/golden/compile_fail/destructor_duplicate.ska:4:5
-   |
-4 |     destroy { return; }
-   |     ^^^^^^^ redeclared here
-   |
-3 |     destroy {}
-   |     ------- first declared here

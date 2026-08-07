@@ -1,0 +1,44 @@
+schema = 1
+
+[[test]]
+name = "profile"
+mode = "run"
+source = "static_fields_profile.ska"
+[[test.run]]
+name = "access_and_mutation"
+expect = { exit = 42, stdout = { file = "data/static_fields_profile.stdout" } }
+
+[[test]]
+name = "inheritance"
+mode = "run"
+source = "static_inheritance.ska"
+[[test.run]]
+name = "selection_and_dispatch"
+expect = { exit = 0, stdout = { file = "data/static_inheritance.stdout" } }
+
+[[test]]
+name = "selection"
+mode = "compile-fail"
+source = "static_field_selection.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES015]: static field `count` in class `Collision` conflicts with inherited static field
+ --> tests/golden/static_fields/static_field_selection.ska:12:12"""
+
+[[test]]
+name = "syntax"
+mode = "compile-fail"
+source = "static_field_syntax.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR006]: `private` must precede method modifiers and `mut`
+ --> tests/golden/static_fields/static_field_syntax.ska:2:12"""
+
+[[test]]
+name = "types"
+mode = "compile-fail"
+source = "static_field_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP042]: static field `item` cannot have type `class c0`
+ --> tests/golden/static_fields/static_field_types.ska:8:18"""

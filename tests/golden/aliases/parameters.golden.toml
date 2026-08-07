@@ -1,0 +1,114 @@
+schema = 1
+
+[[test]]
+name = "mixed_abi"
+mode = "run"
+source = "alias_mixed_abi.ska"
+[[test.run]]
+name = "register_and_stack_arguments"
+expect = { exit = 0, stdout = { file = "data/alias_mixed_abi.stdout" } }
+
+[[test]]
+name = "parameters"
+mode = "run"
+source = "alias_parameters.ska"
+[[test.run]]
+name = "access_and_mutation"
+expect = { exit = 7, stdout = { file = "data/alias_parameters.stdout" } }
+
+[[test]]
+name = "primitive_parameter"
+mode = "run"
+source = "primitive_alias_parameter.ska"
+[[test.run]]
+name = "return_value"
+expect = { exit = 42 }
+
+[[test]]
+name = "produced_arguments"
+mode = "run"
+source = "produced_alias_arguments.ska"
+[[test.run]]
+name = "source_and_lifetime_matrix"
+expect = { exit = 0, stdout = { file = "data/produced_alias_arguments.stdout" } }
+
+[[test]]
+name = "exact_type_mismatch"
+mode = "compile-fail"
+source = "alias_exact_type_mismatch.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: alias argument has type `Right`, expected `Left`
+ --> tests/golden/aliases/alias_exact_type_mismatch.ska:8:13"""
+
+[[test]]
+name = "external_parameter"
+mode = "compile-fail"
+source = "alias_external.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP009]: external function `inspect` cannot declare alias parameters
+ --> tests/golden/aliases/alias_external.ska:3:19"""
+
+[[test]]
+name = "local_binding"
+mode = "compile-fail"
+source = "alias_local_binding.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR003]: local alias bindings are not supported
+ --> tests/golden/aliases/alias_local_binding.ska:5:5"""
+
+[[test]]
+name = "malformed_modifiers"
+mode = "compile-fail"
+source = "alias_malformed_modifiers.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: `mut` must precede `ref` in a mutable alias parameter
+ --> tests/golden/aliases/alias_malformed_modifiers.ska:3:18"""
+
+[[test]]
+name = "mutable_forwarding"
+mode = "compile-fail"
+source = "alias_mutable_forwarding.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP021]: read-only access cannot satisfy a mutable alias parameter
+ --> tests/golden/aliases/alias_mutable_forwarding.ska:6:12"""
+
+[[test]]
+name = "object_value_misuse"
+mode = "compile-fail"
+source = "alias_object_value_misuse.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP014]: an inline object cannot be used as an ordinary value
+ --> tests/golden/aliases/alias_object_value_misuse.ska:6:13"""
+
+[[test]]
+name = "readonly_mutation"
+mode = "compile-fail"
+source = "alias_readonly_mutation.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/aliases/alias_readonly_mutation.ska:8:13"""
+
+[[test]]
+name = "wrong_arity"
+mode = "compile-fail"
+source = "alias_wrong_arity.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP004]: function `inspect` expects 2 arguments but received 1
+ --> tests/golden/aliases/alias_wrong_arity.ska:7:5"""
+
+[[test]]
+name = "produced_invalid_sources"
+mode = "compile-fail"
+source = "produced_alias_invalid_sources.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP005]: alias argument has type `Base`, expected `Other`
+ --> tests/golden/aliases/produced_alias_invalid_sources.ska:14:15"""

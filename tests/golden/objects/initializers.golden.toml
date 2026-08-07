@@ -1,0 +1,71 @@
+schema = 1
+
+[[test]]
+name = "base_overloads"
+mode = "run"
+source = "base_initializer_overloads.ska"
+[[test.run]]
+name = "base_selection"
+expect = { exit = 0, stdout = { file = "data/base_initializer_overloads.stdout" } }
+
+[[test]]
+name = "overloads"
+mode = "run"
+source = "initializer_overloads.ska"
+[[test.run]]
+name = "selection_and_cleanup"
+expect = { exit = 0, stdout = { file = "data/initializer_overloads.stdout" } }
+
+[[test]]
+name = "base_initialization_placement"
+mode = "compile-fail"
+source = "base_initialization_placement.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES016]: a derived initializer must begin with `super(...)`
+ --> tests/golden/objects/base_initialization_placement.ska:9:9"""
+
+[[test]]
+name = "base_initialization_types"
+mode = "compile-fail"
+source = "base_initialization_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP030]: no initializer of base class `Base` matches these arguments
+ --> tests/golden/objects/base_initialization_types.ska:9:9"""
+
+[[test]]
+name = "object_construction"
+mode = "compile-fail"
+source = "object_construction.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP015]: constructor type does not match the object local
+ --> tests/golden/objects/object_construction.ska:10:23"""
+
+[[test]]
+name = "declaration_exclusions"
+mode = "compile-fail"
+source = "object_declaration_exclusions.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP017]: field `child` is not initialized
+ --> tests/golden/objects/object_declaration_exclusions.ska:6:5"""
+
+[[test]]
+name = "field_initialization"
+mode = "compile-fail"
+source = "object_field_initialization.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP017]: field `second` is used before initialization
+ --> tests/golden/objects/object_field_initialization.ska:7:27"""
+
+[[test]]
+name = "initializer_body"
+mode = "compile-fail"
+source = "object_initializer_body.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP016]: initializer bodies contain only direct field assignments
+ --> tests/golden/objects/object_initializer_body.ska:5:9"""

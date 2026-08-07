@@ -809,12 +809,14 @@ fn object_phase_dump() -> String {
 }
 
 fn polymorphism_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!("../../../tests/golden/run/polymorphism.ska"))
+    complete_golden_phase_dump(include_str!(
+        "../../../tests/golden/polymorphism/polymorphism.ska"
+    ))
 }
 
 fn produced_alias_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/run/produced_alias_arguments.ska"
+        "../../../tests/golden/aliases/produced_alias_arguments.ska"
     ))
 }
 

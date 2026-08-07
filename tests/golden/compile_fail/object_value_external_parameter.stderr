@@ -1,6 +1,0 @@
-error[TYP009]: external function `consume` has an unsupported signature
- --> tests/golden/compile_fail/object_value_external_parameter.ska:5:1
-   |
-5 | extern fn consume(value: Value) -> unit;
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected by-value `i64`, `u64`, `u8`, `f64`, or `bool` parameters and a result of type `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
-  = note: the source function name must also be its exact linker symbol
