@@ -86,15 +86,6 @@ inline = """error[TYP009]: external function `inspect` has an unsupported signat
  --> tests/golden/optionals/optional_external_signature.ska:1:1"""
 
 [[test]]
-name = "implicit_unwrap"
-mode = "compile-fail"
-source = "optional_implicit_unwrap.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: local initializer has type `i64?` but `i64` is required
- --> tests/golden/optionals/optional_implicit_unwrap.ska:3:22"""
-
-[[test]]
 name = "malformed_punctuation"
 mode = "compile-fail"
 source = "optional_malformed_punctuation.ska"

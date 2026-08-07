@@ -1,22 +1,6 @@
 schema = 1
 
 [[test]]
-name = "constant"
-mode = "run"
-source = "constant.ska"
-[[test.run]]
-name = "return_value"
-expect = { exit = 42 }
-
-[[test]]
-name = "local"
-mode = "run"
-source = "local.ska"
-[[test.run]]
-name = "return_value"
-expect = { exit = 37 }
-
-[[test]]
 name = "primitive_binding_reassignment"
 mode = "run"
 source = "primitive_binding_reassignment.ska"

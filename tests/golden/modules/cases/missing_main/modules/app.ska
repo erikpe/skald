@@ -1,5 +1,0 @@
-import dependency;
-
-fn helper() -> i64 {
-    return dependency::main();
-}

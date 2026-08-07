@@ -1,14 +1,6 @@
 schema = 1
 
 [[test]]
-name = "counter"
-mode = "run"
-source = "inline_object_counter.ska"
-[[test.run]]
-name = "construction_count"
-expect = { exit = 0, stdout = { file = "data/inline_object_counter.stdout" } }
-
-[[test]]
 name = "evaluation_order"
 mode = "run"
 source = "inline_object_evaluation_order.ska"

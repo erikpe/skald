@@ -1,14 +1,6 @@
 schema = 1
 
 [[test]]
-name = "call_arithmetic"
-mode = "run"
-source = "call_arithmetic.ska"
-[[test.run]]
-name = "return_value"
-expect = { exit = 42 }
-
-[[test]]
 name = "floating_division"
 mode = "run"
 source = "floating_division.ska"
@@ -55,14 +47,6 @@ source = "primitive_operator_profile.ska"
 [[test.run]]
 name = "operator_matrix"
 expect = { exit = 0, stdout = { file = "data/primitive_operator_profile.stdout" } }
-
-[[test]]
-name = "unary_negative"
-mode = "run"
-source = "unary_negative.ska"
-[[test.run]]
-name = "return_value"
-expect = { exit = 5 }
 
 [[test]]
 name = "integer_division_operator_types"

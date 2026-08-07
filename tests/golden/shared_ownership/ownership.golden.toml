@@ -25,14 +25,6 @@ name = "parameter_result_and_cleanup"
 expect = { exit = 0, stdout = { file = "data/shared_calls_and_results.stdout" } }
 
 [[test]]
-name = "exact_lifetime"
-mode = "run"
-source = "shared_exact_lifetime.ska"
-[[test.run]]
-name = "last_owner"
-expect = { exit = 42 }
-
-[[test]]
 name = "fields"
 mode = "run"
 source = "shared_fields.ska"

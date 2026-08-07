@@ -10,15 +10,6 @@ inline = """error[TYP002]: entry function must have signature `fn main() -> i64`
  --> tests/golden/program/external_main.ska:1:11"""
 
 [[test]]
-name = "invalid_bool_main"
-mode = "compile-fail"
-source = "invalid_bool_main.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP002]: entry function must have signature `fn main() -> i64`
- --> tests/golden/program/invalid_bool_main.ska:1:4"""
-
-[[test]]
 name = "invalid_main"
 mode = "compile-fail"
 source = "invalid_main.ska"

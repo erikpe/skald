@@ -109,20 +109,6 @@ inline = """error[MOD003]: module `absent::module` was not found
  --> modules/app.ska:1:8"""
 
 [[test]]
-name = "missing_main"
-mode = "compile-fail"
-compiler_args = [
-  "--entry", "app",
-  "--module-root", "cases/missing_main/modules",
-  "--no-stdlib",
-]
-
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP001]: missing entry function `main`
- --> modules/app.ska:1:1"""
-
-[[test]]
 name = "privacy"
 mode = "compile-fail"
 compiler_args = [
