@@ -37,14 +37,34 @@ fn parses_flat_if_elif_else_arms_with_complete_spans() {
 
 #[test]
 fn conditional_recovery_reports_missing_structure_and_keeps_later_returns() {
-    for source in [
-        "fn main() -> i64 { if true) { return 1; } return 0; }",
-        "fn main() -> i64 { if () { return 1; } return 0; }",
-        "fn main() -> i64 { if (true { return 1; } return 0; }",
-        "fn main() -> i64 { if (true) elif (false) {} return 0; }",
+    for (source, code, message) in [
+        (
+            "fn main() -> i64 { if true) { return 1; } return 0; }",
+            EXPECTED_TOKEN,
+            "expected `(` after `if`",
+        ),
+        (
+            "fn main() -> i64 { if () { return 1; } return 0; }",
+            EXPECTED_EXPRESSION,
+            "expected a condition after `if (`",
+        ),
+        (
+            "fn main() -> i64 { if (true { return 1; } return 0; }",
+            EXPECTED_TOKEN,
+            "expected `)` after the `if` condition",
+        ),
+        (
+            "fn main() -> i64 { if (true) elif (false) {} return 0; }",
+            EXPECTED_TOKEN,
+            "expected `{` to start a block",
+        ),
     ] {
         let (_, output) = parse_text(source);
         assert!(output.has_errors(), "source should be rejected: {source}");
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == code && diagnostic.message == message));
         let main = function(&output.ast, 0);
         assert!(main
             .body
@@ -56,17 +76,20 @@ fn conditional_recovery_reports_missing_structure_and_keeps_later_returns() {
 
 #[test]
 fn rejects_standalone_continuations_and_else_if() {
-    for (source, message) in [
+    for (source, code, message) in [
         (
             "fn main() -> i64 { elif (true) {} return 0; }",
+            EXPECTED_STATEMENT,
             "`elif` has no matching `if`",
         ),
         (
             "fn main() -> i64 { else {} return 0; }",
+            EXPECTED_STATEMENT,
             "`else` has no matching `if`",
         ),
         (
             "fn main() -> i64 { if (false) {} else if (true) {} return 0; }",
+            EXPECTED_TOKEN,
             "expected `{` to start a block",
         ),
     ] {
@@ -75,6 +98,6 @@ fn rejects_standalone_continuations_and_else_if() {
         assert!(output
             .diagnostics
             .iter()
-            .any(|diagnostic| diagnostic.message.contains(message)));
+            .any(|diagnostic| diagnostic.code == code && diagnostic.message == message));
     }
 }

@@ -105,10 +105,9 @@ fn diagnoses_duplicate_external_parameter_names() {
     ));
 
     assert_eq!(output.diagnostics.len(), 1);
-    assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        DUPLICATE_BINDING
-    );
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, DUPLICATE_BINDING);
+    assert_eq!(diagnostic.message, "duplicate parameter `value`");
 }
 
 #[test]

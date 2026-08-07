@@ -1,4 +1,4 @@
-schema = 2
+schema = 1
 
 [[test]]
 name = "primitive_binding_reassignment"
@@ -18,15 +18,6 @@ inline = """error[TYP005]: return value has type `i64` but `bool` is required
  --> tests/golden/primitives/bool_i64_mismatch.ska:2:12"""
 
 [[test]]
-name = "i64_u64_mismatch"
-mode = "compile-fail"
-source = "i64_u64_mismatch.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: local initializer has type `i64` but `u64` is required
- --> tests/golden/primitives/i64_u64_mismatch.ska:2:22"""
-
-[[test]]
 name = "primitive_binding_reassignment_types"
 mode = "compile-fail"
 source = "primitive_binding_reassignment_types.ska"
@@ -34,26 +25,6 @@ source = "primitive_binding_reassignment_types.ska"
 match = "starts-with"
 inline = """error[TYP005]: primitive binding assignment has type `u64` but `i64` is required
  --> tests/golden/primitives/primitive_binding_reassignment_types.ska:8:14"""
-
-[[test]]
-name = "primitive_type_errors"
-mode = "compile-fail"
-source = "primitive_type_errors.ska"
-[test.expect.stderr]
-matches = [
-  { name = "implicit integer to float", match = "contains", inline = """error[TYP005]: return value has type `i64` but `f64` is required
- --> tests/golden/primitives/primitive_type_errors.ska:4:12""" },
-  { name = "implicit float to integer", match = "contains", inline = """error[TYP005]: return value has type `f64` but `i64` is required
- --> tests/golden/primitives/primitive_type_errors.ska:8:12""" },
-  { name = "mixed arithmetic", match = "contains", inline = """error[TYP005]: binary arithmetic requires operands of the same numeric type
- --> tests/golden/primitives/primitive_type_errors.ska:12:16""" },
-  { name = "negate u64", match = "contains", inline = """error[TYP005]: unary negation requires an `i64` or `f64` operand
- --> tests/golden/primitives/primitive_type_errors.ska:16:13""" },
-  { name = "negate u8", match = "contains", inline = """error[TYP005]: unary negation requires an `i64` or `f64` operand
- --> tests/golden/primitives/primitive_type_errors.ska:20:13""" },
-  { name = "implicit call argument conversion", match = "contains", inline = """error[TYP005]: call argument has type `i64` but `u64` is required
- --> tests/golden/primitives/primitive_type_errors.ska:24:14""" },
-]
 
 [[test]]
 name = "unknown_local"

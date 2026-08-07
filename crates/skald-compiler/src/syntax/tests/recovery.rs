@@ -96,9 +96,10 @@ fn missing_external_semicolon_recovers_at_the_next_declaration() {
 
     assert!(output.has_errors());
     assert_eq!(output.ast.declarations.len(), 2);
-    assert!(output.diagnostics.iter().any(|diagnostic| diagnostic
-        .message
-        .contains("`;` after the external function declaration")));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == EXPECTED_TOKEN
+            && diagnostic.message == "expected `;` after the external function declaration"
+    }));
     assert_eq!(function(&output.ast, 1).name.text, "main");
 }
 
@@ -130,6 +131,9 @@ fn missing_block_close_recovers_at_the_next_function() {
 
     assert!(output.has_errors());
     assert_eq!(output.ast.declarations.len(), 2);
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == EXPECTED_TOKEN && diagnostic.message == "expected `}` after the block"
+    }));
     assert_eq!(function(&output.ast, 1).name.text, "second");
 }
 

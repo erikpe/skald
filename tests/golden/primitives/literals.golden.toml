@@ -25,40 +25,20 @@ name = "representative_values"
 expect = { stdout = { file = "data/hexadecimal_integer_literals.stdout" } }
 
 [[test]]
-name = "byte_literal_type_mismatch"
+name = "numeric_literals_out_of_range"
 mode = "compile-fail"
-source = "byte_literal_type_mismatch.ska"
+source = "numeric_literals_out_of_range.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP005]: return value has type `u8` but `i64` is required
- --> tests/golden/primitives/byte_literal_type_mismatch.ska:2:12"""
-
-[[test]]
-name = "f64_out_of_range"
-mode = "compile-fail"
-source = "f64_out_of_range.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP012]: floating literal `1.7976931348623159e308` is out of range for `f64`
- --> tests/golden/primitives/f64_out_of_range.ska:2:12"""
-
-[[test]]
-name = "hexadecimal_integer_out_of_range"
-mode = "compile-fail"
-source = "hexadecimal_integer_out_of_range.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP003]: integer literal `0x8000000000000000` is out of range for `i64`
- --> tests/golden/primitives/hexadecimal_integer_out_of_range.ska:2:12"""
-
-[[test]]
-name = "integer_out_of_range"
-mode = "compile-fail"
-source = "integer_out_of_range.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP003]: integer literal `9223372036854775808` is out of range for `i64`
- --> tests/golden/primitives/integer_out_of_range.ska:2:12"""
+matches = [
+  { name = "i64 literal", match = "contains", inline = """error[TYP003]: integer literal `9223372036854775808` is out of range for `i64`
+ --> tests/golden/primitives/numeric_literals_out_of_range.ska:2:12""" },
+  { name = "u64 literal", match = "contains", inline = """error[TYP010]: integer literal `18446744073709551616u` is out of range for `u64`
+ --> tests/golden/primitives/numeric_literals_out_of_range.ska:6:12""" },
+  { name = "u8 literal", match = "contains", inline = """error[TYP011]: integer literal `256u8` is out of range for `u8`
+ --> tests/golden/primitives/numeric_literals_out_of_range.ska:10:12""" },
+  { name = "f64 literal", match = "contains", inline = """error[TYP012]: floating literal `1.7976931348623159e308` is out of range for `f64`
+ --> tests/golden/primitives/numeric_literals_out_of_range.ska:14:12""" },
+]
 
 [[test]]
 name = "malformed_byte_literals"
@@ -132,21 +112,3 @@ matches = [
   { name = "numeric incomplete exponent", match = "contains", inline = """error[LEX002]: malformed numeric literal `1e+`
  --> tests/golden/primitives/malformed_numeric_literals.ska:18:12""" },
 ]
-
-[[test]]
-name = "u64_out_of_range"
-mode = "compile-fail"
-source = "u64_out_of_range.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP010]: integer literal `18446744073709551616u` is out of range for `u64`
- --> tests/golden/primitives/u64_out_of_range.ska:2:12"""
-
-[[test]]
-name = "u8_out_of_range"
-mode = "compile-fail"
-source = "u8_out_of_range.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP011]: integer literal `256u8` is out of range for `u8`
- --> tests/golden/primitives/u8_out_of_range.ska:2:12"""

@@ -10,24 +10,6 @@ inline = """error[PAR001]: expected a top-level declaration
  --> tests/golden/syntax/expected_declaration.ska:1:1"""
 
 [[test]]
-name = "missing_delimiter"
-mode = "compile-fail"
-source = "missing_delimiter.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR002]: expected `}` after the block
- --> tests/golden/syntax/missing_delimiter.ska:3:1"""
-
-[[test]]
-name = "missing_external_semicolon"
-mode = "compile-fail"
-source = "missing_external_semicolon.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR002]: expected `;` after the external function declaration
- --> tests/golden/syntax/missing_external_semicolon.ska:3:1"""
-
-[[test]]
 name = "missing_semicolon"
 mode = "compile-fail"
 source = "missing_semicolon.ska"
@@ -35,15 +17,6 @@ source = "missing_semicolon.ska"
 match = "starts-with"
 inline = """error[PAR002]: expected `;` after the return statement
  --> tests/golden/syntax/missing_semicolon.ska:3:1"""
-
-[[test]]
-name = "unsupported_construct"
-mode = "compile-fail"
-source = "unsupported_construct.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR002]: expected `(` after `if`
- --> tests/golden/syntax/unsupported_construct.ska:2:8"""
 
 [[test]]
 name = "import_alias_path"

@@ -47,14 +47,34 @@ fn parses_while_as_a_statement_with_complete_stable_spans() {
 
 #[test]
 fn while_recovery_requires_parentheses_and_a_body_then_keeps_later_statements() {
-    for source in [
-        "fn main() -> i64 { while true) {} return 0; }",
-        "fn main() -> i64 { while () {} return 0; }",
-        "fn main() -> i64 { while (true {} return 0; }",
-        "fn main() -> i64 { while (true) return 1; return 0; }",
+    for (source, code, message) in [
+        (
+            "fn main() -> i64 { while true) {} return 0; }",
+            EXPECTED_TOKEN,
+            "expected `(` after `while`",
+        ),
+        (
+            "fn main() -> i64 { while () {} return 0; }",
+            EXPECTED_EXPRESSION,
+            "expected a condition after `while (`",
+        ),
+        (
+            "fn main() -> i64 { while (true {} return 0; }",
+            EXPECTED_TOKEN,
+            "expected `)` after the `while` condition",
+        ),
+        (
+            "fn main() -> i64 { while (true) return 1; return 0; }",
+            EXPECTED_TOKEN,
+            "expected `{` to start a block",
+        ),
     ] {
         let (_, output) = parse_text(source);
         assert!(output.has_errors(), "source should be rejected: {source}");
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == code && diagnostic.message == message));
         assert!(
             function(&output.ast, 0)
                 .body

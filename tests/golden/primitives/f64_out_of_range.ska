@@ -1,7 +1,0 @@
-fn value() -> f64 {
-    return 1.7976931348623159e308;
-}
-
-fn main() -> i64 {
-    return 0;
-}

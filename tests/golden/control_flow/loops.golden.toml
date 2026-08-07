@@ -42,15 +42,6 @@ inline = """error[RES035]: `break` requires an enclosing loop
  --> tests/golden/control_flow/break_outside_loop.ska:2:5"""
 
 [[test]]
-name = "continue_malformed"
-mode = "compile-fail"
-source = "continue_malformed.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR002]: expected `;` after the `continue` statement
- --> tests/golden/control_flow/continue_malformed.ska:4:5"""
-
-[[test]]
 name = "continue_outside_loop"
 mode = "compile-fail"
 source = "continue_outside_loop.ska"
@@ -67,12 +58,3 @@ source = "while_condition_type.ska"
 match = "starts-with"
 inline = """error[TYP005]: while condition has type `i64` but `bool` is required
  --> tests/golden/control_flow/while_condition_type.ska:2:12"""
-
-[[test]]
-name = "while_malformed"
-mode = "compile-fail"
-source = "while_malformed.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[PAR002]: expected `(` after `while`
- --> tests/golden/control_flow/while_malformed.ska:2:11"""

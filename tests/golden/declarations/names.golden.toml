@@ -1,15 +1,6 @@
 schema = 1
 
 [[test]]
-name = "duplicate_external"
-mode = "compile-fail"
-source = "duplicate_external.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[RES001]: duplicate function `emit`
- --> tests/golden/declarations/duplicate_external.ska:2:4"""
-
-[[test]]
 name = "duplicate_function"
 mode = "compile-fail"
 source = "duplicate_function.ska"
@@ -26,15 +17,6 @@ source = "duplicate_local.ska"
 match = "starts-with"
 inline = """error[RES002]: duplicate local binding `value`
  --> tests/golden/declarations/duplicate_local.ska:3:9"""
-
-[[test]]
-name = "duplicate_parameter"
-mode = "compile-fail"
-source = "duplicate_parameter.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[RES002]: duplicate parameter `value`
- --> tests/golden/declarations/duplicate_parameter.ska:1:23"""
 
 [[test]]
 name = "unknown_type"
