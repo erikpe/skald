@@ -28,8 +28,11 @@ independent tests.
 
 ## Spec format
 
-Every spec starts with `schema = 1`. Repository variants are declared in
-`config.toml`; omitted `variants` selects `default`.
+Every spec starts with `schema = 1` or `schema = 2`. Schema 1 is the frozen
+singular-expectation format. Schema 2 adds independent matcher collections and
+compile-fail stdout expectations while retaining the singular syntax as
+shorthand. Repository variants remain in schema-1 `config.toml`; omitted
+`variants` selects `default`.
 
 A native test compiles one source once per selected variant and may execute it
 through several named runs:
@@ -56,8 +59,8 @@ argv_file = "data/large.argv"
 expect = { stdout = { match = "contains", inline = "done" } }
 ```
 
-A compile-fail test requires compiler status 1 and empty stdout. Its stderr
-expectation is explicit:
+A compile-fail test requires compiler status 1. Schema 1 also requires empty
+stdout. Its stderr expectation is explicit:
 
 ```toml
 [[test]]
@@ -69,6 +72,44 @@ source = "wrong_type.ska"
 match = "starts-with"
 inline = """error[TYP005]: return value has the wrong type
  --> tests/golden/example/wrong_type.ska:2:12"""
+```
+
+Schema 2 may match compiler stdout explicitly and may attach any number of
+independent matchers to native stdout, native stderr, compile-fail stdout, or
+compile-fail stderr:
+
+```toml
+schema = 2
+
+[[test]]
+name = "several_errors"
+mode = "compile-fail"
+source = "several_errors.ska"
+
+[test.expect.stdout]
+match = "exact"
+inline = ""
+
+[[test.expect.stderr.matches]]
+name = "invalid left operand"
+match = "contains"
+inline = """error[TYP010]: invalid left operand
+ --> tests/golden/example/several_errors.ska:3:9"""
+
+[[test.expect.stderr.matches]]
+name = "invalid right operand"
+match = "contains"
+file = "expected/invalid-right-operand.stderr"
+```
+
+The compact equivalent uses TOML inline tables:
+
+```toml
+[test.run.expect.stdout]
+matches = [
+  { match = "starts-with", inline = "header" },
+  { match = "contains", file = "expected/result.stdout" },
+]
 ```
 
 Logical module entries omit `source` and express the invocation with typed
@@ -105,12 +146,25 @@ and stderr. Within an explicit expectation, omitting `exit` likewise defaults
 to `0`, so successful cases should specify only the streams or output files
 they actually own.
 
-Omitted stdout and stderr expectations mean exact empty bytes. Stream
-expectations support `exact` (the default), `starts-with`, `contains`, or
-`ignore = true`; partial fragments must be nonempty. Inline and file data work
-with every match mode. Use exact matching for complete output ownership and a
-reviewed partial matcher for a stable diagnostic or panic fragment that may
-gain richer surrounding context.
+Omitted stdout and stderr expectations mean exact empty bytes. Compile-fail
+stderr remains required and cannot be empty or ignored. In schema 2,
+compile-fail stdout is optional and defaults to exact empty bytes.
+
+Singular stream expectations support `exact` (the default), `starts-with`,
+`contains`, or `ignore = true`; partial fragments must be nonempty. Schema-2
+`matches` is a nonempty AND-list: every matcher independently examines the
+same complete captured stream and every matcher must succeed. Declaration
+order affects result ordering, not acceptance, and compatible matchers may use
+the same actual bytes. Each matcher selects `exact`, `starts-with`, or
+`contains`, exactly one `inline` or `file` source, and an optional nonempty
+`name` unique within that stream. `matches` cannot coexist with singular
+fields, and `ignore` applies only to a whole stream.
+
+Inline and file data work with every match mode and may be mixed within one
+matcher list. An exact matcher may coexist with partial matchers but normally
+dominates them. Use exact matching for complete output ownership and reviewed
+partial matchers for stable diagnostic or panic fragments that may gain richer
+surrounding context.
 
 Each run receives a private mode-`0700` temporary directory. Declared
 `input_files` are written there, `output_files` are compared afterward, and

@@ -3,8 +3,8 @@ use super::{
     Determinism,
 };
 use crate::{
-    compare_stream, run_process, PlannedBuild, ProcessCommand, ProcessTermination,
-    ResolvedCompileExpectation,
+    compare_stream, run_process, MatcherOutcome, PlannedBuild, ProcessCommand, ProcessTermination,
+    ResolvedCompileExpectation, StreamComparison,
 };
 use std::{
     ffi::OsString,
@@ -51,6 +51,7 @@ pub(crate) fn compile_build(
             build.id().to_owned(),
             purpose.kind(),
             observations,
+            None,
             None,
             issues,
         );
@@ -127,27 +128,48 @@ pub(crate) fn compile_build(
     if observations.len() == 2 {
         check_determinism(&observations, &purpose, &mut issues);
     }
+    let mut stdout_comparison = None;
     let mut stderr_comparison = None;
     if let CompilationPurpose::CompileFail(expectation) = &purpose {
         if let Some(process) = observations.first().and_then(CompilerObservation::process) {
-            match compare_stream(expectation.stderr(), process.stderr()) {
-                Ok(comparison) => {
-                    if let Err(mismatch) = &comparison {
-                        issues.push(CompilationIssue::StderrExpectation(mismatch.clone()));
-                    }
-                    stderr_comparison = Some(comparison);
-                }
-                Err(error) => issues.push(CompilationIssue::ExpectationLoad(error.to_string())),
-            }
+            let stdout = compare_stream(expectation.stdout(), process.stdout());
+            collect_stream_issues(&stdout, &mut issues, true);
+            stdout_comparison = Some(stdout);
+            let stderr = compare_stream(expectation.stderr(), process.stderr());
+            collect_stream_issues(&stderr, &mut issues, false);
+            stderr_comparison = Some(stderr);
         }
     }
     CompilationExecution::new(
         build.id().to_owned(),
         purpose.kind(),
         observations,
+        stdout_comparison,
         stderr_comparison,
         issues,
     )
+}
+
+fn collect_stream_issues(
+    comparison: &StreamComparison,
+    issues: &mut Vec<CompilationIssue>,
+    stdout: bool,
+) {
+    for outcome in comparison.outcomes() {
+        match outcome {
+            MatcherOutcome::Matched(_) => {}
+            MatcherOutcome::Mismatched(mismatch) => issues.push(if stdout {
+                CompilationIssue::StdoutExpectation(mismatch.clone())
+            } else {
+                CompilationIssue::StderrExpectation(mismatch.clone())
+            }),
+            MatcherOutcome::LoadFailed(failure) => issues.push(if stdout {
+                CompilationIssue::StdoutExpectationLoad(failure.clone())
+            } else {
+                CompilationIssue::StderrExpectationLoad(failure.clone())
+            }),
+        }
+    }
 }
 
 fn check_process(
@@ -168,7 +190,7 @@ fn check_process(
             .cloned()
             .map(CompilationIssue::Pipe),
     );
-    if !process.stdout().is_empty() {
+    if matches!(purpose, CompilationPurpose::Success) && !process.stdout().is_empty() {
         issues.push(CompilationIssue::UnexpectedStdout(
             process.stdout().to_vec(),
         ));

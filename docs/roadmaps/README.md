@@ -7,8 +7,8 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md) —
-  in progress; the independent matcher engine is complete and the symmetric
-  schema-2 stream contract is next. No active roadmap dependency.
+  in progress; the symmetric schema-2 stream contract is complete and
+  matcher-aware planning and reporting are next. No active roadmap dependency.
 
 ## Planned
 

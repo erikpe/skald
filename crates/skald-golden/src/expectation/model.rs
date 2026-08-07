@@ -1,4 +1,4 @@
-use crate::{MatchMode, ResolvedByteSource};
+use crate::MatchMode;
 use std::{
     fmt, io,
     path::{Path, PathBuf},
@@ -6,14 +6,14 @@ use std::{
 
 /// One independently evaluated byte matcher for a captured process stream.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StreamMatcher {
+pub struct StreamMatcher<S> {
     name: Option<String>,
     mode: MatchMode,
-    expected: ResolvedByteSource,
+    expected: S,
 }
 
-impl StreamMatcher {
-    pub fn new(mode: MatchMode, expected: ResolvedByteSource) -> Self {
+impl<S> StreamMatcher<S> {
+    pub fn new(mode: MatchMode, expected: S) -> Self {
         Self {
             name: None,
             mode,
@@ -21,7 +21,7 @@ impl StreamMatcher {
         }
     }
 
-    pub fn named(name: impl Into<String>, mode: MatchMode, expected: ResolvedByteSource) -> Self {
+    pub fn named(name: impl Into<String>, mode: MatchMode, expected: S) -> Self {
         Self {
             name: Some(name.into()),
             mode,
@@ -37,33 +37,33 @@ impl StreamMatcher {
         self.mode
     }
 
-    pub fn expected(&self) -> &ResolvedByteSource {
+    pub fn expected(&self) -> &S {
         &self.expected
     }
 }
 
 /// A validated nonempty collection of independent stream matchers.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StreamMatcherSet {
-    matchers: Vec<StreamMatcher>,
+pub struct StreamMatcherSet<S> {
+    matchers: Vec<StreamMatcher<S>>,
 }
 
-impl StreamMatcherSet {
-    pub fn one(matcher: StreamMatcher) -> Self {
+impl<S> StreamMatcherSet<S> {
+    pub fn one(matcher: StreamMatcher<S>) -> Self {
         Self {
             matchers: vec![matcher],
         }
     }
 
-    pub fn matchers(&self) -> &[StreamMatcher] {
+    pub fn matchers(&self) -> &[StreamMatcher<S>] {
         &self.matchers
     }
 }
 
-impl TryFrom<Vec<StreamMatcher>> for StreamMatcherSet {
+impl<S> TryFrom<Vec<StreamMatcher<S>>> for StreamMatcherSet<S> {
     type Error = EmptyStreamMatcherSet;
 
-    fn try_from(matchers: Vec<StreamMatcher>) -> Result<Self, Self::Error> {
+    fn try_from(matchers: Vec<StreamMatcher<S>>) -> Result<Self, Self::Error> {
         if matchers.is_empty() {
             Err(EmptyStreamMatcherSet)
         } else {
@@ -95,9 +95,9 @@ pub struct MatcherMatch {
 }
 
 impl MatcherMatch {
-    pub(super) fn new(
+    pub(super) fn new<S>(
         index: usize,
-        matcher: &StreamMatcher,
+        matcher: &StreamMatcher<S>,
         offset: usize,
         expected_length: usize,
     ) -> Self {
@@ -141,7 +141,7 @@ pub struct MatcherMismatch {
 }
 
 impl MatcherMismatch {
-    pub(super) fn new(index: usize, matcher: &StreamMatcher, expected: Vec<u8>) -> Self {
+    pub(super) fn new<S>(index: usize, matcher: &StreamMatcher<S>, expected: Vec<u8>) -> Self {
         Self {
             index,
             name: matcher.name.clone(),
@@ -165,10 +165,6 @@ impl MatcherMismatch {
     pub fn expected(&self) -> &[u8] {
         &self.expected
     }
-
-    pub(super) fn into_expected(self) -> Vec<u8> {
-        self.expected
-    }
 }
 
 /// One matcher whose external expected bytes could not be loaded.
@@ -183,9 +179,9 @@ pub struct MatcherLoadFailure {
 }
 
 impl MatcherLoadFailure {
-    pub(super) fn new(
+    pub(super) fn new<S>(
         index: usize,
-        matcher: &StreamMatcher,
+        matcher: &StreamMatcher<S>,
         error: super::ExpectationError,
     ) -> Self {
         let (path, message, source) = error.into_parts();
@@ -221,10 +217,6 @@ impl MatcherLoadFailure {
 
     pub fn source_message(&self) -> Option<&str> {
         self.source.as_ref().map(|(_, message)| message.as_str())
-    }
-
-    pub(super) fn into_error(self) -> super::ExpectationError {
-        super::ExpectationError::from_parts(self.path, self.message, self.source)
     }
 }
 
@@ -280,6 +272,7 @@ impl MatcherOutcome {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StreamComparison {
     actual: Vec<u8>,
+    ignored: bool,
     outcomes: Vec<MatcherOutcome>,
 }
 
@@ -287,7 +280,16 @@ impl StreamComparison {
     pub(super) fn new(actual: &[u8], outcomes: Vec<MatcherOutcome>) -> Self {
         Self {
             actual: actual.to_vec(),
+            ignored: false,
             outcomes,
+        }
+    }
+
+    pub(super) fn new_ignored(actual: &[u8]) -> Self {
+        Self {
+            actual: actual.to_vec(),
+            ignored: true,
+            outcomes: Vec::new(),
         }
     }
 
@@ -299,48 +301,11 @@ impl StreamComparison {
         &self.outcomes
     }
 
+    pub fn is_ignored(&self) -> bool {
+        self.ignored
+    }
+
     pub fn passed(&self) -> bool {
         self.outcomes.iter().all(MatcherOutcome::passed)
-    }
-
-    pub(super) fn into_parts(self) -> (Vec<u8>, Vec<MatcherOutcome>) {
-        (self.actual, self.outcomes)
-    }
-}
-
-/// A successful byte-stream comparison.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StreamMatch {
-    Ignored,
-    Matched { mode: MatchMode, offset: usize },
-}
-
-/// A byte-stream mismatch with complete data retained for later reporting.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StreamMismatch {
-    mode: MatchMode,
-    expected: Vec<u8>,
-    actual: Vec<u8>,
-}
-
-impl StreamMismatch {
-    pub(super) fn from_owned(mode: MatchMode, expected: Vec<u8>, actual: Vec<u8>) -> Self {
-        Self {
-            mode,
-            expected,
-            actual,
-        }
-    }
-
-    pub fn mode(&self) -> MatchMode {
-        self.mode
-    }
-
-    pub fn expected(&self) -> &[u8] {
-        &self.expected
-    }
-
-    pub fn actual(&self) -> &[u8] {
-        &self.actual
     }
 }

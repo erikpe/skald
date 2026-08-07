@@ -1,4 +1,4 @@
-use crate::{ExitExpectation, MatchMode};
+use crate::{ExitExpectation, StreamMatcherSet};
 use std::{
     collections::BTreeMap,
     ffi::OsString,
@@ -365,14 +365,19 @@ impl ResolvedRunExpectation {
     }
 }
 
-/// Fully resolved compiler stderr expectation.
+/// Fully resolved compiler stream expectations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedCompileExpectation {
+    pub(super) stdout: ResolvedStreamExpectation,
     pub(super) stderr: ResolvedStreamExpectation,
     pub(super) stderr_prefix_to_strip: Option<Vec<u8>>,
 }
 
 impl ResolvedCompileExpectation {
+    pub fn stdout(&self) -> &ResolvedStreamExpectation {
+        &self.stdout
+    }
+
     pub fn stderr(&self) -> &ResolvedStreamExpectation {
         &self.stderr
     }
@@ -388,24 +393,14 @@ impl ResolvedCompileExpectation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolvedStreamExpectation {
     Ignore,
-    Match {
-        mode: MatchMode,
-        expected: ResolvedByteSource,
-    },
+    Match(StreamMatcherSet<ResolvedByteSource>),
 }
 
 impl ResolvedStreamExpectation {
-    pub fn mode(&self) -> Option<MatchMode> {
+    pub fn matchers(&self) -> Option<&[crate::StreamMatcher<ResolvedByteSource>]> {
         match self {
             Self::Ignore => None,
-            Self::Match { mode, .. } => Some(*mode),
-        }
-    }
-
-    pub fn expected(&self) -> Option<&ResolvedByteSource> {
-        match self {
-            Self::Ignore => None,
-            Self::Match { expected, .. } => Some(expected),
+            Self::Match(matchers) => Some(matchers.matchers()),
         }
     }
 }

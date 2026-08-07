@@ -15,7 +15,7 @@ pub use model::{
 };
 use raw::{RawConfig, RawSpec};
 
-/// Parses and validates one version-1 golden specification.
+/// Parses and validates one supported golden specification.
 pub fn parse_spec(path: impl AsRef<Path>, contents: &str) -> Result<Spec, SpecError> {
     let path = path.as_ref();
     deserialize(path, contents).and_then(|raw: RawSpec| validation::validate_spec(path, raw))

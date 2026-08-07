@@ -1,6 +1,6 @@
 use crate::{
-    ExitExpectation, PipeFailure, ProcessCommand, ProcessEnvironment, ProcessObservation,
-    ProcessTermination, StreamMatch, StreamMismatch,
+    ExitExpectation, MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCommand,
+    ProcessEnvironment, ProcessObservation, ProcessTermination, StreamComparison,
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -121,8 +121,10 @@ pub enum RunMismatch {
         expected: ExitExpectation,
         actual: ProcessTermination,
     },
-    Stdout(StreamMismatch),
-    Stderr(StreamMismatch),
+    Stdout(MatcherMismatch),
+    Stderr(MatcherMismatch),
+    StdoutLoad(MatcherLoadFailure),
+    StderrLoad(MatcherLoadFailure),
     OutputFile(OutputFileMismatch),
     Pipe(PipeFailure),
 }
@@ -134,8 +136,8 @@ pub struct RunExecution {
     sandbox: PathBuf,
     retained: bool,
     observation: ProcessObservation,
-    stdout_comparison: Result<StreamMatch, StreamMismatch>,
-    stderr_comparison: Result<StreamMatch, StreamMismatch>,
+    stdout_comparison: StreamComparison,
+    stderr_comparison: StreamComparison,
     output_files: Vec<OutputFileObservation>,
     mismatches: Vec<RunMismatch>,
 }
@@ -145,8 +147,8 @@ pub(super) struct RunExecutionParts {
     pub(super) sandbox: PathBuf,
     pub(super) retained: bool,
     pub(super) observation: ProcessObservation,
-    pub(super) stdout_comparison: Result<StreamMatch, StreamMismatch>,
-    pub(super) stderr_comparison: Result<StreamMatch, StreamMismatch>,
+    pub(super) stdout_comparison: StreamComparison,
+    pub(super) stderr_comparison: StreamComparison,
     pub(super) output_files: Vec<OutputFileObservation>,
     pub(super) mismatches: Vec<RunMismatch>,
 }
@@ -181,11 +183,11 @@ impl RunExecution {
         &self.observation
     }
 
-    pub fn stdout_comparison(&self) -> &Result<StreamMatch, StreamMismatch> {
+    pub fn stdout_comparison(&self) -> &StreamComparison {
         &self.stdout_comparison
     }
 
-    pub fn stderr_comparison(&self) -> &Result<StreamMatch, StreamMismatch> {
+    pub fn stderr_comparison(&self) -> &StreamComparison {
         &self.stderr_comparison
     }
 

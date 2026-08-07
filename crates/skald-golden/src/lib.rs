@@ -30,7 +30,7 @@ pub use execute::{
 pub use expectation::{
     compare_exit, compare_matchers, compare_stream, decode_arguments, load_bytes,
     EmptyStreamMatcherSet, ExpectationError, MatcherLoadFailure, MatcherMatch, MatcherMismatch,
-    MatcherOutcome, StreamComparison, StreamMatch, StreamMatcher, StreamMatcherSet, StreamMismatch,
+    MatcherOutcome, StreamComparison, StreamMatcher, StreamMatcherSet,
 };
 pub use plan::{
     build_plan, PlanError, PlannedBuild, PlannedLeaf, PlannedLeafKind, PlannedRun, PlannedSpec,

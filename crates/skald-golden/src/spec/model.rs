@@ -1,3 +1,4 @@
+use crate::{StreamMatcher, StreamMatcherSet};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -8,6 +9,8 @@ use std::{
 pub enum SchemaVersion {
     /// The initial frozen golden-test schema.
     V1,
+    /// Independent matcher collections for every declared process stream.
+    V2,
 }
 
 /// A validated golden specification.
@@ -264,47 +267,42 @@ pub enum ExitExpectation {
     Failure,
 }
 
-/// Expected compiler stderr for a compile-fail test.
+/// Expected compiler streams for a compile-fail test.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompileExpectation {
+    pub(super) stdout: StreamExpectation,
     pub(super) stderr: StreamExpectation,
 }
 
 impl CompileExpectation {
+    pub fn stdout(&self) -> &StreamExpectation {
+        &self.stdout
+    }
+
     pub fn stderr(&self) -> &StreamExpectation {
         &self.stderr
     }
 }
 
-/// An exact or deliberately partial byte-stream expectation.
+/// A whole-stream ignore policy or nonempty independent matcher collection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StreamExpectation {
     Ignore,
-    Match {
-        mode: MatchMode,
-        expected: ByteSource,
-    },
+    Match(StreamMatcherSet<ByteSource>),
 }
 
 impl StreamExpectation {
     pub fn exact_empty() -> Self {
-        Self::Match {
-            mode: MatchMode::Exact,
-            expected: ByteSource::Inline(String::new()),
-        }
+        Self::Match(StreamMatcherSet::one(StreamMatcher::new(
+            MatchMode::Exact,
+            ByteSource::Inline(String::new()),
+        )))
     }
 
-    pub fn mode(&self) -> Option<MatchMode> {
+    pub fn matchers(&self) -> Option<&[StreamMatcher<ByteSource>]> {
         match self {
             Self::Ignore => None,
-            Self::Match { mode, .. } => Some(*mode),
-        }
-    }
-
-    pub fn expected(&self) -> Option<&ByteSource> {
-        match self {
-            Self::Ignore => None,
-            Self::Match { expected, .. } => Some(expected),
+            Self::Match(matchers) => Some(matchers.matchers()),
         }
     }
 }

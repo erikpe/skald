@@ -1,6 +1,6 @@
 # Golden Stream Matcher Lists Roadmap
 
-Status: in progress; GM1 is next.
+Status: in progress; GM2 is next.
 
 This roadmap lets one captured process stream own any number of independent
 byte-match contracts. It preserves the existing singular expectation syntax
@@ -84,7 +84,7 @@ matches = [
 ## Progress
 
 - [x] GM0 — Build the independent matcher engine
-- [ ] GM1 — Publish the symmetric schema-2 stream contract
+- [x] GM1 — Publish the symmetric schema-2 stream contract
 - [ ] GM2 — Complete matcher-aware planning and reporting
 - [ ] GM3 — Migrate multi-error compile-fail contracts
 - [ ] GM4 — Harden, validate, document, and close
@@ -128,31 +128,31 @@ and no process-stage module contains byte-search logic.
 **Purpose:** Extend the versioned specification and carry matcher collections
 through planning and execution for every declarative captured stream.
 
-- [ ] Separate specification-version validation from repository-configuration
+- [x] Separate specification-version validation from repository-configuration
       version validation: specs accept versions 1 and 2, while repository
       configuration remains version 1 until its own contract changes.
-- [ ] Add strict raw and validated matcher-list data with optional names and
+- [x] Add strict raw and validated matcher-list data with optional names and
       typed byte sources. Keep singular `match`/`inline`/`file` syntax as
       shorthand in schema 2 and retain its exact existing behavior in schema
       1.
-- [ ] Reject schema-2-only `matches` and compile-fail stdout fields from schema
+- [x] Reject schema-2-only `matches` and compile-fail stdout fields from schema
       1 with precise field paths rather than silently widening the frozen
       contract.
-- [ ] Validate the stream invariants in one shared path used by native stdout,
+- [x] Validate the stream invariants in one shared path used by native stdout,
       native stderr, compile-fail stdout, and compile-fail stderr; preserve the
       stricter nonempty and non-ignored compile-fail stderr rules.
-- [ ] Replace singular validated and resolved stream representations with
+- [x] Replace singular validated and resolved stream representations with
       nonempty matcher collections plus the whole-stream ignore case; resolve
       every external source canonically and preserve singular convenience
       access only where it cannot conceal multiplicity.
-- [ ] Add compile-fail stdout to the typed expectation and resolved plan,
+- [x] Add compile-fail stdout to the typed expectation and resolved plan,
       default it to exact empty, and compare it through the same matcher engine
       as compile-fail stderr instead of the current unconditional unexpected-
       stdout branch.
-- [ ] Move native stdout/stderr and compile-fail stdout/stderr execution to the
+- [x] Move native stdout/stderr and compile-fail stdout/stderr execution to the
       generic collection comparator, retaining all matcher mismatches and load
       failures while leaving full-output determinism checks unchanged.
-- [ ] Keep the crate facades selective and update public API exports without
+- [x] Keep the crate facades selective and update public API exports without
       exposing raw schema types or process-specific matcher variants.
 
 **Tests:** Schema integration tests for version separation, schema-1

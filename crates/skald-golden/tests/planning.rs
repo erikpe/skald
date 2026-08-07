@@ -355,20 +355,88 @@ expect = { stdout = { file = "data/stdout.bin" }, stderr = { match = "contains",
         &ResolvedWorkingDirectory::Fixture(fixture.canonical("all/fixture-cwd"))
     );
     assert_eq!(
-        run.expectation().stdout().expected(),
-        Some(&ResolvedByteSource::File(
-            fixture.canonical("all/data/stdout.bin")
-        ))
+        run.expectation().stdout().matchers().unwrap()[0].expected(),
+        &ResolvedByteSource::File(fixture.canonical("all/data/stdout.bin"))
     );
     assert_eq!(
-        run.expectation().stderr().expected(),
-        Some(&ResolvedByteSource::File(
-            fixture.canonical("all/data/stderr.bin")
-        ))
+        run.expectation().stderr().matchers().unwrap()[0].expected(),
+        &ResolvedByteSource::File(fixture.canonical("all/data/stderr.bin"))
     );
     assert_eq!(
         run.expectation().output_files()[0].contents(),
         &ResolvedByteSource::File(fixture.canonical("all/data/output.bin"))
+    );
+}
+
+#[test]
+fn resolves_matcher_files_for_native_and_compile_fail_streams() {
+    let fixture = Fixture::new();
+    fixture.write("streams/native.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write(
+        "streams/rejected.ska",
+        "fn main() -> i64 { return missing; }\n",
+    );
+    for file in [
+        "native.stdout",
+        "native.stderr",
+        "compiler.stdout",
+        "compiler.stderr",
+    ] {
+        fixture.write(&format!("streams/expected/{file}"), file);
+    }
+    fixture.write(
+        "streams/streams.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "native"
+mode = "run"
+source = "native.ska"
+[[test.run]]
+name = "streams"
+expect = { stdout = { matches = [{ file = "expected/native.stdout" }] }, stderr = { matches = [{ file = "expected/native.stderr" }] } }
+
+[[test]]
+name = "rejected"
+mode = "compile-fail"
+source = "rejected.ska"
+expect = { stdout = { matches = [{ file = "expected/compiler.stdout" }] }, stderr = { matches = [{ file = "expected/compiler.stderr" }] } }
+"#,
+    );
+
+    let plan = fixture.plan();
+    let native = plan
+        .leaves()
+        .iter()
+        .find_map(|leaf| match leaf.kind() {
+            PlannedLeafKind::Run(run) => Some(run),
+            PlannedLeafKind::Compile(_) => None,
+        })
+        .unwrap();
+    assert_eq!(
+        native.expectation().stdout().matchers().unwrap()[0].expected(),
+        &ResolvedByteSource::File(fixture.canonical("streams/expected/native.stdout"))
+    );
+    assert_eq!(
+        native.expectation().stderr().matchers().unwrap()[0].expected(),
+        &ResolvedByteSource::File(fixture.canonical("streams/expected/native.stderr"))
+    );
+
+    let compile = plan
+        .leaves()
+        .iter()
+        .find_map(|leaf| match leaf.kind() {
+            PlannedLeafKind::Compile(expectation) => Some(expectation),
+            PlannedLeafKind::Run(_) => None,
+        })
+        .unwrap();
+    assert_eq!(
+        compile.stdout().matchers().unwrap()[0].expected(),
+        &ResolvedByteSource::File(fixture.canonical("streams/expected/compiler.stdout"))
+    );
+    assert_eq!(
+        compile.stderr().matchers().unwrap()[0].expected(),
+        &ResolvedByteSource::File(fixture.canonical("streams/expected/compiler.stderr"))
     );
 }
 

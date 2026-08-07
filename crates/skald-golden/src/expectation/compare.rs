@@ -1,11 +1,14 @@
 use super::{
-    load_bytes, ExpectationError, MatcherLoadFailure, MatcherMatch, MatcherMismatch,
-    MatcherOutcome, StreamComparison, StreamMatch, StreamMatcher, StreamMatcherSet, StreamMismatch,
+    load_bytes, MatcherLoadFailure, MatcherMatch, MatcherMismatch, MatcherOutcome,
+    StreamComparison, StreamMatcher, StreamMatcherSet,
 };
 use crate::{ExitExpectation, MatchMode, ProcessTermination, ResolvedStreamExpectation};
 
 /// Compares every matcher independently with the same captured stream.
-pub fn compare_matchers(matchers: &StreamMatcherSet, actual: &[u8]) -> StreamComparison {
+pub fn compare_matchers(
+    matchers: &StreamMatcherSet<crate::ResolvedByteSource>,
+    actual: &[u8],
+) -> StreamComparison {
     let outcomes = matchers
         .matchers()
         .iter()
@@ -15,35 +18,20 @@ pub fn compare_matchers(matchers: &StreamMatcherSet, actual: &[u8]) -> StreamCom
     StreamComparison::new(actual, outcomes)
 }
 
-/// Compares one captured stream using its resolved byte policy.
-pub fn compare_stream(
-    expectation: &ResolvedStreamExpectation,
-    actual: &[u8],
-) -> Result<Result<StreamMatch, StreamMismatch>, ExpectationError> {
-    let ResolvedStreamExpectation::Match { mode, expected } = expectation else {
-        return Ok(Ok(StreamMatch::Ignored));
-    };
-    let matcher = StreamMatcher::new(*mode, expected.clone());
-    let comparison = compare_matchers(&StreamMatcherSet::one(matcher), actual);
-    let (actual, mut outcomes) = comparison.into_parts();
-    let outcome = outcomes
-        .pop()
-        .expect("a singular matcher comparison must have one outcome");
-    match outcome {
-        MatcherOutcome::Matched(result) => Ok(Ok(StreamMatch::Matched {
-            mode: result.mode(),
-            offset: result.offset(),
-        })),
-        MatcherOutcome::Mismatched(result) => Ok(Err(StreamMismatch::from_owned(
-            result.mode(),
-            result.into_expected(),
-            actual,
-        ))),
-        MatcherOutcome::LoadFailed(failure) => Err(failure.into_error()),
+/// Compares one captured stream using its resolved matcher collection or
+/// whole-stream ignore policy.
+pub fn compare_stream(expectation: &ResolvedStreamExpectation, actual: &[u8]) -> StreamComparison {
+    match expectation {
+        ResolvedStreamExpectation::Ignore => StreamComparison::new_ignored(actual),
+        ResolvedStreamExpectation::Match(matchers) => compare_matchers(matchers, actual),
     }
 }
 
-fn compare_matcher(index: usize, matcher: &StreamMatcher, actual: &[u8]) -> MatcherOutcome {
+fn compare_matcher(
+    index: usize,
+    matcher: &StreamMatcher<crate::ResolvedByteSource>,
+    actual: &[u8],
+) -> MatcherOutcome {
     let expected = match load_bytes(matcher.expected()) {
         Ok(expected) => expected,
         Err(error) => {

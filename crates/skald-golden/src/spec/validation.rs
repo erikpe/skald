@@ -8,16 +8,17 @@ use super::{
     raw::{
         RawByteSource, RawCompileExpectation, RawConfig, RawExitExpectation, RawExitName,
         RawInputFile, RawMatchMode, RawOutputFileExpectation, RawRun, RawRunExpectation, RawSpec,
-        RawStreamExpectation, RawTest, RawVariant,
+        RawStreamExpectation, RawStreamMatcher, RawTest, RawVariant,
     },
 };
+use crate::{StreamMatcher, StreamMatcherSet};
 use std::{
     collections::{BTreeMap, HashSet},
     path::{Path, PathBuf},
 };
 
 pub(super) fn validate_spec(path: &Path, raw: RawSpec) -> Result<Spec, SpecError> {
-    let schema = validate_schema(path, raw.schema)?;
+    let schema = validate_spec_schema(path, raw.schema)?;
     if raw.test.is_empty() {
         return Err(error(path, "test", "must contain at least one test"));
     }
@@ -27,14 +28,14 @@ pub(super) fn validate_spec(path: &Path, raw: RawSpec) -> Result<Spec, SpecError
     for (index, test) in raw.test.into_iter().enumerate() {
         let field = format!("test[{index}]");
         require_unique_name(path, &field, &test.name, &mut names)?;
-        tests.push(validate_test(path, &field, test)?);
+        tests.push(validate_test(path, &field, schema, test)?);
     }
 
     Ok(Spec { schema, tests })
 }
 
 pub(super) fn validate_config(path: &Path, raw: RawConfig) -> Result<RepositoryConfig, SpecError> {
-    let schema = validate_schema(path, raw.schema)?;
+    let schema = validate_config_schema(path, raw.schema)?;
     let mut variants = BTreeMap::new();
 
     for (name, variant) in raw.variant {
@@ -54,13 +55,25 @@ pub(super) fn validate_config(path: &Path, raw: RawConfig) -> Result<RepositoryC
     Ok(RepositoryConfig { schema, variants })
 }
 
-fn validate_schema(path: &Path, schema: u64) -> Result<SchemaVersion, SpecError> {
+fn validate_spec_schema(path: &Path, schema: u64) -> Result<SchemaVersion, SpecError> {
+    match schema {
+        1 => Ok(SchemaVersion::V1),
+        2 => Ok(SchemaVersion::V2),
+        version => Err(error(
+            path,
+            "schema",
+            format!("unsupported schema version {version}; expected 1 or 2"),
+        )),
+    }
+}
+
+fn validate_config_schema(path: &Path, schema: u64) -> Result<SchemaVersion, SpecError> {
     match schema {
         1 => Ok(SchemaVersion::V1),
         version => Err(error(
             path,
             "schema",
-            format!("unsupported schema version {version}; expected 1"),
+            format!("unsupported configuration schema version {version}; expected 1"),
         )),
     }
 }
@@ -71,7 +84,12 @@ fn validate_variant(raw: RawVariant) -> Variant {
     }
 }
 
-fn validate_test(path: &Path, field: &str, raw: RawTest) -> Result<Test, SpecError> {
+fn validate_test(
+    path: &Path,
+    field: &str,
+    schema: SchemaVersion,
+    raw: RawTest,
+) -> Result<Test, SpecError> {
     require_name(path, field, &raw.name)?;
     validate_strings_without_nul(path, &format!("{field}.compiler_args"), &raw.compiler_args)?;
     validate_entry_selection(path, field, raw.source.as_ref(), &raw.compiler_args)?;
@@ -112,7 +130,7 @@ fn validate_test(path: &Path, field: &str, raw: RawTest) -> Result<Test, SpecErr
             for (index, run) in raw.run.into_iter().enumerate() {
                 let run_field = format!("{field}.run[{index}]");
                 require_unique_name(path, &run_field, &run.name, &mut names)?;
-                runs.push(validate_run(path, &run_field, run)?);
+                runs.push(validate_run(path, &run_field, schema, run)?);
             }
             TestKind::Run(RunTest { runs })
         }
@@ -132,7 +150,7 @@ fn validate_test(path: &Path, field: &str, raw: RawTest) -> Result<Test, SpecErr
                 )
             })?;
             TestKind::CompileFail(CompileFailTest {
-                expectation: validate_compile_expectation(path, field, expectation)?,
+                expectation: validate_compile_expectation(path, field, schema, expectation)?,
             })
         }
     };
@@ -180,7 +198,12 @@ fn validate_entry_selection(
     }
 }
 
-fn validate_run(path: &Path, field: &str, raw: RawRun) -> Result<Run, SpecError> {
+fn validate_run(
+    path: &Path,
+    field: &str,
+    schema: SchemaVersion,
+    raw: RawRun,
+) -> Result<Run, SpecError> {
     require_name(path, field, &raw.name)?;
     validate_timeout(path, &format!("{field}.timeout"), raw.timeout)?;
 
@@ -217,7 +240,7 @@ fn validate_run(path: &Path, field: &str, raw: RawRun) -> Result<Run, SpecError>
     };
     validate_environment(path, field, &raw.env)?;
     let resources = validate_resources(path, field, raw.resources)?;
-    let expectation = validate_run_expectation(path, field, raw.expect)?;
+    let expectation = validate_run_expectation(path, field, schema, raw.expect)?;
 
     Ok(Run {
         name: raw.name,
@@ -264,6 +287,7 @@ fn validate_input_files(
 fn validate_run_expectation(
     path: &Path,
     field: &str,
+    schema: SchemaVersion,
     raw: Option<RawRunExpectation>,
 ) -> Result<RunExpectation, SpecError> {
     let Some(raw) = raw else {
@@ -281,15 +305,21 @@ fn validate_run_expectation(
         None => ExitExpectation::Code(0),
     };
     let stdout = match raw.stdout {
-        Some(expectation) => {
-            validate_stream_expectation(path, &format!("{field}.expect.stdout"), expectation)?
-        }
+        Some(expectation) => validate_stream_expectation(
+            path,
+            &format!("{field}.expect.stdout"),
+            schema,
+            expectation,
+        )?,
         None => StreamExpectation::exact_empty(),
     };
     let stderr = match raw.stderr {
-        Some(expectation) => {
-            validate_stream_expectation(path, &format!("{field}.expect.stderr"), expectation)?
-        }
+        Some(expectation) => validate_stream_expectation(
+            path,
+            &format!("{field}.expect.stderr"),
+            schema,
+            expectation,
+        )?,
         None => StreamExpectation::exact_empty(),
     };
     let output_files = validate_output_files(path, field, raw.output_files)?;
@@ -333,8 +363,25 @@ fn validate_output_files(
 fn validate_compile_expectation(
     path: &Path,
     field: &str,
+    schema: SchemaVersion,
     raw: RawCompileExpectation,
 ) -> Result<CompileExpectation, SpecError> {
+    if schema == SchemaVersion::V1 && raw.stdout.is_some() {
+        return Err(error(
+            path,
+            format!("{field}.expect.stdout"),
+            "compile-fail stdout expectations require schema version 2",
+        ));
+    }
+    let stdout = match raw.stdout {
+        Some(expectation) => validate_stream_expectation(
+            path,
+            &format!("{field}.expect.stdout"),
+            schema,
+            expectation,
+        )?,
+        None => StreamExpectation::exact_empty(),
+    };
     let stderr = raw.stderr.ok_or_else(|| {
         error(
             path,
@@ -342,30 +389,79 @@ fn validate_compile_expectation(
             "compile-fail tests require a nonempty stderr expectation",
         )
     })?;
-    let stderr = validate_stream_expectation(path, &format!("{field}.expect.stderr"), stderr)?;
+    if stderr.matches.is_none() && stderr.inline.as_deref() == Some("") {
+        return Err(error(
+            path,
+            format!("{field}.expect.stderr.inline"),
+            "compile-fail stderr must not be empty",
+        ));
+    }
+    let stderr =
+        validate_stream_expectation(path, &format!("{field}.expect.stderr"), schema, stderr)?;
     match &stderr {
         StreamExpectation::Ignore => Err(error(
             path,
             format!("{field}.expect.stderr.ignore"),
             "compile-fail stderr cannot be ignored",
         )),
-        StreamExpectation::Match {
-            expected: ByteSource::Inline(expected),
-            ..
-        } if expected.is_empty() => Err(error(
-            path,
-            format!("{field}.expect.stderr.inline"),
-            "compile-fail stderr must not be empty",
-        )),
-        StreamExpectation::Match { .. } => Ok(CompileExpectation { stderr }),
+        StreamExpectation::Match(matchers) => {
+            for (index, matcher) in matchers.matchers().iter().enumerate() {
+                if matches!(matcher.expected(), ByteSource::Inline(expected) if expected.is_empty())
+                {
+                    return Err(error(
+                        path,
+                        format!("{field}.expect.stderr.matches[{index}].inline"),
+                        "compile-fail stderr matchers must not be empty",
+                    ));
+                }
+            }
+            Ok(CompileExpectation { stdout, stderr })
+        }
     }
 }
 
 fn validate_stream_expectation(
     path: &Path,
     field: &str,
+    schema: SchemaVersion,
     raw: RawStreamExpectation,
 ) -> Result<StreamExpectation, SpecError> {
+    let singular_present =
+        raw.mode.is_some() || raw.inline.is_some() || raw.file.is_some() || raw.ignore.is_some();
+    if let Some(matches) = raw.matches {
+        if schema == SchemaVersion::V1 {
+            return Err(error(
+                path,
+                format!("{field}.matches"),
+                "matcher lists require schema version 2",
+            ));
+        }
+        if singular_present {
+            return Err(error(
+                path,
+                field,
+                "matches cannot coexist with match, inline, file, or ignore",
+            ));
+        }
+        require_nonempty_collection(path, &format!("{field}.matches"), &matches)?;
+        let mut names = HashSet::new();
+        let matchers = matches
+            .into_iter()
+            .enumerate()
+            .map(|(index, matcher)| {
+                validate_stream_matcher(
+                    path,
+                    &format!("{field}.matches[{index}]"),
+                    matcher,
+                    &mut names,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        return Ok(StreamExpectation::Match(
+            StreamMatcherSet::try_from(matchers).expect("validated matcher lists must be nonempty"),
+        ));
+    }
+
     if raw.ignore == Some(false) {
         return Err(error(
             path,
@@ -409,7 +505,61 @@ fn validate_stream_expectation(
         ));
     }
 
-    Ok(StreamExpectation::Match { mode, expected })
+    Ok(StreamExpectation::Match(StreamMatcherSet::one(
+        StreamMatcher::new(mode, expected),
+    )))
+}
+
+fn validate_stream_matcher(
+    path: &Path,
+    field: &str,
+    raw: RawStreamMatcher,
+    names: &mut HashSet<String>,
+) -> Result<StreamMatcher<ByteSource>, SpecError> {
+    if let Some(name) = &raw.name {
+        require_name(path, &format!("{field}.name"), name)?;
+        if !names.insert(name.clone()) {
+            return Err(error(
+                path,
+                format!("{field}.name"),
+                format!("duplicate name {name:?}"),
+            ));
+        }
+    }
+    let mode = validate_match_mode(raw.mode);
+    let expected = validate_byte_source_fields(path, field, raw.inline, raw.file)?;
+    validate_partial_matcher(path, field, mode, &expected)?;
+    Ok(match raw.name {
+        Some(name) => StreamMatcher::named(name, mode, expected),
+        None => StreamMatcher::new(mode, expected),
+    })
+}
+
+fn validate_match_mode(raw: Option<RawMatchMode>) -> MatchMode {
+    match raw {
+        Some(RawMatchMode::Exact) | None => MatchMode::Exact,
+        Some(RawMatchMode::StartsWith) => MatchMode::StartsWith,
+        Some(RawMatchMode::Contains) => MatchMode::Contains,
+    }
+}
+
+fn validate_partial_matcher(
+    path: &Path,
+    field: &str,
+    mode: MatchMode,
+    expected: &ByteSource,
+) -> Result<(), SpecError> {
+    if mode != MatchMode::Exact
+        && matches!(expected, ByteSource::Inline(contents) if contents.is_empty())
+    {
+        Err(error(
+            path,
+            format!("{field}.inline"),
+            "partial matchers must not be empty",
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 fn validate_byte_source(

@@ -143,6 +143,116 @@ fn compile_fail_requires_status_stdout_stderr_and_deterministic_diagnostics() {
 }
 
 #[test]
+fn compile_fail_matches_independent_stdout_and_stderr_collections() {
+    let fixture = Fixture::new();
+    fixture.write("failure.ska", "fn main() -> i64 { return missing(); }\n");
+    fixture.write(
+        "streams.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "streams"
+mode = "compile-fail"
+source = "failure.ska"
+compiler_args = ["--fake-mode", "compile-fail-streams"]
+[test.expect.stdout]
+matches = [
+  { name = "stdout prefix", match = "starts-with", inline = "compiler stdout" },
+  { name = "stdout value", match = "contains", inline = "alpha omega" },
+]
+[[test.expect.stderr.matches]]
+name = "first error"
+match = "contains"
+inline = "error[FAKE001]: first rejected construct"
+[[test.expect.stderr.matches]]
+name = "second error"
+match = "contains"
+inline = "error[FAKE002]: second rejected construct"
+"#,
+    );
+
+    let execution = fixture.execute(Determinism::Compile);
+    assert!(execution.passed(), "{execution:#?}");
+    let compilation = execution.builds()[0].compilation();
+    assert_eq!(compilation.stdout_comparison().unwrap().outcomes().len(), 2);
+    assert_eq!(compilation.stderr_comparison().unwrap().outcomes().len(), 2);
+    assert!(compilation.stdout_comparison().unwrap().passed());
+    assert!(compilation.stderr_comparison().unwrap().passed());
+}
+
+#[test]
+fn compile_fail_retains_every_stdout_and_stderr_mismatch() {
+    let fixture = Fixture::new();
+    fixture.write("failure.ska", "fn main() -> i64 { return missing(); }\n");
+    fixture.write(
+        "streams.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "streams"
+mode = "compile-fail"
+source = "failure.ska"
+compiler_args = ["--fake-mode", "compile-fail-streams"]
+[test.expect.stdout]
+matches = [{ inline = "wrong stdout" }, { match = "contains", inline = "missing stdout" }]
+[test.expect.stderr]
+matches = [{ inline = "wrong stderr" }, { match = "contains", inline = "missing stderr" }]
+"#,
+    );
+
+    let execution = fixture.execute(Determinism::Off);
+    assert!(!execution.passed());
+    let issues = execution.builds()[0].compilation().issues();
+    assert_eq!(
+        issues
+            .iter()
+            .filter(|issue| matches!(issue, CompilationIssue::StdoutExpectation(_)))
+            .count(),
+        2
+    );
+    assert_eq!(
+        issues
+            .iter()
+            .filter(|issue| matches!(issue, CompilationIssue::StderrExpectation(_)))
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn compile_fail_retains_independent_stream_expectation_load_failures() {
+    let fixture = Fixture::new();
+    fixture.write("failure.ska", "fn main() -> i64 { return missing(); }\n");
+    fixture.write("stdout.expected", "compiler stdout: alpha omega\n");
+    fixture.write("stderr.expected", "error[FAKE001]");
+    fixture.write(
+        "load-failures.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "load-failures"
+mode = "compile-fail"
+source = "failure.ska"
+compiler_args = ["--fake-mode", "compile-fail-streams"]
+expect = { stdout = { file = "stdout.expected" }, stderr = { match = "contains", file = "stderr.expected" } }
+"#,
+    );
+    let plan = fixture.plan();
+    fs::remove_file(fixture.root.join("stdout.expected")).unwrap();
+    fs::remove_file(fixture.root.join("stderr.expected")).unwrap();
+    let selected = select(&plan, &SelectionOptions::default()).unwrap();
+
+    let execution = execute_sequential(&selected, &fixture.options(Determinism::Off, "success"));
+    let issues = execution.builds()[0].compilation().issues();
+    assert!(issues
+        .iter()
+        .any(|issue| matches!(issue, CompilationIssue::StdoutExpectationLoad(_))));
+    assert!(issues
+        .iter()
+        .any(|issue| matches!(issue, CompilationIssue::StderrExpectationLoad(_))));
+}
+
+#[test]
 fn rejects_unexpected_compiler_output_status_and_missing_assembly() {
     for mode in ["unexpected-output", "status-two", "no-assembly"] {
         let fixture = Fixture::new();

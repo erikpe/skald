@@ -88,6 +88,7 @@ fn collect_plan_ownership(
     for leaf in plan.leaves() {
         match leaf.kind() {
             PlannedLeafKind::Compile(expectation) => {
+                own_stream(files, expectation.stdout(), leaf.spec_id());
                 own_stream(files, expectation.stderr(), leaf.spec_id());
             }
             PlannedLeafKind::Run(run) => {
@@ -116,8 +117,10 @@ fn own_stream(
     stream: &ResolvedStreamExpectation,
     owner: &str,
 ) {
-    if let Some(source) = stream.expected() {
-        own_bytes(files, source, owner);
+    if let Some(matchers) = stream.matchers() {
+        for matcher in matchers {
+            own_bytes(files, matcher.expected(), owner);
+        }
     }
 }
 

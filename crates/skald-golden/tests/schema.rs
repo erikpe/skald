@@ -220,8 +220,8 @@ file = "expected.stderr"
     assert_eq!(ordinary.timeout_seconds(), Some(10));
     assert_eq!(ordinary.expectation().exit(), ExitExpectation::Failure);
     assert_eq!(
-        ordinary.expectation().stderr().mode(),
-        Some(MatchMode::Contains)
+        ordinary.expectation().stderr().matchers().unwrap()[0].mode(),
+        MatchMode::Contains
     );
     assert_eq!(
         native.runs()[1].args(),
@@ -236,8 +236,8 @@ file = "expected.stderr"
         panic!("rejected test should have compile-fail data");
     };
     assert_eq!(
-        rejected.expectation().stderr().mode(),
-        Some(MatchMode::StartsWith)
+        rejected.expectation().stderr().matchers().unwrap()[0].mode(),
+        MatchMode::StartsWith
     );
 }
 
@@ -317,6 +317,147 @@ file = "expected.stderr"
 }
 
 #[test]
+fn schema_two_accepts_singular_shorthand_and_matcher_lists_for_every_stream() {
+    let spec = parse(
+        r#"
+schema = 2
+
+[[test]]
+name = "native"
+mode = "run"
+source = "native.ska"
+
+[[test.run]]
+name = "streams"
+[test.run.expect.stdout]
+matches = [
+  { name = "header", match = "starts-with", inline = "start" },
+  { match = "contains", file = "expected/result.stdout" },
+]
+[[test.run.expect.stderr.matches]]
+name = "complete stderr"
+file = "expected/native.stderr"
+
+[[test]]
+name = "rejected"
+mode = "compile-fail"
+source = "rejected.ska"
+[test.expect.stdout]
+matches = [
+  { name = "progress", match = "contains", inline = "checking" },
+  { match = "exact", file = "expected/compiler.stdout" },
+]
+[[test.expect.stderr.matches]]
+name = "first diagnostic"
+match = "contains"
+inline = "error[ONE]"
+[[test.expect.stderr.matches]]
+name = "diagnostic prefix"
+match = "starts-with"
+file = "expected/compiler-prefix.stderr"
+"#,
+    );
+
+    assert_eq!(spec.schema(), SchemaVersion::V2);
+    let TestKind::Run(native) = spec.tests()[0].kind() else {
+        panic!("expected a native test");
+    };
+    let stdout = native.runs()[0].expectation().stdout().matchers().unwrap();
+    assert_eq!(stdout.len(), 2);
+    assert_eq!(stdout[0].name(), Some("header"));
+    assert_eq!(stdout[0].mode(), MatchMode::StartsWith);
+    assert_eq!(stdout[1].name(), None);
+    assert_eq!(stdout[1].mode(), MatchMode::Contains);
+    let stderr = native.runs()[0].expectation().stderr().matchers().unwrap();
+    assert_eq!(stderr.len(), 1);
+    assert_eq!(stderr[0].mode(), MatchMode::Exact);
+
+    let TestKind::CompileFail(rejected) = spec.tests()[1].kind() else {
+        panic!("expected a compile-fail test");
+    };
+    assert_eq!(rejected.expectation().stdout().matchers().unwrap().len(), 2);
+    assert_eq!(rejected.expectation().stderr().matchers().unwrap().len(), 2);
+}
+
+#[test]
+fn schema_two_compile_fail_stdout_defaults_to_exact_empty() {
+    let spec = parse(
+        r#"
+schema = 2
+[[test]]
+name = "rejected"
+mode = "compile-fail"
+source = "rejected.ska"
+expect = { stderr = { inline = "error" } }
+"#,
+    );
+    let TestKind::CompileFail(rejected) = spec.tests()[0].kind() else {
+        panic!("expected a compile-fail test");
+    };
+    assert_eq!(
+        rejected.expectation().stdout(),
+        &StreamExpectation::exact_empty()
+    );
+}
+
+#[test]
+fn schema_one_rejects_matcher_lists_and_compile_fail_stdout() {
+    let cases = [
+        (
+            "schema=1\n[[test]]\nname='x'\nmode='run'\nsource='x'\n[[test.run]]\nname='r'\nexpect={stdout={matches=[{inline='x'}]}}",
+            "stdout.matches",
+        ),
+        (
+            "schema=1\n[[test]]\nname='x'\nmode='compile-fail'\nsource='x'\nexpect={stdout={inline='progress'},stderr={inline='error'}}",
+            "expect.stdout",
+        ),
+    ];
+    for (contents, field) in cases {
+        assert_rejected(contents, field);
+    }
+
+    let error = parse_config(CONFIG_PATH, "schema=2")
+        .expect_err("repository configuration must remain schema version 1");
+    assert_eq!(error.field_path(), "schema");
+}
+
+#[test]
+fn rejects_invalid_matcher_list_shapes_and_names() {
+    let cases = [
+        ("expect={stdout={matches=[]}}", "stdout.matches"),
+        (
+            "expect={stdout={inline='x',matches=[{inline='x'}]}}",
+            "stdout",
+        ),
+        ("expect={stdout={matches=[{}]}}", "matches[0]"),
+        (
+            "expect={stdout={matches=[{inline='x',file='x'}]}}",
+            "matches[0]",
+        ),
+        (
+            "expect={stdout={matches=[{name='',inline='x'}]}}",
+            "matches[0].name",
+        ),
+        (
+            "expect={stdout={matches=[{name='same',inline='x'},{name='same',inline='y'}]}}",
+            "matches[1].name",
+        ),
+        (
+            "expect={stdout={matches=[{match='contains',inline=''}]}}",
+            "matches[0].inline",
+        ),
+    ];
+    for (tail, field) in cases {
+        assert_rejected(
+            &format!(
+                "schema=2\n[[test]]\nname='x'\nmode='run'\nsource='x'\n[[test.run]]\nname='r'\n{tail}"
+            ),
+            field,
+        );
+    }
+}
+
+#[test]
 fn rejects_unknown_keys_at_every_schema_level() {
     let cases = [
         ("schema = 1\nunknown = true", "unknown"),
@@ -349,6 +490,10 @@ fn rejects_unknown_keys_at_every_schema_level() {
             "stdout",
         ),
         (
+            "schema=2\n[[test]]\nname='x'\nmode='run'\nsource='x.ska'\n[[test.run]]\nname='r'\nexpect={stdout={matches=[{inline='x',unknown=true}]}}",
+            "stdout.matches[0]",
+        ),
+        (
             "schema=1\n[[test]]\nname='x'\nmode='run'\nsource='x.ska'\n[[test.run]]\nname='r'\nexpect={output_files=[{name='f',contents={inline='x'},unknown=true}]}",
             "output_files",
         ),
@@ -377,7 +522,7 @@ fn rejects_unknown_keys_at_every_schema_level() {
 #[test]
 fn rejects_versions_duplicates_and_empty_collections() {
     let cases = [
-        ("schema=2\n[[test]]\nname='x'\nmode='run'\nsource='x'", "schema"),
+        ("schema=3\n[[test]]\nname='x'\nmode='run'\nsource='x'", "schema"),
         ("schema=1", "test"),
         (
             "schema=1\n[[test]]\nname='x'\nmode='run'\nsource='x'\n[[test.run]]\nname='r'\n[[test]]\nname='x'\nmode='run'\nsource='y'\n[[test.run]]\nname='r'",

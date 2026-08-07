@@ -69,6 +69,15 @@ fn run(arguments: Vec<OsString>) -> Result<(), String> {
             drop(activity);
             process::exit(1)
         }
+        "compile-fail-streams" => {
+            println!("compiler stdout: alpha omega");
+            eprint!(
+                "error[FAKE001]: first rejected construct\n --> fake.ska:1:1\n\
+                 error[FAKE002]: second rejected construct\n --> fake.ska:2:1\n"
+            );
+            drop(activity);
+            process::exit(1)
+        }
         "nondeterministic-diagnostic" => {
             eprintln!(
                 "error[FAKE001]: {} diagnostic",

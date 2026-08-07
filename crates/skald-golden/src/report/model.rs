@@ -1,8 +1,9 @@
 use super::{diff, escape_bytes, escape_command, escape_path};
 use crate::{
     BuildExecution, CompilationIssue, Determinism, ExitExpectation, LeafExecution, MatchMode,
-    OutputFileMismatch, PlanExecution, PlannedLeafKind, ProcessObservation, ProcessTermination,
-    RunMismatch, SelectedPlan, StageStatus, StreamMatch, StreamMismatch,
+    MatcherLoadFailure, MatcherMismatch, MatcherOutcome, OutputFileMismatch, PlanExecution,
+    PlannedLeafKind, ProcessObservation, ProcessTermination, RunExecution, RunMismatch,
+    SelectedPlan, StageStatus, StreamComparison,
 };
 use serde::Serialize;
 use std::{collections::BTreeSet, fmt, num::NonZeroUsize, time::Duration};
@@ -261,7 +262,7 @@ fn case_report(
         } else {
             format!("execution-{}", index + 1)
         };
-        let mut failures = run.mismatches().iter().map(run_failure).collect::<Vec<_>>();
+        let mut failures = run_failures(run);
         if failures.is_empty() && !leaf.status().passed() {
             failures.extend(status_failure(leaf.status()));
         }
@@ -352,6 +353,11 @@ fn compilation_stage(build: &BuildExecution, artifact_directory: &std::path::Pat
                 process_report(observation.command(), observation.process(), index + 1);
             if index == 0 {
                 if let (Some(process), Some(comparison)) =
+                    (observation.process(), compilation.stdout_comparison())
+                {
+                    report.stdout = Some(stream_comparison(process.stdout(), comparison));
+                }
+                if let (Some(process), Some(comparison)) =
                     (observation.process(), compilation.stderr_comparison())
                 {
                     report.stderr = Some(stream_comparison(process.stderr(), comparison));
@@ -393,7 +399,7 @@ fn compilation_stage(build: &BuildExecution, artifact_directory: &std::path::Pat
             compilation
                 .issues()
                 .iter()
-                .map(compilation_failure)
+                .map(|issue| compilation_failure(compilation, issue))
                 .collect()
         },
     }
@@ -510,7 +516,10 @@ fn planned_counts(selected: &SelectedPlan<'_>) -> ReportCounts {
     }
 }
 
-fn compilation_failure(issue: &CompilationIssue) -> FailureReport {
+fn compilation_failure(
+    compilation: &crate::CompilationExecution,
+    issue: &CompilationIssue,
+) -> FailureReport {
     match issue {
         CompilationIssue::Process(message) => plain_failure("compiler-process", message.clone()),
         CompilationIssue::Termination { expected, actual } => plain_failure(
@@ -524,7 +533,18 @@ fn compilation_failure(issue: &CompilationIssue) -> FailureReport {
             "compiler-pipe",
             format!("{:?} pipe failed: {}", failure.pipe(), failure.message()),
         ),
-        CompilationIssue::StderrExpectation(mismatch) => mismatch_failure("stderr", mismatch),
+        CompilationIssue::StdoutExpectation(mismatch) => matcher_mismatch_failure(
+            "stdout",
+            mismatch,
+            comparison_actual(compilation.stdout_comparison()),
+        ),
+        CompilationIssue::StderrExpectation(mismatch) => matcher_mismatch_failure(
+            "stderr",
+            mismatch,
+            comparison_actual(compilation.stderr_comparison()),
+        ),
+        CompilationIssue::StdoutExpectationLoad(failure) => matcher_load_failure("stdout", failure),
+        CompilationIssue::StderrExpectationLoad(failure) => matcher_load_failure("stderr", failure),
         CompilationIssue::UnexpectedStdout(bytes) => bytes_failure(
             "unexpected-stdout",
             "successful compilation produced stdout",
@@ -559,13 +579,17 @@ fn compilation_failure(issue: &CompilationIssue) -> FailureReport {
             "compile-determinism",
             "repeated compiler processes produced different diagnostics",
         ),
-        CompilationIssue::ExpectationLoad(message) => {
-            plain_failure("expectation-load", message.clone())
-        }
     }
 }
 
-fn run_failure(mismatch: &RunMismatch) -> FailureReport {
+fn run_failures(run: &RunExecution) -> Vec<FailureReport> {
+    run.mismatches()
+        .iter()
+        .map(|mismatch| run_failure(run, mismatch))
+        .collect()
+}
+
+fn run_failure(run: &RunExecution, mismatch: &RunMismatch) -> FailureReport {
     match mismatch {
         RunMismatch::Exit { expected, actual } => plain_failure(
             "exit",
@@ -575,8 +599,14 @@ fn run_failure(mismatch: &RunMismatch) -> FailureReport {
                 termination(*actual)
             ),
         ),
-        RunMismatch::Stdout(mismatch) => mismatch_failure("stdout", mismatch),
-        RunMismatch::Stderr(mismatch) => mismatch_failure("stderr", mismatch),
+        RunMismatch::Stdout(mismatch) => {
+            matcher_mismatch_failure("stdout", mismatch, run.stdout_comparison().actual())
+        }
+        RunMismatch::Stderr(mismatch) => {
+            matcher_mismatch_failure("stderr", mismatch, run.stderr_comparison().actual())
+        }
+        RunMismatch::StdoutLoad(failure) => matcher_load_failure("stdout", failure),
+        RunMismatch::StderrLoad(failure) => matcher_load_failure("stderr", failure),
         RunMismatch::OutputFile(mismatch) => output_file_failure(mismatch),
         RunMismatch::Pipe(failure) => plain_failure(
             "pipe",
@@ -596,17 +626,40 @@ fn output_file_failure(mismatch: &OutputFileMismatch) -> FailureReport {
     )
 }
 
-fn mismatch_failure(stream_name: &str, mismatch: &StreamMismatch) -> FailureReport {
+fn matcher_mismatch_failure(
+    stream_name: &str,
+    mismatch: &MatcherMismatch,
+    actual: &[u8],
+) -> FailureReport {
+    let matcher = mismatch.name().map_or_else(
+        || format!("matcher {}", mismatch.index()),
+        |name| format!("matcher {name:?}"),
+    );
     bytes_failure(
         stream_name,
         &format!(
-            "{stream_name} did not satisfy {} matching",
+            "{stream_name} {matcher} did not satisfy {} matching",
             mode(mismatch.mode())
         ),
         mismatch.expected(),
-        mismatch.actual(),
+        actual,
         Some(mode(mismatch.mode())),
     )
+}
+
+fn matcher_load_failure(stream_name: &str, failure: &MatcherLoadFailure) -> FailureReport {
+    let matcher = failure.name().map_or_else(
+        || format!("matcher {}", failure.index()),
+        |name| format!("matcher {name:?}"),
+    );
+    plain_failure(
+        "expectation-load",
+        format!("could not load {stream_name} {matcher}: {failure}"),
+    )
+}
+
+fn comparison_actual(comparison: Option<&StreamComparison>) -> &[u8] {
+    comparison.map(StreamComparison::actual).unwrap_or_default()
 }
 
 fn bytes_failure(
@@ -652,18 +705,20 @@ fn status_failure(status: &StageStatus) -> Vec<FailureReport> {
     }
 }
 
-fn stream_comparison(
-    bytes: &[u8],
-    comparison: &Result<StreamMatch, StreamMismatch>,
-) -> StreamReport {
-    match comparison {
-        Ok(StreamMatch::Ignored) => stream(bytes, Some(("ignore", None))),
-        Ok(StreamMatch::Matched {
-            mode: policy,
-            offset,
-        }) => stream(bytes, Some((mode(*policy), Some(*offset)))),
-        Err(mismatch) => stream(bytes, Some((mode(mismatch.mode()), None))),
+fn stream_comparison(bytes: &[u8], comparison: &StreamComparison) -> StreamReport {
+    if comparison.is_ignored() {
+        return stream(bytes, Some(("ignore", None)));
     }
+    if let [outcome] = comparison.outcomes() {
+        return match outcome {
+            MatcherOutcome::Matched(result) => {
+                stream(bytes, Some((mode(result.mode()), Some(result.offset()))))
+            }
+            MatcherOutcome::Mismatched(result) => stream(bytes, Some((mode(result.mode()), None))),
+            MatcherOutcome::LoadFailed(result) => stream(bytes, Some((mode(result.mode()), None))),
+        };
+    }
+    stream(bytes, None)
 }
 
 fn stream(bytes: &[u8], match_data: Option<(&str, Option<usize>)>) -> StreamReport {

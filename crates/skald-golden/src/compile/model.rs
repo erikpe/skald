@@ -1,6 +1,6 @@
 use crate::{
-    PipeFailure, ProcessCommand, ProcessEnvironment, ProcessObservation, ProcessTermination,
-    StreamMatch, StreamMismatch,
+    MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCommand, ProcessEnvironment,
+    ProcessObservation, ProcessTermination, StreamComparison,
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -157,8 +157,10 @@ pub enum CompilationIssue {
     NonUtf8Assembly(PathBuf),
     NondeterministicAssembly,
     NondeterministicDiagnostics,
-    StderrExpectation(StreamMismatch),
-    ExpectationLoad(String),
+    StdoutExpectation(MatcherMismatch),
+    StderrExpectation(MatcherMismatch),
+    StdoutExpectationLoad(MatcherLoadFailure),
+    StderrExpectationLoad(MatcherLoadFailure),
 }
 
 /// Complete observations and issues for one build's compilation stage.
@@ -167,7 +169,8 @@ pub struct CompilationExecution {
     build_id: String,
     kind: CompilationKind,
     observations: Vec<CompilerObservation>,
-    stderr_comparison: Option<Result<StreamMatch, StreamMismatch>>,
+    stdout_comparison: Option<StreamComparison>,
+    stderr_comparison: Option<StreamComparison>,
     issues: Vec<CompilationIssue>,
 }
 
@@ -176,13 +179,15 @@ impl CompilationExecution {
         build_id: String,
         kind: CompilationKind,
         observations: Vec<CompilerObservation>,
-        stderr_comparison: Option<Result<StreamMatch, StreamMismatch>>,
+        stdout_comparison: Option<StreamComparison>,
+        stderr_comparison: Option<StreamComparison>,
         issues: Vec<CompilationIssue>,
     ) -> Self {
         Self {
             build_id,
             kind,
             observations,
+            stdout_comparison,
             stderr_comparison,
             issues,
         }
@@ -197,6 +202,7 @@ impl CompilationExecution {
             build_id,
             kind,
             Vec::new(),
+            None,
             None,
             vec![CompilationIssue::Process(reason.into())],
         )
@@ -214,7 +220,11 @@ impl CompilationExecution {
         &self.observations
     }
 
-    pub fn stderr_comparison(&self) -> Option<&Result<StreamMatch, StreamMismatch>> {
+    pub fn stdout_comparison(&self) -> Option<&StreamComparison> {
+        self.stdout_comparison.as_ref()
+    }
+
+    pub fn stderr_comparison(&self) -> Option<&StreamComparison> {
         self.stderr_comparison.as_ref()
     }
 

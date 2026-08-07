@@ -7,8 +7,8 @@ use super::{
     ExecutionError,
 };
 use crate::{
-    compare_exit, compare_stream, decode_arguments, load_bytes, run_process, PlannedRun,
-    ProcessCommand, ResolvedWorkingDirectory,
+    compare_exit, compare_stream, decode_arguments, load_bytes, run_process, MatcherOutcome,
+    PlannedRun, ProcessCommand, ResolvedWorkingDirectory, StreamComparison,
 };
 use std::{
     fs,
@@ -22,8 +22,8 @@ static NEXT_SANDBOX: AtomicU64 = AtomicU64::new(0);
 struct ObservedRun {
     command: ProcessCommand,
     process: crate::ProcessObservation,
-    stdout: Result<crate::StreamMatch, crate::StreamMismatch>,
-    stderr: Result<crate::StreamMatch, crate::StreamMismatch>,
+    stdout: StreamComparison,
+    stderr: StreamComparison,
     output_files: Vec<OutputFileObservation>,
     mismatches: Vec<RunMismatch>,
 }
@@ -139,16 +139,10 @@ fn execute_in_sandbox(
             actual: observation.termination(),
         });
     }
-    let stdout = compare_stream(expectation.stdout(), observation.stdout())
-        .map_err(|source| ExecutionError::source("could not load stdout expectation", source))?;
-    if let Err(mismatch) = &stdout {
-        mismatches.push(RunMismatch::Stdout(mismatch.clone()));
-    }
-    let stderr = compare_stream(expectation.stderr(), observation.stderr())
-        .map_err(|source| ExecutionError::source("could not load stderr expectation", source))?;
-    if let Err(mismatch) = &stderr {
-        mismatches.push(RunMismatch::Stderr(mismatch.clone()));
-    }
+    let stdout = compare_stream(expectation.stdout(), observation.stdout());
+    collect_stream_mismatches(&stdout, &mut mismatches, true);
+    let stderr = compare_stream(expectation.stderr(), observation.stderr());
+    collect_stream_mismatches(&stderr, &mut mismatches, false);
     let output_files = compare_output_files(run, &temporary_paths, &mut mismatches)?;
     Ok(ObservedRun {
         command: request,
@@ -158,6 +152,28 @@ fn execute_in_sandbox(
         output_files,
         mismatches,
     })
+}
+
+fn collect_stream_mismatches(
+    comparison: &StreamComparison,
+    mismatches: &mut Vec<RunMismatch>,
+    stdout: bool,
+) {
+    for outcome in comparison.outcomes() {
+        match outcome {
+            MatcherOutcome::Matched(_) => {}
+            MatcherOutcome::Mismatched(mismatch) => mismatches.push(if stdout {
+                RunMismatch::Stdout(mismatch.clone())
+            } else {
+                RunMismatch::Stderr(mismatch.clone())
+            }),
+            MatcherOutcome::LoadFailed(failure) => mismatches.push(if stdout {
+                RunMismatch::StdoutLoad(failure.clone())
+            } else {
+                RunMismatch::StderrLoad(failure.clone())
+            }),
+        }
+    }
 }
 
 fn compare_output_files(

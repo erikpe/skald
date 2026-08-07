@@ -1,7 +1,7 @@
 use skald_golden::{
     allowlisted_environment, build_plan, decode_arguments, execute_run, run_process,
-    ExecutionOptions, PlannedLeafKind, PlannedRun, ProcessCommand, ProcessTermination, RunMismatch,
-    SandboxRetention, StreamMatch,
+    ExecutionOptions, MatcherOutcome, PlannedLeafKind, PlannedRun, ProcessCommand,
+    ProcessTermination, RunMismatch, SandboxRetention,
 };
 use std::{
     ffi::OsString,
@@ -165,17 +165,123 @@ expect = { stdout = { file = "expected.bin" }, stderr = { file = "expected.bin" 
         )
         .unwrap();
         assert!(result.passed(), "{name}: {:?}", result.mismatches());
-        assert!(result.stdout_comparison().is_ok());
-        assert!(result.stderr_comparison().is_ok());
+        assert!(result.stdout_comparison().passed());
+        assert!(result.stderr_comparison().passed());
         if name == "contains-inline" {
             assert!(matches!(
-                result.stdout_comparison(),
-                Ok(StreamMatch::Matched { offset: 7, .. })
+                result.stdout_comparison().outcomes(),
+                [MatcherOutcome::Matched(result)] if result.offset() == 7
             ));
         }
         assert!(!result.retained());
         assert!(!result.sandbox().exists());
     }
+}
+
+#[test]
+fn evaluates_every_native_stdout_and_stderr_matcher() {
+    let fixture = Fixture::new();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write(
+        "matcher-lists.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "matcher-lists"
+mode = "run"
+source = "program.ska"
+
+[[test.run]]
+name = "passing"
+args = ["echo"]
+stdin = { inline = "prefix middle suffix" }
+expect = { stdout = { matches = [{ match = "starts-with", inline = "prefix" }, { match = "contains", inline = "middle" }] }, stderr = { matches = [{ match = "exact", inline = "prefix middle suffix" }, { match = "contains", inline = "suffix" }] } }
+
+[[test.run]]
+name = "failing"
+args = ["echo"]
+stdin = { inline = "actual" }
+expect = { stdout = { matches = [{ inline = "wrong" }, { match = "contains", inline = "missing" }] }, stderr = { matches = [{ inline = "also wrong" }, { match = "starts-with", inline = "absent" }] } }
+"#,
+    );
+    let plan = fixture.plan();
+
+    let passing = execute_run(
+        fake_process(),
+        run(&plan, "passing"),
+        &execution_options(&fixture),
+    )
+    .unwrap();
+    assert!(passing.passed(), "{:?}", passing.mismatches());
+    assert_eq!(passing.stdout_comparison().outcomes().len(), 2);
+    assert_eq!(passing.stderr_comparison().outcomes().len(), 2);
+
+    let failing = execute_run(
+        fake_process(),
+        run(&plan, "failing"),
+        &execution_options(&fixture),
+    )
+    .unwrap();
+    assert!(!failing.passed());
+    assert_eq!(failing.mismatches().len(), 4);
+    assert_eq!(
+        failing
+            .mismatches()
+            .iter()
+            .filter(|mismatch| matches!(mismatch, RunMismatch::Stdout(_)))
+            .count(),
+        2
+    );
+    assert_eq!(
+        failing
+            .mismatches()
+            .iter()
+            .filter(|mismatch| matches!(mismatch, RunMismatch::Stderr(_)))
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn retains_native_stream_load_failures_as_independent_mismatches() {
+    let fixture = Fixture::new();
+    fixture.write("program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write("stdout.expected", "actual");
+    fixture.write("stderr.expected", "actual");
+    fixture.write(
+        "load-failures.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "load-failures"
+mode = "run"
+source = "program.ska"
+[[test.run]]
+name = "run"
+args = ["echo"]
+stdin = { inline = "actual" }
+expect = { stdout = { matches = [{ file = "stdout.expected" }] }, stderr = { matches = [{ file = "stderr.expected" }] } }
+"#,
+    );
+    let plan = fixture.plan();
+    fs::remove_file(fixture.root.join("stdout.expected")).unwrap();
+    fs::remove_file(fixture.root.join("stderr.expected")).unwrap();
+
+    let execution = execute_run(
+        fake_process(),
+        run(&plan, "run"),
+        &execution_options(&fixture),
+    )
+    .unwrap();
+    assert!(!execution.passed());
+    assert!(execution
+        .mismatches()
+        .iter()
+        .any(|mismatch| matches!(mismatch, RunMismatch::StdoutLoad(_))));
+    assert!(execution
+        .mismatches()
+        .iter()
+        .any(|mismatch| matches!(mismatch, RunMismatch::StderrLoad(_))));
 }
 
 #[test]

@@ -10,7 +10,7 @@ pub use error::ExpectationError;
 pub use load::{decode_arguments, load_bytes};
 pub use model::{
     EmptyStreamMatcherSet, MatcherLoadFailure, MatcherMatch, MatcherMismatch, MatcherOutcome,
-    StreamComparison, StreamMatch, StreamMatcher, StreamMatcherSet, StreamMismatch,
+    StreamComparison, StreamMatcher, StreamMatcherSet,
 };
 
 #[cfg(test)]

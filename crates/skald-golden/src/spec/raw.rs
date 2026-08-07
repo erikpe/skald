@@ -112,6 +112,7 @@ pub(super) enum RawExitName {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RawCompileExpectation {
+    pub(super) stdout: Option<RawStreamExpectation>,
     pub(super) stderr: Option<RawStreamExpectation>,
 }
 
@@ -131,6 +132,17 @@ pub(super) struct RawStreamExpectation {
     pub(super) inline: Option<String>,
     pub(super) file: Option<PathBuf>,
     pub(super) ignore: Option<bool>,
+    pub(super) matches: Option<Vec<RawStreamMatcher>>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RawStreamMatcher {
+    pub(super) name: Option<String>,
+    #[serde(rename = "match")]
+    pub(super) mode: Option<RawMatchMode>,
+    pub(super) inline: Option<String>,
+    pub(super) file: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]

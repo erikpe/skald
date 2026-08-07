@@ -41,6 +41,7 @@ impl TestPlan {
         match leaf.kind() {
             PlannedLeafKind::Compile(expectation) => {
                 writeln!(output, "kind = compile").unwrap();
+                write_stream(&mut output, "stdout", expectation.stdout());
                 write_stream(&mut output, "stderr", expectation.stderr());
                 if let Some(prefix) = expectation.stderr_prefix_to_strip() {
                     write!(output, "stderr-prefix-to-strip = ").unwrap();
@@ -140,10 +141,18 @@ fn write_byte_value(output: &mut String, source: &ResolvedByteSource) {
 fn write_stream(output: &mut String, label: &str, expectation: &ResolvedStreamExpectation) {
     match expectation {
         ResolvedStreamExpectation::Ignore => writeln!(output, "{label} = ignore").unwrap(),
-        ResolvedStreamExpectation::Match { mode, expected } => {
-            write!(output, "{label} = {mode:?} ").unwrap();
-            write_byte_value(output, expected);
-            output.push('\n');
+        ResolvedStreamExpectation::Match(matchers) => {
+            if let [matcher] = matchers.matchers() {
+                write!(output, "{label} = {:?} ", matcher.mode()).unwrap();
+                write_byte_value(output, matcher.expected());
+                output.push('\n');
+                return;
+            }
+            for (index, matcher) in matchers.matchers().iter().enumerate() {
+                write!(output, "{label}.matches[{index}] = {:?} ", matcher.mode()).unwrap();
+                write_byte_value(output, matcher.expected());
+                output.push('\n');
+            }
         }
     }
 }

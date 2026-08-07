@@ -1,6 +1,6 @@
 use super::{
     compare::{compare_exit, find_bytes},
-    compare_matchers, compare_stream, MatcherOutcome, StreamMatch, StreamMatcher, StreamMatcherSet,
+    compare_matchers, compare_stream, MatcherOutcome, StreamMatcher, StreamMatcherSet,
 };
 use crate::{
     ExitExpectation, MatchMode, ProcessTermination, ResolvedByteSource, ResolvedStreamExpectation,
@@ -81,7 +81,7 @@ fn failure_expectations_do_not_treat_timeouts_as_program_failures() {
 
 #[test]
 fn matcher_sets_must_not_be_empty() {
-    let error = StreamMatcherSet::try_from(Vec::new()).unwrap_err();
+    let error = StreamMatcherSet::<ResolvedByteSource>::try_from(Vec::new()).unwrap_err();
     assert_eq!(
         error.to_string(),
         "a stream matcher collection must not be empty"
@@ -213,31 +213,38 @@ fn exact_empty_and_binary_partial_matchers_remain_byte_exact() {
 }
 
 #[test]
-fn singular_comparison_preserves_success_mismatch_ignore_and_load_errors() {
-    let matched = ResolvedStreamExpectation::Match {
-        mode: MatchMode::Contains,
-        expected: ResolvedByteSource::Inline("target".into()),
+fn stream_comparison_handles_matcher_sets_ignore_and_load_errors() {
+    let matched = ResolvedStreamExpectation::Match(StreamMatcherSet::one(StreamMatcher::new(
+        MatchMode::Contains,
+        ResolvedByteSource::Inline("target".into()),
+    )));
+    let comparison = compare_stream(&matched, b"before target");
+    let MatcherOutcome::Matched(result) = &comparison.outcomes()[0] else {
+        panic!("expected the contains matcher to pass");
     };
-    assert!(matches!(
-        compare_stream(&matched, b"before target").unwrap(),
-        Ok(StreamMatch::Matched { offset: 7, .. })
-    ));
+    assert_eq!(result.offset(), 7);
 
-    let mismatch = compare_stream(&matched, b"actual").unwrap().unwrap_err();
+    let comparison = compare_stream(&matched, b"actual");
+    let MatcherOutcome::Mismatched(mismatch) = &comparison.outcomes()[0] else {
+        panic!("expected the contains matcher to fail");
+    };
     assert_eq!(mismatch.mode(), MatchMode::Contains);
     assert_eq!(mismatch.expected(), b"target");
-    assert_eq!(mismatch.actual(), b"actual");
+    assert_eq!(comparison.actual(), b"actual");
 
-    assert_eq!(
-        compare_stream(&ResolvedStreamExpectation::Ignore, b"anything").unwrap(),
-        Ok(StreamMatch::Ignored)
-    );
+    let ignored = compare_stream(&ResolvedStreamExpectation::Ignore, b"anything");
+    assert!(ignored.is_ignored());
+    assert!(ignored.passed());
+    assert!(ignored.outcomes().is_empty());
 
     let missing = ExpectationFile::missing();
-    let unloaded = ResolvedStreamExpectation::Match {
-        mode: MatchMode::Exact,
-        expected: missing.source(),
+    let unloaded = ResolvedStreamExpectation::Match(StreamMatcherSet::one(StreamMatcher::new(
+        MatchMode::Exact,
+        missing.source(),
+    )));
+    let comparison = compare_stream(&unloaded, b"");
+    let MatcherOutcome::LoadFailed(failure) = &comparison.outcomes()[0] else {
+        panic!("expected the missing file to fail loading");
     };
-    let error = compare_stream(&unloaded, b"").unwrap_err();
-    assert_eq!(error.path(), missing.0);
+    assert_eq!(failure.path(), missing.0);
 }

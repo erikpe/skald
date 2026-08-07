@@ -10,8 +10,8 @@ use super::{
     PlanError,
 };
 use crate::{
-    discovery::DiscoveredSuite, ArgSource, MatchMode, Run, StreamExpectation, Test, TestKind,
-    WorkingDirectory,
+    discovery::DiscoveredSuite, ArgSource, MatchMode, Run, StreamExpectation, StreamMatcher,
+    StreamMatcherSet, Test, TestKind, WorkingDirectory,
 };
 use std::{
     collections::HashMap,
@@ -164,6 +164,12 @@ pub(super) fn build(
                             variant: variant_name.clone(),
                             source_relative: source_relative.clone(),
                             kind: PlannedLeafKind::Compile(ResolvedCompileExpectation {
+                                stdout: resolve_stream(
+                                    &paths,
+                                    compile.expectation().stdout(),
+                                    &format!("{test_field}.expect.stdout"),
+                                    false,
+                                )?,
                                 stderr: resolve_stream(
                                     &paths,
                                     compile.expectation().stderr(),
@@ -286,21 +292,29 @@ fn resolve_stream(
 ) -> Result<ResolvedStreamExpectation, PlanError> {
     match expectation {
         StreamExpectation::Ignore => Ok(ResolvedStreamExpectation::Ignore),
-        StreamExpectation::Match { mode, expected } => {
-            let expected = paths.byte_source(expected, field)?;
-            if (require_nonempty || *mode != MatchMode::Exact)
-                && matches!(&expected, super::model::ResolvedByteSource::File(path) if file_is_empty(path)?)
-            {
-                return Err(PlanError::at_field(
-                    paths.spec_path(),
-                    field,
-                    "expected byte file must not be empty for this match policy",
-                ));
+        StreamExpectation::Match(matchers) => {
+            let mut resolved = Vec::with_capacity(matchers.matchers().len());
+            for (index, matcher) in matchers.matchers().iter().enumerate() {
+                let matcher_field = format!("{field}.matches[{index}]");
+                let expected = paths.byte_source(matcher.expected(), &matcher_field)?;
+                if (require_nonempty || matcher.mode() != MatchMode::Exact)
+                    && matches!(&expected, super::model::ResolvedByteSource::File(path) if file_is_empty(path)?)
+                {
+                    return Err(PlanError::at_field(
+                        paths.spec_path(),
+                        matcher_field,
+                        "expected byte file must not be empty for this match policy",
+                    ));
+                }
+                resolved.push(match matcher.name() {
+                    Some(name) => StreamMatcher::named(name, matcher.mode(), expected),
+                    None => StreamMatcher::new(matcher.mode(), expected),
+                });
             }
-            Ok(ResolvedStreamExpectation::Match {
-                mode: *mode,
-                expected,
-            })
+            Ok(ResolvedStreamExpectation::Match(
+                StreamMatcherSet::try_from(resolved)
+                    .expect("validated stream matcher sets must be nonempty"),
+            ))
         }
     }
 }
