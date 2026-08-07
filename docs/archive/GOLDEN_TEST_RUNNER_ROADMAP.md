@@ -1,9 +1,9 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR14 is next.
+Status: complete; archived 2026-08-07.
 
 This roadmap implements the frozen
-[golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
+[golden test runner design](GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
 It replaces the serial source-discovered harness with a Rust workspace tool,
 retains every current fixture through a compatibility boundary, cuts repository
 commands over only after behavioral parity, and then migrates the corpus into
@@ -64,7 +64,7 @@ implicitly.
 - [x] GR11 — Migrate class, object, alias, and polymorphism fixtures
 - [x] GR12 — Migrate array, optional, and shared-ownership fixtures
 - [x] GR13 — Migrate remaining diagnostics and remove legacy discovery
-- [ ] GR14 — Harden, validate, document, and close
+- [x] GR14 — Harden, validate, document, and close
 
 ## PR-sized implementation sequence
 
@@ -676,28 +676,67 @@ migration instructions.
 quality gates from an artifact-free snapshot, and leave only current behavior
 in living documentation.
 
-- [ ] Audit runner facades and large modules for cohesive ownership; split
+- [x] Audit runner facades and large modules for cohesive ownership; split
       schema, planning, process, scheduling, expectation, or reporting hotspots
       only where a repeated responsibility justifies it.
-- [ ] Audit dependency versions, licenses, transitive packages, Rust 1.82
+- [x] Audit dependency versions, licenses, transitive packages, Rust 1.82
       support, and the boundary preventing runner dependencies from entering
       production compiler artifacts.
-- [ ] Re-run collision, symlink escape, timeout descendant, large-pipe,
+- [x] Re-run collision, symlink escape, timeout descendant, large-pipe,
       randomized completion, resource-lock, fail-fast, binary-data, partial
       matcher, and machine-report stress coverage.
-- [ ] Measure default and full warm performance and stage counts on the audit
+- [x] Measure default and full warm performance and stage counts on the audit
       host; resolve material regressions or document a confirmed environmental
       explanation before closeout.
-- [ ] Search code, tests, Make output, scripts, and living documentation for
+- [x] Search code, tests, Make output, scripts, and living documentation for
       roadmap codes, old runner names, sidecar discovery, stale Cargo-test
       commands, and rollout language; remove every stale reference.
-- [ ] Update the development, testing, scripts, and driver/toolchain documents
+- [x] Update the development, testing, scripts, and driver/toolchain documents
       to their concise final authorities without duplicating schema details
       outside the golden fixture guide.
-- [ ] Run the complete repository gate and full determinism audit from an
+- [x] Run the complete repository gate and full determinism audit from an
       artifact-free snapshot, plus MSRV and extended robustness validation.
-- [ ] Mark every roadmap item complete, archive this roadmap, update active and
+- [x] Mark every roadmap item complete, archive this roadmap, update active and
       archive indexes, and retain the frozen design as its historical input.
+
+Audited on 2026-08-07. The facade tree and its largest implementation owners
+remain cohesive: schema validation validates one typed boundary, plan models
+own resolved immutable data, the scheduler coordinator owns one graph state
+machine, execution models own stage observations, and report models assemble
+one canonical report representation. None repeats a responsibility already
+owned by a sibling module, so size alone did not justify another facade split.
+
+The locked runner graph contains only its declared process, serialization,
+TOML, and test-XML dependencies and permissively licensed transitives (MIT,
+Apache-2.0, Unlicense, and Unicode-3.0 combinations). `skald-compiler` remains
+the runner's only repository dependency, while `skac`, `skald-compiler`, the
+runtime, and generated programs acquire none of the runner's third-party
+packages. The exact TOML 1.0 pin retains Rust 1.82 support.
+
+Focused planning, process, scheduler, and reporting suites re-ran collision,
+symlink-containment, descendant termination, simultaneous large pipes, varied
+completion schedules, resource exclusion, fail-fast cancellation, binary
+bytes, all partial match policies, and JSON/JUnit reporting. The completion
+test now covers four seeded schedule permutations while continuing to require
+canonical result order.
+
+Warm measurements on the 16-logical-CPU Linux audit host took 5.80 seconds
+wall time in default mode (290 compiler processes, 151 links, 151 executions)
+and 10.91 seconds in full mode (580 compiler processes, 151 links, 302
+executions). Both improve on the GR7 measurements and remain comfortably
+inside the 15-second default and 30-second full goals. The code, test, Make
+help, script, and living-documentation audit found no obsolete command; the
+last rollout-oriented `new-format` source comment now says `versioned`.
+
+For the final gate, ignored `target/` and `build/` outputs were removed before
+`make check`. That artifact-free ordinary gate passed, including the complete
+runner suite, all 290 default-mode goldens, runtime tests, documentation checks,
+Clippy, and 1,474 compiler unit tests plus integration suites. The subsequent
+full audit passed all 290 leaves with 580 compiler processes, 151 links, and
+302 executions. `make msrv-check` passed every workspace target on Rust 1.82,
+and `make robustness-long` passed all three frontend properties with 10,000
+generated cases. Formatting, documentation links and indexes, and diff hygiene
+were rechecked after archival edits.
 
 **Tests:** `cargo test --locked -p skald-golden`; `make golden-test`;
 `make golden-determinism-test`; `make check`; `make msrv-check`;

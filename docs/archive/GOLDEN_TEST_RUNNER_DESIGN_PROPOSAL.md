@@ -1,9 +1,9 @@
 # Golden Test Runner Design Proposal
 
-Status: G1 through G12 confirmed, frozen, and promoted on 2026-08-05. The
-[implementation roadmap](../roadmaps/GOLDEN_TEST_RUNNER_ROADMAP.md) owns
-delivery. This archived proposal remains the durable design and decision
-record until implemented behavior is transferred to living documentation.
+Status: G1 through G12 confirmed, frozen, and promoted on 2026-08-05; the
+[implementation roadmap](GOLDEN_TEST_RUNNER_ROADMAP.md) completed and was
+archived on 2026-08-07. This proposal remains the historical design and
+decision record; living documentation owns implemented behavior.
 
 This proposal replaces Skald's organically grown golden-test harness with a
 spec-driven Rust runner. The design adopts the useful organization and
@@ -899,10 +899,10 @@ Review confirmed G1 through G12 on 2026-08-05, including:
 - per-run temporary working directories for new fixtures; and
 - a legacy adapter rather than a big-bang migration.
 
-Freezing this design does not make it implemented. The active
-[golden test runner roadmap](../roadmaps/GOLDEN_TEST_RUNNER_ROADMAP.md) divides
-delivery by stable boundaries: typed model and parser, selection and planning,
-process execution, runtime/link integration, parallel scheduling, reporting,
-legacy parity, Makefile cutover, feature-group migrations, and legacy removal.
+Freezing this design did not itself make it implemented. The completed
+[golden test runner roadmap](GOLDEN_TEST_RUNNER_ROADMAP.md) divided delivery by
+stable boundaries: typed model and parser, selection and planning, process
+execution, runtime/link integration, parallel scheduling, reporting, legacy
+parity, Makefile cutover, feature-group migrations, and legacy removal.
 Each task keeps the complete suite runnable and updates living testing
 documentation when its user-visible contract changes.

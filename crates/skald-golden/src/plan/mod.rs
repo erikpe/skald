@@ -17,7 +17,7 @@ pub use model::{
     ResolvedRunExpectation, ResolvedStreamExpectation, ResolvedWorkingDirectory, TestPlan,
 };
 
-/// Discovers, validates, resolves, and expands every new-format golden spec.
+/// Discovers, validates, resolves, and expands every versioned golden spec.
 ///
 /// This operation only reads fixture files. It neither creates artifact
 /// directories nor starts external processes.

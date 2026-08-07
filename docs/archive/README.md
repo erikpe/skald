@@ -71,6 +71,7 @@ Archived plans:
 - [Hexadecimal integer and byte literals](HEXADECIMAL_INTEGER_AND_BYTE_LITERALS_ROADMAP.md)
 - [Produced object alias arguments](PRODUCED_OBJECT_ALIAS_ARGUMENTS_ROADMAP.md)
 - [Program arguments](PROGRAM_ARGUMENTS_ROADMAP.md)
+- [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md)
 
 Resolved string-design inputs:
 

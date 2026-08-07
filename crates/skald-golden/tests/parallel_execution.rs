@@ -4,7 +4,7 @@ use skald_golden::{
     execute_parallel, execute_sequential, select, Determinism, ProcessTermination,
     SchedulerOptions, SelectionOptions, StageStatus,
 };
-use std::{fs, num::NonZeroUsize};
+use std::{collections::BTreeSet, fs, num::NonZeroUsize};
 use support::{write_compile_fail_spec, write_native_spec, Fixture};
 
 fn scheduler(jobs: usize, fail_fast: bool) -> SchedulerOptions {
@@ -54,17 +54,34 @@ fn bounds_external_processes_and_compiles_independent_sources_concurrently() {
 }
 
 #[test]
-fn returns_canonical_results_after_reverse_completion_order() {
-    let fixture = Fixture::new();
-    let completion_log = fixture.root.join("completion.log");
-    let mut spec = String::from("schema=1\n");
-    for (name, delay) in [("a-slow", 120), ("b-middle", 60), ("c-fast", 0)] {
-        fixture.write(
-            &format!("{name}.ska"),
-            "fn main() -> i64 { return missing(); }\n",
-        );
-        spec.push_str(&format!(
-            r#"
+fn returns_canonical_results_across_varied_completion_orders() {
+    let mut random_state = 0x9e37_79b9_7f4a_7c15;
+    let schedules: [[(&str, u64); 4]; 4] = std::array::from_fn(|_| {
+        let mut delays = [0, 40, 80, 120];
+        for index in (1..delays.len()).rev() {
+            let selected = (next_random(&mut random_state) as usize) % (index + 1);
+            delays.swap(index, selected);
+        }
+        [
+            ("a", delays[0]),
+            ("b", delays[1]),
+            ("c", delays[2]),
+            ("d", delays[3]),
+        ]
+    });
+
+    let mut observed_orders = BTreeSet::new();
+    for schedule in schedules {
+        let fixture = Fixture::new();
+        let completion_log = fixture.root.join("completion.log");
+        let mut spec = String::from("schema=1\n");
+        for (name, delay) in schedule {
+            fixture.write(
+                &format!("{name}.ska"),
+                "fn main() -> i64 { return missing(); }\n",
+            );
+            spec.push_str(&format!(
+                r#"
 [[test]]
 name="{name}"
 mode="compile-fail"
@@ -72,30 +89,40 @@ source="{name}.ska"
 compiler_args=["--fake-mode","compile-fail","--fake-delay-ms","{delay}","--fake-completion-log",{log:?},"--fake-label","{name}"]
 expect={{stderr={{match="contains",inline="error[FAKE001]"}}}}
 "#,
-            log = completion_log.display().to_string(),
-        ));
+                log = completion_log.display().to_string(),
+            ));
+        }
+        fixture.write("order.golden.toml", spec);
+        let plan = fixture.plan();
+        let selected = select(&plan, &SelectionOptions::default()).unwrap();
+
+        let execution = execute_parallel(
+            &selected,
+            &fixture.options(Determinism::Off, "success"),
+            scheduler(4, false),
+        );
+
+        assert!(execution.passed(), "{execution:#?}");
+        let completion = fs::read_to_string(completion_log).unwrap();
+        let mut completed_names = completion.lines().collect::<Vec<_>>();
+        completed_names.sort_unstable();
+        assert_eq!(completed_names, ["a", "b", "c", "d"]);
+        observed_orders.insert(completion);
+        let ids = execution
+            .leaves()
+            .iter()
+            .map(|leaf| leaf.leaf_id())
+            .collect::<Vec<_>>();
+        assert!(ids.windows(2).all(|pair| pair[0] < pair[1]));
     }
-    fixture.write("order.golden.toml", spec);
-    let plan = fixture.plan();
-    let selected = select(&plan, &SelectionOptions::default()).unwrap();
+    assert!(observed_orders.len() > 1, "schedules completed identically");
+}
 
-    let execution = execute_parallel(
-        &selected,
-        &fixture.options(Determinism::Off, "success"),
-        scheduler(3, false),
-    );
-
-    assert!(execution.passed(), "{execution:#?}");
-    assert_eq!(
-        fs::read_to_string(completion_log).unwrap(),
-        "c-fast\nb-middle\na-slow\n"
-    );
-    let ids = execution
-        .leaves()
-        .iter()
-        .map(|leaf| leaf.leaf_id())
-        .collect::<Vec<_>>();
-    assert!(ids.windows(2).all(|pair| pair[0] < pair[1]));
+fn next_random(state: &mut u64) -> u64 {
+    *state ^= *state << 13;
+    *state ^= *state >> 7;
+    *state ^= *state << 17;
+    *state
 }
 
 #[test]
