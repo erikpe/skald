@@ -41,18 +41,42 @@ fn sample_report() -> Report {
                         escaped: "actual\\n".to_owned(),
                         policy: Some("starts-with".to_owned()),
                         match_offset: None,
+                        matchers: vec![MatcherReport {
+                            index: 0,
+                            name: Some("diagnostic <&>".to_owned()),
+                            policy: "starts-with".to_owned(),
+                            status: "mismatched".to_owned(),
+                            match_offset: None,
+                            expected_length: Some(9),
+                            expected: Some("expected\\n".to_owned()),
+                            path: None,
+                            error: None,
+                        }],
                     }),
                 }],
-                failures: vec![FailureReport {
-                    kind: "stderr".to_owned(),
-                    message: "stderr did not satisfy starts-with matching".to_owned(),
-                    policy: Some("starts-with".to_owned()),
-                    expected_length: Some(9),
-                    actual_length: Some(7),
-                    expected: Some("expected\\n".to_owned()),
-                    actual: Some("actual\\n".to_owned()),
-                    diff: Some("--- expected\n+++ actual\n-expected\n+actual\n".to_owned()),
-                }],
+                failures: vec![
+                    FailureReport {
+                        kind: "stderr".to_owned(),
+                        message: "stderr did not satisfy starts-with matching".to_owned(),
+                        policy: Some("starts-with".to_owned()),
+                        expected_length: Some(9),
+                        actual_length: Some(7),
+                        expected: Some("expected\\n".to_owned()),
+                        actual: Some("actual\\n".to_owned()),
+                        diff: Some("--- expected\n+++ actual\n-expected\n+actual\n".to_owned()),
+                    },
+                    FailureReport {
+                        kind: "stderr".to_owned(),
+                        message: "stderr matcher \"second <&>\" did not satisfy contains matching"
+                            .to_owned(),
+                        policy: Some("contains".to_owned()),
+                        expected_length: Some(6),
+                        actual_length: Some(7),
+                        expected: Some("second".to_owned()),
+                        actual: Some("actual\\n".to_owned()),
+                        diff: Some("--- expected\n+++ actual\n-second\n+actual\n".to_owned()),
+                    },
+                ],
             }],
         }],
         scheduler_failure: None,
@@ -100,6 +124,8 @@ fn human_reports_all_failure_context_and_stable_slowest_ids() {
             "missing {expected:?} in:\n{output}"
         );
     }
+    assert_eq!(output.matches("actual:   b\"actual\\n\"").count(), 1);
+    assert!(output.contains("matcher 0 \"diagnostic <&>\": mismatched"));
 }
 
 #[test]
@@ -110,6 +136,9 @@ fn json_and_junit_encode_the_same_canonical_case_and_stage() {
     assert_eq!(value["cases"][0]["id"], report.cases[0].id);
     assert_eq!(value["cases"][0]["stages"][0]["stage"], "compile-fail");
     assert_eq!(value["cases"][0]["duration_ms"], 12.0);
+    let matcher = &value["cases"][0]["stages"][0]["processes"][0]["stderr"]["matchers"][0];
+    assert_eq!(matcher["name"], "diagnostic <&>");
+    assert_eq!(matcher["status"], "mismatched");
 
     let junit = render(&report, ReportFormat::Junit).unwrap();
     let mut reader = quick_xml::Reader::from_str(&junit);
@@ -127,5 +156,7 @@ fn json_and_junit_encode_the_same_canonical_case_and_stage() {
     assert!(junit.contains("tests=\"1\" failures=\"1\" skipped=\"0\""));
     assert!(junit.contains("language/types::bad&lt;&amp;&gt;::default::&lt;compile&gt;"));
     assert!(junit.contains("compile-fail: stderr did not satisfy starts-with matching"));
+    assert!(junit.contains("stderr matcher &quot;second &lt;&amp;&gt;&quot;"));
+    assert_eq!(junit.matches("<failure ").count(), 2);
     assert!(junit.ends_with("</testsuite>\n"));
 }

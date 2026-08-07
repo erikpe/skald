@@ -127,6 +127,21 @@ pub struct StreamReport {
     pub escaped: String,
     pub policy: Option<String>,
     pub match_offset: Option<usize>,
+    pub matchers: Vec<MatcherReport>,
+}
+
+/// One ordered matcher result for a captured stream.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct MatcherReport {
+    pub index: usize,
+    pub name: Option<String>,
+    pub policy: String,
+    pub status: String,
+    pub match_offset: Option<usize>,
+    pub expected_length: Option<usize>,
+    pub expected: Option<String>,
+    pub path: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -416,8 +431,8 @@ fn process_report(
         working_directory: escape_path(command.working_directory()),
         duration_ms: observation.map_or(0.0, process_ms),
         termination: observation.map(|process| termination(process.termination())),
-        stdout: observation.map(|process| stream(process.stdout(), None)),
-        stderr: observation.map(|process| stream(process.stderr(), None)),
+        stdout: observation.map(|process| stream(process.stdout(), None, Vec::new())),
+        stderr: observation.map(|process| stream(process.stderr(), None, Vec::new())),
     }
 }
 
@@ -707,26 +722,80 @@ fn status_failure(status: &StageStatus) -> Vec<FailureReport> {
 
 fn stream_comparison(bytes: &[u8], comparison: &StreamComparison) -> StreamReport {
     if comparison.is_ignored() {
-        return stream(bytes, Some(("ignore", None)));
+        return stream(bytes, Some(("ignore", None)), Vec::new());
     }
+    let matchers = comparison
+        .outcomes()
+        .iter()
+        .map(matcher_report)
+        .collect::<Vec<_>>();
     if let [outcome] = comparison.outcomes() {
         return match outcome {
-            MatcherOutcome::Matched(result) => {
-                stream(bytes, Some((mode(result.mode()), Some(result.offset()))))
+            MatcherOutcome::Matched(result) => stream(
+                bytes,
+                Some((mode(result.mode()), Some(result.offset()))),
+                matchers,
+            ),
+            MatcherOutcome::Mismatched(result) => {
+                stream(bytes, Some((mode(result.mode()), None)), matchers)
             }
-            MatcherOutcome::Mismatched(result) => stream(bytes, Some((mode(result.mode()), None))),
-            MatcherOutcome::LoadFailed(result) => stream(bytes, Some((mode(result.mode()), None))),
+            MatcherOutcome::LoadFailed(result) => {
+                stream(bytes, Some((mode(result.mode()), None)), matchers)
+            }
         };
     }
-    stream(bytes, None)
+    stream(bytes, None, matchers)
 }
 
-fn stream(bytes: &[u8], match_data: Option<(&str, Option<usize>)>) -> StreamReport {
+fn matcher_report(outcome: &MatcherOutcome) -> MatcherReport {
+    match outcome {
+        MatcherOutcome::Matched(result) => MatcherReport {
+            index: result.index(),
+            name: result.name().map(str::to_owned),
+            policy: mode(result.mode()).to_owned(),
+            status: "matched".to_owned(),
+            match_offset: Some(result.offset()),
+            expected_length: Some(result.expected_length()),
+            expected: None,
+            path: None,
+            error: None,
+        },
+        MatcherOutcome::Mismatched(result) => MatcherReport {
+            index: result.index(),
+            name: result.name().map(str::to_owned),
+            policy: mode(result.mode()).to_owned(),
+            status: "mismatched".to_owned(),
+            match_offset: None,
+            expected_length: Some(result.expected().len()),
+            expected: Some(escape_bytes(result.expected())),
+            path: None,
+            error: None,
+        },
+        MatcherOutcome::LoadFailed(result) => MatcherReport {
+            index: result.index(),
+            name: result.name().map(str::to_owned),
+            policy: mode(result.mode()).to_owned(),
+            status: "load-failed".to_owned(),
+            match_offset: None,
+            expected_length: None,
+            expected: None,
+            path: Some(escape_path(result.path())),
+            error: Some(result.to_string()),
+        },
+    }
+}
+
+fn stream(
+    bytes: &[u8],
+    match_data: Option<(&str, Option<usize>)>,
+    matchers: Vec<MatcherReport>,
+) -> StreamReport {
     StreamReport {
         length: bytes.len(),
         escaped: escape_bytes(bytes),
         policy: match_data.map(|(policy, _)| policy.to_owned()),
         match_offset: match_data.and_then(|(_, offset)| offset),
+        matchers,
     }
 }
 

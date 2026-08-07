@@ -441,6 +441,89 @@ expect = { stdout = { matches = [{ file = "expected/compiler.stdout" }] }, stder
 }
 
 #[test]
+fn audits_every_matcher_file_and_reports_duplicate_owners_deterministically() {
+    let fixture = Fixture::new();
+    fixture.write("first.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write("second.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write("shared.stdout", "shared");
+    fixture.write(
+        "first.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "first"
+mode = "run"
+source = "first.ska"
+[[test.run]]
+name = "run"
+expect.stdout.matches = [
+  { match = "starts-with", inline = "prefix" },
+  { match = "contains", file = "shared.stdout" },
+]
+"#,
+    );
+    fixture.write(
+        "second.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "second"
+mode = "run"
+source = "second.ska"
+[[test.run]]
+name = "run"
+expect.stdout.matches = [{ file = "shared.stdout" }]
+"#,
+    );
+
+    let error = build_plan(&fixture.root, &fixture.artifacts, &[]).unwrap_err();
+
+    assert!(error
+        .message_text()
+        .contains("shared.stdout: first, second"));
+}
+
+#[test]
+fn explain_identifies_named_and_unnamed_matchers_in_declaration_order() {
+    let fixture = Fixture::new();
+    fixture.write("case/program.ska", "fn main() -> i64 { return 0; }\n");
+    fixture.write("case/fragment.stdout", "omega");
+    fixture.write(
+        "case/matchers.golden.toml",
+        r#"
+schema = 2
+[[test]]
+name = "matchers"
+mode = "run"
+source = "program.ska"
+[[test.run]]
+name = "run"
+expect.stdout.matches = [
+  { name = "header <&>", match = "starts-with", inline = "alpha" },
+  { match = "contains", file = "fragment.stdout" },
+]
+"#,
+    );
+
+    let plan = fixture.plan();
+    let explanation = plan
+        .explain("case/matchers::matchers::default::run")
+        .unwrap();
+
+    assert!(
+        explanation.contains("stdout.matches[0] name=\"header <&>\" = StartsWith inline \"alpha\"")
+    );
+    assert!(explanation.contains(&format!(
+        "stdout.matches[1] = Contains file {}",
+        fixture.canonical("case/fragment.stdout").display()
+    )));
+    assert!(
+        explanation.find("stdout.matches[0]").unwrap()
+            < explanation.find("stdout.matches[1]").unwrap()
+    );
+}
+
+#[test]
 fn derives_module_diagnostic_prefix_from_the_common_provider_owner() {
     let fixture = Fixture::new();
     fixture.write(

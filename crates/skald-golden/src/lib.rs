@@ -43,8 +43,8 @@ pub use process::{
     ProcessPipe, ProcessTermination,
 };
 pub use report::{
-    render as render_report, CaseReport, FailureReport, ProcessReport, Report, ReportCounts,
-    ReportFormat, ReportOptions, SchedulerFailureReport, StageReport, StreamReport,
+    render as render_report, CaseReport, FailureReport, MatcherReport, ProcessReport, Report,
+    ReportCounts, ReportFormat, ReportOptions, SchedulerFailureReport, StageReport, StreamReport,
 };
 pub use selection::{select, SelectedPlan, SelectionError, SelectionOptions};
 pub use spec::{

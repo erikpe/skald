@@ -1,8 +1,8 @@
 mod support;
 
 use skald_golden::{
-    execute_parallel, execute_sequential, select, Determinism, ProcessTermination,
-    SchedulerOptions, SelectionOptions, StageStatus,
+    execute_parallel, execute_sequential, select, Determinism, ProcessTermination, Report,
+    ReportOptions, SchedulerOptions, SelectionOptions, StageStatus,
 };
 use std::{collections::BTreeSet, fs, num::NonZeroUsize};
 use support::{write_compile_fail_spec, write_native_spec, Fixture};
@@ -226,6 +226,20 @@ expect={stderr={match="contains",inline="error[FAKE001]"}}
         .compilation()
         .observations()
         .is_empty());
+
+    let report = Report::new(
+        &selected,
+        &execution,
+        Determinism::Off,
+        ReportOptions::default(),
+    );
+    assert!(report.cases.windows(2).all(|pair| pair[0].id < pair[1].id));
+    assert_eq!(report.cases[0].status, "failed");
+    assert_eq!(report.cases[1].status, "cancelled");
+    assert_eq!(report.cases[1].stages[0].status, "cancelled");
+    assert!(report.cases[1].stages[0].processes.is_empty());
+    assert_eq!(report.counts.leaves_cancelled, 1);
+    assert_eq!(report.counts.cancellations, 1);
 }
 
 #[test]

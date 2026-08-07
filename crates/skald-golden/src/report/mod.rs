@@ -6,8 +6,8 @@ mod junit;
 mod model;
 
 pub use model::{
-    CaseReport, FailureReport, ProcessReport, Report, ReportCounts, ReportFormat, ReportOptions,
-    SchedulerFailureReport, StageReport, StreamReport,
+    CaseReport, FailureReport, MatcherReport, ProcessReport, Report, ReportCounts, ReportFormat,
+    ReportOptions, SchedulerFailureReport, StageReport, StreamReport,
 };
 
 /// Renders one canonical report without changing execution semantics.

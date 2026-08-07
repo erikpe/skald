@@ -1,5 +1,5 @@
 use super::model::{CaseReport, FailureReport, Report, StageReport};
-use std::fmt::Write as _;
+use std::{collections::BTreeSet, fmt::Write as _};
 
 pub(super) fn render(report: &Report) -> String {
     let mut output = String::new();
@@ -128,16 +128,39 @@ fn render_stage(output: &mut String, stage: &StageReport, show_output: bool) {
                     }
                     writeln!(output, ", b\"{}\"", stream.escaped)
                         .expect("writing to a string cannot fail");
+                    for matcher in &stream.matchers {
+                        write!(output, "{indent}  matcher {}", matcher.index)
+                            .expect("writing to a string cannot fail");
+                        if let Some(name) = &matcher.name {
+                            write!(output, " {name:?}").expect("writing to a string cannot fail");
+                        }
+                        write!(output, ": {}, policy {}", matcher.status, matcher.policy)
+                            .expect("writing to a string cannot fail");
+                        if let Some(offset) = matcher.match_offset {
+                            write!(output, ", match offset {offset}")
+                                .expect("writing to a string cannot fail");
+                        }
+                        if let Some(length) = matcher.expected_length {
+                            write!(output, ", expected {length} bytes")
+                                .expect("writing to a string cannot fail");
+                        }
+                        writeln!(output).expect("writing to a string cannot fail");
+                    }
                 }
             }
         }
     }
+    let mut shown_actual = BTreeSet::new();
     for failure in &stage.failures {
-        render_failure(output, failure);
+        let show_actual = failure
+            .actual
+            .as_ref()
+            .is_none_or(|actual| shown_actual.insert((failure.kind.as_str(), actual.as_str())));
+        render_failure(output, failure, show_actual);
     }
 }
 
-fn render_failure(output: &mut String, failure: &FailureReport) {
+fn render_failure(output: &mut String, failure: &FailureReport, show_actual: bool) {
     writeln!(output, "    mismatch {}: {}", failure.kind, failure.message)
         .expect("writing to a string cannot fail");
     if let Some(policy) = &failure.policy {
@@ -151,8 +174,11 @@ fn render_failure(output: &mut String, failure: &FailureReport) {
         writeln!(output, "      expected: b\"{expected}\"")
             .expect("writing to a string cannot fail");
     }
-    if let Some(actual) = &failure.actual {
-        writeln!(output, "      actual:   b\"{actual}\"").expect("writing to a string cannot fail");
+    if show_actual {
+        if let Some(actual) = &failure.actual {
+            writeln!(output, "      actual:   b\"{actual}\"")
+                .expect("writing to a string cannot fail");
+        }
     }
     if let Some(diff) = &failure.diff {
         for line in diff.lines() {

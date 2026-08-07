@@ -215,6 +215,22 @@ observations, `--slowest N` reports stable timings, and `--format json` or
 `--format junit` emits machine-readable results. There is no blessing or
 implicit expectation-update mode.
 
+`--explain` renders matcher lists in declaration order as
+`<stream>.matches[<index>]`, including an optional name, match mode, and the
+canonical inline value or external path. Human reports use the same stable
+index when a matcher has no name. With `--show-output`, passing observations
+include every matcher status and offset as well as the captured stream once.
+
+JSON stream objects retain the singular `policy` and `match_offset` fields for
+compatibility. They also contain an ordered `matchers` array with each
+matcher's index, optional name, policy, status, offset, expected-byte details,
+and any load error. For a matcher collection, the legacy `policy` and
+`match_offset` fields are `null`; the `matchers` array is authoritative. An
+ignored stream has policy `ignore` and an empty matcher array. The captured
+`length` and escaped bytes remain on the stream object rather than being
+duplicated in every matcher result. JUnit emits one failure element per failed
+matcher in stream and declaration order.
+
 Passing run sandboxes are deleted unless `--keep-all-artifacts` is selected.
 Build products and failed or incompletely prepared sandboxes remain under
 `build/golden/` and are identified in failure reports. These artifacts are

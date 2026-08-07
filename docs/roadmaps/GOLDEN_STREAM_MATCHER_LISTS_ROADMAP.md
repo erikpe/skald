@@ -1,6 +1,6 @@
 # Golden Stream Matcher Lists Roadmap
 
-Status: in progress; GM2 is next.
+Status: in progress; GM3 is next.
 
 This roadmap lets one captured process stream own any number of independent
 byte-match contracts. It preserves the existing singular expectation syntax
@@ -85,7 +85,7 @@ matches = [
 
 - [x] GM0 — Build the independent matcher engine
 - [x] GM1 — Publish the symmetric schema-2 stream contract
-- [ ] GM2 — Complete matcher-aware planning and reporting
+- [x] GM2 — Complete matcher-aware planning and reporting
 - [ ] GM3 — Migrate multi-error compile-fail contracts
 - [ ] GM4 — Harden, validate, document, and close
 
@@ -171,22 +171,22 @@ pass/fail status, and existing schema-1 fixtures run without migration.
 **Purpose:** Make matcher collections fully observable and diagnosable through
 the runner's planning, ownership, human, and machine interfaces.
 
-- [ ] Teach the fixture ownership audit to own every file-backed matcher and
+- [x] Teach the fixture ownership audit to own every file-backed matcher and
       preserve deterministic orphan and duplicate-owner diagnostics.
-- [ ] Render every matcher in `--explain` with its stream, declaration index,
+- [x] Render every matcher in `--explain` with its stream, declaration index,
       optional name, mode, and canonical inline/file source.
-- [ ] Extend execution and report models with ordered per-matcher results while
+- [x] Extend execution and report models with ordered per-matcher results while
       retaining one captured stdout or stderr payload per process observation.
-- [ ] Report every mismatch and expectation-load failure together, using the
+- [x] Report every mismatch and expectation-load failure together, using the
       optional matcher name when present and the stable declaration index
       otherwise; keep expected/actual byte escaping and bounded diffs.
-- [ ] Extend JSON additively with structured matcher results. Preserve legacy
+- [x] Extend JSON additively with structured matcher results. Preserve legacy
       singular policy and offset fields for one-matcher streams, and define
       their documented neutral representation for matcher collections.
-- [ ] Emit deterministic JUnit failures for every failed matcher and keep
+- [x] Emit deterministic JUnit failures for every failed matcher and keep
       human output concise by showing shared actual stream data once when
       several matchers fail.
-- [ ] Cover passing stream details under `--show-output`, cancellation,
+- [x] Cover passing stream details under `--show-output`, cancellation,
       fail-fast, scheduler ordering, and retained-artifact reports without
       changing canonical leaf order.
 

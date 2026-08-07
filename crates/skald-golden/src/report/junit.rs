@@ -38,18 +38,7 @@ pub(super) fn render(report: &Report) -> String {
         )
         .expect("writing to a string cannot fail");
         if runtime.status == "failed" {
-            let details = runtime
-                .failures
-                .iter()
-                .map(|failure| failure.message.as_str())
-                .collect::<Vec<_>>()
-                .join("\n");
-            writeln!(
-                output,
-                "    <failure message=\"runtime preparation failed\">{}</failure>",
-                xml(&details)
-            )
-            .expect("writing to a string cannot fail");
+            render_failures(&mut output, "runtime", &runtime.failures);
         }
         writeln!(
             output,
@@ -103,23 +92,9 @@ fn render_case(output: &mut String, case: &CaseReport) {
     if case.status == "cancelled" {
         output.push_str("    <skipped message=\"cancelled by dependency\"/>\n");
     } else if case.status == "failed" {
-        let details = case
-            .stages
-            .iter()
-            .flat_map(|stage| {
-                stage
-                    .failures
-                    .iter()
-                    .map(move |failure| format!("{}: {}", stage.stage, failure_text(failure)))
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        writeln!(
-            output,
-            "    <failure message=\"golden test failed\">{}</failure>",
-            xml(&details)
-        )
-        .expect("writing to a string cannot fail");
+        for stage in &case.stages {
+            render_failures(output, &stage.stage, &stage.failures);
+        }
     }
     let stages = case
         .stages
@@ -151,6 +126,18 @@ fn render_case(output: &mut String, case: &CaseReport) {
     writeln!(output, "    <system-out>{}</system-out>", xml(&stages))
         .expect("writing to a string cannot fail");
     output.push_str("  </testcase>\n");
+}
+
+fn render_failures(output: &mut String, stage: &str, failures: &[super::model::FailureReport]) {
+    for failure in failures {
+        writeln!(
+            output,
+            "    <failure message=\"{}\">{}</failure>",
+            xml(&format!("{stage}: {}", failure.message)),
+            xml(&failure_text(failure))
+        )
+        .expect("writing to a string cannot fail");
+    }
 }
 
 fn failure_text(failure: &super::model::FailureReport) -> String {

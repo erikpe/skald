@@ -143,13 +143,19 @@ fn write_stream(output: &mut String, label: &str, expectation: &ResolvedStreamEx
         ResolvedStreamExpectation::Ignore => writeln!(output, "{label} = ignore").unwrap(),
         ResolvedStreamExpectation::Match(matchers) => {
             if let [matcher] = matchers.matchers() {
-                write!(output, "{label} = {:?} ", matcher.mode()).unwrap();
-                write_byte_value(output, matcher.expected());
-                output.push('\n');
-                return;
+                if matcher.name().is_none() {
+                    write!(output, "{label} = {:?} ", matcher.mode()).unwrap();
+                    write_byte_value(output, matcher.expected());
+                    output.push('\n');
+                    return;
+                }
             }
             for (index, matcher) in matchers.matchers().iter().enumerate() {
-                write!(output, "{label}.matches[{index}] = {:?} ", matcher.mode()).unwrap();
+                write!(output, "{label}.matches[{index}]").unwrap();
+                if let Some(name) = matcher.name() {
+                    write!(output, " name={name:?}").unwrap();
+                }
+                write!(output, " = {:?} ", matcher.mode()).unwrap();
                 write_byte_value(output, matcher.expected());
                 output.push('\n');
             }
