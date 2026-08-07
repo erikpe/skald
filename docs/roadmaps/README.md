@@ -10,7 +10,10 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md) —
+  planned; GM0 is next. Add independent matcher collections symmetrically to
+  native stdout/stderr and compile-fail stdout/stderr while preserving the
+  frozen schema-1 singular syntax. No active roadmap dependency.
 
 ## Design proposals
 
