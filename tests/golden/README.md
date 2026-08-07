@@ -12,7 +12,7 @@ discovered spec and referenced fixture before applying filters, resolves all
 fixture paths below this golden root, and expands stable spec, test, build, and
 leaf IDs without creating artifacts or starting processes.
 
-The runner can inspect or execute new-format specs:
+The runner can inspect or execute the mixed new-format and legacy suite:
 
 ```text
 cargo run --locked -p skald-golden -- --list --allow-empty
@@ -30,6 +30,14 @@ component and `**` crosses components. `--exact` selects one canonical leaf,
 error unless `--allow-empty` is explicit. Canonical leaf IDs have the form
 `<spec-without-.golden.toml>::<test>::<variant>::<run>`; compile-fail leaves
 end in `::<compile>`.
+
+During migration, the same planner also adapts `run/` and `compile_fail/`
+sidecar cases without moving them. A legacy expectation stem such as
+`run/strings.ska` becomes `run/strings::default::<run>`; a `case.args` stem
+such as `compile_fail/modules_privacy/case.args` becomes
+`compile_fail/modules_privacy/case::default::<compile>`. Artifact directory
+names combine a readable prefix with a stable hash, so flattened legacy paths
+cannot collide.
 
 Execution locates `skac` beside `skald-golden` by default or accepts an
 explicit `--compiler PATH`. `--compiler-arg` appends an argument after spec
@@ -58,9 +66,15 @@ details as single machine-readable documents. An early pipe consumer exit is
 treated as successful output termination. The runner has no blessing or
 implicit expectation-update mode.
 
-Legacy cases are not part of spec discovery. The legacy runner and sidecar
-contract below remain the repository-wide golden-test authority until the
-later cutover roadmap stage.
+The compatibility adapter preserves the sidecar contract below: ordinary
+sources use the repository as compiler and executable working directory,
+`case.args` cases use their case directory, optional stream files still mean
+exact empty bytes when absent, and compile-fail case-directory prefixes are
+removed before diagnostic determinism and expectation checks. Legacy native
+runs hold a resource lock for their shared working directory, preventing the
+parallel scheduler from exposing old fixtures to races. The existing runner
+remains the repository command used by `make golden-test` until GR7 cuts that
+interface over; GR6 keeps both engines available for parity auditing.
 
 ## New-format process and expectation contract
 

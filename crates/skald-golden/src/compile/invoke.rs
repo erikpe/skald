@@ -73,11 +73,14 @@ pub(crate) fn compile_build(
             OsString::from("-o"),
             assembly_path.as_os_str().to_owned(),
         ]);
-        let command = ProcessCommand::new(config.executable(), config.working_directory())
+        let working_directory = build
+            .compiler_working_directory()
+            .unwrap_or_else(|| config.working_directory());
+        let command = ProcessCommand::new(config.executable(), working_directory)
             .with_arguments(arguments)
             .with_environment(config.environment().clone())
             .with_timeout(timeout);
-        let process = match run_process(&command) {
+        let mut process = match run_process(&command) {
             Ok(process) => process,
             Err(error) => {
                 issues.push(CompilationIssue::Process(error.to_string()));
@@ -85,6 +88,11 @@ pub(crate) fn compile_build(
                 break;
             }
         };
+        if let CompilationPurpose::CompileFail(expectation) = &purpose {
+            if let Some(prefix) = expectation.stderr_prefix_to_strip() {
+                process.strip_stderr_prefix(prefix);
+            }
+        }
         check_process(&process, &purpose, &mut issues);
         let assembly = if matches!(purpose, CompilationPurpose::Success)
             && process.termination() == ProcessTermination::Code(0)

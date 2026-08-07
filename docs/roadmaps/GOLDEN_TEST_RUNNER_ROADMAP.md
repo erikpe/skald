@@ -1,6 +1,6 @@
 # Spec-Driven Parallel Golden Test Runner Roadmap
 
-Status: in progress; GR6 is next.
+Status: in progress; GR7 is next.
 
 This roadmap implements the frozen
 [golden test runner design](../archive/GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md).
@@ -56,7 +56,7 @@ implicitly.
 - [x] GR3 — Compile, link, and execute sequential plans
 - [x] GR4 — Schedule the dependency graph in parallel
 - [x] GR5 — Complete reporting and the command-line surface
-- [ ] GR6 — Adapt legacy fixtures and prove behavioral parity
+- [x] GR6 — Adapt legacy fixtures and prove behavioral parity
 - [ ] GR7 — Cut repository commands over to the Rust runner
 - [ ] GR8 — Migrate process, I/O, panic, and runtime-observation fixtures
 - [ ] GR9 — Migrate module and replacement-standard-library fixtures
@@ -290,24 +290,32 @@ describe identical results.
 **Purpose:** Make the new engine cover the entire existing corpus without
 moving fixtures, then prove it is safe to replace the old runner.
 
-- [ ] Implement legacy discovery below `run` and `compile_fail`, including the
+- [x] Implement legacy discovery below `run` and `compile_fail`, including the
       `case.args` recursion stop and supporting-source exclusion.
-- [ ] Translate `.exit`, `.argv`, `.stdin`, `.stdout`, and `.stderr` sidecars
+- [x] Translate `.exit`, `.argv`, `.stdin`, `.stdout`, and `.stderr` sidecars
       into the new internal model without changing byte, missing-file, status,
       compiler-argument, working-directory, or path-prefix semantics.
-- [ ] Derive stable legacy IDs and collision-resistant artifacts from current
+- [x] Derive stable legacy IDs and collision-resistant artifacts from current
       expectation stems.
-- [ ] Apply conservative working-directory resource locks wherever a legacy
+- [x] Apply conservative working-directory resource locks wherever a legacy
       case cannot be proven read-only; do not expose old fixtures to new races.
-- [ ] Move current native expectation loader and mismatch tests into the new
+- [x] Move current native expectation loader and mismatch tests into the new
       expectation owner or replace them with equivalent stronger coverage.
-- [ ] Assert the recorded baseline of exactly 150 native and 138 compile-fail
+- [x] Assert the recorded baseline of exactly 150 native and 138 compile-fail
       legacy cases before migration begins.
-- [ ] Run old and new runners in `full` mode over the complete corpus and
+- [x] Run old and new runners in `full` mode over the complete corpus and
       compare pass/fail outcome, repeated assembly or diagnostic checks,
       process observations, and summary ownership.
-- [ ] Resolve every discrepancy in the new runner or record an explicit design
+- [x] Resolve every discrepancy in the new runner or record an explicit design
       amendment; do not normalize parity failures away.
+
+Implemented and audited on 2026-08-07. The retained runner and the Rust runner
+both passed all 288 legacy cases in full-determinism mode. Parallel and
+single-worker Rust audits agreed on 150 native and 138 compile-fail leaves,
+576 compiler processes, 150 links, and 300 native executions. No parity
+discrepancy or design amendment was required; the Rust runner's separate link
+count reflects the frozen decision to link checked assembly through
+`Toolchain` instead of asking `skac` to compile a third time.
 
 **Tests:** Legacy loader unit tests, all current expectation tests, targeted
 single- and multiple-file fixtures, complete old/new `full` parity, parallel

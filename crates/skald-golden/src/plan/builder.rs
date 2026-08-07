@@ -116,6 +116,7 @@ pub(super) fn build(
                     base_args,
                     variant_args,
                     command_line_args,
+                    compiler_working_directory: None,
                     artifact_directory: plan.artifact_root.join(artifact_name),
                     timeout_seconds: test.timeout_seconds(),
                     serial: test.serial(),
@@ -169,6 +170,7 @@ pub(super) fn build(
                                     &format!("{test_field}.expect.stderr"),
                                     true,
                                 )?,
+                                stderr_prefix_to_strip: None,
                             }),
                         });
                     }
@@ -181,6 +183,19 @@ pub(super) fn build(
             plan.tests.push(planned_test);
         }
     }
+
+    super::legacy::append(
+        &mut plan,
+        discovered.legacy_cases,
+        command_line_compiler_args,
+        super::legacy::IdentityMaps {
+            specs: &mut spec_ids,
+            tests: &mut test_ids,
+            builds: &mut build_ids,
+            leaves: &mut leaf_ids,
+            artifacts: &mut artifact_names,
+        },
+    )?;
 
     plan.specs.sort_by(|left, right| left.id.cmp(&right.id));
     plan.tests.sort_by(|left, right| left.id.cmp(&right.id));
@@ -310,7 +325,7 @@ fn file_is_empty(path: &Path) -> Result<bool, PlanError> {
         })
 }
 
-fn insert_unique(
+pub(super) fn insert_unique(
     seen: &mut HashMap<String, PathBuf>,
     id: &str,
     owner: &Path,

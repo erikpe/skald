@@ -156,8 +156,8 @@ Rust test-name filters match substrings and may select more than one test; use
 Before handoff, run the full validation described in the
 [development workflow](README.md#change-validation).
 
-The Rust golden runner can inspect or execute new-format specs through a
-bounded dependency scheduler:
+The Rust golden runner can inspect or execute new-format specs and adapted
+legacy sidecar cases through a bounded dependency scheduler:
 
 ```text
 cargo run --locked -p skald-golden -- --list --allow-empty

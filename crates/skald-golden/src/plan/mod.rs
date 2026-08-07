@@ -4,6 +4,7 @@ mod builder;
 mod error;
 mod explain;
 mod identity;
+mod legacy;
 mod model;
 mod paths;
 

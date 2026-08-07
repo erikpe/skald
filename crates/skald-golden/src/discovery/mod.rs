@@ -1,5 +1,6 @@
 //! Deterministic spec discovery and repository-root ownership.
 
+mod legacy;
 mod walk;
 
 use crate::{parse_config, parse_spec, PlanError, RepositoryConfig, Spec};
@@ -9,7 +10,10 @@ pub(crate) struct DiscoveredSuite {
     pub(crate) root: PathBuf,
     pub(crate) config: RepositoryConfig,
     pub(crate) specs: Vec<DiscoveredSpec>,
+    pub(crate) legacy_cases: Vec<LegacyCase>,
 }
+
+pub(crate) use legacy::{LegacyCase, LegacyKind};
 
 pub(crate) struct DiscoveredSpec {
     pub(crate) path: PathBuf,
@@ -68,9 +72,12 @@ pub(crate) fn discover(root: impl Into<PathBuf>) -> Result<DiscoveredSuite, Plan
         });
     }
 
+    let legacy_cases = legacy::discover(&root)?;
+
     Ok(DiscoveredSuite {
         root,
         config,
         specs,
+        legacy_cases,
     })
 }

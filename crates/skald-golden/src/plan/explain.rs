@@ -33,6 +33,10 @@ impl TestPlan {
         write_arguments(&mut output, "base-args", build.base_args());
         write_arguments(&mut output, "variant-args", build.variant_args());
         write_arguments(&mut output, "command-line-args", build.command_line_args());
+        match build.compiler_working_directory() {
+            Some(path) => writeln!(output, "compiler-cwd = {}", path.display()).unwrap(),
+            None => writeln!(output, "compiler-cwd = <runner-default>").unwrap(),
+        }
         writeln!(output, "compile-timeout = {:?}", build.timeout_seconds()).unwrap();
         writeln!(output, "compile-serial = {}", build.serial()).unwrap();
         writeln!(output, "compile-resources = {:?}", build.resources()).unwrap();
@@ -41,6 +45,11 @@ impl TestPlan {
             PlannedLeafKind::Compile(expectation) => {
                 writeln!(output, "kind = compile").unwrap();
                 write_stream(&mut output, "stderr", expectation.stderr());
+                if let Some(prefix) = expectation.stderr_prefix_to_strip() {
+                    write!(output, "stderr-prefix-to-strip = ").unwrap();
+                    write_bytes_literal(&mut output, prefix);
+                    output.push('\n');
+                }
                 writeln!(output, "dependencies = []").unwrap();
             }
             PlannedLeafKind::Run(run) => {
@@ -85,6 +94,16 @@ impl TestPlan {
         }
         Some(output)
     }
+}
+
+fn write_bytes_literal(output: &mut String, bytes: &[u8]) {
+    output.push_str("b\"");
+    for byte in bytes {
+        for escaped in std::ascii::escape_default(*byte) {
+            output.push(char::from(escaped));
+        }
+    }
+    output.push('"');
 }
 
 fn write_arguments(output: &mut String, label: &str, arguments: &[std::ffi::OsString]) {

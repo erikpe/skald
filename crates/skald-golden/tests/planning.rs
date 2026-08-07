@@ -609,6 +609,7 @@ artifact-directory = {}\n\
 base-args = [\"{}\"]\n\
 variant-args = []\n\
 command-line-args = []\n\
+compiler-cwd = <runner-default>\n\
 compile-timeout = None\n\
 compile-serial = false\n\
 compile-resources = []\n\

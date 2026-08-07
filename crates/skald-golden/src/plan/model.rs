@@ -132,6 +132,7 @@ pub struct PlannedBuild {
     pub(super) base_args: Vec<OsString>,
     pub(super) variant_args: Vec<OsString>,
     pub(super) command_line_args: Vec<OsString>,
+    pub(super) compiler_working_directory: Option<PathBuf>,
     pub(super) artifact_directory: PathBuf,
     pub(super) timeout_seconds: Option<u64>,
     pub(super) serial: bool,
@@ -166,6 +167,11 @@ impl PlannedBuild {
 
     pub fn command_line_args(&self) -> &[OsString] {
         &self.command_line_args
+    }
+
+    /// Overrides the runner-wide compiler working directory for legacy cases.
+    pub fn compiler_working_directory(&self) -> Option<&Path> {
+        self.compiler_working_directory.as_deref()
     }
 
     pub fn artifact_directory(&self) -> &Path {
@@ -369,11 +375,18 @@ impl ResolvedRunExpectation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedCompileExpectation {
     pub(super) stderr: ResolvedStreamExpectation,
+    pub(super) stderr_prefix_to_strip: Option<Vec<u8>>,
 }
 
 impl ResolvedCompileExpectation {
     pub fn stderr(&self) -> &ResolvedStreamExpectation {
         &self.stderr
+    }
+
+    /// A legacy absolute case-directory prefix removed before diagnostics are
+    /// checked for determinism or compared with their sidecar.
+    pub fn stderr_prefix_to_strip(&self) -> Option<&[u8]> {
+        self.stderr_prefix_to_strip.as_deref()
     }
 }
 
