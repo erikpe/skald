@@ -486,12 +486,12 @@ allocation class from source metadata or synthesize a clone path. A future
 `clone()` convention or dedicated syntax requires a separate source and
 lowering design.
 
-The frozen [array compiler contract](ARRAYS.md) reuses this minimal allocation
+The implemented [array compiler contract](ARRAYS.md) reuses this minimal allocation
 boundary and secure owner machinery for exact non-polymorphic shared array
 targets. Array lengths, element lifecycle, backing anchors, slice operations,
 and finalizers remain compiler-generated rather than new C runtime
-responsibilities. That extension is not implemented by the current shared
-object pipeline.
+responsibilities. Shared-array ownership composes through the ordinary typed
+owner operations and generated array lifecycle.
 
 ## Safety argument and test obligations
 

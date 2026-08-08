@@ -1,7 +1,7 @@
 # Array Compiler and Runtime Contract
 
-Status: **implemented contract on x86-64 with a frozen, executable explicit
-element-list representation extension**.
+Status: **implemented contract on x86-64, including explicit element-list
+representation and execution**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -155,11 +155,10 @@ It also retains inline versus shared allocation separately. Ordinary
 default-length construction never falls back to explicit copy construction,
 and `copy` in the dedicated position is not an ordinary element initializer.
 
-## Frozen element-list representation
+## Element-list representation
 
-The frozen source forms `T[]{...}` and `new T[]{...}` add one distinct
-construction mode. Syntax, resolution, and typed HIR implement this
-representation while executable availability remains staged:
+The source forms `T[]{...}` and `new T[]{...}` add one distinct construction
+mode implemented from syntax through native execution:
 
 ```text
 Elements(ArrayElementList)
@@ -207,8 +206,9 @@ Every element-list HIR-to-MIR plan implements this abstract sequence:
 6. publish inline produced backing or one shared-array owner only when the
    prefix equals the list count.
 
-MIR represents the executable element-list categories with `AllocateElements`, which carries
-the constant source count and establishes a zero `u64` prefix. Primitive
+MIR represents the executable element-list categories with
+`AllocateElements`, which carries the constant source count and establishes a
+zero `u64` prefix. Primitive
 sources use one `InitializeElement` per position. Exact-class sources reuse
 ordinary `Initialize`, object-result `Call`, `StringInitialize`, or
 `CopyConstruct` operations against the final array-element place, followed by
@@ -259,7 +259,7 @@ stack storage, unrolled machine code, or a new descriptor layout. The C runtime
 continues to allocate and free checked byte blocks without knowing element
 types, list expressions, initialized prefixes, or lifecycle operations. No
 public runtime entry point, metadata format, or ABI-version change is part of
-this frozen extension.
+element-list construction.
 
 Syntax, resolved IR, and HIR implement the complete typed representation.
 Verified MIR and x86-64 implement every legal element-list family for inline

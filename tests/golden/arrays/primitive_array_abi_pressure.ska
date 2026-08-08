@@ -23,14 +23,14 @@ fn recursive_copy(values: i64[], again: bool) -> i64[] {
 
 fn main() -> i64 {
     var selected: i64[] = eighth(
-        i64[](1u),
-        i64[](1u),
-        i64[](1u),
-        i64[](1u),
-        i64[](1u),
-        i64[](1u),
-        i64[](1u),
-        i64[](1u)
+        i64[]{1},
+        i64[]{2},
+        i64[]{3},
+        i64[]{4},
+        i64[]{5},
+        i64[]{6},
+        i64[]{7},
+        i64[]{8}
     );
     std::io::println_i64(selected[0]);
 

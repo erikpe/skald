@@ -800,7 +800,7 @@ replacement, and deterministic element cleanup. Its legality pass
 accepts the complete verified array operation profile before instruction
 selection.
 
-The frozen explicit array element-list extension now preserves one additional
+Explicit array element-list construction preserves one additional
 ordered construction mode from syntax through resolution. The explicit type
 resolves to its canonical `ArrayTypeId` before element checking; syntax and
 resolved IR retain both braces, comma spans, and every element expression in
@@ -840,8 +840,8 @@ temporary, produced sources adopt into it, and slot initialization consumes it
 before prefix advancement. Optional shared plans reuse their generic-place
 zero-niche initialization and conditional owner transfer. Array-prefix state
 and shared-owner state verify independently, including nested shared-array
-owners. The detailed frozen boundary is in
-[the array compiler contract](ARRAYS.md#frozen-element-list-representation).
+owners. The detailed representation boundary is in
+[the array compiler contract](ARRAYS.md#element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,

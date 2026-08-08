@@ -249,7 +249,7 @@ frozen panic design preserves this boundary explicitly. Abrupt unsuccessful
 termination is distinct from recoverable exceptional control flow, which is
 not implemented.
 
-The frozen explicit array element-list contract follows this same boundary for
+The explicit array element-list contract follows this same boundary for
 every legal element category. Its outer backing remains
 unpublished while one increasing
 prefix contains live initialized elements. If allocation or an element

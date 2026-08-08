@@ -50,7 +50,7 @@ fn selects_ordered_primitive_element_plans_and_lowers_them_to_mir() {
         .iter()
         .all(|element| matches!(element.value, HirStoredValueInitialization::Primitive(_))));
 
-    let mir = crate::mir::try_lower_hir(&hir).expect("primitive element lists execute in EL2");
+    let mir = crate::mir::lower_hir(&hir);
     crate::mir::verify_mir(&mir).expect("primitive element-list MIR must verify");
     let lowered = mir.definitions.get(mir.entry_function).unwrap();
     assert_eq!(

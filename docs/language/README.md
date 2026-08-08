@@ -155,8 +155,8 @@ makes a result source-observable.
   change the parameterless entry function or runtime ABI.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
-  lifetime, and failure contract, plus the frozen typed explicit element-list
-  extension whose primitive, exact-class, inline-optional, recursively nested
+  lifetime, failure, and typed explicit element-list contract. Primitive,
+  exact-class, inline-optional, recursively nested
   inline-array, shared-owner, and optional shared-owner families execute
   through one verified initialized-prefix protocol.
 - [Zero-default static fields](STATIC_FIELDS.md) defines the implemented

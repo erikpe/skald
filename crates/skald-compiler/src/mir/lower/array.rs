@@ -8,16 +8,6 @@ use crate::hir::{
     HirObjectDestinationInitialization, HirStoredValueInitialization, Type,
 };
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum ExecutableElementListKind {
-    Primitive,
-    ExactClass,
-    InlineOptional,
-    InlineArray,
-    SharedOwner,
-    OptionalSharedOwner,
-}
-
 impl BodyLowerer<'_> {
     pub(super) fn lower_array_element_assignment(
         &mut self,
@@ -438,11 +428,7 @@ impl BodyLowerer<'_> {
                 lower_array_copy_element(*element),
                 construction.span,
             ),
-            HirArrayConstructionMode::Elements(elements)
-                if self
-                    .executable_element_list_kind(construction.array)
-                    .is_some() =>
-            {
+            HirArrayConstructionMode::Elements(elements) => {
                 let produced = self.new_array_temporary(
                     construction.array,
                     MirStorageKind::ArrayProduced,
@@ -461,9 +447,6 @@ impl BodyLowerer<'_> {
                 }));
                 produced
             }
-            HirArrayConstructionMode::Elements(_) => {
-                self.lower_rejected_array_element_list(construction.array, construction.span)
-            }
         }
     }
 
@@ -477,24 +460,19 @@ impl BodyLowerer<'_> {
             crate::hir::HirArrayOwnership::Shared
         );
         if let HirArrayConstructionMode::Elements(elements) = &construction.mode {
-            if self
-                .executable_element_list_kind(construction.array)
-                .is_some()
-            {
-                let backing = self.lower_element_list(
-                    construction.array,
-                    elements,
-                    MirArrayOwnership::Shared,
-                    construction.span,
-                );
-                self.emit(MirInstruction::Array(MirArrayInstruction::PublishShared {
-                    backing,
-                    destination,
-                    array: construction.array,
-                    span: construction.span,
-                }));
-                return;
-            }
+            let backing = self.lower_element_list(
+                construction.array,
+                elements,
+                MirArrayOwnership::Shared,
+                construction.span,
+            );
+            self.emit(MirInstruction::Array(MirArrayInstruction::PublishShared {
+                backing,
+                destination,
+                array: construction.array,
+                span: construction.span,
+            }));
+            return;
         }
         let (length, default, copy) = match &construction.mode {
             HirArrayConstructionMode::Empty => (
@@ -529,16 +507,7 @@ impl BodyLowerer<'_> {
                 )
             }
             HirArrayConstructionMode::Elements(_) => {
-                self.reject_array_element_list(construction.span);
-                (
-                    self.assign(
-                        MirRvalueKind::ConstantU64(0),
-                        MirType::U64,
-                        construction.span,
-                    ),
-                    None,
-                    None,
-                )
+                unreachable!("shared element-list construction returns after dedicated lowering")
             }
         };
         let backing = self.lower_array_prefix(
@@ -555,41 +524,6 @@ impl BodyLowerer<'_> {
             array: construction.array,
             span: construction.span,
         }));
-    }
-
-    fn executable_element_list_kind(
-        &self,
-        array: crate::identity::ArrayTypeId,
-    ) -> Option<ExecutableElementListKind> {
-        match self
-            .input
-            .array_types
-            .get(array)
-            .expect("typed array construction must reference a declared array")
-            .element
-        {
-            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => {
-                Some(ExecutableElementListKind::Primitive)
-            }
-            Type::Class(_) => Some(ExecutableElementListKind::ExactClass),
-            Type::OptionalPrimitive(_) | Type::OptionalClass(_) => {
-                Some(ExecutableElementListKind::InlineOptional)
-            }
-            Type::Array(_) => Some(ExecutableElementListKind::InlineArray),
-            Type::Shared(_) => Some(ExecutableElementListKind::SharedOwner),
-            Type::OptionalShared(_) => Some(ExecutableElementListKind::OptionalSharedOwner),
-            _ => None,
-        }
-    }
-
-    fn lower_rejected_array_element_list(
-        &mut self,
-        array: crate::identity::ArrayTypeId,
-        span: crate::source::Span,
-    ) -> StorageId {
-        self.reject_array_element_list(span);
-        let length = self.assign(MirRvalueKind::ConstantU64(0), MirType::U64, span);
-        self.lower_array_build(array, length, None, None, span)
     }
 
     fn lower_element_list(

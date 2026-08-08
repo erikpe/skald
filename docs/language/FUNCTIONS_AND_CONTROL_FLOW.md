@@ -305,8 +305,7 @@ cleanup are owned by
 ## Evaluation order
 
 Skald uses deterministic source order. The following includes implemented
-expressions and calls plus the frozen, partially implemented explicit array
-element-list extension:
+expressions, calls, and explicit array element-list construction:
 
 1. a unary operand is evaluated before its operator;
 2. eager binary operands are evaluated exactly once from left to right;
@@ -324,7 +323,7 @@ element-list extension:
 9. object destination storage is selected before construction or an
    object-producing call, then the receiver and explicit arguments follow the
    ordering above;
-10. under frozen explicit array element-list construction, outer backing
+10. under explicit array element-list construction, outer backing
     allocation succeeds before the first element expression; listed
     expressions then evaluate exactly once from left to right, each slot
     initialization completes before the next expression, and publication
@@ -346,7 +345,7 @@ Its completed temporaries survive to that existing boundary unless an ordinary
 immediate-consumer rule ends them sooner. The unpublished element storage is
 not a temporary and becomes part of the array only through complete
 publication. The authoritative list construction and failure rules are in
-[Arrays](ARRAYS.md#frozen-explicit-element-list-construction).
+[Arrays](ARRAYS.md#explicit-element-list-construction).
 
 For a produced read-only alias, the producer runs exactly once at its
 argument position after any receiver and before every later argument. The

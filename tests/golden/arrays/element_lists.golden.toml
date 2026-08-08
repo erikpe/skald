@@ -1,0 +1,68 @@
+schema = 1
+
+[[test]]
+name = "primitive"
+mode = "run"
+source = "primitive_array_element_lists.ska"
+[[test.run]]
+name = "ordered_inline_shared_and_nested_contexts"
+expect = { stdout = { file = "data/primitive_array_element_lists.stdout" } }
+
+[[test]]
+name = "class"
+mode = "run"
+source = "class_array_element_lists.ska"
+[[test.run]]
+name = "direct_result_named_grouped_and_shared_outer"
+expect = { stdout = { file = "data/class_array_element_lists.stdout" } }
+
+[[test]]
+name = "optional"
+mode = "run"
+source = "optional_array_element_lists.ska"
+[[test.run]]
+name = "absence_injection_grouping_and_reverse_cleanup"
+expect = { stdout = { file = "data/optional_array_element_lists.stdout" } }
+
+[[test]]
+name = "nested"
+mode = "run"
+source = "nested_array_element_lists.ska"
+[[test.run]]
+name = "jagged_copy_adoption_mutation_and_reverse_cleanup"
+expect = { stdout = { file = "data/nested_array_element_lists.stdout" } }
+
+[[test]]
+name = "shared_owner"
+mode = "run"
+source = "shared_owner_array_element_lists.ska"
+[[test.run]]
+name = "copy_adopt_optional_nested_and_last_owner_cleanup"
+expect = { stdout = { file = "data/shared_owner_array_element_lists.stdout" } }
+
+[[test]]
+name = "trailing_comma_rejection"
+mode = "compile-fail"
+source = "array_element_list_trailing_comma.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR004]: expected an array element after `,`
+ --> tests/golden/arrays/array_element_list_trailing_comma.ska:2:23"""
+
+[[test]]
+name = "missing_comma_recovery"
+mode = "compile-fail"
+source = "array_element_list_missing_comma.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected `,` between array elements
+ --> tests/golden/arrays/array_element_list_missing_comma.ska:2:20"""
+
+[[test]]
+name = "inferred_list_rejection"
+mode = "compile-fail"
+source = "array_element_list_inferred.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR004]: expected an expression
+ --> tests/golden/arrays/array_element_list_inferred.ska:2:25"""

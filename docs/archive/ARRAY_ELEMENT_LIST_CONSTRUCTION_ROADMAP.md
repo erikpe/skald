@@ -1,11 +1,11 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 through EL6 are complete and EL7 is next.
+Status: complete; EL0 through EL7 are implemented and verified.
 
 This roadmap implements the frozen
-[explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
+[explicit array element-list contract](../language/ARRAYS.md#explicit-element-list-construction)
 and its archived
-[design record](../archive/ARRAY_ELEMENT_LIST_CONSTRUCTION_DESIGN_PROPOSAL.md).
+[design record](ARRAY_ELEMENT_LIST_CONSTRUCTION_DESIGN_PROPOSAL.md).
 It adds typed `T[]{...}` and `new T[]{...}` construction from source through
 verified MIR and native x86-64 while preserving the implemented array owner,
 lifecycle, publication, and runtime boundaries.
@@ -52,7 +52,7 @@ lifecycle, publication, and runtime boundaries.
 - [x] EL4 — Execute inline optional element initialization
 - [x] EL5 — Execute recursively nested inline-array elements
 - [x] EL6 — Execute shared and optional-shared owner elements
-- [ ] EL7 — Harden and publish the complete element-list profile
+- [x] EL7 — Harden and publish the complete element-list profile
 
 ## PR-sized implementation sequence
 
@@ -325,34 +325,34 @@ verification, and runtime ABI version 8 remains unchanged.
 **Purpose:** Close cross-category, recovery, robustness, determinism, and
 documentation gaps before changing the feature from frozen to implemented.
 
-- [ ] Complete syntax, resolution, type, capability, access, ownership,
+- [x] Complete syntax, resolution, type, capability, access, ownership,
       evaluation, prefix, publication, lifecycle, and consuming-context
       matrices across mixed and recursively nested element families.
-- [ ] Cover empty equivalence, maximum semantic length, trailing-comma
+- [x] Cover empty equivalence, maximum semantic length, trailing-comma
       rejection, malformed nested recovery, postfix consumers, allocation
       failure before effects, and every supported local/field/argument/result/
       assignment destination.
-- [ ] Add complete native golden coverage for left-to-right effects, named
+- [x] Add complete native golden coverage for left-to-right effects, named
       copy versus produced adoption, direct class placement, optional state,
       nested arrays, shared owner counts, reverse cleanup, and both outer
       ownership forms.
-- [ ] Extend hostile frontend, accepted nesting-budget, malformed-MIR,
+- [x] Extend hostile frontend, accepted nesting-budget, malformed-MIR,
       independent-process determinism, ABI-pressure, helper-collision, and
       system-assembler coverage.
-- [ ] Audit new and touched Rust modules by responsibility; keep syntax,
+- [x] Audit new and touched Rust modules by responsibility; keep syntax,
       resolution, typed-plan, MIR lowering, verifier, and backend logic behind
       their established facades and split any new multi-responsibility hotspot.
-- [ ] Remove all staging gates, temporary unsupported diagnostics, stale frozen
+- [x] Remove all staging gates, temporary unsupported diagnostics, stale frozen
       rollout prose, and feature codes from living code, tests, dumps, and
       general documentation.
-- [ ] Promote grammar, arrays, class lifecycle, optionals, shared ownership,
+- [x] Promote grammar, arrays, class lifecycle, optionals, shared ownership,
       evaluation, errors, status, phase/IR, backend, runtime ABI, indexes, and
       test guidance to current implemented behavior without requiring the
       archived proposal or roadmap.
-- [ ] Reconfirm that inferred lists, trailing commas, fill/generator syntax,
+- [x] Reconfirm that inferred lists, trailing commas, fill/generator syntax,
       comprehensions, spreads, rectangular shapes, vectors, exceptional
       cleanup, covariance, and every other deferred feature remain rejected.
-- [ ] Record any lower-priority discovery in a separately indexed element-list
+- [x] Record any lower-priority discovery in a separately indexed element-list
       discoveries document rather than expanding the frozen scope.
 
 **Tests:** All focused array, object-result, optional, shared-owner,

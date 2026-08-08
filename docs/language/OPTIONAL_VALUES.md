@@ -476,14 +476,14 @@ The frozen profile does not include:
 These exclusions are not implied language behavior. Each requires a separate
 focused design before implementation.
 
-The frozen [array design](ARRAYS.md) separately permits existing optional
+The implemented [array design](ARRAYS.md) permits existing optional
 non-array element types to default to `none` inside arrays and extends
 `shared?` to exact shared array targets. It continues to exclude inline
 optional array payloads; `shared? T[]` is optional shared ownership, not an
 inline optional array.
 
 Its implemented
-[explicit element-list form](ARRAYS.md#frozen-explicit-element-list-construction)
+[explicit element-list form](ARRAYS.md#explicit-element-list-construction)
 also makes each optional element position an ordinary expected optional
 initialization destination. `none` initializes absence, and an ordinary
 payload or shared-owner expression uses the existing optional injection and

@@ -1,7 +1,7 @@
 # Arrays
 
-Status: **implemented contract on x86-64 with a frozen, executable explicit
-element-list extension**. This document is authoritative for the
+Status: **implemented contract on x86-64, including explicit element-list
+construction**. This document is authoritative for the
 source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
@@ -201,9 +201,9 @@ explicit element lists for every supported stored element category: primitive,
 exact-class, inline-optional, recursively nested inline-array, shared-owner,
 and optional shared-owner elements.
 
-## Frozen explicit element-list construction
+## Explicit element-list construction
 
-The compiler parses and resolves the following frozen source forms:
+The compiler implements the following source forms:
 
 ```ska
 T[]{element0, element1}
@@ -214,20 +214,21 @@ new T[]{element0, element1}
 non-null shared owner of a shared outer-array allocation. The explicit
 `array-inline-type` determines the exact invariant element type before any
 element is checked. Braces accept zero or more comma-separated expressions;
-the initial profile does not accept a trailing comma. `T[]{}` is equivalent in
+the grammar does not accept a trailing comma. `T[]{}` is equivalent in
 value and lifecycle to `T[]()` without deprecating that implemented empty
 form.
 
 This is **element-list construction**, not an inferred array literal. Untyped
 `[element0, element1]`, expected-type-only lists, and
-`T[](element0, element1)` are not frozen forms. In particular, the existing
+`T[](element0, element1)` are not accepted forms. In particular, the existing
 single-expression `T[](value)` remains default-length construction and
 requires `value: u64`.
 
 The type checker accepts both brace forms and records one exact ordered
 destination plan per element in HIR. Lists of `i64`, `u64`, `u8`, `f64`,
-`bool`, exact classes, supported inline optionals, and recursively nested
-inline arrays execute for inline and shared outer arrays. Their MIR
+`bool`, exact classes, supported inline optionals, recursively nested inline
+arrays, shared owners, and optional shared owners execute for inline and shared
+outer arrays. Their MIR
 allocates checked unpublished backing before element effects, advances one
 verified ordered prefix, and publishes only after completion. Exact-class
 plans use ordinary direct initialization, object-result placement, or selected
@@ -235,8 +236,9 @@ copy construction in the final slot. Inline optionals reuse ordinary absence,
 injection, conditional payload copying, direct payload placement, and presence
 publication. A named nested array is deep-copied recursively; a produced nested
 array transfers its completed backing into the current outer slot exactly once.
-The structured HIR-to-MIR gate continues to reject shared-owner and
-optional-owner element plans until their roadmap stages land.
+Shared-owner positions retain named compatible owners and adopt produced
+owners; optional shared-owner positions apply the same operation only when
+present and preserve the ordinary zero niche for absence.
 
 The list length is the number of supplied expressions and must satisfy the
 ordinary maximum-`i64` array-length bound. Type grouping and outer ownership
@@ -329,8 +331,8 @@ prefix after reporting begins. Any future recoverable construction failure
 must clean already initialized elements without treating uninitialized slots
 as live.
 
-The compiler representation and unchanged runtime boundary are frozen in the
-[array compiler contract](../compiler/ARRAYS.md#frozen-element-list-representation).
+The compiler representation and unchanged runtime boundary are defined in the
+[array compiler contract](../compiler/ARRAYS.md#element-list-representation).
 
 ## Inline array value semantics
 

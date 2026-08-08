@@ -73,8 +73,8 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
 fn primitive_inline_array_helpers_are_deterministic_and_layout_specialized() {
     let source = concat!(
         "fn main() -> i64 {\n",
-        "  var wide: i64[] = i64[](3u);\n",
-        "  var bytes: u8[] = u8[](3u);\n",
+        "  var wide: i64[] = i64[]{1, 2, 3};\n",
+        "  var bytes: u8[] = u8[]{1u8, 2u8, 3u8};\n",
         "  return 0;\n",
         "}\n",
     );
@@ -95,6 +95,7 @@ fn primitive_inline_array_helpers_are_deterministic_and_layout_specialized() {
     assert!(first.contains("call ska_rt_alloc"));
     assert!(first.contains("call ska_rt_free"));
     assert!(!first.contains("ska_rt_array"));
+    assert_system_assembler_accepts(&first);
 
     let mut labels = std::collections::HashSet::new();
     for label in first

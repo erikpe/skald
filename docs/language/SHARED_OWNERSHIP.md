@@ -436,7 +436,7 @@ These exclusions bound the current implementation. The implemented
 `shared T[]` and `shared? T[]` ownership; it does not change the
 class/interface/`Obj` boundary above.
 The implemented
-[explicit array element-list form](ARRAYS.md#frozen-explicit-element-list-construction)
+[explicit array element-list form](ARRAYS.md#explicit-element-list-construction)
 reuses ordinary target compatibility at each shared-owner element position. A
 named owner is copied/retained, while a produced owner is transferred/adopted;
 the optional-owner form applies the same rule only when present. Listing one

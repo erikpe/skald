@@ -501,8 +501,8 @@ This compiler contract does not design generalized shared boxes, nested
 optionals, inline optional array payloads, optional function values,
 first-class references, optional casts, equality or operator lifting,
 chaining/coalescing/propagation, recoverable failures, concurrency or atomic
-guards, external optional ABI, or dynamic-type-preserving cloning. The frozen
-[array compiler contract](ARRAYS.md) separately extends optional shared-owner
+guards, external optional ABI, or dynamic-type-preserving cloning. The implemented
+[array compiler contract](ARRAYS.md) extends optional shared-owner
 targets to exact arrays and permits already-supported optional non-array
 element types. Explicit array element lists reuse the same generic-place
 optional initialization, conditional owner transfer, zero niche, and cleanup.

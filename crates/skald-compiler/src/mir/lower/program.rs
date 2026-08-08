@@ -7,8 +7,7 @@ use crate::hir::{
     HirMethodDispatch, HirMethodKind, HirSynthesizedFieldCopy,
 };
 
-pub(super) fn lower_program(hir: &HirProgram) -> (MirProgram, Vec<MirLoweringError>) {
-    let mut lowering_errors = Vec::new();
+pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
     let string_language_item = hir
         .string_language_item
         .as_ref()
@@ -20,15 +19,12 @@ pub(super) fn lower_program(hir: &HirProgram) -> (MirProgram, Vec<MirLoweringErr
         .iter()
         .map(|declaration| {
             hir.definitions.get(declaration.id).map(|definition| {
-                let (definition, errors) = lower_function_definition(
+                lower_function_definition(
                     declaration,
                     definition,
                     string_language_item,
                     &hir.literal_data,
-                    &hir.array_types,
-                );
-                lowering_errors.extend(errors);
-                definition
+                )
             })
         })
         .collect();
@@ -44,14 +40,9 @@ pub(super) fn lower_program(hir: &HirProgram) -> (MirProgram, Vec<MirLoweringErr
                 .chain(class.destructor.iter())
                 .chain(class.methods.iter())
         })
-        .map(|definition| {
-            let (definition, errors) =
-                lower_member_definition(hir, definition, string_language_item);
-            lowering_errors.extend(errors);
-            definition
-        })
+        .map(|definition| lower_member_definition(hir, definition, string_language_item))
         .collect();
-    let mir = MirProgram {
+    MirProgram {
         modules: hir.modules.clone(),
         external_links: hir.external_links.clone(),
         array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
@@ -122,8 +113,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> (MirProgram, Vec<MirLoweringErr
         member_definitions: MirMemberDefinitionTable::new(member_definitions),
         entry_function: hir.entry_function,
         span: hir.span,
-    };
-    (mir, lowering_errors)
+    }
 }
 
 fn lower_string_language_item(
@@ -481,8 +471,7 @@ fn lower_function_definition(
     definition: &HirFunctionDefinition,
     string_language_item: Option<MirStringLanguageItem>,
     literal_data: &crate::hir::HirLiteralDataTable,
-    array_types: &crate::hir::HirArrayTypeTable,
-) -> (MirFunctionDefinition, Vec<MirLoweringError>) {
+) -> MirFunctionDefinition {
     let lowered = BodyLowerer::lower(BodyLoweringInput {
         callable: declaration.id.into(),
         parameters: &declaration.parameters,
@@ -492,9 +481,8 @@ fn lower_function_definition(
         receiver_class: None,
         string_language_item,
         literal_data,
-        array_types,
     });
-    let definition = MirFunctionDefinition {
+    MirFunctionDefinition {
         function: declaration.id,
         return_storage: lowered.return_storage,
         parameters: lowered.parameters,
@@ -502,15 +490,14 @@ fn lower_function_definition(
         values: lowered.values,
         body: lowered.body,
         span: definition.span,
-    };
-    (definition, lowered.lowering_errors)
+    }
 }
 
 fn lower_member_definition(
     hir: &HirProgram,
     definition: &HirMemberDefinition,
     string_language_item: Option<MirStringLanguageItem>,
-) -> (MirMemberDefinition, Vec<MirLoweringError>) {
+) -> MirMemberDefinition {
     debug_assert_eq!(definition.callable.class(), Some(definition.class_owner));
     let signature = hir
         .callable_signature(definition.callable)
@@ -524,9 +511,8 @@ fn lower_member_definition(
         receiver_class: definition.receiver_class,
         string_language_item,
         literal_data: &hir.literal_data,
-        array_types: &hir.array_types,
     });
-    let definition = MirMemberDefinition {
+    MirMemberDefinition {
         callable: definition.callable,
         class_owner: definition.class_owner,
         return_storage: lowered.return_storage,
@@ -536,8 +522,7 @@ fn lower_member_definition(
         values: lowered.values,
         body: lowered.body,
         span: definition.span,
-    };
-    (definition, lowered.lowering_errors)
+    }
 }
 
 fn lower_parameter(parameter: &HirParameter) -> MirParameter {

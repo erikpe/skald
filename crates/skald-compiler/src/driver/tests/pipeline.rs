@@ -843,7 +843,7 @@ fn primitive_array_element_lists_cross_the_complete_driver_pipeline() {
         ),
         Target::X86_64SysV,
     )
-    .expect("EL2 primitive element lists must lower through x86-64");
+    .expect("primitive element lists must lower through x86-64");
     assert!(artifact.assembly.contains("call ska_rt_alloc"));
     assert!(artifact.assembly.contains("[r11 + r10*8 + 16]"));
 }
@@ -861,7 +861,7 @@ fn exact_class_array_element_lists_cross_the_complete_driver_pipeline() {
         ),
         Target::X86_64SysV,
     )
-    .expect("EL3 exact-class element lists must lower through x86-64");
+    .expect("exact-class element lists must lower through x86-64");
     assert!(artifact
         .assembly
         .contains("call .Lska.class.main.Item.c0.init.i0"));

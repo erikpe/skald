@@ -307,10 +307,10 @@ version marker. Loop behavior, backward branches, and per-iteration cleanup
 belong to compiler, backend, assembler, and native golden tests rather than a
 new runtime harness.
 
-## Frozen explicit array element-list ABI boundary
+## Explicit array element-list ABI boundary
 
-The frozen, executable
-[explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
+The implemented
+[explicit array element-list contract](../language/ARRAYS.md#explicit-element-list-construction)
 adds no public C symbol, runtime-managed element operation, metadata format, or
 ABI-version change. The runtime marker remains `ska_rt_abi_v8`.
 

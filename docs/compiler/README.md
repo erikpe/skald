@@ -158,9 +158,9 @@ whole-array and exact element aliases execute with detached-backing and
 shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
-That contract also freezes and implements typed explicit `T[]{...}` and
-`new T[]{...}` element-list construction. The
-extension preserves ordered destination initialization, unpublished-prefix
+That contract also implements typed explicit `T[]{...}` and `new T[]{...}`
+element-list construction. The feature preserves ordered destination
+initialization, unpublished-prefix
 verification, existing class/optional/nested-array/shared-owner operations,
 and the current runtime ABI. Syntax and resolution retain those brace forms
 exactly, and type checking now emits one ordered, destination-directed HIR

@@ -27,7 +27,7 @@ Use the authority closest to the behavior:
 - the implemented source-visible invocation-vector, byte, snapshot, ownership, and
   Linux discovery contract belongs in
   [process arguments](language/PROCESS.md);
-- the frozen source-visible contract for inline, shared, optional-shared,
+- the implemented source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
   [arrays](language/ARRAYS.md);
 - the frozen source contract and current syntax/resolution boundary for
@@ -65,7 +65,7 @@ Use the authority closest to the behavior:
 - frozen multiple-file providers, filesystem resolution, entry selection,
   identities, loading, and linkage belong in the
   [module-system compiler contract](compiler/MODULE_SYSTEM.md);
-- the frozen array phase, lifecycle, backing, anchor, verification, and
+- the implemented array phase, lifecycle, backing, anchor, verification, and
   runtime responsibility design belongs in
   [the array compiler and runtime contract](compiler/ARRAYS.md);
 - the implemented optional HIR, checked views, verification, x86-64 layout,

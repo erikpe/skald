@@ -186,7 +186,7 @@ semantics for overlap. Whole-array and exact element aliases execute through
 internal non-owning addresses. Inline backing accounts defer detached element
 destruction, while shared aliases reuse secured strong-owner anchors.
 
-The frozen explicit array element-list extension adds no new target semantic
+Explicit array element-list construction adds no new target semantic
 choice for any stored element category. Instruction selection receives
 verified unpublished backing, a source-derived constant count, exact ordered
 initialization, initialized-prefix advancement, and complete publication.

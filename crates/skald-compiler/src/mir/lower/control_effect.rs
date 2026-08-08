@@ -146,98 +146,11 @@ fn shared_source_contains_control_effect(source: &HirSharedSource) -> bool {
 }
 
 fn array_construction_contains_control_effect(
-    construction: &crate::hir::HirArrayConstruction,
+    _construction: &crate::hir::HirArrayConstruction,
 ) -> bool {
-    match &construction.mode {
-        crate::hir::HirArrayConstructionMode::Empty => false,
-        crate::hir::HirArrayConstructionMode::DefaultLength { length, .. } => {
-            expression_contains_control_effect(length)
-        }
-        crate::hir::HirArrayConstructionMode::Copy { source, .. } => {
-            array_source_contains_control_effect(source)
-        }
-        crate::hir::HirArrayConstructionMode::Elements(list) => list
-            .elements
-            .iter()
-            .any(|element| stored_value_contains_control_effect(&element.value)),
-    }
-}
-
-fn stored_value_contains_control_effect(value: &crate::hir::HirStoredValueInitialization) -> bool {
-    match value {
-        crate::hir::HirStoredValueInitialization::Primitive(value) => {
-            expression_contains_control_effect(value)
-        }
-        crate::hir::HirStoredValueInitialization::Class(value) => match value {
-            crate::hir::HirObjectDestinationInitialization::Direct { producer, .. } => {
-                producer_contains_control_effect(producer)
-            }
-            crate::hir::HirObjectDestinationInitialization::Copy { source, .. } => {
-                object_source_contains_control_effect(source)
-            }
-        },
-        crate::hir::HirStoredValueInitialization::OptionalPrimitive { source, .. } => {
-            optional_source_contains_control_effect(source)
-        }
-        crate::hir::HirStoredValueInitialization::OptionalClass(value) => match value {
-            crate::hir::HirClassOptionalDestinationInitialization::Absent { .. } => false,
-            crate::hir::HirClassOptionalDestinationInitialization::Direct { producer, .. } => {
-                producer_contains_control_effect(producer)
-            }
-            crate::hir::HirClassOptionalDestinationInitialization::Copy { source, .. } => {
-                class_optional_source_contains_control_effect(source)
-            }
-        },
-        crate::hir::HirStoredValueInitialization::Array(value) => {
-            array_source_contains_control_effect(&value.source)
-        }
-        crate::hir::HirStoredValueInitialization::Shared(value) => {
-            shared_source_contains_control_effect(&value.source)
-        }
-        crate::hir::HirStoredValueInitialization::OptionalShared(value) => {
-            optional_shared_source_contains_control_effect(&value.source)
-        }
-    }
-}
-
-fn optional_source_contains_control_effect(source: &crate::hir::HirOptionalSource) -> bool {
-    match source {
-        crate::hir::HirOptionalSource::Absent { .. } | crate::hir::HirOptionalSource::Copy(_) => {
-            false
-        }
-        crate::hir::HirOptionalSource::Present(value) => expression_contains_control_effect(value),
-        crate::hir::HirOptionalSource::Produced(value) => expression_contains_control_effect(value),
-    }
-}
-
-fn class_optional_source_contains_control_effect(
-    source: &crate::hir::HirClassOptionalSource,
-) -> bool {
-    match source {
-        crate::hir::HirClassOptionalSource::Absent { .. }
-        | crate::hir::HirClassOptionalSource::Copy(_) => false,
-        crate::hir::HirClassOptionalSource::Present(source) => {
-            object_source_contains_control_effect(source)
-        }
-        crate::hir::HirClassOptionalSource::Produced(value) => {
-            expression_contains_control_effect(value)
-        }
-    }
-}
-
-fn optional_shared_source_contains_control_effect(
-    source: &crate::hir::HirOptionalSharedSource,
-) -> bool {
-    match source {
-        crate::hir::HirOptionalSharedSource::Absent { .. }
-        | crate::hir::HirOptionalSharedSource::Copy(_) => false,
-        crate::hir::HirOptionalSharedSource::Present(source) => {
-            shared_source_contains_control_effect(source)
-        }
-        crate::hir::HirOptionalSharedSource::Produced(value) => {
-            expression_contains_control_effect(value)
-        }
-    }
+    // Every array production performs checked backing allocation and can move
+    // lowering into a successor block before any source-specific effects run.
+    true
 }
 
 fn array_source_contains_control_effect(source: &crate::hir::HirArraySource) -> bool {
@@ -445,10 +358,10 @@ mod tests {
     }
 
     #[test]
-    fn array_element_lists_traverse_selected_initialization_plans_in_order() {
+    fn pure_array_element_lists_are_control_affecting_because_allocation_is_checked() {
         let hir = type_check_source(concat!(
             "fn exercise() -> unit {\n",
-            "  var values: i64[] = i64[]{1, 8 / 2};\n",
+            "  var values: i64[] = i64[]{1, 2};\n",
             "  return;\n",
             "}\n",
             "fn main() -> i64 { return 0; }\n",

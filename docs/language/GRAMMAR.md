@@ -552,17 +552,17 @@ The explicit array type is required. Untyped
 ordinary expressions inside the existing parentheses are not accepted forms.
 
 An empty list is valid, one or more elements are comma-separated, and the
-initial profile does not accept a trailing comma. The braces and every comma
+grammar does not accept a trailing comma. The braces and every comma
 remain exact source spans for syntax, recovery, and deterministic dumps.
 Ordinary postfix operations may follow the closing brace. Whitespace does not
 change the construction shape.
 
 The parser and resolver retain the complete ordered list and exact array
-identity. Type checking currently rejects the mode with one structured
-availability diagnostic, so it cannot enter HIR. The expression count,
-type compatibility, left-to-right evaluation, destination initialization,
-ownership, publication, and failure are defined by the frozen
-[array element-list contract](ARRAYS.md#frozen-explicit-element-list-construction).
+identity. Type checking records one destination-directed initialization plan
+per element, and verified MIR executes the ordered allocation, initialization,
+publication, ownership, and cleanup protocol. The complete semantics are
+defined by the
+[array element-list contract](ARRAYS.md#explicit-element-list-construction).
 
 From tightest to loosest binding, precedence is:
 
