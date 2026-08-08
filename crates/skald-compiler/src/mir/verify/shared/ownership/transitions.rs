@@ -199,12 +199,10 @@ impl SharedOwnershipAnalysis<'_, '_> {
                     }
                     if state.live_owners.contains(&transfer.destination) {
                         self.error(block.id, "shared move destination is still live");
-                    } else if !state.released_owners.remove(&transfer.destination) {
-                        self.error(
-                            block.id,
-                            "shared move destination was not released before replacement",
-                        );
                     } else if let Some(origin) = source_origin {
+                        // A move may initialize fresh local storage or replace
+                        // an owner released immediately before the move.
+                        state.released_owners.remove(&transfer.destination);
                         state.live_owners.insert(transfer.destination);
                         state.owner_origins.insert(transfer.destination, origin);
                     }

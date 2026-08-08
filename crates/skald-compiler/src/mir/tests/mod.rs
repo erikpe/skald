@@ -46,6 +46,7 @@ mod object_fixtures;
 mod object_results;
 mod object_temporaries;
 mod objects;
+mod optional_shared_owners;
 mod optional_values;
 mod path_conditions;
 mod primitive_binding_assignment;

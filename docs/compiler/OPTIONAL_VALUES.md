@@ -232,7 +232,9 @@ while the presence guard covers conditional payload lifetime.
 
 Primitive extraction copies before later effects and needs no continuing
 guard. Optional shared-owner extraction secures one ordinary non-null owner and
-likewise needs no continuing optional guard.
+likewise needs no continuing optional guard. When the extraction directly
+initializes a local, the checked unwrap first writes a fresh owning temporary;
+a count-neutral move then installs that owner in the local on the success edge.
 
 Structured source-level short-circuit lowering preserves those three distinct
 lifetimes. A selected inline-class payload view ends after its complete field,

@@ -153,7 +153,9 @@ pub struct MirSharedCast {
     pub span: Span,
 }
 
-/// Consumes one live owner and installs it without changing the strong count.
+/// Consumes one live temporary owner and initializes or replaces a local owner
+/// without changing the strong count. Replacement requires the previous owner
+/// to have been released first.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedMove {
     pub destination: StorageId,

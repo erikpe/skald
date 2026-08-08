@@ -32,17 +32,33 @@ fn forward(value: shared? Readable) -> shared? Readable {
     return value;
 }
 
+fn recover(value: shared? Readable) -> shared Readable {
+    var owner: shared Readable = value!;
+    return owner;
+}
+
 fn main() -> i64 {
     var concrete: shared? ReadableValue = new ReadableValue(42);
+    var direct: shared ReadableValue = concrete!;
+    var elements: (shared? ReadableValue)[] = (shared? ReadableValue)[]{concrete};
+    var from_element: shared ReadableValue = elements[0]!;
     var readable: shared? Readable = concrete;
+    var from_result: shared Readable = forward(readable)!;
+    var from_parameter: shared Readable = recover(readable);
     var object: shared? Obj = readable;
     var recovered: shared ReadableValue = (shared ReadableValue) object!;
     var holder: Holder = Holder(forward(recovered));
     holder.replace(readable);
+    var from_field: shared Readable = holder.value!;
     concrete = none;
     readable = none;
     object = none;
     assert_true(holder.value is some);
+    assert_eq_i64(direct->read(), 42);
+    assert_eq_i64(from_element->read(), 42);
+    assert_eq_i64(from_result->read(), 42);
+    assert_eq_i64(from_parameter->read(), 42);
+    assert_eq_i64(from_field->read(), 42);
     assert_eq_i64(holder.value!->read(), 42);
     return 0;
 }

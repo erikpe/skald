@@ -1,32 +1,7 @@
 # Array Element-List Construction Discoveries
 
-Status: actionable follow-up after the completed array element-list
-construction roadmap.
-
-## Optional shared unwrap directly initializing a local
-
-- **Problem:** A checked optional shared-owner unwrap used directly as the
-  initializer of an ordinary shared local lowers the unwrap result into that
-  local, while structural MIR verification currently requires the result
-  storage to be a temporary or shared anchor. The equivalent unwrap in a later
-  expression works because it naturally receives temporary storage.
-- **Evidence:** `var owner: shared Item = maybe_owner!;` reached the invalid-MIR
-  assertion `optional shared unwrap requires matching optional source and fresh
-  shared owner` in native array element-list coverage after first copying a
-  present optional owner from an array slot. Presence tests and expression-
-  temporary unwraps remain valid, so the element-list transfer itself is not
-  implicated.
-- **Likely owner:** Optional shared unwrap lowering and shared local
-  initialization, with the structural and ownership verifiers preserving the
-  established secure-owner protocol.
-- **Priority:** Medium. Valid source can reach an internal invalid-MIR
-  assertion, but repairing direct-local placement is a pre-existing optional
-  lowering concern rather than part of array slot construction.
-- **Useful implementation boundary:** Lower checked unwrap into a fresh typed
-  shared temporary, then consume/adopt it into the destination local using the
-  ordinary shared transfer path. Cover direct locals, fields, arguments,
-  results, optional array-element sources, checked failure, exact target
-  compatibility, and mutated MIR.
+Status: one actionable follow-up remains after the completed array
+element-list construction roadmap.
 
 ## Array-local release liveness in malformed MIR
 

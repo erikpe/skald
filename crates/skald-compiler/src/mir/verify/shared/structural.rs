@@ -262,7 +262,7 @@ impl<'mir> Verifier<'mir> {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared move requires a matching temporary and replaceable owner destination",
+                "shared move requires a compatible temporary and local or parameter owner destination",
             );
         }
     }

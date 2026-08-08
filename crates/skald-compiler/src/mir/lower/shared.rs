@@ -13,7 +13,21 @@ impl BodyLowerer<'_> {
         destination: StorageId,
         transfer: &HirSharedTransfer,
     ) {
-        self.lower_shared_transfer(destination, transfer);
+        if matches!(
+            transfer.source,
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_))
+        ) {
+            let secured = self.new_shared_temporary(transfer.target, transfer.span);
+            self.lower_shared_transfer(secured, transfer);
+            self.consume_shared_temporary(secured);
+            self.emit(MirInstruction::SharedMove(MirSharedMove {
+                destination,
+                source: secured,
+                span: transfer.span,
+            }));
+        } else {
+            self.lower_shared_transfer(destination, transfer);
+        }
         self.full_expression.mark_shared_effect();
     }
 

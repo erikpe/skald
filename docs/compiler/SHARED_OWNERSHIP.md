@@ -158,22 +158,23 @@ new -> allocated -> initialized -> published -> adopted owner
 Only the publication transition creates count-one ownership. The allocation
 slot remains compiler-owned construction provenance and cannot be used as a
 place, view, receiver, or call argument. A named source is secured with
-`SharedCopy`; a produced allocation is secured with `SharedAdopt`. Assignment
-first secures either source into an owning temporary, then releases the old
-local, and finally consumes the temporary with `SharedMove` into the still
-live destination. This makes direct and allocation-alias self-assignment safe
-without exposing an empty owner. Any unconsumed owning temporaries are
-released in reverse creation order before the explicit full-expression
-boundary.
+`SharedCopy`; a produced allocation is secured with `SharedAdopt`. A checked
+optional unwrap is always secured into a fresh owning temporary. Direct local
+initialization consumes that temporary with `SharedMove`; assignment first
+secures either source into an owning temporary, releases the old local, and
+then consumes the temporary with the same instruction. This makes checked
+failure and direct or allocation-alias self-assignment safe without exposing
+an empty owner. Any unconsumed owning temporaries are released in reverse
+creation order before the explicit full-expression boundary.
 
 The verifier requires every move source to be live and temporary, requires the
-destination's old owner to have just been released, consumes the source
-exactly once, and rejects a full-expression boundary with a live owning
-temporary. Normal return requires every local owner to have been released.
-CFG joins require identical shared allocation and owner states. These
-operations are target-independent and carry no handle size, header offset, or
-runtime symbol. Hidden call owners use the distinct `SharedAnchor` storage
-role, so dumps and verification can distinguish them from general temporaries.
+destination to be either fresh or just released, consumes the source exactly
+once, and rejects a full-expression boundary with a live owning temporary.
+Normal return requires every local owner to have been released. CFG joins
+require identical shared allocation and owner states. These operations are
+target-independent and carry no handle size, header offset, or runtime symbol.
+Hidden call owners use the distinct `SharedAnchor` storage role, so dumps and
+verification can distinguish them from general temporaries.
 
 `MirPlaceBase::SharedPointee(owner)` is the target-independent root for a
 borrowed payload place. Its owner must be a live stable local/value parameter

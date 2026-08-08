@@ -135,12 +135,57 @@ fn optional_shared_unwrap_secures_anchors_and_composes_with_runtime_casts() {
 }
 
 #[test]
+fn optional_shared_unwrap_directly_initializes_locals_across_source_contexts() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Value {\n",
+        "  marker: i64;\n",
+        "  init(marker: i64) { self.marker = marker; }\n",
+        "  destroy { test_record_i64(self.marker); }\n",
+        "}\n",
+        "class Holder {\n",
+        "  value: shared? Value;\n",
+        "  init(value: shared? Value) { self.value = value; }\n",
+        "}\n",
+        "fn forward(value: shared? Value) -> shared? Value { return value; }\n",
+        "fn recover(value: shared? Value) -> shared Value {\n",
+        "  var owner: shared Value = value!;\n",
+        "  return owner;\n",
+        "}\n",
+        "fn inspect(value: shared Value) -> i64 { return value->marker; }\n",
+        "fn main() -> i64 {\n",
+        "  var seed: shared Value = new Value(42);\n",
+        "  var maybe: shared? Value = seed;\n",
+        "  var values: (shared? Value)[] = (shared? Value)[]{maybe};\n",
+        "  var holder: Holder = Holder(maybe);\n",
+        "  var from_element: shared Value = values[0]!;\n",
+        "  var from_field: shared Value = holder.value!;\n",
+        "  var from_optional_result: shared Value = forward(maybe)!;\n",
+        "  var from_parameter: shared Value = recover(maybe);\n",
+        "  if (inspect(from_element) != 42) { return 1; }\n",
+        "  if (from_field->marker != 42) { return 2; }\n",
+        "  if (from_optional_result->marker != 42) { return 3; }\n",
+        "  return from_parameter->marker;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    output.push_str(record_i64_stub());
+    let result = run_native_assembly_output(&output);
+
+    assert_eq!(result.status.code(), Some(42), "{output}");
+    assert_eq!(result.stdout, b"42\n");
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
 fn absent_optional_shared_unwrap_terminates() {
     let mut output = assembly(
         "class Value { init() {} fn read() -> i64 { return 42; } }\n\
          fn main() -> i64 {\n\
            var value: shared? Value = none;\n\
-           return value!->read();\n\
+           var owner: shared Value = value!;\n\
+           return owner->read();\n\
          }\n",
     );
     output.push_str(native_allocator());
