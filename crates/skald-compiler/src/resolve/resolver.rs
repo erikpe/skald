@@ -6,7 +6,7 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
         ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, FunctionId,
-        InitializerId, InterfaceId, MethodId, StaticFieldId,
+        InitializerId, InterfaceId, MethodId, StaticFieldId, StaticInitializerId,
     },
     module::ModuleGraph,
     source::Span,

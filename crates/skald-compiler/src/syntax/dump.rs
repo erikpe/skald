@@ -168,6 +168,13 @@ impl AstDumper {
                     dumper.line("Static", field.static_span);
                     dumper.named("Name", &field.name.text, field.name.span);
                     dumper.type_syntax(&field.type_syntax);
+                    if let Some(initializer) = &field.initializer {
+                        dumper.line("DeclarationInitializer", initializer.span);
+                        dumper.indented(|dumper| {
+                            dumper.line("Equal", initializer.equal_span);
+                            dumper.expression(&initializer.expression);
+                        });
+                    }
                 });
             }
             ClassMember::Initializer(initializer) => {

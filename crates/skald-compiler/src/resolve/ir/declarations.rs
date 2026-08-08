@@ -6,7 +6,7 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ModuleId, ParameterId, StaticFieldId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, ParameterId, StaticFieldId, StaticInitializerId, VirtualFamilyId, VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -237,6 +237,18 @@ impl ResolvedClassDeclaration {
             .filter(|field| field.id == id)
     }
 
+    pub(crate) fn static_field_mut(
+        &mut self,
+        id: StaticFieldId,
+    ) -> Option<&mut ResolvedStaticFieldDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.static_fields
+            .get_mut(id.index())
+            .filter(|field| field.id == id)
+    }
+
     pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
         (id.class() == self.id)
             .then(|| self.initializers.get(id.index()))
@@ -305,6 +317,15 @@ pub struct ResolvedStaticFieldDeclaration {
     pub name: String,
     pub name_span: Span,
     pub type_syntax: ResolvedType,
+    pub initializer: Option<ResolvedStaticFieldInitializer>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedStaticFieldInitializer {
+    pub id: StaticInitializerId,
+    pub equal_span: Span,
+    pub expression: super::ResolvedExpression,
     pub span: Span,
 }
 

@@ -146,6 +146,7 @@ impl MirProgram {
                         return_type: declaration.return_type,
                     })
             }
+            CallableId::StaticInitializer(_) => None,
             CallableId::Initializer(initializer) => {
                 self.initializer(initializer)
                     .map(|declaration| MirCallableSignature {

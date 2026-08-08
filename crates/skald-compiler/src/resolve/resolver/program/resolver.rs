@@ -261,6 +261,36 @@ impl<'ast> ProgramResolver<'ast> {
             &mut self.diagnostics,
         );
 
+        let mut static_initializer_updates = Vec::new();
+        for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
+            let unit_class_work = class_work
+                .iter()
+                .filter(|item| item.module == unit.module)
+                .cloned()
+                .collect::<Vec<_>>();
+            static_initializer_updates.extend(resolve_static_field_initializers(
+                unit.ast,
+                &unit_class_work,
+                &class_declarations,
+                BodyResolutionEnvironment::new(
+                    lookup,
+                    &function_declarations,
+                    &class_declarations,
+                    &interfaces,
+                    &hierarchy,
+                    self.has_module_context,
+                    StringLiteralResolutionEnvironment::new(
+                        string_language_item.as_ref(),
+                        &self.literal_ids,
+                    ),
+                ),
+                &mut self.array_types,
+                &mut self.diagnostics,
+            ));
+        }
+        attach_static_field_initializers(&mut class_declarations, static_initializer_updates);
+
         let function_definitions = self.resolve_function_bodies(
             lookups,
             &function_declarations,

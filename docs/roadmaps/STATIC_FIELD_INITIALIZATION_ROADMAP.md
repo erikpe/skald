@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: planned; the combined design record is frozen, SI0 is complete, and
-SI1 is next.
+Status: in progress; the combined design record is frozen, SI0 and SI1 are
+complete, and SI2 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -228,7 +228,7 @@ moves that slot before `destination`.
 ## Progress
 
 - [x] SI0 — Freeze the eager static lifecycle profile
-- [ ] SI1 — Retain and resolve declaration initializers
+- [x] SI1 — Retain and resolve declaration initializers
 - [ ] SI2 — Type-check direct stored-value initialization
 - [ ] SI3 — Lower analyzable static lifecycle bodies to preliminary MIR
 - [ ] SI4 — Infer transitive static effects
@@ -275,25 +275,25 @@ or abrupt termination.
 **Purpose:** Carry the optional source expression to stable, owner-aware
 resolved IR without changing executable behavior yet.
 
-- [ ] Parse optional `= expression` before the static declaration semicolon,
+- [x] Parse optional `= expression` before the static declaration semicolon,
       retain exact `=` and expression spans, and preserve contextual `static`
       recovery and existing initializer-free syntax.
-- [ ] Extend `StaticFieldDecl`, `ResolvedStaticFieldDeclaration`, exact AST and
+- [x] Extend `StaticFieldDecl`, `ResolvedStaticFieldDeclaration`, exact AST and
       resolved dumps, and deterministic equality/fixture coverage.
-- [ ] Add a callable-like compiler identity for each explicit static
+- [x] Add a callable-like compiler identity for each explicit static
       initializer, derived from its canonical `StaticFieldId`, so binding,
       temporary, block, and storage IDs never borrow an unrelated function or
       lifecycle member identity.
-- [ ] Resolve the expression only after all program declarations, imports,
+- [x] Resolve the expression only after all program declarations, imports,
       class hierarchy, members, overload candidates, string language items,
       and static identities are available.
-- [ ] Resolve with the declaring class as lexical privacy owner but without a
+- [x] Resolve with the declaring class as lexical privacy owner but without a
       receiver or base-initialization capability. Reject `self`, `super`, bare
       member lookup, statements, and other receiver-only forms through normal
       resolution paths.
-- [ ] Retain canonical `StaticFieldId` uses, resolved call targets, dynamic
+- [x] Retain canonical `StaticFieldId` uses, resolved call targets, dynamic
       dispatch families, and source spans needed by later effect analysis.
-- [ ] Preserve source order and inherited aliases without creating additional
+- [x] Preserve source order and inherited aliases without creating additional
       initializer work or storage.
 
 **Tests:** Focused syntax and resolution tests for every declaration form,

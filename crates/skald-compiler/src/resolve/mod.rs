@@ -42,10 +42,10 @@ pub use ir::{
     ResolvedPrimitiveType, ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn,
     ResolvedSharedAssignment, ResolvedSharedTarget, ResolvedStatement, ResolvedStaticCallExpr,
     ResolvedStaticFieldAccessExpr, ResolvedStaticFieldAssignment, ResolvedStaticFieldDeclaration,
-    ResolvedStringLanguageItem, ResolvedStringLiteralExpr, ResolvedTopLevelId, ResolvedType,
-    ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
-    ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable, ResolvedVisibility,
-    ResolvedWhile,
+    ResolvedStaticFieldInitializer, ResolvedStringLanguageItem, ResolvedStringLiteralExpr,
+    ResolvedTopLevelId, ResolvedType, ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr,
+    ResolvedUnaryOperator, ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedVisibility, ResolvedWhile,
 };
 pub use resolver::{
     resolve, resolve_module_graph, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER,

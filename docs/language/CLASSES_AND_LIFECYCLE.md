@@ -78,7 +78,7 @@ receiverless method kind. Ordinary initializers and the other lifecycle
 declarations cannot be static. Static-field declarations and inherited
 namespace identity are implemented; executable access, lifetime, and
 supported zero-state validation remain staged according to
-[Zero-Default Static Fields](STATIC_FIELDS.md).
+[Static Fields](STATIC_FIELDS.md).
 
 ### Declaring-class privacy
 

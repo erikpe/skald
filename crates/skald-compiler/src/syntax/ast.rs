@@ -192,6 +192,14 @@ pub struct StaticFieldDecl {
     pub static_span: Span,
     pub name: Name,
     pub type_syntax: TypeSyntax,
+    pub initializer: Option<StaticFieldInitializer>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StaticFieldInitializer {
+    pub equal_span: Span,
+    pub expression: Expression,
     pub span: Span,
 }
 

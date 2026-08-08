@@ -68,7 +68,7 @@ pub struct HirClassDefinition {
 impl HirClassDefinition {
     pub fn member(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
         match callable {
-            CallableId::Function(_) => None,
+            CallableId::Function(_) | CallableId::StaticInitializer(_) => None,
             CallableId::Initializer(id) if id.class() == self.class => self
                 .initializers
                 .get(id.index())

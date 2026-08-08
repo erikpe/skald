@@ -132,13 +132,21 @@ marshals scalar arguments and signed results, and calls the exact version-8
 runtime symbol selected by the MIR operation. Operation selection never
 depends on source spelling after resolution.
 
-Zero-default static fields follow the same phase ownership. Syntax retains a
-distinct class-member shape and modifier spans. Resolution allocates dense
-class-owned identities in source order, establishes ordinary namespace,
-inheritance, privacy, and module-qualified selection, and erases spelling from
-lower products. Type checking alone validates the complete all-zero live-value
-set and emits identity-based typed places for all accepted operations. MIR
-models those places as initialized, always-live program-owned roots; ordinary
+Static fields follow the same phase ownership. Syntax retains a distinct
+class-member shape, modifier spans, and an optional initializer expression
+with its exact `=` and expression spans. Resolution allocates dense class-owned
+field identities in source order and callable-like initializer identities
+derived from them. After the complete program namespace, hierarchy, overload
+candidates, and string language items exist, a delayed pass resolves each
+initializer in a receiver-free context owned lexically by the declaring class.
+Resolved IR retains selected declarations, calls, dispatch families, and
+source spans without reconstructing names or order later.
+
+For initializer-free declarations, type checking validates the complete
+all-zero live-value set and emits identity-based typed places for all accepted
+operations. Explicit initializers currently stop at this boundary with
+`TYP043`; they have no typed HIR or executable effect yet. MIR models accepted
+zero-default places as initialized, always-live program-owned roots; ordinary
 ownership, anchor, optional, array, and place verification proves every
 operation without a startup or cleanup instruction. Backends consume only
 that verified identity and type. The source-visible lifetime rule is owned by

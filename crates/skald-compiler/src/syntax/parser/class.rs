@@ -428,8 +428,12 @@ impl Parser<'_> {
     }
 
     fn parse_field(&mut self, visibility: MemberVisibility) -> Option<FieldDecl> {
-        let (name, type_syntax, end_span) =
-            self.parse_field_parts(FieldDeclarationKind::Instance)?;
+        let (name, type_syntax) = self.parse_field_parts(FieldDeclarationKind::Instance)?;
+        let semicolon = self.expect(
+            TokenKind::Semicolon,
+            FieldDeclarationKind::Instance.semicolon_expectation(),
+        );
+        let end_span = semicolon.map_or(type_syntax.span, |token| token.span);
         Some(FieldDecl {
             span: self.cover(visibility.start_span(name.span), end_span),
             visibility,
@@ -443,20 +447,42 @@ impl Parser<'_> {
         visibility: MemberVisibility,
         static_span: Span,
     ) -> Option<StaticFieldDecl> {
-        let (name, type_syntax, end_span) = self.parse_field_parts(FieldDeclarationKind::Static)?;
+        let (name, type_syntax) = self.parse_field_parts(FieldDeclarationKind::Static)?;
+        let initializer = if let Some(equal) = self.consume(TokenKind::Equal) {
+            let expression = self.parse_expression()?;
+            Some(StaticFieldInitializer {
+                equal_span: equal.span,
+                span: self.cover(equal.span, expression.span()),
+                expression,
+            })
+        } else {
+            None
+        };
+        let semicolon = self.expect(
+            TokenKind::Semicolon,
+            FieldDeclarationKind::Static.semicolon_expectation(),
+        );
+        let end_span = semicolon.map_or_else(
+            || {
+                initializer
+                    .as_ref()
+                    .map_or(type_syntax.span, |initializer| {
+                        initializer.expression.span()
+                    })
+            },
+            |token| token.span,
+        );
         Some(StaticFieldDecl {
             span: self.cover(visibility.start_span(static_span), end_span),
             visibility,
             static_span,
             name,
             type_syntax,
+            initializer,
         })
     }
 
-    fn parse_field_parts(
-        &mut self,
-        kind: FieldDeclarationKind,
-    ) -> Option<(Name, TypeSyntax, Span)> {
+    fn parse_field_parts(&mut self, kind: FieldDeclarationKind) -> Option<(Name, TypeSyntax)> {
         let name = self.parse_name(kind.name_expectation())?;
         self.expect(TokenKind::Colon, kind.colon_expectation());
         let type_context = match kind {
@@ -471,9 +497,7 @@ impl Parser<'_> {
                 format_type_list(STORED_TYPE_NAMES)
             ),
         )?;
-        let semicolon = self.expect(TokenKind::Semicolon, kind.semicolon_expectation());
-        let end_span = semicolon.map_or(type_syntax.span, |token| token.span);
-        Some((name, type_syntax, end_span))
+        Some((name, type_syntax))
     }
 
     fn parse_initializer(&mut self, visibility: MemberVisibility) -> Option<InitializerDecl> {

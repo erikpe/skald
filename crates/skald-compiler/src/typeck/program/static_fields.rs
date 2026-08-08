@@ -6,7 +6,7 @@ use crate::{
     resolve::ResolvedStaticFieldDeclaration,
 };
 
-use super::{lower_type, INVALID_STATIC_FIELD_TYPE};
+use super::{lower_type, INVALID_STATIC_FIELD_TYPE, STATIC_FIELD_INITIALIZER_UNAVAILABLE};
 
 pub(super) fn lower_static_fields(
     fields: &[ResolvedStaticFieldDeclaration],
@@ -17,7 +17,25 @@ pub(super) fn lower_static_fields(
         .iter()
         .map(|field| {
             let ty = lower_type(&field.type_syntax);
-            if !has_zero_default(ty) {
+            if let Some(initializer) = &field.initializer {
+                diagnostics.push(
+                    Diagnostic::error(
+                        STATIC_FIELD_INITIALIZER_UNAVAILABLE,
+                        format!(
+                            "static field initializer for `{}` is not yet available to typed compilation",
+                            field.name
+                        ),
+                    )
+                    .with_primary_label(
+                        initializer.span,
+                        "resolution retained this initializer, but HIR has no static initialization plan",
+                    )
+                    .with_note(
+                        "initializer-free static fields with a complete zero value remain supported",
+                    ),
+                );
+                valid = false;
+            } else if !has_zero_default(ty) {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_STATIC_FIELD_TYPE,

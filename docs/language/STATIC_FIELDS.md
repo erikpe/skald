@@ -1,25 +1,25 @@
-# Zero-Default Static Fields
+# Static Fields
 
-Status: **frozen design; complete zero-default storage profile implemented**.
-This document is authoritative for the selected source-visible static-field
-profile. The
+Status: **complete zero-default storage profile implemented; declaration
+initializer syntax and resolution implemented**. This document is
+authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
 the current compiler.
 
-Static fields are mutable class-owned places whose initial live value is
-established without running Skald code. This initial profile deliberately
-supports only types for which zero-filled storage is already one complete
-valid value. It therefore adds useful counters, flags, optional caches, and
-inline-array registries without introducing declaration expressions, module
-initialization, shutdown ordering, garbage collection, or a new runtime
-service.
+Static fields are mutable class-owned places. Initializer-free declarations
+use the implemented zero-default profile: their initial live value is
+established without running Skald code and their type must admit one complete
+all-zero value. Declaration initializer expressions are now accepted and
+resolved, but are deliberately rejected before typed HIR until the remaining
+startup, ordering, and shutdown implementation lands.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
 complete zero-default storage-type set, and lowers primitive, inline-optional,
 optional shared-owner, and inline-array operations to receiver-free typed HIR
-and MIR places. These categories execute through deterministic native storage.
+and MIR places. It also retains and resolves optional declaration initializer
+expressions under stable identities. These expressions do not yet execute.
 
 ## Declaration syntax
 
@@ -44,9 +44,10 @@ The selected forms are exactly:
 ```text
 static name: T;
 private static name: T;
+static name: T = expression;
+private static name: T = expression;
 ```
 
-There is no initializer after the type and no separate static initializer.
 Every static field is mutable; `final`, constant, lazy, thread-local, and
 externally supplied variants are not part of this profile.
 
@@ -56,6 +57,30 @@ an ordinary instance field whose name is `static`. The same spelling remains
 available for methods, functions, parameters, locals, and other existing
 identifier positions. `private static:` is likewise a private instance field
 named `static`; `private static name:` is a private static field.
+
+## Declaration initializer resolution
+
+An explicit initializer uses the ordinary expression grammar. The compiler
+assigns it a callable-like identity derived from the declaration's canonical
+static-field identity, then resolves it after all modules, declarations,
+class hierarchies, members, overload candidates, string language items, and
+static identities are available. Forward declarations and imported or
+selectively imported declarations therefore use the same resolution rules as
+ordinary expressions.
+
+The declaring class is the initializer's lexical privacy owner, so its private
+static members are accessible. The context has no object receiver,
+parameters, locals, or base-initialization capability: `self`, `super`, and
+bare instance or static member lookup are invalid. Static members must be
+selected through a class spelling. Inherited selection retains the declaring
+field identity and creates neither another initializer nor another storage
+slot.
+
+Resolution retains canonical static-field uses, selected calls and dispatch
+families, and source spans for later dependency analysis. It does not infer
+initialization order or make the expression executable. Until typed static
+initialization is implemented, every otherwise resolved declaration with an
+explicit initializer is rejected with `TYP043` before HIR is produced.
 
 ## Identity, namespace, and inheritance
 
@@ -131,9 +156,9 @@ instance receiver and no `mut` receiver capability. Existing compatible `ref`
 and `mut ref` parameters may borrow a static place for one call; aliases remain
 non-owning, call-scoped, and unable to escape or become stored values.
 
-## Supported storage types and initial values
+## Initializer-free storage types and initial values
 
-The complete initial profile is:
+The complete initializer-free profile is:
 
 | Static field type | Value before Skald entry begins |
 |---|---|
@@ -161,10 +186,11 @@ not one complete valid value under their existing contracts:
 - `unit`; and
 - any other type not listed in the supported table.
 
-This restriction does not make ordinary exact objects nullable, permit zero
-as a `shared T` handle, default-construct a class, or invent a foreign
-representation. A declaration using an unsupported storage type is rejected
-at its type rather than acquiring an implicit initializer.
+For initializer-free declarations, this restriction does not make ordinary
+exact objects nullable, permit zero as a `shared T` handle, default-construct
+a class, or invent a foreign representation. Such a declaration using an
+unsupported storage type is rejected at its type rather than acquiring an
+implicit initializer.
 
 ## Reads, writes, and replacement
 
@@ -191,11 +217,14 @@ when its operand or buffer happens to come from a static place.
 
 ## Initialization and lifetime
 
-Every supported static field in the reachable program is live with the value
-listed above before the selected Skald entry function begins. All slots become
-available simultaneously. No source code runs to establish them, so there is
-no declaration order, class order, module order, import order, dependency
-order, or lazy first-use order to observe.
+Every initializer-free supported static field in the reachable program is
+live with the value listed above before the selected Skald entry function
+begins. All such slots become available simultaneously. No source code runs
+to establish them, so there is no declaration order, class order, module
+order, import order, dependency order, or lazy first-use order to observe.
+Explicitly initialized declarations cannot yet reach executable compilation;
+their eventual startup and shutdown semantics are owned by the active static
+initialization roadmap.
 
 A static slot has process lifetime. It is not registered in any lexical scope,
 does not begin or end lifetime on a function call, and is not cleaned when the
@@ -229,10 +258,12 @@ The implementation must reject each error at the phase that owns it:
 
 Diagnostic wording and codes remain compiler behavior. Malformed declarations
 are syntax errors, namespace and privacy rules are enforced during resolution,
-and `TYP042` rejects a declaration whose type lacks a complete all-zero live
-value. Every declaration accepted by that validation can be used through its
-documented primitive, inline-optional, optional shared-owner, or inline-array
-operations and reaches verified MIR and native execution.
+`TYP042` rejects an initializer-free declaration whose type lacks a complete
+all-zero live value, and `TYP043` rejects a resolved explicit initializer at
+the current typed-compilation boundary. Every initializer-free declaration
+accepted by zero-default validation can be used through its documented
+primitive, inline-optional, optional shared-owner, or inline-array operations
+and reaches verified MIR and native execution.
 
 ## Runtime, ABI, and representation boundary
 
@@ -242,19 +273,21 @@ or process-wrapper lifecycle step. Runtime ABI version 8 and its compatibility
 marker remain unchanged. Source `public` visibility does not export a native
 static symbol, and static fields are not permitted in external declarations.
 
-The x86-64 implementation emits one deterministic,
-target-private, writable, aligned, zero-filled slot per declaration and to
-address it through ordinary verified typed places. Symbol spelling, section
-choice, alignment calculation, relocation form, compiler identities, IR, and
-layout are implementation details. They must preserve one canonical slot per
-declaration, the specified initial value and lifetime, deterministic output,
-and the absence of object-layout or callable-ABI changes.
+For every initializer-free declaration that reaches the backend, the x86-64
+implementation emits one deterministic, target-private, writable, aligned,
+zero-filled slot and addresses it through ordinary verified typed places.
+Symbol spelling, section choice, alignment calculation, relocation form,
+compiler identities, IR, and layout are implementation details. They must
+preserve one canonical slot per declaration, the specified initial value and
+lifetime, deterministic output, and the absence of object-layout or
+callable-ABI changes.
 
 ## Exclusions
 
-This frozen profile does not include:
+The executable profile does not yet include:
 
-- declaration initializers or arbitrary constant evaluation;
+- typed or executable declaration initialization, dependency ordering, or
+  arbitrary constant evaluation;
 - static initializer blocks, lifecycle members, or deinitializers;
 - module initialization or shutdown and their ordering;
 - exact inline-class or non-optional shared-owner static initialization;
@@ -266,6 +299,8 @@ This frozen profile does not include:
 - garbage collection or runtime root registration; or
 - cleanup of final static contents at normal process exit.
 
-These exclusions are settled boundaries of the initial profile. Extending one
-requires a separate design rather than an inference from zero-default static
-storage.
+The active [static-initialization roadmap](../roadmaps/STATIC_FIELD_INITIALIZATION_ROADMAP.md)
+owns the typed initialization, dependency ordering, eager startup, and reverse
+normal-return shutdown items above. Extending the remaining boundaries
+requires a separate design rather than an inference from either the
+zero-default profile or initializer syntax.

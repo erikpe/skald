@@ -322,7 +322,7 @@ impl Verifier<'_> {
             | CallableId::CopyConstructor(_)
             | CallableId::CopyAssignment(_)
             | CallableId::Destructor(_) => MirAliasAccess::Mutable,
-            CallableId::Function(_) => MirAliasAccess::ReadOnly,
+            CallableId::Function(_) | CallableId::StaticInitializer(_) => MirAliasAccess::ReadOnly,
         }
     }
 }

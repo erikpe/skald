@@ -185,7 +185,9 @@ fn check_member_target(
         | CallableId::CopyConstructor(_)
         | CallableId::CopyAssignment(_)
         | CallableId::Destructor(_) => true,
-        CallableId::Function(_) => unreachable!("member target cannot be a top-level function"),
+        CallableId::Function(_) | CallableId::StaticInitializer(_) => {
+            unreachable!("member target cannot be a receiver-free program callable")
+        }
     };
     debug_assert_eq!(definition.receiver.is_some(), has_receiver);
     if classify(signature.parameters, has_receiver).is_none() {

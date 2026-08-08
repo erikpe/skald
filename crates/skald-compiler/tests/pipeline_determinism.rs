@@ -918,7 +918,14 @@ fn static_field_diagnostic_dump() -> String {
         "static-field-diagnostics.ska",
         concat!(
             "class Item { init() {} }\n",
-            "class Invalid { static item: Item; static owner: shared Item; init() {} }\n",
+            "class Invalid {\n",
+            "  private static seed: i64 = 40;\n",
+            "  static answer: i64 = add(Invalid.seed, 2);\n",
+            "  static item: Item;\n",
+            "  static owner: shared Item;\n",
+            "  init() {}\n",
+            "}\n",
+            "fn add(left: i64, right: i64) -> i64 { return left + right; }\n",
             "fn main() -> i64 { return 0; }\n",
         ),
     )

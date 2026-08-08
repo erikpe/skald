@@ -99,6 +99,17 @@ pub(super) fn resolve_callable_body(
     CallableResolver::new(context, parameters, environment, array_types, diagnostics).resolve(body)
 }
 
+pub(super) fn resolve_static_initializer_expression(
+    context: CallableResolutionContext,
+    expression: &syntax::Expression,
+    environment: BodyResolutionEnvironment<'_>,
+    array_types: &mut ArrayTypeInterner,
+    diagnostics: &mut Diagnostics,
+) -> Option<ResolvedExpression> {
+    CallableResolver::new(context, &[], environment, array_types, diagnostics)
+        .resolve_declaration_expression(expression)
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct CallableResolutionContext {
     callable: CallableId,
@@ -145,6 +156,15 @@ impl CallableResolutionContext {
             class_owner,
             Some(class_owner),
             base_initialization,
+        )
+    }
+
+    pub(super) const fn static_initializer(callable: CallableId, class_owner: ClassId) -> Self {
+        Self::member(
+            callable,
+            class_owner,
+            None,
+            BaseInitializationPolicy::Forbidden,
         )
     }
 }
@@ -240,6 +260,19 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             locals: self.locals,
             body,
         }
+    }
+
+    fn resolve_declaration_expression(
+        mut self,
+        expression: &syntax::Expression,
+    ) -> Option<ResolvedExpression> {
+        debug_assert_eq!(self.class_owner, self.callable.class());
+        debug_assert!(self.receiver_class.is_none());
+        debug_assert!(matches!(
+            self.base_initialization,
+            BaseInitializationPolicy::Forbidden
+        ));
+        self.resolve_expression(expression)
     }
 
     fn resolve_view_target(&mut self, name: &syntax::Name) -> Option<ResolvedType> {

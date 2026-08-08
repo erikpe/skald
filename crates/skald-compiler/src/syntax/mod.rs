@@ -24,9 +24,9 @@ pub use ast::{
     NameQualification, NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
     ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr,
     PresenceTestKind, PrimitiveCastExpr, PrimitiveType, ReturnStatement, SelectiveImport,
-    SelectiveImportItem, SelfExpr, Statement, StaticFieldDecl, StringLiteralExpr,
-    TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr,
-    Visibility, WhileStatement,
+    SelectiveImportItem, SelfExpr, Statement, StaticFieldDecl, StaticFieldInitializer,
+    StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr,
+    UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
 };
 pub use dump::dump_ast;
 pub use parser::{

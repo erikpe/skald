@@ -29,8 +29,8 @@ pub use declarations::{
     ResolvedMemberVisibility, ResolvedMethodDeclaration, ResolvedMethodDispatch,
     ResolvedMethodKind, ResolvedMethodModifier, ResolvedOptionalPayload, ResolvedParameter,
     ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget,
-    ResolvedStaticFieldDeclaration, ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily,
-    ResolvedVirtualFamilyTable,
+    ResolvedStaticFieldDeclaration, ResolvedStaticFieldInitializer, ResolvedType, ResolvedTypeKind,
+    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use expression::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayConstructionArguments,

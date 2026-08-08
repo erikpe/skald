@@ -54,6 +54,7 @@ impl ClassCollectionState {
                 id,
                 module,
                 ast_index,
+                static_initializer_members: Vec::new(),
                 initializer_members: Vec::new(),
                 copy_constructor_member: None,
                 copy_assignment_member: None,
@@ -95,6 +96,7 @@ impl ClassCollectionState {
 
     fn collect_static_field(
         &mut self,
+        member_index: usize,
         field: &syntax::StaticFieldDecl,
         lookup: ModuleLookup<'_>,
         array_types: &mut ArrayTypeInterner,
@@ -120,8 +122,17 @@ impl ClassCollectionState {
             name: field.name.text.to_string(),
             name_span: field.name.span,
             type_syntax,
+            initializer: None,
             span: field.span,
         });
+        if field.initializer.is_some() {
+            self.work
+                .static_initializer_members
+                .push(StaticInitializerWorkItem {
+                    id: id.into(),
+                    member_index,
+                });
+        }
     }
 
     fn collect_initializer(
@@ -417,7 +428,7 @@ pub(super) fn collect_class(
                 state.collect_field(field, lookup, array_types, diagnostics)
             }
             syntax::ClassMember::StaticField(field) => {
-                state.collect_static_field(field, lookup, array_types, diagnostics)
+                state.collect_static_field(member_index, field, lookup, array_types, diagnostics)
             }
             syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
                 member_index,
@@ -524,11 +535,18 @@ pub(super) struct ClassWorkItem {
     pub(super) id: ClassId,
     pub(super) module: ModuleId,
     pub(super) ast_index: usize,
+    pub(super) static_initializer_members: Vec<StaticInitializerWorkItem>,
     pub(super) initializer_members: Vec<InitializerWorkItem>,
     pub(super) copy_constructor_member: Option<usize>,
     pub(super) copy_assignment_member: Option<usize>,
     pub(super) destructor_member: Option<usize>,
     pub(super) method_members: Vec<usize>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct StaticInitializerWorkItem {
+    pub(super) id: StaticInitializerId,
+    pub(super) member_index: usize,
 }
 
 #[derive(Clone, Copy)]

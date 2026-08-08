@@ -4,7 +4,7 @@ use crate::{
     identity::{ClassId, MethodId, StaticFieldId},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
-    typeck::INVALID_STATIC_FIELD_TYPE,
+    typeck::{INVALID_STATIC_FIELD_TYPE, STATIC_FIELD_INITIALIZER_UNAVAILABLE},
 };
 
 #[test]
@@ -222,6 +222,31 @@ fn rejects_each_non_zero_default_type_at_its_declaration() {
         .labels
         .iter()
         .any(|label| label.message.contains("all-zero live value"))));
+}
+
+#[test]
+fn rejects_resolved_static_initializers_until_typed_initialization_is_available() {
+    let output = check_text(concat!(
+        "class Item { init() {} }\n",
+        "class State {\n",
+        "  static count: i64 = 1;\n",
+        "  static item: Item = Item();\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let unavailable = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == STATIC_FIELD_INITIALIZER_UNAVAILABLE)
+        .collect::<Vec<_>>();
+    assert_eq!(unavailable.len(), 2, "{:?}", output.diagnostics);
+    assert!(!output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_STATIC_FIELD_TYPE));
 }
 
 #[test]

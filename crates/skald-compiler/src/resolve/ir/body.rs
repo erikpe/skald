@@ -55,7 +55,7 @@ pub struct ResolvedClassDefinition {
 impl ResolvedClassDefinition {
     pub fn member(&self, callable: CallableId) -> Option<&ResolvedMemberDefinition> {
         match callable {
-            CallableId::Function(_) => None,
+            CallableId::Function(_) | CallableId::StaticInitializer(_) => None,
             CallableId::Initializer(initializer) if initializer.class() == self.class => self
                 .initializers
                 .get(initializer.index())

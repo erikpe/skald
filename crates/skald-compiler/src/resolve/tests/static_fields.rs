@@ -1,13 +1,13 @@
 use super::*;
 use crate::{
-    identity::{ClassId, FieldId, FunctionId, MethodId, StaticFieldId},
+    identity::{ClassId, FieldId, FunctionId, MethodId, StaticFieldId, StaticInitializerId},
     resolve::{
         ResolvedClassMember, ResolvedExpression, ResolvedStatement, DUPLICATE_MEMBER,
         INHERITED_MEMBER_COLLISION, INVALID_CALL_TARGET, INVALID_MEMBER_SELECTION,
         INVALID_OVERRIDE, PRIVATE_MEMBER_ACCESS, UNKNOWN_MEMBER, UNKNOWN_NAME,
     },
-    test_support::load_module_sources,
-    typeck::{type_check, INVALID_INTERFACE_CONFORMANCE},
+    test_support::{load_module_sources, load_module_sources_with_standard_library},
+    typeck::{type_check, INVALID_INTERFACE_CONFORMANCE, STATIC_FIELD_INITIALIZER_UNAVAILABLE},
 };
 
 #[test]
@@ -69,6 +69,212 @@ fn collects_static_fields_with_independent_dense_ids_and_deterministic_dump() {
     assert!(dump.contains("StaticField c0:static0 \"count\""));
     assert!(dump.contains("StaticField c0:static1 private \"enabled\""));
     assert!(dump.contains("StaticField c0:static2 \"values\""));
+}
+
+#[test]
+fn resolves_static_initializers_after_program_declarations_with_stable_identities() {
+    let output = resolve_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class State {\n",
+        "  private static seed: i64 = 40;\n",
+        "  static answer: i64 = add(State.seed, Later.offset);\n",
+        "  static item: Item = Item(State.answer);\n",
+        "  init() {}\n",
+        "}\n",
+        "class Later { static offset: i64 = 2; init() {} }\n",
+        "fn add(left: i64, right: i64) -> i64 { return left + right; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let state = output
+        .program
+        .classes
+        .iter()
+        .find(|class| class.name == "State")
+        .unwrap();
+    assert_eq!(state.static_fields.len(), 3);
+    for field in &state.static_fields {
+        let initializer = field.initializer.as_ref().unwrap();
+        assert_eq!(initializer.id, StaticInitializerId::from(field.id));
+        assert_eq!(initializer.id.class(), state.id);
+    }
+
+    let answer = state.static_fields[1].initializer.as_ref().unwrap();
+    let ResolvedExpression::DirectCall(call) = &answer.expression else {
+        panic!("expected resolved forward function call");
+    };
+    assert_eq!(
+        output.program.declarations.get(call.function).unwrap().name,
+        "add"
+    );
+    let ResolvedExpression::StaticFieldAccess(seed) = &call.arguments[0] else {
+        panic!("expected private static access from declaring class initializer");
+    };
+    assert_eq!(seed.field, state.static_fields[0].id);
+    let later = output
+        .program
+        .classes
+        .iter()
+        .find(|class| class.name == "Later")
+        .unwrap();
+    let ResolvedExpression::StaticFieldAccess(offset) = &call.arguments[1] else {
+        panic!("expected forward class static access");
+    };
+    assert_eq!(offset.field, later.static_fields[0].id);
+
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("DeclarationInitializer c1:static1:initializer"),
+        "{dump}"
+    );
+    assert!(dump.contains("DirectCall f0"), "{dump}");
+    assert!(dump.contains("StaticFieldAccess c1:static0"), "{dump}");
+
+    let checked = type_check(&output.program);
+    assert!(checked.hir.is_none());
+    assert_eq!(
+        checked
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == STATIC_FIELD_INITIALIZER_UNAVAILABLE)
+            .count(),
+        4
+    );
+}
+
+#[test]
+fn static_initializer_context_has_class_privacy_but_no_receiver_or_bare_members() {
+    let output = resolve_text(concat!(
+        "class State {\n",
+        "  value: i64;\n",
+        "  private static secret: i64;\n",
+        "  static own_private: i64 = State.secret;\n",
+        "  static bad_self: i64 = self.value;\n",
+        "  static bad_bare: i64 = secret;\n",
+        "  static bad_super: i64 = super;\n",
+        "  init() { self.value = 0; }\n",
+        "}\n",
+        "class Other { static denied: i64 = State.secret; init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == crate::resolve::SELF_OUTSIDE_MEMBER)
+            .count(),
+        1
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNKNOWN_NAME)
+            .count(),
+        2
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == PRIVATE_MEMBER_ACCESS)
+            .count(),
+        1
+    );
+    let state = output
+        .program
+        .classes
+        .iter()
+        .find(|class| class.name == "State")
+        .unwrap();
+    assert!(state.static_fields[1].initializer.is_some());
+    assert!(state.static_fields[2].initializer.is_none());
+    assert!(state.static_fields[3].initializer.is_none());
+    assert!(state.static_fields[4].initializer.is_none());
+}
+
+#[test]
+fn resolves_imported_string_call_and_inherited_static_initializer_uses_deterministically() {
+    let sources = [
+        ("app.ska", "import config; fn main() -> i64 { return 0; }\n"),
+        (
+            "base.ska",
+            "public class Base { static value: i64 = 40; init() {} }\n",
+        ),
+        (
+            "helpers.ska",
+            "public fn add_two(value: i64) -> i64 { return value + 2; }\n",
+        ),
+        (
+            "config.ska",
+            concat!(
+                "import base;\n",
+                "from helpers import add_two;\n",
+                "from std::str import Str;\n",
+                "public class Derived extends base::Base { init() { super(); } }\n",
+                "public class Config {\n",
+                "  static answer: i64 = add_two(Derived.value);\n",
+                "  static label: Str = \"ready\";\n",
+                "  init() {}\n",
+                "}\n",
+            ),
+        ),
+    ];
+    let (_first_workspace, first_graph) =
+        load_module_sources_with_standard_library("app", &sources);
+    let first = resolve_module_graph(&first_graph);
+    assert!(!first.has_errors(), "{:?}", first.diagnostics);
+
+    let config = first
+        .program
+        .classes
+        .iter()
+        .find(|class| class.name == "Config")
+        .unwrap();
+    let base = first
+        .program
+        .classes
+        .iter()
+        .find(|class| class.name == "Base")
+        .unwrap();
+    let ResolvedExpression::DirectCall(call) = &config.static_fields[0]
+        .initializer
+        .as_ref()
+        .unwrap()
+        .expression
+    else {
+        panic!("expected selectively imported call");
+    };
+    let ResolvedExpression::StaticFieldAccess(inherited) = &call.arguments[0] else {
+        panic!("expected inherited static alias access");
+    };
+    assert_eq!(inherited.field, base.static_fields[0].id);
+    let ResolvedExpression::StringLiteral(literal) = &config.static_fields[1]
+        .initializer
+        .as_ref()
+        .unwrap()
+        .expression
+    else {
+        panic!("expected resolved static string literal");
+    };
+    assert_eq!(
+        first.program.literal_data.get(literal.data).unwrap().bytes,
+        b"ready"
+    );
+
+    let first_dump = dump_resolved(&first.program);
+    let (_second_workspace, second_graph) =
+        load_module_sources_with_standard_library("app", &sources);
+    let second = resolve_module_graph(&second_graph);
+    assert!(!second.has_errors(), "{:?}", second.diagnostics);
+    assert_eq!(first_dump, dump_resolved(&second.program));
+    assert_eq!(
+        first_dump.matches("DeclarationInitializer").count(),
+        3,
+        "inherited aliases must not create initializer work: {first_dump}"
+    );
 }
 
 #[test]

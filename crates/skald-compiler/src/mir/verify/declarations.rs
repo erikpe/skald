@@ -236,7 +236,7 @@ impl<'mir> Verifier<'mir> {
                     .program
                     .method(method)
                     .map(|declaration| (&declaration.parameters[..], declaration.return_type)),
-                CallableId::Function(_) => None,
+                CallableId::Function(_) | CallableId::StaticInitializer(_) => None,
             };
             let Some((parameters, return_type)) = signature else {
                 self.function_error(callable, "member definition has no matching declaration");

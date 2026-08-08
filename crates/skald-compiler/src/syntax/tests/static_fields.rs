@@ -88,6 +88,62 @@ fn static_remains_an_identifier_outside_the_exact_member_prefix() {
 }
 
 #[test]
+fn retains_optional_static_initializer_shape_and_exact_spans() {
+    let (sources, output) = parse_text(concat!(
+        "class Item { init(value: i64) {} }\n",
+        "class State {\n",
+        "  static count: i64 = 1 + 2;\n",
+        "  private static item: Item = Item(3);\n",
+        "  static values: i64[] = i64[]{4, 5};\n",
+        "  static empty: bool;\n",
+        "  init() {}\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let state = class(&output.ast, 1);
+    let ClassMember::StaticField(count) = &state.members[0] else {
+        panic!("expected initialized static field");
+    };
+    let initializer = count.initializer.as_ref().unwrap();
+    assert_eq!(
+        source_text(&sources, count.span),
+        "static count: i64 = 1 + 2;"
+    );
+    assert_eq!(source_text(&sources, initializer.equal_span), "=");
+    assert_eq!(source_text(&sources, initializer.span), "= 1 + 2");
+    assert_eq!(
+        source_text(&sources, initializer.expression.span()),
+        "1 + 2"
+    );
+
+    let ClassMember::StaticField(item) = &state.members[1] else {
+        panic!("expected private initialized static field");
+    };
+    assert!(matches!(item.visibility, MemberVisibility::Private { .. }));
+    assert_eq!(
+        source_text(
+            &sources,
+            item.initializer.as_ref().unwrap().expression.span()
+        ),
+        "Item(3)"
+    );
+    assert!(
+        matches!(state.members[3], ClassMember::StaticField(ref field) if field.initializer.is_none())
+    );
+
+    let dump = dump_ast(&output.ast);
+    assert_eq!(
+        dump.matches("DeclarationInitializer @").count(),
+        3,
+        "{dump}"
+    );
+    assert!(dump.contains("Equal @"), "{dump}");
+    assert!(dump.contains("Binary Add"), "{dump}");
+    assert!(dump.contains("Elements @"), "{dump}");
+}
+
+#[test]
 fn malformed_static_fields_recover_to_later_members() {
     let (_, output) = parse_text(concat!(
         "class Broken {\n",
@@ -96,7 +152,8 @@ fn malformed_static_fields_recover_to_later_members() {
         "  static missing_semicolon: u64\n",
         "  after_missing_semicolon: bool;\n",
         "  static private misordered: i64;\n",
-        "  static value: i64 = 1;\n",
+        "  static missing_expression: i64 = ;\n",
+        "  static missing_initializer_semicolon: i64 = 1\n",
         "  private private static duplicate_private: u8;\n",
         "  static recovered: f64;\n",
         "  fn after() -> unit {}\n",
@@ -108,6 +165,7 @@ fn malformed_static_fields_recover_to_later_members() {
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code == EXPECTED_TOKEN
+            || diagnostic.code == EXPECTED_EXPRESSION
             || diagnostic.code == INVALID_CLASS_MEMBER));
 
     let broken = class(&output.ast, 0);

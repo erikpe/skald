@@ -282,7 +282,7 @@ class-member                = field-declaration
 
 field-declaration           = ["private"] identifier ":" storage-type ";"
 static-field-declaration    = ["private"] "static" identifier ":"
-                              storage-type ";"
+                              storage-type ["=" expression] ";"
 initializer-declaration     = ["private"] "init" parameter-list block
 copy-constructor-declaration = "copy" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
@@ -313,20 +313,20 @@ name. Fields, methods, and ordinary initializers are public unless prefixed by
 `private`. Copy constructors, copy assignments, and destructors do not accept
 visibility, and no lifecycle declaration accepts `static`. Ordinary
 initializers do not accept `mut`, `virtual`, or `override`; static methods
-cannot use those modifiers either. Static fields accept exactly
-`static name: T;` and `private static name: T;`, with no
-declaration initializer. `static` remains contextual: `static:` and
+cannot use those modifiers either. Static fields accept an optional
+declaration expression after `=`. `static` remains contextual: `static:` and
 `private static:` continue to declare an instance field whose identifier is
 `static`, while `static` followed by another identifier and `:` selects the
 static-field form. Methods, functions, parameters, locals, and other
 existing identifier positions retain their current use of the spelling.
 
-Syntax and resolution retain static declarations and their inherited identity.
-Static-field parsing also retains `unit` so the zero-default rule can reject
-that otherwise well-formed type at the declaration's type span. The grammar
-alone does not decide which storage types are zero-valid or define executable
-access, initialization, mutation, or lifetime. Those settled rules belong to
-[Zero-Default Static Fields](STATIC_FIELDS.md). Type checking currently lowers
+Syntax and resolution retain static declarations, optional initializer
+expressions, and their inherited identity. Static-field parsing also retains
+`unit` so semantic rules can reject that otherwise well-formed type at the
+declaration's type span. The grammar alone does not decide which storage types
+are zero-valid or define executable access, initialization, mutation, or
+lifetime. Those settled rules belong to [Static Fields](STATIC_FIELDS.md).
+Type checking currently lowers
 primitive, inline-optional, optional shared-owner, and inline-array static
 places through HIR and MIR.
 

@@ -532,7 +532,8 @@ impl<'mir> Verifier<'mir> {
             | crate::identity::CallableId::CopyConstructor(_)
             | crate::identity::CallableId::CopyAssignment(_)
             | crate::identity::CallableId::Destructor(_) => true,
-            crate::identity::CallableId::Function(_) => false,
+            crate::identity::CallableId::Function(_)
+            | crate::identity::CallableId::StaticInitializer(_) => false,
         };
         let receiver_slots: Vec<_> = function
             .storage_entries()

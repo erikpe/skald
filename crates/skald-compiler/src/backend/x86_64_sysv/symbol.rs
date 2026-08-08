@@ -116,6 +116,9 @@ fn callable_stem(program: &MirProgram, callable: CallableId) -> String {
                 function.index()
             )
         }
+        CallableId::StaticInitializer(_) => {
+            unreachable!("static initializer symbols are introduced with lifecycle MIR")
+        }
         CallableId::Initializer(initializer) => format!(
             "{}.init.i{}",
             class_stem(program, initializer.class()),
