@@ -18,8 +18,6 @@ No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
-- [Array element-list construction maintainability](ARRAY_ELEMENT_LIST_CONSTRUCTION_DISCOVERIES.md)
-  — harden malformed-MIR array-local release liveness.
 - [Primitive string conversion maintainability](PRIMITIVE_STRING_CONVERSIONS_DISCOVERIES.md)
   — centralize canonical standard-library test fixture closures while
   preserving explicit module overrides and source-order determinism, and fix

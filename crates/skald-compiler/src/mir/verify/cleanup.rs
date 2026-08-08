@@ -1,4 +1,4 @@
-//! Definite object-liveness analysis for cleanup verification.
+//! Definite owning-place liveness analysis for cleanup verification.
 
 use std::collections::{HashMap, HashSet};
 
@@ -6,8 +6,8 @@ use crate::identity::{CallableId, ClassId};
 
 use super::{
     super::model::{
-        BlockId, MirAliasAccess, MirArgument, MirBasicBlock, MirCallReceiver, MirCleanup,
-        MirDefinitionRef, MirInstruction, MirObjectOrigin, MirPlace, MirPlaceBase,
+        BlockId, MirAliasAccess, MirArgument, MirArrayInstruction, MirBasicBlock, MirCallReceiver,
+        MirCleanup, MirDefinitionRef, MirInstruction, MirObjectOrigin, MirPlace, MirPlaceBase,
         MirPlaceProjection, MirProgram, MirStorageKind, MirTerminator, MirType,
     },
     context::Verifier,
@@ -18,7 +18,7 @@ use super::{
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-struct ObjectState {
+struct OwnerState {
     live: HashSet<MirPlace>,
     cleaned: HashSet<MirPlace>,
     outstanding_local_cleanup: HashSet<MirPlace>,
@@ -113,7 +113,7 @@ struct CleanupLivenessAnalysis<'mir, 'errors> {
 
 impl CleanupLivenessAnalysis<'_, '_> {
     fn analyze(&mut self) {
-        let mut initial = ObjectState::default();
+        let mut initial = OwnerState::default();
         if !matches!(
             self.function.callable(),
             CallableId::Initializer(_) | CallableId::CopyConstructor(_)
@@ -131,7 +131,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
         for storage in self.function.storage_entries() {
             if !matches!(
                 storage.ty,
-                MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                MirType::Class(_) | MirType::Interface(_) | MirType::Obj | MirType::Array(_)
             ) {
                 continue;
             }
@@ -196,13 +196,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     let mut disagrees = false;
                     let missing = states.end_condition(condition, |existing, incoming| {
                         disagrees |= !existing.has_compatible_liveness(incoming);
-                        Self::merge_object_state(existing, incoming);
+                        Self::merge_owner_state(existing, incoming);
                     });
                     if disagrees {
                         self.block_error(
                             block.id,
                             format!(
-                                "conditional object state remains when path condition {condition} ends"
+                                "conditional owner state remains when path condition {condition} ends"
                             ),
                         );
                     }
@@ -381,18 +381,24 @@ impl CleanupLivenessAnalysis<'_, '_> {
         }
     }
 
-    fn check_normal_return(&mut self, block: &MirBasicBlock, state: &ObjectState) {
+    fn check_normal_return(&mut self, block: &MirBasicBlock, state: &OwnerState) {
         if let Some(return_storage) = self.function.return_storage() {
-            if self
+            let return_type = self
                 .function
                 .storage(return_storage)
-                .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
-                && !self.place_is_live(state, &MirPlace::base(return_storage))
-            {
-                self.block_error(
-                    block.id,
-                    "object return storage is not initialized on normal return",
-                );
+                .map(|storage| storage.ty);
+            if !self.place_is_live(state, &MirPlace::base(return_storage)) {
+                match return_type {
+                    Some(MirType::Class(_)) => self.block_error(
+                        block.id,
+                        "object return storage is not initialized on normal return",
+                    ),
+                    Some(MirType::Array(_)) => self.block_error(
+                        block.id,
+                        "array return storage is not initialized on normal return",
+                    ),
+                    _ => {}
+                }
             }
         }
         if !state.outstanding_local_cleanup.is_empty() {
@@ -419,8 +425,8 @@ impl CleanupLivenessAnalysis<'_, '_> {
         &mut self,
         predecessor: BlockId,
         target: BlockId,
-        states: &PathStates<ObjectState>,
-        flow: &mut ForwardDataflow<PathStates<ObjectState>>,
+        states: &PathStates<OwnerState>,
+        flow: &mut ForwardDataflow<PathStates<OwnerState>>,
     ) {
         if states.is_empty() {
             return;
@@ -436,12 +442,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         "owning temporary liveness differs across control-flow paths",
                     );
                 }
-                Self::merge_object_state(existing, incoming);
+                Self::merge_owner_state(existing, incoming);
             })
         });
     }
 
-    fn merge_object_state(existing: &mut ObjectState, incoming: &ObjectState) {
+    fn merge_owner_state(existing: &mut OwnerState, incoming: &OwnerState) {
         existing.live = existing
             .live
             .intersection(&incoming.live)
@@ -469,7 +475,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
         &mut self,
         block: &MirBasicBlock,
         instruction: &MirInstruction,
-        state: &mut ObjectState,
+        state: &mut OwnerState,
     ) {
         match instruction {
             MirInstruction::StorageLive(operation) => {
@@ -546,6 +552,27 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     "shared field replacement destination",
                 );
             }
+            MirInstruction::Array(MirArrayInstruction::Adopt {
+                destination, array, ..
+            }) if self.is_owning_array_place(destination, *array) => {
+                self.initialize_place(block, state, destination);
+            }
+            MirInstruction::Array(MirArrayInstruction::Replace {
+                destination, array, ..
+            }) if self.is_owning_array_place(destination, *array) => {
+                self.require_live_place(block, state, destination, "array replacement destination");
+            }
+            MirInstruction::Array(MirArrayInstruction::Release { owner, array, .. })
+                if self.is_owning_array_place(owner, *array) =>
+            {
+                self.consume_owning_place(
+                    block,
+                    state,
+                    owner,
+                    "array owner is released more than once",
+                    "array release destination is not live",
+                );
+            }
             MirInstruction::StringInitialize(initialize) => {
                 self.initialize_place(block, state, &initialize.destination);
             }
@@ -616,7 +643,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 self.check_borrowed_arguments(block, state, &call.arguments);
                 self.consume_owned_arguments(block, state, &call.arguments);
                 if let Some(destination) = &call.destination {
-                    if matches!(self.place_type(destination), Some(MirType::Class(_))) {
+                    if matches!(
+                        self.place_type(destination),
+                        Some(MirType::Class(_) | MirType::Array(_))
+                    ) {
                         self.initialize_place(block, state, destination);
                     }
                 }
@@ -624,30 +654,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
             MirInstruction::Cleanup(cleanup)
                 if self.is_owning_class_place(&cleanup.destination, cleanup.target) =>
             {
-                if state
-                    .cleaned
-                    .iter()
-                    .any(|place| places_overlap(place, &cleanup.destination))
-                {
-                    self.block_error(block.id, "cleanup destination is destroyed more than once");
-                } else if !state
-                    .live
-                    .iter()
-                    .any(|place| is_ancestor(place, &cleanup.destination))
-                {
-                    self.block_error(block.id, "cleanup destination is not live");
-                } else {
-                    state.cleaned.insert(cleanup.destination.clone());
-                    state
-                        .live
-                        .retain(|place| !is_ancestor(&cleanup.destination, place));
-                    state
-                        .outstanding_local_cleanup
-                        .retain(|place| !is_ancestor(&cleanup.destination, place));
-                    state
-                        .outstanding_parameter_cleanup
-                        .retain(|place| !is_ancestor(&cleanup.destination, place));
-                }
+                self.consume_owning_place(
+                    block,
+                    state,
+                    &cleanup.destination,
+                    "cleanup destination is destroyed more than once",
+                    "cleanup destination is not live",
+                );
             }
             MirInstruction::EndFullExpression(end) => {
                 let expected: Vec<_> = state.live_temporaries.iter().rev().cloned().collect();
@@ -731,7 +744,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     fn initialize_place(
         &mut self,
         block: &MirBasicBlock,
-        state: &mut ObjectState,
+        state: &mut OwnerState,
         destination: &MirPlace,
     ) {
         if matches!(destination.base, MirPlaceBase::SharedPointee(_)) {
@@ -766,10 +779,51 @@ impl CleanupLivenessAnalysis<'_, '_> {
             .retain(|place| !places_overlap(place, destination));
     }
 
+    fn consume_owning_place(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &mut OwnerState,
+        destination: &MirPlace,
+        duplicate_message: &str,
+        dead_message: &str,
+    ) {
+        if state
+            .cleaned
+            .iter()
+            .any(|place| places_overlap(place, destination))
+        {
+            self.block_error(block.id, duplicate_message);
+            return;
+        }
+        if !state
+            .live
+            .iter()
+            .any(|place| is_ancestor(place, destination))
+        {
+            self.block_error(block.id, dead_message);
+            return;
+        }
+
+        state.cleaned.insert(destination.clone());
+        state.live.retain(|place| !is_ancestor(destination, place));
+        state
+            .outstanding_local_cleanup
+            .retain(|place| !is_ancestor(destination, place));
+        state
+            .outstanding_parameter_cleanup
+            .retain(|place| !is_ancestor(destination, place));
+        state
+            .live_arguments
+            .retain(|place| !is_ancestor(destination, place));
+        state
+            .live_temporaries
+            .retain(|place| !is_ancestor(destination, place));
+    }
+
     fn consume_owned_arguments(
         &mut self,
         block: &MirBasicBlock,
-        state: &mut ObjectState,
+        state: &mut OwnerState,
         arguments: &[MirArgument],
     ) {
         for argument in arguments {
@@ -779,7 +833,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
             if !self
                 .function
                 .storage(place.base.expect_local_storage())
-                .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
+                .is_some_and(|storage| matches!(storage.ty, MirType::Class(_) | MirType::Array(_)))
             {
                 continue;
             }
@@ -797,7 +851,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     fn check_borrowed_arguments(
         &mut self,
         block: &MirBasicBlock,
-        state: &ObjectState,
+        state: &OwnerState,
         arguments: &[MirArgument],
     ) {
         for argument in arguments {
@@ -816,7 +870,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     fn require_live_origin(
         &mut self,
         block: &MirBasicBlock,
-        state: &ObjectState,
+        state: &OwnerState,
         origin: &MirObjectOrigin,
         kind: &str,
     ) {
@@ -841,7 +895,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     fn require_live_place(
         &mut self,
         block: &MirBasicBlock,
-        state: &ObjectState,
+        state: &OwnerState,
         place: &MirPlace,
         kind: &str,
     ) {
@@ -877,7 +931,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     fn require_indirect_carrier_live(
         &mut self,
         block: &MirBasicBlock,
-        state: &ObjectState,
+        state: &OwnerState,
         place: &MirPlace,
         kind: &str,
     ) {
@@ -889,7 +943,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
         }
     }
 
-    fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
+    fn place_is_live(&self, state: &OwnerState, place: &MirPlace) -> bool {
         if matches!(place.base, MirPlaceBase::ArrayAlias(_)) {
             // The array ownership verifier proves that a captured alias has
             // one compatible live backing or owner anchor at every consumer.
@@ -921,6 +975,30 @@ impl CleanupLivenessAnalysis<'_, '_> {
             return false;
         }
         self.place_type(place) == Some(MirType::Class(expected_class))
+    }
+
+    fn is_owning_array_place(
+        &self,
+        place: &MirPlace,
+        expected_array: crate::identity::ArrayTypeId,
+    ) -> bool {
+        let MirPlaceBase::Storage(storage) = place.base else {
+            return false;
+        };
+        if !self.function.storage(storage).is_some_and(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::Receiver
+                    | MirStorageKind::Parameter
+                    | MirStorageKind::Local
+                    | MirStorageKind::Argument
+                    | MirStorageKind::Temporary
+                    | MirStorageKind::Return
+            )
+        }) {
+            return false;
+        }
+        self.place_type(place) == Some(MirType::Array(expected_array))
     }
 
     fn place_type(&self, place: &MirPlace) -> Option<MirType> {
@@ -994,7 +1072,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 }
 
-impl ObjectState {
+impl OwnerState {
     fn has_compatible_liveness(&self, other: &Self) -> bool {
         self.live == other.live
             && self.outstanding_local_cleanup == other.outstanding_local_cleanup

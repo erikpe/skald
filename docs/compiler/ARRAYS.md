@@ -636,8 +636,13 @@ The array verifier must establish at least:
   backing account;
 - consumed produced storage cannot be read, copied, destroyed, or released
   again;
-- every normal inline lifetime ends with one owner release and decreasing-index
-  element destruction, immediately or after its final anchor as required;
+- every normal inline local and value-parameter lifetime ends with exactly one
+  owner release, caller argument storage transfers exactly once, and every
+  array result is initialized on each normal return path;
+- array initialization, replacement, release, argument transfer, and result
+  state agree at control-flow joins and across repeated storage epochs;
+- element destruction proceeds in decreasing index order, immediately or after
+  the final anchor as required;
 - shared owner copy/adopt/release state agrees at control-flow joins and absent
   optional handles never enter ordinary owner operations;
 - every element or slice place has compatible type, access, bounds evidence,

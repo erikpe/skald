@@ -245,6 +245,39 @@ impl Verifier<'_> {
                     );
                 }
             }
+            MirArrayInstruction::Release { owner, array, .. } => {
+                let owning_base = match owner.base {
+                    crate::mir::MirPlaceBase::StaticField(_) => true,
+                    crate::mir::MirPlaceBase::Storage(storage) => {
+                        function.storage(storage).is_some_and(|storage| {
+                            matches!(
+                                storage.kind,
+                                MirStorageKind::Receiver
+                                    | MirStorageKind::Parameter
+                                    | MirStorageKind::Local
+                                    | MirStorageKind::Argument
+                                    | MirStorageKind::Temporary
+                                    | MirStorageKind::Return
+                                    | MirStorageKind::ArrayProduced
+                                    | MirStorageKind::ArraySlice
+                            )
+                        })
+                    }
+                    _ => false,
+                };
+                if !owning_base
+                    || self
+                        .verify_place(function, block, owner)
+                        .map(|place| place.ty)
+                        != Some(MirType::Array(*array))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array release requires an exact matching owner place",
+                    );
+                }
+            }
             MirArrayInstruction::Normalize { destination, .. }
             | MirArrayInstruction::Offset { destination, .. }
             | MirArrayInstruction::Boundary { destination, .. } => {

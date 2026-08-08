@@ -1051,6 +1051,57 @@ fn owner_element_lists_reuse_ordinary_copy_adopt_cast_and_optional_transfers() {
 }
 
 #[test]
+fn verifier_requires_shared_owner_element_list_array_locals_to_release_exactly_once() {
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        let owner = function
+            .storage
+            .iter()
+            .find(|storage| storage.name == "optional")
+            .unwrap()
+            .id;
+        for block in &mut function.body.blocks {
+            block.instructions.retain(|instruction| {
+                !matches!(instruction,
+                    MirInstruction::Array(MirArrayInstruction::Release { owner: place, .. })
+                        if matches!(place.base, MirPlaceBase::Storage(storage) if storage == owner))
+            });
+        }
+    });
+    assert!(errors.contains("owning local remains live"), "{errors}");
+
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        let owner = function
+            .storage
+            .iter()
+            .find(|storage| storage.name == "optional")
+            .unwrap()
+            .id;
+        for block in &mut function.body.blocks {
+            let Some(index) = block.instructions.iter().position(|instruction| {
+                matches!(instruction,
+                    MirInstruction::Array(MirArrayInstruction::Release { owner: place, .. })
+                        if matches!(place.base, MirPlaceBase::Storage(storage) if storage == owner))
+            }) else {
+                continue;
+            };
+            let duplicate = block.instructions[index].clone();
+            block.instructions.insert(index + 1, duplicate);
+            return;
+        }
+        panic!("fixture must contain optional owner-array local cleanup");
+    });
+    assert!(errors.contains("released more than once"), "{errors}");
+}
+
+#[test]
 fn verifier_rejects_malformed_owner_element_slot_publication() {
     let errors = owner_element_list_error_after(|program| {
         let function = program

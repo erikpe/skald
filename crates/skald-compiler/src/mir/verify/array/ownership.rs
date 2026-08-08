@@ -737,15 +737,21 @@ impl ArrayOwnerState {
                 }
             }
             MirArrayInstruction::Release { owner, .. } => {
-                let storage = owner.base.expect_local_storage();
-                self.produced.remove(&storage);
+                let Some(storage) = owner.base.local_storage() else {
+                    return;
+                };
                 if function.storage(storage).is_some_and(|storage| {
                     matches!(
                         storage.kind,
                         MirStorageKind::ArrayProduced | MirStorageKind::ArraySlice
                     )
-                }) {
-                    self.consumed.insert(storage);
+                }) && (!self.produced.remove(&storage) || !self.consumed.insert(storage))
+                {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "produced array storage must be released exactly once",
+                    );
                 }
             }
             MirArrayInstruction::AnchorBegin { anchor, .. } => {
