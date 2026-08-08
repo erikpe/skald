@@ -235,6 +235,10 @@ guard. Optional shared-owner extraction secures one ordinary non-null owner and
 likewise needs no continuing optional guard. When the extraction directly
 initializes a local, the checked unwrap first writes a fresh owning temporary;
 a count-neutral move then installs that owner in the local on the success edge.
+This protocol is identical when the optional container is a direct or
+forwarded call result: the call result remains an optional temporary, the
+unwrap secures a distinct ordinary owner, and normal full-expression cleanup
+disposes of the consumed optional container.
 
 Structured source-level short-circuit lowering preserves those three distinct
 lifetimes. A selected inline-class payload view ends after its complete field,

@@ -28,3 +28,19 @@ mode = "run"
 source = "optional_shared_profile.ska"
 [[test.run]]
 name = "ownership_matrix"
+
+[[test]]
+name = "shared_array_result"
+mode = "run"
+source = "optional_shared_array_result.ska"
+[[test.run]]
+name = "present_forwarded_and_cleanup"
+expect = { stdout = { file = "data/optional_shared_array_result.stdout" } }
+
+[[test]]
+name = "shared_array_result_absent"
+mode = "run"
+source = "optional_shared_array_result_absent.ska"
+[[test.run]]
+name = "absent_result"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }

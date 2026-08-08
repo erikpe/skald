@@ -15,6 +15,81 @@ fn direct_local_unwrap_program() -> MirProgram {
     ))
 }
 
+fn produced_array_unwrap_program() -> MirProgram {
+    lower_text(concat!(
+        "fn choose(present: bool) -> shared? i64[] {\n",
+        "  if (present) { return new i64[](2u); }\n",
+        "  return none;\n",
+        "}\n",
+        "fn forward(value: shared? i64[]) -> shared? i64[] { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var direct: shared i64[] = choose(true)!;\n",
+        "  var forwarded: shared i64[] = forward(choose(true))!;\n",
+        "  direct->[0] = 20;\n",
+        "  forwarded->[0] = 22;\n",
+        "  return direct->[0] + forwarded->[0];\n",
+        "}\n",
+    ))
+}
+
+#[test]
+fn produced_optional_shared_array_results_unwrap_into_fresh_local_owners() {
+    let program = produced_array_unwrap_program();
+    verify_mir(&program).expect("produced optional shared-array unwraps must verify");
+
+    let main = program.definitions.get(program.entry_function).unwrap();
+    let unwraps = main
+        .body
+        .blocks
+        .iter()
+        .filter_map(|block| match &block.terminator {
+            Some(MirTerminator::OptionalSharedUnwrap {
+                unwrap,
+                success_target,
+                ..
+            }) => Some((unwrap, *success_target)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(unwraps.len(), 2);
+    for (unwrap, success_target) in unwraps {
+        let source = main
+            .storage(unwrap.source.base.expect_local_storage())
+            .unwrap();
+        assert_eq!(source.kind, MirStorageKind::Temporary);
+        assert_eq!(source.ty, MirType::OptionalShared(unwrap.target));
+
+        let destination = main.storage(unwrap.destination).unwrap();
+        assert_eq!(destination.kind, MirStorageKind::Temporary);
+        assert_eq!(destination.source, None);
+        assert_eq!(destination.ty, MirType::Shared(unwrap.target));
+
+        assert!(main.body.blocks.iter().any(|block| {
+            block.instructions.iter().any(|instruction| {
+                matches!(instruction, MirInstruction::Call(call)
+                    if call.shared_result == Some(source.id))
+            })
+        }));
+        assert!(main.body.blocks[success_target.index()]
+            .instructions
+            .iter()
+            .any(|instruction| {
+                matches!(instruction, MirInstruction::SharedMove(transfer)
+                    if transfer.source == unwrap.destination)
+            }));
+    }
+
+    assert_eq!(
+        main.body
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .filter(|instruction| matches!(instruction, MirInstruction::OptionalSharedCleanup(_)))
+            .count(),
+        2
+    );
+}
+
 #[test]
 fn direct_local_shared_unwraps_use_fresh_temporary_owners() {
     let program = direct_local_unwrap_program();

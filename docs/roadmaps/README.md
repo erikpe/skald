@@ -18,8 +18,7 @@ No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 
-- [Primitive string conversion maintainability](PRIMITIVE_STRING_CONVERSIONS_DISCOVERIES.md)
-  — fix produced optional shared-array result unwrapping through verified MIR.
+No implementation discoveries are currently pending.
 
 ## Implementation baseline
 

@@ -1,0 +1,8 @@
+fn absent() -> shared? i64[] {
+    return none;
+}
+
+fn main() -> i64 {
+    var owner: shared i64[] = absent()!;
+    return (i64) owner->len();
+}

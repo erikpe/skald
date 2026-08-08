@@ -1,0 +1,41 @@
+import std::io;
+from std::test import assert_eq_i64;
+
+class Trace {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+
+    destroy {
+        std::io::println_i64(self.value);
+    }
+}
+
+fn choose(present: bool) -> shared? Trace[] {
+    if (present) {
+        return new Trace[](2u);
+    }
+    return none;
+}
+
+fn forward(value: shared? Trace[]) -> shared? Trace[] {
+    return value;
+}
+
+fn exercise() -> unit {
+    var direct: shared Trace[] = choose(true)!;
+    var forwarded: shared Trace[] = forward(choose(true))!;
+    direct->[0].value = 20;
+    direct->[1].value = 21;
+    forwarded->[0].value = 42;
+    forwarded->[1].value = 43;
+    assert_eq_i64(direct->[0].value + forwarded->[0].value, 62);
+    return;
+}
+
+fn main() -> i64 {
+    exercise();
+    return 0;
+}
