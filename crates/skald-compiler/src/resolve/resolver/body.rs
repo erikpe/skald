@@ -536,6 +536,25 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                         source: Box::new(self.resolve_expression(source)?),
                         right_paren_span: *right_paren_span,
                     },
+                    syntax::ArrayConstructionArguments::Elements(list) => {
+                        let mut elements = Vec::with_capacity(list.elements.len());
+                        let mut valid = true;
+                        for element in &list.elements {
+                            match self.resolve_expression(element) {
+                                Some(element) => elements.push(element),
+                                None => valid = false,
+                            }
+                        }
+                        if !valid {
+                            return None;
+                        }
+                        ResolvedArrayConstructionArguments::Elements(ResolvedArrayElementList {
+                            left_brace_span: list.left_brace_span,
+                            elements,
+                            comma_spans: list.comma_spans.clone(),
+                            right_brace_span: list.right_brace_span,
+                        })
+                    }
                 };
                 Some(ResolvedExpression::ArrayConstruction(Box::new(
                     ResolvedArrayConstructionExpr {

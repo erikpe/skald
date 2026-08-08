@@ -159,11 +159,12 @@ shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
 That contract also freezes typed explicit `T[]{...}` and
-`new T[]{...}` element-list construction for later implementation. The
+`new T[]{...}` element-list construction for staged implementation. The
 extension preserves ordered destination initialization, unpublished-prefix
 verification, existing class/optional/nested-array/shared-owner operations,
-and the current runtime ABI. The compiler does not yet accept those brace
-forms; availability remains authoritative in the
+and the current runtime ABI. The parser and resolver now retain those brace
+forms exactly; type checking reports `TYP043` and produces no HIR until typed
+destination plans are implemented. Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented

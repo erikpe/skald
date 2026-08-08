@@ -162,6 +162,127 @@ fn retains_structured_construction_and_projection_until_type_checking() {
 }
 
 #[test]
+fn resolves_array_element_lists_in_source_order_with_exact_array_identity() {
+    let text = concat!(
+        "fn main() -> i64 {\n",
+        "  var rows: i64[][] = i64[][]{i64[]{1, 2}, i64[]{3}};\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("arrays.ska", text);
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    let parsed = syntax::parse(source, &lexed.tokens);
+    let output = resolve(&parsed.ast);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::ArrayConstruction(construction) =
+        local_initializer(&definition.body.statements[0])
+    else {
+        panic!("expected resolved array construction");
+    };
+    assert_eq!(
+        construction.array_type.kind,
+        ResolvedTypeKind::Array(ArrayTypeId::new(1))
+    );
+    let ResolvedArrayConstructionArguments::Elements(list) = &construction.arguments else {
+        panic!("expected resolved element list");
+    };
+    assert_eq!(list.elements.len(), 2);
+    assert_eq!(list.comma_spans.len(), 1);
+    assert_eq!(source.slice(list.left_brace_span.range()), Some("{"));
+    assert_eq!(source.slice(list.comma_spans[0].range()), Some(","));
+    assert_eq!(source.slice(list.right_brace_span.range()), Some("}"));
+    assert!(list.elements.iter().all(|element| matches!(
+        element,
+        ResolvedExpression::ArrayConstruction(nested)
+            if nested.array_type.kind == ResolvedTypeKind::Array(ArrayTypeId::new(0))
+    )));
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump.matches("Elements @").count(), 3);
+    assert_eq!(dump.matches("Comma @").count(), 2);
+    assert_eq!(dump, dump_resolved(&output.program));
+}
+
+#[test]
+fn resolves_empty_shared_outer_and_ownership_grouped_element_lists() {
+    let output = resolve_text(concat!(
+        "class Item { init() {} }\n",
+        "fn main(owner: shared Item) -> i64 {\n",
+        "  var empty: i64[] = i64[]{};\n",
+        "  var owners: (shared Item)[] = (shared Item)[]{owner};\n",
+        "  var shared_values: shared i64[] = new i64[]{1};\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::ArrayConstruction(empty) =
+        local_initializer(&definition.body.statements[0])
+    else {
+        panic!("expected empty element-list construction");
+    };
+    assert!(matches!(
+        &empty.arguments,
+        ResolvedArrayConstructionArguments::Elements(list)
+            if list.elements.is_empty() && list.comma_spans.is_empty()
+    ));
+
+    let ResolvedExpression::ArrayConstruction(grouped) =
+        local_initializer(&definition.body.statements[1])
+    else {
+        panic!("expected ownership-grouped element-list construction");
+    };
+    assert!(matches!(
+        grouped.array_type.kind,
+        ResolvedTypeKind::Array(_)
+    ));
+    assert!(matches!(
+        &grouped.arguments,
+        ResolvedArrayConstructionArguments::Elements(list) if list.elements.len() == 1
+    ));
+
+    let ResolvedExpression::ArrayConstruction(shared) =
+        local_initializer(&definition.body.statements[2])
+    else {
+        panic!("expected shared-outer element-list construction");
+    };
+    assert!(shared.new_span.is_some());
+    assert!(matches!(
+        &shared.arguments,
+        ResolvedArrayConstructionArguments::Elements(list) if list.elements.len() == 1
+    ));
+}
+
+#[test]
+fn resolves_later_array_elements_after_an_earlier_name_error() {
+    let output = resolve_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[]{missing_first, missing_second};\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNKNOWN_NAME)
+            .count(),
+        2
+    );
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    assert!(matches!(
+        definition.body.statements.last(),
+        Some(ResolvedStatement::Return(_))
+    ));
+}
+
+#[test]
 fn resolved_dump_declares_canonical_nested_arrays_before_their_uses() {
     let output = resolve_text(
         "fn inspect(first: i64[][], second: i64[][], owner: shared i64[][]) -> unit {}\n\

@@ -624,6 +624,9 @@ impl Parser<'_> {
                 Some(argument) => arguments.push(argument),
                 None => {
                     valid = false;
+                    if self.recovering_from_excessive_nesting {
+                        return None;
+                    }
                     self.synchronize_argument();
                 }
             }

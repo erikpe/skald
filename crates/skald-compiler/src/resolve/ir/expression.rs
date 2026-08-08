@@ -100,6 +100,14 @@ pub struct ResolvedArrayConstructionExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedArrayElementList {
+    pub left_brace_span: Span,
+    pub elements: Vec<ResolvedExpression>,
+    pub comma_spans: Vec<Span>,
+    pub right_brace_span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedArrayConstructionArguments {
     Empty {
         left_paren_span: Span,
@@ -116,6 +124,7 @@ pub enum ResolvedArrayConstructionArguments {
         source: Box<ResolvedExpression>,
         right_paren_span: Span,
     },
+    Elements(ResolvedArrayElementList),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

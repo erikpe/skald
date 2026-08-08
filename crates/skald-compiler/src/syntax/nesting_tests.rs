@@ -13,6 +13,10 @@ fn nested_blocks(blocks: usize) -> String {
     format!("{}return 0;{}", "{".repeat(blocks), "}".repeat(blocks))
 }
 
+fn nested_array_element_lists(lists: usize) -> String {
+    (0..lists).fold("1".to_owned(), |element, _| format!("i64[]{{{element}}}"))
+}
+
 fn source_with_return(expression: &str) -> String {
     format!("fn main() -> i64 {{ return {expression}; }}")
 }
@@ -192,4 +196,33 @@ fn recursive_array_types_use_the_common_nesting_budget() {
     ));
     assert_single_nesting_error(&output);
     assert_eq!(output.ast.declarations.len(), 1);
+}
+
+#[test]
+fn recursive_array_element_lists_parse_at_representative_depth() {
+    let allowed = nested_array_element_lists(24);
+    let output = parse_text(source_with_return(&allowed));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.ast.declarations.len(), 1);
+}
+
+#[test]
+fn array_element_lists_use_the_common_nesting_budget() {
+    let allowed_groups = MAX_SYNTAX_NESTING - 2;
+    let allowed = format!("i64[]{{{}}}", grouped_expression(allowed_groups));
+    let output = parse_text(source_with_return(&allowed));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let excessive_groups = MAX_SYNTAX_NESTING - 1;
+    let excessive = format!("i64[]{{{}}}", grouped_expression(excessive_groups));
+    let output = parse_text(format!(
+        "{} fn recovered() -> i64 {{ return 0; }}",
+        source_with_return(&excessive)
+    ));
+    assert_single_nesting_error(&output);
+    assert_eq!(output.ast.declarations.len(), 1);
+    let TopLevelDeclaration::Function(function) = &output.ast.declarations[0] else {
+        panic!("expected recovered function");
+    };
+    assert_eq!(function.name.text, "recovered");
 }

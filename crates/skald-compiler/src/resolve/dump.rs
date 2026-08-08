@@ -967,6 +967,18 @@ impl ResolvedDumper {
                         dumper.line("Copy", *copy_span);
                         dumper.indented(|dumper| dumper.expression(source));
                     }
+                    ResolvedArrayConstructionArguments::Elements(list) => {
+                        dumper.line("Elements", list.left_brace_span);
+                        dumper.indented(|dumper| {
+                            for (index, element) in list.elements.iter().enumerate() {
+                                dumper.expression(element);
+                                if let Some(comma_span) = list.comma_spans.get(index) {
+                                    dumper.line("Comma", *comma_span);
+                                }
+                            }
+                        });
+                        dumper.line("RightBrace", list.right_brace_span);
+                    }
                 });
             }
             ResolvedExpression::ArrayLength(length) => {

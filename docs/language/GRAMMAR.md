@@ -527,36 +527,28 @@ allocation-arguments
                  = "(" [argument-list] ")"
                  | copy-construction-arguments
 array-construction-expression
-                 = array-inline-type array-construction-arguments
-                 | "new" array-inline-type array-construction-arguments
+                 = array-inline-type array-construction-initializer
+                 | "new" array-inline-type array-construction-initializer
+array-construction-initializer
+                 = array-construction-arguments
+                 | array-element-list
 array-inline-type
                  = postfix-array-type
+array-element-list = "{" [expression {"," expression}] "}"
 ```
 
 Leading outer `shared` or `shared?` belongs in a storage type, while `new`
 selects shared construction.
 The contextual `copy` form is a dedicated array construction mode and accepts
-exactly one source. The ordinary nonempty form accepts exactly one length
-expression.
+exactly one source. The ordinary nonempty parenthesized form accepts exactly
+one length expression. An element list is a distinct accepted source mode; its
+execution semantics remain staged behind type checking.
 
-### Frozen explicit array element-list extension
+### Explicit array element lists
 
-The following extension is frozen for implementation but is not accepted by
-the current compiler:
-
-```text
-array-element-list = "{" [expression {"," expression}] "}"
-
-array-element-list-construction-expression
-                 = array-inline-type array-element-list
-                 | "new" array-inline-type array-element-list
-```
-
-The complete future `array-construction-expression` primary will admit either
-the implemented parenthesized construction arguments or this element list.
-The explicit array type is required. Untyped `[expression {"," expression}]`,
-expected-type-only lists, and multiple ordinary expressions inside the
-existing parentheses are not frozen forms.
+The explicit array type is required. Untyped
+`[expression {"," expression}]`, expected-type-only lists, and multiple
+ordinary expressions inside the existing parentheses are not accepted forms.
 
 An empty list is valid, one or more elements are comma-separated, and the
 initial profile does not accept a trailing comma. The braces and every comma
@@ -564,12 +556,12 @@ remain exact source spans for syntax, recovery, and deterministic dumps.
 Ordinary postfix operations may follow the closing brace. Whitespace does not
 change the construction shape.
 
-The expression count determines array length; type compatibility, left-to-right
-evaluation, destination initialization, ownership, publication, and failure
-are defined by the frozen
+The parser and resolver retain the complete ordered list and exact array
+identity. Type checking currently rejects the mode with one structured
+availability diagnostic, so it cannot enter HIR. The expression count,
+type compatibility, left-to-right evaluation, destination initialization,
+ownership, publication, and failure are defined by the frozen
 [array element-list contract](ARRAYS.md#frozen-explicit-element-list-construction).
-Until implementation, encountering these braces after an array type remains a
-syntax error and no element-list node enters the accepted AST.
 
 From tightest to loosest binding, precedence is:
 

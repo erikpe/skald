@@ -1,7 +1,7 @@
 # Arrays
 
-Status: **implemented contract on x86-64 with a frozen, unimplemented explicit
-element-list extension**. This document is authoritative for the
+Status: **implemented contract on x86-64 with a frozen, source-retained
+explicit element-list extension**. This document is authoritative for the
 source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
@@ -194,15 +194,16 @@ assigns these source-reachable failures their distinct reasons from the sole
 copy. The source must designate an exact `T[]` array place or value; array
 copying has no inheritance or dynamic-check relation.
 
-No explicit element-list, fill-value, per-index generator, inferred array
-literal, or multi-dimensional shape constructor is implemented. Nonempty
-construction therefore currently requires a default-initializable element type
-or an exact copy source. The explicit element-list form below is frozen for
-later implementation without changing this current compiler boundary.
+No fill-value, per-index generator, inferred array literal, or
+multi-dimensional shape constructor is implemented. Executable nonempty
+construction therefore currently requires a default-initializable element
+type or an exact copy source. The explicit element-list form below is accepted
+through resolution and deliberately rejected before HIR while its executable
+semantics remain staged.
 
 ## Frozen explicit element-list construction
 
-The following source forms are frozen but not yet accepted by the compiler:
+The compiler parses and resolves the following frozen source forms:
 
 ```ska
 T[]{element0, element1}
@@ -222,6 +223,11 @@ This is **element-list construction**, not an inferred array literal. Untyped
 `T[](element0, element1)` are not frozen forms. In particular, the existing
 single-expression `T[](value)` remains default-length construction and
 requires `value: u64`.
+
+The current type checker reports `TYP043` for either brace form and produces no
+HIR. The allocation, evaluation, and lifecycle rules below become executable
+incrementally through the active implementation roadmap; accepting the source
+shape does not make those later semantics available early.
 
 The list length is the number of supplied expressions and must satisfy the
 ordinary maximum-`i64` array-length bound. Type grouping and outer ownership

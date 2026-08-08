@@ -37,6 +37,9 @@ const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
 const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
 const ARRAY_HELPER_OUTPUT: &str = "SKALD_ARRAY_DETERMINISM_OUTPUT";
 const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_processes";
+const ARRAY_ELEMENT_LIST_HELPER_OUTPUT: &str = "SKALD_ARRAY_ELEMENT_LIST_DETERMINISM_OUTPUT";
+const ARRAY_ELEMENT_LIST_TEST_NAME: &str =
+    "array_element_list_source_products_are_deterministic_across_processes";
 const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINISM_OUTPUT";
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
@@ -178,6 +181,16 @@ fn array_phase_products_are_deterministic_across_processes() {
         ARRAY_HELPER_OUTPUT,
         ARRAY_TEST_NAME,
         array_phase_dump,
+    );
+}
+
+#[test]
+fn array_element_list_source_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "array-element-lists",
+        ARRAY_ELEMENT_LIST_HELPER_OUTPUT,
+        ARRAY_ELEMENT_LIST_TEST_NAME,
+        array_element_list_source_phase_dump,
     );
 }
 
@@ -834,6 +847,18 @@ fn optional_phase_dump() -> String {
 
 fn array_phase_dump() -> String {
     complete_golden_phase_dump(include_str!("../../../tests/golden/arrays/array_views.ska"))
+}
+
+fn array_element_list_source_phase_dump() -> String {
+    type_error_phase_dump(
+        "array-element-lists.ska",
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var rows: i64[][] = i64[][]{i64[]{1, 2}, i64[]{3}};\n",
+            "  return new i64[]{4, 5}[0];\n",
+            "}\n",
+        ),
+    )
 }
 
 fn static_field_phase_dump() -> String {

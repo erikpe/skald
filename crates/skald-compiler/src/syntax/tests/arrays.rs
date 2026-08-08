@@ -104,6 +104,119 @@ fn parses_every_array_construction_mode_without_call_ambiguity() {
 }
 
 #[test]
+fn retains_ordered_array_element_lists_and_exact_punctuation_spans() {
+    let text = concat!(
+        "class Item { init() {} }\n",
+        "fn main(owner: shared Item) -> i64 {\n",
+        "  var empty: i64[] = i64[]{};\n",
+        "  var one: i64[] = i64[]{1};\n",
+        "  var many: i64[] = i64[]{1,\n",
+        "    2, 3};\n",
+        "  var nested: i64[][] = i64[][]{i64[]{1}, i64[]{2, 3}};\n",
+        "  var grouped: (shared Item)[] = (shared Item)[]{owner};\n",
+        "  var shared_values: shared i64[] = new i64[]{1, 2};\n",
+        "  return i64[]{7, 8}[0];\n",
+        "}\n",
+    );
+    let (sources, output) = parse_text(text);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let main = function(&output.ast, 1);
+    let Expression::ArrayConstruction(many) = &local(main, 2).initializer else {
+        panic!("expected element-list construction");
+    };
+    let ArrayConstructionArguments::Elements(list) = &many.arguments else {
+        panic!("expected retained element-list source structure");
+    };
+    assert_eq!(list.elements.len(), 3);
+    assert_eq!(list.comma_spans.len(), 2);
+    let source = sources.get(list.left_brace_span.source_id()).unwrap();
+    assert_eq!(source.slice(list.left_brace_span.range()), Some("{"));
+    assert_eq!(source.slice(list.right_brace_span.range()), Some("}"));
+    assert!(list
+        .comma_spans
+        .iter()
+        .all(|span| source.slice(span.range()) == Some(",")));
+    assert_eq!(source.slice(many.span.range()), Some("i64[]{1,\n    2, 3}"));
+
+    let Expression::ArrayConstruction(empty) = &local(main, 0).initializer else {
+        panic!("expected empty element-list construction");
+    };
+    assert!(matches!(
+        &empty.arguments,
+        ArrayConstructionArguments::Elements(list)
+            if list.elements.is_empty() && list.comma_spans.is_empty()
+    ));
+    assert!(matches!(
+        &local(main, 3).initializer,
+        Expression::ArrayConstruction(construction)
+            if matches!(
+                &construction.arguments,
+                ArrayConstructionArguments::Elements(list)
+                    if matches!(list.elements.first(), Some(Expression::ArrayConstruction(_)))
+            )
+    ));
+    assert!(matches!(
+        return_value(main),
+        Expression::ArrayProjection(projection)
+            if matches!(&*projection.receiver, Expression::ArrayConstruction(_))
+    ));
+
+    let dump = dump_ast(&output.ast);
+    assert_eq!(dump.matches("Elements @").count(), 9);
+    assert_eq!(dump.matches("Comma @").count(), 6);
+    assert_eq!(dump, dump_ast(&output.ast));
+}
+
+#[test]
+fn malformed_array_element_lists_recover_at_clear_boundaries() {
+    for malformed in [
+        "var values: i64[] = i64[]{1,};",
+        "var values: i64[] = i64[]{, 1};",
+        "var values: i64[] = i64[]{1,, 2};",
+        "var values: i64[] = i64[]{1 2};",
+        "var values: i64[] = i64[]{1, 2;",
+        "var values: i64[] = [1, 2];",
+        "var values: i64[] = {1, 2};",
+    ] {
+        let source = format!(
+            "fn broken() -> i64 {{ {malformed} return 1; }}\n\
+             fn recovered() -> i64 {{ return 0; }}\n"
+        );
+        let (_, output) = parse_text(&source);
+
+        assert!(output.has_errors(), "{malformed} unexpectedly parsed");
+        let broken = output
+            .ast
+            .declarations
+            .iter()
+            .find_map(|declaration| match declaration {
+                TopLevelDeclaration::Function(function) if function.name.text == "broken" => {
+                    Some(function)
+                }
+                _ => None,
+            });
+        assert!(
+            broken.is_some_and(|function| function
+                .body
+                .statements
+                .iter()
+                .any(|statement| matches!(statement, Statement::Return(_)))),
+            "parser did not preserve the later statement after {malformed}: {:?}",
+            output.diagnostics
+        );
+        assert!(
+            output.ast.declarations.iter().any(|declaration| matches!(
+                declaration,
+                TopLevelDeclaration::Function(function) if function.name.text == "recovered"
+            )),
+            "parser did not recover after {malformed}: {:?}",
+            output.diagnostics
+        );
+    }
+}
+
+#[test]
 fn parses_index_slice_and_shared_projection_shapes_as_postfix_operations() {
     let (_, output) = parse_text(concat!(
         "fn main() -> i64 {\n",

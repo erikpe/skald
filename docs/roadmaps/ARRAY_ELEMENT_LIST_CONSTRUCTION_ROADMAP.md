@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: planned; EL0 is next.
+Status: in progress; EL0 is complete and EL1 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -45,7 +45,7 @@ lifecycle, publication, and runtime boundaries.
 
 ## Progress
 
-- [ ] EL0 — Retain explicit element-list source structure
+- [x] EL0 — Retain explicit element-list source structure
 - [ ] EL1 — Select typed destination initialization plans
 - [ ] EL2 — Execute verified primitive element lists
 - [ ] EL3 — Execute exact-class destination placement and copying
@@ -61,27 +61,27 @@ lifecycle, publication, and runtime boundaries.
 **Purpose:** Establish the complete brace-list syntax and resolved source
 contract before semantic or executable representations depend on it.
 
-- [ ] Extend array construction syntax with a distinct ordered element-list
+- [x] Extend array construction syntax with a distinct ordered element-list
       mode retaining `new`, exact type, both brace spans, every comma span,
       every element expression, and the complete construction span.
-- [ ] Recognize `array-inline-type { ... }` and
+- [x] Recognize `array-inline-type { ... }` and
       `new array-inline-type { ... }` without confusing class blocks, ordinary
       call arguments, postfix indexing, or the existing `T[](length)` and
       `T[](copy source)` modes.
-- [ ] Accept empty, one-element, multiline, recursively nested, ownership-
+- [x] Accept empty, one-element, multiline, recursively nested, ownership-
       grouped, and postfix-consumed lists; reject untyped lists and trailing
       commas under the frozen grammar.
-- [ ] Extend syntax nesting/depth traversal and recovery so missing elements or
+- [x] Extend syntax nesting/depth traversal and recovery so missing elements or
       braces preserve later elements, statements, and declarations when their
       boundaries are unambiguous.
-- [ ] Preserve the list and its exact array identity through resolution in
+- [x] Preserve the list and its exact array identity through resolution in
       deterministic source order without selecting type compatibility,
       lifecycle, or target behavior.
-- [ ] Extend AST and resolved dumps plus public phase accessors without exposing
+- [x] Extend AST and resolved dumps plus public phase accessors without exposing
       parser-private representation details.
-- [ ] Add one explicit, tested semantic availability gate so newly accepted
+- [x] Add one explicit, tested semantic availability gate so newly accepted
       source cannot panic or leak malformed HIR before typed plans land.
-- [ ] Promote the element-list production from the grammar's frozen-extension
+- [x] Promote the element-list production from the grammar's frozen-extension
       section into accepted syntax while keeping feature availability frozen in
       the status matrix.
 

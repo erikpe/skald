@@ -6,18 +6,20 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
-
-## Planned
-
 - [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_ROADMAP.md)
-  — **planned**. Implements the frozen typed `T[]{...}` and
+  — **in progress**. Implements the frozen typed `T[]{...}` and
   `new T[]{...}` contract through ordered destination plans, verified
   initialized-prefix publication, every owning element family, and native
-  x86-64 without a runtime ABI change. EL0, explicit source retention, is next.
+  x86-64 without a runtime ABI change. EL0 retains the complete source
+  structure through resolution behind an explicit semantic availability gate;
+  EL1, typed destination-plan selection, is next.
   Depends on the implemented array, class lifecycle, optional, shared-owner,
   panic, MIR verifier, backend, and runtime ABI version 8 contracts; no active
   roadmap is a dependency.
+
+## Planned
+
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

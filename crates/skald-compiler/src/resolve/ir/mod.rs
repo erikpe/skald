@@ -34,18 +34,18 @@ pub use declarations::{
 };
 pub use expression::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayConstructionArguments,
-    ResolvedArrayConstructionExpr, ResolvedArrayLengthExpr, ResolvedArrayLengthOperator,
-    ResolvedArrayProjectionBounds, ResolvedArrayProjectionExpr, ResolvedArrayProjectionOperator,
-    ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
-    ResolvedByteLiteralExpr, ResolvedConstructExpr, ResolvedConstructionMode,
-    ResolvedDereferenceExpr, ResolvedDereferenceOperator, ResolvedDirectCallExpr,
-    ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
-    ResolvedInterfaceReceiver, ResolvedLogicalExpr, ResolvedLogicalOperator,
-    ResolvedMethodCallExpr, ResolvedNumericLiteralExpr, ResolvedObjectCastExpr,
-    ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr, ResolvedPresenceTestKind,
-    ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedStaticCallExpr,
-    ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr, ResolvedTypeTestExpr,
-    ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+    ResolvedArrayConstructionExpr, ResolvedArrayElementList, ResolvedArrayLengthExpr,
+    ResolvedArrayLengthOperator, ResolvedArrayProjectionBounds, ResolvedArrayProjectionExpr,
+    ResolvedArrayProjectionOperator, ResolvedBinaryExpr, ResolvedBinaryOperator,
+    ResolvedBindingExpr, ResolvedBooleanExpr, ResolvedByteLiteralExpr, ResolvedConstructExpr,
+    ResolvedConstructionMode, ResolvedDereferenceExpr, ResolvedDereferenceOperator,
+    ResolvedDirectCallExpr, ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr,
+    ResolvedInterfaceCallExpr, ResolvedInterfaceReceiver, ResolvedLogicalExpr,
+    ResolvedLogicalOperator, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
+    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
+    ResolvedPresenceTestKind, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType,
+    ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr,
+    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

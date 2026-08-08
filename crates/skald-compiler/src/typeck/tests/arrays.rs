@@ -7,11 +7,34 @@ use crate::{
     identity::ClassId,
     resolve::ResolvedCopyOperation,
     typeck::{
-        capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE,
-        INVALID_ARRAY_ELEMENT, INVALID_EXTERNAL_DECLARATION, INVALID_INTERFACE_REQUIREMENT,
-        TYPE_MISMATCH,
+        capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE,
+        ARRAY_ELEMENT_LIST_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE, INVALID_ARRAY_ELEMENT,
+        INVALID_EXTERNAL_DECLARATION, INVALID_INTERFACE_REQUIREMENT, TYPE_MISMATCH,
     },
 };
+
+#[test]
+fn gates_retained_array_element_lists_before_hir_construction() {
+    let output = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[]{1, 2};\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, ARRAY_ELEMENT_LIST_UNAVAILABLE);
+    assert_eq!(
+        diagnostic.message,
+        "explicit array element-list construction is not yet available"
+    );
+    assert_eq!(
+        diagnostic.notes,
+        ["the parser and resolver retain this syntax for staged implementation"]
+    );
+}
 
 #[test]
 fn records_exact_lifecycle_plans_for_supported_element_categories() {

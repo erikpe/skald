@@ -1,7 +1,7 @@
 # Array Compiler and Runtime Contract
 
-Status: **implemented contract on x86-64 with a frozen, unimplemented explicit
-element-list representation extension**.
+Status: **implemented contract on x86-64 with a frozen, source-retained
+explicit element-list representation extension**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -156,20 +156,27 @@ and `copy` in the dedicated position is not an ordinary element initializer.
 
 ## Frozen element-list representation
 
-The frozen source forms `T[]{...}` and `new T[]{...}` add one future
-construction mode without changing current compiler availability:
+The frozen source forms `T[]{...}` and `new T[]{...}` add one distinct
+construction mode. Syntax and resolution implement this representation while
+semantic and executable availability remains staged:
 
 ```text
-ExplicitElements([expression])
+Elements(ArrayElementList)
 ```
 
-The name above is conceptual rather than a required Rust variant. Syntax must
-retain the explicit array type, optional `new`, both brace spans, every comma,
-the ordered element expressions, and the complete construction span.
-Resolution assigns the exact recursive `ArrayTypeId` before resolving the
-elements and preserves their order without selecting lifecycle, layout, or
-target operations. Empty braces retain an empty vector and require no element
-capability.
+`ArrayElementList` retains the optional construction-level `new`, explicit
+array type, both brace spans, every comma, ordered element expressions, and
+complete construction span through its owning construction node. Resolution
+assigns the exact recursive `ArrayTypeId` before resolving the elements and
+mirrors their source order and punctuation without selecting lifecycle,
+layout, or target operations. Empty braces retain empty element and comma
+vectors and require no element capability. The public syntax and resolution
+facades expose these phase nodes without exposing parser tokens.
+
+Until typed destination plans land, type checking reports `TYP043` at the
+opening brace and returns no HIR for the program. This single gate is the
+deliberate boundary between the implemented source representation and the
+remaining contract below.
 
 Type checking treats each listed position as one previously uninitialized
 owning destination of the array's exact stored element type. HIR records one
@@ -231,9 +238,11 @@ types, list expressions, initialized prefixes, or lifecycle operations. No
 public runtime entry point, metadata format, or ABI-version change is part of
 this frozen extension.
 
-Current syntax, resolved IR, HIR, MIR, verifier, and backend code do not yet
-implement this mode. The [status matrix](../language/STATUS.md) distinguishes
-the frozen design from accepted compiler behavior.
+Current syntax and resolved IR implement this mode. HIR, MIR, verifier, and
+backend code do not yet implement it, and the type-checking gate prevents
+those phases from observing a partial representation. The
+[status matrix](../language/STATUS.md) distinguishes source retention from
+executable compiler behavior.
 
 ## Typed HIR
 

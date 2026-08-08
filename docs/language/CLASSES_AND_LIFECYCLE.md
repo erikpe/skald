@@ -589,7 +589,8 @@ extension, an exact-class element position is likewise the final destination
 for an eligible listed call. In other source contexts it materializes a
 temporary. These are source-visible destination and lifetime rules; they do
 not prescribe an implementation calling convention. The array-element case is
-frozen but not yet accepted by the compiler.
+accepted through resolution but remains unavailable to type checking and
+execution.
 
 ## Temporaries and full expressions
 

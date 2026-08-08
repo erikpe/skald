@@ -705,6 +705,19 @@ pub struct ArrayConstructionExpr {
     pub span: Span,
 }
 
+/// Ordered source structure for explicit array element-list construction.
+///
+/// Valid lists have exactly one fewer comma than element. Keeping punctuation
+/// separate from expressions lets later phases retain source order and exact
+/// diagnostics without coupling them to parser-private tokens.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ArrayElementList {
+    pub left_brace_span: Span,
+    pub elements: Vec<Expression>,
+    pub comma_spans: Vec<Span>,
+    pub right_brace_span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArrayConstructionArguments {
     Empty {
@@ -722,6 +735,7 @@ pub enum ArrayConstructionArguments {
         source: Box<Expression>,
         right_paren_span: Span,
     },
+    Elements(ArrayElementList),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

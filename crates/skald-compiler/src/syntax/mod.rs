@@ -12,7 +12,7 @@ mod parser;
 
 pub use ast::{
     AbsentExpr, AllocationExpr, ArrayConstructionArguments, ArrayConstructionExpr,
-    ArrayProjectionBounds, ArrayProjectionExpr, ArrayProjectionOperator,
+    ArrayElementList, ArrayProjectionBounds, ArrayProjectionExpr, ArrayProjectionOperator,
     BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, BreakStatement,
     ByteLiteralExpr, CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit,
     ConditionalArm, ConditionalStatement, ContinueStatement, CopyAssignmentDecl,

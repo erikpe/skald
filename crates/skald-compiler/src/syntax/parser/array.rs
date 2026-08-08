@@ -80,7 +80,11 @@ impl Parser<'_> {
         }
         self.scan_type_shape(start, 0)
             .is_some_and(|(end, contains_array)| {
-                contains_array && self.peek_ahead(end).kind == TokenKind::LeftParen
+                contains_array
+                    && matches!(
+                        self.peek_ahead(end).kind,
+                        TokenKind::LeftParen | TokenKind::LeftBrace
+                    )
             })
     }
 
@@ -146,7 +150,45 @@ impl Parser<'_> {
             return None;
         }
 
+        let arguments = if self.at(TokenKind::LeftBrace) {
+            self.parse_array_element_list()?
+        } else {
+            self.parse_parenthesized_array_arguments()?
+        };
+        let end_span = match &arguments {
+            ArrayConstructionArguments::Empty {
+                right_paren_span, ..
+            }
+            | ArrayConstructionArguments::Length {
+                right_paren_span, ..
+            }
+            | ArrayConstructionArguments::Copy {
+                right_paren_span, ..
+            } => *right_paren_span,
+            ArrayConstructionArguments::Elements(list) => list.right_brace_span,
+        };
+        let start_span = new_span.unwrap_or(array_type.span);
+        Some(Expression::ArrayConstruction(Box::new(
+            ArrayConstructionExpr {
+                new_span,
+                array_type,
+                arguments,
+                span: self.cover(start_span, end_span),
+            },
+        )))
+    }
+
+    fn parse_parenthesized_array_arguments(&mut self) -> Option<ArrayConstructionArguments> {
         let left_paren = self.expect(TokenKind::LeftParen, "`(` after the array type")?;
+        self.with_syntax_nesting(left_paren.span, move |parser| {
+            parser.parse_parenthesized_array_argument_contents(left_paren)
+        })
+    }
+
+    fn parse_parenthesized_array_argument_contents(
+        &mut self,
+        left_paren: Token,
+    ) -> Option<ArrayConstructionArguments> {
         let arguments = if let Some(right_paren) = self.consume(TokenKind::RightParen) {
             ArrayConstructionArguments::Empty {
                 left_paren_span: left_paren.span,
@@ -174,26 +216,109 @@ impl Parser<'_> {
                 right_paren_span: right_paren.span,
             }
         };
-        let end_span = match &arguments {
-            ArrayConstructionArguments::Empty {
-                right_paren_span, ..
+        Some(arguments)
+    }
+
+    fn parse_array_element_list(&mut self) -> Option<ArrayConstructionArguments> {
+        let left_brace = self.advance();
+        debug_assert_eq!(left_brace.kind, TokenKind::LeftBrace);
+        self.brace_depth += 1;
+        let list = self.with_syntax_nesting(left_brace.span, move |parser| {
+            parser.parse_array_element_list_contents(left_brace)
+        });
+        self.brace_depth -= 1;
+        list.map(ArrayConstructionArguments::Elements)
+    }
+
+    fn parse_array_element_list_contents(&mut self, left_brace: Token) -> Option<ArrayElementList> {
+        if let Some(right_brace) = self.consume(TokenKind::RightBrace) {
+            return Some(ArrayElementList {
+                left_brace_span: left_brace.span,
+                elements: Vec::new(),
+                comma_spans: Vec::new(),
+                right_brace_span: right_brace.span,
+            });
+        }
+
+        let mut elements = Vec::new();
+        let mut comma_spans = Vec::new();
+        let mut valid = true;
+
+        loop {
+            if self.at_any(&[
+                TokenKind::RightBrace,
+                TokenKind::Semicolon,
+                TokenKind::Fn,
+                TokenKind::Extern,
+                TokenKind::Class,
+                TokenKind::Eof,
+            ]) {
+                self.report(
+                    EXPECTED_EXPRESSION,
+                    "expected an array element",
+                    self.peek().span,
+                    "expected an expression here",
+                );
+                valid = false;
+                break;
             }
-            | ArrayConstructionArguments::Length {
-                right_paren_span, ..
+
+            match self.parse_expression() {
+                Some(element) => elements.push(element),
+                None => {
+                    valid = false;
+                    if self.recovering_from_excessive_nesting {
+                        return None;
+                    }
+                    self.synchronize_argument();
+                }
             }
-            | ArrayConstructionArguments::Copy {
-                right_paren_span, ..
-            } => *right_paren_span,
-        };
-        let start_span = new_span.unwrap_or(array_type.span);
-        Some(Expression::ArrayConstruction(Box::new(
-            ArrayConstructionExpr {
-                new_span,
-                array_type,
-                arguments,
-                span: self.cover(start_span, end_span),
-            },
-        )))
+
+            if let Some(comma) = self.consume(TokenKind::Comma) {
+                comma_spans.push(comma.span);
+                if self.at(TokenKind::RightBrace) {
+                    self.report(
+                        EXPECTED_EXPRESSION,
+                        "expected an array element after `,`",
+                        self.peek().span,
+                        "trailing commas are not supported",
+                    );
+                    valid = false;
+                    break;
+                }
+                continue;
+            }
+
+            if self.at(TokenKind::RightBrace) {
+                break;
+            }
+
+            if self.starts_expression() {
+                self.report(
+                    EXPECTED_TOKEN,
+                    "expected `,` between array elements",
+                    self.peek().span,
+                    "insert `,` before this element",
+                );
+                valid = false;
+                continue;
+            }
+
+            break;
+        }
+
+        let right_brace = self.expect(TokenKind::RightBrace, "`}` after array elements")?;
+        if !valid {
+            return None;
+        }
+
+        debug_assert_eq!(comma_spans.len(), elements.len().saturating_sub(1));
+        Some(ArrayElementList {
+            left_brace_span: left_brace.span,
+            elements,
+            comma_spans,
+            right_brace_span: right_brace.span,
+        })
     }
 }
 

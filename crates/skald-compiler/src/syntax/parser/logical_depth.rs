@@ -58,6 +58,9 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
                 ArrayConstructionArguments::Copy { source, .. } => {
                     pending.push((source, depth));
                 }
+                ArrayConstructionArguments::Elements(list) => {
+                    pending.extend(list.elements.iter().map(|element| (element, depth)));
+                }
             },
             Expression::Call(expression) => {
                 pending.push((&expression.callee, depth));
