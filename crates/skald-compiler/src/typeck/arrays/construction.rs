@@ -3,9 +3,9 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirArrayConstruction, HirArrayConstructionMode, HirArrayInitialize, HirArrayOwnership,
-        HirArrayProvenance, HirArraySource, HirArrayTransfer, HirExpression, HirExpressionKind,
-        HirSharedTarget, Type,
+        HirArrayConstruction, HirArrayConstructionMode, HirArrayElementInitialization,
+        HirArrayElementList, HirArrayInitialize, HirArrayOwnership, HirArrayProvenance,
+        HirArraySource, HirArrayTransfer, HirExpression, HirExpressionKind, HirSharedTarget, Type,
     },
     resolve::{
         ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedExpression,
@@ -17,7 +17,6 @@ use super::super::{expression::require_type, function::CallableChecker};
 
 pub const ARRAY_CAPABILITY_UNAVAILABLE: &str = "TYP037";
 pub const ARRAY_LENGTH_OUT_OF_RANGE: &str = "TYP038";
-pub const ARRAY_ELEMENT_LIST_UNAVAILABLE: &str = "TYP043";
 
 impl CallableChecker<'_, '_> {
     pub(crate) fn check_array_construction(
@@ -107,20 +106,32 @@ impl CallableChecker<'_, '_> {
                 HirArrayConstructionMode::Copy { source, element }
             }
             ResolvedArrayConstructionArguments::Elements(list) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        ARRAY_ELEMENT_LIST_UNAVAILABLE,
-                        "explicit array element-list construction is not yet available",
-                    )
-                    .with_primary_label(
-                        list.left_brace_span,
-                        "type checking for this element list is not implemented",
-                    )
-                    .with_note(
-                        "the parser and resolver retain this syntax for staged implementation",
-                    ),
-                );
-                return None;
+                let element = self.copy_capabilities.array(array).element;
+                let mut elements = Vec::with_capacity(list.elements.len());
+                let mut valid = true;
+                for source in &list.elements {
+                    match self.check_stored_value_initialization(
+                        element,
+                        source,
+                        "array element initializer",
+                    ) {
+                        Some(value) => elements.push(HirArrayElementInitialization {
+                            element,
+                            span: source.span(),
+                            value,
+                        }),
+                        None => valid = false,
+                    }
+                }
+                if !valid {
+                    return None;
+                }
+                HirArrayConstructionMode::Elements(HirArrayElementList {
+                    left_brace_span: list.left_brace_span,
+                    elements,
+                    comma_spans: list.comma_spans.clone(),
+                    right_brace_span: list.right_brace_span,
+                })
             }
         };
         let ownership = if construction.new_span.is_some() {

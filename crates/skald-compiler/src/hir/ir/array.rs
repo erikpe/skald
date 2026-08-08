@@ -140,6 +140,22 @@ pub enum HirArrayConstructionMode {
         source: HirArraySource,
         element: HirArrayCopyElement,
     },
+    Elements(HirArrayElementList),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirArrayElementList {
+    pub left_brace_span: Span,
+    pub elements: Vec<HirArrayElementInitialization>,
+    pub comma_spans: Vec<Span>,
+    pub right_brace_span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirArrayElementInitialization {
+    pub element: Type,
+    pub value: super::HirStoredValueInitialization,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

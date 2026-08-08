@@ -804,25 +804,25 @@ The frozen explicit array element-list extension now preserves one additional
 ordered construction mode from syntax through resolution. The explicit type
 resolves to its canonical `ArrayTypeId` before element checking; syntax and
 resolved IR retain both braces, comma spans, and every element expression in
-source order. Type checking currently reports `TYP043` and emits no HIR for
-this mode. The next semantic stage replaces those expressions with exact
+source order. Type checking replaces those expressions with exact
 destination-directed initialization plans for primitive, class, optional,
 nested-array, shared-owner, and optional-owner elements. Those plans retain
-initializer and copy identities, named versus produced provenance, access, and
-ownership operations rather than leaving lower phases to infer them.
+initializer and copy identities, named versus produced provenance, access,
+and ownership operations rather than leaving lower phases to infer them.
 
-Once that gate is replaced, MIR must allocate unpublished backing for the
-source-derived count before any element effect, initialize exactly one
-increasing prefix in source order, and
-publish only after the prefix equals the count. Verification proves exact
+MIR must next allocate unpublished backing for the source-derived count before
+any element effect, initialize exactly one increasing prefix in source order,
+and publish only after the prefix equals the count. Verification proves exact
 element types and operations, single initialization of every position,
 named-copy versus produced-consumption accounting, no use of uninitialized
 slots, complete publication, and enclosing full-expression temporary and
 anchor lifetime. The representation may use linear instructions or structured
 control flow, but it may not manufacture default live elements and assign over
 them. Backend lowering reuses verified category-specific destination
-initialization, and the runtime remains unaware of the list and prefix. The
-detailed frozen boundary is in
+initialization, and the runtime remains unaware of the list and prefix. During
+EL1, a structured executable-lowering error selected by the `Elements` HIR
+variant forms the phase boundary; the compilation driver reports it without
+entering unimplemented MIR lowering. The detailed frozen boundary is in
 [the array compiler contract](ARRAYS.md#frozen-element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively

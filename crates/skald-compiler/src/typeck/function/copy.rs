@@ -13,6 +13,56 @@ use crate::{
 };
 
 impl CallableChecker<'_, '_> {
+    pub(in crate::typeck) fn check_object_destination_initialization(
+        &mut self,
+        class: ClassId,
+        initializer: &crate::resolve::ResolvedExpression,
+        context: &'static str,
+    ) -> Option<crate::hir::HirObjectDestinationInitialization> {
+        if let crate::resolve::ResolvedExpression::Construct(construction) = initializer {
+            if construction.class == class {
+                let construction = self.check_object_construction(class, construction, context)?;
+                let span = construction.span;
+                return Some(crate::hir::HirObjectDestinationInitialization::Direct {
+                    producer: HirObjectProducer::Construct(construction),
+                    span,
+                });
+            }
+        }
+
+        if is_ungrouped_object_call(initializer)
+            && self.resolved_object_class(initializer) == Some(class)
+        {
+            let expression = self.check_expression(initializer)?;
+            if !require_type(
+                expression.ty,
+                Type::Class(class),
+                expression.span,
+                context,
+                self.diagnostics,
+            ) {
+                return None;
+            }
+            let call = lower_object_call(expression, class);
+            let span = call.span;
+            return Some(crate::hir::HirObjectDestinationInitialization::Direct {
+                producer: HirObjectProducer::Call(call),
+                span,
+            });
+        }
+
+        let source = self.check_object_source(initializer, class, context)?;
+        let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
+            self.report_unavailable_copy_operation(class, true, initializer.span());
+            return None;
+        };
+        Some(crate::hir::HirObjectDestinationInitialization::Copy {
+            source,
+            operation,
+            span: initializer.span(),
+        })
+    }
+
     pub(in crate::typeck) fn report_unavailable_copy_operation(
         &mut self,
         class: ClassId,
@@ -605,6 +655,18 @@ fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> boo
         }
         _ => false,
     }
+}
+
+pub(in crate::typeck) fn is_ungrouped_object_call(
+    expression: &crate::resolve::ResolvedExpression,
+) -> bool {
+    matches!(
+        expression,
+        crate::resolve::ResolvedExpression::DirectCall(_)
+            | crate::resolve::ResolvedExpression::StaticCall(_)
+            | crate::resolve::ResolvedExpression::MethodCall(_)
+            | crate::resolve::ResolvedExpression::InterfaceCall(_)
+    )
 }
 
 fn construction_through_groups(

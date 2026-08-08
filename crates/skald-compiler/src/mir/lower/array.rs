@@ -427,6 +427,15 @@ impl BodyLowerer<'_> {
                 lower_array_copy_element(*element),
                 construction.span,
             ),
+            HirArrayConstructionMode::Elements(_) => {
+                self.reject_array_element_list(construction.span);
+                let length = self.assign(
+                    MirRvalueKind::ConstantU64(0),
+                    MirType::U64,
+                    construction.span,
+                );
+                self.lower_array_build(construction.array, length, None, None, construction.span)
+            }
         }
     }
 
@@ -469,6 +478,18 @@ impl BodyLowerer<'_> {
                     length,
                     None,
                     Some((source_place, lower_array_copy_element(*element))),
+                )
+            }
+            HirArrayConstructionMode::Elements(_) => {
+                self.reject_array_element_list(construction.span);
+                (
+                    self.assign(
+                        MirRvalueKind::ConstantU64(0),
+                        MirType::U64,
+                        construction.span,
+                    ),
+                    None,
+                    None,
                 )
             }
         };

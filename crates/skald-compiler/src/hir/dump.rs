@@ -1308,7 +1308,111 @@ impl HirDumper {
                 dumper.raw_line(&format!("CopyElements {}", array_copy_name(*element)));
                 dumper.indented(|dumper| dumper.array_source(source));
             }
+            HirArrayConstructionMode::Elements(list) => {
+                dumper.raw_line(&format!(
+                    "ElementList count={} commas={}",
+                    list.elements.len(),
+                    list.comma_spans.len()
+                ));
+                dumper.indented(|dumper| {
+                    for (index, element) in list.elements.iter().enumerate() {
+                        dumper.line(
+                            &format!("Element {index} : {}", element.element.name()),
+                            element.span,
+                        );
+                        dumper
+                            .indented(|dumper| dumper.stored_value_initialization(&element.value));
+                    }
+                });
+            }
         });
+    }
+
+    fn stored_value_initialization(&mut self, value: &crate::hir::HirStoredValueInitialization) {
+        match value {
+            crate::hir::HirStoredValueInitialization::Primitive(value) => {
+                self.raw_line("PrimitiveInitialization");
+                self.indented(|dumper| dumper.expression(value));
+            }
+            crate::hir::HirStoredValueInitialization::Class(value) => {
+                self.object_destination_initialization(value)
+            }
+            crate::hir::HirStoredValueInitialization::OptionalPrimitive { source, payload } => {
+                self.raw_line(&format!(
+                    "OptionalPrimitiveInitialization {}?",
+                    payload.name()
+                ));
+                self.indented(|dumper| dumper.optional_source(source));
+            }
+            crate::hir::HirStoredValueInitialization::OptionalClass(value) => {
+                self.class_optional_destination_initialization(value)
+            }
+            crate::hir::HirStoredValueInitialization::Array(value) => self.array_initialize(value),
+            crate::hir::HirStoredValueInitialization::Shared(value) => self.shared_transfer(value),
+            crate::hir::HirStoredValueInitialization::OptionalShared(value) => {
+                self.optional_shared_value(value)
+            }
+        }
+    }
+
+    fn object_destination_initialization(
+        &mut self,
+        value: &crate::hir::HirObjectDestinationInitialization,
+    ) {
+        match value {
+            crate::hir::HirObjectDestinationInitialization::Direct { producer, .. } => {
+                self.raw_line("ClassInitialization direct");
+                self.indented(|dumper| dumper.object_producer(producer));
+            }
+            crate::hir::HirObjectDestinationInitialization::Copy {
+                source, operation, ..
+            } => {
+                self.raw_line("ClassInitialization copy");
+                self.indented(|dumper| {
+                    dumper.object_source(source);
+                    dumper.selected_copy_operation(*operation);
+                });
+            }
+        }
+    }
+
+    fn class_optional_destination_initialization(
+        &mut self,
+        value: &crate::hir::HirClassOptionalDestinationInitialization,
+    ) {
+        match value {
+            crate::hir::HirClassOptionalDestinationInitialization::Absent { class, span } => self
+                .line(
+                    &format!("ClassOptionalInitialization class {class}? absent"),
+                    *span,
+                ),
+            crate::hir::HirClassOptionalDestinationInitialization::Direct {
+                class,
+                producer,
+                span,
+            } => {
+                self.line(
+                    &format!("ClassOptionalInitialization class {class}? direct"),
+                    *span,
+                );
+                self.indented(|dumper| dumper.object_producer(producer));
+            }
+            crate::hir::HirClassOptionalDestinationInitialization::Copy {
+                class,
+                source,
+                operation,
+                span,
+            } => {
+                self.line(
+                    &format!("ClassOptionalInitialization class {class}? copy"),
+                    *span,
+                );
+                self.indented(|dumper| {
+                    dumper.class_optional_source(source);
+                    dumper.selected_copy_operation(*operation);
+                });
+            }
+        }
     }
 
     fn array_source(&mut self, source: &HirArraySource) {

@@ -224,10 +224,11 @@ This is **element-list construction**, not an inferred array literal. Untyped
 single-expression `T[](value)` remains default-length construction and
 requires `value: u64`.
 
-The current type checker reports `TYP043` for either brace form and produces no
-HIR. The allocation, evaluation, and lifecycle rules below become executable
-incrementally through the active implementation roadmap; accepting the source
-shape does not make those later semantics available early.
+The type checker accepts both brace forms and records one exact ordered
+destination plan per element in HIR. The form is not executable yet: the
+compiler's structured HIR-to-MIR availability gate rejects element-list HIR
+until the allocation, prefix, and publication operations below land through
+the active implementation roadmap.
 
 The list length is the number of supplied expressions and must satisfy the
 ordinary maximum-`i64` array-length bound. Type grouping and outer ownership

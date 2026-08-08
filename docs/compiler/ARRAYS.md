@@ -148,6 +148,7 @@ Construction retains one of these source modes:
 Empty
 DefaultLength(expression)
 ExplicitCopy(source)
+Elements(ordered destination plans)
 ```
 
 It also retains inline versus shared allocation separately. Ordinary
@@ -157,8 +158,8 @@ and `copy` in the dedicated position is not an ordinary element initializer.
 ## Frozen element-list representation
 
 The frozen source forms `T[]{...}` and `new T[]{...}` add one distinct
-construction mode. Syntax and resolution implement this representation while
-semantic and executable availability remains staged:
+construction mode. Syntax, resolution, and typed HIR implement this
+representation while executable availability remains staged:
 
 ```text
 Elements(ArrayElementList)
@@ -173,10 +174,12 @@ layout, or target operations. Empty braces retain empty element and comma
 vectors and require no element capability. The public syntax and resolution
 facades expose these phase nodes without exposing parser tokens.
 
-Until typed destination plans land, type checking reports `TYP043` at the
-opening brace and returns no HIR for the program. This single gate is the
-deliberate boundary between the implemented source representation and the
-remaining contract below.
+Type checking now replaces every resolved element expression with one exact
+stored-value initialization plan. The plan retains its element type and span;
+the list retains brace and comma spans in source order. Direct exact-class
+producers are distinguished from copied materialized sources, optional class
+payload placement is distinguished from conditional copying, and nested arrays
+and shared owners retain named-versus-produced transfer provenance.
 
 Type checking treats each listed position as one previously uninitialized
 owning destination of the array's exact stored element type. HIR records one
@@ -203,6 +206,12 @@ HIR-to-MIR lowering must implement this abstract sequence:
 5. advance the prefix only after that initialization completes normally; and
 6. publish inline produced backing or one shared-array owner only when the
    prefix equals the list count.
+
+Until that sequence has verified MIR, `try_lower_hir` rejects every
+`HirArrayConstructionMode::Elements` with a structured
+`MirLoweringError::UnsupportedArrayElementList`. The normal compilation driver
+uses this executable-lowering gate, so valid typed list HIR cannot reach the
+unimplemented lowering branch or panic the compiler.
 
 The MIR vocabulary may use immediate semantic positions, explicit index
 storage, ordinary category-specific initialization instructions, or a focused

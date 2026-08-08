@@ -33,6 +33,7 @@ mod initializer;
 mod overload;
 mod statement;
 
+pub(super) use copy::is_ungrouped_object_call;
 use statement::CheckedStatement;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

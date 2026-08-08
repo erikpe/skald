@@ -11,8 +11,9 @@ progress. Completed roadmaps and resolved discovery records move to
   `new T[]{...}` contract through ordered destination plans, verified
   initialized-prefix publication, every owning element family, and native
   x86-64 without a runtime ABI change. EL0 retains the complete source
-  structure through resolution behind an explicit semantic availability gate;
-  EL1, typed destination-plan selection, is next.
+  structure through resolution; EL1 implements typed destination-plan
+  selection and the structural executable-lowering gate. EL2, verified
+  primitive element-list execution, is next.
   Depends on the implemented array, class lifecycle, optional, shared-owner,
   panic, MIR verifier, backend, and runtime ABI version 8 contracts; no active
   roadmap is a dependency.

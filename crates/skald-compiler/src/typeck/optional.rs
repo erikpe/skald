@@ -254,7 +254,7 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn check_class_optional_source(
+    pub(in crate::typeck) fn check_class_optional_source(
         &mut self,
         source: &ResolvedExpression,
         class: crate::identity::ClassId,

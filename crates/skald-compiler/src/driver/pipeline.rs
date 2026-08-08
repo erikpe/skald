@@ -6,7 +6,7 @@ use crate::{
     backend::{emit_assembly, BackendError, Target},
     diagnostics::Diagnostics,
     lexer::lex,
-    mir::lower_hir,
+    mir::try_lower_hir,
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
@@ -35,6 +35,7 @@ pub struct AssemblyArtifact {
 pub enum CompilationError {
     ProviderConfiguration(Vec<ProviderNormalizationError>),
     Diagnostics(CompilationReport),
+    MirLowering(crate::mir::MirLoweringErrors),
     MirVerification(crate::mir::MirVerificationErrors),
     Backend(BackendError),
 }
@@ -122,7 +123,7 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    let mir = lower_hir(&hir);
+    let mir = try_lower_hir(&hir).map_err(CompilationError::MirLowering)?;
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 

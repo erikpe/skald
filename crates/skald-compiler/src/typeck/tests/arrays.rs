@@ -1,20 +1,21 @@
 use super::*;
 use crate::{
     hir::{
-        dump_hir, HirArrayCopyElement, HirArrayDestroyElement, HirCopyCapability, HirSharedTarget,
-        Type,
+        dump_hir, HirArrayConstructionMode, HirArrayCopyElement, HirArrayDestroyElement,
+        HirCopyCapability, HirExpressionKind, HirLocalInitializer, HirSharedTarget,
+        HirStoredValueInitialization, Type,
     },
     identity::ClassId,
     resolve::ResolvedCopyOperation,
     typeck::{
-        capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE,
-        ARRAY_ELEMENT_LIST_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE, INVALID_ARRAY_ELEMENT,
-        INVALID_EXTERNAL_DECLARATION, INVALID_INTERFACE_REQUIREMENT, TYPE_MISMATCH,
+        capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE,
+        COPY_OPERATION_UNAVAILABLE, INVALID_ARRAY_ELEMENT, INVALID_EXTERNAL_DECLARATION,
+        INVALID_INTERFACE_REQUIREMENT, PRIVATE_INITIALIZER_ACCESS, TYPE_MISMATCH,
     },
 };
 
 #[test]
-fn gates_retained_array_element_lists_before_hir_construction() {
+fn selects_ordered_primitive_element_plans_and_gates_mir_lowering() {
     let output = check_text(concat!(
         "fn main() -> i64 {\n",
         "  var values: i64[] = i64[]{1, 2};\n",
@@ -22,17 +23,172 @@ fn gates_retained_array_element_lists_before_hir_construction() {
         "}\n",
     ));
 
-    assert!(output.hir.is_none());
-    assert_eq!(output.diagnostics.len(), 1);
-    let diagnostic = output.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, ARRAY_ELEMENT_LIST_UNAVAILABLE);
-    assert_eq!(
-        diagnostic.message,
-        "explicit array element-list construction is not yet available"
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let definition = hir.definitions.get(hir.entry_function).unwrap();
+    let crate::hir::HirStatement::Local(local) = &definition.body.statements[0] else {
+        panic!("expected array local");
+    };
+    let HirLocalInitializer::Array(initialization) = &local.initializer else {
+        panic!("expected owning array initialization");
+    };
+    let crate::hir::HirArrayReceiverSource::Inline(expression) =
+        &initialization.source.receiver.source
+    else {
+        panic!("expected inline array source");
+    };
+    let HirExpressionKind::ArrayConstruction(construction) = &expression.kind else {
+        panic!("expected element-list construction");
+    };
+    let HirArrayConstructionMode::Elements(list) = &construction.mode else {
+        panic!("expected typed element list");
+    };
+    assert_eq!(list.elements.len(), 2);
+    assert_eq!(list.comma_spans.len(), 1);
+    assert!(list
+        .elements
+        .iter()
+        .all(|element| matches!(element.value, HirStoredValueInitialization::Primitive(_))));
+
+    let errors = crate::mir::try_lower_hir(&hir).unwrap_err();
+    assert_eq!(errors.len(), 1);
+    assert!(matches!(
+        errors.iter().next(),
+        Some(crate::mir::MirLoweringError::UnsupportedArrayElementList { .. })
+    ));
+}
+
+#[test]
+fn selects_destination_plans_for_every_stored_element_family() {
+    let output = check_text(concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn make_item() -> Item { return Item(2); }\n",
+        "fn main() -> i64 {\n",
+        "  var item: Item = Item(1);\n",
+        "  var nested_source: i64[] = i64[]();\n",
+        "  var owner: shared Item = new Item(3);\n",
+        "  var maybe_owner: shared? Item = owner;\n",
+        "  var primitive: i64[] = i64[]{1, 2};\n",
+        "  var unsigned: u64[] = u64[]{3u};\n",
+        "  var bytes: u8[] = u8[]{4u8};\n",
+        "  var floating: f64[] = f64[]{5.0};\n",
+        "  var booleans: bool[] = bool[]{true};\n",
+        "  var optional: i64?[] = i64?[]{none, 3};\n",
+        "  var objects: Item[] = Item[]{Item(4), make_item(), item};\n",
+        "  var optional_objects: Item?[] = Item?[]{none, Item(5), item};\n",
+        "  var nested: i64[][] = i64[][]{nested_source, i64[]{6}};\n",
+        "  var owners: (shared Item)[] = (shared Item)[]{owner, new Item(7)};\n",
+        "  var maybe_owners: (shared? Item)[] = (shared? Item)[]{none, maybe_owner, new Item(8)};\n",
+        "  var shared_outer: shared i64[] = new i64[]{9};\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let dump = dump_hir(&hir);
+
+    for selected in [
+        "PrimitiveInitialization",
+        "OptionalPrimitiveInitialization i64?",
+        "ClassInitialization direct",
+        "ClassInitialization copy",
+        "ClassOptionalInitialization class c0? absent",
+        "ClassOptionalInitialization class c0? direct",
+        "ClassOptionalInitialization class c0? copy",
+        "ArrayInitialization deep-copy primitive",
+        "ArrayInitialization adopt",
+        "SharedTransfer Copy -> shared class c0",
+        "SharedTransfer Adopt -> shared class c0",
+        "OptionalSharedInitialization shared? class c0",
+        "ArrayAllocation shared",
+    ] {
+        assert!(dump.contains(selected), "missing `{selected}`:\n{dump}");
+    }
+    assert_eq!(dump, dump_hir(&hir));
+}
+
+#[test]
+fn direct_class_elements_require_neither_default_nor_copy_but_materialized_sources_do() {
+    let source = concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item[] = Item[]{Item(1)};\n",
+        "  return 0;\n",
+        "}\n",
     );
+    let mut resolved = resolve_text(source);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let array = hir.array_types.iter().next().unwrap();
+    assert!(array.lifecycle.default.is_none());
+    assert!(array.lifecycle.copy.is_none());
+    assert!(dump_hir(&hir).contains("ClassInitialization direct"));
+
+    let grouped = concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item[] = Item[]{(Item(1))};\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut resolved = resolve_text(grouped);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+}
+
+#[test]
+fn diagnoses_each_invalid_element_and_continues_in_source_order() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[]{true, 1u, false};\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let output = check_text(source);
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 3, "{:?}", output.diagnostics);
+    let starts = diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.labels[0].span.range().start())
+        .collect::<Vec<_>>();
+    assert!(starts.windows(2).all(|pair| pair[0] < pair[1]));
+    assert_eq!(starts[0], source.find("true").unwrap());
+    assert_eq!(starts[1], source.find("1u").unwrap());
+    assert_eq!(starts[2], source.find("false").unwrap());
+    assert!(output.hir.is_none());
+}
+
+#[test]
+fn enforces_initializer_access_at_the_exact_list_element() {
+    let source = concat!(
+        "class Secret { private init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Secret[] = Secret[]{Secret()};\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let output = check_text(source);
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == PRIVATE_INITIALIZER_ACCESS)
+        .expect("private list initializer must be rejected");
     assert_eq!(
-        diagnostic.notes,
-        ["the parser and resolver retain this syntax for staged implementation"]
+        diagnostic.labels[0].span.range().start(),
+        source.rfind("Secret()").unwrap()
     );
 }
 

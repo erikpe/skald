@@ -18,18 +18,19 @@ mod primitive;
 mod shared;
 mod shift;
 mod static_field;
+mod stored_value;
 mod strings;
 
 pub use array::{
     HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor, HirArrayAssignElement,
     HirArrayAssignment, HirArrayConstruction, HirArrayConstructionMode, HirArrayCopyElement,
     HirArrayDefaultElement, HirArrayDestroyElement, HirArrayElementAssignment,
-    HirArrayElementPlace, HirArrayElementValue, HirArrayEvaluationOrder, HirArrayFieldInitialize,
-    HirArrayIndex, HirArrayIndexNormalization, HirArrayInitialize, HirArrayLength,
-    HirArrayLifecycle, HirArrayOwnership, HirArrayPlace, HirArrayProvenance, HirArrayReceiver,
-    HirArrayReceiverOwnership, HirArrayReceiverSource, HirArrayRuntimeFailure, HirArraySlice,
-    HirArraySliceAssignment, HirArraySliceBounds, HirArraySource, HirArrayTransfer, HirArrayType,
-    HirArrayTypeTable,
+    HirArrayElementInitialization, HirArrayElementList, HirArrayElementPlace, HirArrayElementValue,
+    HirArrayEvaluationOrder, HirArrayFieldInitialize, HirArrayIndex, HirArrayIndexNormalization,
+    HirArrayInitialize, HirArrayLength, HirArrayLifecycle, HirArrayOwnership, HirArrayPlace,
+    HirArrayProvenance, HirArrayReceiver, HirArrayReceiverOwnership, HirArrayReceiverSource,
+    HirArrayRuntimeFailure, HirArraySlice, HirArraySliceAssignment, HirArraySliceBounds,
+    HirArraySource, HirArrayTransfer, HirArrayType, HirArrayTypeTable,
 };
 pub use body::{
     HirBlock, HirBreak, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
@@ -87,6 +88,10 @@ pub use shift::{
     HirCheckedShift, HirRightShiftFlavor, HirShiftDirection, HirShiftFailure, HirShiftOperation,
 };
 pub use static_field::{HirStaticFieldDeclaration, HirStaticPlace};
+pub use stored_value::{
+    HirClassOptionalDestinationInitialization, HirObjectDestinationInitialization,
+    HirStoredValueInitialization,
+};
 pub use strings::{HirLiteralData, HirLiteralDataTable, HirStringLanguageItem, HirStringLiteral};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

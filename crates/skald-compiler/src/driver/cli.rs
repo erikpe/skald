@@ -178,6 +178,10 @@ fn compile<Stderr: Write>(
             )?;
             return Ok(EXIT_COMPILE_ERROR);
         }
+        Err(CompilationError::MirLowering(errors)) => {
+            writeln!(stderr, "skac: MIR lowering is unavailable:\n{errors}")?;
+            return Ok(EXIT_COMPILE_ERROR);
+        }
         Err(CompilationError::Backend(error)) => {
             writeln!(stderr, "skac: internal {error}")?;
             return Ok(EXIT_COMPILE_ERROR);

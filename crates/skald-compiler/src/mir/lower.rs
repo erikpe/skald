@@ -1,5 +1,7 @@
 //! Deterministic lowering from typed HIR to MIR.
 
+use std::fmt;
+
 use super::{build::MirBodyBuilder, model::*};
 use crate::{
     hir::{
@@ -36,17 +38,71 @@ use cleanup::CleanupPlanner;
 use full_expression::FullExpressionTracker;
 use loop_context::LoopContextStack;
 
-/// Lowers every currently representable HIR operation into executable MIR.
+/// Lowers HIR that is already known to be executable.
 ///
+/// Compiler drivers should use [`try_lower_hir`] so staged HIR operations are
+/// returned as structured errors. This compatibility entry point panics when
+/// its caller bypasses that gate.
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    let mir = program::lower_program(hir);
+    try_lower_hir(hir).expect("HIR must pass the executable-lowering gate")
+}
+
+/// Lowers executable HIR while rejecting operations reserved for a later MIR
+/// implementation stage.
+pub fn try_lower_hir(hir: &HirProgram) -> Result<MirProgram, MirLoweringErrors> {
+    let (mir, errors) = program::lower_program(hir);
+    if !errors.is_empty() {
+        return Err(MirLoweringErrors(errors));
+    }
 
     #[cfg(debug_assertions)]
     if let Err(errors) = super::verify_mir(&mir) {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
-    mir
+    Ok(mir)
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirLoweringError {
+    UnsupportedArrayElementList { span: crate::source::Span },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirLoweringErrors(Vec<MirLoweringError>);
+
+impl MirLoweringErrors {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirLoweringError> {
+        self.0.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl fmt::Display for MirLoweringErrors {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            formatter,
+            "{} HIR operation(s) are not executable in the current MIR profile:",
+            self.0.len()
+        )?;
+        for error in &self.0 {
+            match error {
+                MirLoweringError::UnsupportedArrayElementList { span } => {
+                    writeln!(formatter, "  array element list at {span:?}")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for MirLoweringErrors {}
 
 fn invalid_array_hir() -> ! {
     unreachable!("typed array HIR violates the lowering contract")
@@ -81,6 +137,7 @@ struct LoweredBody {
     storage: Vec<MirStorage>,
     values: Vec<MirValue>,
     body: MirBody,
+    lowering_errors: Vec<MirLoweringError>,
 }
 
 #[derive(Clone)]
@@ -110,6 +167,7 @@ struct BodyLowerer<'hir> {
     full_expression: FullExpressionTracker,
     next_optional_guard: usize,
     active_optional_guards: Vec<ActiveOptionalGuard>,
+    lowering_errors: Vec<MirLoweringError>,
 }
 
 #[derive(Clone)]
@@ -169,6 +227,7 @@ impl<'hir> BodyLowerer<'hir> {
             storage: lowerer.storage,
             values: lowerer.values,
             body: lowerer.body.finish(),
+            lowering_errors: lowerer.lowering_errors,
         }
     }
 
@@ -188,10 +247,16 @@ impl<'hir> BodyLowerer<'hir> {
             full_expression: FullExpressionTracker::default(),
             next_optional_guard: 0,
             active_optional_guards: Vec::new(),
+            lowering_errors: Vec::new(),
             return_storage: None,
             receiver_storage: None,
             input,
         }
+    }
+
+    fn reject_array_element_list(&mut self, span: crate::source::Span) {
+        self.lowering_errors
+            .push(MirLoweringError::UnsupportedArrayElementList { span });
     }
 
     fn allocate_storage(&mut self) {

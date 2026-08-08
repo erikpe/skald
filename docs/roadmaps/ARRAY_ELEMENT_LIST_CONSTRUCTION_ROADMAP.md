@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 is complete and EL1 is next.
+Status: in progress; EL0 and EL1 are complete and EL2 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -46,7 +46,7 @@ lifecycle, publication, and runtime boundaries.
 ## Progress
 
 - [x] EL0 — Retain explicit element-list source structure
-- [ ] EL1 — Select typed destination initialization plans
+- [x] EL1 — Select typed destination initialization plans
 - [ ] EL2 — Execute verified primitive element lists
 - [ ] EL3 — Execute exact-class destination placement and copying
 - [ ] EL4 — Execute inline optional element initialization
@@ -102,27 +102,27 @@ from source text.
 **Purpose:** Resolve every element's exact owning operation in HIR before MIR
 or the backend can depend on expression shape.
 
-- [ ] Add an ordered element-list construction mode to HIR, with one
+- [x] Add an ordered element-list construction mode to HIR, with one
       destination-directed initialization plan per source expression and
       separate inline versus shared outer ownership.
-- [ ] Centralize reusable stored-value initialization selection so an array
+- [x] Centralize reusable stored-value initialization selection so an array
       element receives the same primitive, exact-class, optional, nested-array,
       shared-owner, or optional-owner compatibility decision as the
       corresponding owning destination without duplicating local/field rules.
-- [ ] Retain exact initializer/copy identities, access authorization, nested
+- [x] Retain exact initializer/copy identities, access authorization, nested
       `ArrayTypeId`, shared target, named versus produced provenance, and every
       source span needed below HIR.
-- [ ] Require only the operation selected by each element source; do not
+- [x] Require only the operation selected by each element source; do not
       request an array default plan or element assignment merely because the
       list is nonempty.
-- [ ] Preserve the completed array type's independently computed lifecycle
+- [x] Preserve the completed array type's independently computed lifecycle
       table for later named copy, slice, assignment, and cleanup operations.
-- [ ] Diagnose the exact failing element for type mismatch, inaccessible
+- [x] Diagnose the exact failing element for type mismatch, inaccessible
       initializer, unavailable copy, invalid ownership target, or other
       capability failure, while continuing to check recoverable later elements.
-- [ ] Extend HIR control-effect traversal and deterministic dumps for ordered
+- [x] Extend HIR control-effect traversal and deterministic dumps for ordered
       listed expressions and selected initialization plans.
-- [ ] Replace the semantic availability gate with a deliberate executable-
+- [x] Replace the semantic availability gate with a deliberate executable-
       lowering gate that rejects unsupported list HIR structurally rather than
       panicking until verified MIR support lands.
 
