@@ -5,9 +5,9 @@ use crate::{
     intrinsic::Intrinsic,
     mir::{lower_hir, verify_mir, MirFunctionLinkage},
     test_support::{
-        load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
-        CANONICAL_STR_FORMAT_F64_SOURCE, CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-        CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_PARSE_INTEGER_SOURCE, CANONICAL_STR_SOURCE,
+        load_module_sources_with_standard_library,
+        load_module_sources_with_standard_library_overrides, CANONICAL_F64_SOURCE,
+        CANONICAL_IO_SOURCE,
     },
     typeck::{
         type_check, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT, INVALID_CALL_STATEMENT,
@@ -16,20 +16,17 @@ use crate::{
 
 #[test]
 fn canonical_f64_bit_intrinsics_lower_to_verified_bit_reinterpretation() {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                concat!(
-                    "import std::f64;\n",
-                    "fn main() -> i64 {\n",
-                    "  return (i64) std::f64::to_bits(std::f64::from_bits(0u));\n",
-                    "}\n",
-                ),
+        &[(
+            "app.ska",
+            concat!(
+                "import std::f64;\n",
+                "fn main() -> i64 {\n",
+                "  return (i64) std::f64::to_bits(std::f64::from_bits(0u));\n",
+                "}\n",
             ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-        ],
+        )],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(
@@ -99,15 +96,13 @@ fn rejects_malformed_f64_bit_intrinsic_declarations() {
         ),
         CANONICAL_F64_SOURCE.replace("_from_bits", "_unknown_from_bits"),
     ] {
-        let (_workspace, graph) = load_module_sources(
+        let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
             "app",
-            &[
-                (
-                    "app.ska",
-                    "import std::f64;\nfn main() -> i64 { return 0; }\n",
-                ),
-                ("std/f64.ska", &replacement),
-            ],
+            &[(
+                "app.ska",
+                "import std::f64;\nfn main() -> i64 { return 0; }\n",
+            )],
+            &[("std/f64.ska", &replacement)],
         );
         let output = resolve_module_graph(&graph);
         assert!(
@@ -148,28 +143,12 @@ fn is_io_intrinsic(intrinsic: Intrinsic) -> bool {
 
 #[test]
 fn canonical_io_intrinsics_have_exact_stable_identities_and_no_definitions() {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                "import std::io;\nfn main() -> i64 { return 0; }\n",
-            ),
-            ("std/io.ska", CANONICAL_IO_SOURCE),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        &[(
+            "app.ska",
+            "import std::io;\nfn main() -> i64 { return 0; }\n",
+        )],
     );
     let output = resolve_module_graph(&graph);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
@@ -232,28 +211,13 @@ fn io_intrinsic_calls_type_to_dedicated_target_independent_hir() {
         "}\n",
         "public fn close(handle: i64) -> i64 { return _io_close(handle); }\n",
     ));
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
         "app",
-        &[
-            (
-                "app.ska",
-                "import std::io;\nfn main() -> i64 { return 0; }\n",
-            ),
-            ("std/io.ska", &io),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        &[(
+            "app.ska",
+            "import std::io;\nfn main() -> i64 { return 0; }\n",
+        )],
+        &[("std/io.ska", &io)],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(
@@ -331,28 +295,13 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
         ),
     ] {
         let io = io_module_with_bodies(body);
-        let (_workspace, graph) = load_module_sources(
+        let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
             "app",
-            &[
-                (
-                    "app.ska",
-                    "import std::io;\nfn main() -> i64 { return 0; }\n",
-                ),
-                ("std/io.ska", &io),
-                ("std/error.ska", CANONICAL_ERROR_SOURCE),
-                ("std/str.ska", CANONICAL_STR_SOURCE),
-                (
-                    "std/str/format_integer.ska",
-                    CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-                ),
-                ("std/f64.ska", CANONICAL_F64_SOURCE),
-                ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-                (
-                    "std/str/parse_integer.ska",
-                    CANONICAL_STR_PARSE_INTEGER_SOURCE,
-                ),
-                ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-            ],
+            &[(
+                "app.ska",
+                "import std::io;\nfn main() -> i64 { return 0; }\n",
+            )],
+            &[("std/io.ska", &io)],
         );
         let resolved = resolve_module_graph(&graph);
         assert!(
@@ -374,28 +323,13 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
 
     let io =
         io_module_with_bodies("public fn bad(handle: i64) -> unit { _io_close(handle); return; }");
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
         "app",
-        &[
-            (
-                "app.ska",
-                "import std::io;\nfn main() -> i64 { return 0; }\n",
-            ),
-            ("std/io.ska", &io),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        &[(
+            "app.ska",
+            "import std::io;\nfn main() -> i64 { return 0; }\n",
+        )],
+        &[("std/io.ska", &io)],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.diagnostics.is_empty());
@@ -408,28 +342,12 @@ fn io_intrinsics_reuse_array_alias_eligibility_and_expression_consumer_rules() {
 
 #[test]
 fn rejects_private_io_imports_and_manufactured_intrinsics() {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                "from std::io import _io_open;\nfn main() -> i64 { return 0; }\n",
-            ),
-            ("std/io.ska", CANONICAL_IO_SOURCE),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        &[(
+            "app.ska",
+            "from std::io import _io_open;\nfn main() -> i64 { return 0; }\n",
+        )],
     );
     let output = resolve_module_graph(&graph);
     assert!(output
@@ -469,28 +387,13 @@ fn rejects_malformed_replacement_io_intrinsic_declarations() {
         ),
         CANONICAL_IO_SOURCE.replace("_io_standard_handle", "_io_unknown"),
     ] {
-        let (_workspace, graph) = load_module_sources(
+        let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
             "app",
-            &[
-                (
-                    "app.ska",
-                    "import std::io;\nfn main() -> i64 { return 0; }\n",
-                ),
-                ("std/io.ska", &replacement),
-                ("std/error.ska", CANONICAL_ERROR_SOURCE),
-                ("std/str.ska", CANONICAL_STR_SOURCE),
-                (
-                    "std/str/format_integer.ska",
-                    CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-                ),
-                ("std/f64.ska", CANONICAL_F64_SOURCE),
-                ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-                (
-                    "std/str/parse_integer.ska",
-                    CANONICAL_STR_PARSE_INTEGER_SOURCE,
-                ),
-                ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-            ],
+            &[(
+                "app.ska",
+                "import std::io;\nfn main() -> i64 { return 0; }\n",
+            )],
+            &[("std/io.ska", &replacement)],
         );
         let output = resolve_module_graph(&graph);
         assert!(
@@ -506,44 +409,28 @@ fn rejects_malformed_replacement_io_intrinsic_declarations() {
 
 #[test]
 fn all_supported_spellings_resolve_to_one_panic_intrinsic_identity() {
-    let (_workspace, graph) = load_module_sources(
+    let error = concat!(
+        "import std::str;\n",
+        "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
+        "public fn direct(message: std::str::Str) -> unit { panic(message); }\n",
+    );
+    let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
         "app",
-        &[
-            (
-                "app.ska",
-                concat!(
-                    "import std::error;\n",
-                    "import std::error as errors;\n",
-                    "import std::str;\n",
-                    "from std::error import panic, panic as fail;\n",
-                    "fn qualified(message: std::str::Str) -> unit { std::error::panic(message); }\n",
-                    "fn module_alias(message: std::str::Str) -> unit { errors::panic(message); }\n",
-                    "fn selective(message: std::str::Str) -> unit { panic(message); }\n",
-                    "fn selective_alias(message: std::str::Str) -> unit { fail(message); }\n",
-                    "fn main() -> i64 { return 0; }\n",
-                ),
+        &[(
+            "app.ska",
+            concat!(
+                "import std::error;\n",
+                "import std::error as errors;\n",
+                "import std::str;\n",
+                "from std::error import panic, panic as fail;\n",
+                "fn qualified(message: std::str::Str) -> unit { std::error::panic(message); }\n",
+                "fn module_alias(message: std::str::Str) -> unit { errors::panic(message); }\n",
+                "fn selective(message: std::str::Str) -> unit { panic(message); }\n",
+                "fn selective_alias(message: std::str::Str) -> unit { fail(message); }\n",
+                "fn main() -> i64 { return 0; }\n",
             ),
-            (
-                "std/error.ska",
-                concat!(
-                    "import std::str;\n",
-                    "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
-                    "public fn direct(message: std::str::Str) -> unit { panic(message); }\n",
-                ),
-            ),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        )],
+        &[("std/error.ska", error)],
     );
 
     let output = resolve_module_graph(&graph);
@@ -585,27 +472,12 @@ fn all_supported_spellings_resolve_to_one_panic_intrinsic_identity() {
 
 #[test]
 fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                "import std::error;\nfn main() -> i64 { return 0; }\n",
-            ),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        &[(
+            "app.ska",
+            "import std::error;\nfn main() -> i64 { return 0; }\n",
+        )],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.diagnostics.is_empty());
@@ -643,36 +515,21 @@ fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
 
 #[test]
 fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                concat!(
-                    "import std::error;\n",
-                    "import std::str;\n",
-                    "fn later() -> unit {}\n",
-                    "fn stop(message: std::str::Str) -> unit {\n",
-                    "  std::error::panic(message);\n",
-                    "  later();\n",
-                    "}\n",
-                    "fn main() -> i64 { return 0; }\n",
-                ),
+        &[(
+            "app.ska",
+            concat!(
+                "import std::error;\n",
+                "import std::str;\n",
+                "fn later() -> unit {}\n",
+                "fn stop(message: std::str::Str) -> unit {\n",
+                "  std::error::panic(message);\n",
+                "  later();\n",
+                "}\n",
+                "fn main() -> i64 { return 0; }\n",
             ),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        )],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(resolved.diagnostics.is_empty());
@@ -736,27 +593,13 @@ fn rejects_noncanonical_and_malformed_panic_intrinsics_during_resolution() {
         "public extern fn panic(message: i64) -> unit;",
     ] {
         let error_module = format!("import std::str;\n{declaration}\n");
-        let (_workspace, graph) = load_module_sources(
+        let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
             "app",
-            &[
-                (
-                    "app.ska",
-                    "import std::error;\nfn main() -> i64 { return 0; }\n",
-                ),
-                ("std/error.ska", &error_module),
-                ("std/str.ska", CANONICAL_STR_SOURCE),
-                (
-                    "std/str/format_integer.ska",
-                    CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-                ),
-                ("std/f64.ska", CANONICAL_F64_SOURCE),
-                ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-                (
-                    "std/str/parse_integer.ska",
-                    CANONICAL_STR_PARSE_INTEGER_SOURCE,
-                ),
-                ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-            ],
+            &[(
+                "app.ska",
+                "import std::error;\nfn main() -> i64 { return 0; }\n",
+            )],
+            &[("std/error.ska", &error_module)],
         );
         let output = resolve_module_graph(&graph);
         assert!(

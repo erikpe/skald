@@ -23,6 +23,10 @@ use skald_compiler::{
     typeck::type_check,
 };
 
+#[path = "../test_support/standard_library.rs"]
+mod standard_library;
+use standard_library::{canonical_standard_library_sources, CANONICAL_IO_SOURCE};
+
 const OBJECT_HELPER_OUTPUT: &str = "SKALD_OBJECT_DETERMINISM_OUTPUT";
 const OBJECT_TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic_across_processes";
 const POLYMORPHISM_HELPER_OUTPUT: &str = "SKALD_POLYMORPHISM_DETERMINISM_OUTPUT";
@@ -1177,50 +1181,20 @@ fn string_phase_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("string-products", variant);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
-    let sources = [
-        (
-            application.join("app.ska"),
-            include_str!("../../../tests/golden/primitive_strings/string_values.ska"),
-        ),
-        (
-            standard_library.join("std/str.ska"),
-            include_str!("../../../std/std/str.ska"),
-        ),
-        (
-            standard_library.join("std/str/format_integer.ska"),
-            include_str!("../../../std/std/str/format_integer.ska"),
-        ),
-        (
-            standard_library.join("std/f64.ska"),
-            include_str!("../../../std/std/f64.ska"),
-        ),
-        (
-            standard_library.join("std/str/format_f64.ska"),
-            include_str!("../../../std/std/str/format_f64.ska"),
-        ),
-        (
-            standard_library.join("std/str/parse_integer.ska"),
-            include_str!("../../../std/std/str/parse_integer.ska"),
-        ),
-        (
-            standard_library.join("std/str/parse_f64.ska"),
-            include_str!("../../../std/std/str/parse_f64.ska"),
-        ),
-        (
-            standard_library.join("std/error.ska"),
-            include_str!("../../../std/std/error.ska"),
-        ),
-        (
-            standard_library.join("std/io.ska"),
-            include_str!("../../../std/std/io.ska"),
-        ),
-    ];
-    for index in if variant == 0 {
-        [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    } else {
-        [8, 7, 6, 5, 4, 3, 2, 1, 0]
-    } {
-        write_source(&sources[index].0, sources[index].1);
+    let mut sources = vec![(
+        application.join("app.ska"),
+        include_str!("../../../tests/golden/primitive_strings/string_values.ska"),
+    )];
+    sources.extend(
+        canonical_standard_library_sources(&[])
+            .into_iter()
+            .map(|(relative, source)| (standard_library.join(relative), source)),
+    );
+    if variant != 0 {
+        sources.reverse();
+    }
+    for (path, source) in sources {
+        write_source(&path, source);
     }
     let configurations = if variant == 0 {
         vec![
@@ -1266,62 +1240,35 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
     let fixture = ModuleFixture::new("io-products", variant);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
-    let mut io_source = include_str!("../../../std/std/io.ska").to_owned();
+    let mut io_source = CANONICAL_IO_SOURCE.to_owned();
     if malformed {
         io_source = io_source.replace("intrinsic fn _io_close", "public intrinsic fn _io_close");
     }
-    let sources = [
-        (
-            application.join("app.ska"),
-            concat!(
-                "import std::io;\n",
-                "from std::str import Str;\n",
-                "fn main() -> i64 {\n",
-                "  var path: Str = \"input.bin\";\n",
-                "  var stdin: Str = std::io::read_stdin();\n",
-                "  var file: Str = std::io::read_file(path);\n",
-                "  std::io::write_stdout(stdin);\n",
-                "  std::io::write_stderr(file);\n",
-                "  return 0;\n",
-                "}\n",
-            ),
+    let mut sources = vec![(
+        application.join("app.ska"),
+        concat!(
+            "import std::io;\n",
+            "from std::str import Str;\n",
+            "fn main() -> i64 {\n",
+            "  var path: Str = \"input.bin\";\n",
+            "  var stdin: Str = std::io::read_stdin();\n",
+            "  var file: Str = std::io::read_file(path);\n",
+            "  std::io::write_stdout(stdin);\n",
+            "  std::io::write_stderr(file);\n",
+            "  return 0;\n",
+            "}\n",
         ),
-        (
-            standard_library.join("std/str.ska"),
-            include_str!("../../../std/std/str.ska"),
-        ),
-        (
-            standard_library.join("std/str/format_integer.ska"),
-            include_str!("../../../std/std/str/format_integer.ska"),
-        ),
-        (
-            standard_library.join("std/f64.ska"),
-            include_str!("../../../std/std/f64.ska"),
-        ),
-        (
-            standard_library.join("std/str/format_f64.ska"),
-            include_str!("../../../std/std/str/format_f64.ska"),
-        ),
-        (
-            standard_library.join("std/str/parse_integer.ska"),
-            include_str!("../../../std/std/str/parse_integer.ska"),
-        ),
-        (
-            standard_library.join("std/str/parse_f64.ska"),
-            include_str!("../../../std/std/str/parse_f64.ska"),
-        ),
-        (
-            standard_library.join("std/error.ska"),
-            include_str!("../../../std/std/error.ska"),
-        ),
-        (standard_library.join("std/io.ska"), io_source.as_str()),
-    ];
-    for index in if variant == 0 {
-        [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    } else {
-        [8, 7, 6, 5, 4, 3, 2, 1, 0]
-    } {
-        write_source(&sources[index].0, sources[index].1);
+    )];
+    sources.extend(
+        canonical_standard_library_sources(&[("std/io.ska", io_source.as_str())])
+            .into_iter()
+            .map(|(relative, source)| (standard_library.join(relative), source)),
+    );
+    if variant != 0 {
+        sources.reverse();
+    }
+    for (path, source) in sources {
+        write_source(&path, source);
     }
     let configurations = if variant == 0 {
         vec![
@@ -1378,7 +1325,21 @@ fn string_diagnostic_dump(variant: usize) -> String {
     let fixture = ModuleFixture::new("string-diagnostics", variant);
     let application = fixture.path.join("application");
     let standard_library = fixture.path.join("standard-library");
-    let sources = [
+    let malformed_string = concat!(
+        "public class Str {\n",
+        "  private _storage: shared u64[];\n",
+        "  private _start: u8;\n",
+        "  private _length: i64;\n",
+        "  private _extra: u64;\n",
+        "  init() {\n",
+        "    self._storage = new u64[]();\n",
+        "    self._start = 0u8;\n",
+        "    self._length = 0;\n",
+        "    self._extra = 0u;\n",
+        "  }\n",
+        "}\n",
+    );
+    let mut sources = vec![
         (
             application.join("app.ska"),
             "import feature;\nfn main() -> i64 { \"app\"; return 0; }\n",
@@ -1387,26 +1348,17 @@ fn string_diagnostic_dump(variant: usize) -> String {
             application.join("feature.ska"),
             "public fn value() -> unit { \"feature\"; }\n",
         ),
-        (
-            standard_library.join("std/str.ska"),
-            concat!(
-                "public class Str {\n",
-                "  private _storage: shared u64[];\n",
-                "  private _start: u8;\n",
-                "  private _length: i64;\n",
-                "  private _extra: u64;\n",
-                "  init() {\n",
-                "    self._storage = new u64[]();\n",
-                "    self._start = 0u8;\n",
-                "    self._length = 0;\n",
-                "    self._extra = 0u;\n",
-                "  }\n",
-                "}\n",
-            ),
-        ),
     ];
-    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
-        write_source(&sources[index].0, sources[index].1);
+    sources.extend(
+        canonical_standard_library_sources(&[("std/str.ska", malformed_string)])
+            .into_iter()
+            .map(|(relative, source)| (standard_library.join(relative), source)),
+    );
+    if variant != 0 {
+        sources.reverse();
+    }
+    for (path, source) in sources {
+        write_source(&path, source);
     }
 
     let configurations = if variant == 0 {

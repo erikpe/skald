@@ -1,11 +1,7 @@
 use crate::{
     mir::{lower_hir, MirProgram},
     resolve::resolve_module_graph,
-    test_support::{
-        load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
-        CANONICAL_STR_FORMAT_F64_SOURCE, CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-        CANONICAL_STR_PARSE_F64_SOURCE, CANONICAL_STR_PARSE_INTEGER_SOURCE, CANONICAL_STR_SOURCE,
-    },
+    test_support::{load_module_sources_with_standard_library_overrides, CANONICAL_IO_SOURCE},
     typeck::type_check,
 };
 
@@ -62,25 +58,10 @@ pub(crate) fn standard_io_program_with_additional_bodies(
 }
 
 fn lower_io_program(app: &str, io: &str) -> MirProgram {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library_overrides(
         "app",
-        &[
-            ("app.ska", app),
-            ("std/io.ska", io),
-            ("std/error.ska", CANONICAL_ERROR_SOURCE),
-            ("std/f64.ska", CANONICAL_F64_SOURCE),
-            ("std/str.ska", CANONICAL_STR_SOURCE),
-            (
-                "std/str/format_integer.ska",
-                CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-            ),
-            ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-            (
-                "std/str/parse_integer.ska",
-                CANONICAL_STR_PARSE_INTEGER_SOURCE,
-            ),
-            ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ],
+        &[("app.ska", app)],
+        &[("std/io.ska", io)],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(

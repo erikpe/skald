@@ -221,6 +221,11 @@ fixtures belong in a responsibility-named test module, not a general bag of
 defaults. Test-only compiler pipelines stop at the boundary named by the
 helper and assert only that earlier phases succeeded.
 
+Compiler tests obtain the canonical standard-library module closure from one
+shared fixture catalog. Malformed-provider tests pass explicit per-module
+overrides, while determinism tests may reorder the returned closure before
+writing it; neither case maintains a second canonical module inventory.
+
 Choose primitive literal spellings that communicate the fixture's intent.
 Use single-quoted `u8` literals for textual bytes, hexadecimal integers for
 masks and bit patterns, and decimal integers for counts, arithmetic examples,

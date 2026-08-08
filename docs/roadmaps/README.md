@@ -19,9 +19,7 @@ No design proposals are currently awaiting decisions or promotion.
 ## Pending discoveries
 
 - [Primitive string conversion maintainability](PRIMITIVE_STRING_CONVERSIONS_DISCOVERIES.md)
-  — centralize canonical standard-library test fixture closures while
-  preserving explicit module overrides and source-order determinism, and fix
-  produced optional shared-array result unwrapping through verified MIR.
+  — fix produced optional shared-array result unwrapping through verified MIR.
 
 ## Implementation baseline
 

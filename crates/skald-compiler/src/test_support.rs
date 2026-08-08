@@ -23,22 +23,14 @@ use crate::{
     typeck::{type_check, TypeCheckOutput},
 };
 
-static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
+#[path = "../test_support/standard_library.rs"]
+mod standard_library;
+pub(crate) use standard_library::{
+    canonical_standard_library_sources, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
+    CANONICAL_STR_SOURCE,
+};
 
-pub(crate) const CANONICAL_STR_SOURCE: &str = include_str!("../../../std/std/str.ska");
-pub(crate) const CANONICAL_STR_FORMAT_INTEGER_SOURCE: &str =
-    include_str!("../../../std/std/str/format_integer.ska");
-pub(crate) const CANONICAL_STR_FORMAT_F64_SOURCE: &str =
-    include_str!("../../../std/std/str/format_f64.ska");
-pub(crate) const CANONICAL_STR_PARSE_INTEGER_SOURCE: &str =
-    include_str!("../../../std/std/str/parse_integer.ska");
-pub(crate) const CANONICAL_STR_PARSE_F64_SOURCE: &str =
-    include_str!("../../../std/std/str/parse_f64.ska");
-pub(crate) const CANONICAL_ERROR_SOURCE: &str = include_str!("../../../std/std/error.ska");
-pub(crate) const CANONICAL_F64_SOURCE: &str = include_str!("../../../std/std/f64.ska");
-pub(crate) const CANONICAL_IO_SOURCE: &str = include_str!("../../../std/std/io.ska");
-pub(crate) const CANONICAL_PROCESS_SOURCE: &str = include_str!("../../../std/std/process.ska");
-pub(crate) const CANONICAL_TEST_SOURCE: &str = include_str!("../../../std/std/test.ska");
+static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) const INLINE_FIELD_SOURCE: &str = concat!(
     "class Root {\n",
@@ -157,26 +149,26 @@ pub(crate) fn load_module_sources_with_standard_library(
     entry: &str,
     sources: &[(&str, &str)],
 ) -> (TemporaryDirectory, ModuleGraph) {
-    let mut complete_sources = Vec::with_capacity(sources.len() + 10);
+    load_module_sources_with_standard_library_overrides(entry, sources, &[])
+}
+
+pub(crate) fn load_module_sources_with_standard_library_overrides<'a>(
+    entry: &str,
+    sources: &[(&'a str, &'a str)],
+    overrides: &[(&str, &'a str)],
+) -> (TemporaryDirectory, ModuleGraph) {
+    let canonical = canonical_standard_library_sources(overrides);
+    for (path, _) in sources {
+        assert!(
+            !canonical
+                .iter()
+                .any(|(canonical_path, _)| canonical_path == path),
+            "canonical module `{path}` must be supplied as an explicit override"
+        );
+    }
+    let mut complete_sources = Vec::with_capacity(sources.len() + canonical.len());
     complete_sources.extend_from_slice(sources);
-    complete_sources.extend([
-        ("std/str.ska", CANONICAL_STR_SOURCE),
-        (
-            "std/str/format_integer.ska",
-            CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-        ),
-        ("std/str/format_f64.ska", CANONICAL_STR_FORMAT_F64_SOURCE),
-        (
-            "std/str/parse_integer.ska",
-            CANONICAL_STR_PARSE_INTEGER_SOURCE,
-        ),
-        ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
-        ("std/error.ska", CANONICAL_ERROR_SOURCE),
-        ("std/f64.ska", CANONICAL_F64_SOURCE),
-        ("std/io.ska", CANONICAL_IO_SOURCE),
-        ("std/process.ska", CANONICAL_PROCESS_SOURCE),
-        ("std/test.ska", CANONICAL_TEST_SOURCE),
-    ]);
+    complete_sources.extend(canonical);
     load_module_sources(entry, &complete_sources)
 }
 
@@ -337,6 +329,8 @@ fn temporary_path(label: &str, kind: &str) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     #[test]
@@ -358,6 +352,53 @@ mod tests {
         assert!(
             lower_source_to_assembly("fn main() -> i64 { return 0; }", Target::X86_64SysV).is_ok()
         );
+    }
+
+    #[test]
+    fn canonical_standard_library_closure_is_complete_and_overridable() {
+        let canonical = canonical_standard_library_sources(&[]);
+        assert_eq!(canonical.len(), 10);
+        assert_eq!(canonical[0].0, "std/str.ska");
+        assert_eq!(canonical[9].0, "std/test.ska");
+        assert_eq!(
+            canonical
+                .iter()
+                .map(|(path, _)| *path)
+                .collect::<HashSet<_>>()
+                .len(),
+            canonical.len()
+        );
+
+        let replacement = "public fn replacement() -> unit {}\n";
+        let overridden = canonical_standard_library_sources(&[("std/io.ska", replacement)]);
+        assert_eq!(
+            overridden
+                .iter()
+                .find(|(path, _)| *path == "std/io.ska")
+                .unwrap()
+                .1,
+            replacement
+        );
+        assert_eq!(
+            overridden
+                .iter()
+                .find(|(path, _)| *path == "std/str.ska")
+                .unwrap()
+                .1,
+            CANONICAL_STR_SOURCE
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "standard-library override `std/missing.ska` is not canonical")]
+    fn canonical_standard_library_closure_rejects_unknown_overrides() {
+        canonical_standard_library_sources(&[("std/missing.ska", "")]);
+    }
+
+    #[test]
+    #[should_panic(expected = "standard-library module `std/io.ska` is overridden more than once")]
+    fn canonical_standard_library_closure_rejects_duplicate_overrides() {
+        canonical_standard_library_sources(&[("std/io.ska", "first"), ("std/io.ska", "second")]);
     }
 
     #[test]

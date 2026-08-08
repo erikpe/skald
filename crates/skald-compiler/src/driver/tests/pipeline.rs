@@ -1,32 +1,11 @@
 use super::*;
 
 fn write_canonical_standard_library(root: &Path) {
-    fs::create_dir_all(root.join("std/str")).unwrap();
-    fs::write(root.join("std/str.ska"), CANONICAL_STR_SOURCE).unwrap();
-    fs::write(
-        root.join("std/str/format_integer.ska"),
-        CANONICAL_STR_FORMAT_INTEGER_SOURCE,
-    )
-    .unwrap();
-    fs::write(
-        root.join("std/str/format_f64.ska"),
-        CANONICAL_STR_FORMAT_F64_SOURCE,
-    )
-    .unwrap();
-    fs::write(
-        root.join("std/str/parse_integer.ska"),
-        CANONICAL_STR_PARSE_INTEGER_SOURCE,
-    )
-    .unwrap();
-    fs::write(
-        root.join("std/str/parse_f64.ska"),
-        CANONICAL_STR_PARSE_F64_SOURCE,
-    )
-    .unwrap();
-    fs::write(root.join("std/error.ska"), CANONICAL_ERROR_SOURCE).unwrap();
-    fs::write(root.join("std/f64.ska"), CANONICAL_F64_SOURCE).unwrap();
-    fs::write(root.join("std/io.ska"), CANONICAL_IO_SOURCE).unwrap();
-    fs::write(root.join("std/process.ska"), CANONICAL_PROCESS_SOURCE).unwrap();
+    for (relative, source) in canonical_standard_library_sources(&[]) {
+        let path = root.join(relative);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, source).unwrap();
+    }
 }
 
 fn module_request(

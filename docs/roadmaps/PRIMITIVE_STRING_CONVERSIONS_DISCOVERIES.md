@@ -4,34 +4,6 @@ This record owns maintainability work discovered while implementing the
 primitive string conversions roadmap but not required for its source-visible
 conversion behavior.
 
-## Canonical standard-library fixture closure
-
-**Priority:** medium after the primitive string conversions roadmap.
-
-**Problem:** Compiler tests manually enumerate the canonical `std::str`,
-`std::error`, `std::f64`, `std::io`, and string companion modules in several
-independent fixture builders. Adding `std::str::format_f64` and then its shared
-`std::str::bigunsigned_helper` dependency required repeating each new module in
-resolver intrinsic tests, MIR I/O fixtures, driver provider tests, and
-cross-process pipeline fixtures. Migrating golden programs to `std::io` again
-required extending the cross-process string fixture independently. A future
-companion can silently leave a fixture with an incomplete reachable module
-closure.
-
-**Evidence:** The canonical constants and general loader live in
-`crates/skald-compiler/src/test_support.rs`, while additional source lists
-remain in `src/resolve/tests/intrinsics.rs`, `src/mir/test_fixtures/io.rs`,
-`src/driver/tests/pipeline.rs`, and `tests/pipeline_determinism.rs`.
-
-**Likely owner:** Compiler test-support and module-fixture infrastructure.
-
-**Useful boundary:** Provide one reusable canonical standard-library closure
-builder that can install all current modules, accept explicit per-module
-overrides for malformed/replacement tests, and still let determinism tests
-choose source-creation order deliberately. Migrate the duplicated lists and
-retain exact reachable-source-count assertions. Do not turn this into a
-production module-loader shortcut or hide provider-root behavior under test.
-
 ## Optional shared-array result unwrap
 
 **Priority:** high after the primitive string conversions roadmap.
