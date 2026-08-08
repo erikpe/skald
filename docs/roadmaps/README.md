@@ -22,9 +22,6 @@ No design proposals are currently awaiting decisions or promotion.
   — centralize canonical standard-library test fixture closures while
   preserving explicit module overrides and source-order determinism, and fix
   produced optional shared-array result unwrapping through verified MIR.
-- [Standard I/O maintainability](STANDARD_IO_DISCOVERIES.md) — extract
-  assembly-only native probe builders from the backend behavior suite in a
-  future focused test-organization cleanup.
 
 ## Implementation baseline
 
