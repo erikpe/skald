@@ -202,6 +202,24 @@ fn subprocess_failure_includes_the_tool_and_status() {
 }
 
 #[test]
+fn subprocess_failure_precedes_an_early_closed_stdin_pipe() {
+    let directory = TemporaryDirectory::new("driver-closed-toolchain-stdin").unwrap();
+    let runtime_placeholder = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+    let toolchain = Toolchain::new("false", runtime_placeholder);
+    let assembly = "x".repeat(1024 * 1024);
+    for _ in 0..16 {
+        let error = toolchain
+            .link_assembly(&assembly, &directory.join("output"))
+            .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "toolchain `false` failed with exit status 1"
+        );
+    }
+    assert!(temporary_artifacts(directory.path()).is_empty());
+}
+
+#[test]
 fn process_start_failure_is_structured() {
     let runtime_placeholder = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
     let toolchain = Toolchain::new("skald-test-tool-that-does-not-exist", runtime_placeholder);

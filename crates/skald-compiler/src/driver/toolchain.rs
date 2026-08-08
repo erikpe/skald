@@ -172,6 +172,20 @@ fn execute_link(invocation: &LinkInvocation) -> Result<LinkObservation, Toolchai
             tool: invocation.program().to_owned(),
             source,
         })?;
+
+    // A tool may reject its invocation and close stdin before consuming all
+    // assembly. In that case the pipe write and process failure describe the
+    // same failed invocation, and scheduling alone determines whether the
+    // writer observes `EPIPE`. Prefer the completed process status so the
+    // diagnostic is stable and retains the tool's captured output. A process
+    // that reports success must still have consumed the complete input.
+    if !result.status.success() {
+        return Ok(LinkObservation::new(
+            result.status.code(),
+            result.stdout,
+            result.stderr,
+        ));
+    }
     if let Err(source) = write_result {
         return Err(ToolchainError::WriteAssembly {
             tool: invocation.program().to_owned(),
