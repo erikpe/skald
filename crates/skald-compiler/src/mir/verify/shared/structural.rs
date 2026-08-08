@@ -6,12 +6,13 @@ use crate::identity::CallableId;
 
 use super::super::{
     super::model::{
-        BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceProjection,
-        MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
-        MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy,
-        MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize,
-        MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
-        MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId, ValueId,
+        BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceBase,
+        MirPlaceProjection, MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode,
+        MirSharedAllocationOrigin, MirSharedCast, MirSharedCastSource, MirSharedCastTransfer,
+        MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace,
+        MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId,
+        ValueId,
     },
     context::Verifier,
     type_operations::TypeRelation,
@@ -291,13 +292,15 @@ impl<'mir> Verifier<'mir> {
                         (MirType::Shared(expected), MirType::Shared(actual))
                             if self.shared_target_accepts(expected, actual)
                     )
-                    && matches!(
-                        copy.source.projections.last(),
-                        Some(
-                            MirPlaceProjection::Field(_)
-                                | MirPlaceProjection::ArrayElement { .. }
+                    && (matches!(
+                            copy.source.projections.last(),
+                            Some(
+                                MirPlaceProjection::Field(_)
+                                    | MirPlaceProjection::ArrayElement { .. }
+                            )
                         )
-                    )
+                        || (matches!(copy.source.base, MirPlaceBase::StaticField(_))
+                            && copy.source.projections.is_empty()))
         ) {
             self.block_error(
                 function.callable(),
@@ -500,12 +503,18 @@ impl<'mir> Verifier<'mir> {
                     .storage(backing)
                     .is_some_and(|storage| storage.kind == MirStorageKind::ArrayBacking)
             });
-        let receiver_initialization = function.receiver()
-            == Some(destination.base.expect_local_storage())
+        let receiver_initialization = destination
+            .base
+            .local_storage()
+            .is_some_and(|storage| function.receiver() == Some(storage))
             && matches!(
                 function.callable(),
                 CallableId::Initializer(_) | CallableId::CopyConstructor(_)
             );
+        let static_initialization = initialization
+            && field.is_some_and(|field| {
+                self.is_static_initializer_destination(function, destination, field.ty)
+            });
         let valid = matches!(
             (field, source),
             (Some(field), Some(source))
@@ -513,10 +522,15 @@ impl<'mir> Verifier<'mir> {
                     && matches!(field.ty, MirType::Shared(_))
                     && field.ty == source.ty
                     && source.kind == MirStorageKind::Temporary
-                    && (is_direct_field || (initialization && is_unpublished_array_element))
+                    && (is_direct_field
+                        || (initialization && is_unpublished_array_element)
+                        || static_initialization)
         );
         if !valid
-            || (initialization && !receiver_initialization && !is_unpublished_array_element)
+            || (initialization
+                && !receiver_initialization
+                && !is_unpublished_array_element
+                && !static_initialization)
             || (!initialization && receiver_initialization)
         {
             self.block_error(

@@ -169,6 +169,7 @@ impl MirMemberDefinition {
 pub enum MirDefinitionRef<'mir> {
     Function(&'mir MirFunctionDefinition),
     Member(&'mir MirMemberDefinition),
+    StaticInitializer(&'mir super::PreliminaryMirStaticInitializer),
 }
 
 impl<'mir> MirDefinitionRef<'mir> {
@@ -176,6 +177,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => definition.callable(),
             Self::Member(definition) => definition.callable,
+            Self::StaticInitializer(definition) => definition.callable(),
         }
     }
 
@@ -183,6 +185,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(_) => None,
             Self::Member(definition) => definition.receiver,
+            Self::StaticInitializer(_) => None,
         }
     }
 
@@ -190,6 +193,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(_) => None,
             Self::Member(definition) => Some(definition.class_owner),
+            Self::StaticInitializer(definition) => Some(definition.id.class()),
         }
     }
 
@@ -197,6 +201,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => definition.return_storage,
             Self::Member(definition) => definition.return_storage,
+            Self::StaticInitializer(_) => None,
         }
     }
 
@@ -204,6 +209,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => &definition.parameters,
             Self::Member(definition) => &definition.parameters,
+            Self::StaticInitializer(_) => &[],
         }
     }
 
@@ -211,6 +217,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => &definition.storage,
             Self::Member(definition) => &definition.storage,
+            Self::StaticInitializer(definition) => &definition.storage,
         }
     }
 
@@ -218,6 +225,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => &definition.values,
             Self::Member(definition) => &definition.values,
+            Self::StaticInitializer(definition) => &definition.values,
         }
     }
 
@@ -225,6 +233,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => &definition.body,
             Self::Member(definition) => &definition.body,
+            Self::StaticInitializer(definition) => &definition.body,
         }
     }
 
@@ -250,6 +259,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => definition.span,
             Self::Member(definition) => definition.span,
+            Self::StaticInitializer(definition) => definition.span,
         }
     }
 
@@ -257,6 +267,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => definition.storage(id),
             Self::Member(definition) => definition.storage(id),
+            Self::StaticInitializer(definition) => definition.storage(id),
         }
     }
 
@@ -264,6 +275,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => definition.value(id),
             Self::Member(definition) => definition.value(id),
+            Self::StaticInitializer(definition) => definition.value(id),
         }
     }
 
@@ -271,6 +283,7 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(definition) => definition.block(id),
             Self::Member(definition) => definition.block(id),
+            Self::StaticInitializer(definition) => definition.block(id),
         }
     }
 }
@@ -284,6 +297,12 @@ impl<'mir> From<&'mir MirFunctionDefinition> for MirDefinitionRef<'mir> {
 impl<'mir> From<&'mir MirMemberDefinition> for MirDefinitionRef<'mir> {
     fn from(definition: &'mir MirMemberDefinition) -> Self {
         Self::Member(definition)
+    }
+}
+
+impl<'mir> From<&'mir super::PreliminaryMirStaticInitializer> for MirDefinitionRef<'mir> {
+    fn from(definition: &'mir super::PreliminaryMirStaticInitializer) -> Self {
+        Self::StaticInitializer(definition)
     }
 }
 

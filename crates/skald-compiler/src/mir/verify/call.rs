@@ -576,19 +576,20 @@ impl<'mir> Verifier<'mir> {
             ),
             (MirType::Array(array), None, destination) => {
                 let complete_destination = call.destination.as_ref().is_some_and(|place| {
-                    place.projections.is_empty()
-                        && matches!(place.base, MirPlaceBase::Storage(_))
-                        && function
-                            .storage(place.base.expect_local_storage())
-                            .is_some_and(|storage| {
-                                matches!(
-                                    storage.kind,
-                                    MirStorageKind::Local
-                                        | MirStorageKind::ArrayProduced
-                                        | MirStorageKind::Argument
-                                        | MirStorageKind::Return
-                                )
-                            })
+                    self.is_static_initializer_destination(function, place, MirType::Array(array))
+                        || (place.projections.is_empty()
+                            && matches!(place.base, MirPlaceBase::Storage(_))
+                            && function
+                                .storage(place.base.expect_local_storage())
+                                .is_some_and(|storage| {
+                                    matches!(
+                                        storage.kind,
+                                        MirStorageKind::Local
+                                            | MirStorageKind::ArrayProduced
+                                            | MirStorageKind::Argument
+                                            | MirStorageKind::Return
+                                    )
+                                }))
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Array(array))
                     || !complete_destination
@@ -618,7 +619,11 @@ impl<'mir> Verifier<'mir> {
             ),
             (MirType::Class(class), None, destination) => {
                 let complete_destination = call.destination.as_ref().is_some_and(|place| {
-                    matches!(place.base, MirPlaceBase::Storage(_))
+                    self.is_static_initializer_destination(
+                        function,
+                        place,
+                        MirType::Class(class),
+                    ) || (matches!(place.base, MirPlaceBase::Storage(_))
                         && function
                             .storage(place.base.expect_local_storage())
                             .is_some_and(|storage| match place.projections.as_slice() {
@@ -638,7 +643,7 @@ impl<'mir> Verifier<'mir> {
                                     crate::mir::MirPlaceProjection::OptionalPayload(_),
                                 ] => storage.kind == MirStorageKind::ArrayBacking,
                                 _ => false,
-                            })
+                            }))
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Class(class))
                     || !complete_destination
@@ -657,7 +662,11 @@ impl<'mir> Verifier<'mir> {
             ),
             (MirType::OptionalPrimitive(payload), None, destination) => {
                 let complete_destination = call.destination.as_ref().is_some_and(|place| {
-                    place.projections.is_empty()
+                    self.is_static_initializer_destination(
+                        function,
+                        place,
+                        MirType::OptionalPrimitive(payload),
+                    ) || (place.projections.is_empty()
                         && matches!(place.base, MirPlaceBase::Storage(_))
                         && function
                             .storage(place.base.expect_local_storage())
@@ -668,7 +677,7 @@ impl<'mir> Verifier<'mir> {
                                         | MirStorageKind::Temporary
                                         | MirStorageKind::Argument
                                 )
-                            })
+                            }))
                 });
                 if destination.map(|place| place.ty) != Some(MirType::OptionalPrimitive(payload))
                     || !complete_destination

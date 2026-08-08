@@ -489,17 +489,18 @@ impl ArrayOwnerState {
     ) {
         if let MirInstruction::Call(call) = instruction {
             if let Some(destination) = &call.destination {
-                let storage = destination.base.expect_local_storage();
-                if function
-                    .storage(storage)
-                    .is_some_and(|entry| entry.kind == MirStorageKind::ArrayProduced)
-                    && (!self.produced.insert(storage) || self.consumed.contains(&storage))
-                {
-                    verifier.block_error(
-                        function.callable(),
-                        block,
-                        "produced array call destination is initialized more than once",
-                    );
+                if let Some(storage) = destination.base.local_storage() {
+                    if function
+                        .storage(storage)
+                        .is_some_and(|entry| entry.kind == MirStorageKind::ArrayProduced)
+                        && (!self.produced.insert(storage) || self.consumed.contains(&storage))
+                    {
+                        verifier.block_error(
+                            function.callable(),
+                            block,
+                            "produced array call destination is initialized more than once",
+                        );
+                    }
                 }
             }
         }

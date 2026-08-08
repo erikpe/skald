@@ -747,7 +747,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
         state: &mut OwnerState,
         destination: &MirPlace,
     ) {
-        if matches!(destination.base, MirPlaceBase::SharedPointee(_)) {
+        if matches!(
+            destination.base,
+            MirPlaceBase::SharedPointee(_) | MirPlaceBase::StaticField(_)
+        ) {
+            // Static destination completion belongs to the preliminary
+            // publication verifier and, later, the global lifecycle plan. It
+            // is not a function-local cleanup obligation.
             return;
         }
         if destination
@@ -944,6 +950,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 
     fn place_is_live(&self, state: &OwnerState, place: &MirPlace) -> bool {
+        if matches!(place.base, MirPlaceBase::StaticField(_)) {
+            // Preliminary static dependency analysis decides whether a static
+            // root is live at a particular lifecycle point. The structural
+            // owner verifier must still validate all local carriers around it.
+            return true;
+        }
         if matches!(place.base, MirPlaceBase::ArrayAlias(_)) {
             // The array ownership verifier proves that a captured alias has
             // one compatible live backing or owner anchor at every consumer.
@@ -1002,7 +1014,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 
     fn place_type(&self, place: &MirPlace) -> Option<MirType> {
-        let mut ty = self.function.storage(place.base.expect_local_storage())?.ty;
+        let mut ty = match place.base {
+            MirPlaceBase::StaticField(field) => self.program.static_field(field)?.ty,
+            _ => self.function.storage(place.base.local_storage()?)?.ty,
+        };
         for projection in &place.projections {
             match *projection {
                 MirPlaceProjection::Base(base) => {

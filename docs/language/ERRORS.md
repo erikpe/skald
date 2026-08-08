@@ -38,8 +38,9 @@ resolution. Type checking reports `TYP042` at an initializer-free declaration
 whose type has no complete all-zero live value, or at an explicit declaration
 whose type cannot store a value. Explicit expressions otherwise use ordinary
 type mismatch, overload, privacy, copy-capability, and ownership diagnostics.
-They are retained as complete typed stored-value HIR; the driver reports
-`DRV001` at the subsequent not-yet-implemented lifecycle-MIR boundary rather
+They are retained as complete typed stored-value HIR and structurally verified
+preliminary lifecycle MIR; the driver reports `DRV001` at the subsequent
+not-yet-implemented dependency-analysis and lifecycle-planning boundary rather
 than forming an executable that ignores them. Every accepted
 initializer-free primitive, inline-optional, optional shared-owner, and
 inline-array declaration can be read or mutated through its documented

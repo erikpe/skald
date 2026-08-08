@@ -6,7 +6,7 @@ use crate::{
     backend::{emit_assembly, BackendError, Target},
     diagnostics::{Diagnostic, Diagnostics},
     lexer::lex,
-    mir::lower_hir,
+    mir::{lower_preliminary_hir, verify_preliminary_mir},
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
@@ -19,9 +19,9 @@ use crate::{
 
 use super::CompilationRequest;
 
-/// Temporary driver boundary while typed static initializers await lifecycle
-/// MIR lowering and planning.
-pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_LOWERING: &str = "DRV001";
+/// Temporary driver boundary while preliminary static lifecycle MIR awaits
+/// dependency analysis and planning.
+pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_PLANNING: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -126,23 +126,27 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    for initializer in hir.static_initializers() {
+    let preliminary = lower_preliminary_hir(&hir);
+    verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
+    for initializer in preliminary.static_initializers() {
         diagnostics.push(
             Diagnostic::error(
-                STATIC_INITIALIZER_REQUIRES_LIFECYCLE_LOWERING,
-                "typed static field initialization cannot be lowered yet",
+                STATIC_INITIALIZER_REQUIRES_LIFECYCLE_PLANNING,
+                "static field initialization cannot be planned yet",
             )
             .with_primary_label(
                 initializer.span,
-                "stored-value typing is complete, but lifecycle MIR lowering is not implemented",
+                "preliminary lifecycle MIR is complete, but dependency planning is not implemented",
             )
-            .with_note("no initializer is replaced by a zero value and no assembly is produced"),
+            .with_note("unplanned lifecycle MIR cannot be consumed by a backend"),
         );
     }
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
     }
-    let mir = lower_hir(&hir);
+    let mir = preliminary
+        .try_into_final()
+        .expect("initializer-free preliminary MIR must convert to final MIR");
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 

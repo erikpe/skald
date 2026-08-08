@@ -57,6 +57,7 @@ mod shared;
 mod shifts;
 mod static_fields;
 mod static_inheritance;
+mod static_initializers;
 mod static_methods;
 mod storage_lifetimes;
 mod strings;

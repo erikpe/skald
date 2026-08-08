@@ -8,7 +8,7 @@ use std::fmt;
 
 use crate::identity::CallableId;
 
-use super::model::{BlockId, MirProgram};
+use super::model::{BlockId, MirProgram, PreliminaryMirProgram};
 
 mod arguments;
 mod array;
@@ -31,6 +31,7 @@ mod optional;
 mod path_conditions;
 mod path_state;
 mod place;
+mod preliminary;
 mod primitive_cast;
 mod shared;
 mod shift;
@@ -100,4 +101,10 @@ pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     } else {
         Err(MirVerificationErrors { errors })
     }
+}
+
+pub fn verify_preliminary_mir(
+    program: &PreliminaryMirProgram,
+) -> Result<(), MirVerificationErrors> {
+    preliminary::verify(program)
 }

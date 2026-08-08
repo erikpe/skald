@@ -4,8 +4,8 @@ use crate::{
     identity::{CallableId, ClassId},
     mir::{
         MirArgument, MirBasicBlock, MirClassOptionalSource, MirDefinitionRef, MirInstruction,
-        MirOptionalSharedSource, MirOptionalSource, MirPlace, MirProgram, MirRvalueKind,
-        MirStorageKind, MirTerminator, MirType, StorageId,
+        MirOptionalSharedSource, MirOptionalSource, MirPlace, MirPlaceBase, MirProgram,
+        MirRvalueKind, MirStorageKind, MirTerminator, MirType, StorageId,
     },
 };
 
@@ -16,17 +16,22 @@ pub(super) struct InitializationState {
 
 impl InitializationState {
     pub(super) fn at_entry(program: &MirProgram, function: MirDefinitionRef<'_>) -> Self {
+        let initializing_field = match function.callable() {
+            CallableId::StaticInitializer(initializer) => Some(initializer.field()),
+            _ => None,
+        };
         let static_optionals = program.classes.iter().flat_map(|class| {
             class
                 .static_fields
                 .iter()
                 .filter(|field| {
-                    matches!(
-                        field.ty,
-                        MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
-                            | MirType::OptionalShared(_)
-                    )
+                    Some(field.id) != initializing_field
+                        && matches!(
+                            field.ty,
+                            MirType::OptionalPrimitive(_)
+                                | MirType::OptionalClass(_)
+                                | MirType::OptionalShared(_)
+                        )
                 })
                 .map(|field| MirPlace::static_field(field.id))
         });
@@ -145,10 +150,18 @@ impl InitializationState {
                         }
                     }
                     if let Some(destination) = &call.destination {
-                        if function
-                            .storage(destination.base.expect_local_storage())
-                            .is_some_and(|storage| is_optional(storage.ty))
-                        {
+                        let destination_type = destination
+                            .base
+                            .local_storage()
+                            .and_then(|storage| function.storage(storage))
+                            .map(|storage| storage.ty)
+                            .or_else(|| match destination.base {
+                                MirPlaceBase::StaticField(field) => {
+                                    program.static_field(field).map(|field| field.ty)
+                                }
+                                _ => None,
+                            });
+                        if destination_type.is_some_and(is_optional) {
                             self.insert(destination.clone());
                         } else {
                             self.initialize_complete_class_storage(program, function, destination);
@@ -191,7 +204,7 @@ impl InitializationState {
         function: MirDefinitionRef<'_>,
         place: &MirPlace,
     ) {
-        let Some(class) = complete_class_storage(function, place) else {
+        let Some(class) = complete_class_storage(program, function, place) else {
             return;
         };
         self.initialize_optional_fields(program, class, place);
@@ -354,13 +367,24 @@ pub(super) fn is_optional(ty: MirType) -> bool {
     )
 }
 
-fn complete_class_storage(function: MirDefinitionRef<'_>, place: &MirPlace) -> Option<ClassId> {
+fn complete_class_storage(
+    program: &MirProgram,
+    function: MirDefinitionRef<'_>,
+    place: &MirPlace,
+) -> Option<ClassId> {
     place
         .projections
         .is_empty()
-        .then(|| function.storage(place.base.expect_local_storage()))
+        .then(|| match place.base {
+            MirPlaceBase::StaticField(field) => program.static_field(field).map(|field| field.ty),
+            _ => place
+                .base
+                .local_storage()
+                .and_then(|storage| function.storage(storage))
+                .map(|storage| storage.ty),
+        })
         .flatten()
-        .and_then(|storage| match storage.ty {
+        .and_then(|ty| match ty {
             MirType::Class(class) => Some(class),
             _ => None,
         })

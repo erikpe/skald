@@ -51,15 +51,7 @@ impl Verifier<'_> {
                 );
                 return None;
             };
-            if !field.ty.is_scalar_value()
-                && !matches!(
-                    field.ty,
-                    MirType::OptionalPrimitive(_)
-                        | MirType::OptionalClass(_)
-                        | MirType::OptionalShared(_)
-                        | MirType::Array(_)
-                )
-            {
+            if !self.static_field_type_is_supported(field.id, field.ty) {
                 self.block_error(
                     function.callable(),
                     block.id,

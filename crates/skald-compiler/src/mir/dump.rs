@@ -7,8 +7,48 @@ use crate::dump_format::{write_quoted, write_span};
 use super::model::*;
 
 pub fn dump_mir(program: &MirProgram) -> String {
+    dump_program(program, "MirProgram")
+}
+
+pub fn dump_preliminary_mir(program: &PreliminaryMirProgram) -> String {
+    let mut output = dump_program(program.program(), "PreliminaryMirProgram");
+    output.push_str("  StaticInitializationModes\n");
+    for field in program.static_fields() {
+        let _ = write!(output, "    StaticField {} ", field.field);
+        match field.initializer {
+            Some(initializer) => {
+                let _ = write!(output, "explicit {initializer}");
+            }
+            None => output.push_str("zero-default"),
+        }
+        let _ = write!(output, " : {}", field.ty);
+        write_span(&mut output, field.span);
+        output.push('\n');
+    }
+    if program.has_static_initializers() {
+        output.push_str("  StaticInitializers\n");
+        for initializer in program.static_initializers() {
+            let _ = write!(
+                output,
+                "    StaticInitializer {} destination {} : {}",
+                initializer.id, initializer.field, initializer.destination_type
+            );
+            dump_executable_body(&mut output, initializer.into());
+            let _ = write!(
+                output,
+                "      Publication {} -> {}",
+                initializer.publication.initialization_exit, initializer.publication.cleanup_entry,
+            );
+            write_span(&mut output, initializer.publication.span);
+            output.push('\n');
+        }
+    }
+    output
+}
+
+fn dump_program(program: &MirProgram, heading: &str) -> String {
     let mut output = String::new();
-    output.push_str("MirProgram");
+    output.push_str(heading);
     write_span(&mut output, program.span);
     output.push('\n');
     let _ = writeln!(output, "  SelectedModule {}", program.modules.selected());

@@ -185,10 +185,18 @@ fn verify_instruction(
                 }
             }
             if let Some(destination) = &call.destination {
-                if function
-                    .storage(destination.base.expect_local_storage())
-                    .is_some_and(|storage| is_optional(storage.ty))
-                {
+                let destination_type = destination
+                    .base
+                    .local_storage()
+                    .and_then(|storage| function.storage(storage))
+                    .map(|storage| storage.ty)
+                    .or_else(|| match destination.base {
+                        MirPlaceBase::StaticField(field) => {
+                            verifier.program.static_field(field).map(|field| field.ty)
+                        }
+                        _ => None,
+                    });
+                if destination_type.is_some_and(is_optional) {
                     if !state.insert(destination.clone()) {
                         verifier.block_error(
                             function.callable(),

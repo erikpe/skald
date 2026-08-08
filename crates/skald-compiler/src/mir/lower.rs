@@ -30,6 +30,7 @@ mod program;
 mod shared;
 mod shift;
 mod statement;
+mod static_initializer;
 mod type_operations;
 
 use cleanup::CleanupPlanner;
@@ -38,17 +39,31 @@ use loop_context::LoopContextStack;
 
 /// Lowers a fully type-checked HIR program to MIR.
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    assert!(
-        hir.static_initializers().next().is_none(),
-        "typed static initializers require lifecycle MIR lowering"
-    );
-    let mir = program::lower_program(hir);
+    let preliminary = lower_preliminary_hir(hir);
+    let mir = preliminary
+        .try_into_final()
+        .unwrap_or_else(|_| panic!("typed static initializers require lifecycle planning"));
 
     #[cfg(debug_assertions)]
     if let Err(errors) = super::verify_mir(&mir) {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
     mir
+}
+
+/// Lowers complete typed HIR into the closed-world product consumed by static
+/// lifecycle analysis. This product cannot be passed directly to a backend.
+pub fn lower_preliminary_hir(hir: &HirProgram) -> PreliminaryMirProgram {
+    let program = program::lower_program(hir);
+    let (static_fields, static_initializers) =
+        static_initializer::lower_static_initializers(hir, program.string_language_item);
+    let preliminary = PreliminaryMirProgram::new(program, static_fields, static_initializers);
+
+    #[cfg(debug_assertions)]
+    if let Err(errors) = super::verify_preliminary_mir(&preliminary) {
+        panic!("HIR lowering produced invalid preliminary MIR:\n{errors}");
+    }
+    preliminary
 }
 
 fn invalid_array_hir() -> ! {

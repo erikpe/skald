@@ -12,7 +12,7 @@ use skald_compiler::{
     driver::EntrySelector,
     hir::dump_hir,
     lexer::{dump_tokens, lex},
-    mir::{dump_mir, lower_hir},
+    mir::{dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir},
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
@@ -120,10 +120,10 @@ const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_
 const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
-const STATIC_INITIALIZER_HIR_HELPER_OUTPUT: &str =
-    "SKALD_STATIC_INITIALIZER_HIR_DETERMINISM_OUTPUT";
-const STATIC_INITIALIZER_HIR_TEST_NAME: &str =
-    "static_initializer_hir_products_are_deterministic_across_processes";
+const STATIC_INITIALIZER_PRELIMINARY_HELPER_OUTPUT: &str =
+    "SKALD_STATIC_INITIALIZER_PRELIMINARY_DETERMINISM_OUTPUT";
+const STATIC_INITIALIZER_PRELIMINARY_TEST_NAME: &str =
+    "static_initializer_preliminary_products_are_deterministic_across_processes";
 const STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_STATIC_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
@@ -213,12 +213,12 @@ fn static_field_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn static_initializer_hir_products_are_deterministic_across_processes() {
+fn static_initializer_preliminary_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
-        "static-initializer-hir",
-        STATIC_INITIALIZER_HIR_HELPER_OUTPUT,
-        STATIC_INITIALIZER_HIR_TEST_NAME,
-        static_initializer_hir_phase_dump,
+        "static-initializer-preliminary",
+        STATIC_INITIALIZER_PRELIMINARY_HELPER_OUTPUT,
+        STATIC_INITIALIZER_PRELIMINARY_TEST_NAME,
+        static_initializer_preliminary_phase_dump,
     );
 }
 
@@ -927,8 +927,8 @@ fn static_field_phase_dump() -> String {
     ))
 }
 
-fn static_initializer_hir_phase_dump() -> String {
-    typed_hir_phase_dump(concat!(
+fn static_initializer_preliminary_phase_dump() -> String {
+    preliminary_phase_dump(concat!(
         "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
         "class State {\n",
         "  static count: i64 = combine(20, 22);\n",
@@ -1457,7 +1457,7 @@ fn complete_phase_dump(text: &str) -> String {
     )
 }
 
-fn typed_hir_phase_dump(text: &str) -> String {
+fn preliminary_phase_dump(text: &str) -> String {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("typed-hir-determinism.ska", text);
     let source = sources.get(source_id).unwrap();
@@ -1471,13 +1471,15 @@ fn typed_hir_phase_dump(text: &str) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
+    let preliminary = lower_preliminary_hir(&hir);
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
         dump_hir(&hir),
+        dump_preliminary_mir(&preliminary),
     )
 }
 

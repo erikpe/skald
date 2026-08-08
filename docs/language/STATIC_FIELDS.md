@@ -1,7 +1,7 @@
 # Static Fields
 
 Status: **complete zero-default storage profile implemented; declaration
-initializer syntax, resolution, type checking, and HIR implemented**. This document is
+initializer syntax through preliminary MIR implemented**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -11,9 +11,9 @@ Static fields are mutable class-owned places. Initializer-free declarations
 use the implemented zero-default profile: their initial live value is
 established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
-and type-checked as direct stored-value initialization. Their typed HIR is
-complete, but the compiler deliberately stops before MIR and executable output
-until lifecycle lowering, dependency planning, startup, and shutdown land.
+type-checked as direct stored-value initialization, and lowered to structurally
+verified preliminary lifecycle MIR. The compiler deliberately stops before
+dependency analysis, lifecycle planning, and executable output.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
@@ -22,7 +22,8 @@ optional shared-owner, and inline-array operations to receiver-free typed HIR
 and MIR places. It also retains and resolves optional declaration initializer
 expressions under stable identities, selects their ordinary stored-value
 operations, and retains those operations in typed HIR. These expressions do
-not yet execute.
+not yet execute; preliminary MIR makes their calls, temporaries, ownership
+operations, cleanup, and publication boundary available to the next analysis.
 
 ## Declaration syntax
 
@@ -217,9 +218,12 @@ unavailable-copy diagnostics are likewise the ordinary ones.
 
 The expression is evaluated once in source order within one complete
 full-expression plan. Typed HIR retains canonical static sources, calls,
-constructor and copy selections, temporary ownership, and source spans so the
-later MIR dependency analysis need not reconstruct source intent. This
-milestone does not yet define or run an activation order.
+constructor and copy selections, temporary ownership, and source spans.
+Preliminary MIR then lowers the selected operations through the ordinary body
+machinery and places full-expression cleanup after an explicit destination
+publication edge. Dependency analysis therefore scans executable operations
+instead of reconstructing source intent. This milestone does not yet define or
+run an activation order.
 
 ## Reads, writes, and replacement
 
@@ -252,10 +256,10 @@ begins. All such slots become available simultaneously. No source code runs
 to establish them, so there is no declaration order, class order, module
 order, import order, dependency order, or lazy first-use order to observe.
 Explicitly initialized declarations cannot yet reach executable compilation;
-after producing typed HIR the driver reports `DRV001` rather than silently
-discarding the initializer or emitting zero-only assembly. Their eventual
-startup and shutdown semantics are owned by the active static initialization
-roadmap.
+after producing and structurally verifying preliminary lifecycle MIR the
+driver reports `DRV001` rather than silently discarding the initializer or
+emitting zero-only assembly. Their eventual dependency plan, startup, and
+shutdown semantics are owned by the active static initialization roadmap.
 
 A static slot has process lifetime. It is not registered in any lexical scope,
 does not begin or end lifetime on a function call, and is not cleaned when the
@@ -293,7 +297,7 @@ and `TYP042` rejects either an initializer-free declaration whose type lacks a
 complete all-zero live value or an explicit declaration whose type cannot
 store a value. Explicit expressions otherwise use ordinary type, overload,
 privacy, copy-capability, and ownership diagnostics. `DRV001` marks the current
-post-HIR lifecycle-lowering boundary. Every initializer-free declaration
+post-preliminary-MIR dependency-planning boundary. Every initializer-free declaration
 accepted by zero-default validation can be used through its documented
 primitive, inline-optional, optional shared-owner, or inline-array operations
 and reaches verified MIR and native execution.

@@ -13,8 +13,8 @@ mod verify;
 #[cfg(test)]
 pub(crate) mod test_fixtures;
 
-pub use dump::dump_mir;
-pub use lower::lower_hir;
+pub use dump::{dump_mir, dump_preliminary_mir};
+pub use lower::{lower_hir, lower_preliminary_hir};
 pub use model::{
     BlockId, MirAliasAccess, MirArgument, MirArrayAnchorKind, MirArrayAssignElement,
     MirArrayBoundary, MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement,
@@ -49,13 +49,15 @@ pub use model::{
     MirSharedFieldReplace, MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease,
     MirSharedStatic, MirSharedTarget, MirShiftCountCheck, MirShiftDirection, MirShiftOperation,
     MirSignedIntegerDivisionSemantics, MirSignedMinimumPairResult, MirSignedQuotientRounding,
-    MirSignedRemainderSign, MirStaticAllocationOrigin, MirStaticDataMutability, MirStorage,
-    MirStorageDead, MirStorageKind, MirStorageLive, MirStore, MirStringInitialize,
-    MirStringLanguageItem, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminationReason,
-    MirTerminator, MirType, MirUnaryOperation, MirUserCopy, MirValue, MirViewTarget,
-    MirVirtualFamily, MirVirtualFamilyTable, OptionalGuardId, PathConditionId, StorageId, ValueId,
+    MirSignedRemainderSign, MirStaticAllocationOrigin, MirStaticDataMutability,
+    MirStaticPublication, MirStorage, MirStorageDead, MirStorageKind, MirStorageLive, MirStore,
+    MirStringInitialize, MirStringLanguageItem, MirSynthesizedCopy, MirSynthesizedFieldCopy,
+    MirTerminationReason, MirTerminator, MirType, MirUnaryOperation, MirUserCopy, MirValue,
+    MirViewTarget, MirVirtualFamily, MirVirtualFamilyTable, OptionalGuardId, PathConditionId,
+    PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget, PreliminaryMirStaticField,
+    PreliminaryMirStaticInitializer, StorageId, ValueId,
 };
-pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
+pub use verify::{verify_mir, verify_preliminary_mir, MirVerificationError, MirVerificationErrors};
 
 #[cfg(test)]
 mod tests;

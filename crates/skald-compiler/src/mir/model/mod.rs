@@ -12,6 +12,7 @@ mod io;
 mod logical;
 mod optional;
 mod path_condition;
+mod preliminary;
 mod primitive;
 mod shared;
 mod shift;
@@ -64,6 +65,10 @@ pub use optional::{
     MirOptionalViewEnd, MirPresenceTestKind,
 };
 pub use path_condition::MirPathCondition;
+pub use preliminary::{
+    MirStaticPublication, PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget,
+    PreliminaryMirStaticField, PreliminaryMirStaticInitializer,
+};
 pub use primitive::{
     MirF64ToIntegerRange, MirF64ToIntegerRounding, MirPrimitiveCast, MirPrimitiveCastKind,
     MirPrimitiveCastRangeCheck, MirPrimitiveType,

@@ -924,7 +924,7 @@ fn primitive_static_programs_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn typed_static_initializers_stop_before_unavailable_lifecycle_lowering() {
+fn preliminary_static_initializers_stop_before_unavailable_lifecycle_planning() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "static-initializer.ska",
         concat!(
@@ -941,10 +941,9 @@ fn typed_static_initializers_stop_before_unavailable_lifecycle_lowering() {
     let diagnostic = report.diagnostics.iter().next().unwrap();
     assert_eq!(
         diagnostic.code,
-        STATIC_INITIALIZER_REQUIRES_LIFECYCLE_LOWERING
+        STATIC_INITIALIZER_REQUIRES_LIFECYCLE_PLANNING
     );
-    assert!(diagnostic
-        .labels
-        .iter()
-        .any(|label| label.message.contains("stored-value typing is complete")));
+    assert!(diagnostic.labels.iter().any(|label| label
+        .message
+        .contains("preliminary lifecycle MIR is complete")));
 }

@@ -25,7 +25,8 @@ use skald_compiler::{
     lexer::{dump_tokens, lex, LexOutput},
     literal::{IntegerRadix, NumericLiteralKind},
     mir::{
-        dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
+        dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, verify_mir,
+        verify_preliminary_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
         MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirComparisonOperand,
         MirComparisonPredicate, MirDirectBase, MirIntegerBitwiseOperation, MirIntegerType,
         MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
@@ -178,6 +179,10 @@ fn intentional_phase_and_dump_paths_compose() {
         HirUnaryOperation::BitwiseComplement(HirIntegerType::U64).result_type(),
         Type::U64
     );
+    let preliminary = lower_preliminary_hir(hir);
+    verify_preliminary_mir(&preliminary).unwrap();
+    let _preliminary_dump = dump_preliminary_mir(&preliminary);
+    assert!(!preliminary.has_static_initializers());
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;

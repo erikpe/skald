@@ -497,7 +497,10 @@ impl Verifier<'_> {
                 "copy-allocation destination must name one complete unpublished payload",
             );
         }
-        let destination_storage = function.storage(destination_place.base.expect_local_storage());
+        let destination_storage = destination_place
+            .base
+            .local_storage()
+            .and_then(|storage| function.storage(storage));
         if matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
             || destination_storage
                 .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
@@ -514,7 +517,10 @@ impl Verifier<'_> {
         }
         if !construction
             && destination_place.projections.is_empty()
-            && function.receiver() == Some(destination_place.base.expect_local_storage())
+            && destination_place
+                .base
+                .local_storage()
+                .is_some_and(|storage| function.receiver() == Some(storage))
         {
             self.block_error(
                 function.callable(),

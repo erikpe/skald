@@ -27,7 +27,9 @@ The target-independent compiler path is:
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve`, `resolve::resolve_module_graph` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
-| MIR lowering | `mir::lower_hir` | target-independent `MirProgram` |
+| Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
+| Static lifecycle analysis and planning | not yet implemented | eventually converts preliminary MIR to planned `MirProgram` |
+| Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
 `driver::compile_request_to_assembly` composes provider normalization,
@@ -152,16 +154,28 @@ field-derived initializer identity, destination type, and
 transfer, optional or array behavior and full-expression ownership metadata.
 It is direct initialization of uninitialized storage rather than assignment.
 
-Explicit initializers currently stop after typed HIR with driver diagnostic
-`DRV001`; no MIR or executable output is produced, and direct MIR lowering
-asserts the same phase boundary so an initializer cannot be silently replaced
-by a zero value. The next roadmap milestone makes temporary cleanup and the
-publication boundary explicit in preliminary MIR. MIR already models accepted
-zero-default places as initialized, always-live program-owned roots; ordinary
-ownership, anchor, optional, array, and place verification proves every
-operation without a startup or cleanup instruction. Backends consume only
-that verified identity and type. The source-visible lifetime rule is owned by
-the [static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
+`PreliminaryMirProgram` privately owns the ordinary closed-world program and
+one independently identified body per explicit initializer. Each body uses the
+ordinary target-directed lowering paths for calls, construction, copy,
+optionals, shared owners, strings, arrays, temporaries, and cleanup. One CFG
+edge separates destination completion from post-publication full-expression
+cleanup. The preliminary product retains ordinary bodies, virtual families,
+interface conformances, destruction plans, array lifecycle metadata, and
+source spans. Shared-owner views expand through one canonical API to a finite
+set of compatible class or array lifecycle implementations.
+
+The structural preliminary verifier checks the ordinary program and every
+initializer body's identities, types, selected targets, ownership metadata,
+control flow, exact destination, and publication boundary without assuming a
+global activation order. A product containing explicit lifecycle bodies cannot
+be converted to `MirProgram`, passed to ordinary MIR passes, or consumed by a
+backend. The driver therefore reports `DRV001` only after preliminary lowering
+and verification, at the not-yet-implemented dependency-analysis and planning
+boundary. A lifecycle-free preliminary product converts to the existing final
+MIR path. MIR continues to model accepted zero-default places as initialized,
+always-live program-owned roots without startup or cleanup instructions. The
+source-visible lifetime rule is owned by the
+[static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional

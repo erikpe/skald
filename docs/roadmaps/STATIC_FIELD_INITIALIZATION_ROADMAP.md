@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI2 are
-complete, and SI3 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI3 are
+complete, and SI4 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -230,7 +230,7 @@ moves that slot before `destination`.
 - [x] SI0 — Freeze the eager static lifecycle profile
 - [x] SI1 — Retain and resolve declaration initializers
 - [x] SI2 — Type-check direct stored-value initialization
-- [ ] SI3 — Lower analyzable static lifecycle bodies to preliminary MIR
+- [x] SI3 — Lower analyzable static lifecycle bodies to preliminary MIR
 - [ ] SI4 — Infer transitive static effects
 - [ ] SI5 — Plan and diagnose static lifetimes
 - [ ] SI6 — Define and verify lifecycle MIR
@@ -351,24 +351,24 @@ invalid source cannot reach lifecycle analysis.
 implicit calls, temporaries, and cleanup cannot be missed by a second partial
 interpretation of HIR.
 
-- [ ] Split MIR construction into a preliminary program product and the final
+- [x] Split MIR construction into a preliminary program product and the final
       planned `MirProgram`, or otherwise make it impossible for a backend to
       consume lifecycle-unplanned MIR.
-- [ ] Lower one independently identified MIR body for each explicit static
+- [x] Lower one independently identified MIR body for each explicit static
       initializer through the ordinary stored-value lowering machinery,
       including evaluation order, temporaries, adoption, optional wrapping,
       array construction, and full-expression cleanup.
-- [ ] Represent the static destination, the completion/publication boundary,
+- [x] Represent the static destination, the completion/publication boundary,
       and any cleanup that follows publication explicitly enough for the
       analysis to distinguish pre-publication dependencies from legal
       post-publication uses of the newly live field.
-- [ ] Retain all ordinary callable bodies plus virtual families, interface
+- [x] Retain all ordinary callable bodies plus virtual families, interface
       conformance selections, destruction plans, array element lifecycle, and
       source spans in the preliminary product.
-- [ ] Give every implicit lifecycle operation an analyzable target or a
+- [x] Give every implicit lifecycle operation an analyzable target or a
       conservative finite target set; do not rely on backend-only destructor
       or shared-release knowledge.
-- [ ] Add a structural preliminary verifier for identities, types, targets,
+- [x] Add a structural preliminary verifier for identities, types, targets,
       ownership metadata, and control flow that is meaningful before a global
       lifecycle plan exists.
 
@@ -381,6 +381,17 @@ rejection of malformed preliminary programs.
 MIR-level closed-world program in which all executable operations relevant to
 static effects are explicit, and no target backend can observe the unplanned
 product.
+
+**Implementation result:** `PreliminaryMirProgram` privately owns the ordinary
+program, canonical field-mode inventory, and one static-initializer body per
+explicit declaration. Each body has a single CFG publication edge before
+full-expression cleanup. Ordinary and initializer bodies share verifier and
+dump machinery, while preliminary-only static destination rules and finite
+shared lifecycle target expansion preserve the final MIR/backend trust
+boundary. The complete stored-value matrix, strings, named static copies,
+publication ordering, closed-world lifecycle metadata, malformed products,
+public API composition, and cross-process dumps are covered. `make check`,
+`make golden-determinism-test`, and `git diff --check` pass.
 
 ### SI4 — Infer transitive static effects
 
