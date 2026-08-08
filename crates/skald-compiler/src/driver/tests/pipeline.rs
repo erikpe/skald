@@ -849,8 +849,8 @@ fn primitive_array_element_lists_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn lifecycle_array_element_lists_stay_at_the_structured_executable_lowering_gate() {
-    let result = compile_source_to_assembly(
+fn exact_class_array_element_lists_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
         "array-element-list.ska",
         concat!(
             "class Item { init() {} }\n",
@@ -860,9 +860,27 @@ fn lifecycle_array_element_lists_stay_at_the_structured_executable_lowering_gate
             "}\n",
         ),
         Target::X86_64SysV,
+    )
+    .expect("EL3 exact-class element lists must lower through x86-64");
+    assert!(artifact
+        .assembly
+        .contains("call .Lska.class.main.Item.c0.init.i0"));
+}
+
+#[test]
+fn remaining_element_list_families_stay_at_the_structured_executable_lowering_gate() {
+    let result = compile_source_to_assembly(
+        "array-element-list.ska",
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var values: i64?[] = i64?[]{none};\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
     );
     let CompilationError::MirLowering(errors) =
-        result.expect_err("lifecycle-bearing element lists remain gated after EL2")
+        result.expect_err("optional element lists remain gated after EL3")
     else {
         panic!("expected the MIR executable-lowering gate");
     };

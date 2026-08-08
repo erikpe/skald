@@ -1364,6 +1364,18 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             );
             write_span(output, *span);
         }
+        MirArrayInstruction::CompleteElement {
+            backing,
+            prefix,
+            position,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-complete-element {backing}[{prefix}] position {position}"
+            );
+            write_span(output, *span);
+        }
         MirArrayInstruction::InitializeNext {
             backing,
             index,

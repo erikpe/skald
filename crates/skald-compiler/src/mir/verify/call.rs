@@ -618,15 +618,18 @@ impl<'mir> Verifier<'mir> {
             ),
             (MirType::Class(class), None, destination) => {
                 let complete_destination = call.destination.as_ref().is_some_and(|place| {
-                    place.projections.is_empty()
-                        && matches!(place.base, MirPlaceBase::Storage(_))
+                    matches!(place.base, MirPlaceBase::Storage(_))
                         && function
                             .storage(place.base.expect_local_storage())
-                            .is_some_and(|storage| {
-                                matches!(
+                            .is_some_and(|storage| match place.projections.as_slice() {
+                                [] => matches!(
                                     storage.kind,
                                     MirStorageKind::Local | MirStorageKind::Temporary
-                                )
+                                ),
+                                [crate::mir::MirPlaceProjection::ArrayElement { .. }] => {
+                                    storage.kind == MirStorageKind::ArrayBacking
+                                }
+                                _ => false,
                             })
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Class(class))
@@ -635,7 +638,7 @@ impl<'mir> Verifier<'mir> {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "object-returning call requires complete exact-class local or temporary destination storage",
+                        "object-returning call requires complete exact-class local or temporary destination storage, or an unpublished element-list slot",
                     );
                 }
             }

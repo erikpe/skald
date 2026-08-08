@@ -16,9 +16,11 @@ impl BodyLowerer<'_> {
 
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
         if let Some(element) = &place.array_element {
-            return self
-                .lower_array_element_place(element)
-                .project_field(place.field);
+            return project_object_path(
+                self.lower_array_element_place(element),
+                place.receiver.projections(),
+            )
+            .project_field(place.field);
         }
         let receiver = match (
             &place.checked_cast,
@@ -64,13 +66,7 @@ impl BodyLowerer<'_> {
                 }
             }
         };
-        place
-            .projections()
-            .iter()
-            .fold(root, |projected, projection| match *projection {
-                ObjectProjection::Field(field) => projected.project_field(field),
-                ObjectProjection::Base(base) => projected.project_base(base),
-            })
+        project_object_path(root, place.projections())
     }
 
     pub(super) fn storage_for_binding(&self, binding: BindingId) -> StorageId {
@@ -87,4 +83,13 @@ impl BodyLowerer<'_> {
             BindingId::Local(id) => self.local_storage[id.index()],
         }
     }
+}
+
+fn project_object_path(root: MirPlace, projections: &[ObjectProjection]) -> MirPlace {
+    projections
+        .iter()
+        .fold(root, |projected, projection| match *projection {
+            ObjectProjection::Field(field) => projected.project_field(field),
+            ObjectProjection::Base(base) => projected.project_base(base),
+        })
 }

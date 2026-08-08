@@ -1,7 +1,7 @@
 # Arrays
 
-Status: **implemented contract on x86-64 with a frozen, primitive-executable
-explicit element-list extension**. This document is authoritative for the
+Status: **implemented contract on x86-64 with a frozen, primitive-and-class-
+executable explicit element-list extension**. This document is authoritative for the
 source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
@@ -197,8 +197,9 @@ copying has no inheritance or dynamic-check relation.
 No fill-value, per-index generator, inferred array literal, or
 multi-dimensional shape constructor is implemented. Executable nonempty
 construction accepts the existing default-length and exact-copy modes plus
-explicit primitive element lists. Lifecycle-bearing element-list families
-remain staged behind structured executable lowering.
+explicit primitive and exact-class element lists. Optional, nested-array,
+shared-owner, and optional-owner element-list families remain staged behind
+structured executable lowering.
 
 ## Frozen explicit element-list construction
 
@@ -224,12 +225,14 @@ single-expression `T[](value)` remains default-length construction and
 requires `value: u64`.
 
 The type checker accepts both brace forms and records one exact ordered
-destination plan per element in HIR. Lists of `i64`, `u64`, `u8`, `f64`, and
-`bool` execute for inline and shared outer arrays. Their MIR allocates checked
-unpublished backing before element effects, advances one verified ordered
-prefix, and publishes only after completion. The structured HIR-to-MIR gate
-continues to reject class, optional, nested-array, shared-owner, and
-optional-owner element plans until their roadmap stages land.
+destination plan per element in HIR. Lists of `i64`, `u64`, `u8`, `f64`,
+`bool`, and exact classes execute for inline and shared outer arrays. Their MIR
+allocates checked unpublished backing before element effects, advances one
+verified ordered prefix, and publishes only after completion. Exact-class
+plans use ordinary direct initialization, object-result placement, or selected
+copy construction in the final slot. The structured HIR-to-MIR gate continues
+to reject optional, nested-array, shared-owner, and optional-owner element
+plans until their roadmap stages land.
 
 The list length is the number of supplied expressions and must satisfy the
 ordinary maximum-`i64` array-length bound. Type grouping and outer ownership
@@ -749,8 +752,9 @@ The following are intentionally outside the implemented array profile:
 - inline optional array payloads and their eventual source spelling;
 - inferred array literals, expected-type-only lists, fill-value, per-index
   generator, comprehensions, spreads, repetition, and rectangular-shape
-  initialization syntax; lifecycle-bearing explicit typed element-list
-  families are frozen separately above but remain staged;
+  initialization syntax; optional, nested-array, shared-owner, and optional-
+  owner explicit typed element-list families are frozen above but remain
+  staged;
 - capacity, resizing an existing allocation, append, insertion, removal, or
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;

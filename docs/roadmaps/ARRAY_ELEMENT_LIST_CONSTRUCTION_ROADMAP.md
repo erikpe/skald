@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 through EL2 are complete and EL3 is next.
+Status: in progress; EL0 through EL3 are complete and EL4 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -48,7 +48,7 @@ lifecycle, publication, and runtime boundaries.
 - [x] EL0 — Retain explicit element-list source structure
 - [x] EL1 — Select typed destination initialization plans
 - [x] EL2 — Execute verified primitive element lists
-- [ ] EL3 — Execute exact-class destination placement and copying
+- [x] EL3 — Execute exact-class destination placement and copying
 - [ ] EL4 — Execute inline optional element initialization
 - [ ] EL5 — Execute recursively nested inline-array elements
 - [ ] EL6 — Execute shared and optional-shared owner elements
@@ -186,27 +186,27 @@ ordinary array destinations, clean exactly once, and add no runtime ABI.
 **Purpose:** Implement the frozen class-specific destination extension and
 observable lifecycle behavior after the prefix trust boundary is proven.
 
-- [ ] Supply an element slot as the final destination for an eligible
+- [x] Supply an element slot as the final destination for an eligible
       ungrouped exact-class construction, invoking the selected ordinary
       initializer directly without a default value, copy, assignment, or
       temporary.
-- [ ] Supply the slot as the final result destination for an eligible
+- [x] Supply the slot as the final result destination for an eligible
       exact-class-returning call while preserving callee cleanup and result
       completion order.
-- [ ] Copy-construct from named places and otherwise materialized sources using
+- [x] Copy-construct from named places and otherwise materialized sources using
       the selected exact operation and existing target-directed checked source
       rules.
-- [ ] Preserve grouping: a grouped fresh construction materializes, requires
+- [x] Preserve grouping: a grouped fresh construction materializes, requires
       the applicable copy constructor, copy-constructs the slot, and destroys
       its temporary at the enclosing full-expression boundary.
-- [ ] Enforce declaring-class initializer privacy at the list call site and
+- [x] Enforce declaring-class initializer privacy at the list call site and
       diagnose unavailable copy only for source shapes that require it.
-- [ ] Extend MIR lifetime and class-initialization verification so a slot
+- [x] Extend MIR lifetime and class-initialization verification so a slot
       advances the prefix only after initializer, result placement, or copy
       construction completes normally.
-- [ ] Reuse existing x86-64 initializer, object-result, copy, destructor, and
+- [x] Reuse existing x86-64 initializer, object-result, copy, destructor, and
       aligned array-element place machinery without aggregate byte copying.
-- [ ] Preserve user-visible constructor, copy-constructor, destructor, and
+- [x] Preserve user-visible constructor, copy-constructor, destructor, and
       full-expression effect order in nested lists and every owning outer
       destination.
 

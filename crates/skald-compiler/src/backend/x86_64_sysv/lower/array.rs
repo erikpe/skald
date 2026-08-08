@@ -137,6 +137,10 @@ impl InstructionSelector<'_, '_> {
                 self.advance_array_index(*prefix);
                 Ok(())
             }
+            MirArrayInstruction::CompleteElement { prefix, .. } => {
+                self.advance_array_index(*prefix);
+                Ok(())
+            }
             MirArrayInstruction::InitializeNext {
                 backing,
                 index,

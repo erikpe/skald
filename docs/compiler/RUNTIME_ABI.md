@@ -309,7 +309,7 @@ new runtime harness.
 
 ## Frozen explicit array element-list ABI boundary
 
-The frozen, primitive-executable
+The frozen, primitive-and-exact-class-executable
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
 adds no public C symbol, runtime-managed element operation, metadata format, or
 ABI-version change. The runtime marker remains `ska_rt_abi_v8`.
@@ -324,10 +324,11 @@ list expression, initialized prefix, or lifecycle identity.
 Allocation failure continues to use the existing allocation and common panic
 boundaries. Current non-unwinding termination adds no runtime partial-prefix
 cleanup service. Direct runtime tests therefore keep validating the unchanged
-allocator, reporter, header, symbol set, and version marker. Primitive
-element-list behavior is implemented entirely in compiler, verifier, backend,
-and native execution tests; later lifecycle-bearing slices retain the same
-boundary.
+allocator, reporter, header, symbol set, and version marker. Primitive and
+exact-class element-list behavior is implemented entirely in compiler,
+verifier, backend, and native execution tests; exact-class construction and
+cleanup reuse ordinary generated lifecycle operations. Later optional,
+nested-array, shared-owner, and optional-owner slices retain the same boundary.
 
 ## Implemented primitive operator ABI boundary
 

@@ -1,6 +1,6 @@
 # Array Compiler and Runtime Contract
 
-Status: **implemented contract on x86-64 with a frozen, source-retained
+Status: **implemented contract on x86-64 with a frozen, partially executable
 explicit element-list representation extension**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
@@ -197,7 +197,7 @@ array declaration nevertheless retains its independently computed default,
 copy, assignment, and destruction capabilities for later operations on the
 completed value.
 
-Primitive HIR-to-MIR lowering implements this abstract sequence:
+Primitive and exact-class HIR-to-MIR lowering implement this abstract sequence:
 
 1. materialize the constant list count and perform checked backing allocation;
 2. establish unpublished backing with an initialized prefix of zero;
@@ -207,14 +207,19 @@ Primitive HIR-to-MIR lowering implements this abstract sequence:
 6. publish inline produced backing or one shared-array owner only when the
    prefix equals the list count.
 
-MIR represents the primitive slice with `AllocateElements`, which carries the
-constant source count and establishes a zero `u64` prefix, followed by one
-`InitializeElement` per exact source position and ordinary inline or shared
-publication. Element expression lowering may introduce explicit CFG, but it
-does not introduce the uniform default/copy loop or live placeholders.
-`try_lower_hir` retains `MirLoweringError::UnsupportedArrayElementList` only
-for lifecycle-bearing element plans whose later roadmap stages have not
-landed.
+MIR represents both executable slices with `AllocateElements`, which carries
+the constant source count and establishes a zero `u64` prefix. Primitive
+sources use one `InitializeElement` per position. Exact-class sources reuse
+ordinary `Initialize`, object-result `Call`, `StringInitialize`, or
+`CopyConstruct` operations against the final array-element place, followed by
+`CompleteElement` only after that operation returns normally. Grouped produced
+sources use ordinary full-expression temporary materialization and cleanup.
+Both slices finish through ordinary inline or shared publication. Element
+expression lowering may introduce explicit CFG, but it does not introduce the
+uniform default/copy loop or live placeholders. `try_lower_hir` retains
+`MirLoweringError::UnsupportedArrayElementList` only for optional,
+nested-array, shared-owner, and optional-owner plans whose later roadmap stages
+have not landed.
 
 The MIR vocabulary may use immediate semantic positions, explicit index
 storage, ordinary category-specific initialization instructions, or a focused
@@ -251,12 +256,13 @@ public runtime entry point, metadata format, or ABI-version change is part of
 this frozen extension.
 
 Syntax, resolved IR, and HIR implement the complete typed representation.
-Verified MIR and x86-64 implement primitive lists for inline and shared outer
-ownership; the verifier proves exact scalar values, source-position order,
-prefix completion, publication, backing consumption, and storage lifetime.
-Other typed element families remain behind the executable-lowering gate. The
-[status matrix](../language/STATUS.md) distinguishes this primitive vertical
-slice from the remaining frozen profile.
+Verified MIR and x86-64 implement primitive and exact-class lists for inline
+and shared outer ownership. The verifier proves exact values or class
+destinations, source-position order, normally completed construction before
+prefix advancement, publication, backing consumption, and storage lifetime.
+Optional, nested-array, shared-owner, and optional-owner families remain behind
+the executable-lowering gate. The [status matrix](../language/STATUS.md)
+distinguishes these vertical slices from the remaining frozen profile.
 
 ## Typed HIR
 

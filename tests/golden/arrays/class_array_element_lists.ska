@@ -1,0 +1,38 @@
+import std::io;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref other: Item) {
+        self.value = other.value + 10;
+    }
+}
+
+fn make(value: i64) -> Item {
+    return Item(value);
+}
+
+fn returned() -> Item[] {
+    return Item[]{make(6)};
+}
+
+fn main() -> i64 {
+    var source: Item = Item(3);
+    var inline: Item[] = Item[]{Item(1), make(2), source, (Item(4))};
+    var shared: shared Item[] = new Item[]{Item(1), make(2), source, (Item(4))};
+
+    std::io::println_i64(inline[0].value);
+    std::io::println_i64(inline[1].value);
+    std::io::println_i64(inline[2].value);
+    std::io::println_i64(inline[3].value);
+    std::io::println_i64(shared->[0].value);
+    std::io::println_i64(shared->[1].value);
+    std::io::println_i64(shared->[2].value);
+    std::io::println_i64(shared->[3].value);
+    std::io::println_i64(returned()[0].value);
+    return 0;
+}

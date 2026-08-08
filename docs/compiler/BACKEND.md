@@ -186,16 +186,20 @@ semantics for overlap. Whole-array and exact element aliases execute through
 internal non-owning addresses. Inline backing accounts defer detached element
 destruction, while shared aliases reuse secured strong-owner anchors.
 
-The primitive slice of the frozen explicit array element-list extension adds
-no new target semantic choice. Instruction selection receives verified
-unpublished backing, a source-derived constant count, exact ordered primitive
-values, initialized-prefix advancement, and complete publication. It reuses
-ordinary checked allocation, inline/shared header layout, scalar stores, and
-release machinery while preserving allocation-before-element failure order
-and enclosing full-expression lifetime. It does not default-construct then
-assign, recover source expressions, publish a partial prefix, or introduce a
-new runtime service or descriptor layout. Class, optional, nested-array, and
-shared-owner element operations remain staged for later roadmap entries.
+The primitive and exact-class slices of the frozen explicit array element-list
+extension add no new target semantic choice. Instruction selection receives
+verified unpublished backing, a source-derived constant count, exact ordered
+initialization, initialized-prefix advancement, and complete publication.
+Primitive slots reuse scalar stores. Exact-class slots reuse the ordinary
+aligned array-element place plus initializer, hidden object-result,
+copy-constructor, and destructor calls; `CompleteElement` only increments the
+verified prefix. Both reuse checked allocation, inline/shared header layout,
+publication, and release while preserving allocation-before-element failure
+order and enclosing full-expression lifetime. They do not default-construct
+then assign, aggregate-copy class bytes, recover source expressions, publish a
+partial prefix, or introduce a new runtime service or descriptor layout.
+Optional, nested-array, shared-owner, and optional-owner element operations
+remain staged for later roadmap entries.
 
 Verified string literal data is pooled by exact decoded bytes in first
 canonical identity order. The target emits one eight-aligned local object per

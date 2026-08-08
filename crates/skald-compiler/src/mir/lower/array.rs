@@ -5,8 +5,14 @@ use crate::hir::{
     HirArrayConstruction, HirArrayConstructionMode, HirArrayElementPlace, HirArrayIndex,
     HirArrayInitialize, HirArrayPlace, HirArrayReceiver, HirArrayReceiverSource, HirArraySlice,
     HirArraySliceBounds, HirArraySource, HirArrayTransfer, HirExpressionKind,
-    HirStoredValueInitialization, Type,
+    HirObjectDestinationInitialization, HirStoredValueInitialization, Type,
 };
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ExecutableElementListKind {
+    Primitive,
+    ExactClass,
+}
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_array_element_assignment(
@@ -429,14 +435,16 @@ impl BodyLowerer<'_> {
                 construction.span,
             ),
             HirArrayConstructionMode::Elements(elements)
-                if self.is_primitive_array(construction.array) =>
+                if self
+                    .executable_element_list_kind(construction.array)
+                    .is_some() =>
             {
                 let produced = self.new_array_temporary(
                     construction.array,
                     MirStorageKind::ArrayProduced,
                     construction.span,
                 );
-                let backing = self.lower_primitive_element_list(
+                let backing = self.lower_element_list(
                     construction.array,
                     elements,
                     MirArrayOwnership::Inline,
@@ -465,8 +473,11 @@ impl BodyLowerer<'_> {
             crate::hir::HirArrayOwnership::Shared
         );
         if let HirArrayConstructionMode::Elements(elements) = &construction.mode {
-            if self.is_primitive_array(construction.array) {
-                let backing = self.lower_primitive_element_list(
+            if self
+                .executable_element_list_kind(construction.array)
+                .is_some()
+            {
+                let backing = self.lower_element_list(
                     construction.array,
                     elements,
                     MirArrayOwnership::Shared,
@@ -542,15 +553,23 @@ impl BodyLowerer<'_> {
         }));
     }
 
-    fn is_primitive_array(&self, array: crate::identity::ArrayTypeId) -> bool {
-        matches!(
-            self.input
-                .array_types
-                .get(array)
-                .expect("typed array construction must reference a declared array")
-                .element,
-            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
-        )
+    fn executable_element_list_kind(
+        &self,
+        array: crate::identity::ArrayTypeId,
+    ) -> Option<ExecutableElementListKind> {
+        match self
+            .input
+            .array_types
+            .get(array)
+            .expect("typed array construction must reference a declared array")
+            .element
+        {
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => {
+                Some(ExecutableElementListKind::Primitive)
+            }
+            Type::Class(_) => Some(ExecutableElementListKind::ExactClass),
+            _ => None,
+        }
     }
 
     fn lower_rejected_array_element_list(
@@ -563,7 +582,7 @@ impl BodyLowerer<'_> {
         self.lower_array_build(array, length, None, None, span)
     }
 
-    fn lower_primitive_element_list(
+    fn lower_element_list(
         &mut self,
         array: crate::identity::ArrayTypeId,
         elements: &crate::hir::HirArrayElementList,
@@ -589,21 +608,55 @@ impl BodyLowerer<'_> {
         self.emit_array_operation_check(MirArrayFailure::AllocationSize, span);
 
         for (position, element) in elements.elements.iter().enumerate() {
-            let HirStoredValueInitialization::Primitive(expression) = &element.value else {
-                invalid_array_hir();
-            };
-            let value = self
-                .lower_expression(expression)
-                .expect("typed primitive array element must produce a MIR value");
-            self.emit(MirInstruction::Array(
-                MirArrayInstruction::InitializeElement {
-                    backing,
-                    prefix,
-                    position: u64::try_from(position).expect("array element position must fit u64"),
-                    value,
-                    span: element.span,
-                },
-            ));
+            let position = u64::try_from(position).expect("array element position must fit u64");
+            match &element.value {
+                HirStoredValueInitialization::Primitive(expression) => {
+                    let value = self
+                        .lower_expression(expression)
+                        .expect("typed primitive array element must produce a MIR value");
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::InitializeElement {
+                            backing,
+                            prefix,
+                            position,
+                            value,
+                            span: element.span,
+                        },
+                    ));
+                }
+                HirStoredValueInitialization::Class(initialization) => {
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    match initialization {
+                        HirObjectDestinationInitialization::Direct { producer, .. } => {
+                            self.lower_object_producer(producer, destination);
+                        }
+                        HirObjectDestinationInitialization::Copy {
+                            source, operation, ..
+                        } => {
+                            let source = self.lower_object_source(source);
+                            let Type::Class(class) = element.element else {
+                                invalid_array_hir();
+                            };
+                            self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                                destination,
+                                source,
+                                class,
+                                operation: lower_selected_copy_operation(*operation),
+                                span: element.span,
+                            }));
+                        }
+                    }
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
+                _ => invalid_array_hir(),
+            }
         }
         backing
     }

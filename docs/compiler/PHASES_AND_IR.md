@@ -818,9 +818,19 @@ types, unique increasing positions, prefix completion, backing consumption,
 and enclosing full-expression lifetime; no default live elements or
 assignment loop is introduced. The x86-64 backend reuses checked allocation,
 layout-specific primitive stores, publication, and release, while the runtime
-remains unaware of the list and prefix. A structured executable-lowering error
-selected by lifecycle-bearing `Elements` plans remains the phase boundary for
-the later EL3 through EL6 stages. The detailed frozen boundary is in
+remains unaware of the list and prefix.
+
+Exact-class plans reuse the existing destination-directed `Initialize`,
+object-result `Call`, `StringInitialize`, and `CopyConstruct` operations with
+the current prefix slot as their complete destination. A focused
+`CompleteElement` operation advances the prefix only after one exact slot
+construction has completed. Verification carries that completion fact across
+CFG edges and rejects missing, duplicate, wrong-slot, post-publication, or
+premature advancement. Existing full-expression cleanup owns grouped produced
+sources, and existing class-array release destroys published elements in
+reverse order. A structured executable-lowering error selected by optional,
+nested-array, shared-owner, and optional-owner `Elements` plans remains the
+phase boundary for EL4 through EL6. The detailed frozen boundary is in
 [the array compiler contract](ARRAYS.md#frozen-element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively

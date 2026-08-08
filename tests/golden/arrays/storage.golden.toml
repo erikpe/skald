@@ -40,6 +40,14 @@ name = "ordered_inline_shared_and_nested_contexts"
 expect = { stdout = { file = "data/primitive_array_element_lists.stdout" } }
 
 [[test]]
+name = "class_element_lists"
+mode = "run"
+source = "class_array_element_lists.ska"
+[[test.run]]
+name = "direct_result_named_grouped_and_shared_outer"
+expect = { stdout = { file = "data/class_array_element_lists.stdout" } }
+
+[[test]]
 name = "static"
 mode = "run"
 source = "static_arrays.ska"

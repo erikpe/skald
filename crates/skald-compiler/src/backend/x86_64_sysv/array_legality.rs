@@ -112,6 +112,7 @@ fn check_instruction(
                 ..
             }
             | MirArrayInstruction::InitializeElement { .. }
+            | MirArrayInstruction::CompleteElement { .. }
             | MirArrayInstruction::Publish { .. }
             | MirArrayInstruction::PublishShared { .. } => {}
             MirArrayInstruction::InitializeNext {

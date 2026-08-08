@@ -49,17 +49,22 @@ impl Verifier<'_> {
                     == Some((MirStorageKind::ArrayBacking, MirType::Array(*array)))
                     && function.storage(*prefix).map(|s| (s.kind, s.ty))
                         == Some((MirStorageKind::ArrayPosition, MirType::U64));
-                let primitive_element = self.program.array_type(*array).is_some_and(|array| {
+                let executable_element = self.program.array_type(*array).is_some_and(|array| {
                     matches!(
                         array.element,
-                        MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool
+                        MirType::I64
+                            | MirType::U64
+                            | MirType::U8
+                            | MirType::F64
+                            | MirType::Bool
+                            | MirType::Class(_)
                     )
                 });
-                if !storage_matches || !primitive_element {
+                if !storage_matches || !executable_element {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "array element-list allocation requires matching backing, prefix, and primitive array type",
+                        "array element-list allocation requires matching backing, prefix, and executable element type",
                     );
                 }
             }
@@ -92,6 +97,29 @@ impl Verifier<'_> {
                         function.callable(),
                         block.id,
                         "array element initialization requires exact primitive value, backing, and prefix types",
+                    );
+                }
+            }
+            MirArrayInstruction::CompleteElement {
+                backing, prefix, ..
+            } => {
+                let class_element = function.storage(*backing).is_some_and(|storage| {
+                    storage.kind == MirStorageKind::ArrayBacking
+                        && match storage.ty {
+                            MirType::Array(array) => self
+                                .program
+                                .array_type(array)
+                                .is_some_and(|array| matches!(array.element, MirType::Class(_))),
+                            _ => false,
+                        }
+                });
+                let prefix_matches = function.storage(*prefix).map(|s| (s.kind, s.ty))
+                    == Some((MirStorageKind::ArrayPosition, MirType::U64));
+                if !class_element || !prefix_matches {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class array element completion requires exact-class backing and `u64` prefix storage",
                     );
                 }
             }

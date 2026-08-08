@@ -737,6 +737,16 @@ impl CleanupLivenessAnalysis<'_, '_> {
         if matches!(destination.base, MirPlaceBase::SharedPointee(_)) {
             return;
         }
+        if destination
+            .projections
+            .iter()
+            .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
+        {
+            // Array prefix ownership tracks these destination-directed
+            // constructions. They are not independent local objects and
+            // become reachable for cleanup only when their array is published.
+            return;
+        }
         if self.place_is_live(state, destination) {
             self.block_error(block.id, "initialization destination is already live");
             return;

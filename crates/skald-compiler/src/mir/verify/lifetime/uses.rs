@@ -313,6 +313,9 @@ fn visit_array_instruction(instruction: &MirArrayInstruction, visit: &mut impl F
         }
         | MirArrayInstruction::InitializeElement {
             backing, prefix, ..
+        }
+        | MirArrayInstruction::CompleteElement {
+            backing, prefix, ..
         } => {
             visit(*backing);
             visit(*prefix);

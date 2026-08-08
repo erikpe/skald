@@ -13,8 +13,9 @@ progress. Completed roadmaps and resolved discovery records move to
   x86-64 without a runtime ABI change. EL0 retains the complete source
   structure through resolution; EL1 implements typed destination-plan
   selection and the structural executable-lowering gate; EL2 implements
-  verified primitive element-list execution. EL3, exact-class destination
-  placement and copying, is next.
+  verified primitive element-list execution; EL3 implements exact-class final
+  placement, selected copying, grouped temporary lifetime, and native reverse
+  destruction. EL4, inline optional element initialization, is next.
   Depends on the implemented array, class lifecycle, optional, shared-owner,
   panic, MIR verifier, backend, and runtime ABI version 8 contracts; no active
   roadmap is a dependency.

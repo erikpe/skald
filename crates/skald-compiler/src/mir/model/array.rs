@@ -196,6 +196,14 @@ pub enum MirArrayInstruction {
         value: ValueId,
         span: Span,
     },
+    /// Records that the next exact-class element has finished construction
+    /// in its final slot and advances the initialized prefix by one element.
+    CompleteElement {
+        backing: StorageId,
+        prefix: StorageId,
+        position: u64,
+        span: Span,
+    },
     InitializeNext {
         backing: StorageId,
         index: StorageId,
@@ -327,6 +335,7 @@ impl MirArrayInstruction {
             Self::Allocate { span, .. }
             | Self::AllocateElements { span, .. }
             | Self::InitializeElement { span, .. }
+            | Self::CompleteElement { span, .. }
             | Self::InitializeNext { span, .. }
             | Self::CopyNext { span, .. }
             | Self::Publish { span, .. }

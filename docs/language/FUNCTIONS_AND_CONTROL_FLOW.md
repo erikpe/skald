@@ -305,7 +305,7 @@ cleanup are owned by
 ## Evaluation order
 
 Skald uses deterministic source order. The following includes implemented
-expressions and calls plus the frozen, unimplemented explicit array
+expressions and calls plus the frozen, partially implemented explicit array
 element-list extension:
 
 1. a unary operand is evaluated before its operator;

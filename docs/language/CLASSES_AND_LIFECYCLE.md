@@ -671,7 +671,7 @@ rather than a general class move or elision facility:
 var values: T[] = T[]{T(arguments), make_t()};
 ```
 
-Once implemented, the eligible ungrouped `T(arguments)` initializes its
+The eligible ungrouped `T(arguments)` initializes its
 uninitialized element slot directly, and the eligible exact-`T` result from
 `make_t()` uses its element slot as the final result destination. Grouping a
 fresh construction continues to prevent direct placement and therefore

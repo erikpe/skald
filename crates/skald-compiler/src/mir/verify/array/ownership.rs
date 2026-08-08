@@ -464,9 +464,11 @@ struct ArrayOwnerState {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ElementListState {
+    array: crate::identity::ArrayTypeId,
     prefix: StorageId,
     length: u64,
     next: u64,
+    element_ready: bool,
 }
 
 impl ArrayOwnerState {
@@ -492,6 +494,9 @@ impl ArrayOwnerState {
                     );
                 }
             }
+        }
+        if let Some(destination) = completed_class_destination(instruction) {
+            self.record_completed_class_destination(verifier, function, block, destination);
         }
         match instruction {
             MirInstruction::StorageLive(operation) => {
@@ -554,6 +559,7 @@ impl ArrayOwnerState {
             MirArrayInstruction::AllocateElements {
                 backing,
                 prefix,
+                array,
                 length,
                 ..
             } => {
@@ -575,9 +581,11 @@ impl ArrayOwnerState {
                 self.element_lists.insert(
                     *backing,
                     ElementListState {
+                        array: *array,
                         prefix: *prefix,
                         length: *length,
                         next: 0,
+                        element_ready: false,
                     },
                 );
                 if *length == 0 {
@@ -598,7 +606,10 @@ impl ArrayOwnerState {
                     );
                     return;
                 };
-                if state.prefix != *prefix || state.next != *position || state.next >= state.length
+                if state.prefix != *prefix
+                    || state.next != *position
+                    || state.next >= state.length
+                    || state.element_ready
                 {
                     verifier.block_error(
                         function.callable(),
@@ -607,6 +618,38 @@ impl ArrayOwnerState {
                     );
                     return;
                 }
+                state.next += 1;
+                if state.next == state.length {
+                    self.completed_backings.insert(*backing);
+                }
+            }
+            MirArrayInstruction::CompleteElement {
+                backing,
+                prefix,
+                position,
+                ..
+            } => {
+                let Some(state) = self.element_lists.get_mut(backing) else {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "class array element completion requires a live unpublished element-list backing",
+                    );
+                    return;
+                };
+                if state.prefix != *prefix
+                    || state.next != *position
+                    || state.next >= state.length
+                    || !state.element_ready
+                {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "class array element completion must advance the exact constructed source-ordered prefix",
+                    );
+                    return;
+                }
+                state.element_ready = false;
                 state.next += 1;
                 if state.next == state.length {
                     self.completed_backings.insert(*backing);
@@ -733,6 +776,47 @@ impl ArrayOwnerState {
             || self.anchors.contains(&storage)
     }
 
+    fn record_completed_class_destination(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        destination: &MirPlace,
+    ) {
+        let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
+            return;
+        };
+        let Some(state) = self.element_lists.get_mut(&backing) else {
+            if function
+                .storage(backing)
+                .is_some_and(|storage| storage.kind == MirStorageKind::ArrayBacking)
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "class array element construction requires a live unpublished element-list backing",
+                );
+            }
+            return;
+        };
+        let exact_slot = matches!(
+            destination.projections.as_slice(),
+            [MirPlaceProjection::ArrayElement {
+                array,
+                normalized_index,
+            }] if *array == state.array && *normalized_index == state.prefix
+        );
+        if !exact_slot || state.next >= state.length || state.element_ready {
+            verifier.block_error(
+                function.callable(),
+                block,
+                "class array element construction must complete exactly once in the current prefix slot",
+            );
+            return;
+        }
+        state.element_ready = true;
+    }
+
     fn reset_storage(&mut self, storage: StorageId) {
         self.backings.remove(&storage);
         self.completed_backings.remove(&storage);
@@ -747,6 +831,16 @@ impl ArrayOwnerState {
             .retain(|(start, end)| *start != storage && *end != storage);
         self.checked_range_offsets.remove(&storage);
         self.range_offset_owners.remove(&storage);
+    }
+}
+
+fn completed_class_destination(instruction: &MirInstruction) -> Option<&MirPlace> {
+    match instruction {
+        MirInstruction::Initialize(initialize) => Some(&initialize.destination),
+        MirInstruction::CopyConstruct(copy) => Some(&copy.destination),
+        MirInstruction::Call(call) => call.destination.as_ref(),
+        MirInstruction::StringInitialize(initialize) => Some(&initialize.destination),
+        _ => None,
     }
 }
 
