@@ -14,7 +14,15 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
-No design proposals are currently awaiting decisions or promotion.
+- [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_DESIGN_PROPOSAL.md)
+  — **draft design proposal**. Defines typed `T[]{...}` and
+  `new T[]{...}` construction with direct ordered element initialization,
+  owning lifecycle composition, unpublished-prefix publication, and no runtime
+  ABI extension. Next: review and confirm AEL1 through AEL10, promote the
+  frozen contract, and archive the proposal before creating an implementation
+  roadmap. Depends on the implemented array, class lifecycle, optional,
+  shared-ownership, and non-unwinding panic contracts; no active roadmap is a
+  dependency.
 
 ## Pending discoveries
 
