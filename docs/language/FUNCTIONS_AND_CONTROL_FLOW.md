@@ -305,7 +305,8 @@ cleanup are owned by
 ## Evaluation order
 
 Skald uses deterministic source order. The following includes implemented
-expressions and calls plus the frozen logical-operator extension:
+expressions and calls plus the frozen, unimplemented explicit array
+element-list extension:
 
 1. a unary operand is evaluated before its operator;
 2. eager binary operands are evaluated exactly once from left to right;
@@ -323,17 +324,29 @@ expressions and calls plus the frozen logical-operator extension:
 9. object destination storage is selected before construction or an
    object-producing call, then the receiver and explicit arguments follow the
    ordering above;
-10. conditional conditions are evaluated in arm order, each selected condition
+10. under frozen explicit array element-list construction, outer backing
+    allocation succeeds before the first element expression; listed
+    expressions then evaluate exactly once from left to right, each slot
+    initialization completes before the next expression, and publication
+    follows the final completed slot;
+11. conditional conditions are evaluated in arm order, each selected condition
     is cleaned before its branch, and evaluation stops after the first true
     result;
-11. a `while` condition is completed and cleaned before its branch, and each
+12. a `while` condition is completed and cleaned before its branch, and each
     normal body completion or `continue` is cleaned before the next condition
     evaluation;
-12. a return result is completed before its cleanup sequence begins.
+13. a return result is completed before its cleanup sequence begins.
 
 Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
+
+Each element-list expression remains part of the enclosing full expression.
+Its completed temporaries survive to that existing boundary unless an ordinary
+immediate-consumer rule ends them sooner. The unpublished element storage is
+not a temporary and becomes part of the array only through complete
+publication. The authoritative list construction and failure rules are in
+[Arrays](ARRAYS.md#frozen-explicit-element-list-construction).
 
 For a produced read-only alias, the producer runs exactly once at its
 argument position after any receiver and before every later argument. The

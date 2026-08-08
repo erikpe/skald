@@ -800,6 +800,29 @@ replacement, and deterministic element cleanup. Its legality pass
 accepts the complete verified array operation profile before instruction
 selection.
 
+The frozen, unimplemented explicit array element-list extension preserves one
+additional ordered construction mode from syntax through resolution. The
+explicit type resolves to its canonical `ArrayTypeId` before element checking;
+syntax and resolved IR retain both braces, comma spans, and every element
+expression in source order. HIR replaces those expressions with exact
+destination-directed initialization plans for primitive, class, optional,
+nested-array, shared-owner, and optional-owner elements. Those plans retain
+initializer and copy identities, named versus produced provenance, access, and
+ownership operations rather than leaving lower phases to infer them.
+
+MIR must allocate unpublished backing for the source-derived count before any
+element effect, initialize exactly one increasing prefix in source order, and
+publish only after the prefix equals the count. Verification proves exact
+element types and operations, single initialization of every position,
+named-copy versus produced-consumption accounting, no use of uninitialized
+slots, complete publication, and enclosing full-expression temporary and
+anchor lifetime. The representation may use linear instructions or structured
+control flow, but it may not manufacture default live elements and assign over
+them. Backend lowering reuses verified category-specific destination
+initialization, and the runtime remains unaware of the list and prefix. The
+detailed frozen boundary is in
+[the array compiler contract](ARRAYS.md#frozen-element-list-representation).
+
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,
 or an optional shared class/interface/`Obj` target. Resolved expressions retain

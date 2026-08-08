@@ -1,12 +1,12 @@
 # Explicit Array Element-List Construction Design Proposal
 
-Status: draft design proposal; AEL1 through AEL10 await review and
-confirmation. Current implemented behavior remains authoritative in the living
-language and compiler documentation. No implementation roadmap may begin
-until this proposal is confirmed, promoted into those authorities, and
-archived as a frozen decision record.
+Status: confirmed, promoted, validated, and archived on 2026-08-08. AEL1
+through AEL10 adopt the decisions recorded below, and the contract audit is
+complete. Living language and compiler documentation own the frozen behavior;
+this archived proposal retains the decision and promotion record. An explicit
+array element-list implementation roadmap may now be created.
 
-This proposal adds one destination-typed array construction form whose length
+This proposal records one destination-typed array construction form whose length
 and element values come from an explicit ordered source list. It addresses the
 current gap between scalar or class construction and array default-length
 construction without weakening Skald's exact types, deterministic evaluation,
@@ -40,7 +40,7 @@ The frozen design should provide:
   and
 - no public runtime ABI extension.
 
-Freezing this proposal will not make element-list construction executable.
+Freezing this proposal did not make element-list construction executable.
 The [status matrix](../language/STATUS.md) remains the sole authority for
 compiler availability, and the
 [implemented grammar](../language/GRAMMAR.md) remains the exact accepted
@@ -110,22 +110,21 @@ lifecycle model and selects only an explicit element list.
 
 ## Decision register
 
-Every direction below is proposed rather than confirmed. Review may revise a
-direction, but AEL1 through AEL10 must all have explicit confirmed outcomes
-before promotion or implementation-roadmap work.
+Every decision in this register was confirmed on 2026-08-08. The complete
+design was promoted into living contracts before implementation-roadmap work.
 
-| ID | Decision | Proposed direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [AEL1](#ael1--source-form) | Source form | Add `T[]{...}` and `new T[]{...}` | **Proposed** |
-| [AEL2](#ael2--list-shape-empty-form-and-separators) | List grammar | Allow empty and nonempty lists; comma-separated with no trailing comma | **Proposed** |
-| [AEL3](#ael3--type-selection-and-compatibility) | Type selection | Use the explicit element type and ordinary owning-initialization compatibility | **Proposed** |
-| [AEL4](#ael4--allocation-evaluation-and-temporary-order) | Evaluation order | Allocate first, then evaluate and initialize elements once from left to right | **Proposed** |
-| [AEL5](#ael5--element-initialization-and-ownership) | Ownership behavior | Initialize each slot directly using category-specific existing owning rules | **Proposed** |
-| [AEL6](#ael6--capabilities-and-resulting-array-operations) | Capability requirements | Require only the operation selected by each element source; preserve the resulting array's ordinary capabilities | **Proposed** |
-| [AEL7](#ael7--publication-failure-and-cleanup) | Partial construction | Maintain an unpublished initialized prefix and publish only after completion | **Proposed** |
-| [AEL8](#ael8--compiler-representation-and-runtime-boundary) | Compiler boundary | Preserve ordered source and typed initialization plans through verified MIR; add no runtime ABI | **Proposed** |
-| [AEL9](#ael9--diagnostics-dumps-and-recovery) | Compiler quality | Preserve exact spans and deterministic recovery/dumps without freezing diagnostic wording | **Proposed** |
-| [AEL10](#ael10--promotion-and-delivery-boundary) | Freeze and delivery | Promote and archive the complete design before creating an implementation roadmap | **Proposed** |
+| [AEL1](#ael1--source-form) | Source form | Add `T[]{...}` and `new T[]{...}` | **Confirmed** |
+| [AEL2](#ael2--list-shape-empty-form-and-separators) | List grammar | Allow empty and nonempty lists; comma-separated with no trailing comma | **Confirmed** |
+| [AEL3](#ael3--type-selection-and-compatibility) | Type selection | Use the explicit element type and ordinary owning-initialization compatibility | **Confirmed** |
+| [AEL4](#ael4--allocation-evaluation-and-temporary-order) | Evaluation order | Allocate first, then evaluate and initialize elements once from left to right | **Confirmed** |
+| [AEL5](#ael5--element-initialization-and-ownership) | Ownership behavior | Initialize each slot directly using category-specific existing owning rules | **Confirmed** |
+| [AEL6](#ael6--capabilities-and-resulting-array-operations) | Capability requirements | Require only the operation selected by each element source; preserve the resulting array's ordinary capabilities | **Confirmed** |
+| [AEL7](#ael7--publication-failure-and-cleanup) | Partial construction | Maintain an unpublished initialized prefix and publish only after completion | **Confirmed** |
+| [AEL8](#ael8--compiler-representation-and-runtime-boundary) | Compiler boundary | Preserve ordered source and typed initialization plans through verified MIR; add no runtime ABI | **Confirmed** |
+| [AEL9](#ael9--diagnostics-dumps-and-recovery) | Compiler quality | Preserve exact spans and deterministic recovery/dumps without freezing diagnostic wording | **Confirmed** |
+| [AEL10](#ael10--promotion-and-delivery-boundary) | Freeze and delivery | Promote and archive the complete design before creating an implementation roadmap | **Confirmed** |
 
 ## Proposed source surface
 
@@ -234,7 +233,7 @@ and continues to require `value: u64`; it never means a one-element array.
 
 **Question:** Which syntax introduces explicit element-list construction?
 
-**Proposed decision:** Add exactly:
+**Confirmed decision:** Add exactly:
 
 ```ska
 T[]{element0, element1}
@@ -257,7 +256,7 @@ result ordinarily owns dynamically allocated backing.
 
 **Question:** Are empty braces valid, and what separator rules apply?
 
-**Proposed decision:** Accept zero or more comma-separated expressions and do
+**Confirmed decision:** Accept zero or more comma-separated expressions and do
 not accept a trailing comma in the initial profile.
 
 ```ska
@@ -284,7 +283,7 @@ smaller, but the semantic bound remains uniform.
 
 **Question:** How is the element type chosen and how is each source checked?
 
-**Proposed decision:** The explicit array type resolves first to one canonical
+**Confirmed decision:** The explicit array type resolves first to one canonical
 `ArrayTypeId`. Every list position is then checked as an owning
 initialization source for that array identity's stored element type.
 
@@ -313,7 +312,7 @@ assignment, or element expression from which to infer one.
 **Question:** In what order do allocation, element expressions, and their
 temporaries execute?
 
-**Proposed decision:** Abstract execution is:
+**Confirmed decision:** Abstract execution is:
 
 1. determine the constant element count from the source list;
 2. allocate one unpublished inline or shared outer backing for that count;
@@ -343,7 +342,7 @@ panic behavior, and cleanup remain observationally identical.
 
 **Question:** What operation establishes each element's lifetime?
 
-**Proposed decision:** Each position is an uninitialized owning destination,
+**Confirmed decision:** Each position is an uninitialized owning destination,
 and its source selects the same category-specific initialization behavior as
 an owning destination of that stored type:
 
@@ -394,7 +393,7 @@ var distinct: (shared Point)[] = (shared Point)[]{
 
 **Question:** Which element lifecycle capabilities are prerequisites?
 
-**Proposed decision:** Element-list construction does not require the element
+**Confirmed decision:** Element-list construction does not require the element
 type's default plan or copy-assignment plan. Each element requires only the
 operation selected for its actual source:
 
@@ -431,7 +430,7 @@ without deep-copying it.
 **Question:** When does the array become live, and what happens to partial
 construction?
 
-**Proposed decision:** Backing remains unpublished while elements are
+**Confirmed decision:** Backing remains unpublished while elements are
 initialized. The compiler tracks one increasing initialized prefix:
 
 - slots below the prefix are complete live values;
@@ -462,7 +461,7 @@ construction does not introduce a second destruction order.
 **Question:** Which internal invariants must be frozen before implementation
 can be planned?
 
-**Proposed decision:** Preserve the following target-independent boundary:
+**Confirmed decision:** Preserve the following target-independent boundary:
 
 - syntax retains the array type, optional `new`, both brace spans, every comma,
   every ordered element expression, and the complete construction span;
@@ -501,7 +500,7 @@ rather than treating that change as an implementation detail.
 
 **Question:** Which compiler-quality behavior belongs to the frozen boundary?
 
-**Proposed decision:** Syntax, resolved, HIR, and MIR dumps remain
+**Confirmed decision:** Syntax, resolved, HIR, and MIR dumps remain
 deterministic and visibly distinguish empty, default-length, explicit-copy,
 and explicit element-list construction.
 
@@ -527,7 +526,7 @@ handling remain compiler obligations.
 
 **Question:** When may implementation-roadmap work begin?
 
-**Proposed decision:** No implementation roadmap is written or started until:
+**Confirmed decision:** No implementation roadmap is written or started until:
 
 1. AEL1 through AEL10 are explicitly confirmed;
 2. the complete design is audited against existing array, class lifecycle,
@@ -567,56 +566,50 @@ Only after promotion should a separate implementation roadmap inspect current
 module ownership and divide the work into PR-sized tasks. This proposal does
 not establish those tasks, their codes, or their implementation order.
 
-## Contract audit questions for review
+## Contract audit
 
-The confirmation pass must resolve these questions against current living
-contracts rather than assuming the proposed text is already compatible:
+The confirmed design was audited on 2026-08-08 against the implemented array,
+class lifecycle, optional, shared-owner, evaluation, temporary, panic, MIR,
+backend, and runtime contracts. No confirmed AEL decision changed. The audit
+resolved these preservation and promotion boundaries:
 
-- Does treating an array element as an eligible direct exact-class
-  initialization/result destination require a narrow extension to the current
-  class elision wording, and does grouping still prevent the same cases?
-- Do optional-present element sources already have a complete
-  destination-directed rule for every implemented optional payload category?
-- Do shared class/interface/`Obj` targets need any additional wording to make
-  clear that element lists reuse existing explicit target compatibility rather
-  than adding array covariance?
-- Does preserving all completed element-expression temporaries to the enclosing
-  full-expression boundary agree with current cleanup lowering for arguments,
-  results, assignments, conditions, and nested lists?
-- Can existing MIR initialized-prefix verification represent heterogeneous
-  destination-directed element initialization without weakening publication
-  or produced-value accounting?
-- Can the x86-64 backend reuse ordinary destination initialization for every
-  legal element category without a new runtime entry point or layout promise?
+| Contract | Audit result | Promotion treatment |
+|---|---|---|
+| Exact-class destination placement | An array element is a new narrow owning destination. Eligible ungrouped fresh construction and an eligible object-returning call can initialize the slot directly; grouping retains its existing materialization effect. | Extend living class destination/result wording explicitly without adding a general move or broadening unrelated elision cases. |
+| Optional initialization | Existing absence, injection, direct exact-class payload destination, conditional copy, and optional-owner operations cover every supported listed optional source. | State that each optional element supplies the ordinary expected optional destination; add no universal `none`, implicit unwrap, or optional array. |
+| Shared ownership and invariance | Named-copy and produced-adoption rules compose at element positions, including compatible explicit targets. They do not imply array covariance. | Preserve existing shared target compatibility and distinguish repeated named owners from distinct `new` expressions. |
+| Evaluation and temporaries | Allocation-before-elements and left-to-right slot completion fit deterministic source order. Existing full-expression ownership can retain completed element temporaries until the enclosing boundary. | Add the list sequence to the evaluation contract and retain immediate-consumer exceptions unchanged. |
+| Array MIR and verification | The existing unpublished backing, initialized-prefix, publication, produced-value, and cleanup invariants are compatible. Heterogeneous listed sources require a new ordered HIR/MIR construction mode but no weaker state model. | Freeze exact per-element plans, increasing prefix, complete publication, and source-consumption proofs while leaving private instruction shape to the roadmap. |
+| Backend and runtime | Existing primitive, class, optional, nested-array, and shared-owner destination machinery can realize verified list operations. The C runtime remains a checked byte allocator/reporter and needs no list knowledge. | Freeze mechanical backend reuse, unchanged descriptor/runtime services, and ABI version 8. |
 
-These are audit obligations, not invitations to move implementation detail
-into the source contract. Any contradiction that changes observable behavior
-must revise the applicable AEL decision before confirmation.
+The design is therefore compatible with existing contracts after the promoted
+narrow class-destination extension. No source-visible contradiction or runtime
+ABI dependency remains for roadmap planning.
 
 ## Decisions required before roadmap work
 
-- [ ] Confirm the explicit `T[]{...}` and `new T[]{...}` source forms.
-- [ ] Confirm typed empty braces, comma separation, and the initial rejection
+- [x] Confirm the explicit `T[]{...}` and `new T[]{...}` source forms.
+- [x] Confirm typed empty braces, comma separation, and the initial rejection
       of trailing commas.
-- [ ] Confirm explicit element-type selection and reuse of ordinary owning
+- [x] Confirm explicit element-type selection and reuse of ordinary owning
       initialization compatibility without inference or array covariance.
-- [ ] Confirm allocation-before-elements, exact left-to-right evaluation, and
+- [x] Confirm allocation-before-elements, exact left-to-right evaluation, and
       enclosing full-expression temporary lifetime.
-- [ ] Confirm category-specific direct slot initialization, including class
+- [x] Confirm category-specific direct slot initialization, including class
       direct destinations, nested-array adoption/deep copy, shared-owner
       retain/transfer, and optional initialization.
-- [ ] Confirm per-source capability requirements and the independence of the
+- [x] Confirm per-source capability requirements and the independence of the
       resulting array type's later copy and assignment capabilities.
-- [ ] Confirm unpublished initialized-prefix, complete publication, current
+- [x] Confirm unpublished initialized-prefix, complete publication, current
       non-unwinding failure, and reverse completed-array destruction rules.
-- [ ] Confirm the syntax/resolution/HIR/MIR/verifier/backend representation
+- [x] Confirm the syntax/resolution/HIR/MIR/verifier/backend representation
       boundary and unchanged public runtime ABI.
-- [ ] Confirm span, recovery, dump, and non-normative diagnostic boundaries.
-- [ ] Complete the contract audit questions without leaving a representation
+- [x] Confirm span, recovery, dump, and non-normative diagnostic boundaries.
+- [x] Complete the contract audit questions without leaving a representation
       decision unresolved.
-- [ ] Promote the complete confirmed design into living language and compiler
+- [x] Promote the complete confirmed design into living language and compiler
       documentation, including frozen-but-unimplemented status.
-- [ ] Validate links and indexes, then archive this proposal before creating
+- [x] Validate links and indexes, then archive this proposal before creating
       an implementation roadmap.
 
 ## Deliberately deferred decisions
@@ -704,6 +697,6 @@ This proposal may be frozen and archived only when:
 - no implementation roadmap has started from an unresolved decision; and
 - documentation links, indexes, and terminology have been validated.
 
-After promotion, this file becomes a historical decision record under
-`docs/archive/`. Only then may an explicit array element-list implementation
-roadmap be created and scheduled.
+This file is now the historical decision record under `docs/archive/`. An
+explicit array element-list implementation roadmap may now be created and
+scheduled.

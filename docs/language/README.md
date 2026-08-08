@@ -153,9 +153,10 @@ makes a result source-observable.
   snapshot, including the host invocation name at index zero, decoded from
   Linux `/proc/self/cmdline` by ordinary standard-library code. It does not
   change the parameterless entry function or runtime ABI.
-- [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
-  construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
-  and failure contract.
+- [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
+  type, construction, copying, adoption, indexing, slicing, nesting, alias,
+  lifetime, and failure contract, plus the frozen but unimplemented typed
+  explicit element-list construction extension.
 - [Zero-default static fields](STATIC_FIELDS.md) defines the implemented
   class-owned declaration, selection, zero-state type set, process lifetime,
   replacement, diagnostic, and unchanged runtime-ABI contract.

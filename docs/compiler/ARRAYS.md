@@ -1,6 +1,7 @@
 # Array Compiler and Runtime Contract
 
-Status: **implemented contract on x86-64**.
+Status: **implemented contract on x86-64 with a frozen, unimplemented explicit
+element-list representation extension**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -152,6 +153,87 @@ ExplicitCopy(source)
 It also retains inline versus shared allocation separately. Ordinary
 default-length construction never falls back to explicit copy construction,
 and `copy` in the dedicated position is not an ordinary element initializer.
+
+## Frozen element-list representation
+
+The frozen source forms `T[]{...}` and `new T[]{...}` add one future
+construction mode without changing current compiler availability:
+
+```text
+ExplicitElements([expression])
+```
+
+The name above is conceptual rather than a required Rust variant. Syntax must
+retain the explicit array type, optional `new`, both brace spans, every comma,
+the ordered element expressions, and the complete construction span.
+Resolution assigns the exact recursive `ArrayTypeId` before resolving the
+elements and preserves their order without selecting lifecycle, layout, or
+target operations. Empty braces retain an empty vector and require no element
+capability.
+
+Type checking treats each listed position as one previously uninitialized
+owning destination of the array's exact stored element type. HIR records one
+ordered destination-directed plan per element, selecting the applicable
+primitive store, exact-class direct initialization or copy construction,
+optional initialization, named nested-array deep copy, produced nested-array
+adoption, named shared-owner copy, produced shared-owner adoption, or
+optional-owner operation. A plan names every required initializer, copy
+operation, shared target, nested array identity, and access decision. It never
+recovers those semantics from expression shape below HIR.
+
+The list does not require one uniform array-wide default or assignment plan.
+Each source requires only its selected initialization operation. The canonical
+array declaration nevertheless retains its independently computed default,
+copy, assignment, and destruction capabilities for later operations on the
+completed value.
+
+HIR-to-MIR lowering must implement this abstract sequence:
+
+1. materialize the constant list count and perform checked backing allocation;
+2. establish unpublished backing with an initialized prefix of zero;
+3. evaluate each element expression exactly once in source order;
+4. initialize the current backing slot through its selected owning plan;
+5. advance the prefix only after that initialization completes normally; and
+6. publish inline produced backing or one shared-array owner only when the
+   prefix equals the list count.
+
+The MIR vocabulary may use immediate semantic positions, explicit index
+storage, ordinary category-specific initialization instructions, or a focused
+array initialization instruction. It may emit linear operations or structured
+control flow. Those choices are private, but MIR must retain evaluation order,
+full-expression temporaries, source consumption, and prefix state explicitly
+enough for verification. It may not lower the form to default construction
+followed by assignment.
+
+Verification must prove:
+
+- allocation precedes every element effect and failure reporting precedes the
+  first element when allocation cannot complete;
+- each position below the declared length is initialized exactly once in
+  increasing order;
+- the operation and source type match the exact stored element type and its
+  selected lifecycle or ownership identity;
+- named sources are copied and produced sources are consumed exactly as their
+  category requires;
+- uninitialized slots are never projected, copied, assigned, destroyed,
+  borrowed, or published;
+- only the complete prefix is published, and each produced backing or shared
+  owner is consumed or cleaned exactly once; and
+- completed element-expression temporaries and anchors remain in the enclosing
+  full-expression plan.
+
+The backend lowers verified element destinations through its existing
+primitive, class, optional, nested-array, and shared-owner selection
+machinery. The list count is source-derived but does not imply static data,
+stack storage, unrolled machine code, or a new descriptor layout. The C runtime
+continues to allocate and free checked byte blocks without knowing element
+types, list expressions, initialized prefixes, or lifecycle operations. No
+public runtime entry point, metadata format, or ABI-version change is part of
+this frozen extension.
+
+Current syntax, resolved IR, HIR, MIR, verifier, and backend code do not yet
+implement this mode. The [status matrix](../language/STATUS.md) distinguishes
+the frozen design from accepted compiler behavior.
 
 ## Typed HIR
 

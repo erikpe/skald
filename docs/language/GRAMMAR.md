@@ -539,6 +539,38 @@ The contextual `copy` form is a dedicated array construction mode and accepts
 exactly one source. The ordinary nonempty form accepts exactly one length
 expression.
 
+### Frozen explicit array element-list extension
+
+The following extension is frozen for implementation but is not accepted by
+the current compiler:
+
+```text
+array-element-list = "{" [expression {"," expression}] "}"
+
+array-element-list-construction-expression
+                 = array-inline-type array-element-list
+                 | "new" array-inline-type array-element-list
+```
+
+The complete future `array-construction-expression` primary will admit either
+the implemented parenthesized construction arguments or this element list.
+The explicit array type is required. Untyped `[expression {"," expression}]`,
+expected-type-only lists, and multiple ordinary expressions inside the
+existing parentheses are not frozen forms.
+
+An empty list is valid, one or more elements are comma-separated, and the
+initial profile does not accept a trailing comma. The braces and every comma
+remain exact source spans for syntax, recovery, and deterministic dumps.
+Ordinary postfix operations may follow the closing brace. Whitespace does not
+change the construction shape.
+
+The expression count determines array length; type compatibility, left-to-right
+evaluation, destination initialization, ownership, publication, and failure
+are defined by the frozen
+[array element-list contract](ARRAYS.md#frozen-explicit-element-list-construction).
+Until implementation, encountering these braces after an array type remains a
+syntax error and no element-list node enters the accepted AST.
+
 From tightest to loosest binding, precedence is:
 
 1. postfix unwrap, member access, dereferencing member access, calls, indexing,

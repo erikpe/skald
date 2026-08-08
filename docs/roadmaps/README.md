@@ -10,19 +10,18 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_ROADMAP.md)
+  — **planned**. Implements the frozen typed `T[]{...}` and
+  `new T[]{...}` contract through ordered destination plans, verified
+  initialized-prefix publication, every owning element family, and native
+  x86-64 without a runtime ABI change. EL0, explicit source retention, is next.
+  Depends on the implemented array, class lifecycle, optional, shared-owner,
+  panic, MIR verifier, backend, and runtime ABI version 8 contracts; no active
+  roadmap is a dependency.
 
 ## Design proposals
 
-- [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_DESIGN_PROPOSAL.md)
-  — **draft design proposal**. Defines typed `T[]{...}` and
-  `new T[]{...}` construction with direct ordered element initialization,
-  owning lifecycle composition, unpublished-prefix publication, and no runtime
-  ABI extension. Next: review and confirm AEL1 through AEL10, promote the
-  frozen contract, and archive the proposal before creating an implementation
-  roadmap. Depends on the implemented array, class lifecycle, optional,
-  shared-ownership, and non-unwinding panic contracts; no active roadmap is a
-  dependency.
+No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 

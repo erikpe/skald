@@ -158,6 +158,14 @@ whole-array and exact element aliases execute with detached-backing and
 shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
+That contract also freezes typed explicit `T[]{...}` and
+`new T[]{...}` element-list construction for later implementation. The
+extension preserves ordered destination initialization, unpublished-prefix
+verification, existing class/optional/nested-array/shared-owner operations,
+and the current runtime ABI. The compiler does not yet accept those brace
+forms; availability remains authoritative in the
+[status matrix](../language/STATUS.md).
+
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64
 pointer/length lowering, and runtime ABI version 8. It deliberately leaves

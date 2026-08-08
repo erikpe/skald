@@ -435,4 +435,12 @@ These exclusions bound the current implementation. The implemented
 [array contract](ARRAYS.md) extends these rules with exact non-polymorphic
 `shared T[]` and `shared? T[]` ownership; it does not change the
 class/interface/`Obj` boundary above.
+The frozen, unimplemented
+[explicit array element-list form](ARRAYS.md#frozen-explicit-element-list-construction)
+reuses ordinary target compatibility at each shared-owner element position. A
+named owner is copied/retained, while a produced owner is transferred/adopted;
+the optional-owner form applies the same rule only when present. Listing one
+named owner twice therefore creates two owners of one allocation, while two
+separate `new` expressions produce distinct allocations. These rules do not
+make arrays covariant or add an implicit shared target conversion.
 Other omissions do not reserve syntax or freeze their eventual designs.

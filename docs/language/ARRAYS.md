@@ -1,7 +1,8 @@
 # Arrays
 
-Status: **implemented contract on x86-64**. This document is authoritative for
-the source-visible array contract. The
+Status: **implemented contract on x86-64 with a frozen, unimplemented explicit
+element-list extension**. This document is authoritative for the
+source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
 by the compiler. Array forms receive canonical recursive identities during
@@ -193,9 +194,128 @@ assigns these source-reachable failures their distinct reasons from the sole
 copy. The source must designate an exact `T[]` array place or value; array
 copying has no inheritance or dynamic-check relation.
 
-No fill-value, per-index generator, array literal, or multi-dimensional shape
-constructor is implemented. Nonempty construction therefore
-requires a default-initializable element type or an exact copy source.
+No explicit element-list, fill-value, per-index generator, inferred array
+literal, or multi-dimensional shape constructor is implemented. Nonempty
+construction therefore currently requires a default-initializable element type
+or an exact copy source. The explicit element-list form below is frozen for
+later implementation without changing this current compiler boundary.
+
+## Frozen explicit element-list construction
+
+The following source forms are frozen but not yet accepted by the compiler:
+
+```ska
+T[]{element0, element1}
+new T[]{element0, element1}
+```
+
+`T[]{...}` produces one owning inline array. `new T[]{...}` produces one
+non-null shared owner of a shared outer-array allocation. The explicit
+`array-inline-type` determines the exact invariant element type before any
+element is checked. Braces accept zero or more comma-separated expressions;
+the initial profile does not accept a trailing comma. `T[]{}` is equivalent in
+value and lifecycle to `T[]()` without deprecating that implemented empty
+form.
+
+This is **element-list construction**, not an inferred array literal. Untyped
+`[element0, element1]`, expected-type-only lists, and
+`T[](element0, element1)` are not frozen forms. In particular, the existing
+single-expression `T[](value)` remains default-length construction and
+requires `value: u64`.
+
+The list length is the number of supplied expressions and must satisfy the
+ordinary maximum-`i64` array-length bound. Type grouping and outer ownership
+retain their existing meanings, so the form composes with nested, shared, and
+optional elements:
+
+```ska
+var rows: i64[][] = i64[][]{
+    i64[]{1, 2},
+    i64[]{3, 4, 5}
+};
+
+var owners: (shared Item)[] = (shared Item)[]{
+    new Item(1),
+    new Item(2)
+};
+
+var maybe: i64?[] = i64?[]{none, 10, none};
+```
+
+Nested arrays remain jagged. `shared? T[]` remains an optional shared owner of
+one complete array, while `(shared? T)[]` remains an array of optional shared
+owners. Element-list construction adds no optional inline-array payload and no
+array covariance, common-supertype search, or implicit numeric conversion.
+
+### Allocation, evaluation, and initialization
+
+Abstract execution is ordered as follows:
+
+1. determine the element count from the source list;
+2. allocate one unpublished inline or shared outer backing for that count;
+3. if allocation cannot complete, report the existing allocation failure
+   before evaluating any element expression;
+4. evaluate each element expression exactly once from left to right;
+5. completely initialize that expression's previously uninitialized slot
+   before evaluating the next expression; and
+6. publish the complete array only after every slot is live.
+
+An element position is an owning initialization destination of the declared
+stored element type. It is not a live default value followed by assignment.
+Consequently element-list construction does not require the element type's
+default or copy-assignment capability. Each expression requires only the
+operation selected for that source:
+
+- a primitive expression stores its exact value;
+- an eligible ungrouped fresh exact-class construction initializes its slot
+  directly through the selected accessible ordinary initializer;
+- an eligible exact-class result uses the slot as its final result destination;
+- an existing or otherwise materialized exact-class source copy-constructs the
+  slot;
+- `none` or a present optional source uses ordinary optional initialization;
+- a named inline-array source deep-copies while a produced inline-array source
+  transfers its backing into the nested slot; and
+- a named shared owner copies/retains one owner while a produced shared owner
+  transfers/adopts it, including the corresponding optional-owner cases.
+
+These are the ordinary target-directed stored-value rules. They add no
+array-specific conversion. Grouping retains its existing effect on exact-class
+materialization and copy elision. A named shared owner listed twice makes both
+slots own the same allocation; two separate `new` expressions produce two
+allocations.
+
+The resulting array type retains its independently computed default, copy,
+assignment, and destruction capabilities. Constructing one array value does
+not make a later named deep copy, slice copy, element assignment, or other
+operation available when its required element capability is absent. A
+completed produced element-list array may nevertheless transfer its backing
+to its immediate owning destination under the ordinary adoption rule.
+
+Ordinary full-expression lifetime remains in force. A completed temporary
+from one element expression remains live through the enclosing full-expression
+boundary unless an existing immediate-consumer rule ends it sooner. Directly
+initialized element storage belongs to the unpublished backing rather than to
+the temporary sequence.
+
+### Publication, cleanup, and failure
+
+Construction maintains one increasing initialized prefix. Slots below the
+prefix are complete live values, the next slot remains incomplete until its
+selected initialization returns normally, and later slots are uninitialized
+storage. Uninitialized slots may not be read, copied, assigned, destroyed,
+borrowed, or published. Only a prefix equal to the list length may become a
+source-visible produced array or shared-array owner.
+
+Once published, the array follows every ordinary copy, adoption, anchor,
+replacement, reverse element-destruction, and backing-release rule in this
+document. Current panic and allocation failures remain non-returning and
+non-unwinding, so no source-level cleanup is guaranteed for an unpublished
+prefix after reporting begins. Any future recoverable construction failure
+must clean already initialized elements without treating uninitialized slots
+as live.
+
+The compiler representation and unchanged runtime boundary are frozen in the
+[array compiler contract](../compiler/ARRAYS.md#frozen-element-list-representation).
 
 ## Inline array value semantics
 
@@ -619,8 +739,10 @@ array ownership combinations are compile-time errors.
 The following are intentionally outside the implemented array profile:
 
 - inline optional array payloads and their eventual source spelling;
-- fill-value, per-index generator, array literal, and rectangular-shape
-  initialization syntax;
+- inferred array literals, expected-type-only lists, fill-value, per-index
+  generator, comprehensions, spreads, repetition, and rectangular-shape
+  initialization syntax; explicit typed element-list construction is frozen
+  separately above but remains unimplemented;
 - capacity, resizing an existing allocation, append, insertion, removal, or
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;

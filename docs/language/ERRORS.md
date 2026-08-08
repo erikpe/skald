@@ -249,6 +249,15 @@ frozen panic design preserves this boundary explicitly. Abrupt unsuccessful
 termination is distinct from recoverable exceptional control flow, which is
 not implemented.
 
+The frozen, unimplemented explicit array element-list contract follows this
+same boundary. Its outer backing remains unpublished while one increasing
+prefix contains live initialized elements. If allocation or an element
+expression terminates unsuccessfully, current panic remains non-unwinding and
+guarantees no prefix cleanup. Normal completion publishes only the fully
+initialized array. Any future recoverable failure must destroy exactly the
+completed prefix and release unpublished backing without treating later raw
+slots as live.
+
 Any future abrupt control flow that resumes or transfers within a Skald
 program must extend the existing lifetime model rather than bypass it. At
 minimum, its design must specify:

@@ -186,6 +186,18 @@ semantics for overlap. Whole-array and exact element aliases execute through
 internal non-owning addresses. Inline backing accounts defer detached element
 destruction, while shared aliases reuse secured strong-owner anchors.
 
+The frozen explicit array element-list extension adds no new target semantic
+choice. Once implemented, instruction selection will receive verified
+unpublished backing, exact ordered element destinations, category-specific
+initialization operations, initialized-prefix advancement, and complete
+publication. It must reuse the ordinary primitive, class, optional,
+nested-array, and shared-owner machinery while preserving allocation-before-
+element failure order and enclosing full-expression lifetime. It may choose
+linear or helper-based machine code, but it may not default-construct then
+assign, recover source expressions, publish a partial prefix, or introduce a
+new runtime service or descriptor layout. The compiler does not yet supply
+this verified MIR mode.
+
 Verified string literal data is pooled by exact decoded bytes in first
 canonical identity order. The target emits one eight-aligned local object per
 unique byte sequence in relocation-read-only data: immortal count, exact

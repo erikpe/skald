@@ -475,3 +475,13 @@ non-array element types to default to `none` inside arrays and extends
 `shared?` to exact shared array targets. It continues to exclude inline
 optional array payloads; `shared? T[]` is optional shared ownership, not an
 inline optional array.
+
+Its frozen, unimplemented
+[explicit element-list form](ARRAYS.md#frozen-explicit-element-list-construction)
+also makes each optional element position an ordinary expected optional
+initialization destination. `none` initializes absence, and an ordinary
+payload expression uses the existing optional injection and destination rules.
+An eligible ungrouped exact-class construction initializes a present payload
+directly; named and otherwise materialized sources retain their existing
+conditional copy behavior. The list adds no universal `none` type, implicit
+unwrap, nested optional, or inline optional-array payload.

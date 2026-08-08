@@ -307,6 +307,26 @@ version marker. Loop behavior, backward branches, and per-iteration cleanup
 belong to compiler, backend, assembler, and native golden tests rather than a
 new runtime harness.
 
+## Frozen explicit array element-list ABI boundary
+
+The frozen, unimplemented
+[explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
+adds no public C symbol, runtime-managed element operation, metadata format, or
+ABI-version change. The runtime marker remains `ska_rt_abi_v8`.
+
+Checked backing allocation and release continue through the existing raw byte
+allocation boundary. Element expression evaluation, destination-typed
+initialization, initialized-prefix tracking, publication, ownership,
+lifecycle, and full-expression cleanup are compiler and backend operations.
+The runtime never receives an array type, element count as a distinct service,
+list expression, initialized prefix, or lifecycle identity.
+
+Allocation failure continues to use the existing allocation and common panic
+boundaries. Current non-unwinding termination adds no runtime partial-prefix
+cleanup service. Direct runtime tests therefore keep validating the unchanged
+allocator, reporter, header, symbol set, and version marker; element-list
+behavior belongs to compiler, verifier, backend, and native execution tests.
+
 ## Implemented primitive operator ABI boundary
 
 The

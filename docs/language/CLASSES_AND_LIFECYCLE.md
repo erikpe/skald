@@ -378,8 +378,10 @@ initializer begins only after every argument is ready. The destination
 becomes live only on normal initializer completion.
 
 A fresh object may directly initialize an exact-class local or a direct class
-field as described above. It is also an object source in the copy, assignment,
-argument, and return contexts below.
+field as described above. The frozen explicit array element-list extension
+also makes one element position a direct destination for an eligible ungrouped
+fresh construction once that syntax is implemented. A fresh object is also an
+object source in the copy, assignment, argument, and return contexts below.
 
 Skald has no recoverable construction failure. Exceptional initialization,
 partially completed object cleanup, and delegation between ordinary
@@ -582,9 +584,12 @@ temporary. Callee cleanup therefore cannot invalidate the result. A read-only
 or mutable alias may be a copy source, but the alias itself is never returned.
 
 An object-returning call directly initializes an exact-class local when that
-local is its final destination. In other source contexts it materializes a
+local is its final destination. Under the frozen explicit array element-list
+extension, an exact-class element position is likewise the final destination
+for an eligible listed call. In other source contexts it materializes a
 temporary. These are source-visible destination and lifetime rules; they do
-not prescribe an implementation calling convention.
+not prescribe an implementation calling convention. The array-element case is
+frozen but not yet accepted by the compiler.
 
 ## Temporaries and full expressions
 
@@ -634,8 +639,8 @@ simplify a join.
 
 ## Permitted copy elision
 
-The compiler elides the copy for an ungrouped fresh construction of the exact
-destination class in exactly these forms:
+The implemented compiler elides the copy for an ungrouped fresh construction
+of the exact destination class in exactly these forms:
 
 ```ska
 var value: T = T(arguments);
@@ -657,6 +662,24 @@ copying from an existing place, initialization from a function result, and a
 named-return optimization are not eligible. Direct construction of a class
 field is its initialization rule, and direct placement of an object-returning
 call into a local is result placement; neither is an additional elision case.
+
+The frozen explicit array element-list contract adds one destination rule
+rather than a general class move or elision facility:
+
+```ska
+var values: T[] = T[]{T(arguments), make_t()};
+```
+
+Once implemented, the eligible ungrouped `T(arguments)` initializes its
+uninitialized element slot directly, and the eligible exact-`T` result from
+`make_t()` uses its element slot as the final result destination. Grouping a
+fresh construction continues to prevent direct placement and therefore
+requires the ordinary materialize, copy-construct, and destroy behavior. A
+named or otherwise non-elided source likewise requires the selected copy
+constructor. The rule neither requires a default constructor or copy
+assignment nor makes the resulting array copyable when `T` lacks copy
+construction. Detailed ordering and publication belong to
+[Arrays](ARRAYS.md#frozen-explicit-element-list-construction).
 
 ## Lifetime registration and normal cleanup
 
