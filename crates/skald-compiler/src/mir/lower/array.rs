@@ -12,6 +12,7 @@ use crate::hir::{
 enum ExecutableElementListKind {
     Primitive,
     ExactClass,
+    InlineOptional,
 }
 
 impl BodyLowerer<'_> {
@@ -568,6 +569,9 @@ impl BodyLowerer<'_> {
                 Some(ExecutableElementListKind::Primitive)
             }
             Type::Class(_) => Some(ExecutableElementListKind::ExactClass),
+            Type::OptionalPrimitive(_) | Type::OptionalClass(_) => {
+                Some(ExecutableElementListKind::InlineOptional)
+            }
             _ => None,
         }
     }
@@ -646,6 +650,30 @@ impl BodyLowerer<'_> {
                             }));
                         }
                     }
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
+                HirStoredValueInitialization::OptionalPrimitive { source, .. } => {
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    self.lower_optional_initialize_at(destination, source, element.span);
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
+                HirStoredValueInitialization::OptionalClass(initialization) => {
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    self.lower_class_optional_destination_initialize(destination, initialization);
                     self.emit(MirInstruction::Array(
                         MirArrayInstruction::CompleteElement {
                             backing,

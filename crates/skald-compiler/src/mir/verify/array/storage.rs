@@ -58,6 +58,8 @@ impl Verifier<'_> {
                             | MirType::F64
                             | MirType::Bool
                             | MirType::Class(_)
+                            | MirType::OptionalPrimitive(_)
+                            | MirType::OptionalClass(_)
                     )
                 });
                 if !storage_matches || !executable_element {
@@ -103,23 +105,29 @@ impl Verifier<'_> {
             MirArrayInstruction::CompleteElement {
                 backing, prefix, ..
             } => {
-                let class_element = function.storage(*backing).is_some_and(|storage| {
+                let lifecycle_element = function.storage(*backing).is_some_and(|storage| {
                     storage.kind == MirStorageKind::ArrayBacking
                         && match storage.ty {
-                            MirType::Array(array) => self
-                                .program
-                                .array_type(array)
-                                .is_some_and(|array| matches!(array.element, MirType::Class(_))),
+                            MirType::Array(array) => {
+                                self.program.array_type(array).is_some_and(|array| {
+                                    matches!(
+                                        array.element,
+                                        MirType::Class(_)
+                                            | MirType::OptionalPrimitive(_)
+                                            | MirType::OptionalClass(_)
+                                    )
+                                })
+                            }
                             _ => false,
                         }
                 });
                 let prefix_matches = function.storage(*prefix).map(|s| (s.kind, s.ty))
                     == Some((MirStorageKind::ArrayPosition, MirType::U64));
-                if !class_element || !prefix_matches {
+                if !lifecycle_element || !prefix_matches {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "class array element completion requires exact-class backing and `u64` prefix storage",
+                        "array element completion requires lifecycle-bearing backing and `u64` prefix storage",
                     );
                 }
             }

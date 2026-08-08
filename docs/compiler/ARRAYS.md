@@ -256,12 +256,13 @@ public runtime entry point, metadata format, or ABI-version change is part of
 this frozen extension.
 
 Syntax, resolved IR, and HIR implement the complete typed representation.
-Verified MIR and x86-64 implement primitive and exact-class lists for inline
-and shared outer ownership. The verifier proves exact values or class
-destinations, source-position order, normally completed construction before
-prefix advancement, publication, backing consumption, and storage lifetime.
-Optional, nested-array, shared-owner, and optional-owner families remain behind
-the executable-lowering gate. The [status matrix](../language/STATUS.md)
+Verified MIR and x86-64 implement primitive, exact-class, and inline-optional
+lists for inline and shared outer ownership. The verifier proves exact values,
+class and conditional payload destinations, presence-before-prefix ordering,
+source-position order, normally completed construction before prefix
+advancement, publication, backing consumption, and storage lifetime. Nested-
+array, shared-owner, and optional-owner families remain behind the executable-
+lowering gate. The [status matrix](../language/STATUS.md)
 distinguishes these vertical slices from the remaining frozen profile.
 
 ## Typed HIR

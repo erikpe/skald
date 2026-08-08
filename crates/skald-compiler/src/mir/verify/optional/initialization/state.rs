@@ -78,6 +78,19 @@ impl InitializationState {
             .retain(|place| place.base.local_storage() != Some(storage));
     }
 
+    pub(super) fn complete_array_element(&mut self, backing: StorageId, prefix: StorageId) {
+        self.places.retain(|place| {
+            place.base.local_storage() != Some(backing)
+                || !matches!(
+                    place.projections.first(),
+                    Some(crate::mir::MirPlaceProjection::ArrayElement {
+                        normalized_index,
+                        ..
+                    }) if *normalized_index == prefix
+                )
+        });
+    }
+
     pub(super) fn merge(&mut self, incoming: &Self) {
         self.places.retain(|place| incoming.places.contains(place));
     }
@@ -115,6 +128,11 @@ impl InitializationState {
                 MirInstruction::OptionalSharedCleanup(cleanup) => {
                     self.remove(&cleanup.destination);
                 }
+                MirInstruction::Array(crate::mir::MirArrayInstruction::CompleteElement {
+                    backing,
+                    prefix,
+                    ..
+                }) => self.complete_array_element(*backing, *prefix),
                 MirInstruction::Call(call) => {
                     self.transfer_class_optional_arguments(function, &call.arguments);
                     self.transfer_optional_shared_arguments(function, &call.arguments);

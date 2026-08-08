@@ -250,8 +250,8 @@ termination is distinct from recoverable exceptional control flow, which is
 not implemented.
 
 The frozen explicit array element-list contract follows this same boundary;
-its primitive and exact-class slices are executable while optional,
-nested-array, and shared-owner slices remain staged. Its outer backing remains
+its primitive, exact-class, and inline-optional slices are executable while
+nested-array and shared-owner slices remain staged. Its outer backing remains
 unpublished while one increasing
 prefix contains live initialized elements. If allocation or an element
 expression terminates unsuccessfully, current panic remains non-unwinding and

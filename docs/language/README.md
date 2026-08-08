@@ -156,8 +156,8 @@ makes a result source-observable.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
   lifetime, and failure contract, plus the frozen typed explicit element-list
-  extension whose primitive and exact-class slices execute while the remaining
-  destination-plan families stay behind structured lowering.
+  extension whose primitive, exact-class, and inline-optional slices execute
+  while the remaining destination-plan families stay behind structured lowering.
 - [Zero-default static fields](STATIC_FIELDS.md) defines the implemented
   class-owned declaration, selection, zero-state type set, process lifetime,
   replacement, diagnostic, and unchanged runtime-ABI contract.

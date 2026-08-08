@@ -828,9 +828,12 @@ construction has completed. Verification carries that completion fact across
 CFG edges and rejects missing, duplicate, wrong-slot, post-publication, or
 premature advancement. Existing full-expression cleanup owns grouped produced
 sources, and existing class-array release destroys published elements in
-reverse order. A structured executable-lowering error selected by optional,
-nested-array, shared-owner, and optional-owner `Elements` plans remains the
-phase boundary for EL4 through EL6. The detailed frozen boundary is in
+reverse order. Inline optionals reuse their ordinary absent/present operations;
+class payloads progress through absent-wrapper initialization, completed
+payload construction, presence publication, and only then outer-prefix
+advancement. A structured executable-lowering error selected by nested-array,
+shared-owner, and optional-owner `Elements` plans remains the phase boundary
+for the remaining staged families. The detailed frozen boundary is in
 [the array compiler contract](ARRAYS.md#frozen-element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively

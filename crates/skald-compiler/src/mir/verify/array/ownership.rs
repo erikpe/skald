@@ -468,7 +468,15 @@ struct ElementListState {
     prefix: StorageId,
     length: u64,
     next: u64,
-    element_ready: bool,
+    element_state: ElementInitializationState,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum ElementInitializationState {
+    #[default]
+    Uninitialized,
+    Ready,
+    ClassOptionalPayloadReady,
 }
 
 impl ArrayOwnerState {
@@ -497,6 +505,17 @@ impl ArrayOwnerState {
         }
         if let Some(destination) = completed_class_destination(instruction) {
             self.record_completed_class_destination(verifier, function, block, destination);
+        }
+        if let Some(destination) = completed_optional_destination(instruction) {
+            self.record_completed_optional_destination(verifier, function, block, destination);
+        }
+        if let MirInstruction::ClassOptionalPublish(publish) = instruction {
+            self.record_published_class_optional_destination(
+                verifier,
+                function,
+                block,
+                &publish.destination,
+            );
         }
         match instruction {
             MirInstruction::StorageLive(operation) => {
@@ -585,7 +604,7 @@ impl ArrayOwnerState {
                         prefix: *prefix,
                         length: *length,
                         next: 0,
-                        element_ready: false,
+                        element_state: ElementInitializationState::Uninitialized,
                     },
                 );
                 if *length == 0 {
@@ -609,7 +628,7 @@ impl ArrayOwnerState {
                 if state.prefix != *prefix
                     || state.next != *position
                     || state.next >= state.length
-                    || state.element_ready
+                    || state.element_state != ElementInitializationState::Uninitialized
                 {
                     verifier.block_error(
                         function.callable(),
@@ -640,7 +659,7 @@ impl ArrayOwnerState {
                 if state.prefix != *prefix
                     || state.next != *position
                     || state.next >= state.length
-                    || !state.element_ready
+                    || state.element_state != ElementInitializationState::Ready
                 {
                     verifier.block_error(
                         function.callable(),
@@ -649,7 +668,7 @@ impl ArrayOwnerState {
                     );
                     return;
                 }
-                state.element_ready = false;
+                state.element_state = ElementInitializationState::Uninitialized;
                 state.next += 1;
                 if state.next == state.length {
                     self.completed_backings.insert(*backing);
@@ -806,7 +825,35 @@ impl ArrayOwnerState {
                 normalized_index,
             }] if *array == state.array && *normalized_index == state.prefix
         );
-        if !exact_slot || state.next >= state.length || state.element_ready {
+        if exact_slot {
+            if state.next >= state.length
+                || state.element_state != ElementInitializationState::Uninitialized
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "class array element construction must complete exactly once in the current prefix slot",
+                );
+                return;
+            }
+            state.element_state = ElementInitializationState::Ready;
+            return;
+        }
+
+        let optional_payload = matches!(
+            destination.projections.as_slice(),
+            [
+                MirPlaceProjection::ArrayElement {
+                    array,
+                    normalized_index,
+                },
+                MirPlaceProjection::OptionalPayload(_),
+            ] if *array == state.array && *normalized_index == state.prefix
+        );
+        if !optional_payload
+            || state.next >= state.length
+            || state.element_state != ElementInitializationState::Ready
+        {
             verifier.block_error(
                 function.callable(),
                 block,
@@ -814,7 +861,95 @@ impl ArrayOwnerState {
             );
             return;
         }
-        state.element_ready = true;
+        state.element_state = ElementInitializationState::ClassOptionalPayloadReady;
+    }
+
+    fn record_completed_optional_destination(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        destination: &MirPlace,
+    ) {
+        let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
+            return;
+        };
+        let Some(state) = self.element_lists.get_mut(&backing) else {
+            if function
+                .storage(backing)
+                .is_some_and(|storage| storage.kind == MirStorageKind::ArrayBacking)
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "optional array element initialization requires a live unpublished element-list backing",
+                );
+            }
+            return;
+        };
+        let exact_slot = matches!(
+            destination.projections.as_slice(),
+            [MirPlaceProjection::ArrayElement {
+                array,
+                normalized_index,
+            }] if *array == state.array && *normalized_index == state.prefix
+        );
+        if !exact_slot
+            || state.next >= state.length
+            || state.element_state != ElementInitializationState::Uninitialized
+        {
+            verifier.block_error(
+                function.callable(),
+                block,
+                "optional array element initialization must complete exactly once in the current prefix slot",
+            );
+            return;
+        }
+        state.element_state = ElementInitializationState::Ready;
+    }
+
+    fn record_published_class_optional_destination(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        destination: &MirPlace,
+    ) {
+        let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
+            return;
+        };
+        let Some(state) = self.element_lists.get_mut(&backing) else {
+            if function
+                .storage(backing)
+                .is_some_and(|storage| storage.kind == MirStorageKind::ArrayBacking)
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "class optional array element publication requires a live unpublished element-list backing",
+                );
+            }
+            return;
+        };
+        let exact_slot = matches!(
+            destination.projections.as_slice(),
+            [MirPlaceProjection::ArrayElement {
+                array,
+                normalized_index,
+            }] if *array == state.array && *normalized_index == state.prefix
+        );
+        if !exact_slot
+            || state.next >= state.length
+            || state.element_state != ElementInitializationState::ClassOptionalPayloadReady
+        {
+            verifier.block_error(
+                function.callable(),
+                block,
+                "class optional array element publication requires a completed current payload",
+            );
+            return;
+        }
+        state.element_state = ElementInitializationState::Ready;
     }
 
     fn reset_storage(&mut self, storage: StorageId) {
@@ -840,6 +975,14 @@ fn completed_class_destination(instruction: &MirInstruction) -> Option<&MirPlace
         MirInstruction::CopyConstruct(copy) => Some(&copy.destination),
         MirInstruction::Call(call) => call.destination.as_ref(),
         MirInstruction::StringInitialize(initialize) => Some(&initialize.destination),
+        _ => None,
+    }
+}
+
+fn completed_optional_destination(instruction: &MirInstruction) -> Option<&MirPlace> {
+    match instruction {
+        MirInstruction::OptionalInitialize(initialize) => Some(&initialize.destination),
+        MirInstruction::ClassOptionalInitialize(initialize) => Some(&initialize.destination),
         _ => None,
     }
 }

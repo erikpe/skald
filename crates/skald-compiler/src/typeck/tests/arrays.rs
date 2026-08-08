@@ -158,6 +158,41 @@ fn direct_class_elements_require_neither_default_nor_copy_but_materialized_sourc
 }
 
 #[test]
+fn direct_optional_payloads_require_no_copy_but_materialized_payloads_do() {
+    let direct = concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item?[] = Item?[]{none, Item(1)};\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut resolved = resolve_text(direct);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert!(dump_hir(output.hir.as_ref().unwrap())
+        .contains("ClassOptionalInitialization class c0? direct"));
+
+    let grouped = concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Item?[] = Item?[]{(Item(1))};\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut resolved = resolve_text(grouped);
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let output = crate::typeck::type_check(&resolved);
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+}
+
+#[test]
 fn diagnoses_each_invalid_element_and_continues_in_source_order() {
     let source = concat!(
         "fn main() -> i64 {\n",

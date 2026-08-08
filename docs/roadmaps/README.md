@@ -15,7 +15,9 @@ progress. Completed roadmaps and resolved discovery records move to
   selection and the structural executable-lowering gate; EL2 implements
   verified primitive element-list execution; EL3 implements exact-class final
   placement, selected copying, grouped temporary lifetime, and native reverse
-  destruction. EL4, inline optional element initialization, is next.
+  destruction; EL4 composes inline-optional absence, injection, conditional
+  payload copying, direct placement, publication, and cleanup with that prefix
+  protocol. EL5, recursively nested inline-array elements, is next.
   Depends on the implemented array, class lifecycle, optional, shared-owner,
   panic, MIR verifier, backend, and runtime ABI version 8 contracts; no active
   roadmap is a dependency.

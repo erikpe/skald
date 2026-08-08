@@ -202,6 +202,99 @@ fn exact_class_element_lists_copy_ancestor_slices_and_checked_sources() {
     assert_eq!(run_native_assembly(&output).code(), Some(54));
 }
 
+#[test]
+fn inline_optional_element_lists_execute_absent_and_present_values() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var signed: i64?[] = i64?[]{none, -7, 42};\n",
+        "  var unsigned: shared u64?[] = new u64?[]{1u, none, 9u};\n",
+        "  var bytes: u8?[] = u8?[]{2u8, none, 8u8};\n",
+        "  var floating: f64?[] = f64?[]{none, 1.25, 2.5};\n",
+        "  var booleans: shared bool?[] = new bool?[]{false, none, true};\n",
+        "  if (signed[0] is some || signed[1]! != -7 || signed[2]! != 42) { return 1; }\n",
+        "  if (unsigned->[0]! != 1u || unsigned->[1] is some || unsigned->[2]! != 9u) { return 2; }\n",
+        "  if (bytes[0]! != 2u8 || bytes[1] is some || bytes[2]! != 8u8) { return 3; }\n",
+        "  if (floating[0] is some || floating[1]! != 1.25 || floating[2]! != 2.5) { return 4; }\n",
+        "  if (booleans->[0]! || booleans->[1] is some || !booleans->[2]!) { return 5; }\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn class_optional_element_lists_preserve_copy_and_conditional_cleanup() {
+    let source = concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn validate() -> i64;\n",
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref other: Item) { self.value = other.value + 10; }\n",
+        "  destroy { observe(self.value + 100); }\n",
+        "}\n",
+        "fn make(value: i64) -> Item { return Item(value); }\n",
+        "fn maybe(value: i64) -> Item? { return Item(value); }\n",
+        "fn build() -> unit {\n",
+        "  var source: Item = Item(3);\n",
+        "  var optional: Item? = Item(5);\n",
+        "  var inline: Item?[] = Item?[]{none, Item(1), make(2), source, (Item(4)), optional, maybe(6)};\n",
+        "  var shared: shared Item?[] = new Item?[]{none, Item(1), make(2), source, (Item(4)), optional, maybe(6)};\n",
+        "  if (inline[0] is some || inline[1] is none || inline[6] is none) { return; }\n",
+        "  if (shared->[0] is some || shared->[1] is none || shared->[6] is none) { return; }\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return validate(); }\n",
+    );
+    let mut output = assembly(source);
+    assert!(output.contains("call .Lska.class.main.Item.c0.copy.k0"));
+    output.push_str(native_allocator());
+    output.push_str(optional_class_element_lifecycle_probe());
+    assert_eq!(run_native_assembly(&output).code(), Some(0), "{output}");
+}
+
+fn optional_class_element_lifecycle_probe() -> &'static str {
+    concat!(
+        "\n.section .rodata\n",
+        ".align 8\n",
+        ".Loptional_element_expected:\n",
+        "    .quad 106, 104, 106, 104, 116, 115, 114, 113, 102, 101, 116, 115, 114, 113, 102, 101, 105, 103\n",
+        ".bss\n",
+        ".align 8\n",
+        ".Loptional_element_index:\n",
+        "    .zero 8\n",
+        ".text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    mov rax, qword ptr [rip + .Loptional_element_index]\n",
+        "    cmp rax, 18\n",
+        "    jae .Loptional_element_bad\n",
+        "    lea rcx, [rip + .Loptional_element_expected]\n",
+        "    cmp rdi, qword ptr [rcx + rax * 8]\n",
+        "    jne .Loptional_element_bad\n",
+        "    inc rax\n",
+        "    mov qword ptr [rip + .Loptional_element_index], rax\n",
+        "    ret\n",
+        ".globl validate\n",
+        ".type validate, @function\n",
+        "validate:\n",
+        "    xor eax, eax\n",
+        "    cmp qword ptr [rip + .Loptional_element_index], 18\n",
+        "    je .Loptional_element_done\n",
+        "    mov eax, 98\n",
+        ".Loptional_element_done:\n",
+        "    ret\n",
+        ".Loptional_element_bad:\n",
+        "    mov rax, 60\n",
+        "    syscall\n",
+        ".size observe, .-observe\n",
+        ".size validate, .-validate\n",
+    )
+}
+
 fn class_element_lifecycle_probe() -> &'static str {
     concat!(
         "\n.section .rodata\n",

@@ -48,6 +48,14 @@ name = "direct_result_named_grouped_and_shared_outer"
 expect = { stdout = { file = "data/class_array_element_lists.stdout" } }
 
 [[test]]
+name = "optional_element_lists"
+mode = "run"
+source = "optional_array_element_lists.ska"
+[[test.run]]
+name = "absence_injection_grouping_and_reverse_cleanup"
+expect = { stdout = { file = "data/optional_array_element_lists.stdout" } }
+
+[[test]]
 name = "static"
 mode = "run"
 source = "static_arrays.ska"

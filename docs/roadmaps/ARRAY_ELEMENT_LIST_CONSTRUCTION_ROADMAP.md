@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 through EL3 are complete and EL4 is next.
+Status: in progress; EL0 through EL4 are complete and EL5 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -49,7 +49,7 @@ lifecycle, publication, and runtime boundaries.
 - [x] EL1 — Select typed destination initialization plans
 - [x] EL2 — Execute verified primitive element lists
 - [x] EL3 — Execute exact-class destination placement and copying
-- [ ] EL4 — Execute inline optional element initialization
+- [x] EL4 — Execute inline optional element initialization
 - [ ] EL5 — Execute recursively nested inline-array elements
 - [ ] EL6 — Execute shared and optional-shared owner elements
 - [ ] EL7 — Harden and publish the complete element-list profile
@@ -226,20 +226,20 @@ completed arrays retain their independently computed copyability.
 **Purpose:** Compose explicit list destinations with the existing absent,
 present, conditional lifecycle, and payload-destination rules.
 
-- [ ] Initialize primitive and exact-class optional slots from `none` without
+- [x] Initialize primitive and exact-class optional slots from `none` without
       reading or constructing payload bytes.
-- [ ] Inject ordinary primitive and exact-class sources into the expected
+- [x] Inject ordinary primitive and exact-class sources into the expected
       optional element type without adding a universal `none` type or any
       implicit unwrap.
-- [ ] Direct an eligible ungrouped exact-class construction into the present
+- [x] Direct an eligible ungrouped exact-class construction into the present
       payload destination; preserve named/materialized conditional copy and
       grouping behavior.
-- [ ] Lower presence publication only after its payload is complete, and
+- [x] Lower presence publication only after its payload is complete, and
       advance the outer array prefix only after the complete optional value is
       live.
-- [ ] Verify conditional payload initialization, copy identities, absence,
+- [x] Verify conditional payload initialization, copy identities, absence,
       outer-prefix order, cleanup, and no read/destroy of absent payload bytes.
-- [ ] Reuse existing x86-64 optional layout, initialization, guard, copy, and
+- [x] Reuse existing x86-64 optional layout, initialization, guard, copy, and
       conditional destruction machinery for inline and shared outer arrays.
 
 **Tests:** Primitive/class absent-present matrices; mixed lists; fresh, named,

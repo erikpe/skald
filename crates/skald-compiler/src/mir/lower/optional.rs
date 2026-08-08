@@ -75,6 +75,60 @@ impl BodyLowerer<'_> {
         self.end_optional_views_from(optional_mark, value.span);
     }
 
+    pub(super) fn lower_class_optional_destination_initialize(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        value: &crate::hir::HirClassOptionalDestinationInitialization,
+    ) {
+        match value {
+            crate::hir::HirClassOptionalDestinationInitialization::Absent { class, span } => {
+                self.lower_class_optional_initialize_at(
+                    destination,
+                    &HirClassOptionalInitialize {
+                        class: *class,
+                        source: HirClassOptionalSource::Absent { span: *span },
+                        copy_constructor: None,
+                        span: *span,
+                    },
+                );
+            }
+            crate::hir::HirClassOptionalDestinationInitialization::Direct {
+                class,
+                producer,
+                span,
+            } => self.lower_class_optional_initialize_at(
+                destination,
+                &HirClassOptionalInitialize {
+                    class: *class,
+                    source: HirClassOptionalSource::Present(HirObjectSource::Produced(
+                        producer.clone(),
+                    )),
+                    copy_constructor: None,
+                    span: *span,
+                },
+            ),
+            crate::hir::HirClassOptionalDestinationInitialization::Copy {
+                class,
+                source,
+                operation,
+                span,
+            } => {
+                let optional_mark = self.optional_view_mark();
+                let source = self.lower_class_optional_copy_source(source, *class);
+                self.emit(MirInstruction::ClassOptionalInitialize(
+                    MirClassOptionalInitialize {
+                        destination,
+                        source,
+                        class: *class,
+                        copy_constructor: Some(super::lower_selected_copy_operation(*operation)),
+                        span: *span,
+                    },
+                ));
+                self.end_optional_views_from(optional_mark, *span);
+            }
+        }
+    }
+
     pub(super) fn lower_class_optional_assignment(
         &mut self,
         assignment: &HirClassOptionalAssignment,
@@ -92,28 +146,8 @@ impl BodyLowerer<'_> {
             );
             return;
         }
-        let source = match &assignment.source {
-            HirClassOptionalSource::Produced(expression) => {
-                let storage = self.new_optional_storage(
-                    MirStorageKind::Temporary,
-                    "class-optional-result",
-                    expression.ty,
-                    expression.span,
-                );
-                self.lower_optional_call(expression, crate::mir::MirPlace::base(storage));
-                self.full_expression.register_temporary(
-                    super::FullExpressionTemporary::ClassOptional(
-                        crate::mir::MirClassOptionalCleanup {
-                            destination: crate::mir::MirPlace::base(storage),
-                            class: assignment.destination.class,
-                            span: expression.span,
-                        },
-                    ),
-                );
-                MirClassOptionalSource::Copy(crate::mir::MirPlace::base(storage))
-            }
-            source => self.lower_class_optional_source(source),
-        };
+        let source =
+            self.lower_class_optional_copy_source(&assignment.source, assignment.destination.class);
         let self_copy =
             matches!(&source, MirClassOptionalSource::Copy(source) if source == &destination);
         if !self_copy {
@@ -133,6 +167,35 @@ impl BodyLowerer<'_> {
                 span: assignment.span,
             },
         ));
+    }
+
+    fn lower_class_optional_copy_source(
+        &mut self,
+        source: &HirClassOptionalSource,
+        class: crate::identity::ClassId,
+    ) -> MirClassOptionalSource {
+        match source {
+            HirClassOptionalSource::Produced(expression) => {
+                let storage = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "class-optional-result",
+                    expression.ty,
+                    expression.span,
+                );
+                self.lower_optional_call(expression, crate::mir::MirPlace::base(storage));
+                self.full_expression.register_temporary(
+                    super::FullExpressionTemporary::ClassOptional(
+                        crate::mir::MirClassOptionalCleanup {
+                            destination: crate::mir::MirPlace::base(storage),
+                            class,
+                            span: expression.span,
+                        },
+                    ),
+                );
+                MirClassOptionalSource::Copy(crate::mir::MirPlace::base(storage))
+            }
+            source => self.lower_class_optional_source(source),
+        }
     }
 
     pub(super) fn check_optional_mutation(
@@ -204,9 +267,18 @@ impl BodyLowerer<'_> {
         source: &HirOptionalSource,
         span: crate::source::Span,
     ) {
+        self.lower_optional_initialize_at(crate::mir::MirPlace::base(destination), source, span);
+    }
+
+    pub(super) fn lower_optional_initialize_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        source: &HirOptionalSource,
+        span: crate::source::Span,
+    ) {
         let source = self.lower_optional_source(source);
         self.emit(MirInstruction::OptionalInitialize(MirOptionalInitialize {
-            destination: crate::mir::MirPlace::base(destination),
+            destination,
             source,
             span,
         }));

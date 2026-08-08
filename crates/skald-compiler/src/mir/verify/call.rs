@@ -626,9 +626,17 @@ impl<'mir> Verifier<'mir> {
                                     storage.kind,
                                     MirStorageKind::Local | MirStorageKind::Temporary
                                 ),
+                                [crate::mir::MirPlaceProjection::OptionalPayload(_)] => matches!(
+                                    storage.kind,
+                                    MirStorageKind::Local | MirStorageKind::Temporary
+                                ),
                                 [crate::mir::MirPlaceProjection::ArrayElement { .. }] => {
                                     storage.kind == MirStorageKind::ArrayBacking
                                 }
+                                [
+                                    crate::mir::MirPlaceProjection::ArrayElement { .. },
+                                    crate::mir::MirPlaceProjection::OptionalPayload(_),
+                                ] => storage.kind == MirStorageKind::ArrayBacking,
                                 _ => false,
                             })
                 });
@@ -638,7 +646,7 @@ impl<'mir> Verifier<'mir> {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "object-returning call requires complete exact-class local or temporary destination storage, or an unpublished element-list slot",
+                        "object-returning call requires complete exact-class local or temporary destination storage, an optional payload, or an unpublished element-list slot",
                     );
                 }
             }

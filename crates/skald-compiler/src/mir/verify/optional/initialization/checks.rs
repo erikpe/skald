@@ -156,6 +156,11 @@ fn verify_instruction(
             );
             state.remove(&cleanup.destination);
         }
+        MirInstruction::Array(crate::mir::MirArrayInstruction::CompleteElement {
+            backing,
+            prefix,
+            ..
+        }) => state.complete_array_element(*backing, *prefix),
         MirInstruction::Assign(assignment) => {
             if let MirRvalueKind::OptionalPresence { source, .. } = &assignment.rvalue.kind {
                 require_initialized(

@@ -173,6 +173,12 @@ temporary `Item`, invoke copy construction, or extend the existing optional
 copy-elision permission. Other source shapes retain their ordinary materialize,
 copy, assignment, and cleanup behavior.
 
+The same initialization rules apply to explicit inline-optional array element
+lists. For example, `Item?[]{none, Item(), existing}` initializes an absent
+slot, directly constructs one present payload, and conditionally copies the
+ordinary source into another present payload. It does not default-construct
+the array elements or assign over live placeholder values.
+
 ## Presence tests
 
 Presence tests are explicit, non-failing boolean expressions:

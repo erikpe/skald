@@ -1,0 +1,45 @@
+import std::io;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref other: Item) {
+        self.value = other.value + 10;
+    }
+
+    destroy {
+        std::io::println_i64(self.value + 100);
+    }
+}
+
+fn maybe(value: i64) -> Item? {
+    return Item(value);
+}
+
+fn exercise_classes() -> unit {
+    var source: Item = Item(3);
+    var inline: Item?[] = Item?[]{none, Item(1), source, (Item(4)), maybe(6)};
+    var shared: shared Item?[] = new Item?[]{none, Item(1), source, (Item(4)), maybe(6)};
+
+    std::io::println_bool(inline[0] is none);
+    std::io::println_bool(inline[1] is some);
+    std::io::println_bool(shared->[0] is none);
+    std::io::println_bool(shared->[4] is some);
+    return;
+}
+
+fn main() -> i64 {
+    var inline: i64?[] = i64?[]{none, 7};
+    var shared: shared bool?[] = new bool?[]{false, none, true};
+    std::io::println_bool(inline[0] is none);
+    std::io::println_i64(inline[1]!);
+    std::io::println_bool(shared->[0]!);
+    std::io::println_bool(shared->[1] is none);
+    std::io::println_bool(shared->[2]!);
+    exercise_classes();
+    return 0;
+}
