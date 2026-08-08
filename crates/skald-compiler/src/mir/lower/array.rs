@@ -5,6 +5,7 @@ use crate::hir::{
     HirArrayConstruction, HirArrayConstructionMode, HirArrayElementPlace, HirArrayIndex,
     HirArrayInitialize, HirArrayPlace, HirArrayReceiver, HirArrayReceiverSource, HirArraySlice,
     HirArraySliceBounds, HirArraySource, HirArrayTransfer, HirExpressionKind,
+    HirStoredValueInitialization, Type,
 };
 
 impl BodyLowerer<'_> {
@@ -427,14 +428,29 @@ impl BodyLowerer<'_> {
                 lower_array_copy_element(*element),
                 construction.span,
             ),
-            HirArrayConstructionMode::Elements(_) => {
-                self.reject_array_element_list(construction.span);
-                let length = self.assign(
-                    MirRvalueKind::ConstantU64(0),
-                    MirType::U64,
+            HirArrayConstructionMode::Elements(elements)
+                if self.is_primitive_array(construction.array) =>
+            {
+                let produced = self.new_array_temporary(
+                    construction.array,
+                    MirStorageKind::ArrayProduced,
                     construction.span,
                 );
-                self.lower_array_build(construction.array, length, None, None, construction.span)
+                let backing = self.lower_primitive_element_list(
+                    construction.array,
+                    elements,
+                    MirArrayOwnership::Inline,
+                    construction.span,
+                );
+                self.emit(MirInstruction::Array(MirArrayInstruction::Publish {
+                    backing,
+                    destination: produced,
+                    span: construction.span,
+                }));
+                produced
+            }
+            HirArrayConstructionMode::Elements(_) => {
+                self.lower_rejected_array_element_list(construction.array, construction.span)
             }
         }
     }
@@ -448,6 +464,23 @@ impl BodyLowerer<'_> {
             construction.ownership,
             crate::hir::HirArrayOwnership::Shared
         );
+        if let HirArrayConstructionMode::Elements(elements) = &construction.mode {
+            if self.is_primitive_array(construction.array) {
+                let backing = self.lower_primitive_element_list(
+                    construction.array,
+                    elements,
+                    MirArrayOwnership::Shared,
+                    construction.span,
+                );
+                self.emit(MirInstruction::Array(MirArrayInstruction::PublishShared {
+                    backing,
+                    destination,
+                    array: construction.array,
+                    span: construction.span,
+                }));
+                return;
+            }
+        }
         let (length, default, copy) = match &construction.mode {
             HirArrayConstructionMode::Empty => (
                 self.assign(
@@ -507,6 +540,72 @@ impl BodyLowerer<'_> {
             array: construction.array,
             span: construction.span,
         }));
+    }
+
+    fn is_primitive_array(&self, array: crate::identity::ArrayTypeId) -> bool {
+        matches!(
+            self.input
+                .array_types
+                .get(array)
+                .expect("typed array construction must reference a declared array")
+                .element,
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+        )
+    }
+
+    fn lower_rejected_array_element_list(
+        &mut self,
+        array: crate::identity::ArrayTypeId,
+        span: crate::source::Span,
+    ) -> StorageId {
+        self.reject_array_element_list(span);
+        let length = self.assign(MirRvalueKind::ConstantU64(0), MirType::U64, span);
+        self.lower_array_build(array, length, None, None, span)
+    }
+
+    fn lower_primitive_element_list(
+        &mut self,
+        array: crate::identity::ArrayTypeId,
+        elements: &crate::hir::HirArrayElementList,
+        ownership: MirArrayOwnership,
+        span: crate::source::Span,
+    ) -> StorageId {
+        let backing = self.new_array_storage(array, MirStorageKind::ArrayBacking, "backing", span);
+        let prefix = self.new_array_storage(array, MirStorageKind::ArrayPosition, "prefix", span);
+        self.storage[prefix.index()].ty = MirType::U64;
+        let length = u64::try_from(elements.elements.len())
+            .expect("array element-list length must fit the language u64 length");
+        self.emit(MirInstruction::Array(
+            MirArrayInstruction::AllocateElements {
+                backing,
+                prefix,
+                array,
+                length,
+                ownership,
+                failure: MirArrayFailure::AllocationSize,
+                span,
+            },
+        ));
+        self.emit_array_operation_check(MirArrayFailure::AllocationSize, span);
+
+        for (position, element) in elements.elements.iter().enumerate() {
+            let HirStoredValueInitialization::Primitive(expression) = &element.value else {
+                invalid_array_hir();
+            };
+            let value = self
+                .lower_expression(expression)
+                .expect("typed primitive array element must produce a MIR value");
+            self.emit(MirInstruction::Array(
+                MirArrayInstruction::InitializeElement {
+                    backing,
+                    prefix,
+                    position: u64::try_from(position).expect("array element position must fit u64"),
+                    value,
+                    span: element.span,
+                },
+            ));
+        }
+        backing
     }
 
     fn lower_array_named_copy(

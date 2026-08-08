@@ -22,6 +22,7 @@ use crate::{
 mod alias_fixtures;
 mod alias_lowering;
 mod aliases;
+mod array_element_lists;
 mod arrays;
 mod bitwise;
 mod comparisons;

@@ -176,6 +176,26 @@ pub enum MirArrayInstruction {
         failure: MirArrayFailure,
         span: Span,
     },
+    /// Allocates unpublished storage for an element-list construction and
+    /// establishes its initialized-prefix counter at zero.
+    AllocateElements {
+        backing: StorageId,
+        prefix: StorageId,
+        array: ArrayTypeId,
+        length: u64,
+        ownership: MirArrayOwnership,
+        failure: MirArrayFailure,
+        span: Span,
+    },
+    /// Initializes the next primitive element in source order and advances
+    /// the initialized prefix by exactly one element.
+    InitializeElement {
+        backing: StorageId,
+        prefix: StorageId,
+        position: u64,
+        value: ValueId,
+        span: Span,
+    },
     InitializeNext {
         backing: StorageId,
         index: StorageId,
@@ -305,6 +325,8 @@ impl MirArrayInstruction {
     pub const fn span(&self) -> Span {
         match self {
             Self::Allocate { span, .. }
+            | Self::AllocateElements { span, .. }
+            | Self::InitializeElement { span, .. }
             | Self::InitializeNext { span, .. }
             | Self::CopyNext { span, .. }
             | Self::Publish { span, .. }

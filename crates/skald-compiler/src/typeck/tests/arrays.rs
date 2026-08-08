@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[test]
-fn selects_ordered_primitive_element_plans_and_gates_mir_lowering() {
+fn selects_ordered_primitive_element_plans_and_lowers_them_to_mir() {
     let output = check_text(concat!(
         "fn main() -> i64 {\n",
         "  var values: i64[] = i64[]{1, 2};\n",
@@ -50,12 +50,24 @@ fn selects_ordered_primitive_element_plans_and_gates_mir_lowering() {
         .iter()
         .all(|element| matches!(element.value, HirStoredValueInitialization::Primitive(_))));
 
-    let errors = crate::mir::try_lower_hir(&hir).unwrap_err();
-    assert_eq!(errors.len(), 1);
-    assert!(matches!(
-        errors.iter().next(),
-        Some(crate::mir::MirLoweringError::UnsupportedArrayElementList { .. })
-    ));
+    let mir = crate::mir::try_lower_hir(&hir).expect("primitive element lists execute in EL2");
+    crate::mir::verify_mir(&mir).expect("primitive element-list MIR must verify");
+    let lowered = mir.definitions.get(mir.entry_function).unwrap();
+    assert_eq!(
+        lowered
+            .body
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .filter(|instruction| matches!(
+                instruction,
+                crate::mir::MirInstruction::Array(
+                    crate::mir::MirArrayInstruction::InitializeElement { .. }
+                )
+            ))
+            .count(),
+        2
+    );
 }
 
 #[test]

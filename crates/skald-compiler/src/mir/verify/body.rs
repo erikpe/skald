@@ -899,6 +899,13 @@ impl<'mir> Verifier<'mir> {
                         })),
                     ) => operation_failure == failure,
                     (
+                        MirArrayFailure::AllocationSize,
+                        Some(MirInstruction::Array(MirArrayInstruction::AllocateElements {
+                            failure: operation_failure,
+                            ..
+                        })),
+                    ) => operation_failure == failure,
+                    (
                         MirArrayFailure::InvalidSliceBounds,
                         Some(MirInstruction::Array(MirArrayInstruction::SliceBoundsCheck {
                             ..

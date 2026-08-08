@@ -58,6 +58,7 @@ use alias_fixtures::*;
 mod native_support;
 use native_support::*;
 
+mod array_element_lists;
 mod arrays;
 mod assembler;
 mod calls;

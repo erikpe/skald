@@ -810,19 +810,17 @@ nested-array, shared-owner, and optional-owner elements. Those plans retain
 initializer and copy identities, named versus produced provenance, access,
 and ownership operations rather than leaving lower phases to infer them.
 
-MIR must next allocate unpublished backing for the source-derived count before
-any element effect, initialize exactly one increasing prefix in source order,
-and publish only after the prefix equals the count. Verification proves exact
-element types and operations, single initialization of every position,
-named-copy versus produced-consumption accounting, no use of uninitialized
-slots, complete publication, and enclosing full-expression temporary and
-anchor lifetime. The representation may use linear instructions or structured
-control flow, but it may not manufacture default live elements and assign over
-them. Backend lowering reuses verified category-specific destination
-initialization, and the runtime remains unaware of the list and prefix. During
-EL1, a structured executable-lowering error selected by the `Elements` HIR
-variant forms the phase boundary; the compilation driver reports it without
-entering unimplemented MIR lowering. The detailed frozen boundary is in
+Primitive element plans now lower to `AllocateElements`, an exact constant
+count and zero initialized prefix, followed by ordered `InitializeElement`
+operations and complete inline or shared publication. Allocation and its
+failure edge precede every element effect. Verification proves exact primitive
+types, unique increasing positions, prefix completion, backing consumption,
+and enclosing full-expression lifetime; no default live elements or
+assignment loop is introduced. The x86-64 backend reuses checked allocation,
+layout-specific primitive stores, publication, and release, while the runtime
+remains unaware of the list and prefix. A structured executable-lowering error
+selected by lifecycle-bearing `Elements` plans remains the phase boundary for
+the later EL3 through EL6 stages. The detailed frozen boundary is in
 [the array compiler contract](ARRAYS.md#frozen-element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively

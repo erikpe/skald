@@ -1,6 +1,6 @@
 # Arrays
 
-Status: **implemented contract on x86-64 with a frozen, source-retained
+Status: **implemented contract on x86-64 with a frozen, primitive-executable
 explicit element-list extension**. This document is authoritative for the
 source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
@@ -196,10 +196,9 @@ copying has no inheritance or dynamic-check relation.
 
 No fill-value, per-index generator, inferred array literal, or
 multi-dimensional shape constructor is implemented. Executable nonempty
-construction therefore currently requires a default-initializable element
-type or an exact copy source. The explicit element-list form below is accepted
-through resolution and deliberately rejected before HIR while its executable
-semantics remain staged.
+construction accepts the existing default-length and exact-copy modes plus
+explicit primitive element lists. Lifecycle-bearing element-list families
+remain staged behind structured executable lowering.
 
 ## Frozen explicit element-list construction
 
@@ -225,10 +224,12 @@ single-expression `T[](value)` remains default-length construction and
 requires `value: u64`.
 
 The type checker accepts both brace forms and records one exact ordered
-destination plan per element in HIR. The form is not executable yet: the
-compiler's structured HIR-to-MIR availability gate rejects element-list HIR
-until the allocation, prefix, and publication operations below land through
-the active implementation roadmap.
+destination plan per element in HIR. Lists of `i64`, `u64`, `u8`, `f64`, and
+`bool` execute for inline and shared outer arrays. Their MIR allocates checked
+unpublished backing before element effects, advances one verified ordered
+prefix, and publishes only after completion. The structured HIR-to-MIR gate
+continues to reject class, optional, nested-array, shared-owner, and
+optional-owner element plans until their roadmap stages land.
 
 The list length is the number of supplied expressions and must satisfy the
 ordinary maximum-`i64` array-length bound. Type grouping and outer ownership
@@ -748,8 +749,8 @@ The following are intentionally outside the implemented array profile:
 - inline optional array payloads and their eventual source spelling;
 - inferred array literals, expected-type-only lists, fill-value, per-index
   generator, comprehensions, spreads, repetition, and rectangular-shape
-  initialization syntax; explicit typed element-list construction is frozen
-  separately above but remains unimplemented;
+  initialization syntax; lifecycle-bearing explicit typed element-list
+  families are frozen separately above but remain staged;
 - capacity, resizing an existing allocation, append, insertion, removal, or
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;

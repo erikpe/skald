@@ -106,6 +106,12 @@ fn check_instruction(
                 failure: MirArrayFailure::AllocationSize,
                 ..
             }
+            | MirArrayInstruction::AllocateElements {
+                ownership: MirArrayOwnership::Inline | MirArrayOwnership::Shared,
+                failure: MirArrayFailure::AllocationSize,
+                ..
+            }
+            | MirArrayInstruction::InitializeElement { .. }
             | MirArrayInstruction::Publish { .. }
             | MirArrayInstruction::PublishShared { .. } => {}
             MirArrayInstruction::InitializeNext {

@@ -1,0 +1,49 @@
+import std::io;
+
+class Trace {
+    static order: i64;
+
+    init() {}
+}
+
+fn record(value: i64) -> i64 {
+    Trace.order = Trace.order * 10 + value;
+    return value;
+}
+
+fn consume(values: i64[]) -> unit {
+    std::io::println_i64(values[0]);
+}
+
+fn main() -> i64 {
+    var signed: i64[] = i64[]{record(1), record(2), record(3)};
+    var unsigned: u64[] = u64[]{7u, 9u};
+    var bytes: u8[] = u8[]{6u8, 8u8};
+    var floats: f64[] = f64[]{1.25, 2.5};
+    var flags: bool[] = bool[]{false, true};
+    var empty: i64[] = i64[]{};
+
+    var shared_signed: shared i64[] = new i64[]{20, 22};
+    var shared_unsigned: shared u64[] = new u64[]{3u, 4u};
+    var shared_bytes: shared u8[] = new u8[]{5u8, 6u8};
+    var shared_floats: shared f64[] = new f64[]{3.5, 4.5};
+    var shared_flags: shared bool[] = new bool[]{true, false};
+
+    std::io::println_i64(Trace.order);
+    std::io::println_i64(signed[0]);
+    std::io::println_i64(signed[1]);
+    std::io::println_i64(signed[2]);
+    std::io::println_u64(unsigned[1]);
+    std::io::println_u8(bytes[1]);
+    std::io::println_f64(floats[1]);
+    std::io::println_bool(flags[1]);
+    std::io::println_u64(empty.len());
+    std::io::println_i64(shared_signed->[1]);
+    std::io::println_u64(shared_unsigned->[1]);
+    std::io::println_u8(shared_bytes->[0]);
+    std::io::println_f64(shared_floats->[1]);
+    std::io::println_bool(shared_flags->[0]);
+    consume(i64[]{42});
+    std::io::println_i64(i64[]{40, 2}[0]);
+    return 0;
+}

@@ -39,6 +39,62 @@ impl Verifier<'_> {
                     );
                 }
             }
+            MirArrayInstruction::AllocateElements {
+                backing,
+                prefix,
+                array,
+                ..
+            } => {
+                let storage_matches = function.storage(*backing).map(|s| (s.kind, s.ty))
+                    == Some((MirStorageKind::ArrayBacking, MirType::Array(*array)))
+                    && function.storage(*prefix).map(|s| (s.kind, s.ty))
+                        == Some((MirStorageKind::ArrayPosition, MirType::U64));
+                let primitive_element = self.program.array_type(*array).is_some_and(|array| {
+                    matches!(
+                        array.element,
+                        MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool
+                    )
+                });
+                if !storage_matches || !primitive_element {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array element-list allocation requires matching backing, prefix, and primitive array type",
+                    );
+                }
+            }
+            MirArrayInstruction::InitializeElement {
+                backing,
+                prefix,
+                value,
+                ..
+            } => {
+                let element = function.storage(*backing).and_then(|storage| {
+                    (storage.kind == MirStorageKind::ArrayBacking)
+                        .then_some(storage.ty)
+                        .and_then(|ty| match ty {
+                            MirType::Array(array) => {
+                                self.program.array_type(array).map(|entry| entry.element)
+                            }
+                            _ => None,
+                        })
+                });
+                let prefix_matches = function.storage(*prefix).map(|s| (s.kind, s.ty))
+                    == Some((MirStorageKind::ArrayPosition, MirType::U64));
+                let value_matches = element.is_some_and(|element| {
+                    matches!(
+                        element,
+                        MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool
+                    ) && self.verify_value_use(function, block, *value, defined) == Some(element)
+                });
+                if !prefix_matches || !value_matches {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array element initialization requires exact primitive value, backing, and prefix types",
+                    );
+                }
+            }
             MirArrayInstruction::InitializeNext { backing, index, .. }
             | MirArrayInstruction::CopyNext { backing, index, .. } => {
                 if function.storage(*backing).map(|s| s.kind) != Some(MirStorageKind::ArrayBacking)

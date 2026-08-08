@@ -308,6 +308,15 @@ fn visit_optional_shared_source(
 fn visit_array_instruction(instruction: &MirArrayInstruction, visit: &mut impl FnMut(StorageId)) {
     match instruction {
         MirArrayInstruction::Allocate { backing, .. } => visit(*backing),
+        MirArrayInstruction::AllocateElements {
+            backing, prefix, ..
+        }
+        | MirArrayInstruction::InitializeElement {
+            backing, prefix, ..
+        } => {
+            visit(*backing);
+            visit(*prefix);
+        }
         MirArrayInstruction::InitializeNext { backing, index, .. } => {
             visit(*backing);
             visit(*index);

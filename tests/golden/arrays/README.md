@@ -1,7 +1,8 @@
 # Array fixtures
 
-`storage.golden.toml` owns primitive, inline, nontrivial, static, indexing, and
-ABI-pressure behavior. `views.golden.toml` owns array aliases and slices plus
+`storage.golden.toml` owns primitive, inline, nontrivial, static, indexing,
+explicit primitive element-list, and ABI-pressure behavior.
+`views.golden.toml` owns array aliases and slices plus
 their rejected rebinding, optional-payload, and whole-pointee operations.
 Lifecycle and value traces remain exact external byte expectations.
 

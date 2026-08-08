@@ -197,7 +197,7 @@ array declaration nevertheless retains its independently computed default,
 copy, assignment, and destruction capabilities for later operations on the
 completed value.
 
-HIR-to-MIR lowering must implement this abstract sequence:
+Primitive HIR-to-MIR lowering implements this abstract sequence:
 
 1. materialize the constant list count and perform checked backing allocation;
 2. establish unpublished backing with an initialized prefix of zero;
@@ -207,11 +207,14 @@ HIR-to-MIR lowering must implement this abstract sequence:
 6. publish inline produced backing or one shared-array owner only when the
    prefix equals the list count.
 
-Until that sequence has verified MIR, `try_lower_hir` rejects every
-`HirArrayConstructionMode::Elements` with a structured
-`MirLoweringError::UnsupportedArrayElementList`. The normal compilation driver
-uses this executable-lowering gate, so valid typed list HIR cannot reach the
-unimplemented lowering branch or panic the compiler.
+MIR represents the primitive slice with `AllocateElements`, which carries the
+constant source count and establishes a zero `u64` prefix, followed by one
+`InitializeElement` per exact source position and ordinary inline or shared
+publication. Element expression lowering may introduce explicit CFG, but it
+does not introduce the uniform default/copy loop or live placeholders.
+`try_lower_hir` retains `MirLoweringError::UnsupportedArrayElementList` only
+for lifecycle-bearing element plans whose later roadmap stages have not
+landed.
 
 The MIR vocabulary may use immediate semantic positions, explicit index
 storage, ordinary category-specific initialization instructions, or a focused
@@ -247,11 +250,13 @@ types, list expressions, initialized prefixes, or lifecycle operations. No
 public runtime entry point, metadata format, or ABI-version change is part of
 this frozen extension.
 
-Current syntax and resolved IR implement this mode. HIR, MIR, verifier, and
-backend code do not yet implement it, and the type-checking gate prevents
-those phases from observing a partial representation. The
-[status matrix](../language/STATUS.md) distinguishes source retention from
-executable compiler behavior.
+Syntax, resolved IR, and HIR implement the complete typed representation.
+Verified MIR and x86-64 implement primitive lists for inline and shared outer
+ownership; the verifier proves exact scalar values, source-position order,
+prefix completion, publication, backing consumption, and storage lifetime.
+Other typed element families remain behind the executable-lowering gate. The
+[status matrix](../language/STATUS.md) distinguishes this primitive vertical
+slice from the remaining frozen profile.
 
 ## Typed HIR
 

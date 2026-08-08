@@ -1,5 +1,5 @@
 use crate::{
-    hir::{HirBlock, HirControlEffects, HirLiteralDataTable, Type},
+    hir::{HirArrayTypeTable, HirBlock, HirControlEffects, HirLiteralDataTable, Type},
     identity::{CallableId, ClassId, FunctionId},
     mir::{
         MirAssignment, MirCleanup, MirInstruction, MirPathCondition, MirPlace, MirRvalue,
@@ -23,6 +23,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         span,
     };
     let literal_data = HirLiteralDataTable::default();
+    let array_types = HirArrayTypeTable::default();
     let input = BodyLoweringInput {
         callable,
         parameters: &[],
@@ -32,6 +33,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         receiver_class: None,
         string_language_item: None,
         literal_data: &literal_data,
+        array_types: &array_types,
     };
     let mut lowerer = BodyLowerer::new(input);
     let activation = StorageId::new(callable, 0);

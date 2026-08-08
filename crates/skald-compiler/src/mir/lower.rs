@@ -128,6 +128,7 @@ struct BodyLoweringInput<'hir> {
     receiver_class: Option<ClassId>,
     string_language_item: Option<MirStringLanguageItem>,
     literal_data: &'hir crate::hir::HirLiteralDataTable,
+    array_types: &'hir crate::hir::HirArrayTypeTable,
 }
 
 struct LoweredBody {

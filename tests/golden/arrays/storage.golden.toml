@@ -32,6 +32,14 @@ name = "construction_copy_and_replacement"
 expect = { stdout = { file = "data/primitive_array_values.stdout" } }
 
 [[test]]
+name = "primitive_element_lists"
+mode = "run"
+source = "primitive_array_element_lists.ska"
+[[test.run]]
+name = "ordered_inline_shared_and_nested_contexts"
+expect = { stdout = { file = "data/primitive_array_element_lists.stdout" } }
+
+[[test]]
 name = "static"
 mode = "run"
 source = "static_arrays.ska"

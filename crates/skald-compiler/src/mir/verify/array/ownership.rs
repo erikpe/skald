@@ -148,15 +148,21 @@ impl Verifier<'_> {
                             &mut reported_joins,
                         );
                         let mut failure_states = states.clone();
-                        if let Some(MirInstruction::Array(MirArrayInstruction::Allocate {
-                            backing,
-                            ..
-                        })) = block.instructions.last()
-                        {
-                            failure_states.update_states(|state| {
-                                state.backings.remove(backing);
-                                state.completed_backings.remove(backing);
-                            });
+                        if let Some(MirInstruction::Array(operation)) = block.instructions.last() {
+                            let backing = match operation {
+                                MirArrayInstruction::Allocate { backing, .. }
+                                | MirArrayInstruction::AllocateElements { backing, .. } => {
+                                    Some(*backing)
+                                }
+                                _ => None,
+                            };
+                            if let Some(backing) = backing {
+                                failure_states.update_states(|state| {
+                                    state.backings.remove(&backing);
+                                    state.completed_backings.remove(&backing);
+                                    state.element_lists.remove(&backing);
+                                });
+                            }
                         }
                         self.merge_array_owner_state(
                             function,
@@ -200,6 +206,7 @@ impl Verifier<'_> {
                         states.update_states(|state| {
                             if !state.backings.is_empty()
                                 || !state.completed_backings.is_empty()
+                                || !state.element_lists.is_empty()
                                 || !state.produced.is_empty()
                                 || !state.anchors.is_empty()
                                 || !state.aliases.is_empty()
@@ -445,6 +452,7 @@ fn array_anchor_covers(anchor: StorageId, owner: &MirPlace, borrowed: &MirPlace)
 struct ArrayOwnerState {
     backings: HashSet<StorageId>,
     completed_backings: HashSet<StorageId>,
+    element_lists: HashMap<StorageId, ElementListState>,
     produced: HashSet<StorageId>,
     consumed: HashSet<StorageId>,
     anchors: HashSet<StorageId>,
@@ -452,6 +460,13 @@ struct ArrayOwnerState {
     slice_checks: HashSet<(StorageId, StorageId)>,
     checked_range_offsets: HashSet<StorageId>,
     range_offset_owners: HashMap<StorageId, MirPlace>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct ElementListState {
+    prefix: StorageId,
+    length: u64,
+    next: u64,
 }
 
 impl ArrayOwnerState {
@@ -536,6 +551,67 @@ impl ArrayOwnerState {
                 }
                 self.completed_backings.remove(backing);
             }
+            MirArrayInstruction::AllocateElements {
+                backing,
+                prefix,
+                length,
+                ..
+            } => {
+                let duplicate = !self.backings.insert(*backing)
+                    || self.completed_backings.contains(backing)
+                    || self.element_lists.contains_key(backing)
+                    || self
+                        .element_lists
+                        .values()
+                        .any(|state| state.prefix == *prefix);
+                if duplicate {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array element-list backing or prefix is allocated more than once",
+                    );
+                }
+                self.completed_backings.remove(backing);
+                self.element_lists.insert(
+                    *backing,
+                    ElementListState {
+                        prefix: *prefix,
+                        length: *length,
+                        next: 0,
+                    },
+                );
+                if *length == 0 {
+                    self.completed_backings.insert(*backing);
+                }
+            }
+            MirArrayInstruction::InitializeElement {
+                backing,
+                prefix,
+                position,
+                ..
+            } => {
+                let Some(state) = self.element_lists.get_mut(backing) else {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array element initialization requires a live unpublished element-list backing",
+                    );
+                    return;
+                };
+                if state.prefix != *prefix || state.next != *position || state.next >= state.length
+                {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array element initialization must advance the exact source-ordered prefix",
+                    );
+                    return;
+                }
+                state.next += 1;
+                if state.next == state.length {
+                    self.completed_backings.insert(*backing);
+                }
+            }
             MirArrayInstruction::Publish {
                 backing,
                 destination,
@@ -552,6 +628,9 @@ impl ArrayOwnerState {
                         "array publication requires one completed unpublished backing",
                     );
                 }
+                if !self.backings.contains(backing) {
+                    self.element_lists.remove(backing);
+                }
             }
             MirArrayInstruction::PublishShared { backing, .. } => {
                 if !self.completed_backings.remove(backing) || !self.backings.remove(backing) {
@@ -560,6 +639,9 @@ impl ArrayOwnerState {
                         block,
                         "shared array publication requires one completed unpublished backing",
                     );
+                }
+                if !self.backings.contains(backing) {
+                    self.element_lists.remove(backing);
                 }
             }
             MirArrayInstruction::SliceCopy { destination, .. } => {
@@ -642,6 +724,11 @@ impl ArrayOwnerState {
     fn has_active_storage(&self, storage: StorageId) -> bool {
         self.backings.contains(&storage)
             || self.completed_backings.contains(&storage)
+            || self.element_lists.contains_key(&storage)
+            || self
+                .element_lists
+                .values()
+                .any(|state| state.prefix == storage)
             || self.produced.contains(&storage)
             || self.anchors.contains(&storage)
     }
@@ -649,6 +736,8 @@ impl ArrayOwnerState {
     fn reset_storage(&mut self, storage: StorageId) {
         self.backings.remove(&storage);
         self.completed_backings.remove(&storage);
+        self.element_lists
+            .retain(|backing, state| *backing != storage && state.prefix != storage);
         self.produced.remove(&storage);
         self.consumed.remove(&storage);
         self.anchors.remove(&storage);

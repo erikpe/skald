@@ -7,7 +7,7 @@ use crate::{
         MirArrayFailure, MirArrayInstruction, MirArrayOwnership, MirArrayPositionKind,
         MirClassOptionalCleanup, MirClassOptionalInitialize, MirClassOptionalSource, MirInitialize,
         MirOptionalSharedCleanup, MirOptionalSharedInitialize, MirOptionalSharedSource,
-        MirOptionalSource, MirPlace, MirPlaceProjection, MirTerminator, MirType,
+        MirOptionalSource, MirPlace, MirPlaceProjection, MirStore, MirTerminator, MirType,
     },
 };
 
@@ -40,6 +40,12 @@ pub(super) fn lower_helpers(
 }
 
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
+
+#[derive(Clone, Copy)]
+enum ArrayAllocationLength {
+    Value(crate::mir::ValueId),
+    Constant(u64),
+}
 
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_array_copy_construction(
@@ -98,6 +104,39 @@ impl InstructionSelector<'_, '_> {
                 ownership,
                 ..
             } => self.select_array_allocate(*backing, *array, *length, *ownership),
+            MirArrayInstruction::AllocateElements {
+                backing,
+                prefix,
+                array,
+                length,
+                ownership,
+                ..
+            } => {
+                self.clear_storage(*prefix);
+                self.select_array_allocate_length(
+                    *backing,
+                    *array,
+                    ArrayAllocationLength::Constant(*length),
+                    *ownership,
+                )
+            }
+            MirArrayInstruction::InitializeElement {
+                backing,
+                prefix,
+                value,
+                span,
+                ..
+            } => {
+                let array = self.array_for_storage(*backing)?;
+                let destination = array_element_place(MirPlace::base(*backing), array, *prefix);
+                self.select_store(&MirStore {
+                    destination,
+                    value: *value,
+                    span: *span,
+                })?;
+                self.advance_array_index(*prefix);
+                Ok(())
+            }
             MirArrayInstruction::InitializeNext {
                 backing,
                 index,
@@ -534,6 +573,21 @@ impl InstructionSelector<'_, '_> {
         length: crate::mir::ValueId,
         ownership: MirArrayOwnership,
     ) -> Result<(), BackendError> {
+        self.select_array_allocate_length(
+            backing,
+            array,
+            ArrayAllocationLength::Value(length),
+            ownership,
+        )
+    }
+
+    fn select_array_allocate_length(
+        &mut self,
+        backing: crate::mir::StorageId,
+        array: crate::identity::ArrayTypeId,
+        length: ArrayAllocationLength,
+        ownership: MirArrayOwnership,
+    ) -> Result<(), BackendError> {
         let layout = self
             .data_layout
             .array(array)
@@ -542,7 +596,7 @@ impl InstructionSelector<'_, '_> {
         let failure = self.next_array_label("allocate_failure");
         let complete = self.next_array_label("allocate_complete");
 
-        value::load_rax(value::frame_value(self.frame, length), self.output);
+        self.load_array_allocation_length(length);
         self.output.push(Instruction::MoveImmediate64 {
             bits: match ownership {
                 MirArrayOwnership::Inline => layout.maximum_length(),
@@ -600,14 +654,14 @@ impl InstructionSelector<'_, '_> {
                     value::memory(Register::Rdx, ARRAY_OWNER_COUNT_OFFSET),
                     self.output,
                 );
-                value::load_rax(value::frame_value(self.frame, length), self.output);
+                self.load_array_allocation_length(length);
                 value::store_rax(
                     value::memory(Register::Rdx, ARRAY_LENGTH_OFFSET),
                     self.output,
                 );
             }
             MirArrayOwnership::Shared => {
-                value::load_rax(value::frame_value(self.frame, length), self.output);
+                self.load_array_allocation_length(length);
                 value::store_rax(
                     value::memory(Register::Rdx, SHARED_ARRAY_LENGTH_OFFSET),
                     self.output,
@@ -636,6 +690,20 @@ impl InstructionSelector<'_, '_> {
         });
         self.output.push(Instruction::Label(complete));
         Ok(())
+    }
+
+    fn load_array_allocation_length(&mut self, length: ArrayAllocationLength) {
+        match length {
+            ArrayAllocationLength::Value(value_id) => {
+                value::load_rax(value::frame_value(self.frame, value_id), self.output);
+            }
+            ArrayAllocationLength::Constant(bits) => {
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits,
+                    destination: Register::Rax,
+                });
+            }
+        }
     }
 
     pub(super) fn select_array_element_place(
@@ -901,11 +969,18 @@ impl InstructionSelector<'_, '_> {
                 .instructions
                 .iter()
                 .find_map(|instruction| match instruction {
-                    crate::mir::MirInstruction::Array(MirArrayInstruction::Allocate {
-                        backing: candidate,
-                        ownership,
-                        ..
-                    }) if *candidate == backing => Some(*ownership),
+                    crate::mir::MirInstruction::Array(
+                        MirArrayInstruction::Allocate {
+                            backing: candidate,
+                            ownership,
+                            ..
+                        }
+                        | MirArrayInstruction::AllocateElements {
+                            backing: candidate,
+                            ownership,
+                            ..
+                        },
+                    ) if *candidate == backing => Some(*ownership),
                     _ => None,
                 })
         })

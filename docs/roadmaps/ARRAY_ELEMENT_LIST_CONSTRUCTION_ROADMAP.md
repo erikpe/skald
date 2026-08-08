@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 and EL1 are complete and EL2 is next.
+Status: in progress; EL0 through EL2 are complete and EL3 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -47,7 +47,7 @@ lifecycle, publication, and runtime boundaries.
 
 - [x] EL0 — Retain explicit element-list source structure
 - [x] EL1 — Select typed destination initialization plans
-- [ ] EL2 — Execute verified primitive element lists
+- [x] EL2 — Execute verified primitive element lists
 - [ ] EL3 — Execute exact-class destination placement and copying
 - [ ] EL4 — Execute inline optional element initialization
 - [ ] EL5 — Execute recursively nested inline-array elements
@@ -143,30 +143,30 @@ compiler-wide input remains non-panicking behind the explicit execution gate.
 initialization, initialized-prefix verification, publication, and the first
 native vertical slice over trivial element lifecycle.
 
-- [ ] Extend target-independent MIR with the minimal construction vocabulary
+- [x] Extend target-independent MIR with the minimal construction vocabulary
       needed to allocate source-count backing, address the next uninitialized
       slot, initialize it, advance the prefix, and publish inline or shared
       outer arrays only after completion.
-- [ ] Lower listed expressions linearly or through explicit CFG without using
+- [x] Lower listed expressions linearly or through explicit CFG without using
       the uniform default/copy array loop to invent live placeholder elements.
-- [ ] Integrate element evaluation with full-expression tracking so completed
+- [x] Integrate element evaluation with full-expression tracking so completed
       temporaries and anchors retain their existing enclosing lifetime and
       allocation failure precedes the first element effect.
-- [ ] Verify exact array and primitive element types, source order, position
+- [x] Verify exact array and primitive element types, source order, position
       uniqueness, increasing prefix, no use before initialization, complete
       publication, backing consumption, and normal cleanup.
-- [ ] Add verifier mutations for missing, duplicate, out-of-order, wrong-type,
+- [x] Add verifier mutations for missing, duplicate, out-of-order, wrong-type,
       post-publication, incomplete-publication, and leaked/duplicated backing
       operations.
-- [ ] Extend deterministic MIR dumps, storage/lifetime use accounting,
+- [x] Extend deterministic MIR dumps, storage/lifetime use accounting,
       cleanup verification, backend legality, and control-effect handling for
       the new mode.
-- [ ] Execute inline and shared-outer lists of `i64`, `u64`, `u8`, `f64`, and
+- [x] Execute inline and shared-outer lists of `i64`, `u64`, `u8`, `f64`, and
       `bool` on x86-64 using existing layout, checked allocation, primitive
       stores, publication, and release machinery.
-- [ ] Remove the execution gate for primitive lists while retaining structured
+- [x] Remove the execution gate for primitive lists while retaining structured
       staging for lifecycle-bearing element families.
-- [ ] Prove the runtime header, symbol set, panic/allocator interface, and ABI
+- [x] Prove the runtime header, symbol set, panic/allocator interface, and ABI
       version remain unchanged.
 
 **Tests:** MIR lowering and exact dump tests; initialized-prefix, lifetime,

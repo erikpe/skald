@@ -25,6 +25,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> (MirProgram, Vec<MirLoweringErr
                     definition,
                     string_language_item,
                     &hir.literal_data,
+                    &hir.array_types,
                 );
                 lowering_errors.extend(errors);
                 definition
@@ -480,6 +481,7 @@ fn lower_function_definition(
     definition: &HirFunctionDefinition,
     string_language_item: Option<MirStringLanguageItem>,
     literal_data: &crate::hir::HirLiteralDataTable,
+    array_types: &crate::hir::HirArrayTypeTable,
 ) -> (MirFunctionDefinition, Vec<MirLoweringError>) {
     let lowered = BodyLowerer::lower(BodyLoweringInput {
         callable: declaration.id.into(),
@@ -490,6 +492,7 @@ fn lower_function_definition(
         receiver_class: None,
         string_language_item,
         literal_data,
+        array_types,
     });
     let definition = MirFunctionDefinition {
         function: declaration.id,
@@ -521,6 +524,7 @@ fn lower_member_definition(
         receiver_class: definition.receiver_class,
         string_language_item,
         literal_data: &hir.literal_data,
+        array_types: &hir.array_types,
     });
     let definition = MirMemberDefinition {
         callable: definition.callable,

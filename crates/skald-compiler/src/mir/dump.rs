@@ -1336,6 +1336,34 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             );
             write_span(output, *span);
         }
+        MirArrayInstruction::AllocateElements {
+            backing,
+            prefix,
+            array,
+            length,
+            ownership,
+            failure,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-allocate-elements {backing} {array} length {length} prefix {prefix} {ownership:?} failure {failure:?}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::InitializeElement {
+            backing,
+            prefix,
+            position,
+            value,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-initialize-element {backing}[{prefix}] position {position} = {value}"
+            );
+            write_span(output, *span);
+        }
         MirArrayInstruction::InitializeNext {
             backing,
             index,

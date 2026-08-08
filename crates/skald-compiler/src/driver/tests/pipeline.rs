@@ -832,22 +832,37 @@ fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn typed_array_element_lists_stop_at_the_structured_executable_lowering_gate() {
-    let result = std::panic::catch_unwind(|| {
-        compile_source_to_assembly(
-            "array-element-list.ska",
-            concat!(
-                "fn main() -> i64 {\n",
-                "  var values: i64[] = i64[]{1, 2};\n",
-                "  return 0;\n",
-                "}\n",
-            ),
-            Target::X86_64SysV,
-        )
-    });
-    let CompilationError::MirLowering(errors) = result
-        .expect("typed element-list input must not panic")
-        .expect_err("EL1 element lists are not executable before EL2")
+fn primitive_array_element_lists_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
+        "array-element-list.ska",
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var values: i64[] = i64[]{1, 2};\n",
+            "  return values[0] + values[1];\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("EL2 primitive element lists must lower through x86-64");
+    assert!(artifact.assembly.contains("call ska_rt_alloc"));
+    assert!(artifact.assembly.contains("[r11 + r10*8 + 16]"));
+}
+
+#[test]
+fn lifecycle_array_element_lists_stay_at_the_structured_executable_lowering_gate() {
+    let result = compile_source_to_assembly(
+        "array-element-list.ska",
+        concat!(
+            "class Item { init() {} }\n",
+            "fn main() -> i64 {\n",
+            "  var values: Item[] = Item[]{Item()};\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    );
+    let CompilationError::MirLowering(errors) =
+        result.expect_err("lifecycle-bearing element lists remain gated after EL2")
     else {
         panic!("expected the MIR executable-lowering gate");
     };
