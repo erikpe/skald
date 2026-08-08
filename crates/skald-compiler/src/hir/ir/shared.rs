@@ -36,6 +36,11 @@ pub enum HirSharedPlace {
         target: HirSharedTarget,
         span: Span,
     },
+    Static {
+        place: super::HirStaticPlace,
+        target: HirSharedTarget,
+        span: Span,
+    },
 }
 
 impl HirSharedPlace {
@@ -43,7 +48,8 @@ impl HirSharedPlace {
         match self {
             Self::Binding { target, .. }
             | Self::Field { target, .. }
-            | Self::ArrayElement { target, .. } => *target,
+            | Self::ArrayElement { target, .. }
+            | Self::Static { target, .. } => *target,
         }
     }
 
@@ -51,7 +57,8 @@ impl HirSharedPlace {
         match self {
             Self::Binding { span, .. }
             | Self::Field { span, .. }
-            | Self::ArrayElement { span, .. } => *span,
+            | Self::ArrayElement { span, .. }
+            | Self::Static { span, .. } => *span,
         }
     }
 }

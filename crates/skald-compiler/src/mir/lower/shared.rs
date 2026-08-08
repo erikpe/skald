@@ -126,6 +126,9 @@ impl BodyLowerer<'_> {
                     span,
                 }));
             }
+            HirSharedSource::Place(HirSharedPlace::Static { .. }) => {
+                unreachable!("static shared sources require lifecycle MIR lowering")
+            }
         }
     }
 
@@ -154,6 +157,9 @@ impl BodyLowerer<'_> {
                 },
                 MirSharedCastTransfer::Copy,
             ),
+            HirSharedSource::Place(HirSharedPlace::Static { .. }) => {
+                unreachable!("static shared casts require lifecycle MIR lowering")
+            }
             produced @ HirSharedSource::Produced(_) => {
                 let temporary = self.new_shared_temporary(produced.target(), produced.span());
                 self.lower_shared_source(temporary, produced, produced.span());

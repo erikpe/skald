@@ -120,6 +120,10 @@ const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_
 const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
+const STATIC_INITIALIZER_HIR_HELPER_OUTPUT: &str =
+    "SKALD_STATIC_INITIALIZER_HIR_DETERMINISM_OUTPUT";
+const STATIC_INITIALIZER_HIR_TEST_NAME: &str =
+    "static_initializer_hir_products_are_deterministic_across_processes";
 const STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_STATIC_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
@@ -205,6 +209,16 @@ fn static_field_phase_products_are_deterministic_across_processes() {
         STATIC_FIELD_HELPER_OUTPUT,
         STATIC_FIELD_TEST_NAME,
         static_field_phase_dump,
+    );
+}
+
+#[test]
+fn static_initializer_hir_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "static-initializer-hir",
+        STATIC_INITIALIZER_HIR_HELPER_OUTPUT,
+        STATIC_INITIALIZER_HIR_TEST_NAME,
+        static_initializer_hir_phase_dump,
     );
 }
 
@@ -913,6 +927,22 @@ fn static_field_phase_dump() -> String {
     ))
 }
 
+fn static_initializer_hir_phase_dump() -> String {
+    typed_hir_phase_dump(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class State {\n",
+        "  static count: i64 = combine(20, 22);\n",
+        "  static item: Item = Item(State.count);\n",
+        "  static owner: shared Item = new Item(1);\n",
+        "  static owner_copy: shared Item = State.owner;\n",
+        "  static values: i64[] = i64[]{1, 2};\n",
+        "  init() {}\n",
+        "}\n",
+        "fn combine(left: i64, right: i64) -> i64 { return left + right; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ))
+}
+
 fn static_field_diagnostic_dump() -> String {
     type_error_phase_dump(
         "static-field-diagnostics.ska",
@@ -1424,6 +1454,30 @@ fn complete_phase_dump(text: &str) -> String {
         dump_hir(&hir),
         dump_mir(&mir),
         assembly,
+    )
+}
+
+fn typed_hir_phase_dump(text: &str) -> String {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("typed-hir-determinism.ska", text);
+    let source = sources.get(source_id).unwrap();
+
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.unwrap();
+
+    format!(
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}",
+        dump_tokens(source, &lexed.tokens),
+        dump_ast(&parsed.ast),
+        dump_resolved(&resolved.program),
+        dump_hir(&hir),
     )
 }
 

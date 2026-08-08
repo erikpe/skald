@@ -87,7 +87,7 @@ pub use shared::{
 pub use shift::{
     HirCheckedShift, HirRightShiftFlavor, HirShiftDirection, HirShiftFailure, HirShiftOperation,
 };
-pub use static_field::{HirStaticFieldDeclaration, HirStaticPlace};
+pub use static_field::{HirStaticFieldDeclaration, HirStaticFieldInitializer, HirStaticPlace};
 pub use stored_value::{
     HirClassOptionalDestinationInitialization, HirObjectDestinationInitialization,
     HirStoredValueInitialization,

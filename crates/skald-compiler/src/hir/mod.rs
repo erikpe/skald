@@ -55,8 +55,9 @@ pub use ir::{
     HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer, HirShiftDirection,
     HirShiftFailure, HirShiftOperation, HirSignedIntegerDivisionSemantics,
     HirSignedMinimumPairResult, HirSignedQuotientRounding, HirSignedRemainderSign, HirStatement,
-    HirStaticFieldDeclaration, HirStaticPlace, HirStoredValueInitialization, HirStringLanguageItem,
-    HirStringLiteral, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirTypeTest, HirTypeTestKind,
-    HirUnaryOperation, HirUserCopy, HirViewSource, HirViewTarget, HirVirtualFamily,
-    HirVirtualFamilyTable, HirWhile, ObjectProjection, Type,
+    HirStaticFieldDeclaration, HirStaticFieldInitializer, HirStaticPlace,
+    HirStoredValueInitialization, HirStringLanguageItem, HirStringLiteral, HirSynthesizedCopy,
+    HirSynthesizedFieldCopy, HirTypeTest, HirTypeTestKind, HirUnaryOperation, HirUserCopy,
+    HirViewSource, HirViewTarget, HirVirtualFamily, HirVirtualFamilyTable, HirWhile,
+    ObjectProjection, Type,
 };

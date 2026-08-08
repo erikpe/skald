@@ -158,6 +158,9 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_object_source(&mut self, source: &HirObjectSource) -> MirPlace {
         match source {
             HirObjectSource::Place(place) => self.lower_object_place(place),
+            HirObjectSource::Static { .. } => {
+                unreachable!("static object sources require lifecycle MIR lowering")
+            }
             HirObjectSource::ArrayElement(element) => self.lower_array_element_place(element),
             HirObjectSource::Produced(producer) => self.lower_object_producer_temporary(producer),
             HirObjectSource::Checked(view) => self.lower_checked_object_view(view).source,

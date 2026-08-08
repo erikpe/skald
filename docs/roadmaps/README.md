@@ -8,8 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Static field initialization and shutdown](STATIC_FIELD_INITIALIZATION_ROADMAP.md)
   is in progress. Its combined design record is frozen, declaration
-  initializer syntax and resolution are complete, and typed stored-value
-  initialization is next. It adds eager initialization, checked program-owned
+  initializer syntax, resolution, and typed stored-value HIR are complete, and
+  preliminary lifecycle MIR is next. It adds eager initialization, checked program-owned
   lifecycle state, and reverse normal-return cleanup on top of the implemented
   zero-default static-storage baseline.
 

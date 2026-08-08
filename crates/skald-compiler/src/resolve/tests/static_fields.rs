@@ -7,7 +7,7 @@ use crate::{
         INVALID_OVERRIDE, PRIVATE_MEMBER_ACCESS, UNKNOWN_MEMBER, UNKNOWN_NAME,
     },
     test_support::{load_module_sources, load_module_sources_with_standard_library},
-    typeck::{type_check, INVALID_INTERFACE_CONFORMANCE, STATIC_FIELD_INITIALIZER_UNAVAILABLE},
+    typeck::{type_check, INVALID_INTERFACE_CONFORMANCE},
 };
 
 #[test]
@@ -132,15 +132,8 @@ fn resolves_static_initializers_after_program_declarations_with_stable_identitie
     assert!(dump.contains("StaticFieldAccess c1:static0"), "{dump}");
 
     let checked = type_check(&output.program);
-    assert!(checked.hir.is_none());
-    assert_eq!(
-        checked
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == STATIC_FIELD_INITIALIZER_UNAVAILABLE)
-            .count(),
-        4
-    );
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    assert_eq!(checked.hir.unwrap().static_initializers().count(), 4);
 }
 
 #[test]

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::Diagnostics,
+    diagnostics::{Diagnostic, Diagnostics},
     lexer::lex,
     mir::lower_hir,
     module::{
@@ -18,6 +18,10 @@ use crate::{
 };
 
 use super::CompilationRequest;
+
+/// Temporary driver boundary while typed static initializers await lifecycle
+/// MIR lowering and planning.
+pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_LOWERING: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -122,6 +126,22 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    for initializer in hir.static_initializers() {
+        diagnostics.push(
+            Diagnostic::error(
+                STATIC_INITIALIZER_REQUIRES_LIFECYCLE_LOWERING,
+                "typed static field initialization cannot be lowered yet",
+            )
+            .with_primary_label(
+                initializer.span,
+                "stored-value typing is complete, but lifecycle MIR lowering is not implemented",
+            )
+            .with_note("no initializer is replaced by a zero value and no assembly is produced"),
+        );
+    }
+    if diagnostics.has_errors() {
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let mir = lower_hir(&hir);
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;

@@ -131,6 +131,18 @@ impl CallableChecker<'_, '_> {
                     span: checked.span,
                 }))
             }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                let (place, ty) = self.check_static_place(access.field, access.span)?;
+                let Type::Shared(target) = ty else {
+                    self.report_non_shared_source(expression, cast_source);
+                    return None;
+                };
+                Some(HirSharedSource::Place(HirSharedPlace::Static {
+                    place,
+                    target,
+                    span: access.span,
+                }))
+            }
             ResolvedExpression::ArrayProjection(_) => {
                 let checked = self.check_expression(expression)?;
                 let Type::Shared(target) = checked.ty else {

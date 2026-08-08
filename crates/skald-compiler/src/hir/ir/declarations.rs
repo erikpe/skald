@@ -6,7 +6,7 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ModuleId, ParameterId, StaticFieldId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, ParameterId, StaticFieldId, StaticInitializerId, VirtualFamilyId, VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -52,6 +52,25 @@ impl HirProgram {
         self.class(id.class())?.static_field(id)
     }
 
+    pub fn static_initializer(
+        &self,
+        id: StaticInitializerId,
+    ) -> Option<&super::HirStaticFieldInitializer> {
+        self.static_field(id.field())?
+            .initializer
+            .as_ref()
+            .filter(|initializer| initializer.id == id)
+    }
+
+    pub fn static_initializers(&self) -> impl Iterator<Item = &super::HirStaticFieldInitializer> {
+        self.classes.iter().flat_map(|class| {
+            class
+                .static_fields
+                .iter()
+                .filter_map(|field| field.initializer.as_ref())
+        })
+    }
+
     pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {
         self.class(id.class())?.initializer(id)
     }
@@ -91,7 +110,13 @@ impl HirProgram {
                         return_type: declaration.return_type,
                     })
             }
-            CallableId::StaticInitializer(_) => None,
+            CallableId::StaticInitializer(initializer) => {
+                self.static_initializer(initializer)
+                    .map(|_| HirCallableSignature {
+                        parameters: &[],
+                        return_type: Type::Unit,
+                    })
+            }
             CallableId::Initializer(initializer) => {
                 self.initializer(initializer)
                     .map(|declaration| HirCallableSignature {

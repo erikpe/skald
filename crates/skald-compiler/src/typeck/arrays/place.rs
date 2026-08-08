@@ -242,6 +242,7 @@ impl CallableChecker<'_, '_> {
                 // remains mutable after explicit dereference.
                 HirAccess::Mutable
             }
+            HirSharedSource::Place(HirSharedPlace::Static { .. }) => HirAccess::Mutable,
             HirSharedSource::Produced(_) => HirAccess::Mutable,
         };
         let anchor = match &source {
@@ -252,6 +253,9 @@ impl CallableChecker<'_, '_> {
                 HirArrayAnchor::CopiedSharedOwner
             }
             HirSharedSource::Place(HirSharedPlace::ArrayElement { .. }) => {
+                HirArrayAnchor::CopiedSharedOwner
+            }
+            HirSharedSource::Place(HirSharedPlace::Static { .. }) => {
                 HirArrayAnchor::CopiedSharedOwner
             }
             HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => {

@@ -36,6 +36,7 @@ pub(super) fn lower_class_declarations(
         .iter()
         .filter_map(|class| {
             lower_class_declaration(
+                program,
                 class,
                 copy_capabilities,
                 conformances[class.id.index()].clone(),
@@ -46,6 +47,7 @@ pub(super) fn lower_class_declarations(
 }
 
 fn lower_class_declaration(
+    program: &ResolvedProgram,
     class: &ResolvedClassDeclaration,
     copy_capabilities: &CopyCapabilities,
     conformances: Vec<HirInterfaceConformance>,
@@ -80,8 +82,12 @@ fn lower_class_declaration(
             }
         })
         .collect();
-    let static_fields =
-        super::static_fields::lower_static_fields(&class.static_fields, diagnostics);
+    let static_fields = super::static_fields::lower_static_fields(
+        program,
+        copy_capabilities,
+        &class.static_fields,
+        diagnostics,
+    );
     if static_fields.is_none() {
         valid = false;
     }
@@ -475,6 +481,7 @@ mod tests {
         let mut diagnostics = Diagnostics::new();
         let copy_capabilities = CopyCapabilities::compute(&resolved.program);
         let outer = lower_class_declaration(
+            &resolved.program,
             resolved.program.classes.get(ClassId::new(0)).unwrap(),
             &copy_capabilities,
             Vec::new(),

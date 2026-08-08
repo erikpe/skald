@@ -10,8 +10,8 @@ use crate::{
     },
     identity::{BindingId, CallableId, ClassId, FieldId},
     resolve::{
-        ResolvedBlock, ResolvedFunctionDeclaration, ResolvedFunctionDefinition, ResolvedLocal,
-        ResolvedMemberDefinition, ResolvedParameter, ResolvedProgram,
+        ResolvedBlock, ResolvedExpression, ResolvedFunctionDeclaration, ResolvedFunctionDefinition,
+        ResolvedLocal, ResolvedMemberDefinition, ResolvedParameter, ResolvedProgram,
     },
 };
 
@@ -73,7 +73,7 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) callable: CallableId,
     pub(super) parameters: &'program [ResolvedParameter],
     pub(super) locals: &'program [ResolvedLocal],
-    body: &'program ResolvedBlock,
+    body: Option<&'program ResolvedBlock>,
     definition_span: crate::source::Span,
     callable_name: String,
     pub(super) return_type: Type,
@@ -99,7 +99,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             callable: declaration.id.into(),
             parameters: &declaration.parameters,
             locals: &definition.locals,
-            body: &definition.body,
+            body: Some(&definition.body),
             definition_span: definition.span,
             callable_name: format!("function `{}`", declaration.name),
             return_type: lower_type(&declaration.return_type),
@@ -113,16 +113,17 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     }
 
     pub(super) fn check(mut self) -> HirFunctionDefinition {
+        let body = self.body.expect("function checker needs a body");
         let locals = self.lower_locals();
-        let body = self.check_block(self.body);
+        let checked_body = self.check_block(body);
 
-        if self.return_type != Type::Unit && body.effects.can_fall_through() {
+        if self.return_type != Type::Unit && checked_body.effects.can_fall_through() {
             self.diagnostics.push(
                 Diagnostic::error(
                     MISSING_RETURN,
                     format!("{} does not return a value", self.callable_name),
                 )
-                .with_primary_label(self.body.span, "a return value is required on every path")
+                .with_primary_label(body.span, "a return value is required on every path")
                 .with_note(format!(
                     "{} declares return type `{}`",
                     self.callable_name,
@@ -137,7 +138,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                 .as_function()
                 .expect("function checker needs function ID"),
             locals,
-            body,
+            body: checked_body,
             span: self.definition_span,
         }
     }
@@ -160,7 +161,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             callable: context.callable,
             parameters: context.parameters,
             locals: &context.definition.locals,
-            body: &context.definition.body,
+            body: Some(&context.definition.body),
             definition_span: context.definition.span,
             callable_name: context.callable_name,
             return_type: context.return_type,
@@ -174,8 +175,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     }
 
     pub(super) fn check_member(mut self) -> HirMemberDefinition {
+        let source_body = self.body.expect("member checker needs a body");
         let locals = self.lower_locals();
-        let body = self.check_block(self.body);
+        let body = self.check_block(source_body);
         let owner = self
             .class_owner
             .expect("member checker needs a class owner");
@@ -194,7 +196,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                         format!("base subobject of `{}` is not initialized", class.name),
                     )
                     .with_primary_label(
-                        self.body.span,
+                        source_body.span,
                         "a derived ordinary initializer must begin with a valid `super(...)`",
                     ),
                 );
@@ -219,7 +221,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                     MISSING_RETURN,
                     format!("{} does not return a value", self.callable_name),
                 )
-                .with_primary_label(self.body.span, "a return value is required on every path")
+                .with_primary_label(source_body.span, "a return value is required on every path")
                 .with_note(format!(
                     "{} declares return type `{}`",
                     self.callable_name,
@@ -235,6 +237,44 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             body,
             span: self.definition_span,
         }
+    }
+
+    pub(super) fn new_static_initializer(
+        program: &'program ResolvedProgram,
+        copy_capabilities: &'program CopyCapabilities,
+        initializer: &'program crate::resolve::ResolvedStaticFieldInitializer,
+        diagnostics: &'diagnostics mut Diagnostics,
+    ) -> Self {
+        Self {
+            program,
+            copy_capabilities,
+            callable: initializer.id.into(),
+            parameters: &[],
+            locals: &[],
+            body: None,
+            definition_span: initializer.span,
+            callable_name: format!("static initializer `{}`", initializer.id),
+            return_type: Type::Unit,
+            class_owner: Some(initializer.id.class()),
+            receiver: None,
+            member_body_kind: None,
+            initialized_fields: BTreeSet::new(),
+            base_initialized: true,
+            diagnostics,
+        }
+    }
+
+    pub(super) fn check_static_initializer(
+        mut self,
+        expected: Type,
+        expression: &'program ResolvedExpression,
+    ) -> Option<crate::hir::HirStoredValueInitialization> {
+        debug_assert!(self.parameters.is_empty());
+        debug_assert!(self.locals.is_empty());
+        debug_assert!(self.body.is_none());
+        debug_assert!(self.receiver.is_none());
+        debug_assert_eq!(self.class_owner, self.callable.class());
+        self.check_stored_value_initialization(expected, expression, "static field initializer")
     }
 
     fn lower_locals(&mut self) -> Vec<HirLocal> {

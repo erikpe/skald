@@ -253,6 +253,23 @@ impl HirDumper {
                         let _ = write!(dumper.output, " : {}", field.ty.name());
                         write_span(&mut dumper.output, field.span);
                         dumper.output.push('\n');
+                        dumper.indented(|dumper| match &field.initializer {
+                            Some(initializer) => {
+                                dumper.line(
+                                    &format!(
+                                        "DeclarationInitializer {} destination {}",
+                                        initializer.id,
+                                        field.ty.name()
+                                    ),
+                                    initializer.span,
+                                );
+                                dumper.indented(|dumper| {
+                                    dumper.line("Equal", initializer.equal_span);
+                                    dumper.stored_value_initialization(&initializer.value);
+                                });
+                            }
+                            None => dumper.raw_line("ZeroDefaultInitialization"),
+                        });
                     }
                 });
             }
@@ -1773,6 +1790,18 @@ impl HirDumper {
                 );
                 self.indented(|dumper| dumper.array_element(place));
             }
+            HirSharedSource::Place(HirSharedPlace::Static {
+                place,
+                target,
+                span,
+            }) => self.line(
+                &format!(
+                    "SharedStatic {} : {}",
+                    place.field,
+                    shared_target_name(*target)
+                ),
+                *span,
+            ),
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
                 match &allocation.mode {
                     crate::hir::HirSharedAllocationMode::Initialize {
@@ -2008,6 +2037,12 @@ impl HirDumper {
     fn object_source(&mut self, source: &crate::hir::HirObjectSource) {
         match source {
             crate::hir::HirObjectSource::Place(place) => self.object_place(place),
+            crate::hir::HirObjectSource::Static { place, class } => {
+                self.line(
+                    &format!("StaticObjectSource {} : {class}", place.field),
+                    place.span,
+                );
+            }
             crate::hir::HirObjectSource::ArrayElement(place) => self.array_element(place),
             crate::hir::HirObjectSource::Produced(producer) => {
                 self.line("MaterializedSource", producer.span());

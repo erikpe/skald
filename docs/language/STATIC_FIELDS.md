@@ -1,7 +1,7 @@
 # Static Fields
 
 Status: **complete zero-default storage profile implemented; declaration
-initializer syntax and resolution implemented**. This document is
+initializer syntax, resolution, type checking, and HIR implemented**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -10,16 +10,19 @@ the current compiler.
 Static fields are mutable class-owned places. Initializer-free declarations
 use the implemented zero-default profile: their initial live value is
 established without running Skald code and their type must admit one complete
-all-zero value. Declaration initializer expressions are now accepted and
-resolved, but are deliberately rejected before typed HIR until the remaining
-startup, ordering, and shutdown implementation lands.
+all-zero value. Declaration initializer expressions are accepted, resolved,
+and type-checked as direct stored-value initialization. Their typed HIR is
+complete, but the compiler deliberately stops before MIR and executable output
+until lifecycle lowering, dependency planning, startup, and shutdown land.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
 complete zero-default storage-type set, and lowers primitive, inline-optional,
 optional shared-owner, and inline-array operations to receiver-free typed HIR
 and MIR places. It also retains and resolves optional declaration initializer
-expressions under stable identities. These expressions do not yet execute.
+expressions under stable identities, selects their ordinary stored-value
+operations, and retains those operations in typed HIR. These expressions do
+not yet execute.
 
 ## Declaration syntax
 
@@ -77,10 +80,12 @@ field identity and creates neither another initializer nor another storage
 slot.
 
 Resolution retains canonical static-field uses, selected calls and dispatch
-families, and source spans for later dependency analysis. It does not infer
-initialization order or make the expression executable. Until typed static
-initialization is implemented, every otherwise resolved declaration with an
-explicit initializer is rejected with `TYP043` before HIR is produced.
+families, and source spans for later dependency analysis. Type checking then
+uses the ordinary stored-value initialization machinery in a receiver-free,
+parameter-free context with the same declaring-class privacy. It retains one
+initializer identity, destination type, selected construction, copy or owner
+transfer, and full-expression ownership plan in HIR. Neither phase infers
+initialization order or makes the expression executable.
 
 ## Identity, namespace, and inheritance
 
@@ -192,6 +197,30 @@ a class, or invent a foreign representation. Such a declaration using an
 unsupported storage type is rejected at its type rather than acquiring an
 implicit initializer.
 
+## Explicit initializer types and typed semantics
+
+An explicit initializer permits the ordinary stored field types: all five
+primitives, exact inline classes, supported inline optionals, non-optional and
+optional shared owners, and inline arrays. Strings use their ordinary exact
+class and language-item behavior. `unit`, a bare interface, a bare `Obj` view,
+aliases, and otherwise unsupported stored forms remain invalid.
+
+The declaration is direct initialization of previously uninitialized program
+storage, not assignment to a zero/default value. Consequently, it uses the
+same target-directed rules as an instance-field initializer: an ungrouped
+matching constructor or object-returning call can produce the exact object
+directly; a named or grouped exact object selects copy construction; shared
+production adopts an owner while named shared storage copies it; optional and
+array values retain their ordinary presence, element, copy, adoption, and
+cleanup rules. Constructor overload selection, privacy, type mismatch, and
+unavailable-copy diagnostics are likewise the ordinary ones.
+
+The expression is evaluated once in source order within one complete
+full-expression plan. Typed HIR retains canonical static sources, calls,
+constructor and copy selections, temporary ownership, and source spans so the
+later MIR dependency analysis need not reconstruct source intent. This
+milestone does not yet define or run an activation order.
+
 ## Reads, writes, and replacement
 
 Primitive reads and writes use their ordinary value behavior. Optional,
@@ -223,8 +252,10 @@ begins. All such slots become available simultaneously. No source code runs
 to establish them, so there is no declaration order, class order, module
 order, import order, dependency order, or lazy first-use order to observe.
 Explicitly initialized declarations cannot yet reach executable compilation;
-their eventual startup and shutdown semantics are owned by the active static
-initialization roadmap.
+after producing typed HIR the driver reports `DRV001` rather than silently
+discarding the initializer or emitting zero-only assembly. Their eventual
+startup and shutdown semantics are owned by the active static initialization
+roadmap.
 
 A static slot has process lifetime. It is not registered in any lexical scope,
 does not begin or end lifetime on a function call, and is not cleaned when the
@@ -258,9 +289,11 @@ The implementation must reject each error at the phase that owns it:
 
 Diagnostic wording and codes remain compiler behavior. Malformed declarations
 are syntax errors, namespace and privacy rules are enforced during resolution,
-`TYP042` rejects an initializer-free declaration whose type lacks a complete
-all-zero live value, and `TYP043` rejects a resolved explicit initializer at
-the current typed-compilation boundary. Every initializer-free declaration
+and `TYP042` rejects either an initializer-free declaration whose type lacks a
+complete all-zero live value or an explicit declaration whose type cannot
+store a value. Explicit expressions otherwise use ordinary type, overload,
+privacy, copy-capability, and ownership diagnostics. `DRV001` marks the current
+post-HIR lifecycle-lowering boundary. Every initializer-free declaration
 accepted by zero-default validation can be used through its documented
 primitive, inline-optional, optional shared-owner, or inline-array operations
 and reaches verified MIR and native execution.
@@ -286,11 +319,12 @@ callable-ABI changes.
 
 The executable profile does not yet include:
 
-- typed or executable declaration initialization, dependency ordering, or
-  arbitrary constant evaluation;
+- executable declaration initialization, dependency ordering, or arbitrary
+  constant evaluation;
 - static initializer blocks, lifecycle members, or deinitializers;
 - module initialization or shutdown and their ordering;
-- exact inline-class or non-optional shared-owner static initialization;
+- executable exact inline-class or non-optional shared-owner static
+  initialization;
 - top-level or module-owned global variables;
 - interface-owned static fields;
 - external, exported, thread-local, atomic, synchronized, `final`, or constant
@@ -300,7 +334,7 @@ The executable profile does not yet include:
 - cleanup of final static contents at normal process exit.
 
 The active [static-initialization roadmap](../roadmaps/STATIC_FIELD_INITIALIZATION_ROADMAP.md)
-owns the typed initialization, dependency ordering, eager startup, and reverse
+owns lifecycle MIR lowering, dependency ordering, eager startup, and reverse
 normal-return shutdown items above. Extending the remaining boundaries
 requires a separate design rather than an inference from either the
 zero-default profile or initializer syntax.

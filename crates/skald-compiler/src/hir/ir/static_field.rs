@@ -1,8 +1,11 @@
-//! Typed static declarations and receiver-free static places.
+//! Typed static declarations, declaration initializers, and receiver-free places.
 
-use crate::{identity::StaticFieldId, source::Span};
+use crate::{
+    identity::{StaticFieldId, StaticInitializerId},
+    source::Span,
+};
 
-use super::Type;
+use super::{HirStoredValueInitialization, Type};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirStaticFieldDeclaration {
@@ -11,6 +14,20 @@ pub struct HirStaticFieldDeclaration {
     pub name: String,
     pub name_span: Span,
     pub ty: Type,
+    pub initializer: Option<HirStaticFieldInitializer>,
+    pub span: Span,
+}
+
+/// Typed direct initialization of one previously uninitialized static slot.
+///
+/// The stored-value plan retains source ownership and selected lifecycle
+/// operations. MIR lowering remains responsible for making temporary cleanup
+/// and publication boundaries explicit.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirStaticFieldInitializer {
+    pub id: StaticInitializerId,
+    pub equal_span: Span,
+    pub value: HirStoredValueInitialization,
     pub span: Span,
 }
 

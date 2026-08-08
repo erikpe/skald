@@ -144,8 +144,19 @@ source spans without reconstructing names or order later.
 
 For initializer-free declarations, type checking validates the complete
 all-zero live-value set and emits identity-based typed places for all accepted
-operations. Explicit initializers currently stop at this boundary with
-`TYP043`; they have no typed HIR or executable effect yet. MIR models accepted
+operations. For explicit declarations, it separately validates ordinary
+stored-value capability and checks the expression in a receiver-free,
+parameter-free callable context owned by the declaring class. HIR retains one
+field-derived initializer identity, destination type, and
+`HirStoredValueInitialization`, including selected construction, copy, owner
+transfer, optional or array behavior and full-expression ownership metadata.
+It is direct initialization of uninitialized storage rather than assignment.
+
+Explicit initializers currently stop after typed HIR with driver diagnostic
+`DRV001`; no MIR or executable output is produced, and direct MIR lowering
+asserts the same phase boundary so an initializer cannot be silently replaced
+by a zero value. The next roadmap milestone makes temporary cleanup and the
+publication boundary explicit in preliminary MIR. MIR already models accepted
 zero-default places as initialized, always-live program-owned roots; ordinary
 ownership, anchor, optional, array, and place verification proves every
 operation without a startup or cleanup instruction. Backends consume only

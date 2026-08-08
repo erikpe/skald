@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 and SI1 are
-complete, and SI2 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI2 are
+complete, and SI3 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -229,7 +229,7 @@ moves that slot before `destination`.
 
 - [x] SI0 — Freeze the eager static lifecycle profile
 - [x] SI1 — Retain and resolve declaration initializers
-- [ ] SI2 — Type-check direct stored-value initialization
+- [x] SI2 — Type-check direct stored-value initialization
 - [ ] SI3 — Lower analyzable static lifecycle bodies to preliminary MIR
 - [ ] SI4 — Infer transitive static effects
 - [ ] SI5 — Plan and diagnose static lifetimes
@@ -311,26 +311,26 @@ order reconstruction.
 **Purpose:** Reuse ordinary initialization semantics for program-owned
 destinations and settle the complete explicit-initializer type matrix in HIR.
 
-- [ ] Split declaration validation into initializer-free zero-default
+- [x] Split declaration validation into initializer-free zero-default
       capability and explicit stored-value initialization capability.
-- [ ] Accept explicit initialization for the same stored types as ordinary
+- [x] Accept explicit initialization for the same stored types as ordinary
       instance fields, while retaining focused rejection of `unit`, bare
       interfaces, bare `Obj`, aliases, and unsupported forms.
-- [ ] Generalize `CallableChecker` only as needed for a receiver-free,
+- [x] Generalize `CallableChecker` only as needed for a receiver-free,
       parameter-free static-initializer context with declaring-class privacy
       and ordinary expression checking.
-- [ ] Route the destination and expression through
+- [x] Route the destination and expression through
       `check_stored_value_initialization` so primitives, direct exact-object
       production, selected copy construction, inline optionals, shared
       transfer/adoption, optional shared owners, strings, and arrays keep one
       semantic owner.
-- [ ] Retain one `HirStoredValueInitialization` and its full-expression cleanup
+- [x] Retain one `HirStoredValueInitialization` and its full-expression cleanup
       metadata on the static declaration or a dedicated HIR lifecycle table;
       do not encode assignment to a default value.
-- [ ] Retain source spans for direct static accesses, calls, selected
+- [x] Retain source spans for direct static accesses, calls, selected
       constructors/copies, temporary ownership, and implicit cleanup so later
       effect analysis can produce call-chain diagnostics.
-- [ ] Extend HIR dumps and diagnostics with initializer identity, destination
+- [x] Extend HIR dumps and diagnostics with initializer identity, destination
       type, selected overload/copy operation, and lifecycle order.
 
 **Tests:** Focused type-check tests for all primitive and owning categories,

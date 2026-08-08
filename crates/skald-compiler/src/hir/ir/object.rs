@@ -187,6 +187,11 @@ pub struct HirCopyConstruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirObjectSource {
     Place(HirObjectPlace),
+    /// An exact-class object stored in a receiver-free static slot.
+    Static {
+        place: super::HirStaticPlace,
+        class: ClassId,
+    },
     ArrayElement(Box<super::HirArrayElementPlace>),
     Produced(HirObjectProducer),
     /// A checked, full-expression-bounded class place consumed by an owning
@@ -199,6 +204,7 @@ impl HirObjectSource {
     pub const fn class(&self) -> ClassId {
         match self {
             Self::Place(place) => place.class(),
+            Self::Static { class, .. } => *class,
             Self::ArrayElement(place) => match place.element {
                 super::Type::Class(class) => class,
                 _ => panic!("object array-element source must have a class type"),
@@ -215,6 +221,7 @@ impl HirObjectSource {
     pub const fn span(&self) -> Span {
         match self {
             Self::Place(place) => place.span(),
+            Self::Static { place, .. } => place.span,
             Self::ArrayElement(place) => place.span,
             Self::Produced(producer) => producer.span(),
             Self::Checked(view) => view.span,

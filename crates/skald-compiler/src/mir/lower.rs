@@ -38,6 +38,10 @@ use loop_context::LoopContextStack;
 
 /// Lowers a fully type-checked HIR program to MIR.
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
+    assert!(
+        hir.static_initializers().next().is_none(),
+        "typed static initializers require lifecycle MIR lowering"
+    );
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]

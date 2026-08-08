@@ -182,6 +182,7 @@ fn shared_allocation_contains_control_effect(allocation: &crate::hir::HirSharedA
 fn object_source_contains_control_effect(source: &HirObjectSource) -> bool {
     match source {
         HirObjectSource::Place(_) => false,
+        HirObjectSource::Static { .. } => false,
         HirObjectSource::ArrayElement(_) => false,
         HirObjectSource::Produced(producer) => producer_contains_control_effect(producer),
         HirObjectSource::Checked(view) => checked_view_contains_control_effect(view),

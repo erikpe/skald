@@ -922,3 +922,29 @@ fn primitive_static_programs_cross_the_complete_driver_pipeline() {
         .contains(".Lska.class.main.State.c0.static.s0"));
     assert!(artifact.assembly.contains("\n.bss\n"));
 }
+
+#[test]
+fn typed_static_initializers_stop_before_unavailable_lifecycle_lowering() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "static-initializer.ska",
+        concat!(
+            "class State { static count: i64 = 42; init() {} }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err() else {
+        panic!("typed static initializer must stop at the lifecycle MIR boundary");
+    };
+
+    assert_eq!(report.diagnostics.len(), 1);
+    let diagnostic = report.diagnostics.iter().next().unwrap();
+    assert_eq!(
+        diagnostic.code,
+        STATIC_INITIALIZER_REQUIRES_LIFECYCLE_LOWERING
+    );
+    assert!(diagnostic
+        .labels
+        .iter()
+        .any(|label| label.message.contains("stored-value typing is complete")));
+}

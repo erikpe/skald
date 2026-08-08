@@ -213,6 +213,27 @@ impl CallableChecker<'_, '_> {
             ));
             return self.convert_object_source(source, class, context);
         }
+        if let crate::resolve::ResolvedExpression::StaticFieldAccess(access) = expression {
+            let (place, ty) = self.check_static_place(access.field, access.span)?;
+            let Type::Class(actual) = ty else {
+                let _ = require_type(
+                    ty,
+                    Type::Class(class),
+                    access.span,
+                    context,
+                    self.diagnostics,
+                );
+                return None;
+            };
+            return self.convert_object_source(
+                HirObjectSource::Static {
+                    place,
+                    class: actual,
+                },
+                class,
+                context,
+            );
+        }
         match expression {
             crate::resolve::ResolvedExpression::ArrayProjection(_) => {
                 let checked = self.check_expression(expression)?;

@@ -1,14 +1,17 @@
-//! Zero-default static-field declaration validation and HIR lowering.
+//! Static-field storage validation and typed initializer selection.
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    hir::{HirStaticFieldDeclaration, Type},
+    hir::{HirStaticFieldDeclaration, HirStaticFieldInitializer, Type},
     resolve::ResolvedStaticFieldDeclaration,
+    typeck::{capabilities::CopyCapabilities, function::CallableChecker},
 };
 
-use super::{lower_type, INVALID_STATIC_FIELD_TYPE, STATIC_FIELD_INITIALIZER_UNAVAILABLE};
+use super::{lower_type, INVALID_STATIC_FIELD_TYPE};
 
 pub(super) fn lower_static_fields(
+    program: &crate::resolve::ResolvedProgram,
+    copy_capabilities: &CopyCapabilities,
     fields: &[ResolvedStaticFieldDeclaration],
     diagnostics: &mut Diagnostics,
 ) -> Option<Vec<HirStaticFieldDeclaration>> {
@@ -17,55 +20,98 @@ pub(super) fn lower_static_fields(
         .iter()
         .map(|field| {
             let ty = lower_type(&field.type_syntax);
-            if let Some(initializer) = &field.initializer {
-                diagnostics.push(
-                    Diagnostic::error(
-                        STATIC_FIELD_INITIALIZER_UNAVAILABLE,
-                        format!(
-                            "static field initializer for `{}` is not yet available to typed compilation",
-                            field.name
-                        ),
+            let initializer = if let Some(initializer) = &field.initializer {
+                if !is_stored_value_type(ty) {
+                    report_invalid_explicit_storage(field, ty, diagnostics);
+                    valid = false;
+                    None
+                } else {
+                    let value = CallableChecker::new_static_initializer(
+                        program,
+                        copy_capabilities,
+                        initializer,
+                        diagnostics,
                     )
-                    .with_primary_label(
-                        initializer.span,
-                        "resolution retained this initializer, but HIR has no static initialization plan",
-                    )
-                    .with_note(
-                        "initializer-free static fields with a complete zero value remain supported",
-                    ),
-                );
-                valid = false;
+                    .check_static_initializer(ty, &initializer.expression);
+                    if value.is_none() {
+                        valid = false;
+                    }
+                    value.map(|value| HirStaticFieldInitializer {
+                        id: initializer.id,
+                        equal_span: initializer.equal_span,
+                        value,
+                        span: initializer.span,
+                    })
+                }
             } else if !has_zero_default(ty) {
-                diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_STATIC_FIELD_TYPE,
-                        format!(
-                            "static field `{}` cannot have type `{}`",
-                            field.name,
-                            ty.name()
-                        ),
-                    )
-                    .with_primary_label(
-                        field.type_syntax.span,
-                        "this type has no complete all-zero live value",
-                    )
-                    .with_note(
-                        "static fields support primitives, inline optionals, optional shared owners, and inline arrays",
-                    ),
-                );
+                report_missing_zero_default(field, ty, diagnostics);
                 valid = false;
-            }
+                None
+            } else {
+                None
+            };
             HirStaticFieldDeclaration {
                 id: field.id,
                 static_span: field.static_span,
                 name: field.name.clone(),
                 name_span: field.name_span,
                 ty,
+                initializer,
                 span: field.span,
             }
         })
         .collect();
     valid.then_some(fields)
+}
+
+fn report_missing_zero_default(
+    field: &ResolvedStaticFieldDeclaration,
+    ty: Type,
+    diagnostics: &mut Diagnostics,
+) {
+    diagnostics.push(
+        Diagnostic::error(
+            INVALID_STATIC_FIELD_TYPE,
+            format!(
+                "static field `{}` cannot have type `{}`",
+                field.name,
+                ty.name()
+            ),
+        )
+        .with_primary_label(
+            field.type_syntax.span,
+            "this type has no complete all-zero live value",
+        )
+        .with_note(
+            "add an explicit initializer or use a primitive, inline optional, optional shared owner, or inline array",
+        ),
+    );
+}
+
+fn report_invalid_explicit_storage(
+    field: &ResolvedStaticFieldDeclaration,
+    ty: Type,
+    diagnostics: &mut Diagnostics,
+) {
+    diagnostics.push(
+        Diagnostic::error(
+            INVALID_STATIC_FIELD_TYPE,
+            format!(
+                "static field `{}` cannot store type `{}`",
+                field.name,
+                ty.name()
+            ),
+        )
+        .with_primary_label(
+            field.type_syntax.span,
+            "`unit`, `Obj`, and interfaces are not stored value types",
+        )
+        .with_note("an explicit initializer does not make a non-owning view into stored data"),
+    );
+}
+
+pub(super) const fn is_stored_value_type(ty: Type) -> bool {
+    !matches!(ty, Type::Unit | Type::Obj | Type::Interface(_))
 }
 
 pub(super) const fn has_zero_default(ty: Type) -> bool {

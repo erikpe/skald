@@ -1,10 +1,15 @@
 use super::*;
 use crate::{
-    hir::{HirCallArgument, HirExpressionKind, HirOptionalStorage, HirPrimitiveStorage},
-    identity::{ClassId, MethodId, StaticFieldId},
+    hir::{
+        HirArrayTransfer, HirCallArgument, HirClassOptionalDestinationInitialization,
+        HirExpressionKind, HirObjectDestinationInitialization, HirOptionalSharedSource,
+        HirOptionalSource, HirOptionalStorage, HirOwnerTransfer, HirPrimitiveStorage,
+        HirStoredValueInitialization,
+    },
+    identity::{ClassId, MethodId, StaticFieldId, StaticInitializerId},
     resolve::resolve_module_graph,
     test_support::load_module_sources_with_standard_library,
-    typeck::{INVALID_STATIC_FIELD_TYPE, STATIC_FIELD_INITIALIZER_UNAVAILABLE},
+    typeck::INVALID_STATIC_FIELD_TYPE,
 };
 
 #[test]
@@ -225,7 +230,7 @@ fn rejects_each_non_zero_default_type_at_its_declaration() {
 }
 
 #[test]
-fn rejects_resolved_static_initializers_until_typed_initialization_is_available() {
+fn retains_typed_primitive_and_exact_object_static_initializers() {
     let output = check_text(concat!(
         "class Item { init() {} }\n",
         "class State {\n",
@@ -236,17 +241,367 @@ fn rejects_resolved_static_initializers_until_typed_initialization_is_available(
         "fn main() -> i64 { return 0; }\n",
     ));
 
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let state = hir.class(ClassId::new(1)).unwrap();
+    assert!(matches!(
+        state.static_fields[0].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Primitive(_)
+    ));
+    assert!(matches!(
+        state.static_fields[1].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Class(HirObjectDestinationInitialization::Direct { .. })
+    ));
+}
+
+#[test]
+fn static_initializer_hir_dump_is_exact_and_retains_one_typed_evaluation() {
+    let output = check_text(concat!(
+        "class State { static value: i64 = 1 + produce(); init() {} }\n",
+        "fn produce() -> i64 { return 2; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(
+        dump_hir(&output.hir.unwrap()),
+        concat!(
+            "HirProgram @0..126\n",
+            "  SelectedModule m0\n",
+            "  Modules\n",
+            "    Module m0 main source 0 provider provider0 package package0\n",
+            "  Entry f1\n",
+            "  Classes\n",
+            "    Class c0 module m0 \"State\" @0..60\n",
+            "      Fields\n",
+            "      StaticFields\n",
+            "        StaticField c0:static0 \"value\" : i64 @14..48\n",
+            "          DeclarationInitializer c0:static0:initializer destination i64 @32..47\n",
+            "            Equal @32..33\n",
+            "            PrimitiveInitialization\n",
+            "              Binary AddI64 : i64 @34..47\n",
+            "                Integer 1 : i64 @34..35\n",
+            "                DirectCall f0 : i64 @38..47\n",
+            "      Initializers\n",
+            "        Initializer c0:init0 @49..58\n",
+            "      CopyConstructor\n",
+            "        Synthesized c0\n",
+            "      CopyAssignment\n",
+            "        Synthesized c0\n",
+            "      Methods\n",
+            "  ClassDefinitions\n",
+            "    ClassDefinition c0 @0..60\n",
+            "      MemberDefinition c0:init0 @49..58\n",
+            "        Locals\n",
+            "        Block @56..58\n",
+            "  Declarations\n",
+            "    Declaration f0 module m0 \"produce\" internal @61..94\n",
+            "      Parameters\n",
+            "      ReturnType i64\n",
+            "    Declaration f1 module m0 \"main\" internal @95..125\n",
+            "      Parameters\n",
+            "      ReturnType i64\n",
+            "  Definitions\n",
+            "    Definition f0 @61..94\n",
+            "      Locals\n",
+            "      Block @81..94\n",
+            "        Return @83..92\n",
+            "          Integer 2 : i64 @90..91\n",
+            "    Definition f1 @95..125\n",
+            "      Locals\n",
+            "      Block @112..125\n",
+            "        Return @114..123\n",
+            "          Integer 0 : i64 @121..122\n",
+        )
+    );
+}
+
+#[test]
+fn selects_the_complete_stored_value_initialization_matrix() {
+    let output = check_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref other: Item) { self.value = other.value; }\n",
+        "}\n",
+        "fn make_item(value: i64) -> Item { return Item(value); }\n",
+        "class State {\n",
+        "  static signed: i64 = 1;\n",
+        "  static unsigned: u64 = 2u;\n",
+        "  static byte: u8 = 3u8;\n",
+        "  static float: f64 = 4.0;\n",
+        "  static flag: bool = true;\n",
+        "  static direct: Item = Item(5);\n",
+        "  static called: Item = make_item(6);\n",
+        "  static copied: Item = (Item(7));\n",
+        "  static maybe_signed: i64? = 8;\n",
+        "  static no_signed: i64? = none;\n",
+        "  static maybe_item: Item? = Item(9);\n",
+        "  static no_item: Item? = none;\n",
+        "  static owner: shared Item = new Item(10);\n",
+        "  static maybe_owner: shared? Item = new Item(11);\n",
+        "  static no_owner: shared? Item = none;\n",
+        "  static values: i64[] = i64[]{12, 13};\n",
+        "  static items: Item[] = Item[]{Item(14), Item(15)};\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let state = hir.class(ClassId::new(1)).unwrap();
+    assert_eq!(state.static_fields.len(), 17);
+    assert_eq!(hir.static_initializers().count(), 17);
+    assert_eq!(
+        hir.static_initializer(StaticInitializerId::from(state.static_fields[5].id))
+            .unwrap()
+            .id,
+        StaticInitializerId::from(state.static_fields[5].id)
+    );
+
+    for field in &state.static_fields[..5] {
+        assert!(matches!(
+            field.initializer.as_ref().unwrap().value,
+            HirStoredValueInitialization::Primitive(_)
+        ));
+    }
+    assert!(matches!(
+        state.static_fields[5].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Class(HirObjectDestinationInitialization::Direct { .. })
+    ));
+    assert!(matches!(
+        state.static_fields[6].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Class(HirObjectDestinationInitialization::Direct { .. })
+    ));
+    assert!(matches!(
+        state.static_fields[7].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Class(HirObjectDestinationInitialization::Copy { .. })
+    ));
+    assert!(matches!(
+        state.static_fields[8].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalPrimitive {
+            source: HirOptionalSource::Present(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        state.static_fields[9].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalPrimitive {
+            source: HirOptionalSource::Absent { .. },
+            ..
+        }
+    ));
+    assert!(matches!(
+        state.static_fields[10].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalClass(
+            HirClassOptionalDestinationInitialization::Direct { .. }
+        )
+    ));
+    assert!(matches!(
+        state.static_fields[11].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalClass(
+            HirClassOptionalDestinationInitialization::Absent { .. }
+        )
+    ));
+    assert!(matches!(
+        state.static_fields[12].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Shared(ref transfer)
+            if transfer.operation == HirOwnerTransfer::Adopt
+    ));
+    assert!(matches!(
+        state.static_fields[13].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalShared(ref value)
+            if matches!(value.source, HirOptionalSharedSource::Present(_))
+    ));
+    assert!(matches!(
+        state.static_fields[14].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalShared(ref value)
+            if matches!(value.source, HirOptionalSharedSource::Absent { .. })
+    ));
+    for field in &state.static_fields[15..] {
+        assert!(matches!(
+            field.initializer.as_ref().unwrap().value,
+            HirStoredValueInitialization::Array(ref value)
+                if value.operation == HirArrayTransfer::Adopt
+        ));
+    }
+
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("DeclarationInitializer").count(), 17, "{dump}");
+    assert!(dump.contains("ClassInitialization direct"), "{dump}");
+    assert!(dump.contains("ClassInitialization copy"), "{dump}");
+    assert!(dump.contains("ArrayInitialization adopt"), "{dump}");
+}
+
+#[test]
+fn selects_copy_operations_for_named_static_sources() {
+    let output = check_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref other: Item) { self.value = other.value; }\n",
+        "}\n",
+        "class State {\n",
+        "  static owner: shared Item = new Item(1);\n",
+        "  static owner_copy: shared Item = State.owner;\n",
+        "  static maybe_owner: shared? Item = new Item(2);\n",
+        "  static maybe_owner_copy: shared? Item = State.maybe_owner;\n",
+        "  static values: i64[] = i64[]{3};\n",
+        "  static values_copy: i64[] = State.values;\n",
+        "  static maybe_number: i64? = 4;\n",
+        "  static maybe_number_copy: i64? = State.maybe_number;\n",
+        "  static maybe_item: Item? = Item(5);\n",
+        "  static maybe_item_copy: Item? = State.maybe_item;\n",
+        "  static item: Item = Item(6);\n",
+        "  static item_copy: Item = State.item;\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let fields = &hir.class(ClassId::new(1)).unwrap().static_fields;
+    assert!(matches!(
+        fields[1].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Shared(ref transfer)
+            if transfer.operation == HirOwnerTransfer::Copy
+    ));
+    assert!(matches!(
+        fields[3].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalShared(ref value)
+            if matches!(value.source, HirOptionalSharedSource::Copy(_))
+    ));
+    assert!(matches!(
+        fields[5].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Array(ref value)
+            if matches!(value.operation, HirArrayTransfer::DeepCopy(_))
+    ));
+    assert!(matches!(
+        fields[7].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalPrimitive {
+            source: HirOptionalSource::Copy(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        fields[9].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::OptionalClass(
+            HirClassOptionalDestinationInitialization::Copy { .. }
+        )
+    ));
+    assert!(matches!(
+        fields[11].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Class(crate::hir::HirObjectDestinationInitialization::Copy {
+            source: crate::hir::HirObjectSource::Static { .. },
+            ..
+        })
+    ));
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("SharedStatic c1:static0"), "{dump}");
+    assert!(dump.contains("SharedTransfer Copy"), "{dump}");
+    assert!(dump.contains("ArrayInitialization deep-copy"), "{dump}");
+    assert!(
+        dump.contains("StaticObjectSource c1:static10 : c0"),
+        "{dump}"
+    );
+}
+
+#[test]
+fn applies_declaring_class_privacy_and_initializer_overload_selection() {
+    let output = check_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  private init() { self.value = 0; }\n",
+        "  private init(value: i64) { self.value = value; }\n",
+        "  static own: Item = Item(42);\n",
+        "}\n",
+        "class Foreign { static denied: Item = Item(); init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
     assert!(output.hir.is_none());
-    let unavailable = output
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.code == STATIC_FIELD_INITIALIZER_UNAVAILABLE)
-        .collect::<Vec<_>>();
-    assert_eq!(unavailable.len(), 2, "{:?}", output.diagnostics);
-    assert!(!output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_STATIC_FIELD_TYPE));
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == crate::typeck::PRIVATE_INITIALIZER_ACCESS)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+}
+
+#[test]
+fn direct_production_does_not_require_copy_but_grouped_production_does() {
+    let mut program = resolve_text(concat!(
+        "class Item { init() {} }\n",
+        "class State {\n",
+        "  static direct: Item = Item();\n",
+        "  static copied: Item = (Item());\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    program.classes.entries_mut_for_test()[0].copy_constructor =
+        crate::resolve::ResolvedCopyOperation::Unavailable;
+    let output = type_check(&program);
+
+    assert!(output.hir.is_none());
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == crate::typeck::COPY_OPERATION_UNAVAILABLE)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+}
+
+#[test]
+fn rejects_non_stored_explicit_types_and_initializer_type_mismatches() {
+    let output = check_text(concat!(
+        "interface View { fn read() -> i64; }\n",
+        "class Item implements View {\n",
+        "  init() {}\n",
+        "  fn read() -> i64 { return 0; }\n",
+        "}\n",
+        "fn nothing() -> unit {}\n",
+        "class Invalid {\n",
+        "  static empty: unit = nothing();\n",
+        "  static object_view: Obj = (Obj) Item();\n",
+        "  static interface_view: View = (View) Item();\n",
+        "  static mismatch: i64 = true;\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_STATIC_FIELD_TYPE)
+            .count(),
+        3,
+        "{:?}",
+        output.diagnostics
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == crate::typeck::TYPE_MISMATCH)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
 }
 
 #[test]
@@ -531,4 +886,37 @@ fn optional_string_statics_use_ordinary_literal_and_method_semantics() {
     let dump = dump_hir(&output.hir.unwrap());
     assert!(dump.contains("ClassOptionalStaticPlace"), "{dump}");
     assert!(dump.contains("StringLiteral"), "{dump}");
+}
+
+#[test]
+fn string_literal_static_initialization_reuses_exact_object_copy_semantics() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[(
+            "app.ska",
+            concat!(
+                "from std::str import Str;\n",
+                "class State { static text: Str = \"ready\"; init() {} }\n",
+                "fn main() -> i64 { return 0; }\n",
+            ),
+        )],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let output = type_check(&resolved.program);
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let state = hir
+        .classes
+        .iter()
+        .find(|class| class.name == "State")
+        .unwrap();
+    assert!(matches!(
+        state.static_fields[0].initializer.as_ref().unwrap().value,
+        HirStoredValueInitialization::Class(HirObjectDestinationInitialization::Copy { .. })
+    ));
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("StringLiteral"), "{dump}");
+    assert!(dump.contains("ClassInitialization copy"), "{dump}");
 }
