@@ -207,19 +207,22 @@ Primitive and exact-class HIR-to-MIR lowering implement this abstract sequence:
 6. publish inline produced backing or one shared-array owner only when the
    prefix equals the list count.
 
-MIR represents both executable slices with `AllocateElements`, which carries
+MIR represents the executable element-list categories with `AllocateElements`, which carries
 the constant source count and establishes a zero `u64` prefix. Primitive
 sources use one `InitializeElement` per position. Exact-class sources reuse
 ordinary `Initialize`, object-result `Call`, `StringInitialize`, or
 `CopyConstruct` operations against the final array-element place, followed by
 `CompleteElement` only after that operation returns normally. Grouped produced
 sources use ordinary full-expression temporary materialization and cleanup.
-Both slices finish through ordinary inline or shared publication. Element
-expression lowering may introduce explicit CFG, but it does not introduce the
-uniform default/copy loop or live placeholders. `try_lower_hir` retains
-`MirLoweringError::UnsupportedArrayElementList` only for optional,
-nested-array, shared-owner, and optional-owner plans whose later roadmap stages
-have not landed.
+Inline optionals reuse their conditional payload operations. Nested inline
+arrays deep-copy named sources through their exact recursive element copy plan,
+or consume a completed produced descriptor through `Adopt`; `CompleteElement`
+then advances the outer prefix. Every category finishes through ordinary
+inline or shared publication. Element expression lowering may introduce
+explicit CFG, but it does not introduce the uniform default/copy loop or live
+placeholders. `try_lower_hir` retains
+`MirLoweringError::UnsupportedArrayElementList` only for shared-owner and
+optional-owner plans whose later roadmap stages have not landed.
 
 The MIR vocabulary may use immediate semantic positions, explicit index
 storage, ordinary category-specific initialization instructions, or a focused
@@ -256,14 +259,15 @@ public runtime entry point, metadata format, or ABI-version change is part of
 this frozen extension.
 
 Syntax, resolved IR, and HIR implement the complete typed representation.
-Verified MIR and x86-64 implement primitive, exact-class, and inline-optional
-lists for inline and shared outer ownership. The verifier proves exact values,
-class and conditional payload destinations, presence-before-prefix ordering,
-source-position order, normally completed construction before prefix
-advancement, publication, backing consumption, and storage lifetime. Nested-
-array, shared-owner, and optional-owner families remain behind the executable-
-lowering gate. The [status matrix](../language/STATUS.md)
-distinguishes these vertical slices from the remaining frozen profile.
+Verified MIR and x86-64 implement primitive, exact-class, inline-optional, and
+recursively nested inline-array lists for inline and shared outer ownership.
+The verifier proves exact values, class and conditional payload destinations,
+presence-before-prefix ordering, nested array identity and produced-source
+consumption, source-position order, normally completed construction before
+prefix advancement, publication, backing consumption, and storage lifetime.
+Shared-owner and optional-owner families remain behind the executable-lowering
+gate. The [status matrix](../language/STATUS.md) distinguishes these vertical
+slices from the remaining frozen profile.
 
 ## Typed HIR
 

@@ -196,8 +196,9 @@ pub enum MirArrayInstruction {
         value: ValueId,
         span: Span,
     },
-    /// Records that the next exact-class element has finished construction
-    /// in its final slot and advances the initialized prefix by one element.
+    /// Records that the next lifecycle-bearing element has finished
+    /// initialization in its final slot and advances the initialized prefix
+    /// by one element.
     CompleteElement {
         backing: StorageId,
         prefix: StorageId,

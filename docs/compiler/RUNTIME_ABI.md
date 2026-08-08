@@ -324,11 +324,12 @@ list expression, initialized prefix, or lifecycle identity.
 Allocation failure continues to use the existing allocation and common panic
 boundaries. Current non-unwinding termination adds no runtime partial-prefix
 cleanup service. Direct runtime tests therefore keep validating the unchanged
-allocator, reporter, header, symbol set, and version marker. Primitive and
-exact-class element-list behavior is implemented entirely in compiler,
-verifier, backend, and native execution tests; exact-class construction and
-cleanup reuse ordinary generated lifecycle operations. Later optional,
-nested-array, shared-owner, and optional-owner slices retain the same boundary.
+allocator, reporter, header, symbol set, and version marker. Primitive,
+exact-class, inline-optional, and recursively nested inline-array element-list
+behavior is implemented entirely in compiler, verifier, backend, and native
+execution tests; class and nested cleanup reuse ordinary generated lifecycle
+operations. Later shared-owner and optional-owner slices retain the same
+boundary.
 
 ## Implemented primitive operator ABI boundary
 

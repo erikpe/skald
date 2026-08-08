@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 through EL4 are complete and EL5 is next.
+Status: in progress; EL0 through EL5 are complete and EL6 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -50,7 +50,7 @@ lifecycle, publication, and runtime boundaries.
 - [x] EL2 — Execute verified primitive element lists
 - [x] EL3 — Execute exact-class destination placement and copying
 - [x] EL4 — Execute inline optional element initialization
-- [ ] EL5 — Execute recursively nested inline-array elements
+- [x] EL5 — Execute recursively nested inline-array elements
 - [ ] EL6 — Execute shared and optional-shared owner elements
 - [ ] EL7 — Harden and publish the complete element-list profile
 
@@ -258,19 +258,19 @@ surface is added.
 **Purpose:** Make element lists compose recursively as jagged owning values
 while preserving exact nested copy and produced-backing transfer semantics.
 
-- [ ] Deep-copy each named nested inline-array source into distinct inner
+- [x] Deep-copy each named nested inline-array source into distinct inner
       backing through its exact element copy plan.
-- [ ] Adopt each produced nested source, including another element-list result,
+- [x] Adopt each produced nested source, including another element-list result,
       into its outer slot without a redundant deep copy or moved-from source
       value.
-- [ ] Preserve exact recursive `ArrayTypeId`, named/produced provenance,
+- [x] Preserve exact recursive `ArrayTypeId`, named/produced provenance,
       arbitrary jagged lengths, and ownership grouping at every nesting level.
-- [ ] Advance the outer initialized prefix only after the complete inner array
+- [x] Advance the outer initialized prefix only after the complete inner array
       owner is installed, and consume each produced inner backing exactly once.
-- [ ] Extend nested array ownership, cleanup, and verifier mutations for lost,
+- [x] Extend nested array ownership, cleanup, and verifier mutations for lost,
       duplicate, wrong-identity, named-as-produced, and produced-as-named
       transfers.
-- [ ] Reuse recursive x86-64 array copy, adoption, replacement, anchor, and
+- [x] Reuse recursive x86-64 array copy, adoption, replacement, anchor, and
       reverse destruction machinery without flattening or rectangular layout.
 
 **Tests:** Empty and nonempty inner lists; mixed jagged lengths; named deep

@@ -197,9 +197,9 @@ copying has no inheritance or dynamic-check relation.
 No fill-value, per-index generator, inferred array literal, or
 multi-dimensional shape constructor is implemented. Executable nonempty
 construction accepts the existing default-length and exact-copy modes plus
-explicit primitive, exact-class, and inline-optional element lists. Nested-
-array, shared-owner, and optional-owner element-list families remain staged
-behind structured executable lowering.
+explicit primitive, exact-class, inline-optional, and recursively nested
+inline-array element lists. Shared-owner and optional-owner element-list
+families remain staged behind structured executable lowering.
 
 ## Frozen explicit element-list construction
 
@@ -226,15 +226,17 @@ requires `value: u64`.
 
 The type checker accepts both brace forms and records one exact ordered
 destination plan per element in HIR. Lists of `i64`, `u64`, `u8`, `f64`,
-`bool`, exact classes, and supported inline optionals execute for inline and
-shared outer arrays. Their MIR
+`bool`, exact classes, supported inline optionals, and recursively nested
+inline arrays execute for inline and shared outer arrays. Their MIR
 allocates checked unpublished backing before element effects, advances one
 verified ordered prefix, and publishes only after completion. Exact-class
 plans use ordinary direct initialization, object-result placement, or selected
 copy construction in the final slot. Inline optionals reuse ordinary absence,
 injection, conditional payload copying, direct payload placement, and presence
-publication. The structured HIR-to-MIR gate continues to reject nested-array,
-shared-owner, and optional-owner element plans until their roadmap stages land.
+publication. A named nested array is deep-copied recursively; a produced nested
+array transfers its completed backing into the current outer slot exactly once.
+The structured HIR-to-MIR gate continues to reject shared-owner and
+optional-owner element plans until their roadmap stages land.
 
 The list length is the number of supplied expressions and must satisfy the
 ordinary maximum-`i64` array-length bound. Type grouping and outer ownership
@@ -754,8 +756,8 @@ The following are intentionally outside the implemented array profile:
 - inline optional array payloads and their eventual source spelling;
 - inferred array literals, expected-type-only lists, fill-value, per-index
   generator, comprehensions, spreads, repetition, and rectangular-shape
-  initialization syntax; nested-array, shared-owner, and optional-owner
-  explicit typed element-list families are frozen above but remain staged;
+  initialization syntax; shared-owner and optional-owner explicit typed
+  element-list families are frozen above but remain staged;
 - capacity, resizing an existing allocation, append, insertion, removal, or
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;

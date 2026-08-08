@@ -541,8 +541,9 @@ Leading outer `shared` or `shared?` belongs in a storage type, while `new`
 selects shared construction.
 The contextual `copy` form is a dedicated array construction mode and accepts
 exactly one source. The ordinary nonempty parenthesized form accepts exactly
-one length expression. An element list is a distinct accepted source mode; its
-execution semantics remain staged behind type checking.
+one length expression. An element list is a distinct accepted source mode;
+category availability after type checking is tracked in the
+[status matrix](STATUS.md#not-implemented).
 
 ### Explicit array element lists
 

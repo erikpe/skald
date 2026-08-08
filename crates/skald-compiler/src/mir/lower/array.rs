@@ -13,6 +13,7 @@ enum ExecutableElementListKind {
     Primitive,
     ExactClass,
     InlineOptional,
+    InlineArray,
 }
 
 impl BodyLowerer<'_> {
@@ -572,6 +573,7 @@ impl BodyLowerer<'_> {
             Type::OptionalPrimitive(_) | Type::OptionalClass(_) => {
                 Some(ExecutableElementListKind::InlineOptional)
             }
+            Type::Array(_) => Some(ExecutableElementListKind::InlineArray),
             _ => None,
         }
     }
@@ -674,6 +676,18 @@ impl BodyLowerer<'_> {
                 HirStoredValueInitialization::OptionalClass(initialization) => {
                     let destination = MirPlace::base(backing).project_array_element(array, prefix);
                     self.lower_class_optional_destination_initialize(destination, initialization);
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
+                HirStoredValueInitialization::Array(initialization) => {
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    self.lower_array_initialize(destination, initialization, false);
                     self.emit(MirInstruction::Array(
                         MirArrayInstruction::CompleteElement {
                             backing,

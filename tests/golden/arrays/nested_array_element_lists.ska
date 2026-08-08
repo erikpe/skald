@@ -1,0 +1,42 @@
+import std::io;
+
+class Trace {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value);
+    }
+}
+
+fn exercise() -> unit {
+    var named: i64[] = i64[]{10, 20};
+    var rows: i64[][] = i64[][]{(named), i64[]{30}, i64[]{}, i64[]{40, 50}};
+    var cubes: i64[][][] = i64[][][]{rows, i64[][]{i64[]{60}}};
+
+    named[0] = 99;
+    rows[0][1] = 21;
+    cubes[0][1][0] = 31;
+
+    std::io::println_i64(named[0]);
+    std::io::println_i64(named[1]);
+    std::io::println_i64(rows[0][0]);
+    std::io::println_i64(rows[0][1]);
+    std::io::println_u64(rows.len());
+    std::io::println_u64(rows[2].len());
+    std::io::println_i64(cubes[0][1][0]);
+    std::io::println_i64(rows[1][0]);
+    std::io::println_i64(cubes[1][0][0]);
+
+    var inline: Trace[][] = Trace[][]{Trace[]{Trace(1), Trace(2)}, Trace[]{Trace(3)}};
+    var shared: shared Trace[][] = new Trace[][]{Trace[]{Trace(4), Trace(5)}, Trace[]{Trace(6)}};
+    return;
+}
+
+fn main() -> i64 {
+    exercise();
+    return 0;
+}

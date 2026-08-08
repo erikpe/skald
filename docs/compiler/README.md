@@ -164,14 +164,15 @@ extension preserves ordered destination initialization, unpublished-prefix
 verification, existing class/optional/nested-array/shared-owner operations,
 and the current runtime ABI. Syntax and resolution retain those brace forms
 exactly, and type checking now emits one ordered, destination-directed HIR
-plan per element. Primitive, exact-class, and inline-optional plans execute
-through verified MIR and x86-64 for both outer ownership modes; exact classes
-reuse ordinary final-destination initializer, call-result, copy-construction,
-full-expression, and reverse-destruction machinery, while optionals reuse
-ordinary absence, injection, payload, publication, and conditional cleanup.
-A structured HIR-to-MIR availability error continues to gate nested-array,
-shared-owner, and optional-owner plans. Availability remains authoritative in the
-[status matrix](../language/STATUS.md).
+plan per element. Primitive, exact-class, inline-optional, and recursively
+nested inline-array plans execute through verified MIR and x86-64 for both
+outer ownership modes; exact classes reuse ordinary final-destination
+initializer, call-result, copy-construction, full-expression, and
+reverse-destruction machinery, optionals reuse ordinary absence, injection,
+payload, publication, and conditional cleanup, and nested arrays reuse exact
+recursive deep copy or produced-backing adoption. A structured HIR-to-MIR
+availability error continues to gate shared-owner and optional-owner plans.
+Availability remains authoritative in the [status matrix](../language/STATUS.md).
 
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64

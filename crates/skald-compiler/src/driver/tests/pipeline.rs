@@ -889,20 +889,39 @@ fn inline_optional_array_element_lists_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn remaining_element_list_families_stay_at_the_structured_executable_lowering_gate() {
-    let result = compile_source_to_assembly(
+fn nested_inline_array_element_lists_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
         "array-element-list.ska",
         concat!(
             "fn main() -> i64 {\n",
-            "  var inner: i64[] = i64[]{};\n",
-            "  var values: i64[][] = i64[][]{inner};\n",
+            "  var inner: i64[] = i64[]{1, 2};\n",
+            "  var values: i64[][] = i64[][]{inner, i64[]{3}};\n",
+            "  return values[1][0];\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("nested inline-array element lists must lower through x86-64");
+    assert!(artifact.assembly.contains("call .Lska_array_0_clone"));
+    assert!(artifact.assembly.contains("call .Lska_array_0_release"));
+}
+
+#[test]
+fn owner_element_list_families_stay_at_the_structured_executable_lowering_gate() {
+    let result = compile_source_to_assembly(
+        "array-element-list.ska",
+        concat!(
+            "class Item { init() {} }\n",
+            "fn main() -> i64 {\n",
+            "  var owner: shared Item = new Item();\n",
+            "  var values: (shared Item)[] = (shared Item)[]{owner};\n",
             "  return 0;\n",
             "}\n",
         ),
         Target::X86_64SysV,
     );
     let CompilationError::MirLowering(errors) =
-        result.expect_err("nested-array element lists remain gated after inline optionals")
+        result.expect_err("shared-owner element lists remain gated after nested inline arrays")
     else {
         panic!("expected the MIR executable-lowering gate");
     };

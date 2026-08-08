@@ -255,6 +255,156 @@ fn class_optional_element_lists_preserve_copy_and_conditional_cleanup() {
     assert_eq!(run_native_assembly(&output).code(), Some(0), "{output}");
 }
 
+#[test]
+fn nested_array_element_lists_deep_copy_named_rows_and_adopt_produced_rows() {
+    let source = concat!(
+        "extern fn validate_counts() -> i64;\n",
+        "fn make(value: i64) -> i64[] { return i64[]{value}; }\n",
+        "fn exercise() -> unit {\n",
+        "  var named: i64[] = i64[]{10, 20};\n",
+        "  var inline: i64[][] = i64[][]{named, i64[]{30}, make(40), i64[]{}};\n",
+        "  var shared: shared i64[][] = new i64[][]{named, i64[]{50, 60}};\n",
+        "  named[0] = 99;\n",
+        "  inline[0][1] = 21;\n",
+        "  shared->[1][0] = 51;\n",
+        "  if (inline.len() != 4u || inline[3].len() != 0u) { return; }\n",
+        "  if (inline[0][0] != 10 || inline[0][1] != 21 || named[1] != 20) { return; }\n",
+        "  if (inline[1][0] != 30 || inline[2][0] != 40) { return; }\n",
+        "  if (shared->len() != 2u || shared->[0][0] != 10 || shared->[1][0] != 51 || shared->[1][1] != 60) { return; }\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { exercise(); return validate_counts(); }\n",
+    );
+    let mut output = assembly(source);
+    assert!(output.contains("call .Lska_array_0_clone"));
+    output.push_str(nested_array_allocation_probe());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn nested_array_element_lists_destroy_inner_values_in_recursive_reverse_order() {
+    let source = concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn validate() -> i64;\n",
+        "class Trace {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  destroy { observe(self.value); }\n",
+        "}\n",
+        "fn exercise() -> unit {\n",
+        "  var inline: Trace[][] = Trace[][]{Trace[]{Trace(1), Trace(2)}, Trace[]{Trace(3)}};\n",
+        "  var shared: shared Trace[][] = new Trace[][]{Trace[]{Trace(4), Trace(5)}, Trace[]{Trace(6)}};\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { exercise(); return validate(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    output.push_str(nested_array_lifecycle_probe());
+    assert_eq!(run_native_assembly(&output).code(), Some(0), "{output}");
+}
+
+#[test]
+fn nested_array_element_lists_compose_with_recursive_class_array_graphs() {
+    let source = concat!(
+        "class Node {\n",
+        "  value: i64; children: Node[];\n",
+        "  init(children: Node[], value: i64) { self.children = children; self.value = value; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var forest: Node[][] = Node[][]{\n",
+        "    Node[]{Node(Node[]{}, 1), Node(Node[]{Node(Node[]{}, 3)}, 2)},\n",
+        "    Node[]{}\n",
+        "  };\n",
+        "  if (forest.len() != 2u || forest[0].len() != 2u || forest[1].len() != 0u) { return 1; }\n",
+        "  return forest[0][1].children[0].value + 39;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+fn nested_array_allocation_probe() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lnested_array_allocations: .quad 0\n",
+        ".Lnested_array_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    push rbp\n",
+        "    mov rbp, rsp\n",
+        "    add qword ptr [rip + .Lnested_array_allocations], 1\n",
+        "    call malloc@PLT\n",
+        "    leave\n",
+        "    ret\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    add qword ptr [rip + .Lnested_array_frees], 1\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl validate_counts\n",
+        ".type validate_counts, @function\n",
+        "validate_counts:\n",
+        "    cmp qword ptr [rip + .Lnested_array_allocations], 8\n",
+        "    jne .Lnested_array_count_failure\n",
+        "    cmp qword ptr [rip + .Lnested_array_frees], 8\n",
+        "    jne .Lnested_array_count_failure\n",
+        "    mov rax, 42\n",
+        "    ret\n",
+        ".Lnested_array_count_failure:\n",
+        "    mov rax, 1\n",
+        "    ret\n",
+        ".size validate_counts, .-validate_counts\n",
+    )
+}
+
+fn nested_array_lifecycle_probe() -> &'static str {
+    concat!(
+        "\n.section .rodata\n",
+        ".align 8\n",
+        ".Lnested_array_expected:\n",
+        "    .quad 6, 5, 4, 3, 2, 1\n",
+        ".bss\n",
+        ".align 8\n",
+        ".Lnested_array_index:\n",
+        "    .zero 8\n",
+        ".text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    mov rax, qword ptr [rip + .Lnested_array_index]\n",
+        "    cmp rax, 6\n",
+        "    jae .Lnested_array_bad\n",
+        "    lea rcx, [rip + .Lnested_array_expected]\n",
+        "    cmp rdi, qword ptr [rcx + rax * 8]\n",
+        "    jne .Lnested_array_bad\n",
+        "    inc rax\n",
+        "    mov qword ptr [rip + .Lnested_array_index], rax\n",
+        "    ret\n",
+        ".globl validate\n",
+        ".type validate, @function\n",
+        "validate:\n",
+        "    xor eax, eax\n",
+        "    cmp qword ptr [rip + .Lnested_array_index], 6\n",
+        "    je .Lnested_array_done\n",
+        "    mov eax, 98\n",
+        ".Lnested_array_done:\n",
+        "    ret\n",
+        ".Lnested_array_bad:\n",
+        "    mov rax, 60\n",
+        "    mov rdi, 99\n",
+        "    syscall\n",
+        ".size observe, .-observe\n",
+        ".size validate, .-validate\n",
+    )
+}
+
 fn optional_class_element_lifecycle_probe() -> &'static str {
     concat!(
         "\n.section .rodata\n",

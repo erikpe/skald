@@ -60,6 +60,7 @@ impl Verifier<'_> {
                             | MirType::Class(_)
                             | MirType::OptionalPrimitive(_)
                             | MirType::OptionalClass(_)
+                            | MirType::Array(_)
                     )
                 });
                 if !storage_matches || !executable_element {
@@ -115,6 +116,7 @@ impl Verifier<'_> {
                                         MirType::Class(_)
                                             | MirType::OptionalPrimitive(_)
                                             | MirType::OptionalClass(_)
+                                            | MirType::Array(_)
                                     )
                                 })
                             }
@@ -207,6 +209,35 @@ impl Verifier<'_> {
                         function.callable(),
                         block.id,
                         "shared array publication requires matching backing and owner storage",
+                    );
+                }
+            }
+            MirArrayInstruction::Adopt {
+                destination,
+                source,
+                array,
+                ..
+            }
+            | MirArrayInstruction::Replace {
+                destination,
+                source,
+                array,
+                ..
+            } => {
+                let source_matches = function.storage(*source).is_some_and(|source| {
+                    matches!(
+                        source.kind,
+                        MirStorageKind::ArrayProduced | MirStorageKind::ArraySlice
+                    ) && source.ty == MirType::Array(*array)
+                });
+                let destination_matches = self
+                    .verify_place(function, block, destination)
+                    .is_some_and(|destination| destination.ty == MirType::Array(*array));
+                if !source_matches || !destination_matches {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array transfer requires exact produced source and destination identities",
                     );
                 }
             }

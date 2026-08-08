@@ -1,4 +1,5 @@
 use super::*;
+use crate::identity::ArrayTypeId;
 
 fn primitive_element_list_program() -> MirProgram {
     lower_text(concat!(
@@ -71,6 +72,27 @@ fn optional_element_list_error_after(mutator: impl FnOnce(&mut MirProgram)) -> S
     mutator(&mut program);
     verify_mir(&program)
         .expect_err("malformed optional element-list MIR must be rejected")
+        .to_string()
+}
+
+fn nested_array_element_list_program() -> MirProgram {
+    lower_text(concat!(
+        "fn make(value: i64) -> i64[] { return i64[]{value}; }\n",
+        "fn main() -> i64 {\n",
+        "  var named: i64[] = i64[]{1, 2};\n",
+        "  var rows: i64[][] = i64[][]{(named), i64[]{3}, make(4), (i64[]{5, 6})};\n",
+        "  var cubes: i64[][][] = i64[][][]{rows, i64[][]{i64[]{7}}};\n",
+        "  return rows[0][0] + cubes[1][0][0];\n",
+        "}\n",
+    ))
+}
+
+fn nested_array_element_list_error_after(mutator: impl FnOnce(&mut MirProgram)) -> String {
+    let mut program = nested_array_element_list_program();
+    verify_mir(&program).expect("nested array element-list mutation seed must be valid");
+    mutator(&mut program);
+    verify_mir(&program)
+        .expect_err("malformed nested array element-list MIR must be rejected")
         .to_string()
 }
 
@@ -723,6 +745,227 @@ fn verifier_rejects_class_element_completion_mutations() {
     });
     assert!(
         errors.contains("live unpublished element-list backing"),
+        "{errors}"
+    );
+}
+
+#[test]
+fn nested_array_element_lists_deep_copy_named_sources_and_adopt_produced_sources() {
+    let program = nested_array_element_list_program();
+    verify_mir(&program).expect("nested array element-list MIR must verify");
+    let function = program.definitions.get(program.entry_function).unwrap();
+    let instructions = function
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .collect::<Vec<_>>();
+
+    assert!(instructions.iter().any(|instruction| matches!(
+        instruction,
+        MirInstruction::Array(MirArrayInstruction::CopyNext {
+            operation: MirArrayCopyElement::Primitive,
+            ..
+        })
+    )));
+    assert!(instructions.iter().any(|instruction| matches!(
+        instruction,
+        MirInstruction::Array(MirArrayInstruction::CopyNext {
+            operation: MirArrayCopyElement::Array(_),
+            ..
+        })
+    )));
+    let adopted_slots = instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Array(MirArrayInstruction::Adopt {
+                destination, array, ..
+            }) if matches!(
+                destination.projections.as_slice(),
+                [MirPlaceProjection::ArrayElement { .. }]
+            ) =>
+            {
+                Some(*array)
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(adopted_slots.len() >= 6, "{adopted_slots:?}");
+    assert!(adopted_slots.contains(&ArrayTypeId::new(0)));
+    assert!(adopted_slots.contains(&ArrayTypeId::new(1)));
+
+    let completions = instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Array(MirArrayInstruction::CompleteElement { position, .. }) => {
+                Some(*position)
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(completions.windows(2).any(|positions| positions == [0, 1]));
+
+    let dump = dump_mir(&program);
+    assert!(dump.contains("array-adopt"), "{dump}");
+    assert!(dump.contains("via Array(ArrayTypeId(0))"), "{dump}");
+    assert_eq!(dump, dump_mir(&nested_array_element_list_program()));
+}
+
+#[test]
+fn verifier_rejects_malformed_nested_array_element_transfers() {
+    let errors = nested_array_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            if let Some(adopt) = block.instructions.iter().position(|instruction| {
+                matches!(instruction, MirInstruction::Array(MirArrayInstruction::Adopt {
+                    destination,
+                    ..
+                }) if matches!(destination.projections.as_slice(),
+                    [MirPlaceProjection::ArrayElement { .. }]))
+            }) {
+                block.instructions.remove(adopt);
+                return;
+            }
+        }
+        panic!("fixture must contain nested array adoption");
+    });
+    assert!(
+        errors.contains("constructed source-ordered prefix") || errors.contains("never consumed"),
+        "{errors}"
+    );
+
+    let errors = nested_array_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            let Some(adopt) = block.instructions.iter().position(|instruction| {
+                matches!(instruction, MirInstruction::Array(MirArrayInstruction::Adopt {
+                    destination,
+                    ..
+                }) if matches!(destination.projections.as_slice(),
+                    [MirPlaceProjection::ArrayElement { .. }]))
+            }) else {
+                continue;
+            };
+            let duplicate = block.instructions[adopt].clone();
+            block.instructions.insert(adopt + 1, duplicate);
+            return;
+        }
+        panic!("fixture must contain nested array adoption");
+    });
+    assert!(errors.contains("consumed exactly once"), "{errors}");
+
+    let errors = nested_array_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            for instruction in &mut block.instructions {
+                let MirInstruction::Array(MirArrayInstruction::Adopt {
+                    destination, array, ..
+                }) = instruction
+                else {
+                    continue;
+                };
+                if matches!(
+                    destination.projections.as_slice(),
+                    [MirPlaceProjection::ArrayElement { .. }]
+                ) {
+                    *array = ArrayTypeId::new(2);
+                    return;
+                }
+            }
+        }
+        panic!("fixture must contain nested array adoption");
+    });
+    assert!(
+        errors.contains("exact produced source and destination identities"),
+        "{errors}"
+    );
+
+    let errors = nested_array_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        let named = function
+            .storage
+            .iter()
+            .find(|storage| {
+                storage.kind == MirStorageKind::Local
+                    && storage.ty == MirType::Array(ArrayTypeId::new(0))
+            })
+            .expect("fixture must contain a named inner array")
+            .id;
+        for block in &mut function.body.blocks {
+            for instruction in &mut block.instructions {
+                let MirInstruction::Array(MirArrayInstruction::Adopt {
+                    destination,
+                    source,
+                    array,
+                    ..
+                }) = instruction
+                else {
+                    continue;
+                };
+                if *array == ArrayTypeId::new(0)
+                    && matches!(
+                        destination.projections.as_slice(),
+                        [MirPlaceProjection::ArrayElement { .. }]
+                    )
+                {
+                    *source = named;
+                    return;
+                }
+            }
+        }
+        panic!("fixture must contain nested array adoption");
+    });
+    assert!(
+        errors.contains("exact produced source and destination identities"),
+        "{errors}"
+    );
+
+    let errors = nested_array_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        let produced = function
+            .storage
+            .iter()
+            .find(|storage| {
+                storage.kind == MirStorageKind::ArrayProduced
+                    && storage.ty == MirType::Array(ArrayTypeId::new(0))
+            })
+            .expect("fixture must contain a produced inner array")
+            .id;
+        for block in &mut function.body.blocks {
+            for instruction in &mut block.instructions {
+                if let MirInstruction::Array(MirArrayInstruction::CopyNext {
+                    source,
+                    operation: MirArrayCopyElement::Primitive,
+                    ..
+                }) = instruction
+                {
+                    *source = MirPlace::base(produced);
+                    return;
+                }
+            }
+        }
+        panic!("fixture must contain a named inner-array deep copy");
+    });
+    assert!(
+        errors.contains("before storage-live")
+            || errors.contains("after storage-dead")
+            || errors.contains("outside a live lifetime epoch")
+            || errors.contains("never consumed"),
         "{errors}"
     );
 }

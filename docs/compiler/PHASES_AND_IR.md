@@ -831,9 +831,13 @@ sources, and existing class-array release destroys published elements in
 reverse order. Inline optionals reuse their ordinary absent/present operations;
 class payloads progress through absent-wrapper initialization, completed
 payload construction, presence publication, and only then outer-prefix
-advancement. A structured executable-lowering error selected by nested-array,
-shared-owner, and optional-owner `Elements` plans remains the phase boundary
-for the remaining staged families. The detailed frozen boundary is in
+advancement. Nested inline-array plans recursively deep-copy named sources or
+consume produced descriptors through exact-identity `Adopt` operations before
+`CompleteElement` advances the outer prefix. The ordinary recursive array copy,
+anchor, adoption, and reverse-release machinery remains authoritative. A
+structured executable-lowering error selected by shared-owner and
+optional-owner `Elements` plans remains the phase boundary for the remaining
+staged families. The detailed frozen boundary is in
 [the array compiler contract](ARRAYS.md#frozen-element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively
