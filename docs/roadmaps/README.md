@@ -10,7 +10,12 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Static field initialization and shutdown](STATIC_FIELD_INITIALIZATION_ROADMAP.md)
+  is planned. Its combined design record is frozen and SI1 is next. It adds
+  eager declaration initializers, checked program-owned lifecycle state, and
+  reverse normal-return cleanup on top of the implemented zero-default static
+  storage, constructor, ownership, array, module, and deterministic-
+  destruction baselines.
 
 ## Design proposals
 
