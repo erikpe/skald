@@ -61,6 +61,8 @@ impl Verifier<'_> {
                             | MirType::OptionalPrimitive(_)
                             | MirType::OptionalClass(_)
                             | MirType::Array(_)
+                            | MirType::Shared(_)
+                            | MirType::OptionalShared(_)
                     )
                 });
                 if !storage_matches || !executable_element {
@@ -117,6 +119,8 @@ impl Verifier<'_> {
                                             | MirType::OptionalPrimitive(_)
                                             | MirType::OptionalClass(_)
                                             | MirType::Array(_)
+                                            | MirType::Shared(_)
+                                            | MirType::OptionalShared(_)
                                     )
                                 })
                             }

@@ -325,6 +325,106 @@ fn nested_array_element_lists_compose_with_recursive_class_array_graphs() {
     assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
 }
 
+#[test]
+fn shared_owner_element_lists_execute_all_transfers_and_outer_ownership_modes() {
+    let source = concat!(
+        "interface Value { fn read() -> i64; }\n",
+        "class Item implements Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn make(value: i64) -> shared Item { return new Item(value); }\n",
+        "fn main() -> i64 {\n",
+        "  var named: shared Item = new Item(1);\n",
+        "  var erased: shared Obj = named;\n",
+        "  var inline: (shared Item)[] = (shared Item)[]{named, named, new Item(2), make(3), (shared Item) erased};\n",
+        "  var outer: shared (shared Item)[] = new (shared Item)[]{named, new Item(4)};\n",
+        "  var views: (shared Value)[] = (shared Value)[]{named, new Item(5)};\n",
+        "  var objects: (shared Obj)[] = (shared Obj)[]{named, (shared Obj) new Item(7)};\n",
+        "  var optional: (shared? Item)[] = (shared? Item)[]{none, named, make(6)};\n",
+        "  var shared_optional: shared (shared? Item)[] = new (shared? Item)[]{none, named};\n",
+        "  var first: shared Item = inline[0];\n",
+        "  first->value = 20;\n",
+        "  var repeated: shared Item = inline[1];\n",
+        "  var distinct: shared Item = inline[2];\n",
+        "  var casted: shared Item = inline[4];\n",
+        "  var outer_named: shared Item = outer->[0];\n",
+        "  var view: shared Value = views[0];\n",
+        "  if (repeated->value != 20 || casted->value != 20 || outer_named->value != 20) { return 1; }\n",
+        "  if (view->read() != 20 || optional[0] is some || !(optional[1] is some)) { return 2; }\n",
+        "  if (shared_optional->[0] is some || !(shared_optional->[1] is some)) { return 5; }\n",
+        "  if (distinct->value != 2 || inline.len() != 5u || outer->len() != 2u || objects.len() != 2u) { return 3; }\n",
+        "  var rows: (shared i64[])[] = (shared i64[])[]{new i64[]{7}, new i64[]{8, 9}};\n",
+        "  var shared_rows: shared (shared i64[])[] = new (shared i64[])[]{new i64[]{10}};\n",
+        "  var row: shared i64[] = rows[1];\n",
+        "  var shared_row: shared i64[] = shared_rows->[0];\n",
+        "  if (row->[1] != 9 || shared_row->[0] != 10) { return 4; }\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    assert!(output.contains("ownership_retain_overflow"));
+    assert!(output.contains("call .Lska_array_"));
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn shared_owner_element_lists_balance_counts_and_finalize_last_owners_in_order() {
+    let source = concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn validate() -> i64;\n",
+        "class Item {\n",
+        "  marker: i64;\n",
+        "  init(marker: i64) { self.marker = marker; }\n",
+        "  destroy { observe(self.marker); }\n",
+        "}\n",
+        "fn make(marker: i64) -> shared Item { return new Item(marker); }\n",
+        "fn build() -> unit {\n",
+        "  var named: shared Item = new Item(1);\n",
+        "  var inline: (shared Item)[] = (shared Item)[]{named, named, new Item(2)};\n",
+        "  var outer: shared (shared Item)[] = new (shared Item)[]{named, make(3)};\n",
+        "  var optional: (shared? Item)[] = (shared? Item)[]{none, named, make(4)};\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return validate(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(owner_element_list_lifecycle_probe());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(0), "{output}");
+}
+
+#[test]
+fn owner_element_list_edges_preserve_the_specified_strong_cycle_leak() {
+    let source = concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn report() -> i64;\n",
+        "class Seed { init() {} destroy { observe(10); } }\n",
+        "class Node {\n",
+        "  edge: shared Obj;\n",
+        "  init(edge: shared Obj) { self.edge = edge; }\n",
+        "  destroy { observe(1); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  {\n",
+        "    var seed: shared Obj = new Seed();\n",
+        "    var node: shared Node = new Node(seed);\n",
+        "    var values: (shared Node)[] = (shared Node)[]{node};\n",
+        "    node->edge = values[0];\n",
+        "    var control: shared Seed = new Seed();\n",
+        "  }\n",
+        "  return report();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(owner_element_list_cycle_probe());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(0), "{output}");
+}
+
 fn nested_array_allocation_probe() -> &'static str {
     concat!(
         "\n.bss\n",
@@ -483,5 +583,98 @@ fn class_element_lifecycle_probe() -> &'static str {
         "    syscall\n",
         ".size observe, .-observe\n",
         ".size validate, .-validate\n",
+    )
+}
+
+fn owner_element_list_lifecycle_probe() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lowner_list_trace: .quad 0\n",
+        ".Lowner_list_allocations: .quad 0\n",
+        ".Lowner_list_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    imul rax, qword ptr [rip + .Lowner_list_trace], 10\n",
+        "    add rax, rdi\n",
+        "    mov qword ptr [rip + .Lowner_list_trace], rax\n",
+        "    ret\n",
+        ".size observe, .-observe\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    push rbp\n",
+        "    mov rbp, rsp\n",
+        "    add qword ptr [rip + .Lowner_list_allocations], 1\n",
+        "    call malloc@PLT\n",
+        "    leave\n",
+        "    ret\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    add qword ptr [rip + .Lowner_list_frees], 1\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl validate\n",
+        ".type validate, @function\n",
+        "validate:\n",
+        "    cmp qword ptr [rip + .Lowner_list_trace], 4321\n",
+        "    jne .Lowner_list_failure\n",
+        "    cmp qword ptr [rip + .Lowner_list_allocations], 7\n",
+        "    jne .Lowner_list_failure\n",
+        "    cmp qword ptr [rip + .Lowner_list_frees], 7\n",
+        "    jne .Lowner_list_failure\n",
+        "    xor rax, rax\n",
+        "    ret\n",
+        ".Lowner_list_failure:\n",
+        "    mov rax, 1\n",
+        "    ret\n",
+        ".size validate, .-validate\n",
+    )
+}
+
+fn owner_element_list_cycle_probe() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lowner_cycle_count: .quad 0\n",
+        ".Lowner_cycle_sum: .quad 0\n",
+        ".Lowner_cycle_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    add qword ptr [rip + .Lowner_cycle_count], 1\n",
+        "    add qword ptr [rip + .Lowner_cycle_sum], rdi\n",
+        "    ret\n",
+        ".size observe, .-observe\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    add qword ptr [rip + .Lowner_cycle_frees], 1\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl report\n",
+        ".type report, @function\n",
+        "report:\n",
+        "    mov rax, 1\n",
+        "    cmp qword ptr [rip + .Lowner_cycle_count], 2\n",
+        "    jne .Lowner_cycle_done\n",
+        "    cmp qword ptr [rip + .Lowner_cycle_sum], 20\n",
+        "    jne .Lowner_cycle_done\n",
+        "    cmp qword ptr [rip + .Lowner_cycle_frees], 3\n",
+        "    jne .Lowner_cycle_done\n",
+        "    xor rax, rax\n",
+        ".Lowner_cycle_done:\n",
+        "    ret\n",
+        ".size report, .-report\n",
     )
 }

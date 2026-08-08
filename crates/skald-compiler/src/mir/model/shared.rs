@@ -167,7 +167,8 @@ pub struct MirSharedRelease {
     pub span: Span,
 }
 
-/// Consumes a fresh owner and initializes one previously uninitialized field.
+/// Consumes a fresh owner and initializes one previously uninitialized owning
+/// place: a receiver field or the current unpublished array element-list slot.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedFieldInitialize {
     pub destination: MirPlace,

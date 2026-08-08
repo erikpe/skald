@@ -1,6 +1,6 @@
 # Explicit Array Element-List Construction Roadmap
 
-Status: in progress; EL0 through EL5 are complete and EL6 is next.
+Status: in progress; EL0 through EL6 are complete and EL7 is next.
 
 This roadmap implements the frozen
 [explicit array element-list contract](../language/ARRAYS.md#frozen-explicit-element-list-construction)
@@ -51,7 +51,7 @@ lifecycle, publication, and runtime boundaries.
 - [x] EL3 — Execute exact-class destination placement and copying
 - [x] EL4 — Execute inline optional element initialization
 - [x] EL5 — Execute recursively nested inline-array elements
-- [ ] EL6 — Execute shared and optional-shared owner elements
+- [x] EL6 — Execute shared and optional-shared owner elements
 - [ ] EL7 — Harden and publish the complete element-list profile
 
 ## PR-sized implementation sequence
@@ -290,21 +290,21 @@ semantics appear.
 owner categories without confusing element ownership with outer array
 ownership.
 
-- [ ] Copy/retain a named shared class or exact shared-array owner into each
+- [x] Copy/retain a named shared class or exact shared-array owner into each
       listed slot according to ordinary compatible target rules.
-- [ ] Transfer/adopt a produced owner into its slot without a redundant retain
+- [x] Transfer/adopt a produced owner into its slot without a redundant retain
       and release, including produced calls, allocations, casts, and nested
       shared-array construction.
-- [ ] Initialize optional shared-owner slots as absent or present through the
+- [x] Initialize optional shared-owner slots as absent or present through the
       existing zero niche and conditional owner operations.
-- [ ] Preserve repeated named-owner sharing versus distinct allocations from
+- [x] Preserve repeated named-owner sharing versus distinct allocations from
       separate `new` expressions; do not infer freshness from list position.
-- [ ] Support legal exact class/interface/`Obj` target compatibility without
+- [x] Support legal exact class/interface/`Obj` target compatibility without
       array covariance, default-target selection, or dynamic cloning.
-- [ ] Verify exact owner target, named/produced accounting, optional absence,
+- [x] Verify exact owner target, named/produced accounting, optional absence,
       slot publication, outer prefix, secure cleanup, and independent outer/
       inner strong counts.
-- [ ] Reuse existing x86-64 one-word element layout, retain/adopt/release,
+- [x] Reuse existing x86-64 one-word element layout, retain/adopt/release,
       optional-owner, finalization, and nested shared-array machinery for both
       inline and shared outer arrays.
 

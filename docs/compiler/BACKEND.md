@@ -186,9 +186,8 @@ semantics for overlap. Whole-array and exact element aliases execute through
 internal non-owning addresses. Inline backing accounts defer detached element
 destruction, while shared aliases reuse secured strong-owner anchors.
 
-The primitive, exact-class, inline-optional, and recursively nested inline-array
-slices of the frozen explicit array element-list extension add no new target
-semantic choice. Instruction selection receives
+The frozen explicit array element-list extension adds no new target semantic
+choice for any stored element category. Instruction selection receives
 verified unpublished backing, a source-derived constant count, exact ordered
 initialization, initialized-prefix advancement, and complete publication.
 Primitive slots reuse scalar stores. Exact-class slots reuse the ordinary
@@ -198,13 +197,15 @@ existing state word, payload offset, conditional copy/destruction, and
 presence store; `CompleteElement` only increments the verified prefix after
 the whole wrapper is live. Nested slots reuse recursive array cloning for named
 sources, descriptor adoption for produced sources, and decreasing-index release
-for cleanup. All four categories reuse checked allocation, inline/shared header layout,
-publication, and release while preserving allocation-before-element failure
-order and enclosing full-expression lifetime. They do not default-construct
-then assign, aggregate-copy class bytes, recover source expressions, publish a
-partial prefix, or introduce a new runtime service or descriptor layout.
-Shared-owner and optional-owner element operations remain staged for later
-roadmap entries.
+for cleanup. Shared-owner slots reuse one-word retain/adopt/store and release;
+optional shared-owner slots add only the existing zero test around those owner
+operations. Exact shared-array owners use the same generated nested array
+finalization machinery, independently of outer array ownership. All categories
+reuse checked allocation, inline/shared header layout, publication, and release
+while preserving allocation-before-element failure order and enclosing
+full-expression lifetime. They do not default-construct then assign,
+aggregate-copy class bytes, recover source expressions, publish a partial
+prefix, or introduce a new runtime service or descriptor layout.
 
 Verified string literal data is pooled by exact decoded bytes in first
 canonical identity order. The target emits one eight-aligned local object per

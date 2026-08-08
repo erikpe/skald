@@ -907,29 +907,24 @@ fn nested_inline_array_element_lists_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn owner_element_list_families_stay_at_the_structured_executable_lowering_gate() {
-    let result = compile_source_to_assembly(
+fn owner_element_list_families_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
         "array-element-list.ska",
         concat!(
-            "class Item { init() {} }\n",
+            "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
             "fn main() -> i64 {\n",
-            "  var owner: shared Item = new Item();\n",
-            "  var values: (shared Item)[] = (shared Item)[]{owner};\n",
-            "  return 0;\n",
+            "  var owner: shared Item = new Item(20);\n",
+            "  var values: (shared Item)[] = (shared Item)[]{owner, new Item(22)};\n",
+            "  var maybe: shared (shared? Item)[] = new (shared? Item)[]{none, owner};\n",
+            "  var first: shared Item = values[0];\n",
+            "  return first->value + (i64) maybe->len();\n",
             "}\n",
         ),
         Target::X86_64SysV,
-    );
-    let CompilationError::MirLowering(errors) =
-        result.expect_err("shared-owner element lists remain gated after nested inline arrays")
-    else {
-        panic!("expected the MIR executable-lowering gate");
-    };
-    assert_eq!(errors.len(), 1);
-    assert!(matches!(
-        errors.iter().next(),
-        Some(crate::mir::MirLoweringError::UnsupportedArrayElementList { .. })
-    ));
+    )
+    .expect("shared-owner element lists must lower through x86-64");
+    assert!(artifact.assembly.contains("call ska_rt_alloc"));
+    assert!(artifact.assembly.contains("call ska_rt_free"));
 }
 
 #[test]

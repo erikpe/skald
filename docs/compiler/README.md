@@ -158,20 +158,19 @@ whole-array and exact element aliases execute with detached-backing and
 shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
-That contract also freezes typed explicit `T[]{...}` and
-`new T[]{...}` element-list construction for staged implementation. The
+That contract also freezes and implements typed explicit `T[]{...}` and
+`new T[]{...}` element-list construction. The
 extension preserves ordered destination initialization, unpublished-prefix
 verification, existing class/optional/nested-array/shared-owner operations,
 and the current runtime ABI. Syntax and resolution retain those brace forms
 exactly, and type checking now emits one ordered, destination-directed HIR
-plan per element. Primitive, exact-class, inline-optional, and recursively
-nested inline-array plans execute through verified MIR and x86-64 for both
-outer ownership modes; exact classes reuse ordinary final-destination
+plan per element. Every legal stored element plan executes through verified
+MIR and x86-64 for both outer ownership modes; exact classes reuse ordinary final-destination
 initializer, call-result, copy-construction, full-expression, and
 reverse-destruction machinery, optionals reuse ordinary absence, injection,
-payload, publication, and conditional cleanup, and nested arrays reuse exact
-recursive deep copy or produced-backing adoption. A structured HIR-to-MIR
-availability error continues to gate shared-owner and optional-owner plans.
+payload, publication, and conditional cleanup, nested arrays reuse exact
+recursive deep copy or produced-backing adoption, and shared-owner families
+reuse ordinary retain/adopt/release and zero-niche optional operations.
 Availability remains authoritative in the [status matrix](../language/STATUS.md).
 
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented

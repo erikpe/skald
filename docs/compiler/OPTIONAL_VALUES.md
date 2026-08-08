@@ -504,4 +504,5 @@ chaining/coalescing/propagation, recoverable failures, concurrency or atomic
 guards, external optional ABI, or dynamic-type-preserving cloning. The frozen
 [array compiler contract](ARRAYS.md) separately extends optional shared-owner
 targets to exact arrays and permits already-supported optional non-array
-element types; those forms remain unimplemented.
+element types. Explicit array element lists reuse the same generic-place
+optional initialization, conditional owner transfer, zero niche, and cleanup.

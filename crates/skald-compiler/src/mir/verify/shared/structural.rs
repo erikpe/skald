@@ -491,6 +491,15 @@ impl<'mir> Verifier<'mir> {
             destination.projections.last(),
             Some(MirPlaceProjection::Field(_))
         );
+        let is_unpublished_array_element =
+            matches!(
+                destination.projections.as_slice(),
+                [MirPlaceProjection::ArrayElement { .. }]
+            ) && destination.base.local_storage().is_some_and(|backing| {
+                function
+                    .storage(backing)
+                    .is_some_and(|storage| storage.kind == MirStorageKind::ArrayBacking)
+            });
         let receiver_initialization = function.receiver()
             == Some(destination.base.expect_local_storage())
             && matches!(
@@ -500,21 +509,21 @@ impl<'mir> Verifier<'mir> {
         let valid = matches!(
             (field, source),
             (Some(field), Some(source))
-                if is_direct_field
-                    && field.access == MirAliasAccess::Mutable
+                if field.access == MirAliasAccess::Mutable
                     && matches!(field.ty, MirType::Shared(_))
                     && field.ty == source.ty
                     && source.kind == MirStorageKind::Temporary
+                    && (is_direct_field || (initialization && is_unpublished_array_element))
         );
         if !valid
-            || (initialization && !receiver_initialization)
+            || (initialization && !receiver_initialization && !is_unpublished_array_element)
             || (!initialization && receiver_initialization)
         {
             self.block_error(
                 function.callable(),
                 block.id,
                 if initialization {
-                    "shared field initialization requires a mutable receiver field and matching temporary owner"
+                    "shared owner initialization requires a mutable receiver field or array element and matching temporary owner"
                 } else {
                     "shared field replacement requires a mutable shared field and matching temporary owner"
                 },

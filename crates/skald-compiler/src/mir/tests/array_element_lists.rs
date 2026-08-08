@@ -96,6 +96,37 @@ fn nested_array_element_list_error_after(mutator: impl FnOnce(&mut MirProgram)) 
         .to_string()
 }
 
+fn owner_element_list_program() -> MirProgram {
+    lower_text(concat!(
+        "interface Value { fn read() -> i64; }\n",
+        "class Item implements Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn make(value: i64) -> shared Item { return new Item(value); }\n",
+        "fn main() -> i64 {\n",
+        "  var named: shared Item = new Item(1);\n",
+        "  var erased: shared Obj = named;\n",
+        "  var values: (shared Item)[] = (shared Item)[]{named, named, new Item(2), make(3), (shared Item) erased};\n",
+        "  var views: shared (shared Value)[] = new (shared Value)[]{named, new Item(4)};\n",
+        "  var objects: (shared Obj)[] = (shared Obj)[]{named, (shared Obj) new Item(9)};\n",
+        "  var optional: (shared? Item)[] = (shared? Item)[]{none, named, make(5)};\n",
+        "  var arrays: (shared i64[])[] = (shared i64[])[]{new i64[]{6}, new i64[]{7, 8}};\n",
+        "  return (i64) values.len() + (i64) views->len() + (i64) objects.len() + (i64) optional.len() + (i64) arrays.len();\n",
+        "}\n",
+    ))
+}
+
+fn owner_element_list_error_after(mutator: impl FnOnce(&mut MirProgram)) -> String {
+    let mut program = owner_element_list_program();
+    verify_mir(&program).expect("owner element-list mutation seed must be valid");
+    mutator(&mut program);
+    verify_mir(&program)
+        .expect_err("malformed owner element-list MIR must be rejected")
+        .to_string()
+}
+
 #[test]
 fn primitive_element_lists_lower_to_a_linear_initialized_prefix() {
     let program = primitive_element_list_program();
@@ -968,4 +999,261 @@ fn verifier_rejects_malformed_nested_array_element_transfers() {
             || errors.contains("never consumed"),
         "{errors}"
     );
+}
+
+#[test]
+fn owner_element_lists_reuse_ordinary_copy_adopt_cast_and_optional_transfers() {
+    let program = owner_element_list_program();
+    verify_mir(&program).expect("owner element-list MIR must verify");
+    let function = program.definitions.get(program.entry_function).unwrap();
+    let instructions = function
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .collect::<Vec<_>>();
+
+    assert!(instructions
+        .iter()
+        .any(|instruction| matches!(instruction, MirInstruction::SharedCopy(_))));
+    assert!(instructions
+        .iter()
+        .any(|instruction| matches!(instruction, MirInstruction::SharedAdopt(_))));
+    assert!(instructions
+        .iter()
+        .any(|instruction| matches!(instruction, MirInstruction::SharedCast(_))));
+    assert!(instructions.iter().any(|instruction| matches!(
+        instruction,
+        MirInstruction::OptionalSharedInitialize(initialize)
+            if matches!(initialize.source, MirOptionalSharedSource::Absent)
+    )));
+    let owner_slots = instructions
+        .iter()
+        .filter(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::SharedFieldInitialize(initialize)
+                    if matches!(initialize.destination.projections.as_slice(),
+                        [MirPlaceProjection::ArrayElement { .. }])
+            )
+        })
+        .count();
+    assert_eq!(owner_slots, 11);
+
+    let dump = dump_mir(&program);
+    assert!(dump.contains("shared-field-initialize"), "{dump}");
+    assert!(
+        dump.contains("optional-shared-initialize") && dump.contains("from absent"),
+        "{dump}"
+    );
+    assert!(dump.contains("PublishShared"), "{dump}");
+    assert_eq!(dump, dump_mir(&owner_element_list_program()));
+}
+
+#[test]
+fn verifier_rejects_malformed_owner_element_slot_publication() {
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            if let Some(index) = block.instructions.iter().position(|instruction| {
+                matches!(instruction, MirInstruction::SharedFieldInitialize(initialize)
+                    if matches!(initialize.destination.projections.as_slice(),
+                        [MirPlaceProjection::ArrayElement { .. }]))
+            }) {
+                block.instructions.remove(index);
+                return;
+            }
+        }
+        panic!("fixture must contain shared-owner slot initialization");
+    });
+    assert!(
+        errors.contains("constructed source-ordered prefix")
+            || errors.contains("remains live at full-expression boundary"),
+        "{errors}"
+    );
+
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            let Some(index) = block.instructions.iter().position(|instruction| {
+                matches!(instruction, MirInstruction::SharedFieldInitialize(initialize)
+                    if matches!(initialize.destination.projections.as_slice(),
+                        [MirPlaceProjection::ArrayElement { .. }]))
+            }) else {
+                continue;
+            };
+            let duplicate = block.instructions[index].clone();
+            block.instructions.insert(index + 1, duplicate);
+            return;
+        }
+        panic!("fixture must contain shared-owner slot initialization");
+    });
+    assert!(
+        errors.contains("exactly once in the current prefix slot")
+            || errors.contains("transfer source is not a live temporary owner"),
+        "{errors}"
+    );
+
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            for instruction in &mut block.instructions {
+                let MirInstruction::SharedFieldInitialize(initialize) = instruction else {
+                    continue;
+                };
+                let [MirPlaceProjection::ArrayElement {
+                    normalized_index, ..
+                }] = initialize.destination.projections.as_mut_slice()
+                else {
+                    continue;
+                };
+                *normalized_index = initialize.source;
+                return;
+            }
+        }
+        panic!("fixture must contain shared-owner slot initialization");
+    });
+    assert!(
+        errors.contains("current prefix slot") || errors.contains("wrong type"),
+        "{errors}"
+    );
+}
+
+#[test]
+fn verifier_rejects_wrong_owner_element_target_and_optional_duplication() {
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        let source = function
+            .body
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .find_map(|instruction| match instruction {
+                MirInstruction::SharedFieldInitialize(initialize)
+                    if matches!(
+                        initialize.destination.projections.as_slice(),
+                        [MirPlaceProjection::ArrayElement { .. }]
+                    ) =>
+                {
+                    Some(initialize.source)
+                }
+                _ => None,
+            })
+            .unwrap();
+        function.storage[source.index()].ty = MirType::Shared(MirSharedTarget::Obj);
+    });
+    assert!(errors.contains("matching temporary owner"), "{errors}");
+
+    let errors = owner_element_list_error_after(|program| {
+        let function = program
+            .definitions
+            .get_mut_for_test(program.entry_function)
+            .unwrap();
+        for block in &mut function.body.blocks {
+            let Some(index) = block.instructions.iter().position(|instruction| {
+                matches!(instruction, MirInstruction::OptionalSharedInitialize(initialize)
+                    if matches!(initialize.destination.projections.as_slice(),
+                        [MirPlaceProjection::ArrayElement { .. }]))
+            }) else {
+                continue;
+            };
+            let duplicate = block.instructions[index].clone();
+            block.instructions.insert(index + 1, duplicate);
+            return;
+        }
+        panic!("fixture must contain optional shared-owner slot initialization");
+    });
+    assert!(
+        errors.contains("exactly once in the current prefix slot")
+            || errors.contains("initialized more than once"),
+        "{errors}"
+    );
+}
+
+#[test]
+fn verifier_rejects_missing_or_duplicate_owner_element_transfers() {
+    for duplicate in [false, true] {
+        let errors = owner_element_list_error_after(|program| {
+            let function = program
+                .definitions
+                .get_mut_for_test(program.entry_function)
+                .unwrap();
+            let temporaries = function
+                .storage
+                .iter()
+                .filter(|storage| storage.kind == MirStorageKind::Temporary)
+                .map(|storage| storage.id)
+                .collect::<Vec<_>>();
+            for block in &mut function.body.blocks {
+                let Some(index) = block.instructions.iter().position(|instruction| {
+                    matches!(instruction, MirInstruction::SharedCopy(copy)
+                        if temporaries.contains(&copy.destination))
+                }) else {
+                    continue;
+                };
+                if duplicate {
+                    let operation = block.instructions[index].clone();
+                    block.instructions.insert(index + 1, operation);
+                } else {
+                    block.instructions.remove(index);
+                }
+                return;
+            }
+            panic!("fixture must contain a retained named-owner element source");
+        });
+        assert!(
+            errors.contains("live temporary owner")
+                || errors.contains("transfer source is not a live owner")
+                || errors.contains("destination is already initialized")
+                || errors.contains("remains live at full-expression boundary"),
+            "{errors}"
+        );
+
+        let errors = owner_element_list_error_after(|program| {
+            let function = program
+                .definitions
+                .get_mut_for_test(program.entry_function)
+                .unwrap();
+            let temporaries = function
+                .storage
+                .iter()
+                .filter(|storage| storage.kind == MirStorageKind::Temporary)
+                .map(|storage| storage.id)
+                .collect::<Vec<_>>();
+            for block in &mut function.body.blocks {
+                let Some(index) = block.instructions.iter().position(|instruction| {
+                    matches!(instruction, MirInstruction::SharedAdopt(adopt)
+                        if temporaries.contains(&adopt.destination))
+                }) else {
+                    continue;
+                };
+                if duplicate {
+                    let operation = block.instructions[index].clone();
+                    block.instructions.insert(index + 1, operation);
+                } else {
+                    block.instructions.remove(index);
+                }
+                return;
+            }
+            panic!("fixture must contain an adopted produced-owner element source");
+        });
+        assert!(
+            errors.contains("published produced owner")
+                || errors.contains("live temporary owner")
+                || errors.contains("not published and adopted"),
+            "{errors}"
+        );
+    }
 }

@@ -418,10 +418,18 @@ impl BodyLowerer<'_> {
         destination: StorageId,
         value: &crate::hir::HirOptionalSharedInitialize,
     ) {
+        self.lower_optional_shared_initialize_at(crate::mir::MirPlace::base(destination), value);
+    }
+
+    pub(super) fn lower_optional_shared_initialize_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        value: &crate::hir::HirOptionalSharedInitialize,
+    ) {
         let source = self.lower_optional_shared_source(&value.source);
         self.emit(MirInstruction::OptionalSharedInitialize(
             crate::mir::MirOptionalSharedInitialize {
-                destination: crate::mir::MirPlace::base(destination),
+                destination,
                 source,
                 target: super::lower_shared_target(value.target),
                 span: value.span,

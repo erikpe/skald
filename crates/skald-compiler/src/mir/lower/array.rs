@@ -14,6 +14,8 @@ enum ExecutableElementListKind {
     ExactClass,
     InlineOptional,
     InlineArray,
+    SharedOwner,
+    OptionalSharedOwner,
 }
 
 impl BodyLowerer<'_> {
@@ -574,6 +576,8 @@ impl BodyLowerer<'_> {
                 Some(ExecutableElementListKind::InlineOptional)
             }
             Type::Array(_) => Some(ExecutableElementListKind::InlineArray),
+            Type::Shared(_) => Some(ExecutableElementListKind::SharedOwner),
+            Type::OptionalShared(_) => Some(ExecutableElementListKind::OptionalSharedOwner),
             _ => None,
         }
     }
@@ -697,7 +701,39 @@ impl BodyLowerer<'_> {
                         },
                     ));
                 }
-                _ => invalid_array_hir(),
+                HirStoredValueInitialization::Shared(transfer) => {
+                    let source = self.new_shared_temporary(transfer.target, transfer.span);
+                    self.lower_shared_transfer(source, transfer);
+                    self.consume_shared_temporary(source);
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    self.emit(MirInstruction::SharedFieldInitialize(
+                        MirSharedFieldInitialize {
+                            destination,
+                            source,
+                            span: element.span,
+                        },
+                    ));
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
+                HirStoredValueInitialization::OptionalShared(initialization) => {
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    self.lower_optional_shared_initialize_at(destination, initialization);
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
             }
         }
         backing

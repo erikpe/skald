@@ -834,10 +834,13 @@ payload construction, presence publication, and only then outer-prefix
 advancement. Nested inline-array plans recursively deep-copy named sources or
 consume produced descriptors through exact-identity `Adopt` operations before
 `CompleteElement` advances the outer prefix. The ordinary recursive array copy,
-anchor, adoption, and reverse-release machinery remains authoritative. A
-structured executable-lowering error selected by shared-owner and
-optional-owner `Elements` plans remains the phase boundary for the remaining
-staged families. The detailed frozen boundary is in
+anchor, adoption, and reverse-release machinery remains authoritative. Shared
+owner plans reuse typed shared temporaries: named sources retain into the
+temporary, produced sources adopt into it, and slot initialization consumes it
+before prefix advancement. Optional shared plans reuse their generic-place
+zero-niche initialization and conditional owner transfer. Array-prefix state
+and shared-owner state verify independently, including nested shared-array
+owners. The detailed frozen boundary is in
 [the array compiler contract](ARRAYS.md#frozen-element-list-representation).
 
 Optional types use two flat, copyable resolved families rather than recursively

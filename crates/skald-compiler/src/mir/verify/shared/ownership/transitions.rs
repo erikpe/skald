@@ -4,8 +4,9 @@ use crate::{
     identity::CallableId,
     mir::{
         BlockId, MirArgument, MirArrayInstruction, MirBasicBlock, MirCheckedViewBinding,
-        MirInstruction, MirPlace, MirPlaceBase, MirSharedAllocationMode, MirSharedCast,
-        MirSharedCastSource, MirSharedCastTransfer, MirStorageKind, MirType, StorageId,
+        MirInstruction, MirPlace, MirPlaceBase, MirPlaceProjection, MirSharedAllocationMode,
+        MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirStorageKind, MirType,
+        StorageId,
     },
 };
 
@@ -274,6 +275,22 @@ impl SharedOwnershipAnalysis<'_, '_> {
                     }
                 }
                 MirInstruction::OptionalSharedCleanup(_) => {}
+                MirInstruction::Array(MirArrayInstruction::CompleteElement {
+                    backing,
+                    prefix,
+                    ..
+                }) => {
+                    state.initialized_fields.retain(|place| {
+                        place.base.local_storage() != Some(*backing)
+                            || !matches!(
+                                place.projections.as_slice(),
+                                [MirPlaceProjection::ArrayElement {
+                                    normalized_index,
+                                    ..
+                                }] if *normalized_index == *prefix
+                            )
+                    });
+                }
                 MirInstruction::EndFullExpression(_) => {
                     if state.live_owners.iter().any(|owner| {
                         self.function

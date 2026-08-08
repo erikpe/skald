@@ -1,7 +1,7 @@
 # Array Compiler and Runtime Contract
 
-Status: **implemented contract on x86-64 with a frozen, partially executable
-explicit element-list representation extension**.
+Status: **implemented contract on x86-64 with a frozen, executable explicit
+element-list representation extension**.
 This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler lowers all
@@ -197,7 +197,7 @@ array declaration nevertheless retains its independently computed default,
 copy, assignment, and destruction capabilities for later operations on the
 completed value.
 
-Primitive and exact-class HIR-to-MIR lowering implement this abstract sequence:
+Every element-list HIR-to-MIR plan implements this abstract sequence:
 
 1. materialize the constant list count and perform checked backing allocation;
 2. establish unpublished backing with an initialized prefix of zero;
@@ -217,12 +217,15 @@ sources use ordinary full-expression temporary materialization and cleanup.
 Inline optionals reuse their conditional payload operations. Nested inline
 arrays deep-copy named sources through their exact recursive element copy plan,
 or consume a completed produced descriptor through `Adopt`; `CompleteElement`
-then advances the outer prefix. Every category finishes through ordinary
-inline or shared publication. Element expression lowering may introduce
-explicit CFG, but it does not introduce the uniform default/copy loop or live
-placeholders. `try_lower_hir` retains
-`MirLoweringError::UnsupportedArrayElementList` only for shared-owner and
-optional-owner plans whose later roadmap stages have not landed.
+then advances the outer prefix. Shared-owner slots copy/retain named compatible
+owners and adopt produced allocations, calls, casts, or exact shared-array
+owners through the ordinary typed temporary transfer path. Optional shared
+slots reuse zero-niche absence and conditional copy/adopt operations. Both
+owner categories publish a completed slot before `CompleteElement`, and outer
+inline/shared array ownership remains independent from every element strong
+count. Every category finishes through ordinary inline or shared publication.
+Element expression lowering may introduce explicit CFG, but it does not
+introduce the uniform default/copy loop or live placeholders.
 
 The MIR vocabulary may use immediate semantic positions, explicit index
 storage, ordinary category-specific initialization instructions, or a focused
@@ -259,15 +262,14 @@ public runtime entry point, metadata format, or ABI-version change is part of
 this frozen extension.
 
 Syntax, resolved IR, and HIR implement the complete typed representation.
-Verified MIR and x86-64 implement primitive, exact-class, inline-optional, and
-recursively nested inline-array lists for inline and shared outer ownership.
-The verifier proves exact values, class and conditional payload destinations,
-presence-before-prefix ordering, nested array identity and produced-source
-consumption, source-position order, normally completed construction before
-prefix advancement, publication, backing consumption, and storage lifetime.
-Shared-owner and optional-owner families remain behind the executable-lowering
-gate. The [status matrix](../language/STATUS.md) distinguishes these vertical
-slices from the remaining frozen profile.
+Verified MIR and x86-64 implement every legal element-list family for inline
+and shared outer ownership. The verifier proves exact values, class and
+conditional payload destinations, presence-before-prefix ordering, nested
+array identity and produced-source consumption, compatible shared targets,
+named-versus-produced owner accounting, source-position order, normally
+completed construction before prefix advancement, publication, backing
+consumption, and storage lifetime. The
+[status matrix](../language/STATUS.md) remains the concise availability view.
 
 ## Typed HIR
 

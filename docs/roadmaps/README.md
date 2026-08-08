@@ -19,7 +19,10 @@ progress. Completed roadmaps and resolved discovery records move to
   payload copying, direct placement, publication, and cleanup with that prefix
   protocol; EL5 composes recursively nested inline-array deep copy, produced-
   backing adoption, exact-identity verification, jagged mutation, and recursive
-  reverse cleanup. EL6, shared and optional-shared owner elements, is next.
+  reverse cleanup; EL6 composes named retain and produced adoption, compatible
+  class/interface/`Obj` targets, optional-owner zero-niche initialization,
+  exact shared-array edges, independent owner accounting, and native cleanup
+  for both outer ownership modes. EL7 hardening and publication is next.
   Depends on the implemented array, class lifecycle, optional, shared-owner,
   panic, MIR verifier, backend, and runtime ABI version 8 contracts; no active
   roadmap is a dependency.
@@ -37,7 +40,9 @@ No design proposals are currently awaiting decisions or promotion.
 - [Array element-list construction maintainability](ARRAY_ELEMENT_LIST_CONSTRUCTION_DISCOVERIES.md)
   — preserve earlier scalar call arguments when a later argument introduces
   checked control flow, using typed spill storage without changing source-order
-  effects or ownership.
+  effects or ownership; also route direct-local optional shared unwrap through
+  a verified fresh owner temporary and harden malformed-MIR array-local release
+  liveness.
 - [Primitive string conversion maintainability](PRIMITIVE_STRING_CONVERSIONS_DISCOVERIES.md)
   — centralize canonical standard-library test fixture closures while
   preserving explicit module overrides and source-order determinism, and fix

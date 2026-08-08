@@ -509,6 +509,14 @@ impl ArrayOwnerState {
         if let Some(destination) = completed_optional_destination(instruction) {
             self.record_completed_optional_destination(verifier, function, block, destination);
         }
+        if let MirInstruction::SharedFieldInitialize(initialize) = instruction {
+            self.record_completed_shared_destination(
+                verifier,
+                function,
+                block,
+                &initialize.destination,
+            );
+        }
         if let MirInstruction::Array(MirArrayInstruction::Adopt { destination, .. }) = instruction {
             self.record_completed_array_destination(verifier, function, block, destination);
         }
@@ -911,6 +919,50 @@ impl ArrayOwnerState {
         state.element_state = ElementInitializationState::Ready;
     }
 
+    fn record_completed_shared_destination(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: BlockId,
+        destination: &MirPlace,
+    ) {
+        let crate::mir::MirPlaceBase::Storage(backing) = destination.base else {
+            return;
+        };
+        let Some(state) = self.element_lists.get_mut(&backing) else {
+            if function
+                .storage(backing)
+                .is_some_and(|storage| storage.kind == MirStorageKind::ArrayBacking)
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "shared-owner array element initialization requires a live unpublished element-list backing",
+                );
+            }
+            return;
+        };
+        let exact_slot = matches!(
+            destination.projections.as_slice(),
+            [MirPlaceProjection::ArrayElement {
+                array,
+                normalized_index,
+            }] if *array == state.array && *normalized_index == state.prefix
+        );
+        if !exact_slot
+            || state.next >= state.length
+            || state.element_state != ElementInitializationState::Uninitialized
+        {
+            verifier.block_error(
+                function.callable(),
+                block,
+                "shared-owner array element initialization must complete exactly once in the current prefix slot",
+            );
+            return;
+        }
+        state.element_state = ElementInitializationState::Ready;
+    }
+
     fn record_completed_array_destination(
         &mut self,
         verifier: &mut Verifier<'_>,
@@ -1030,6 +1082,7 @@ fn completed_optional_destination(instruction: &MirInstruction) -> Option<&MirPl
     match instruction {
         MirInstruction::OptionalInitialize(initialize) => Some(&initialize.destination),
         MirInstruction::ClassOptionalInitialize(initialize) => Some(&initialize.destination),
+        MirInstruction::OptionalSharedInitialize(initialize) => Some(&initialize.destination),
         _ => None,
     }
 }

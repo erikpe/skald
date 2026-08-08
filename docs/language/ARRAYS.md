@@ -1,7 +1,7 @@
 # Arrays
 
-Status: **implemented contract on x86-64 with a frozen, primitive-and-class-
-executable explicit element-list extension**. This document is authoritative for the
+Status: **implemented contract on x86-64 with a frozen, executable explicit
+element-list extension**. This document is authoritative for the
 source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
@@ -197,9 +197,9 @@ copying has no inheritance or dynamic-check relation.
 No fill-value, per-index generator, inferred array literal, or
 multi-dimensional shape constructor is implemented. Executable nonempty
 construction accepts the existing default-length and exact-copy modes plus
-explicit primitive, exact-class, inline-optional, and recursively nested
-inline-array element lists. Shared-owner and optional-owner element-list
-families remain staged behind structured executable lowering.
+explicit element lists for every supported stored element category: primitive,
+exact-class, inline-optional, recursively nested inline-array, shared-owner,
+and optional shared-owner elements.
 
 ## Frozen explicit element-list construction
 
@@ -756,8 +756,7 @@ The following are intentionally outside the implemented array profile:
 - inline optional array payloads and their eventual source spelling;
 - inferred array literals, expected-type-only lists, fill-value, per-index
   generator, comprehensions, spreads, repetition, and rectangular-shape
-  initialization syntax; shared-owner and optional-owner explicit typed
-  element-list families are frozen above but remain staged;
+  initialization syntax;
 - capacity, resizing an existing allocation, append, insertion, removal, or
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;
