@@ -1,0 +1,76 @@
+import std::process;
+from std::error import panic;
+from std::str import Str;
+
+interface Failing {
+    fn fail() -> i64;
+}
+
+class Root {
+    init() {}
+
+    virtual fn fail() -> i64 {
+        panic("root failure");
+        return 0;
+    }
+}
+
+class Leaf extends Root implements Failing {
+    init() {
+        super();
+    }
+
+    override fn fail() -> i64 {
+        panic("dispatch failure");
+        return 0;
+    }
+}
+
+class Resource {
+    init() {}
+
+    destroy {
+        panic("lifecycle failure");
+    }
+}
+
+fn direct_failure() -> i64 {
+    panic("direct failure");
+    return 0;
+}
+
+fn recursive_failure(depth: i64) -> i64 {
+    if (depth == 0) {
+        panic("recursive failure");
+        return 0;
+    }
+    return recursive_failure(depth - 1);
+}
+
+fn virtual_failure(ref value: Root) -> i64 {
+    return value.fail();
+}
+
+fn interface_failure(ref value: Failing) -> i64 {
+    return value.fail();
+}
+
+fn main() -> i64 {
+    var args: Str[] = std::process::args();
+    if (args[1].equals("direct")) {
+        return direct_failure();
+    }
+    if (args[1].equals("recursive")) {
+        return recursive_failure(2);
+    }
+    if (args[1].equals("virtual")) {
+        var leaf: Leaf = Leaf();
+        return virtual_failure(leaf);
+    }
+    if (args[1].equals("interface")) {
+        var leaf: Leaf = Leaf();
+        return interface_failure(leaf);
+    }
+    var resource: Resource = Resource();
+    return 0;
+}

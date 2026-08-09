@@ -471,20 +471,17 @@ being compiled into either a panic or a hard trap.
 
 A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
-`panic:` record. The production driver explicitly omits trace generation, so
-version-9 runtime trace rendering observes a null top for compiler-generated
-programs. The target metadata, frame maintenance, source-call, central
-reporter, generated-helper, and lower-level runtime attribution support below
-is implemented. Trace state applies only to source-level panic reporting, not
-to hard traps.
+`panic:` record. Default compiler output enables the target metadata, frame
+maintenance, source-call, central reporter, generated-helper, and lower-level
+runtime attribution support below. Trace state applies only to source-level
+panic reporting, not to hard traps.
 
-## Frozen runtime trace target boundary
+## Runtime trace target boundary
 
 Runtime-trace input and deterministic static metadata are implemented for
-Linux x86-64. The production driver remains explicitly omitted until the
-public rollout, so ordinary builds still contain no trace records. The
-version-9 runtime owns the hidden TLS state and allocation-free
-renderer. Each traced source callable receives one 16-byte linked trace
+Linux x86-64 and enabled by default in ordinary builds. The version-9 runtime
+owns the hidden TLS state and allocation-free renderer. Each traced source
+callable receives one 16-byte linked trace
 record inside its ordinary fixed native frame: an eight-byte pointer to the
 previous record and an eight-byte pointer to immutable static location
 metadata. The runtime owns one hidden C11 thread-local top pointer. Generated
@@ -520,7 +517,7 @@ are interned and ordered by semantic identity and location rather than address
 or hash traversal. No record is emitted for an unused location.
 
 Eligible frames and update sites are fixed by the
-[phase boundary](PHASES_AND_IR.md#frozen-runtime-trace-phase-boundary). The
+[phase boundary](PHASES_AND_IR.md#runtime-trace-phase-boundary). The
 bodyless panic intrinsic, process wrapper, generated static coordinator,
 generated lifecycle/array/ownership/finalization helpers, runtime C frames,
 and target thunks never push. Ordinary source-authored standard-library and
@@ -537,10 +534,8 @@ Inline ownership overflow replaces the location only on its taken failure
 edge. Known non-reporting runtime calls, deallocation, process/static
 coordination, and hard-defect paths perform no unnecessary replacement.
 
-The frozen completed design makes trace emission default-on. During staged
-implementation the production driver still constructs the explicit omitted
-input. Omission removes the record homes, TLS instructions and references,
-location replacements, metadata and strings, and
+Trace emission is default-on. Omission removes the record homes, TLS
+instructions and references, location replacements, metadata and strings, and
 trace-only source lookup. Thus `--omit-runtime-trace` has zero target execution
 or metadata cost. Linux AArch64 may later realize the same frame semantics
 through target-specific ELF TLS access, but no AArch64 instruction sequence or

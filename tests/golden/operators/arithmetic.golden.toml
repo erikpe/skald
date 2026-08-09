@@ -15,17 +15,26 @@ source = "integer_division_failures.ska"
 [[test.run]]
 name = "division_by_zero"
 args = ["division"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer division by zero" } }
+expect = { exit = "failure", stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at integer_division_failures::main (tests/golden/operators/integer_division_failures.ska:11:16)
+""" } }
 
 [[test.run]]
 name = "operand_before_operator"
 args = ["operand"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at integer_division_failures::main (tests/golden/operators/integer_division_failures.ska:15:16)
+""" } }
 
 [[test.run]]
 name = "remainder_by_zero"
 args = ["remainder"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer remainder by zero" } }
+expect = { exit = "failure", stderr = { inline = """panic: integer remainder by zero
+stacktrace:
+  at integer_division_failures::main (tests/golden/operators/integer_division_failures.ska:17:12)
+""" } }
 
 [[test]]
 name = "integer_division_operators"

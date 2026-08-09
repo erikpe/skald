@@ -15,12 +15,20 @@ source = "optional_pinned_mutation.ska"
 [[test.run]]
 name = "clear"
 args = ["clear"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: cannot mutate a guarded optional value" } }
+expect = { exit = "failure", stderr = { inline = """panic: cannot mutate a guarded optional value
+stacktrace:
+  at optional_pinned_mutation::Holder.clear (tests/golden/optionals/optional_pinned_mutation.ska:20:21)
+  at optional_pinned_mutation::main (tests/golden/optionals/optional_pinned_mutation.ska:38:38)
+""" } }
 
 [[test.run]]
 name = "replace"
 args = ["replace"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: cannot mutate a guarded optional value" } }
+expect = { exit = "failure", stderr = { inline = """panic: cannot mutate a guarded optional value
+stacktrace:
+  at optional_pinned_mutation::Holder.replace (tests/golden/optionals/optional_pinned_mutation.ska:25:21)
+  at optional_pinned_mutation::main (tests/golden/optionals/optional_pinned_mutation.ska:40:34)
+""" } }
 
 [[test]]
 name = "shared_profile"
@@ -43,4 +51,7 @@ mode = "run"
 source = "optional_shared_array_result_absent.ska"
 [[test.run]]
 name = "absent_result"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at optional_shared_array_result_absent::main (tests/golden/optionals/optional_shared_array_result_absent.ska:6:31)
+""" } }

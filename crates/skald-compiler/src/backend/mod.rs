@@ -20,8 +20,9 @@ pub const DEFAULT_TARGET_NAME: &str = "x86_64-sysv";
 pub const SUPPORTED_TARGET_NAMES: &[&str] = &[DEFAULT_TARGET_NAME];
 
 /// Controls whether target emission may construct panic runtime-trace data.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum RuntimeTracePolicy {
+    #[default]
     Enabled,
     Omitted,
 }

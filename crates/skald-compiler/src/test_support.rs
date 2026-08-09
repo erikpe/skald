@@ -390,10 +390,15 @@ fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
          ska_rt_panic:\n    ud2\n.size ska_rt_panic, .-ska_rt_panic\n"
     };
     let linkable_output = format!(
-        "{output}\n.text\n\
+        "{output}\n.section .tbss,\"awT\",@nobits\n\
+         .p2align 3\n\
+         .globl {1}\n.hidden {1}\n.type {1}, @object\n.size {1}, 8\n\
+         {1}:\n    .zero 8\n\
+         .text\n\
          .globl {0}\n.type {0}, @function\n{0}:\n    ret\n.size {0}, .-{0}\n\
          {panic_link_guard}",
         RUNTIME_ABI_MARKER_SYMBOL,
+        crate::backend::RUNTIME_TRACE_TOP_SYMBOL,
     );
     let mut child = Command::new("cc")
         .args(["-x", "assembler", "-o"])

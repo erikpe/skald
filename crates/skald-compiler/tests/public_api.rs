@@ -3,7 +3,7 @@
 use std::{ffi::OsString, path::Path};
 
 use skald_compiler::{
-    backend::{emit_assembly, target_by_name, BackendInput, Target},
+    backend::{emit_assembly, target_by_name, BackendInput, RuntimeTracePolicy, Target},
     diagnostics::{render_diagnostics, Diagnostics},
     driver::{
         compile_request_to_assembly, compile_source_to_assembly, run_cli, ArtifactKind,
@@ -77,6 +77,7 @@ fn intentional_module_and_request_paths_compose() {
     assert_eq!(request.entry(), &EntrySelector::Module(entry));
     assert_eq!(request.module_roots().len(), 2);
     assert_eq!(request.artifact().output(), Some(Path::new("main.s")));
+    assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(
         "not-valid".parse::<ModulePath>().unwrap_err().kind(),
         ModulePathErrorKind::InvalidComponent
@@ -269,7 +270,7 @@ fn intentional_driver_paths_compile() {
     )
     .unwrap();
 
-    assert!(!artifact.assembly.is_empty());
+    assert!(artifact.assembly.contains("ska_rt_trace_top@tpoff"));
 
     let arrays = compile_source_to_assembly(
         "arrays-api.ska",

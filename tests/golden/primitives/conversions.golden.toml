@@ -31,17 +31,26 @@ source = "primitive_cast_failures.ska"
 [[test.run]]
 name = "i64_before_later_effect"
 args = ["i64"]
-expect = { exit = "failure", stdout = { file = "data/primitive_cast_i64_failure.stdout" }, stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
+expect = { exit = "failure", stdout = { file = "data/primitive_cast_i64_failure.stdout" }, stderr = { inline = """panic: floating-point cast out of range
+stacktrace:
+  at primitive_cast_failures::main (tests/golden/primitives/primitive_cast_failures.ska:38:16)
+""" } }
 
 [[test.run]]
 name = "u64_out_of_range"
 args = ["u64"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
+expect = { exit = "failure", stderr = { inline = """panic: floating-point cast out of range
+stacktrace:
+  at primitive_cast_failures::main (tests/golden/primitives/primitive_cast_failures.ska:41:29)
+""" } }
 
 [[test.run]]
 name = "u8_out_of_range"
 args = ["u8"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: floating-point cast out of range" } }
+expect = { exit = "failure", stderr = { inline = """panic: floating-point cast out of range
+stacktrace:
+  at primitive_cast_failures::main (tests/golden/primitives/primitive_cast_failures.ska:44:20)
+""" } }
 
 [[test]]
 name = "primitive_cast_matrix"

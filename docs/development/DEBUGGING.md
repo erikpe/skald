@@ -220,7 +220,7 @@ with `input MIR failed verification` means malformed MIR reached the final
 trust boundary; another structured backend error means verified MIR violates a
 target-specific legality or lowering contract.
 
-## Inspect frozen runtime traces
+## Inspect runtime traces
 
 The version-9 runtime renderer, x86-64 requested metadata planner, inline
 activation-frame maintenance, source-call replacement, central reporter

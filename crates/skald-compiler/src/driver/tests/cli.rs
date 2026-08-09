@@ -72,6 +72,15 @@ fn module_arguments_are_order_independent_and_selector_conflicts_are_usage_error
             vec!["skac", "main.ska", "--no-stdlib", "--no-stdlib"],
             "no-stdlib option specified more than once",
         ),
+        (
+            vec![
+                "skac",
+                "main.ska",
+                "--omit-runtime-trace",
+                "--omit-runtime-trace",
+            ],
+            "omit-runtime-trace option specified more than once",
+        ),
     ];
 
     for (arguments, expected) in cases {

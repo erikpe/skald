@@ -12,9 +12,17 @@ args = ["passing"]
 [[test.run]]
 name = "equality_failure"
 args = ["equality-failure"]
-expect = { exit = "failure", stderr = { match = "contains", inline = "Assert failed: '-1' != '2'" } }
+expect = { exit = "failure", stderr = { inline = """panic: Assert failed: '-1' != '2'
+stacktrace:
+  at std::test::assert_eq_i64 (std/test.ska:17:9)
+  at std_test_assertions::main (tests/golden/standard_test/std_test_assertions.ska:27:9)
+""" } }
 
 [[test.run]]
 name = "explicit_failure"
 args = ["explicit-failure"]
-expect = { exit = "failure", stderr = { match = "contains", inline = "Test failed: unexpected branch" } }
+expect = { exit = "failure", stderr = { inline = """panic: Test failed: unexpected branch
+stacktrace:
+  at std::test::fail (std/test.ska:66:5)
+  at std_test_assertions::main (tests/golden/standard_test/std_test_assertions.ska:30:5)
+""" } }

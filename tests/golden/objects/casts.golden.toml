@@ -14,7 +14,11 @@ mode = "run"
 source = "object_cast_failure.ska"
 [[test.run]]
 name = "incompatible_runtime_class"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: checked object cast failed" } }
+expect = { exit = "failure", stderr = { inline = """panic: checked object cast failed
+stacktrace:
+  at object_cast_failure::require_leaf (tests/golden/objects/object_cast_failure.ska:12:22)
+  at object_cast_failure::main (tests/golden/objects/object_cast_failure.ska:18:12)
+""" } }
 
 [[test]]
 name = "static_rejections"

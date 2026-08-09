@@ -30,7 +30,11 @@ mode = "run"
 source = "short_circuit_selected_failure.ska"
 [[test.run]]
 name = "selected_operand"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at short_circuit_selected_failure::fail (tests/golden/operators/short_circuit_selected_failure.ska:3:12)
+  at short_circuit_selected_failure::main (tests/golden/operators/short_circuit_selected_failure.ska:7:17)
+""" } }
 
 [[test]]
 name = "short_circuit_skipped_failures"

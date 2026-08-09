@@ -14,11 +14,11 @@ storage, per-location runtime calls, and a permanently reserved register.
 The language and implementation-dependent choices in this record are frozen.
 Current implemented behavior remains distinguished from the frozen extension
 in
-[Errors and Exceptional Control Flow](../language/ERRORS.md#frozen-panic-runtime-traces),
-[Compiler Phases and IR](../compiler/PHASES_AND_IR.md#frozen-runtime-trace-phase-boundary),
-[Backend and Target Contract](../compiler/BACKEND.md#frozen-runtime-trace-target-boundary),
+[Errors and Exceptional Control Flow](../language/ERRORS.md#panic-runtime-traces),
+[Compiler Phases and IR](../compiler/PHASES_AND_IR.md#runtime-trace-phase-boundary),
+[Backend and Target Contract](../compiler/BACKEND.md#runtime-trace-target-boundary),
 and
-[Runtime ABI](../compiler/RUNTIME_ABI.md#frozen-runtime-trace-abi-version-9),
+[Runtime ABI](../compiler/RUNTIME_ABI.md#runtime-trace-abi-version-9),
 which now own the living contracts.
 
 ## Intended outcome

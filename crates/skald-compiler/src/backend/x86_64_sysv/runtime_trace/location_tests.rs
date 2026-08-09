@@ -381,3 +381,55 @@ fn runtime_trace_location_native_explicit_panic_omits_the_intrinsic_frame() {
     assert_eq!(result.stderr, expected.as_bytes());
     assert!(!String::from_utf8_lossy(&result.stderr).contains("std::error::panic"));
 }
+
+#[test]
+fn runtime_trace_location_native_renders_one_based_unicode_scalar_columns() {
+    let source = concat!(
+        "// aéé marker\n",
+        "fn main() -> i64 { var zero: i64 = 0; return 1 / zero; }\n",
+    );
+    let mut fixture = lower_source_to_final_mir_with_sources("app/main.ska", source);
+    let main = function(&fixture, "main");
+    let source_file = fixture.sources.get(fixture.mir.span.source_id()).unwrap();
+    let unicode_offset = source.find("éé").unwrap() + "éé".len();
+    let unicode_span = source_file.span(unicode_offset, unicode_offset).unwrap();
+    // Executable source tokens are currently ASCII. Repoint one valid failure
+    // span into a UTF-8 comment so this still exercises the complete
+    // source-database, metadata, assembly, and runtime-rendering path.
+    let CallableId::Function(main_function) = main else {
+        panic!("main must be a free function");
+    };
+    let definition = fixture
+        .mir
+        .definitions
+        .get_mut_for_test(main_function)
+        .unwrap();
+    let termination = definition
+        .body
+        .blocks
+        .iter_mut()
+        .find_map(|block| match block.terminator.as_mut() {
+            Some(terminator @ MirTerminator::Terminate { .. }) => Some(terminator),
+            _ => None,
+        })
+        .expect("integer division fixture must contain a terminating failure block");
+    let MirTerminator::Terminate { span, .. } = termination else {
+        unreachable!();
+    };
+    *span = unicode_span;
+
+    let assembly = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+        .unwrap();
+    let result = run_native_assembly_with_runtime_trace_probe(&assembly);
+
+    assert_eq!(result.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8(result.stderr).unwrap(),
+        concat!(
+            "panic: integer division by zero\n",
+            "stacktrace:\n",
+            "  at main::main (app/main.ska:1:7)\n",
+        )
+    );
+}

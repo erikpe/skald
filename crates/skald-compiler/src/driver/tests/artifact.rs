@@ -33,6 +33,44 @@ fn assembly_mode_runs_the_pipeline_and_writes_only_assembly() {
     assert!(text.starts_with(".intel_syntax noprefix\n"));
     assert!(text.contains(".globl main"));
     assert!(text.contains("mov rax, 42"));
+    assert!(text.contains("ska_rt_trace_top@tpoff"));
+    assert!(text.contains(".Lska.trace.location."));
+    assert!(temporary_artifacts(directory.path()).is_empty());
+}
+
+#[test]
+fn assembly_mode_can_omit_every_runtime_trace_artifact() {
+    let directory = TemporaryDirectory::new("driver-assembly-omit-trace").unwrap();
+    let input = directory.join("trace_omission_marker.ska");
+    let output = directory.join("answer.s");
+    fs::write(&input, "fn main() -> i64 { return 42; }").unwrap();
+    let args = [
+        OsString::from("skac"),
+        input.into_os_string(),
+        OsString::from("--emit"),
+        OsString::from("asm"),
+        OsString::from("--omit-runtime-trace"),
+        OsString::from("-o"),
+        output.clone().into_os_string(),
+    ];
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+
+    let status = run_cli_with_context(
+        args,
+        &mut stdout,
+        &mut stderr,
+        &Toolchain::new("false", "missing-runtime.a"),
+    )
+    .unwrap();
+
+    assert_eq!(status, 0, "{}", String::from_utf8_lossy(&stderr));
+    assert!(stdout.is_empty());
+    assert!(stderr.is_empty());
+    let text = fs::read_to_string(output).unwrap();
+    assert!(!text.contains("ska_rt_trace_top"));
+    assert!(!text.contains(".Lska.trace."));
+    assert!(!text.contains("trace_omission_marker.ska"));
     assert!(temporary_artifacts(directory.path()).is_empty());
 }
 

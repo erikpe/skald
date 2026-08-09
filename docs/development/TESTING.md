@@ -582,13 +582,12 @@ both real sources into their filesystem fixtures. This keeps the public
 surface, panic dependency, and lifecycle behavior from drifting independently
 of compiler coverage.
 
-## Frozen runtime-trace coverage
+## Runtime-trace coverage
 
-Runtime traces are frozen; the version-9 runtime foundation and x86-64
+Runtime traces are implemented; the version-9 runtime foundation and x86-64
 requested metadata emission, activation-frame maintenance, source-call
 replacement, central reporter-edge replacement, and generated-helper/runtime
-attribution are implemented. Production enablement remains pending. Coverage
-remains split by owner:
+attribution are enabled by default. Coverage remains split by owner:
 
 - source and source-database tests own one-based line and Unicode-scalar
   column mapping at span starts;
@@ -614,17 +613,16 @@ remains split by owner:
   and status across different temporary provider roots.
 
 Generated lifecycle, array, ownership, finalization, coordinator, wrapper, and
-target helpers must be tested as omitted frames whose failure remains
-attributed to the initiating source operation. Source-authored standard-library
-and lifecycle bodies must be tested as visible. A separate omitted build of
-each representative case must preserve the current single-line panic output
-and contain no trace-only frame bytes, instructions, symbols, relocations,
-metadata, or source lookup.
+target helpers are covered as omitted frames whose failure remains attributed
+to the initiating source operation. Source-authored standard-library and
+lifecycle bodies are visible. Representative omitted builds preserve the
+single-line panic output and contain no trace-only frame bytes, instructions,
+symbols, relocations, metadata, or source lookup.
 
-Performance acceptance compares enabled and omitted builds for tiny call-heavy
+TRACE6 performance closeout compares enabled and omitted builds for tiny call-heavy
 recursion, a pure tight loop, allocation-heavy execution, and representative
 goldens. Record instruction counts and measured execution/code-size effects;
-understand any material regression before default-on tracing ships. The
+understand and address any material regression before closing the roadmap. The
 repository gates remain `make check`, `make msrv-check`, and
 `git diff --check`; the implementation roadmap supplies focused commands as
 the test owners land.

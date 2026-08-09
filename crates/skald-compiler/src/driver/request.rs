@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    backend::Target,
+    backend::{RuntimeTracePolicy, Target},
     module::{ModulePath, ProviderRootConfiguration},
 };
 
@@ -105,11 +105,21 @@ pub enum ArtifactKind {
 pub struct ArtifactOptions {
     kind: ArtifactKind,
     output: Option<PathBuf>,
+    runtime_trace: RuntimeTracePolicy,
 }
 
 impl ArtifactOptions {
     pub fn new(kind: ArtifactKind, output: Option<PathBuf>) -> Self {
-        Self { kind, output }
+        Self {
+            kind,
+            output,
+            runtime_trace: RuntimeTracePolicy::Enabled,
+        }
+    }
+
+    pub fn with_runtime_trace_policy(mut self, policy: RuntimeTracePolicy) -> Self {
+        self.runtime_trace = policy;
+        self
     }
 
     pub const fn kind(&self) -> ArtifactKind {
@@ -118,6 +128,10 @@ impl ArtifactOptions {
 
     pub fn output(&self) -> Option<&Path> {
         self.output.as_deref()
+    }
+
+    pub const fn runtime_trace(&self) -> RuntimeTracePolicy {
+        self.runtime_trace
     }
 }
 
@@ -197,6 +211,10 @@ impl CompilationRequest {
 
     pub const fn artifact(&self) -> &ArtifactOptions {
         &self.artifact
+    }
+
+    pub const fn runtime_trace(&self) -> RuntimeTracePolicy {
+        self.artifact.runtime_trace()
     }
 
     pub const fn environment(&self) -> &CompilationEnvironment {

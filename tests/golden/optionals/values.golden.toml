@@ -6,7 +6,10 @@ mode = "run"
 source = "optional_absent_unwrap.ska"
 [[test.run]]
 name = "absent_value"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at optional_absent_unwrap::main (tests/golden/optionals/optional_absent_unwrap.ska:3:12)
+""" } }
 
 [[test]]
 name = "primitive_operations"

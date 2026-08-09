@@ -43,6 +43,32 @@ fn assembly_output_runs_the_real_pipeline_through_the_binary() {
     assert!(assembly_text.starts_with(".intel_syntax noprefix\n"));
     assert!(assembly_text.contains("imul rax, rcx"));
     assert!(assembly_text.contains(".globl main"));
+    assert!(assembly_text.contains("ska_rt_trace_top@tpoff"));
+}
+
+#[test]
+fn omitted_runtime_trace_reaches_the_real_binary_pipeline() {
+    let directory = TemporaryDirectory::new("assembly-omit-runtime-trace").unwrap();
+    let source = directory.join("omitted_marker.ska");
+    let assembly = directory.join("answer.s");
+    fs::write(&source, "fn main() -> i64 { return 42; }\n").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_skac"))
+        .arg(&source)
+        .args(["--emit", "asm", "--omit-runtime-trace", "-o"])
+        .arg(&assembly)
+        .output()
+        .expect("failed to execute skac");
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let assembly = fs::read_to_string(&assembly).unwrap();
+    assert!(!assembly.contains("ska_rt_trace_top"));
+    assert!(!assembly.contains(".Lska.trace."));
+    assert!(!assembly.contains("omitted_marker.ska"));
 }
 
 #[test]

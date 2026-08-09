@@ -81,7 +81,7 @@ fn request_pipeline_ignores_malformed_sources_outside_the_reachable_closure() {
     assert!(artifact.report.diagnostics.is_empty());
     assert_eq!(artifact.report.sources.len(), 1);
     assert!(artifact.assembly.contains("mov rax, 42"));
-    assert!(!artifact.assembly.contains(".Lska.trace."));
+    assert!(artifact.assembly.contains(".Lska.trace."));
 }
 
 #[test]
@@ -437,7 +437,7 @@ fn unused_destructor_bodies_lower_through_the_backend() {
     assert!(artifact
         .assembly
         .contains(".Lska.class.main.Resource.c0.destroy.d0"));
-    assert!(!artifact.assembly.contains(".Lska.trace."));
+    assert!(artifact.assembly.contains(".Lska.trace."));
 }
 
 #[test]

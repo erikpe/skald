@@ -15,22 +15,34 @@ source = "integer_shift_failures.ska"
 [[test.run]]
 name = "dynamic_count"
 args = ["dynamic"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
+expect = { exit = "failure", stderr = { inline = """panic: shift count out of range
+stacktrace:
+  at integer_shift_failures::main (tests/golden/operators/integer_shift_failures.ska:17:16)
+""" } }
 
 [[test.run]]
 name = "literal_count"
 args = ["literal"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
+expect = { exit = "failure", stderr = { inline = """panic: shift count out of range
+stacktrace:
+  at integer_shift_failures::main (tests/golden/operators/integer_shift_failures.ska:20:16)
+""" } }
 
 [[test.run]]
 name = "operand_before_count"
 args = ["operand"]
-expect = { exit = "failure", stdout = { inline = "1\n" }, stderr = { match = "starts-with", inline = "panic: optional value is absent" } }
+expect = { exit = "failure", stdout = { inline = "1\n" }, stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at integer_shift_failures::main (tests/golden/operators/integer_shift_failures.ska:24:33)
+""" } }
 
 [[test.run]]
 name = "u8_count"
 args = ["u8"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: shift count out of range" } }
+expect = { exit = "failure", stderr = { inline = """panic: shift count out of range
+stacktrace:
+  at integer_shift_failures::main (tests/golden/operators/integer_shift_failures.ska:26:22)
+""" } }
 
 [[test]]
 name = "integer_shift_operators"

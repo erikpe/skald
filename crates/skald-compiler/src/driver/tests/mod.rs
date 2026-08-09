@@ -46,4 +46,5 @@ mod artifact;
 mod cli;
 mod pipeline;
 mod request;
+mod runtime_trace;
 mod toolchain;

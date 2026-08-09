@@ -1,0 +1,87 @@
+schema = 1
+
+[[test]]
+name = "chains"
+mode = "run"
+source = "trace_chains.ska"
+
+[[test.run]]
+name = "direct"
+args = ["direct"]
+expect = { exit = "failure", stderr = { inline = """panic: direct failure
+stacktrace:
+  at trace_chains::direct_failure (tests/golden/runtime/trace_chains.ska:38:5)
+  at trace_chains::main (tests/golden/runtime/trace_chains.ska:61:16)
+""" } }
+
+[[test.run]]
+name = "recursive"
+args = ["recursive"]
+expect = { exit = "failure", stderr = { inline = """panic: recursive failure
+stacktrace:
+  at trace_chains::recursive_failure (tests/golden/runtime/trace_chains.ska:44:9)
+  at trace_chains::recursive_failure (tests/golden/runtime/trace_chains.ska:47:12)
+  at trace_chains::recursive_failure (tests/golden/runtime/trace_chains.ska:47:12)
+  at trace_chains::main (tests/golden/runtime/trace_chains.ska:64:16)
+""" } }
+
+[[test.run]]
+name = "virtual"
+args = ["virtual"]
+expect = { exit = "failure", stderr = { inline = """panic: dispatch failure
+stacktrace:
+  at trace_chains::Leaf.fail (tests/golden/runtime/trace_chains.ska:24:9)
+  at trace_chains::virtual_failure (tests/golden/runtime/trace_chains.ska:51:12)
+  at trace_chains::main (tests/golden/runtime/trace_chains.ska:68:16)
+""" } }
+
+[[test.run]]
+name = "interface"
+args = ["interface"]
+expect = { exit = "failure", stderr = { inline = """panic: dispatch failure
+stacktrace:
+  at trace_chains::Leaf.fail (tests/golden/runtime/trace_chains.ska:24:9)
+  at trace_chains::interface_failure (tests/golden/runtime/trace_chains.ska:55:12)
+  at trace_chains::main (tests/golden/runtime/trace_chains.ska:72:16)
+""" } }
+
+[[test.run]]
+name = "lifecycle"
+args = ["lifecycle"]
+expect = { exit = "failure", stderr = { inline = """panic: lifecycle failure
+stacktrace:
+  at trace_chains::Resource.destroy (tests/golden/runtime/trace_chains.ska:33:9)
+  at trace_chains::main (tests/golden/runtime/trace_chains.ska:75:5)
+""" } }
+
+[[test]]
+name = "static_initialization"
+mode = "run"
+source = "trace_static_initialization.ska"
+[[test.run]]
+name = "failure"
+expect = { exit = "failure", stderr = { inline = """panic: static initializer failure
+stacktrace:
+  at trace_static_initialization::fail (tests/golden/runtime/trace_static_initialization.ska:4:5)
+  at trace_static_initialization::State.value::<static-init> (tests/golden/runtime/trace_static_initialization.ska:9:25)
+""" } }
+
+[[test]]
+name = "static_shutdown"
+mode = "run"
+source = "trace_static_shutdown.ska"
+[[test.run]]
+name = "failure"
+expect = { exit = "failure", stderr = { inline = """panic: static shutdown failure
+stacktrace:
+  at trace_static_shutdown::Resource.destroy (tests/golden/runtime/trace_static_shutdown.ska:7:9)
+""" } }
+
+[[test]]
+name = "omitted"
+mode = "run"
+source = "panic_omitted.ska"
+compiler_args = ["--omit-runtime-trace"]
+[[test.run]]
+name = "single_line"
+expect = { exit = "failure", stderr = { inline = "panic: omitted trace\n" } }

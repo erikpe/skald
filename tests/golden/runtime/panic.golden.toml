@@ -8,17 +8,26 @@ source = "panic_cases.ska"
 [[test.run]]
 name = "dynamic_slice"
 args = ["dynamic-slice"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: dynamic failure" } }
+expect = { exit = "failure", stderr = { inline = """panic: dynamic failure
+stacktrace:
+  at panic_cases::main (tests/golden/runtime/panic_cases.ska:9:9)
+""" } }
 
 [[test.run]]
 name = "empty"
 args = ["empty"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: " } }
+expect = { exit = "failure", stderr = { inline = """panic:\u0020
+stacktrace:
+  at panic_cases::main (tests/golden/runtime/panic_cases.ska:12:9)
+""" } }
 
 [[test.run]]
 name = "literal"
 args = ["literal"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: literal failure" } }
+expect = { exit = "failure", stderr = { inline = """panic: literal failure
+stacktrace:
+  at panic_cases::main (tests/golden/runtime/panic_cases.ska:14:5)
+""" } }
 
 [[test]]
 name = "expression"

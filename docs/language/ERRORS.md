@@ -185,18 +185,17 @@ The exact reporter signature, stderr bytes, and ABI-version transition are
 implementation contracts rather than portable source representation. They
 are frozen in the
 [runtime ABI](../compiler/RUNTIME_ABI.md#panic-reporting-abi).
-The version-9 reporter can append the frozen
-[runtime-trace rows](#frozen-panic-runtime-traces) from a valid active shadow
+The version-9 reporter appends the
+[runtime-trace rows](#panic-runtime-traces) from a valid active shadow
 chain without changing the panic API, failure catalog, or non-unwinding
 semantics. Enabled Linux x86-64 backend emission now publishes the chain and
-records source-call and central failure locations. The production driver still
-requests omission, so ordinary compiler invocations emit only the single panic
-line during the staged rollout. Exceptions remain deferred.
+records source-call and central failure locations by default. Exceptions
+remain deferred.
 
-## Frozen panic runtime traces
+## Panic runtime traces
 
-Panic runtime traces are frozen for implementation. The version-9 runtime can
-render a chain, and enabled Linux x86-64 backend emission now supplies frames
+Panic runtime traces are implemented. The version-9 runtime renders a chain,
+and enabled Linux x86-64 backend emission supplies frames
 with precise source-call, generated-helper/runtime, and failure-edge
 locations. With tracing enabled, every source-authored executable
 callable contributes one active frame. This includes ordinary functions,
@@ -240,15 +239,15 @@ Trace execution has no separate depth limit. Rendering emits at most 256
 newest frames and, when an outer frame remains, ends with
 `  ... outer frames omitted`. Rendering remains allocation-free and uses the
 same retrying direct-write and immediate-failure policy as the panic record.
-Tracing is frozen as default-on for native executables and assembly; the
+Tracing is default-on for native executables and assembly; the
 `--omit-runtime-trace` compilation option removes all trace frame storage,
 maintenance instructions, metadata, and trace-only source lookup.
 
 This extension adds no syntax and leaves the implemented grammar unchanged.
 Its compiler, target, and runtime representation belongs to
-[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-runtime-trace-phase-boundary),
-the [backend](../compiler/BACKEND.md#frozen-runtime-trace-target-boundary), and
-the [runtime ABI](../compiler/RUNTIME_ABI.md#frozen-runtime-trace-abi-version-9).
+[Phases and IR](../compiler/PHASES_AND_IR.md#runtime-trace-phase-boundary),
+the [backend](../compiler/BACKEND.md#runtime-trace-target-boundary), and
+the [runtime ABI](../compiler/RUNTIME_ABI.md#runtime-trace-abi-version-9).
 
 ## Optional failures
 

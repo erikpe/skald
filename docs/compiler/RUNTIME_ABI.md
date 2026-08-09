@@ -240,15 +240,13 @@ defect as a Skald `panic:` record. The exact hard-failure instruction or
 signal is private, but normal return is forbidden.
 
 The source-level API, flow behavior, and sole static-message catalog are owned
-by the [frozen language panic design](../language/ERRORS.md#frozen-panic-design).
+by the [language panic contract](../language/ERRORS.md#frozen-panic-design).
 The version-9 reporter discovers an optional active trace through hidden TLS
 while keeping this reporter signature. Enabled Linux x86-64 backend emission
-publishes frames and precise source-call and central failure locations. The
-production driver still requests omission, so ordinary compiler-generated
-programs retain the single-line record during the staged rollout. Exceptions
-remain deferred.
+publishes frames and precise source-call and central failure locations by
+default. Exceptions remain deferred.
 
-## Frozen runtime trace ABI version 9
+## Runtime trace ABI version 9
 
 The runtime half of tracing is implemented in ABI version 9. Its
 compiler/runtime-private record contract is:
@@ -320,15 +318,16 @@ frame, so a runtime containing this support still produces the current
 single-line record for an omitted-trace program.
 
 The compiler references the version-9 compatibility marker and its x86-64
-backend can plan and emit deterministic requested context/location metadata
-and maintain one linked frame for every enabled source activation. It replaces
+backend plans and emits deterministic requested context/location metadata and
+maintains one linked frame for every enabled source activation. It replaces
 the active location at source/external calls, taken dynamic or static reporter
 edges, source operations entering generated helpers or allocation, and taken
 inline ownership-overflow edges. Omitted helpers inherit their caller's
-location and never publish a frame. The production driver still requests
-complete omission until the public rollout, so ordinary compiled programs
-continue to observe a null trace top and unchanged single-line output. The
-compiler contract remains described by the phase and backend sections below.
+location and never publish a frame. `--omit-runtime-trace` deliberately leaves
+the trace top null, preserving the single-line output for that build. The
+compiler contract remains described by
+[Phases and IR](PHASES_AND_IR.md#runtime-trace-phase-boundary) and the
+[backend contract](BACKEND.md#runtime-trace-target-boundary).
 
 ## Responsibility boundary
 

@@ -34,6 +34,7 @@ pub(super) const HELP: &str = concat!(
     "  -o, --output <path>     Write the executable or assembly to this path\n",
     "  --emit asm              Emit textual assembly instead of an executable\n",
     "  --target <name>         Select the target (default: x86_64-sysv)\n",
+    "  --omit-runtime-trace    Omit panic runtime traces from generated code\n",
     "  -h, --help              Show this help\n",
     "  --version               Show the compiler version\n\n",
     "Output defaults:\n",

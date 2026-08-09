@@ -1306,7 +1306,7 @@ not acquire a termination reason. They remain structured verifier errors
 before target lowering, or hard compiler-defect traps if an invalid state is
 somehow reached after the trust boundary.
 
-### Frozen runtime trace phase boundary
+### Runtime trace phase boundary
 
 Runtime traces add no AST, resolved, HIR, or MIR operation. The source-aware
 backend input, requested-only target metadata, and target-private activation
@@ -1318,13 +1318,13 @@ frame offsets.
 
 Backend emission receives one explicit input containing the final verified
 `MirProgram`, read-only `SourceDatabase` access when tracing is enabled, and
-the selected trace policy. It will also consume the program's existing
+the selected trace policy. It also consumes the program's existing
 semantic declaration and module provenance needed to form source-callable
 names and provider-relative display paths. `SourceDatabase` resolves used span
 starts to checked one-based `u64` line and Unicode-scalar column values only
-when target lowering requests a location. Trace-disabled emission has no
-source access and performs no trace-only lookup. The production driver remains
-explicitly omitted until the public rollout begins.
+when target lowering requests a location. Omitted emission has no source
+access and performs no trace-only lookup. Request compilation and the
+in-memory singleton adapter enable tracing by default.
 
 The target boundary decides which source definitions contribute frames and
 which existing spans require location records. Source functions, methods,
@@ -1350,7 +1350,7 @@ never depends on that optimization.
 The public verifier continues to validate target-independent spans and control
 flow only. Trace-frame layout, metadata interning, update placement, and TLS
 sequences are target legality and lowering responsibilities described by the
-[backend contract](BACKEND.md#frozen-runtime-trace-target-boundary).
+[backend contract](BACKEND.md#runtime-trace-target-boundary).
 
 ## While-loop representation
 

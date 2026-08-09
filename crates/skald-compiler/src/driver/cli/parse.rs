@@ -2,7 +2,10 @@
 
 use std::{ffi::OsString, path::PathBuf};
 
-use crate::{backend::DEFAULT_TARGET_NAME, module::ModulePath};
+use crate::{
+    backend::{RuntimeTracePolicy, DEFAULT_TARGET_NAME},
+    module::ModulePath,
+};
 
 use super::super::request::{
     ArtifactKind, ArtifactOptions, EntrySelector, StandardLibrarySelection,
@@ -38,6 +41,7 @@ where
     let mut output_kind = ArtifactKind::Executable;
     let mut emit_seen = false;
     let mut target = None;
+    let mut omit_runtime_trace = false;
 
     while let Some(argument) = args.next() {
         match argument.to_str() {
@@ -101,6 +105,12 @@ where
                 }
                 target = Some(utf8_option_value(&mut args, "--target", "a target name")?);
             }
+            Some("--omit-runtime-trace") => {
+                if omit_runtime_trace {
+                    return Err("omit-runtime-trace option specified more than once".to_owned());
+                }
+                omit_runtime_trace = true;
+            }
             Some(value) if value.starts_with('-') => {
                 return Err(format!("unknown option `{value}`"));
             }
@@ -120,7 +130,13 @@ where
         entry,
         module_roots,
         standard_library,
-        artifact: ArtifactOptions::new(output_kind, output),
+        artifact: ArtifactOptions::new(output_kind, output).with_runtime_trace_policy(
+            if omit_runtime_trace {
+                RuntimeTracePolicy::Omitted
+            } else {
+                RuntimeTracePolicy::Enabled
+            },
+        ),
         target: target.unwrap_or_else(|| DEFAULT_TARGET_NAME.to_owned()),
     }))
 }

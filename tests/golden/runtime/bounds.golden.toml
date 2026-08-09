@@ -8,54 +8,100 @@ source = "runtime_bounds_failures.ska"
 [[test.run]]
 name = "array_allocation_failure"
 args = ["array-allocation-failure"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed" } }
+expect = { exit = "failure", stderr = { inline = """panic: memory allocation failed
+stacktrace:
+  at runtime_bounds_failures::array_allocation_failure (tests/golden/runtime/runtime_bounds_failures.ska:13:24)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:75:16)
+""" } }
 
 [[test.run]]
 name = "array_allocation_overflow"
 args = ["array-allocation-overflow"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array allocation failed" } }
+expect = { exit = "failure", stderr = { inline = """panic: array allocation failed
+stacktrace:
+  at runtime_bounds_failures::array_allocation_overflow (tests/golden/runtime/runtime_bounds_failures.ska:18:25)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:78:16)
+""" } }
 
 [[test.run]]
 name = "array_index_empty_out_of_bounds"
 args = ["array-index-empty"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at runtime_bounds_failures::array_index_empty (tests/golden/runtime/runtime_bounds_failures.ska:24:19)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:81:16)
+""" } }
 
 [[test.run]]
 name = "array_index_minimum_out_of_bounds"
 args = ["array-index-minimum"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at runtime_bounds_failures::array_index_minimum (tests/golden/runtime/runtime_bounds_failures.ska:29:19)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:84:16)
+""" } }
 
 [[test.run]]
 name = "array_index_negative_out_of_bounds"
 args = ["array-index-negative"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at runtime_bounds_failures::array_index_negative (tests/golden/runtime/runtime_bounds_failures.ska:34:19)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:87:16)
+""" } }
 
 [[test.run]]
 name = "array_index_positive_out_of_bounds"
 args = ["array-index-positive"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at runtime_bounds_failures::array_index_positive (tests/golden/runtime/runtime_bounds_failures.ska:39:19)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:90:16)
+""" } }
 
 [[test.run]]
 name = "array_maximum_length"
 args = ["array-maximum-length"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: memory allocation failed" } }
+expect = { exit = "failure", stderr = { inline = """panic: memory allocation failed
+stacktrace:
+  at runtime_bounds_failures::array_maximum_length (tests/golden/runtime/runtime_bounds_failures.ska:43:24)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:93:16)
+""" } }
 
 [[test.run]]
 name = "array_slice_invalid_bounds"
 args = ["array-slice-invalid"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array slice bounds are invalid" } }
+expect = { exit = "failure", stderr = { inline = """panic: array slice bounds are invalid
+stacktrace:
+  at runtime_bounds_failures::array_slice_invalid (tests/golden/runtime/runtime_bounds_failures.ska:49:34)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:96:16)
+""" } }
 
 [[test.run]]
 name = "array_slice_length_mismatch"
 args = ["array-slice-length-mismatch"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array slice length mismatch" } }
+expect = { exit = "failure", stderr = { inline = """panic: array slice length mismatch
+stacktrace:
+  at runtime_bounds_failures::array_slice_length_mismatch (tests/golden/runtime/runtime_bounds_failures.ska:56:5)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:99:16)
+""" } }
 
 [[test.run]]
 name = "string_byte_out_of_bounds"
 args = ["string-byte"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at std::str::Str.byte (std/str.ska:35:13)
+  at runtime_bounds_failures::string_byte (tests/golden/runtime/runtime_bounds_failures.ska:62:23)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:102:16)
+""" } }
 
 [[test.run]]
 name = "string_slice_invalid_bounds"
 args = ["string-slice"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at std::str::Str.slice (std/str.ska:78:13)
+  at runtime_bounds_failures::string_slice (tests/golden/runtime/runtime_bounds_failures.ska:68:24)
+  at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:104:12)
+""" } }

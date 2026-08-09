@@ -1,6 +1,6 @@
 # Panic Runtime Trace Roadmap
 
-Status: in progress; TRACE4 is complete and TRACE5 is next.
+Status: in progress; TRACE5 is complete and TRACE6 is next.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
@@ -48,7 +48,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 - [x] TRACE2 — Maintain source-callable trace frames with inline TLS
 - [x] TRACE3 — Record source calls and reporter failure locations
 - [x] TRACE4 — Complete generated-helper and runtime-failure attribution
-- [ ] TRACE5 — Expose default-on tracing and migrate native observations
+- [x] TRACE5 — Expose default-on tracing and migrate native observations
 - [ ] TRACE6 — Measure overhead, harden determinism, and close the rollout
 
 ## PR-sized implementation sequence
@@ -273,29 +273,29 @@ and hard traps remain silent.
 **Purpose:** Publish the complete behavior through the typed request/CLI
 surface only after all trace locations are accurate.
 
-- [ ] Add trace policy to `ArtifactOptions`/`CompilationRequest` with enabled
+- [x] Add trace policy to `ArtifactOptions`/`CompilationRequest` with enabled
   as the programmatic and CLI default for executable and assembly output.
-- [ ] Parse and document the value-free `--omit-runtime-trace` option, reject
+- [x] Parse and document the value-free `--omit-runtime-trace` option, reject
   repetition as usage error, and pass the selected policy through request
   compilation. The in-memory singleton convenience API uses the enabled
   default; direct backend tests retain explicit enabled/omitted control.
-- [ ] Update help, request, CLI, pipeline, artifact, real-binary, and public API
+- [x] Update help, request, CLI, pipeline, artifact, real-binary, and public API
   tests without coupling trace policy to runtime environment variables.
-- [ ] Convert representative panic goldens from prefix matching to exact
+- [x] Convert representative panic goldens from prefix matching to exact
   enabled stderr for explicit panic and every compiler-known termination
   family, including multiline application, standard-library, lifecycle,
   static-initializer, allocation, and ownership chains.
-- [ ] Add enabled direct/recursive/virtual/interface/lifecycle/static-library
+- [x] Add enabled direct/recursive/virtual/interface/lifecycle/static-library
   chain goldens and confirm the bodyless panic intrinsic is omitted.
-- [ ] Add omitted variants that retain exact current single-line panic output
+- [x] Add omitted variants that retain exact current single-line panic output
   and inspect assembly for absence of frame bytes, TLS references, location
   updates, metadata, and strings.
-- [ ] Cover provider-relative application and standard-library paths,
+- [x] Cover provider-relative application and standard-library paths,
   positional outside-root fallback, escaped hostile path bytes, semantic
   initializer signatures, and one-based Unicode columns end to end.
-- [ ] Extend independent-process determinism coverage across different
+- [x] Extend independent-process determinism coverage across different
   temporary provider roots for enabled assembly, metadata, stderr, and status.
-- [ ] Promote living language, phase, backend, runtime, driver, debugging,
+- [x] Promote living language, phase, backend, runtime, driver, debugging,
   testing, and status text from frozen/not-yet-implemented to the exact
   implemented boundary; keep AArch64 and exceptions deferred.
 

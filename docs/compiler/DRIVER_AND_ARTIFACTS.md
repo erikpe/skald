@@ -71,12 +71,13 @@ x86-64 base layout and internal static-view calling convention.
 
 Neither assembly API invokes the host toolchain or publishes an artifact.
 
-The frozen runtime-trace extension changes the final handoff only: the driver
+The runtime-trace extension changes the final handoff only: the driver
 passes final verified MIR, the report's read-only `SourceDatabase`, and the
 selected trace policy together to backend emission. Source ownership remains
 with the compilation report, and no target trace record or rendered path is
-written back into MIR. This handoff is implemented, but the production driver
-deliberately selects complete omission until the default-on CLI rollout.
+written back into MIR. Both request compilation and the in-memory singleton
+adapter enable tracing by default; `ArtifactOptions` carries the explicit
+policy used by request compilation.
 
 ## Command-line modes
 
@@ -95,12 +96,12 @@ is mutually exclusive with `--no-stdlib`.
 frontend and backend but does not require a runtime archive or invoke the host
 toolchain. `--version`, `-h`, and `--help` complete without compilation.
 
-Runtime traces are frozen as enabled by default for both executable and
-assembly modes. `--omit-runtime-trace` selects compile-time omission for that
+Runtime traces are enabled by default for both executable and assembly modes.
+`--omit-runtime-trace` selects compile-time omission for that
 invocation. It is a trace policy rather than a runtime toggle: omitted output
 contains no trace frame homes, TLS maintenance, trace metadata, or trace-only
 source lookup. The option takes no value and repeated use is a command-usage
-error. The current CLI does not yet accept it.
+error.
 
 For example, split application, dependency, and SDK trees compose without
 source-visible root bindings:

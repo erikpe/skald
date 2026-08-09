@@ -2,6 +2,7 @@ use super::*;
 
 use std::path::Path;
 
+use crate::backend::RuntimeTracePolicy;
 use crate::module::{ModulePath, ProviderRootKind};
 
 #[test]
@@ -74,6 +75,7 @@ fn compilation_request_retains_explicit_process_and_artifact_inputs() {
     assert_eq!(request.target(), Target::X86_64SysV);
     assert_eq!(request.artifact().kind(), ArtifactKind::Assembly);
     assert_eq!(request.artifact().output(), Some(Path::new("out/main.s")));
+    assert_eq!(request.runtime_trace(), RuntimeTracePolicy::Enabled);
     assert_eq!(
         request.environment().working_directory(),
         Path::new("/work/project")
@@ -82,6 +84,16 @@ fn compilation_request_retains_explicit_process_and_artifact_inputs() {
         request.environment().default_standard_library_root(),
         Path::new("/install/skald/std")
     );
+}
+
+#[test]
+fn artifact_options_enable_runtime_traces_by_default_and_allow_explicit_omission() {
+    let enabled = ArtifactOptions::default();
+    let omitted = ArtifactOptions::new(ArtifactKind::Assembly, None)
+        .with_runtime_trace_policy(RuntimeTracePolicy::Omitted);
+
+    assert_eq!(enabled.runtime_trace(), RuntimeTracePolicy::Enabled);
+    assert_eq!(omitted.runtime_trace(), RuntimeTracePolicy::Omitted);
 }
 
 #[test]

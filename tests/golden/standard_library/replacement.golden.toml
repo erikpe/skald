@@ -53,7 +53,11 @@ compiler_args = [
 
 [[test.run]]
 name = "default"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds" } }
+expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
+stacktrace:
+  at std::io::bounds_probe (std/io.ska:12:55)
+  at app::main::main (app/main.ska:4:12)
+""" } }
 
 [[test]]
 name = "string_language_item"

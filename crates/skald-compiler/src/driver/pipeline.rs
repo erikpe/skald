@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::{
-    backend::{emit_assembly, BackendError, BackendInput, Target},
+    backend::{emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target},
     diagnostics::Diagnostics,
     lexer::lex,
     mir::{lower_preliminary_hir, verify_preliminary_mir},
@@ -66,7 +66,7 @@ pub fn compile_request_to_assembly(
         diagnostic_failure(sources, diagnostics)
     })?;
 
-    compile_module_graph_to_assembly(graph, request.target())
+    compile_module_graph_to_assembly(graph, request.target(), request.runtime_trace())
 }
 
 /// Compiles one in-memory singleton source through the same semantic and
@@ -98,16 +98,29 @@ pub fn compile_source_to_assembly(
 
     let resolved = resolve_with_source_path(&parsed.ast, path);
     diagnostics.append(resolved.diagnostics);
-    finish_compilation(sources, diagnostics, resolved.program, target)
+    finish_compilation(
+        sources,
+        diagnostics,
+        resolved.program,
+        target,
+        RuntimeTracePolicy::Enabled,
+    )
 }
 
 fn compile_module_graph_to_assembly(
     graph: ModuleGraph,
     target: Target,
+    runtime_trace: RuntimeTracePolicy,
 ) -> Result<AssemblyArtifact, CompilationError> {
     let resolved = resolve_module_graph(&graph);
     let sources = graph.into_sources();
-    finish_compilation(sources, resolved.diagnostics, resolved.program, target)
+    finish_compilation(
+        sources,
+        resolved.diagnostics,
+        resolved.program,
+        target,
+        runtime_trace,
+    )
 }
 
 fn finish_compilation(
@@ -115,6 +128,7 @@ fn finish_compilation(
     mut diagnostics: Diagnostics,
     resolved: ResolvedProgram,
     target: Target,
+    runtime_trace: RuntimeTracePolicy,
 ) -> Result<AssemblyArtifact, CompilationError> {
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
@@ -140,7 +154,10 @@ fn finish_compilation(
     verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
     let mir = synthesize_static_lifecycle(planned).map_err(CompilationError::MirVerification)?;
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
-    let input = BackendInput::without_runtime_trace(&mir);
+    let input = match runtime_trace {
+        RuntimeTracePolicy::Enabled => BackendInput::with_runtime_trace(&mir, &sources),
+        RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&mir),
+    };
     let assembly = emit_assembly(target, input).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {
