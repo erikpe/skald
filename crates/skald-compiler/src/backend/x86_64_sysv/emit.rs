@@ -38,6 +38,7 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
     if !program.literal_backings.is_empty()
         || !program.dispatch_tables.is_empty()
         || !program.panic_messages.is_empty()
+        || !program.runtime_trace.is_empty()
     {
         output.push_str("\n.section .data.rel.ro.local,\"aw\",@progbits\n");
         for backing in &program.literal_backings {
@@ -73,6 +74,32 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
             writeln!(output, "{}:", message.symbol).unwrap();
             emit_ascii_bytes(&mut output, message.bytes);
             writeln!(output, ".size {}, .-{}", message.symbol, message.symbol).unwrap();
+        }
+        for string in &program.runtime_trace.strings {
+            output.push_str(".p2align 0\n");
+            writeln!(output, ".type {}, @object", string.symbol).unwrap();
+            writeln!(output, "{}:", string.symbol).unwrap();
+            emit_ascii_bytes(&mut output, &string.bytes);
+            writeln!(output, ".size {}, .-{}", string.symbol, string.symbol).unwrap();
+        }
+        for context in &program.runtime_trace.contexts {
+            output.push_str(".p2align 3\n");
+            writeln!(output, ".type {}, @object", context.symbol).unwrap();
+            writeln!(output, "{}:", context.symbol).unwrap();
+            writeln!(output, "    .quad {}", context.name_symbol).unwrap();
+            writeln!(output, "    .quad {}", context.name_length).unwrap();
+            writeln!(output, "    .quad {}", context.path_symbol).unwrap();
+            writeln!(output, "    .quad {}", context.path_length).unwrap();
+            writeln!(output, ".size {}, 32", context.symbol).unwrap();
+        }
+        for location in &program.runtime_trace.locations {
+            output.push_str(".p2align 3\n");
+            writeln!(output, ".type {}, @object", location.symbol).unwrap();
+            writeln!(output, "{}:", location.symbol).unwrap();
+            writeln!(output, "    .quad {}", location.context_symbol).unwrap();
+            writeln!(output, "    .quad {}", location.line).unwrap();
+            writeln!(output, "    .quad {}", location.column).unwrap();
+            writeln!(output, ".size {}, 24", location.symbol).unwrap();
         }
     }
     output.push_str("\n.section .note.GNU-stack,\"\",@progbits\n");

@@ -1,5 +1,5 @@
 use super::*;
-use crate::backend::{emit_assembly, Target};
+use crate::{backend::Target, test_support::emit_assembly_without_runtime_trace as emit_assembly};
 
 use super::type_operation_fixtures::type_operation_mir;
 

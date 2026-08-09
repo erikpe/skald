@@ -231,6 +231,15 @@ fn positional_containment_uses_root_spellings_but_not_descendant_targets() {
             .to_string(),
         "outside_main"
     );
+    assert_eq!(
+        outside_entry
+            .module(outside_entry.entry())
+            .unwrap()
+            .provenance()
+            .source_location()
+            .trace_source_path(),
+        outside.join("outside_main.ska")
+    );
     assert!(outside_entry.find(&"inside".parse().unwrap()).is_none());
 }
 
@@ -264,6 +273,42 @@ fn relative_positional_entry_uses_the_captured_working_directory() {
             .source_location()
             .display_source_path(),
         Path::new("modules/other/../app/main.ska")
+    );
+    assert_eq!(
+        graph
+            .module(graph.entry())
+            .unwrap()
+            .provenance()
+            .source_location()
+            .trace_source_path(),
+        Path::new("app/main.ska")
+    );
+}
+
+#[test]
+fn relative_outside_entry_retains_its_configured_trace_spelling() {
+    let workspace = directory("graph-relative-outside-entry");
+    source(
+        workspace.path(),
+        "outside/main.ska",
+        "fn main() -> i64 { return 0; }\n",
+    );
+
+    let graph = load(
+        EntrySelector::File("outside/other/../main.ska".into()),
+        workspace.path(),
+        &[],
+    )
+    .unwrap();
+
+    assert_eq!(
+        graph
+            .module(graph.entry())
+            .unwrap()
+            .provenance()
+            .source_location()
+            .trace_source_path(),
+        Path::new("outside/other/../main.ska")
     );
 }
 

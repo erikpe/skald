@@ -1,6 +1,7 @@
 //! Whole-program resolution orchestration and responsibility-oriented stages.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use super::{
     body::{
@@ -42,8 +43,11 @@ use static_initializer::{attach_static_field_initializers, resolve_static_field_
 use string_language_item::validate_string_language_item;
 use virtuals::resolve_virtual_families;
 
-pub(super) fn resolve_singleton(ast: &syntax::CompilationUnit) -> ResolveOutput {
-    ProgramResolver::singleton(ast).resolve()
+pub(super) fn resolve_singleton(
+    ast: &syntax::CompilationUnit,
+    source_path: &Path,
+) -> ResolveOutput {
+    ProgramResolver::singleton(ast, source_path).resolve()
 }
 
 pub(super) fn resolve_graph(graph: &ModuleGraph) -> ResolveOutput {

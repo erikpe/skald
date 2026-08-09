@@ -1,10 +1,10 @@
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     mir::{
         dump_mir, lower_preliminary_hir, MirArgument, MirInstruction, MirPlace,
         MirStaticActivationWork, MirStaticValueCleanup, MirTerminator,
     },
-    test_support::type_check_source,
+    test_support::{emit_assembly_without_runtime_trace as emit_assembly, type_check_source},
 };
 
 use super::{

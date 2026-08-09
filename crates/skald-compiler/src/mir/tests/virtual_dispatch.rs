@@ -109,8 +109,11 @@ fn virtual_mir_dump_is_deterministic_and_target_independent() {
 fn verified_virtual_mir_reaches_indirect_backend_lowering() {
     let (program, _) = virtual_dispatch_mir();
     verify_mir(&program).unwrap();
-    let assembly =
-        crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program).unwrap();
+    let assembly = crate::test_support::emit_assembly_without_runtime_trace(
+        crate::backend::Target::X86_64SysV,
+        &program,
+    )
+    .unwrap();
     assert!(assembly.contains(".Lska.class.main.Root.c0.dispatch:"));
     assert!(assembly.contains("call r11"));
 }

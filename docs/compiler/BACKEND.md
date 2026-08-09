@@ -34,15 +34,16 @@ ABI, external-ABI, or runtime-marker rule. Their source lifetime is owned by the
 
 ## Backend interface and target registry
 
-Backends currently consume target-independent `MirProgram` values. The frozen
-runtime-trace extension changes emission to accept the verified MIR together
-with read-only source lookup and trace policy; it still does not expose AST,
-resolved IR, HIR, or type-checker state to a backend. The public backend facade
-provides:
+Backends consume an explicit `BackendInput`: final target-independent
+`MirProgram`, read-only source lookup only when tracing is enabled, and a typed
+runtime-trace policy. This boundary does not expose AST, resolved IR, HIR, or
+type-checker state to a backend. The public backend facade provides:
 
 - `backend::Target`, the selected target identity;
 - `backend::target_by_name`, which validates a user-facing target name;
-- `backend::SUPPORTED_TARGET_NAMES` and `DEFAULT_TARGET_NAME`; and
+- `backend::SUPPORTED_TARGET_NAMES` and `DEFAULT_TARGET_NAME`;
+- `backend::BackendInput` and `backend::RuntimeTracePolicy`, whose constructors
+  make source access unavailable on the omitted path; and
 - `backend::emit_assembly`, which dispatches verified MIR to the selected
   target and returns textual assembly or a structured `BackendError`.
 
@@ -470,21 +471,23 @@ being compiled into either a panic or a hard trap.
 
 A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
-`panic:` record. The current target allocates no trace state, so version-9
-runtime trace rendering observes a null top for compiler-generated programs.
-The frozen target extension below adds source locations and a shadow stack
-only to source-level panic reporting, not to hard traps.
+`panic:` record. The production driver explicitly omits trace generation, so
+version-9 runtime trace rendering observes a null top for compiler-generated
+programs. The target metadata foundation below is implemented, while frame
+publication and location replacement remain pending. Trace state applies only
+to source-level panic reporting, not to hard traps.
 
 ## Frozen runtime trace target boundary
 
-Runtime tracing is frozen for Linux x86-64 implementation but is not yet
-emitted by the compiler. The version-9 runtime already owns the hidden TLS
-state and allocation-free renderer. Each traced source callable will receive
-one 16-byte linked trace record
-inside its ordinary fixed native frame: an eight-byte pointer to the previous
-record and an eight-byte pointer to immutable static location metadata. The
-runtime owns one hidden C11 thread-local top pointer. Generated code accesses
-that symbol directly with the local-exec TLS model and
+Runtime-trace input and deterministic static metadata are implemented for
+Linux x86-64. The production driver remains explicitly omitted until frame and
+location coverage is complete, so ordinary builds still contain no trace
+records. The version-9 runtime owns the hidden TLS state and allocation-free
+renderer. Each traced source callable will receive one 16-byte linked trace
+record inside its ordinary fixed native frame: an eight-byte pointer to the
+previous record and an eight-byte pointer to immutable static location
+metadata. The runtime owns one hidden C11 thread-local top pointer. Generated
+code accesses that symbol directly with the local-exec TLS model and
 `R_X86_64_TPOFF32`; it makes no C call and performs no allocation, capacity
 check, or depth check while maintaining the trace.
 
@@ -502,9 +505,10 @@ assembly, and nesting tests own the invariant rather than adding a comparison
 and branch to every return. Panic does not unwind, so all published records
 remain live while the reporter walks them.
 
-The backend emits deterministic, relocation-read-only metadata consisting of
-one context per used traced source callable and one location per distinct used
-callable and span-start line/column. Contexts hold length-delimited pointers
+The target-private requested-only metadata planner emits deterministic,
+relocation-read-only metadata consisting of one context per used traced source
+callable and one location per distinct used callable and span-start
+line/column. Contexts hold length-delimited pointers
 and lengths for semantic callable names and escaped module-provider-relative
 paths. Positional sources outside a configured root use their configured
 relative display spelling when available and otherwise may remain absolute.
@@ -521,8 +525,10 @@ lifecycle bodies do push. Before an omitted helper, external call, or
 panic-capable runtime operation, the source caller records the initiating
 operation.
 
-Trace emission is on by default. Omission removes the record homes, TLS
-instructions and references, location replacements, metadata and strings, and
+The frozen completed design makes trace emission default-on. During staged
+implementation the production driver still constructs the explicit omitted
+input. Omission removes the record homes, TLS instructions and references,
+location replacements, metadata and strings, and
 trace-only source lookup. Thus `--omit-runtime-trace` has zero target execution
 or metadata cost. Linux AArch64 may later realize the same frame semantics
 through target-specific ELF TLS access, but no AArch64 instruction sequence or

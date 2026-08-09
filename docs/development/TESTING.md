@@ -584,8 +584,10 @@ of compiler coverage.
 
 ## Frozen runtime-trace coverage
 
-Runtime traces are frozen and their version-9 runtime foundation is
-implemented; compiler emission is not. Coverage remains split by owner:
+Runtime traces are frozen; the version-9 runtime foundation and x86-64
+requested metadata emission are implemented. Frame maintenance, complete
+location coverage, and production enablement remain pending. Coverage remains
+split by owner:
 
 - source and source-database tests own one-based line and Unicode-scalar
   column mapping at span starts;

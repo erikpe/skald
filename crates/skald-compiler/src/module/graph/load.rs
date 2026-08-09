@@ -287,7 +287,8 @@ fn finalize_graph(
                     module.candidate.root_relative_path().to_owned(),
                     module.candidate.display_source_path().to_owned(),
                     Some(module.candidate.canonical_io_path().to_owned()),
-                ),
+                )
+                .with_trace_source_path(module.candidate.trace_source_path().to_owned()),
             );
             LoadedModule::new(provenance, module.ast, imports)
         })

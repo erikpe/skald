@@ -314,10 +314,18 @@ fn source_floating_comparisons_have_deterministic_hir_mir_and_assembly() {
     assert!(mir_dump.contains("lt.f64"));
     assert!(mir_dump.contains("eq.f64"));
 
-    let assembly = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir).unwrap();
+    let assembly = crate::test_support::emit_assembly_without_runtime_trace(
+        crate::backend::Target::X86_64SysV,
+        &mir,
+    )
+    .unwrap();
     assert_eq!(
         assembly,
-        crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir).unwrap()
+        crate::test_support::emit_assembly_without_runtime_trace(
+            crate::backend::Target::X86_64SysV,
+            &mir,
+        )
+        .unwrap()
     );
     assert_eq!(assembly.matches("ucomisd xmm14, xmm15").count(), 2);
 }

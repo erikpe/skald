@@ -1,6 +1,6 @@
 # Panic Runtime Trace Roadmap
 
-Status: in progress; TRACE1 is next.
+Status: in progress; TRACE2 is next.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
@@ -44,7 +44,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 ## Progress
 
 - [x] TRACE0 — Establish runtime ABI version 9 and trace rendering
-- [ ] TRACE1 — Add explicit backend trace input and deterministic metadata
+- [x] TRACE1 — Add explicit backend trace input and deterministic metadata
 - [ ] TRACE2 — Maintain source-callable trace frames with inline TLS
 - [ ] TRACE3 — Record source calls and reporter failure locations
 - [ ] TRACE4 — Complete generated-helper and runtime-failure attribution
@@ -96,39 +96,39 @@ allocation; all precondition defects and failed writes remain non-returning.
 **Purpose:** Establish one source-aware target boundary and one cohesive
 metadata owner before frame or call lowering depends on trace identities.
 
-- [ ] Replace the backend's MIR-only emission argument with an explicit input
+- [x] Replace the backend's MIR-only emission argument with an explicit input
   carrying final verified MIR, read-only source access when enabled, and a
   typed runtime-trace policy.
-- [ ] Thread that input through both request and singleton driver pipelines
+- [x] Thread that input through both request and singleton driver pipelines
   without copying source text into MIR or exposing AST, resolved IR, or HIR to
   the backend.
-- [ ] Keep production driver emission explicitly omitted during this staged
+- [x] Keep production driver emission explicitly omitted during this staged
   task; enabled metadata paths are exercised through focused backend tests
   until location coverage is complete.
-- [ ] Introduce a target-private trace metadata owner that maps callable and
+- [x] Introduce a target-private trace metadata owner that maps callable and
   span identities to stable symbols and emits only requested records.
-- [ ] Format semantic names for functions, instance/static methods,
+- [x] Format semantic names for functions, instance/static methods,
   initializer parameter signatures and modes, user copy/assignment/destruction
   bodies, and explicit static-field initializer bodies. Do not derive display
   names from mangled symbols or source-order initializer ordinals.
-- [ ] Select module-provider-relative paths from provenance; retain the
+- [x] Select module-provider-relative paths from provenance; retain the
   configured positional display spelling outside roots and the frozen absolute
   fallback where necessary.
-- [ ] For the in-memory singleton pipeline, retain the API-supplied source path
+- [x] For the in-memory singleton pipeline, retain the API-supplied source path
   as its trace display path instead of replacing it with the synthetic
   `main.ska` module fallback.
-- [ ] Escape backslash, LF, CR, tab, other control bytes, and non-UTF-8 host
+- [x] Escape backslash, LF, CR, tab, other control bytes, and non-UTF-8 host
   bytes into one safe display line before records are emitted.
-- [ ] Resolve only used span starts through `SourceDatabase`, convert checked
+- [x] Resolve only used span starts through `SourceDatabase`, convert checked
   one-based line and Unicode-scalar column values to `u64`, and return a
   structured backend error rather than truncating an unrepresentable value.
-- [ ] Extend the target assembly model and emitter with deterministic interned
+- [x] Extend the target assembly model and emitter with deterministic interned
   byte strings, 32-byte contexts, and 24-byte locations in
   relocation-read-only data, ordered by semantic identity/location rather
   than address or hash traversal.
-- [ ] Preserve MIR dumps and verification exactly: no trace record ID,
+- [x] Preserve MIR dumps and verification exactly: no trace record ID,
   rendered path, TLS operation, or frame offset enters MIR.
-- [ ] Add shared backend test support that can emit the same MIR with tracing
+- [x] Add shared backend test support that can emit the same MIR with tracing
   enabled or omitted and retains the associated `SourceDatabase` for precise
   assertions.
 

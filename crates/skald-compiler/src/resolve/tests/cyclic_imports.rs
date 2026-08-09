@@ -1,9 +1,9 @@
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::dump_hir,
     mir::{dump_mir, lower_hir, verify_mir},
-    test_support::load_module_sources,
+    test_support::{emit_assembly_without_runtime_trace as emit_assembly, load_module_sources},
     typeck::{type_check, INVALID_INTERFACE_CONFORMANCE, RECURSIVE_INLINE_CONTAINMENT},
 };
 

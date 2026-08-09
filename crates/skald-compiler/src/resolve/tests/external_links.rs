@@ -1,8 +1,11 @@
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     mir::{dump_mir, lower_hir, verify_mir},
-    test_support::{load_module_sources, run_native_assembly},
+    test_support::{
+        emit_assembly_without_runtime_trace as emit_assembly, load_module_sources,
+        run_native_assembly,
+    },
     typeck::type_check,
 };
 

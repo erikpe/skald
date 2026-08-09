@@ -17,16 +17,20 @@ mod legality;
 mod literal_data;
 mod lower;
 mod machine;
+// TRACE1 establishes the request API before TRACE2's instruction selection
+// begins consuming locations in production lowering.
+#[allow(dead_code)]
+mod runtime_trace;
 mod static_fields;
 mod symbol;
 
-use crate::mir::MirProgram;
+use super::{BackendError, BackendInput};
 
-use super::BackendError;
-
-pub fn emit_assembly(program: &MirProgram) -> Result<String, BackendError> {
+pub fn emit_assembly(input: BackendInput<'_>) -> Result<String, BackendError> {
+    let program = input.program();
     let (data_layout, dispatch) = legality::check(program)?;
-    let assembly = lower::lower(program, &data_layout, &dispatch)?;
+    let mut assembly = lower::lower(program, &data_layout, &dispatch)?;
+    assembly.runtime_trace = runtime_trace::Metadata::new(input).finish();
     Ok(emit::emit(&assembly))
 }
 

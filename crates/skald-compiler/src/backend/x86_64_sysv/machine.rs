@@ -370,6 +370,43 @@ pub(super) struct AssemblyProgram {
     pub dispatch_tables: Vec<AssemblyDispatchTable>,
     pub literal_backings: Vec<AssemblyLiteralBacking>,
     pub panic_messages: Vec<AssemblyPanicMessage>,
+    pub runtime_trace: AssemblyRuntimeTraceMetadata,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(super) struct AssemblyRuntimeTraceMetadata {
+    pub strings: Vec<AssemblyTraceByteString>,
+    pub contexts: Vec<AssemblyTraceContext>,
+    pub locations: Vec<AssemblyTraceLocation>,
+}
+
+impl AssemblyRuntimeTraceMetadata {
+    pub(super) fn is_empty(&self) -> bool {
+        self.strings.is_empty() && self.contexts.is_empty() && self.locations.is_empty()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyTraceByteString {
+    pub symbol: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyTraceContext {
+    pub symbol: String,
+    pub name_symbol: String,
+    pub name_length: u64,
+    pub path_symbol: String,
+    pub path_length: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyTraceLocation {
+    pub symbol: String,
+    pub context_symbol: String,
+    pub line: u64,
+    pub column: u64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

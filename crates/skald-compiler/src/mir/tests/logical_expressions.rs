@@ -1,11 +1,14 @@
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::{
         dump_hir, HirExpression, HirExpressionKind, HirFunctionDefinition, HirLogicalExpression,
         HirLogicalOperation, HirProgram, HirReturnValue, HirStatement, Type,
     },
-    test_support::{run_native_assembly, run_native_assembly_output},
+    test_support::{
+        emit_assembly_without_runtime_trace as emit_assembly, run_native_assembly,
+        run_native_assembly_output,
+    },
 };
 
 fn returned_expression_mut(definition: &mut HirFunctionDefinition) -> &mut HirExpression {

@@ -47,6 +47,7 @@ pub use ir::{
     ResolvedUnaryOperator, ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
     ResolvedVisibility, ResolvedWhile,
 };
+pub(crate) use resolver::resolve_with_source_path;
 pub use resolver::{
     resolve, resolve_module_graph, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER,
     DUPLICATE_MODULE_BINDING, DUPLICATE_ORDINARY_BINDING, DUPLICATE_TOP_LEVEL,

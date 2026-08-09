@@ -7,7 +7,7 @@ use std::{
 };
 
 use skald_compiler::{
-    backend::{emit_assembly, Target},
+    backend::{emit_assembly, BackendInput, Target},
     diagnostics::render_diagnostics,
     driver::EntrySelector,
     hir::{dump_hir, HirProgram},
@@ -695,7 +695,11 @@ fn module_phase_dump(variant: usize) -> String {
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
     let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
-    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir),
+    )
+    .unwrap();
 
     normalize_fixture_paths(
         &fixture.path,
@@ -1066,7 +1070,11 @@ fn static_field_module_phase_dump(variant: usize) -> String {
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
     let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
-    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir),
+    )
+    .unwrap();
 
     normalize_fixture_paths(
         &fixture.path,
@@ -1304,7 +1312,11 @@ fn string_phase_dump(variant: usize) -> String {
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
     let mir = lower_final_hir(&hir);
-    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir),
+    )
+    .unwrap();
 
     normalize_fixture_paths(
         &fixture.path,
@@ -1392,7 +1404,11 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let hir = checked.hir.unwrap();
         let mir = lower_final_hir(&hir);
-        let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+        let assembly = emit_assembly(
+            Target::X86_64SysV,
+            BackendInput::without_runtime_trace(&mir),
+        )
+        .unwrap();
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
@@ -1491,7 +1507,11 @@ fn complete_phase_dump(text: &str) -> String {
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
     let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
-    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir),
+    )
+    .unwrap();
 
     format!(
         "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
@@ -1529,7 +1549,11 @@ fn planned_lifecycle_phase_dump(text: &str) -> String {
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = synthesize_static_lifecycle(planned).unwrap();
-    let assembly = emit_assembly(Target::X86_64SysV, &final_mir).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&final_mir),
+    )
+    .unwrap();
 
     format!(
         "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",

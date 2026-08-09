@@ -167,8 +167,13 @@ fn byte_decimal_and_hexadecimal_spellings_converge_below_type_checking() {
         let mir = crate::mir::lower_hir(&hir);
         assert!(crate::mir::dump_mir(&mir).contains("const.u8 65"));
         let mir = crate::passes::run_mir_pipeline(mir).unwrap();
-        assemblies
-            .push(crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir).unwrap());
+        assemblies.push(
+            crate::test_support::emit_assembly_without_runtime_trace(
+                crate::backend::Target::X86_64SysV,
+                &mir,
+            )
+            .unwrap(),
+        );
     }
 
     assert!(assemblies.windows(2).all(|pair| pair[0] == pair[1]));

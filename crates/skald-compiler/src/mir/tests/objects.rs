@@ -409,8 +409,11 @@ fn source_lowered_objects_are_accepted_by_the_existing_backend() {
         "fn main() -> i64 { var value: Box = Box(42); return value.get(); }\n",
     ));
 
-    let assembly = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program)
-        .expect("source-lowered object MIR must be accepted by the object backend");
+    let assembly = crate::test_support::emit_assembly_without_runtime_trace(
+        crate::backend::Target::X86_64SysV,
+        &program,
+    )
+    .expect("source-lowered object MIR must be accepted by the object backend");
     assert!(assembly.contains("call .Lska.class.main.Box.c0.init.i0"));
     assert!(assembly.contains("call .Lska.class.main.Box.c0.method.get.m0"));
 }

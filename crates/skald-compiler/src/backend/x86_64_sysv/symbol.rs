@@ -94,6 +94,26 @@ pub(super) fn literal_backing(pool_index: usize) -> String {
     format!(".Lska_literal_{pool_index}_backing")
 }
 
+pub(super) fn trace_byte_string(index: usize) -> String {
+    format!(".Lska.trace.bytes.{index}")
+}
+
+pub(super) fn trace_context(program: &MirProgram, callable: CallableId) -> String {
+    format!(".Lska.trace.context.{}", callable_stem(program, callable))
+}
+
+pub(super) fn trace_location(
+    program: &MirProgram,
+    callable: CallableId,
+    line: u64,
+    column: u64,
+) -> String {
+    format!(
+        ".Lska.trace.location.{}.l{line}.c{column}",
+        callable_stem(program, callable)
+    )
+}
+
 pub(super) fn shared_handle_retain() -> String {
     ".Lska_shared_handle_retain".to_owned()
 }

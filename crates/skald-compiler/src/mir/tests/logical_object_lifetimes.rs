@@ -4,12 +4,15 @@ use super::logical_fixtures::{
 };
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::{
         HirCallArgument, HirExpression, HirExpressionKind, HirLogicalExpression,
         HirLogicalOperation, HirOptionalOperand, HirPresenceTestKind, HirProgram, Type,
     },
-    test_support::{run_native_assembly, type_check_source},
+    test_support::{
+        emit_assembly_without_runtime_trace as emit_assembly, run_native_assembly,
+        type_check_source,
+    },
 };
 
 const OBJECT_OPERANDS: &str = concat!(

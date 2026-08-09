@@ -12,12 +12,15 @@ use std::{
 };
 
 use crate::{
-    backend::{emit_assembly, BackendError, Target, RUNTIME_ABI_MARKER_SYMBOL},
+    backend::{
+        emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target,
+        RUNTIME_ABI_MARKER_SYMBOL,
+    },
     driver::EntrySelector,
     lexer::{lex, LexOutput},
     mir::{lower_hir, lower_preliminary_hir, MirProgram},
     module::{load_module_graph, normalize_provider_roots, ModuleGraph, ProviderRootConfiguration},
-    resolve::{resolve, ResolveOutput},
+    resolve::{resolve, resolve_with_source_path, ResolveOutput},
     source::{SourceDatabase, SourceId},
     syntax::{parse, ParseOutput},
     typeck::{type_check, TypeCheckOutput},
@@ -124,6 +127,59 @@ pub(crate) fn lower_source_to_final_mir(text: impl Into<String>) -> MirProgram {
     lower_hir_to_final_mir(&hir)
 }
 
+pub(crate) struct FinalMirWithSources {
+    pub sources: SourceDatabase,
+    pub mir: MirProgram,
+}
+
+impl FinalMirWithSources {
+    pub(crate) fn backend_input(&self, policy: RuntimeTracePolicy) -> BackendInput<'_> {
+        match policy {
+            RuntimeTracePolicy::Enabled => {
+                BackendInput::with_runtime_trace(&self.mir, &self.sources)
+            }
+            RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&self.mir),
+        }
+    }
+
+    pub(crate) fn emit_assembly(
+        &self,
+        target: Target,
+        policy: RuntimeTracePolicy,
+    ) -> Result<String, BackendError> {
+        emit_assembly(target, self.backend_input(policy))
+    }
+}
+
+/// Retains the source database paired with the exact final MIR passed to a
+/// backend, allowing enabled and omitted metadata paths to share one product.
+pub(crate) fn lower_source_to_final_mir_with_sources(
+    path: impl AsRef<Path>,
+    text: impl Into<String>,
+) -> FinalMirWithSources {
+    let path = path.as_ref();
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add(path, text);
+    let source = sources
+        .get(source_id)
+        .expect("test source was just inserted");
+    let lexed = lex(source);
+    assert_phase_succeeded("lexing", &lexed.diagnostics);
+    let parsed = parse(source, &lexed.tokens);
+    assert_phase_succeeded("parsing", &parsed.diagnostics);
+    let resolved = resolve_with_source_path(&parsed.ast, path);
+    assert_phase_succeeded("resolution", &resolved.diagnostics);
+    let checked = type_check(&resolved.program);
+    assert_phase_succeeded("type checking", &checked.diagnostics);
+    let hir = checked
+        .hir
+        .expect("successful type checking must produce typed HIR");
+    FinalMirWithSources {
+        sources,
+        mir: lower_hir_to_final_mir(&hir),
+    }
+}
+
 /// Runs lifecycle planning and synthesis for already type-checked test HIR.
 pub(crate) fn lower_hir_to_final_mir(hir: &crate::hir::HirProgram) -> MirProgram {
     let preliminary = lower_preliminary_hir(hir);
@@ -142,7 +198,17 @@ pub(crate) fn lower_source_to_assembly(
     text: impl Into<String>,
     target: Target,
 ) -> Result<String, BackendError> {
-    emit_assembly(target, &lower_source_to_final_mir(text))
+    let mir = lower_source_to_final_mir(text);
+    emit_assembly_without_runtime_trace(target, &mir)
+}
+
+/// Emits final MIR through the intentionally metadata-free backend path used
+/// by tests whose concern predates runtime trace metadata.
+pub(crate) fn emit_assembly_without_runtime_trace(
+    target: Target,
+    mir: &MirProgram,
+) -> Result<String, BackendError> {
+    emit_assembly(target, BackendInput::without_runtime_trace(mir))
 }
 
 pub(crate) fn load_module_sources(
@@ -218,6 +284,43 @@ pub(crate) fn assert_system_assembler_accepts(output: &str) {
         "assembler rejected generated output:\n{}\nassembly:\n{output}",
         String::from_utf8_lossy(&result.stderr)
     );
+}
+
+pub(crate) fn assembly_relocations(output: &str) -> String {
+    let object = TemporaryFile::new("assembly-object").unwrap();
+    let mut child = Command::new("cc")
+        .args(["-x", "assembler", "-c", "-o"])
+        .arg(object.path())
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("relocation tests require the Linux `cc` toolchain");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(output.as_bytes())
+        .unwrap();
+    let assembled = child.wait_with_output().unwrap();
+    assert!(
+        assembled.status.success(),
+        "assembler rejected generated output:\n{}\nassembly:\n{output}",
+        String::from_utf8_lossy(&assembled.stderr)
+    );
+
+    let inspected = Command::new("readelf")
+        .args(["--relocs", "--wide"])
+        .arg(object.path())
+        .output()
+        .expect("relocation tests require the Linux `readelf` tool");
+    assert!(
+        inspected.status.success(),
+        "readelf rejected generated object:\n{}",
+        String::from_utf8_lossy(&inspected.stderr)
+    );
+    String::from_utf8(inspected.stdout).expect("readelf output must be UTF-8")
 }
 
 pub(crate) fn run_native_assembly(output: &str) -> std::process::ExitStatus {

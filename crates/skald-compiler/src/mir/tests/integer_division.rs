@@ -1,12 +1,13 @@
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::{
         dump_hir, HirCheckedIntegerDivision, HirExpression, HirExpressionKind,
         HirFunctionDefinition, HirIntegerDivisionKind as HirDivisionKind,
         HirIntegerDivisionOperation as HirDivisionOperation, HirIntegerType, HirReturnValue,
         HirStatement, Type,
     },
+    test_support::emit_assembly_without_runtime_trace as emit_assembly,
 };
 
 const DIVISION_OPERATIONS: [(HirDivisionOperation, MirIntegerDivisionOperation); 6] = [

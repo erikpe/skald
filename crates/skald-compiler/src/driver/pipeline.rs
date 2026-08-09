@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::{
-    backend::{emit_assembly, BackendError, Target},
+    backend::{emit_assembly, BackendError, BackendInput, Target},
     diagnostics::Diagnostics,
     lexer::lex,
     mir::{lower_preliminary_hir, verify_preliminary_mir},
@@ -16,7 +16,7 @@ use crate::{
             plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
         },
     },
-    resolve::{resolve, resolve_module_graph, ResolvedProgram},
+    resolve::{resolve_module_graph, resolve_with_source_path, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,
@@ -76,6 +76,7 @@ pub fn compile_source_to_assembly(
     text: impl Into<String>,
     target: Target,
 ) -> Result<AssemblyArtifact, CompilationError> {
+    let path = path.as_ref();
     let mut sources = SourceDatabase::new();
     let source_id = sources.add(path, text);
     let mut diagnostics = Diagnostics::new();
@@ -95,7 +96,7 @@ pub fn compile_source_to_assembly(
         return Err(diagnostic_failure(sources, diagnostics));
     }
 
-    let resolved = resolve(&parsed.ast);
+    let resolved = resolve_with_source_path(&parsed.ast, path);
     diagnostics.append(resolved.diagnostics);
     finish_compilation(sources, diagnostics, resolved.program, target)
 }
@@ -139,7 +140,8 @@ fn finish_compilation(
     verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
     let mir = synthesize_static_lifecycle(planned).map_err(CompilationError::MirVerification)?;
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
-    let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
+    let input = BackendInput::without_runtime_trace(&mir);
+    let assembly = emit_assembly(target, input).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {
         assembly,

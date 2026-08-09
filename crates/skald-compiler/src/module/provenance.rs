@@ -15,6 +15,7 @@ use super::ModulePath;
 pub struct ModuleSourceLocation {
     root_relative_path: PathBuf,
     display_source_path: PathBuf,
+    trace_source_path: PathBuf,
     canonical_io_path: Option<PathBuf>,
 }
 
@@ -24,11 +25,18 @@ impl ModuleSourceLocation {
         display_source_path: PathBuf,
         canonical_io_path: Option<PathBuf>,
     ) -> Self {
+        let trace_source_path = root_relative_path.clone();
         Self {
             root_relative_path,
             display_source_path,
+            trace_source_path,
             canonical_io_path,
         }
+    }
+
+    pub(crate) fn with_trace_source_path(mut self, path: PathBuf) -> Self {
+        self.trace_source_path = path;
+        self
     }
 
     /// Returns the lexical path below the provider root.
@@ -39,6 +47,11 @@ impl ModuleSourceLocation {
     /// Returns the stable user-facing source spelling selected by loading.
     pub fn display_source_path(&self) -> &Path {
         &self.display_source_path
+    }
+
+    /// Returns the stable path spelling embedded in runtime trace metadata.
+    pub fn trace_source_path(&self) -> &Path {
+        &self.trace_source_path
     }
 
     /// Returns the resolved I/O target, when loading retained one.

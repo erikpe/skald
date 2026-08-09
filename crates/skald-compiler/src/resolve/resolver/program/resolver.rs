@@ -8,6 +8,7 @@ use crate::{
     lexer::decode_string_literal,
     module::{ModuleGraph, ModulePath, ProgramModuleTable},
 };
+use std::path::Path;
 
 pub(super) const fn resolved_visibility(visibility: syntax::Visibility) -> ResolvedVisibility {
     match visibility {
@@ -132,10 +133,10 @@ pub(super) struct ProgramResolver<'ast> {
 }
 
 impl<'ast> ProgramResolver<'ast> {
-    pub(super) fn singleton(ast: &'ast syntax::CompilationUnit) -> Self {
+    pub(super) fn singleton(ast: &'ast syntax::CompilationUnit, source_path: &Path) -> Self {
         Self {
             units: vec![ModuleUnit::new(ast, ModuleId::new(0), false)],
-            modules: ProgramModuleTable::singleton(ast.span.source_id()),
+            modules: ProgramModuleTable::singleton(ast.span.source_id(), source_path),
             has_module_context: false,
             array_types: ArrayTypeInterner::default(),
             literal_data: Vec::new(),

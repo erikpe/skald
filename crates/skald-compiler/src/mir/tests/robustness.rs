@@ -1,8 +1,9 @@
 use std::panic::{self, AssertUnwindSafe};
 
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     identity::{FieldId, FunctionId},
+    test_support::emit_assembly_without_runtime_trace as emit_assembly,
 };
 
 use super::{

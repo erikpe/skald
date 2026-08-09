@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use crate::{identity::CallableId, mir::MirProgram};
+use crate::{identity::CallableId, mir::MirProgram, source::SourceDatabase};
 
 mod x86_64_sysv;
 
@@ -17,6 +17,57 @@ pub(crate) const RUNTIME_ABI_MARKER_SYMBOL: &str = "ska_rt_abi_v9";
 
 pub const DEFAULT_TARGET_NAME: &str = "x86_64-sysv";
 pub const SUPPORTED_TARGET_NAMES: &[&str] = &[DEFAULT_TARGET_NAME];
+
+/// Controls whether target emission may construct panic runtime-trace data.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RuntimeTracePolicy {
+    Enabled,
+    Omitted,
+}
+
+/// Complete verified input needed by a target backend.
+///
+/// The constructors keep source access unavailable when tracing is omitted,
+/// making trace-only source lookup impossible on that path.
+#[derive(Clone, Copy, Debug)]
+pub struct BackendInput<'input> {
+    program: &'input MirProgram,
+    sources: Option<&'input SourceDatabase>,
+    runtime_trace: RuntimeTracePolicy,
+}
+
+impl<'input> BackendInput<'input> {
+    pub const fn with_runtime_trace(
+        program: &'input MirProgram,
+        sources: &'input SourceDatabase,
+    ) -> Self {
+        Self {
+            program,
+            sources: Some(sources),
+            runtime_trace: RuntimeTracePolicy::Enabled,
+        }
+    }
+
+    pub const fn without_runtime_trace(program: &'input MirProgram) -> Self {
+        Self {
+            program,
+            sources: None,
+            runtime_trace: RuntimeTracePolicy::Omitted,
+        }
+    }
+
+    pub const fn program(self) -> &'input MirProgram {
+        self.program
+    }
+
+    pub const fn sources(self) -> Option<&'input SourceDatabase> {
+        self.sources
+    }
+
+    pub const fn runtime_trace(self) -> RuntimeTracePolicy {
+        self.runtime_trace
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Target {
@@ -119,9 +170,9 @@ impl fmt::Display for BackendError {
 
 impl std::error::Error for BackendError {}
 
-pub fn emit_assembly(target: Target, program: &MirProgram) -> Result<String, BackendError> {
+pub fn emit_assembly(target: Target, input: BackendInput<'_>) -> Result<String, BackendError> {
     match target {
-        Target::X86_64SysV => x86_64_sysv::emit_assembly(program),
+        Target::X86_64SysV => x86_64_sysv::emit_assembly(input),
     }
 }
 
@@ -139,5 +190,19 @@ mod tests {
             error.to_string(),
             "unsupported target `aarch64-linux`; supported targets: x86_64-sysv"
         );
+    }
+
+    #[test]
+    fn backend_input_exposes_sources_only_for_enabled_tracing() {
+        let program =
+            crate::test_support::lower_source_to_final_mir("fn main() -> i64 { return 0; }");
+        let sources = SourceDatabase::new();
+        let enabled = BackendInput::with_runtime_trace(&program, &sources);
+        let omitted = BackendInput::without_runtime_trace(&program);
+
+        assert_eq!(enabled.runtime_trace(), RuntimeTracePolicy::Enabled);
+        assert!(enabled.sources().is_some());
+        assert_eq!(omitted.runtime_trace(), RuntimeTracePolicy::Omitted);
+        assert!(omitted.sources().is_none());
     }
 }

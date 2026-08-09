@@ -17,7 +17,7 @@ use crate::mir::test_fixtures::{
     OneBlockDefinition,
 };
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::{BackendInput, Target},
     identity::{
         BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
         MethodId, ParameterId,
@@ -92,3 +92,10 @@ mod type_operations;
 mod value_parameters;
 mod virtual_dispatch;
 use objects::record_i64_stub;
+
+fn emit_assembly(
+    target: Target,
+    program: &MirProgram,
+) -> Result<String, crate::backend::BackendError> {
+    crate::backend::emit_assembly(target, BackendInput::without_runtime_trace(program))
+}

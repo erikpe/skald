@@ -1,11 +1,11 @@
 use std::panic::{self, AssertUnwindSafe};
 
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::HirStatement,
     identity::LoopId,
     passes::run_mir_pipeline,
-    test_support::run_native_assembly,
+    test_support::{emit_assembly_without_runtime_trace as emit_assembly, run_native_assembly},
 };
 
 use super::*;

@@ -79,6 +79,7 @@ pub(super) fn lower(
         dispatch_tables: dispatch.assembly_tables(program),
         literal_backings: literal_pool.into_backings(),
         panic_messages: panic_messages.into_assembly(),
+        runtime_trace: Default::default(),
     })
 }
 

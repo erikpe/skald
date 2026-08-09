@@ -409,8 +409,11 @@ fn effectful_checked_cast_operands_are_evaluated_once_and_cleanup_after_the_join
     let dump = dump_mir(&mir);
     assert!(dump.contains("primitive-cast-range-check f64.u64"));
     assert!(dump.contains("shared-release"));
-    crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir)
-        .expect("verified effectful checked-cast MIR must reach target selection");
+    crate::test_support::emit_assembly_without_runtime_trace(
+        crate::backend::Target::X86_64SysV,
+        &mir,
+    )
+    .expect("verified effectful checked-cast MIR must reach target selection");
 }
 
 #[test]
@@ -430,16 +433,22 @@ fn checked_cast_secures_a_checked_operand_before_its_own_range_check() {
     let operand_check = dump.find("array-position-check").unwrap();
     let cast_check = dump.find("primitive-cast-range-check f64.u8").unwrap();
     assert!(operand_check < cast_check);
-    crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir)
-        .expect("nested checked operations must reach target selection in verified order");
+    crate::test_support::emit_assembly_without_runtime_trace(
+        crate::backend::Target::X86_64SysV,
+        &mir,
+    )
+    .expect("nested checked operations must reach target selection in verified order");
 }
 
 #[test]
 fn verified_checked_cast_mir_reaches_backend_selection() {
     let mir = checked_primitive_cast_mir(HirPrimitiveType::U8);
     verify_mir(&mir).unwrap();
-    let assembly = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &mir)
-        .expect("verified checked-cast MIR must be executable");
+    let assembly = crate::test_support::emit_assembly_without_runtime_trace(
+        crate::backend::Target::X86_64SysV,
+        &mir,
+    )
+    .expect("verified checked-cast MIR must be executable");
     assert!(assembly.contains("cvttsd2si rax, xmm14"));
     assert!(assembly.contains("call ska_rt_panic"));
 }

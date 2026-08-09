@@ -3,8 +3,8 @@
 use super::logical_fixtures::function_id_from_mir;
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
-    syntax::MAX_LOGICAL_EXPRESSION_DEPTH,
+    backend::Target, syntax::MAX_LOGICAL_EXPRESSION_DEPTH,
+    test_support::emit_assembly_without_runtime_trace as emit_assembly,
 };
 
 fn mixed_chain(terms: usize, operand: impl Fn(usize) -> String) -> String {

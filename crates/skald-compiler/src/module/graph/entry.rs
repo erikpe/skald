@@ -145,6 +145,7 @@ fn select_file_entry(
     match identities.as_slice() {
         [] => {
             let module_path = module_path_from_file_name(&lexical_path)?;
+            let trace_source_path = display_source_path.clone();
             let singleton = ModuleCandidate::new(
                 module_path.clone(),
                 ProviderId::new(providers.providers().len()),
@@ -155,7 +156,8 @@ fn select_file_entry(
                     .into(),
                 display_source_path,
                 canonical_io_path,
-            );
+            )
+            .with_trace_source_path(trace_source_path);
             let candidate = LoaderProviders::new(providers, Some(singleton.clone()))
                 .resolve(&module_path)
                 .map_err(EntryError::Resolution)?;

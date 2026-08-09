@@ -238,6 +238,7 @@ pub struct ModuleCandidate {
     package_id: PackageId,
     root_relative_path: PathBuf,
     display_source_path: PathBuf,
+    trace_source_path: PathBuf,
     canonical_io_path: PathBuf,
 }
 
@@ -250,12 +251,14 @@ impl ModuleCandidate {
         display_source_path: PathBuf,
         canonical_io_path: PathBuf,
     ) -> Self {
+        let trace_source_path = root_relative_path.clone();
         Self {
             module_path,
             provider_id,
             package_id,
             root_relative_path,
             display_source_path,
+            trace_source_path,
             canonical_io_path,
         }
     }
@@ -280,6 +283,10 @@ impl ModuleCandidate {
         &self.display_source_path
     }
 
+    pub fn trace_source_path(&self) -> &Path {
+        &self.trace_source_path
+    }
+
     /// Returns the physical target retained only for I/O and diagnostics.
     pub fn canonical_io_path(&self) -> &Path {
         &self.canonical_io_path
@@ -287,6 +294,11 @@ impl ModuleCandidate {
 
     pub(in crate::module) fn with_display_source_path(mut self, path: PathBuf) -> Self {
         self.display_source_path = path;
+        self
+    }
+
+    pub(in crate::module) fn with_trace_source_path(mut self, path: PathBuf) -> Self {
+        self.trace_source_path = path;
         self
     }
 }

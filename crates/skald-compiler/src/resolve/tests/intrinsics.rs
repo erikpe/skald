@@ -1,10 +1,11 @@
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::{HirExpressionKind, HirIoOperation, HirReturnValue, HirStatement},
     intrinsic::Intrinsic,
     mir::{verify_mir, MirFunctionLinkage},
     test_support::{
+        emit_assembly_without_runtime_trace as emit_assembly,
         load_module_sources_with_standard_library,
         load_module_sources_with_standard_library_overrides, lower_hir_to_final_mir,
         CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,

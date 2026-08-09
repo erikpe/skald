@@ -1308,20 +1308,24 @@ somehow reached after the trust boundary.
 
 ### Frozen runtime trace phase boundary
 
-Runtime traces are frozen for implementation but are not yet present in phase
-products or backend output. They add no AST, resolved, HIR, or MIR operation.
+Runtime traces add no AST, resolved, HIR, or MIR operation. TRACE1 implements
+the source-aware backend input and requested-only target metadata without
+changing any phase product or dump.
 MIR continues to own the semantic spans already carried by definitions,
 instructions, calls, blocks, `Panic`, and every `Terminate` reason; it must not
 gain target trace-record identities, rendered paths, TLS operations, or stack
 frame offsets.
 
-Backend emission will receive one explicit input containing the final verified
+Backend emission receives one explicit input containing the final verified
 `MirProgram`, read-only `SourceDatabase` access when tracing is enabled, and
 the selected trace policy. It will also consume the program's existing
 semantic declaration and module provenance needed to form source-callable
 names and provider-relative display paths. `SourceDatabase` resolves used span
-starts to one-based line and Unicode-scalar column once during target metadata
-planning. Trace-disabled emission performs no trace-only source lookup.
+starts to checked one-based `u64` line and Unicode-scalar column values only
+when target lowering requests a location. Trace-disabled emission has no
+source access and performs no trace-only lookup. The production driver remains
+explicitly omitted until later roadmap tasks complete frame and location
+coverage.
 
 The target boundary decides which source definitions contribute frames and
 which existing spans require location records. Source functions, methods,

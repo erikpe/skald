@@ -2,8 +2,8 @@
 
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
-    passes::run_mir_pipeline,
+    backend::Target, passes::run_mir_pipeline,
+    test_support::emit_assembly_without_runtime_trace as emit_assembly,
 };
 
 mod anchors;

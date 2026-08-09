@@ -1,6 +1,7 @@
 //! Two-pass top-level/member collection and callable-body name resolution.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
@@ -79,7 +80,14 @@ impl ResolveOutput {
 /// while ensuring that all successful uses below this boundary carry stable
 /// identities rather than source names.
 pub fn resolve(ast: &syntax::CompilationUnit) -> ResolveOutput {
-    program::resolve_singleton(ast)
+    resolve_with_source_path(ast, Path::new("main.ska"))
+}
+
+pub(crate) fn resolve_with_source_path(
+    ast: &syntax::CompilationUnit,
+    source_path: &Path,
+) -> ResolveOutput {
+    program::resolve_singleton(ast, source_path)
 }
 
 /// Resolves every reachable module in a loaded graph into one flat program.

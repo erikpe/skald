@@ -102,6 +102,10 @@ fn provenance_keeps_logical_and_physical_roles_separate() {
         Path::new("/display/math/geometry.ska")
     );
     assert_eq!(
+        provenance.source_location().trace_source_path(),
+        Path::new("math/geometry.ska")
+    );
+    assert_eq!(
         provenance.source_location().canonical_io_path(),
         Some(Path::new("/shared/geometry.ska"))
     );

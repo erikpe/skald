@@ -336,7 +336,10 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     );
 
     MirProgram {
-        modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
+        modules: crate::module::ProgramModuleTable::singleton(
+            span.source_id(),
+            std::path::Path::new("main.ska"),
+        ),
         external_links: ExternalLinkTable::new(vec![ExternalLink {
             id: ExternalLinkId::new(0),
             symbol: "validate_f64".to_owned(),
@@ -595,7 +598,10 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     );
 
     MirProgram {
-        modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
+        modules: crate::module::ProgramModuleTable::singleton(
+            span.source_id(),
+            std::path::Path::new("main.ska"),
+        ),
         external_links: ExternalLinkTable::default(),
         array_types: Default::default(),
         string_language_item: None,

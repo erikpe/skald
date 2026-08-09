@@ -134,7 +134,10 @@ pub(super) fn primitive_cast_program(
     );
 
     let program = MirProgram {
-        modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
+        modules: crate::module::ProgramModuleTable::singleton(
+            span.source_id(),
+            std::path::Path::new("main.ska"),
+        ),
         external_links: ExternalLinkTable::new(vec![ExternalLink {
             id: ExternalLinkId::new(0),
             symbol: "validate_primitive_cast".to_owned(),

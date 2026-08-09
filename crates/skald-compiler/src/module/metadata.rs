@@ -1,6 +1,6 @@
 //! Validated module metadata carried by whole-program semantic IR.
 
-use std::{collections::HashSet, fmt};
+use std::{collections::HashSet, fmt, path::Path};
 
 use crate::{
     identity::{ModuleId, PackageId, ProviderId},
@@ -93,7 +93,7 @@ impl ProgramModuleTable {
         self.entries.is_empty()
     }
 
-    pub(crate) fn singleton(source_id: SourceId) -> Self {
+    pub(crate) fn singleton(source_id: SourceId, source_path: &Path) -> Self {
         let module = ModuleId::new(0);
         Self::new(
             module,
@@ -103,7 +103,7 @@ impl ProgramModuleTable {
                 source_id,
                 ProviderId::new(0),
                 PackageId::new(0),
-                ModuleSourceLocation::new("main.ska".into(), "main.ska".into(), None),
+                ModuleSourceLocation::new(source_path.to_owned(), source_path.to_owned(), None),
             )],
         )
         .expect("singleton module metadata is valid")

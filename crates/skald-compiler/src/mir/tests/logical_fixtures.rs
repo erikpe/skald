@@ -2,12 +2,15 @@
 
 use super::*;
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::Target,
     hir::{
         HirExpression, HirExpressionKind, HirFunctionDefinition, HirLogicalExpression,
         HirLogicalOperation, HirProgram, HirReturnValue, HirStatement, Type,
     },
-    test_support::{run_native_assembly_output, type_check_source},
+    test_support::{
+        emit_assembly_without_runtime_trace as emit_assembly, run_native_assembly_output,
+        type_check_source,
+    },
 };
 
 pub(super) fn function_id(program: &HirProgram, name: &str) -> FunctionId {
