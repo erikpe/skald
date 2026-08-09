@@ -2,10 +2,11 @@
 
 Status: investigation complete against Skald commit
 `49899bac3e6cedf79703d5a0656747f433b7c0fc` and Niflheim commit
-`3dcd543620bfdc14c0b7c70a09364960e28174c9`; the linked native-stack-frame
-design below is recommended, but output, path, and default-enable policy must
-be confirmed before promotion into living contracts or an implementation
-roadmap.
+`3dcd543620bfdc14c0b7c70a09364960e28174c9`. The current reviewable direction
+is recorded in the
+[panic runtime trace design proposal](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md),
+which refines the linked native-frame design below by performing push and pop
+through direct Linux x86-64 TLS access rather than per-activation C calls.
 
 This investigation asks how Skald can attach source locations and a useful
 call stack to its existing panic reporter while keeping successful execution
@@ -60,26 +61,23 @@ struct SkaRtTraceFrame {
     const SkaRtTraceLocation* location;
 };
 
-void ska_rt_trace_enter(
-    SkaRtTraceFrame* frame,
-    const SkaRtTraceLocation* initial_location
-);
-void ska_rt_trace_leave(SkaRtTraceFrame* frame);
+extern _Thread_local SkaRtTraceFrame* ska_rt_trace_top;
 ```
 
-The runtime keeps only a thread-local pointer to the top frame. A callable
-enters once after establishing its native frame and leaves once on every
-normal return. Changing location does not call the runtime: generated code
-loads one static `SkaRtTraceLocation` address and stores it directly into the
-current frame's `location` field. Panic walks the still-live linked frames from
-newest to oldest.
+The runtime keeps only a thread-local pointer to the top frame. Generated code
+pushes after establishing its native frame, pops on every normal return, and
+loads/stores the TLS top directly through the local-exec model. Changing
+location loads one static `SkaRtTraceLocation` address and stores it directly
+into the current frame's `location` field. Panic walks the still-live linked
+frames from newest to oldest.
 
 This gives the desired push/replace/pop behavior with no heap allocation, no
-capacity checks, and no new failure caused by trace bookkeeping. Compared with
-Niflheim, it replaces every `rt_trace_set_location` call with two ordinary
-machine instructions and reduces dynamic trace storage from a heap-resident
-24-byte record per activation to a 16-byte record in the native frame that
-already bounds the activation's lifetime.
+capacity checks, per-activation C calls, reserved general register, or new
+failure caused by trace bookkeeping. On Linux x86-64 the proposed sequences
+are six instructions for push, two for pop, and two for replacement. Compared
+with Niflheim, dynamic trace storage falls from a heap-resident 24-byte record
+per activation to a 16-byte record in the native frame that already bounds
+the activation's lifetime.
 
 ## Current Skald boundary
 
@@ -305,21 +303,19 @@ Tracing adds one 16-byte `SkaRtTraceFrame` allocation to the fixed frame layout
 of every source callable. The prologue must:
 
 1. establish and reserve the native frame;
-2. spill incoming parameters so the trace-enter C call cannot clobber them;
-3. initialize/push the trace frame with the callable-entry location; and
+2. preserve incoming parameters through the ordinary prologue;
+3. initialize/push the trace frame with direct local-exec TLS operations; and
 4. begin body instruction selection.
 
-The runtime maintains an implementation-private `_Thread_local` top pointer.
-`ska_rt_trace_enter` sets `previous`, sets `location`, and publishes the frame.
-It performs no allocation. `ska_rt_trace_leave` requires the supplied frame to
-be the current top, restores `previous`, and treats a mismatch or underflow as
-a private runtime defect rather than a Skald panic.
+The runtime defines one hidden `_Thread_local` top pointer. Generated code
+loads it into a transient caller-saved scratch register, writes `previous` and
+the initial `location`, and publishes the frame address back through TLS. It
+performs no C call or allocation and permanently reserves no register.
 
-Every ordinary return path should call `ska_rt_trace_leave` before loading its
-final scalar, floating, shared-owner, or hidden-result return value from its
-frame home. That avoids the extra save/restore calls used by Niflheim and
-keeps the existing common `leave; ret` epilogue simple. No pop occurs on panic,
-because the live frames are exactly what the reporter must inspect.
+Every ordinary return path restores the TLS top directly from `previous`
+before loading its final scalar, floating, shared-owner, or hidden-result
+return value from its frame home. No pop occurs on panic, because the live
+frames are exactly what the reporter must inspect.
 
 ### Location replacement policy
 
@@ -428,7 +424,7 @@ paths are compiler-controlled length-delimited fields; the panic message
 remains arbitrary raw bytes and may contain embedded zero or newline exactly
 as today.
 
-The new structs and enter/leave calls are an incompatible public runtime ABI
+The new structs and hidden TLS symbol are an incompatible compiler/runtime ABI
 addition, so the numeric ABI and link marker must advance together. The panic
 function's own C signature need not change.
 
@@ -438,7 +434,7 @@ Follow Niflheim in making trace emission a compilation choice. When omitted,
 the compiler must emit:
 
 - no trace frame homes;
-- no enter/leave calls;
+- no TLS push/pop instructions;
 - no location stores; and
 - no context, path, or location records.
 
@@ -453,8 +449,8 @@ release builds, not on implementation convenience.
 
 With the recommended enabled design:
 
-- per source activation: 16 additional fixed-frame bytes, one enter call, and
-  one leave call;
+- per source activation: 16 additional fixed-frame bytes, six inline push
+  instructions, and two inline pop instructions;
 - per relevant location change: one RIP-relative address load and one stack
   store, with no call and no allocation;
 - per generated helper activation: no frame unless it represents an actual
@@ -468,7 +464,7 @@ The unavoidable successful-path updates are source call sites and runtime
 operations such as allocation that may themselves panic. A benchmark should
 separate call-heavy recursion, tight loops with no observable failure point,
 allocation-heavy code, and ordinary application goldens. Assembly tests
-should also count enter/leave and location stores so a later refactor cannot
+should also count push/pop and location stores so a later refactor cannot
 silently reintroduce a function call per location as in Niflheim.
 
 ## Correctness cases
@@ -496,9 +492,9 @@ The implementation must settle and test these cases explicitly:
 - output failure partway through the trace without recursion or buffered I/O.
 
 Runtime C tests should directly build nested frames, mutate a top frame's
-location exactly as generated code does, verify newest-first output, and prove
-that mismatched leave is a hard defect. Backend tests should own hook placement
-and ABI-preserving return order. Native goldens should own complete source-to-
+location exactly as generated code does, and verify newest-first output.
+Backend tests should own exact TLS relocation, hook placement, linked-pop, and
+ABI-preserving return order. Native goldens should own complete source-to-
 stderr call chains. Existing plain panic expectations can remain useful under
 the omit-trace compiler variant.
 
@@ -531,12 +527,12 @@ proceed in reviewable layers:
 
 1. define exact trace output, paths, context names, enablement, metadata
    structs, frame invariants, and the new runtime ABI version;
-2. implement and directly test allocation-free runtime enter/leave and trace
+2. implement and directly test the hidden TLS state and allocation-free trace
    rendering without generated-code dependencies;
 3. add explicit backend source/options input and deterministic semantic trace
    metadata construction;
-4. integrate trace homes and enter/leave with frame planning and every return
-   ABI, initially without interior location changes;
+4. integrate trace homes and inline TLS push/pop with frame planning and every
+   return ABI, initially without interior location changes;
 5. add call-site, generated-helper, allocation, explicit-panic, and static-
    termination location replacement with focused assembly tests;
 6. add CLI omission policy and exact native golden traces, migrate affected
@@ -548,4 +544,3 @@ This order establishes the observable and ABI contracts before target code,
 then proves frame lifetime before expanding location coverage. A future
 implementation roadmap should split these outcomes into PR-sized tasks and
 name the exact focused and repository-wide validation commands.
-
