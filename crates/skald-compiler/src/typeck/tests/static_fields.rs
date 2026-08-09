@@ -806,8 +806,8 @@ fn primitive_statics_compose_with_bit_intrinsics_and_io_scalar_arguments() {
     assert!(dump.contains("bit_reinterpretation f64.u64"));
     assert!(dump.contains("bit_reinterpretation u64.f64"));
     // Seven reads belong to the application. The canonical floating-point
-    // conversion tables contribute ten more reads to the complete graph.
-    assert_eq!(dump.matches("StaticRead").count(), 17);
+    // conversion tables contribute six more reads to the complete graph.
+    assert_eq!(dump.matches("StaticRead").count(), 13);
 }
 
 #[test]

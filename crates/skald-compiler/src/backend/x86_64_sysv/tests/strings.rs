@@ -241,9 +241,9 @@ fn private_initializer_dynamic_strings_reclaim_their_last_backing_owner() {
         "report:\n",
         "    mov rax, 1\n",
         "    mov rcx, qword ptr [rip + .Lstring_allocations]\n",
-        // The six conversion tables remain live until program shutdown; the
+        // The three conversion tables remain live until program shutdown; the
         // two dynamic string allocations have already been reclaimed here.
-        "    cmp rcx, 8\n",
+        "    cmp rcx, 5\n",
         "    jne .Lstring_report_done\n",
         "    cmp qword ptr [rip + .Lstring_frees], 2\n",
         "    jne .Lstring_report_done\n",
