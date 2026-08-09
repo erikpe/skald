@@ -3,11 +3,11 @@ use crate::{
     backend::{emit_assembly, Target},
     hir::{HirExpressionKind, HirIoOperation, HirReturnValue, HirStatement},
     intrinsic::Intrinsic,
-    mir::{lower_hir, verify_mir, MirFunctionLinkage},
+    mir::{verify_mir, MirFunctionLinkage},
     test_support::{
         load_module_sources_with_standard_library,
-        load_module_sources_with_standard_library_overrides, CANONICAL_F64_SOURCE,
-        CANONICAL_IO_SOURCE,
+        load_module_sources_with_standard_library_overrides, lower_hir_to_final_mir,
+        CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
     },
     typeck::{
         type_check, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT, INVALID_CALL_STATEMENT,
@@ -70,7 +70,7 @@ fn canonical_f64_bit_intrinsics_lower_to_verified_bit_reinterpretation() {
     assert!(hir_dump.contains("PrimitiveCast bit_reinterpretation f64.u64 : u64"));
     assert!(hir_dump.contains("PrimitiveCast bit_reinterpretation u64.f64 : f64"));
 
-    let mir = lower_hir(&hir);
+    let mir = lower_hir_to_final_mir(&hir);
     verify_mir(&mir).unwrap();
     let mir_dump = crate::mir::dump_mir(&mir);
     assert!(mir_dump.contains("cast.f64.u64 bit_reinterpretation"));
@@ -492,7 +492,7 @@ fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
     let hir_dump = crate::hir::dump_hir(&hir);
     assert_eq!(hir_dump, crate::hir::dump_hir(&hir));
     assert!(hir_dump.contains("intrinsic Panic"));
-    let mir = lower_hir(&hir);
+    let mir = lower_hir_to_final_mir(&hir);
     verify_mir(&mir).unwrap();
     let intrinsic = mir
         .declarations
@@ -551,7 +551,7 @@ fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
     let stop_function = stop.function;
     let hir_dump = crate::hir::dump_hir(&hir);
     assert!(hir_dump.contains("Panic"));
-    let mir = lower_hir(&hir);
+    let mir = lower_hir_to_final_mir(&hir);
     verify_mir(&mir).unwrap();
     let mir_dump = crate::mir::dump_mir(&mir);
     assert!(mir_dump.contains("panic "));

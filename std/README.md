@@ -59,13 +59,9 @@ do not.
 slice bounds, forming an ordinary two-module cycle with `std::error`. It also
 imports the integer and binary64 formatting and parsing descendant modules in
 one direction. The integer helpers depend only on primitive values and arrays.
-The binary64 parser and formatter independently import `std::f64` for bit
-conversion and `Str` only to read their own immortal encoded tables. Those
-reciprocal `std::str` imports are ordinary source cycles, not backing-storage
-escapes.
-Only the formatter has lazy mutable state; it publishes its private
-cached-power array on first use, so the cycles impose no eager initialization
-order.
+The binary64 parser and formatter depend only on primitive values and arrays,
+and independently import `std::f64` for bit conversion. Their private cached
+powers are initialized directly as static `u64[]` fields before execution.
 
 A module and descendant module may coexist: the `std/str.ska` source is
 `std::str`, while files below `std/str/` are distinct descendant modules.
@@ -82,14 +78,14 @@ validates its range and is available for direct decimal parsing. `Str.to_f64`
 borrows its private backing only for that call; the call-scoped alias cannot
 expose the backing to callers. The formatter's public `format(value: f64) ->
 shared u8[]` requires a finite value because the `Str` facade owns special
-spellings. It uses fixed-width Ryū arithmetic, lazily decodes one 832-byte
-encoding held in five immortal literal sections into a reusable private static
-table, and allocates only the returned exact-length array per value. The public
+spellings. It uses fixed-width Ryū arithmetic over a reusable private static
+cached-power table set and allocates only the returned exact-length array per
+value. The public
 `BigUnsigned` class now lives in `std::str::parse_f64` beside its only consumer
 and remains a narrow parser implementation entry point, not part of the
 supported `Str` conversion surface. The parser keeps the existing exact small
 path, uses fixed-width Eisel-Lemire conversion for ordinary decimals, and
-rescans only ambiguous inputs into a 768-digit exact fallback. Its encoded
+rescans only ambiguous inputs into a 768-digit exact fallback. Its static
 powers and arithmetic helpers are independent from the formatter. Third-party-
 derived standard-library code is listed in
 [Third-party notices](THIRD_PARTY.md).

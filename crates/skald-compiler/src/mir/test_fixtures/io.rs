@@ -1,7 +1,10 @@
 use crate::{
-    mir::{lower_hir, MirProgram},
+    mir::MirProgram,
     resolve::resolve_module_graph,
-    test_support::{load_module_sources_with_standard_library_overrides, CANONICAL_IO_SOURCE},
+    test_support::{
+        load_module_sources_with_standard_library_overrides, lower_hir_to_final_mir,
+        CANONICAL_IO_SOURCE,
+    },
     typeck::type_check,
 };
 
@@ -71,5 +74,5 @@ fn lower_io_program(app: &str, io: &str) -> MirProgram {
     );
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    lower_hir(&checked.hir.expect("valid standard-I/O fixture has HIR"))
+    lower_hir_to_final_mir(&checked.hir.expect("valid standard-I/O fixture has HIR"))
 }

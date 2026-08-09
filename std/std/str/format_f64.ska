@@ -1,5 +1,4 @@
 import std::f64;
-from std::str import Str;
 
 // The finite conversion algorithm and cached powers are derived from Ryū:
 // Copyright 2018 Ulf Adams, Apache-2.0 or BSL-1.0.
@@ -552,23 +551,63 @@ class _RyuPower {
 }
 
 class _RyuTables {
-    private static _words: u64[];
+    private static _inverse_powers: u64[] = u64[]{
+        0x0000000000000001u, 0x2000000000000000u, 0x52a6c95fc0655034u, 0x18c240c4aecb13bbu,
+        0x7ca8d50071dfc806u, 0x1327fc58da0f6ff5u, 0x6520247d3556476eu, 0x1da48ce468e7c702u,
+        0x6139cdd76802e6e9u, 0x16ef5b40c2fc7779u, 0xf951a7ff43de8c79u, 0x11bebdf578b2f391u,
+        0x7be8bee8d6e957e8u, 0x1b758d848fac54b0u, 0x8bd3f9e999a423eau, 0x153eda614071a3b7u,
+        0x0848f973cb3ee3ceu, 0x10701bd527b4978cu, 0x153285ebb9efbfa2u, 0x196fbb9bb44db44du,
+        0xadeee7f86c07b696u, 0x13ae3591f5b4d936u, 0x4d686a4eaf182222u, 0x1e74404f3daada91u,
+        0x98c0a106e09ebd9fu, 0x17900ea4fda7c257u, 0x8f20e37371497d0eu, 0x123b140576d820b2u,
+        0xb043138134743d85u, 0x1c35f4275f7a29adu
+    };
+
+    private static _inverse_offsets: u64[] = u64[]{
+        0x0405554554544554u, 0x0040041410041000u, 0x4115555540010000u, 0x0001004400000454u,
+        0x4400004140000000u, 0x5555005450454450u, 0x4000400051655554u, 0x0001050001000001u,
+        0x0555555451515411u, 0x4004000050411500u, 0x0000000005040110u
+    };
+
+    private static _powers: u64[] = u64[]{
+        0x0000000000000000u, 0x1000000000000000u, 0x0000000000000000u, 0x14adf4b7320334b9u,
+        0x0e549208b31adb10u, 0x1aba4714957d300du, 0x6dc6ad264d8f0866u, 0x1145b7e285bf98f5u,
+        0xeb1dbd923d8596cau, 0x1652efdc6018a1fcu, 0xb4c1b80b22ae923cu, 0x1cda62055b2d9d83u,
+        0x5bb28b4e8f7e4c30u, 0x12a5568b9f52f416u, 0xf08aed437682d4fbu, 0x1819651531f9e78fu,
+        0xb4ee134ad99bf150u, 0x1f25c186a6f04c28u, 0x16499ecb70c25f03u, 0x1420eb449c8842e6u,
+        0x85a56ead360865b0u, 0x1a03fde214caf085u, 0x093db1d57999890bu, 0x10cfeb353a97dad8u,
+        0xcf38bb735e3f36acu, 0x15baaf44fa52673eu
+    };
+
+    private static _offsets: u64[] = u64[]{
+        0x0000000000000000u, 0x0000000000000000u, 0x5969599540000000u, 0x5655551555545555u,
+        0x4055541041150504u, 0x4450454044555145u, 0x4000400045555550u, 0x5556556596440440u,
+        0x4015415154454045u, 0x5140555555559155u, 0x0000000000000105u
+    };
+
+    private static _small_powers: u64[] = u64[]{
+        0x0000000000000001u, 0x0000000000000005u, 0x0000000000000019u, 0x000000000000007du,
+        0x0000000000000271u, 0x0000000000000c35u, 0x0000000000003d09u, 0x000000000001312du,
+        0x000000000005f5e1u, 0x00000000001dcd65u, 0x00000000009502f9u, 0x0000000002e90eddu,
+        0x000000000e8d4a51u, 0x0000000048c27395u, 0x000000016bcc41e9u, 0x000000071afd498du,
+        0x0000002386f26fc1u, 0x000000b1a2bc2ec5u, 0x000003782dace9d9u, 0x00001158e460913du,
+        0x000056bc75e2d631u, 0x0001b1ae4d6e2ef5u, 0x000878678326eac9u, 0x002a5a058fc295edu,
+        0x00d3c21bcecceda1u, 0x0422ca8b0a00a425u
+    };
 
     init() {}
 
     static fn power(index: u64) -> _RyuPower {
-        _RyuTables._ensure();
         var base: u64 = index / 26u;
         var base_index: u64 = base * 26u;
         var offset: u64 = index - base_index;
-        var word: u64 = 41u + base * 2u;
-        var low: u64 = _RyuTables._words[(i64) word];
-        var high: u64 = _RyuTables._words[(i64) (word + 1u)];
+        var word: u64 = base * 2u;
+        var low: u64 = _RyuTables._powers[(i64) word];
+        var high: u64 = _RyuTables._powers[(i64) (word + 1u)];
         if (offset == 0u) {
             return _RyuPower(low, high);
         }
 
-        var multiplier: u64 = _RyuTables._words[(i64) (78u + offset)];
+        var multiplier: u64 = _RyuTables._small_powers[(i64) offset];
         var high1: u64 = _multiply_high(multiplier, high);
         var low1: u64 = multiplier * high;
         var high0: u64 = _multiply_high(multiplier, low);
@@ -580,7 +619,10 @@ class _RyuTables {
         var distance: u64 = (u64) (
             _pow5_bits(index) - _pow5_bits(base_index)
         );
-        var correction: u64 = _RyuTables._offset(67u, index);
+        var correction: u64 = _RyuTables._packed_offset(
+            _RyuTables._offsets,
+            index
+        );
         return _RyuPower(
             _shift_right_128(low0, sum, distance) + correction,
             _shift_right_128(sum, high1, distance)
@@ -588,18 +630,17 @@ class _RyuTables {
     }
 
     static fn inverse_power(index: u64) -> _RyuPower {
-        _RyuTables._ensure();
         var base: u64 = (index + 25u) / 26u;
         var base_index: u64 = base * 26u;
         var offset: u64 = base_index - index;
         var word: u64 = base * 2u;
-        var low: u64 = _RyuTables._words[(i64) word];
-        var high: u64 = _RyuTables._words[(i64) (word + 1u)];
+        var low: u64 = _RyuTables._inverse_powers[(i64) word];
+        var high: u64 = _RyuTables._inverse_powers[(i64) (word + 1u)];
         if (offset == 0u) {
             return _RyuPower(low, high);
         }
 
-        var multiplier: u64 = _RyuTables._words[(i64) (78u + offset)];
+        var multiplier: u64 = _RyuTables._small_powers[(i64) offset];
         var high1: u64 = _multiply_high(multiplier, high);
         var low1: u64 = multiplier * high;
         var high0: u64 = _multiply_high(multiplier, low - 1u);
@@ -611,66 +652,19 @@ class _RyuTables {
         var distance: u64 = (u64) (
             _pow5_bits(base_index) - _pow5_bits(index)
         );
-        var correction: u64 = _RyuTables._offset(30u, index);
+        var correction: u64 = _RyuTables._packed_offset(
+            _RyuTables._inverse_offsets,
+            index
+        );
         return _RyuPower(
             _shift_right_128(low0, sum, distance) + 1u + correction,
             _shift_right_128(sum, high1, distance)
         );
     }
 
-    private static fn _offset(start: u64, index: u64) -> u64 {
-        var packed: u64 = _RyuTables._words[
-            (i64) (start + index / 32u)
-        ];
+    private static fn _packed_offset(ref offsets: u64[], index: u64) -> u64 {
+        var packed: u64 = offsets[(i64) (index / 32u)];
         var shift: u64 = (index % 32u) * 2u;
         return (packed >> shift) & 0x3u;
-    }
-
-    private static fn _ensure() -> unit {
-        if (_RyuTables._words.len() != 0u) {
-            return;
-        }
-
-        // The five logical sections below form one canonical 832-byte
-        // little-endian table encoding: inverse powers (30 words), inverse
-        // offsets (11), powers (26), offsets (11), and small powers (26).
-        // Decode locally and publish only after all 104 words are complete.
-        // Skald is currently single-threaded, so the empty static array is a
-        // sufficient lazy-initialization sentinel.
-        var decoded: u64[] = u64[](104u);
-        var inverse_powers: Str = "\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x34\x50\x65\xc0\x5f\xc9\xa6\x52\xbb\x13\xcb\xae\xc4\x40\xc2\x18\x06\xc8\xdf\x71\x00\xd5\xa8\x7c\xf5\x6f\x0f\xda\x58\xfc\x27\x13\x6e\x47\x56\x35\x7d\x24\x20\x65\x02\xc7\xe7\x68\xe4\x8c\xa4\x1d\xe9\xe6\x02\x68\xd7\xcd\x39\x61\x79\x77\xfc\xc2\x40\x5b\xef\x16\x79\x8c\xde\x43\xff\xa7\x51\xf9\x91\xf3\xb2\x78\xf5\xbd\xbe\x11\xe8\x57\xe9\xd6\xe8\xbe\xe8\x7b\xb0\x54\xac\x8f\x84\x8d\x75\x1b\xea\x23\xa4\x99\xe9\xf9\xd3\x8b\xb7\xa3\x71\x40\x61\xda\x3e\x15\xce\xe3\x3e\xcb\x73\xf9\x48\x08\x8c\x97\xb4\x27\xd5\x1b\x70\x10\xa2\xbf\xef\xb9\xeb\x85\x32\x15\x4d\xb4\x4d\xb4\x9b\xbb\x6f\x19\x96\xb6\x07\x6c\xf8\xe7\xee\xad\x36\xd9\xb4\xf5\x91\x35\xae\x13\x22\x22\x18\xaf\x4e\x6a\x68\x4d\x91\xda\xaa\x3d\x4f\x40\x74\x1e\x9f\xbd\x9e\xe0\x06\xa1\xc0\x98\x57\xc2\xa7\xfd\xa4\x0e\x90\x17\x0e\x7d\x49\x71\x73\xe3\x20\x8f\xb2\x20\xd8\x76\x05\x14\x3b\x12\x85\x3d\x74\x34\x81\x13\x43\xb0\xad\x29\x7a\x5f\x27\xf4\x35\x1c";
-        var inverse_offsets: Str = "\x54\x45\x54\x54\x45\x55\x05\x04\x00\x10\x04\x10\x14\x04\x40\x00\x00\x00\x01\x40\x55\x55\x15\x41\x54\x04\x00\x00\x44\x00\x01\x00\x00\x00\x00\x40\x41\x00\x00\x44\x50\x44\x45\x50\x54\x00\x55\x55\x54\x55\x65\x51\x00\x40\x00\x40\x01\x00\x00\x01\x00\x05\x01\x00\x11\x54\x51\x51\x54\x55\x55\x05\x00\x15\x41\x50\x00\x00\x04\x40\x10\x01\x04\x05\x00\x00\x00\x00";
-        var powers: Str = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\xb9\x34\x03\x32\xb7\xf4\xad\x14\x10\xdb\x1a\xb3\x08\x92\x54\x0e\x0d\x30\x7d\x95\x14\x47\xba\x1a\x66\x08\x8f\x4d\x26\xad\xc6\x6d\xf5\x98\xbf\x85\xe2\xb7\x45\x11\xca\x96\x85\x3d\x92\xbd\x1d\xeb\xfc\xa1\x18\x60\xdc\xef\x52\x16\x3c\x92\xae\x22\x0b\xb8\xc1\xb4\x83\x9d\x2d\x5b\x05\x62\xda\x1c\x30\x4c\x7e\x8f\x4e\x8b\xb2\x5b\x16\xf4\x52\x9f\x8b\x56\xa5\x12\xfb\xd4\x82\x76\x43\xed\x8a\xf0\x8f\xe7\xf9\x31\x15\x65\x19\x18\x50\xf1\x9b\xd9\x4a\x13\xee\xb4\x28\x4c\xf0\xa6\x86\xc1\x25\x1f\x03\x5f\xc2\x70\xcb\x9e\x49\x16\xe6\x42\x88\x9c\x44\xeb\x20\x14\xb0\x65\x08\x36\xad\x6e\xa5\x85\x85\xf0\xca\x14\xe2\xfd\x03\x1a\x0b\x89\x99\x79\xd5\xb1\x3d\x09\xd8\xda\x97\x3a\x35\xeb\xcf\x10\xac\x36\x3f\x5e\x73\xbb\x38\xcf\x3e\x67\x52\xfa\x44\xaf\xba\x15";
-        var offsets: Str = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x95\x59\x69\x59\x55\x55\x54\x55\x15\x55\x55\x56\x04\x05\x15\x41\x10\x54\x55\x40\x45\x51\x55\x44\x40\x45\x50\x44\x50\x55\x55\x45\x00\x40\x00\x40\x40\x04\x44\x96\x65\x55\x56\x55\x45\x40\x45\x54\x51\x41\x15\x40\x55\x91\x55\x55\x55\x55\x40\x51\x05\x01\x00\x00\x00\x00\x00\x00";
-        var small_powers: Str = "\x01\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x19\x00\x00\x00\x00\x00\x00\x00\x7d\x00\x00\x00\x00\x00\x00\x00\x71\x02\x00\x00\x00\x00\x00\x00\x35\x0c\x00\x00\x00\x00\x00\x00\x09\x3d\x00\x00\x00\x00\x00\x00\x2d\x31\x01\x00\x00\x00\x00\x00\xe1\xf5\x05\x00\x00\x00\x00\x00\x65\xcd\x1d\x00\x00\x00\x00\x00\xf9\x02\x95\x00\x00\x00\x00\x00\xdd\x0e\xe9\x02\x00\x00\x00\x00\x51\x4a\x8d\x0e\x00\x00\x00\x00\x95\x73\xc2\x48\x00\x00\x00\x00\xe9\x41\xcc\x6b\x01\x00\x00\x00\x8d\x49\xfd\x1a\x07\x00\x00\x00\xc1\x6f\xf2\x86\x23\x00\x00\x00\xc5\x2e\xbc\xa2\xb1\x00\x00\x00\xd9\xe9\xac\x2d\x78\x03\x00\x00\x3d\x91\x60\xe4\x58\x11\x00\x00\x31\xd6\xe2\x75\xbc\x56\x00\x00\xf5\x2e\x6e\x4d\xae\xb1\x01\x00\xc9\xea\x26\x83\x67\x78\x08\x00\xed\x95\xc2\x8f\x05\x5a\x2a\x00\xa1\xed\xcc\xce\x1b\xc2\xd3\x00\x25\xa4\x00\x0a\x8b\xca\x22\x04";
-        _decode_words(inverse_powers, decoded, 0u);
-        _decode_words(inverse_offsets, decoded, 30u);
-        _decode_words(powers, decoded, 41u);
-        _decode_words(offsets, decoded, 67u);
-        _decode_words(small_powers, decoded, 78u);
-        _RyuTables._words = decoded;
-    }
-}
-
-fn _decode_words(
-    ref source: Str,
-    mut ref destination: u64[],
-    start: u64
-) -> unit {
-    var source_index: u64 = 0u;
-    var destination_index: u64 = start;
-    while (source_index < source.len()) {
-        var word: u64 = 0u;
-        var byte_index: u64 = 0u;
-        while (byte_index < 8u) {
-            word = word | (
-                (u64) source.byte((i64) (source_index + byte_index))
-                << (byte_index * 8u)
-            );
-            byte_index = byte_index + 1u;
-        }
-        destination[(i64) destination_index] = word;
-        source_index = source_index + 8u;
-        destination_index = destination_index + 1u;
     }
 }

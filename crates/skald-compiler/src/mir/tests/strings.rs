@@ -2,7 +2,9 @@ use super::*;
 use crate::{
     identity::{ArrayTypeId, ClassId, LiteralDataId},
     resolve::resolve_module_graph,
-    test_support::{load_module_sources, load_module_sources_with_standard_library},
+    test_support::{
+        load_module_sources, load_module_sources_with_standard_library, lower_hir_to_final_mir,
+    },
     typeck::type_check,
 };
 
@@ -60,7 +62,7 @@ fn panic_mir() -> MirProgram {
     );
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    lower_hir(&checked.hir.expect("valid panic source must produce HIR"))
+    lower_hir_to_final_mir(&checked.hir.expect("valid panic source must produce HIR"))
 }
 
 fn errors_after(mutator: impl FnOnce(&mut MirProgram)) -> String {

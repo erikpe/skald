@@ -375,6 +375,7 @@ fn installed_process_arguments_reach_verified_assembly_as_ordinary_library_sourc
         "    push rbp\n",
         "    mov rbp, rsp\n",
         "    call ska_rt_abi_v8\n",
+        "    call .Lska.static.initialize\n",
         "    call .Lska.fn.app.main.",
     )));
     for runtime_symbol in [

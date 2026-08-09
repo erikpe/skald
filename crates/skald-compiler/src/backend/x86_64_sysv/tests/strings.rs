@@ -2,7 +2,9 @@ use super::*;
 use crate::{
     mir::{lower_hir, MirStaticAllocationOrigin},
     resolve::resolve_module_graph,
-    test_support::{load_module_sources, load_module_sources_with_standard_library},
+    test_support::{
+        load_module_sources, load_module_sources_with_standard_library, lower_hir_to_final_mir,
+    },
     typeck::type_check,
 };
 
@@ -54,7 +56,7 @@ fn canonical_string_program(app: &str) -> MirProgram {
     );
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    lower_hir(&checked.hir.expect("valid panic source must produce HIR"))
+    lower_hir_to_final_mir(&checked.hir.expect("valid panic source must produce HIR"))
 }
 
 fn string_assembly(app: &str) -> String {
@@ -239,9 +241,11 @@ fn private_initializer_dynamic_strings_reclaim_their_last_backing_owner() {
         "report:\n",
         "    mov rax, 1\n",
         "    mov rcx, qword ptr [rip + .Lstring_allocations]\n",
-        "    cmp rcx, 2\n",
+        // The six conversion tables remain live until program shutdown; the
+        // two dynamic string allocations have already been reclaimed here.
+        "    cmp rcx, 8\n",
         "    jne .Lstring_report_done\n",
-        "    cmp rcx, qword ptr [rip + .Lstring_frees]\n",
+        "    cmp qword ptr [rip + .Lstring_frees], 2\n",
         "    jne .Lstring_report_done\n",
         "    xor rax, rax\n",
         ".Lstring_report_done:\n",

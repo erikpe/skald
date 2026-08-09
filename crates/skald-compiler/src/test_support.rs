@@ -121,7 +121,12 @@ pub(crate) fn lower_source_to_final_mir(text: impl Into<String>) -> MirProgram {
     let hir = checked
         .hir
         .expect("successful type checking must produce typed HIR");
-    let preliminary = lower_preliminary_hir(&hir);
+    lower_hir_to_final_mir(&hir)
+}
+
+/// Runs lifecycle planning and synthesis for already type-checked test HIR.
+pub(crate) fn lower_hir_to_final_mir(hir: &crate::hir::HirProgram) -> MirProgram {
+    let preliminary = lower_preliminary_hir(hir);
     let planned = crate::passes::static_lifecycle::plan_static_lifetimes(preliminary)
         .unwrap_or_else(|failure| {
             panic!(

@@ -241,7 +241,7 @@ The required asymptotic behavior is:
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 | Format a boolean | `O(1)` literal-backed result |
 | Format an integer | `O(d)` final-backing allocation and decimal digit emission |
-| Format a binary64 value | `O(1)` over the fixed binary64 domain: one exact-length result allocation plus bounded fixed-width Ryū arithmetic; the first non-small finite value also initializes one reusable 832-byte cached-power table |
+| Format a binary64 value | `O(1)` over the fixed binary64 domain: one exact-length result allocation plus bounded fixed-width Ryū arithmetic over statically initialized cached-power tables |
 | Parse a boolean | `O(1)` exact byte comparison with no allocation |
 | Parse an integer | `O(n)` checked decimal accumulation with no allocation |
 | Parse a binary64 value | `O(n)` allocation-free scan, followed by an exact small conversion or fixed-width Eisel-Lemire conversion in ordinary cases; ambiguous inputs use one `O(n)` rescan plus bounded 768-digit, 4096-bit exact rounding storage and work |
@@ -290,11 +290,11 @@ Binary64 parsing first retains at most 19 significant decimal digits in a
 `u64`. Integer-valued inputs that can be scaled without unsigned overflow, and
 values whose significand and power of ten are both exactly representable in
 binary64, use the exact small path. Other ordinary values use Eisel-Lemire
-conversion with portable `64 × 64 -> 128` multiplication and an independently
-encoded power-of-five table covering decimal exponents from -342 through 308.
-The parser decodes only the selected two-word power directly from an immortal
-hexadecimal literal and performs no table or numeric-storage allocation on
-that path. When more than 19 digits are significant, the result is accepted
+conversion with portable `64 × 64 -> 128` multiplication and an independent,
+statically initialized power-of-five table covering decimal exponents from
+-342 through 308. The parser indexes the selected two-word power directly and
+performs no table or numeric-storage allocation on that path. When more than
+19 digits are significant, the result is accepted
 only if converting both adjacent retained-prefix endpoints selects the same
 binary64 value. Near-halfway and otherwise ambiguous inputs are rescanned into
 the exact-rounding fallback.
@@ -304,13 +304,9 @@ Binary64 formatting reads the exact IEEE-754 representation through
 algorithm. Values in Ryū's small-integer range avoid the cached-power table.
 Other finite nonzero values reconstruct the needed power from Ryū's
 size-optimized constants using portable `64 × 64 -> 128` limb arithmetic. The
-constants occupy an 832-byte canonical little-endian encoding split into five
-immortal string-literal sections. On first use, the formatter decodes them
-into one zero-default static 104-word `u64[]`
-and reuses that program-owned array; table decoding and numeric conversion
-perform no per-value allocation. Reverse normal-return shutdown releases its
-backing. The current single-threaded execution model permits the empty static
-array to serve as the initialization sentinel.
+constants occupy five statically initialized `u64[]` tables containing 104
+words in total; numeric conversion performs no per-value table allocation.
+Reverse normal-return shutdown releases the arrays' backing.
 
 The exact parser fallback retains at most 768 significant digits plus a
 nonzero-tail bit. Every binary64 rounding boundary can be decided within that

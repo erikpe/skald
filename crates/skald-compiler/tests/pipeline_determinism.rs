@@ -10,9 +10,9 @@ use skald_compiler::{
     backend::{emit_assembly, Target},
     diagnostics::render_diagnostics,
     driver::EntrySelector,
-    hir::dump_hir,
+    hir::{dump_hir, HirProgram},
     lexer::{dump_tokens, lex},
-    mir::{dump_mir, lower_hir, lower_preliminary_hir},
+    mir::{dump_mir, lower_hir, lower_preliminary_hir, MirProgram},
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
@@ -1303,7 +1303,7 @@ fn string_phase_dump(variant: usize) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
-    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let mir = lower_final_hir(&hir);
     let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
 
     normalize_fixture_paths(
@@ -1391,7 +1391,7 @@ fn io_phase_dump(variant: usize, malformed: bool) -> String {
         let checked = type_check(&resolved.program);
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let hir = checked.hir.unwrap();
-        let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+        let mir = lower_final_hir(&hir);
         let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
         format!(
             "GRAPH\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
@@ -1502,6 +1502,13 @@ fn complete_phase_dump(text: &str) -> String {
         dump_mir(&mir),
         assembly,
     )
+}
+
+fn lower_final_hir(hir: &HirProgram) -> MirProgram {
+    let preliminary = lower_preliminary_hir(hir);
+    let planned = plan_static_lifetimes(preliminary).unwrap();
+    let mir = synthesize_static_lifecycle(planned).unwrap();
+    run_mir_pipeline(mir).unwrap()
 }
 
 fn planned_lifecycle_phase_dump(text: &str) -> String {

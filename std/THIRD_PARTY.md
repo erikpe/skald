@@ -13,8 +13,8 @@ Copyright 2018 Ulf Adams.
 The derived code is used under the Boost Software License 1.0, included at
 [licenses/BSL-1.0.txt](licenses/BSL-1.0.txt). The port replaces C intrinsics
 with portable 32-bit-limb multiplication, packs the size-optimized constants
-as a canonical little-endian immortal string, lazily decodes one reusable
-104-word table, and applies Skald's existing textual presentation contract.
+into five statically initialized tables containing 104 words in total, and
+applies Skald's existing textual presentation contract.
 
 ## Rust Eisel-Lemire binary64 parsing
 
@@ -27,7 +27,7 @@ Copyright The Rust Project Developers.
 
 The derived code is used under the MIT license, included at
 [licenses/MIT-RUST.txt](licenses/MIT-RUST.txt). The port replaces native
-`u128` operations with portable 32-bit-limb multiplication, stores an
-independent hexadecimal power table in immortal string literals, constructs
+`u128` operations with portable 32-bit-limb multiplication, stores the
+independent power table as statically initialized `u64` words, constructs
 binary64 results through `std::f64::from_bits`, and retains Skald's existing
 bounded exact fallback and textual contract.

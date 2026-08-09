@@ -11,7 +11,9 @@ use crate::{
         HirLogicalOperation, HirOptionalOperand, HirProgram, HirSharedProducer, HirSharedSource,
         HirStatement, HirViewSource, Type,
     },
-    test_support::{load_module_sources_with_standard_library, type_check_source},
+    test_support::{
+        load_module_sources_with_standard_library, lower_hir_to_final_mir, type_check_source,
+    },
 };
 
 const BOUNDED_OPERANDS: &str = concat!(
@@ -445,7 +447,7 @@ fn lower_failure_logical(operation: HirLogicalOperation, left: &str, right: &str
     let left = operand(&hir, left);
     let right = operand(&hir, right);
     replace_return_with_logical_expressions(&mut hir, "evaluate", operation, left, right);
-    lower_hir(&hir)
+    lower_hir_to_final_mir(&hir)
 }
 
 #[test]
