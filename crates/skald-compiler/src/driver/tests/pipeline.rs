@@ -369,12 +369,12 @@ fn installed_process_arguments_reach_verified_assembly_as_ordinary_library_sourc
     assert!(artifact
         .assembly
         .contains("call .Lska.fn.std.io.read_file."));
-    assert_eq!(artifact.assembly.matches("call ska_rt_abi_v8\n").count(), 1);
+    assert_eq!(artifact.assembly.matches("call ska_rt_abi_v9\n").count(), 1);
     assert!(artifact.assembly.contains(concat!(
         "main:\n",
         "    push rbp\n",
         "    mov rbp, rsp\n",
-        "    call ska_rt_abi_v8\n",
+        "    call ska_rt_abi_v9\n",
         "    call .Lska.static.initialize\n",
         "    call .Lska.fn.app.main.",
     )));
@@ -938,7 +938,7 @@ fn synthesized_static_initializers_cross_the_complete_driver_pipeline() {
 
     assert!(artifact.assembly.contains(".Lska.static.initialize:"));
     assert!(artifact.assembly.contains(
-        "    call ska_rt_abi_v8\n    call .Lska.static.initialize\n    call .Lska.fn.main.main.f0"
+        "    call ska_rt_abi_v9\n    call .Lska.static.initialize\n    call .Lska.fn.main.main.f0"
     ));
 }
 

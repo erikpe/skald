@@ -74,7 +74,7 @@ Use the authority closest to the behavior:
 - implemented language-item, literal-data, immortal-backing, verification, and
   target responsibilities belong in
   [the strings compiler contract](compiler/STRINGS.md);
-- the frozen private byte-array intrinsic, phase, target, and version-8 runtime
+- the frozen private byte-array intrinsic, phase, target, and version-9 runtime
   boundary belongs in
   [the standard I/O compiler and runtime contract](compiler/IO.md);
 - implemented shared-owner lowering, allocation layout, generated reference

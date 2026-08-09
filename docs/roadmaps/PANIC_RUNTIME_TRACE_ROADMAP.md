@@ -1,6 +1,6 @@
 # Panic Runtime Trace Roadmap
 
-Status: planned; TRACE0 is next.
+Status: in progress; TRACE1 is next.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
@@ -43,7 +43,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 
 ## Progress
 
-- [ ] TRACE0 — Establish runtime ABI version 9 and trace rendering
+- [x] TRACE0 — Establish runtime ABI version 9 and trace rendering
 - [ ] TRACE1 — Add explicit backend trace input and deterministic metadata
 - [ ] TRACE2 — Maintain source-callable trace frames with inline TLS
 - [ ] TRACE3 — Record source calls and reporter failure locations
@@ -59,26 +59,26 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 top preserves current program output, so the incompatible ABI transition can
 be made atomically without requiring compiler-generated frames in the same PR.
 
-- [ ] Add the fixed `SkaRtTraceContext`, `SkaRtTraceLocation`, and
+- [x] Add the fixed `SkaRtTraceContext`, `SkaRtTraceLocation`, and
   `SkaRtTraceFrame` layouts plus the zero-initialized hidden
   `_Thread_local SkaRtTraceFrame* ska_rt_trace_top` definition.
-- [ ] Advance the runtime header, runtime definition, backend link reference,
+- [x] Advance the runtime header, runtime definition, backend link reference,
   contract tests, link-mismatch tests, and all current version assertions from
   ABI 8/`ska_rt_abi_v8` to ABI 9/`ska_rt_abi_v9` in one change.
-- [ ] Preserve the existing `ska_rt_panic` signature and first-line payload
+- [x] Preserve the existing `ska_rt_panic` signature and first-line payload
   behavior, including embedded zeroes/newlines and null-with-zero-length.
-- [ ] Extend the reporter to walk newest first, write length-delimited name and
+- [x] Extend the reporter to walk newest first, write length-delimited name and
   path bytes, convert `u64` line/column values with fixed local buffers, cap at
   256 rows, and emit the exact omitted-outer-frames marker.
-- [ ] Reuse the existing retrying direct-write path for every fragment; do not
+- [x] Reuse the existing retrying direct-write path for every fragment; do not
   introduce `stdio`, heap allocation, recursion, a capacity vector, or a
   recoverable output failure.
-- [ ] Expand the direct C harness to construct empty, single, nested, replaced,
+- [x] Expand the direct C harness to construct empty, single, nested, replaced,
   256-frame, longer-than-cap, and cyclic chains, and to cover output failure
   after trace rendering begins.
-- [ ] Prove reporter allocation independence with a direct harness whose
+- [x] Prove reporter allocation independence with a direct harness whose
   allocation hooks hard-fail if rendering calls them.
-- [ ] Update the runtime ABI and related living documents to distinguish the
+- [x] Update the runtime ABI and related living documents to distinguish the
   implemented version-9 reporter from not-yet-emitted compiler trace state.
 
 **Tests:** `make runtime-test`; focused compiler/backend marker and

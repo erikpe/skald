@@ -342,7 +342,7 @@ verified MIR, deterministic x86-64 startup, and native execution.
 
 Static fields add no public C symbol, runtime service, allocator behavior,
 panic reason, garbage-collector root, trace operation, or linker lifecycle
-hook. Runtime ABI version 8 and its compatibility marker remain unchanged. The
+hook. Runtime ABI version 9 and its compatibility marker remain unchanged. The
 existing process wrapper calls compiler-private program initializer and
 finalizer functions around Skald entry. Source `public` visibility does not
 export a native static symbol, and static fields are not permitted in external

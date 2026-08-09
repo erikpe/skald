@@ -421,8 +421,8 @@ invalid lifetime state.
 ## Implemented standard I/O target boundary
 
 Standard I/O has five dedicated verified MIR operations which the x86-64
-target lowers directly to the five exact version-8 symbols specified by the
-[I/O contract](IO.md#implemented-runtime-abi-version-8). Array operands become
+target lowers directly to the five exact version-9 symbols specified by the
+[I/O contract](IO.md#implemented-runtime-abi-version-9). Array operands become
 a backing byte address at the checked offset plus the remaining byte count;
 neither an array descriptor, owner, nor `Str` value crosses into C. The
 frame-resident backing anchor remains live through the call and ordinary
@@ -438,7 +438,7 @@ select symbols from the MIR operation rather than source names.
 
 ## Panic and hard-trap boundary
 
-The version-8 runtime reporter and explicit source-panic lowering are
+The version-9 runtime reporter and explicit source-panic lowering are
 implemented. Compiler-known optional, array, cast, checked-shift, and checked
 integer-division failures use the same reporter while retaining distinct
 target-independent MIR reasons.
@@ -470,14 +470,17 @@ being compiled into either a panic or a hard trap.
 
 A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
-`panic:` record. The current target allocates no trace state; the frozen
-extension below adds source locations and a shadow stack only to source-level
-panic reporting, not to hard traps.
+`panic:` record. The current target allocates no trace state, so version-9
+runtime trace rendering observes a null top for compiler-generated programs.
+The frozen target extension below adds source locations and a shadow stack
+only to source-level panic reporting, not to hard traps.
 
 ## Frozen runtime trace target boundary
 
 Runtime tracing is frozen for Linux x86-64 implementation but is not yet
-emitted. Each traced source callable receives one 16-byte linked trace record
+emitted by the compiler. The version-9 runtime already owns the hidden TLS
+state and allocation-free renderer. Each traced source callable will receive
+one 16-byte linked trace record
 inside its ordinary fixed native frame: an eight-byte pointer to the previous
 record and an eight-byte pointer to immutable static location metadata. The
 runtime owns one hidden C11 thread-local top pointer. Generated code accesses

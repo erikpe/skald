@@ -222,11 +222,13 @@ target-specific legality or lowering contract.
 
 ## Inspect frozen runtime traces
 
-Runtime traces are frozen but not yet implemented. Once present, begin with
-the existing MIR span at the reported operation; MIR deliberately contains no
-trace instruction or metadata identity. Then inspect backend planning for the
-source-callable context, escaped provider-relative path, span-start line and
-column, frame eligibility, and whether the operation requires a replacement.
+The version-9 runtime renderer is implemented, while compiler trace emission
+is not. A directly constructed chain can isolate runtime formatting from
+future backend faults. For emitted traces, begin with the existing MIR span at
+the reported operation; MIR deliberately contains no trace instruction or
+metadata identity. Then inspect backend planning for the source-callable
+context, escaped provider-relative path, span-start line and column, frame
+eligibility, and whether the operation requires a replacement.
 
 In enabled x86-64 assembly, an eligible source callable must have one linked
 16-byte record, one six-instruction publish sequence after its ordinary entry

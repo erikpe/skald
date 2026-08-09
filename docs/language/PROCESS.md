@@ -96,7 +96,7 @@ operations and casts, strings, modules, and whole-file I/O. It adds no syntax,
 grammar production, name-resolution rule, type-system rule, compiler phase,
 IR operation, target instruction, or compiler intrinsic.
 
-Runtime ABI version 8, `ska_rt_abi_v8`, the five byte-I/O functions, the public
+Runtime ABI version 9, `ska_rt_abi_v9`, the five byte-I/O functions, the public
 C header, and the generated C-compatible process wrapper remain unchanged.
 The wrapper continues to call the parameterless internal Skald entry function;
 there is no C `argc`/`argv` capture, retained host pointer, runtime global, or

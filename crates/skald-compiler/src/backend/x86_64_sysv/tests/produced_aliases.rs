@@ -68,12 +68,12 @@ fn produced_views_use_the_existing_object_alias_abi_without_runtime_support() {
             .map(str::trim)
             .filter(|line| line.starts_with("call ska_rt_"))
             .collect::<Vec<_>>(),
-        ["call ska_rt_panic", "call ska_rt_abi_v8"]
+        ["call ska_rt_panic", "call ska_rt_abi_v9"]
     );
     assert_system_assembler_accepts(&first);
     assert_eq!(run_native_assembly(&first).code(), Some(36));
 
     let runtime_header = include_str!("../../../../../../runtime/include/skald_runtime.h");
-    assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(8)"));
-    assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8"));
+    assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(9)"));
+    assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v9"));
 }

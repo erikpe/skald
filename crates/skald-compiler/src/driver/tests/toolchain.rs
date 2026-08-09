@@ -121,14 +121,14 @@ fn unresolved_source_external_is_reported_as_a_toolchain_failure() {
 }
 
 #[test]
-fn runtime_version_7_archive_is_a_toolchain_failure() {
+fn runtime_version_8_archive_is_a_toolchain_failure() {
     let directory = TemporaryDirectory::new("driver-runtime-abi-mismatch").unwrap();
     let output = directory.join("program");
     fs::write(&output, "previous executable").unwrap();
     let incompatible_archive = directory.join("libskald_runtime.a");
-    let stale_source = directory.join("runtime_v7.c");
-    let stale_object = directory.join("runtime_v7.o");
-    fs::write(&stale_source, "void ska_rt_abi_v7(void) {}\n").unwrap();
+    let stale_source = directory.join("runtime_v8.c");
+    let stale_object = directory.join("runtime_v8.o");
+    fs::write(&stale_source, "void ska_rt_abi_v8(void) {}\n").unwrap();
     assert!(Command::new("cc")
         .args(["-std=c11", "-c"])
         .arg(&stale_source)
@@ -167,7 +167,7 @@ fn runtime_version_7_archive_is_a_toolchain_failure() {
     assert_eq!(tool, OsString::from("cc"));
     assert!(exit_code.is_some());
     assert!(
-        details.contains("ska_rt_abi_v8"),
+        details.contains("ska_rt_abi_v9"),
         "linker did not identify the missing ABI marker: {details}"
     );
     assert_eq!(fs::read_to_string(output).unwrap(), "previous executable");

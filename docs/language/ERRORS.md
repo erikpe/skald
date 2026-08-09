@@ -185,15 +185,17 @@ The exact reporter signature, stderr bytes, and ABI-version transition are
 implementation contracts rather than portable source representation. They
 are frozen in the
 [runtime ABI](../compiler/RUNTIME_ABI.md#panic-reporting-abi).
-The implemented reporter still emits only that single panic line. The frozen
-[runtime-trace extension](#frozen-panic-runtime-traces) below adds locations
-and stacktrace rows without changing the panic API, failure catalog, or
-non-unwinding semantics. Exceptions remain deferred.
+The version-9 reporter can append the frozen
+[runtime-trace rows](#frozen-panic-runtime-traces) from a valid active shadow
+chain without changing the panic API, failure catalog, or non-unwinding
+semantics. The current compiler does not yet publish that chain, so its
+programs still emit only the single panic line. Exceptions remain deferred.
 
 ## Frozen panic runtime traces
 
-Panic runtime traces are frozen for implementation but are not yet emitted by
-the current compiler. With tracing enabled, every source-authored executable
+Panic runtime traces are frozen for implementation and the version-9 runtime
+can render a directly supplied chain, but traces are not yet emitted by the
+current compiler. With tracing enabled, every source-authored executable
 callable contributes one active frame. This includes ordinary functions,
 methods, initializers, explicit static-field initializer bodies, and
 source-authored copy, assignment, and destruction bodies in application or

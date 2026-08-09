@@ -26,7 +26,7 @@ fn primitive_element_lists_execute_for_every_scalar_and_outer_ownership() {
             second = second,
         );
         let mut output = assembly(&source);
-        assert!(output.contains("call ska_rt_abi_v8"));
+        assert!(output.contains("call ska_rt_abi_v9"));
         assert!(!output.contains("ska_rt_array_element_list"));
         output.push_str(native_allocator());
         assert_eq!(

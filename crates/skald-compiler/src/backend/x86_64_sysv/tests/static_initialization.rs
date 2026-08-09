@@ -93,7 +93,7 @@ fn coordinator_uses_dependency_order_and_wrapper_runs_it_before_entry() {
     assert!(coordinator.find(base_call).unwrap() < coordinator.find(dependent_call).unwrap());
     assert!(!coordinator.contains("static.s1.initialize"));
     assert!(assembly.contains(
-        "    call ska_rt_abi_v8\n    call .Lska.static.initialize\n    call .Lska.fn.main.main.f1"
+        "    call ska_rt_abi_v9\n    call .Lska.static.initialize\n    call .Lska.fn.main.main.f1"
     ));
     assert_eq!(run_native_assembly(&assembly).code(), Some(42));
 }

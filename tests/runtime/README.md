@@ -12,7 +12,7 @@ Run the current runtime suite from the repository root with:
 make runtime-test
 ```
 
-The suite contains six focused executables:
+The suite contains seven focused executables:
 
 - `test_runtime_contract.c` checks link/version compatibility and platform
   requirements;
@@ -26,8 +26,11 @@ The suite contains six focused executables:
   progress, EOF, host failures, normal close, and post-close behavior;
 - `test_runtime_io_defects.c` uses child processes to verify hard failure for
   invalid selectors, modes, handles, and pointer/length pairs;
-- `test_runtime_panic.c` verifies exact length-delimited panic records,
-  reporter failure, and invalid-input hard failure.
+- `test_runtime_panic.c` verifies exact length-delimited panic records; single,
+  nested, replaced, capped, over-cap, and cyclic trace chains; reporter
+  failure after trace output begins; and invalid-input hard failure;
+- `test_runtime_panic_no_allocation.c` link-wraps the heap operations and
+  verifies that rendering a valid trace never calls one.
 
 The allocation-failure, I/O, and panic harnesses share only the small system
 error-reporting helper in `runtime_test_support.c`. The Makefile builds and runs the runtime archive

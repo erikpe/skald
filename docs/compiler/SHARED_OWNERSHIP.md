@@ -448,7 +448,7 @@ when nested logical selections establish several owners before cleanup.
 
 ## Minimal C runtime ABI
 
-Runtime ABI version 8 carries its version-specific marker, the common panic
+Runtime ABI version 9 carries its version-specific marker, the common panic
 reporter, the existing output functions, and these allocation operations:
 
 ```c
@@ -472,12 +472,12 @@ wrapper around `free`. It does not know the header shape, initialize counts,
 inspect metadata, invoke finalizers, or implement retain and release. Exact C
 allocation-failure termination machinery remains private; the stable current
 behavior is unsuccessful non-returning failure. Valid host allocation failure
-uses the version-8 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry
+uses the version-9 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry
 point.
 Invalid byte counts and violated deallocation preconditions remain runtime
 contract defects rather than user panic.
 
-ABI version 8 and these symbols are the current shared-ownership runtime
+ABI version 9 and these symbols are the current shared-ownership runtime
 boundary. The header, runtime implementation, every generated process-entry
 marker, direct C harnesses, mismatch tests, and documentation carry the same
 version.

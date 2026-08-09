@@ -4,7 +4,7 @@
 public functions implemented.
 
 This document defines the compiler/runtime boundary for the source API in
-[Standard I/O](../language/IO.md). Runtime ABI version 8 implements the five
+[Standard I/O](../language/IO.md). Runtime ABI version 9 implements the five
 host operations below. The closed compiler registry recognizes the five
 private declarations installed in `std::io`; the module implements its complete
 nine-function public surface in ordinary Skald code.
@@ -126,9 +126,9 @@ validated it. A count greater than the supplied remaining length, or zero
 progress from a write with non-empty remaining input, is an invalid runtime
 result and must not silently loop or truncate.
 
-## Implemented runtime ABI version 8
+## Implemented runtime ABI version 9
 
-The runtime exports these functions under ABI version 8:
+The runtime exports these functions under ABI version 9:
 
 ```c
 int64_t ska_rt_io_standard_handle(uint8_t stream);
@@ -162,7 +162,7 @@ Focused compiler tests cover all five HIR-to-MIR operations, deterministic MIR
 forms, left-to-right single evaluation, byte-array aliases and backing-anchor
 lifetimes, exact result carriage, malformed types/access/anchors/checks/results,
 residual intrinsic calls, exact runtime-symbol selection, pointer/remaining-
-length formation, empty ranges, assembler acceptance, and native version-8
+length formation, empty ranges, assembler acceptance, and native version-9
 archive linkage. Private replacement-standard-library goldens cover successful
 results, host failures, dynamic offsets, and bounds failure before C.
 

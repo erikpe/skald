@@ -12,9 +12,10 @@ target calling conventions are owned by the
 ## Artifact and public surface
 
 The runtime is a C11 static library built as
-`build/runtime/libskald_runtime.a`. Its public interface is
-`runtime/include/skald_runtime.h`; declarations not present in that header are
-implementation-private and are not ABI entry points.
+`build/runtime/libskald_runtime.a`. Its ABI contract is declared in
+`runtime/include/skald_runtime.h`. The callable declarations are public ABI
+entry points; the trace records and hidden TLS declaration in the same header
+form a compiler/runtime-private data contract.
 
 Optional values add no runtime entry point or ABI-version change. The
 `shared? T` zero niche is handled entirely by generated branches; zero is
@@ -28,24 +29,49 @@ bodies, and the private program initializer and finalizer are
 compiler/backend-owned. The generated process-entry wrapper calls the
 initializer after the unchanged compatibility marker and before Skald entry,
 then preserves the entry result across the finalizer on normal return. Abrupt
-termination does not unwind static state. Runtime ABI version 8,
+termination does not unwind static state. Runtime ABI version 9,
 `skald_runtime.h`, and its marker remain unchanged. Static fields do not alter
 instance object layouts, dispatch metadata, internal call classification, or
 the primitive-only external ABI.
 
 The implemented [process-argument contract](../language/PROCESS.md) also leaves
 this surface unchanged. Its Linux implementation is ordinary Skald source
-over `std::io::read_file`; runtime ABI version 8 and the parameterless process
+over `std::io::read_file`; runtime ABI version 9 and the parameterless process
 wrapper remain current. It adds no C `argc`/`argv` capture, retained host
 pointer, runtime global, public symbol, or compatibility-marker change.
 
-The current public surface is:
+The current header contract is:
 
 ```c
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(8)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(9)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v9
+
+typedef struct SkaRtTraceContext SkaRtTraceContext;
+typedef struct SkaRtTraceLocation SkaRtTraceLocation;
+typedef struct SkaRtTraceFrame SkaRtTraceFrame;
+
+struct SkaRtTraceContext {
+    const uint8_t* name;
+    uint64_t name_length;
+    const uint8_t* path;
+    uint64_t path_length;
+};
+
+struct SkaRtTraceLocation {
+    const SkaRtTraceContext* context;
+    uint64_t line;
+    uint64_t column;
+};
+
+struct SkaRtTraceFrame {
+    SkaRtTraceFrame* previous;
+    const SkaRtTraceLocation* location;
+};
+
+extern __attribute__((visibility("hidden")))
+    _Thread_local SkaRtTraceFrame* ska_rt_trace_top;
 
 void SKALD_RUNTIME_ABI_MARKER(void);
 uint64_t ska_rt_abi_version(void);
@@ -68,7 +94,7 @@ conversion or scalar observation entry point.
 
 ## Byte I/O ABI
 
-ABI version 8 implements the five host operations over handles, scalars, and
+ABI version 9 implements the five host operations over handles, scalars, and
 byte pointer/length pairs shown in the public surface above. They form the
 runtime half of the [standard I/O compiler and runtime contract](IO.md). The
 compiler's canonical intrinsic identities, typed I/O HIR, verified
@@ -109,9 +135,9 @@ growth, whole-input loop, partial-write completion, public error message,
 
 ## Version and link compatibility
 
-ABI version 8 uses the exported no-op marker `ska_rt_abi_v8`. Every generated
+ABI version 9 uses the exported no-op marker `ska_rt_abi_v9`. Every generated
 process entry wrapper calls that exact symbol before entering Skald code. A
-version-7 or otherwise incompatible runtime archive therefore fails
+version-8 or otherwise incompatible runtime archive therefore fails
 normal linking with an undefined-symbol error rather than producing an
 executable with mismatched compiler/runtime assumptions.
 
@@ -129,12 +155,11 @@ An incompatible runtime change must update all of these together:
 The marker name is deliberately version-specific. Keeping the old marker on an
 incompatible runtime would defeat the link guard.
 
-The frozen runtime-trace extension is an incompatible compiler/runtime state
-contract and therefore advances the implementation target once to ABI version
-9 with marker `ska_rt_abi_v9`. Version 8 remains the current implemented ABI
-until that extension lands. The version-9 change must update the numeric
-constant, public marker macro and declaration, runtime definition, backend
-reference, link-mismatch tests, and every version assertion together.
+The runtime-trace state contract was the incompatible change that advanced the
+current implementation to ABI version 9 with marker `ska_rt_abi_v9`. A
+version-8 archive is intentionally incompatible. The numeric constant, marker
+macro and definition, backend reference, link-mismatch test, and version
+assertions move together for every future incompatible change.
 
 ## C platform requirements
 
@@ -175,7 +200,7 @@ unrecoverable termination helper remain implementation details.
 
 ## Panic-reporting ABI
 
-ABI version 8 exports this reporting entry point:
+ABI version 9 exports this reporting entry point:
 
 ```c
 _Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
@@ -216,13 +241,14 @@ signal is private, but normal return is forbidden.
 
 The source-level API, flow behavior, and sole static-message catalog are owned
 by the [frozen language panic design](../language/ERRORS.md#frozen-panic-design).
-The current version-8 reporter has no source locations or shadow state. The
-frozen version-9 extension below adds trace discovery through hidden TLS while
-keeping this reporter signature. Exceptions remain deferred.
+The version-9 reporter discovers an optional active trace through hidden TLS
+while keeping this reporter signature. The current compiler does not yet
+publish trace frames, so compiler-generated programs retain the single-line
+record until the backend trace work lands. Exceptions remain deferred.
 
 ## Frozen runtime trace ABI version 9
 
-Runtime traces are frozen for ABI version 9 but are not yet implemented. The
+The runtime half of tracing is implemented in ABI version 9. Its
 compiler/runtime-private record contract is:
 
 ```c
@@ -291,9 +317,15 @@ silent and never request trace rendering. Compile-time omission publishes no
 frame, so a runtime containing this support still produces the current
 single-line record for an omitted-trace program.
 
+The current compiler references the version-9 compatibility marker but does
+not yet emit metadata, publish frames, or update locations. Consequently its
+programs observe a null trace top and the unchanged single-line output. The
+frozen compiler contract remains described by the phase and backend sections
+linked below.
+
 ## Responsibility boundary
 
-The current version-8 runtime owns its version/link guard, checked byte
+The current version-9 runtime owns its version/link guard, checked byte
 allocation/deallocation, panic reporter, and five narrow handle/byte I/O
 operations above. It has no public ABI for:
 
@@ -301,7 +333,7 @@ operations above. It has no public ABI for:
 - object, class, interface, or dynamic-type metadata;
 - garbage collection, roots, tracing, safepoints, or write barriers;
 - strings, array descriptors, source-level files/streams, or broader I/O;
-- runtime traces (until the frozen version-9 extension is implemented);
+- runtime-managed trace push, pop, location replacement, or metadata creation;
 - recoverable or checked exceptions.
 
 Produced exact-class objects passed to read-only class, interface, or `Obj`
@@ -311,7 +343,7 @@ selected address, complete-object address, and metadata address. No runtime
 allocation, lifetime service, object symbol, or ABI-version change is
 involved; checked type operations may still use the existing generic panic
 reporter on their ordinary failure path. The compatibility marker remains
-`ska_rt_abi_v8`.
+`ska_rt_abi_v9`.
 
 Future language designs may require more of these responsibilities, but they
 do not exist merely because a runtime library is present.
@@ -345,12 +377,12 @@ runtime symbol.
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,
 descriptor materialization, and immortal retain/release behavior are generated
-compiler responsibilities; the runtime marker remains version 8.
+compiler responsibilities; the runtime marker remains version 9.
 
 Primitive integer comparisons likewise add no public C symbol or ABI revision.
 The x86-64 backend selects signed or unsigned target conditions and
 materializes canonical boolean results entirely in generated code; the runtime
-marker remains version 8.
+marker remains version 9.
 
 ## Loop ABI boundary
 
@@ -358,7 +390,7 @@ The implemented `while`, `break`, and `continue`
 [source contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits)
 and [phase representation](PHASES_AND_IR.md#while-loop-representation)
 add no public C symbol, runtime state, or ABI-version change. The runtime marker
-remains `ska_rt_abi_v8`.
+remains `ska_rt_abi_v9`.
 
 Loop execution is generated control flow. The runtime never receives or
 interprets:
@@ -393,7 +425,7 @@ new runtime harness.
 The implemented
 [explicit array element-list contract](../language/ARRAYS.md#explicit-element-list-construction)
 adds no public C symbol, runtime-managed element operation, metadata format, or
-ABI-version change. The runtime marker remains `ska_rt_abi_v8`.
+ABI-version change. The runtime marker remains `ska_rt_abi_v9`.
 
 Checked backing allocation and release continue through the existing raw byte
 allocation boundary. Element expression evaluation, destination-typed
@@ -417,7 +449,7 @@ ownership operations.
 The
 [implemented primitive operator profile](../language/TYPES_AND_VALUES.md#implemented-primitive-operator-profile)
 adds no public C symbol, runtime-managed value, or ABI-version change. The
-runtime marker remains `ska_rt_abi_v8`.
+runtime marker remains `ska_rt_abi_v9`.
 
 Wrapping arithmetic, division and remainder, bitwise operations, shifts,
 floating operations and comparisons, boolean operations, short-circuit
@@ -447,7 +479,7 @@ The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
 adds no public C symbol, runtime-managed value, or ABI-version change. All
 twenty-two pure cells are generated inline and retain the existing
-`ska_rt_abi_v8` marker. The compiler catalogs the checked conversion's
+`ska_rt_abi_v9` marker. The compiler catalogs the checked conversion's
 distinct termination reason and exact static message while preserving that
 marker. x86-64 executes the checked diamond and reaches the existing
 reporter on failure without adding a runtime symbol or conversion helper.
@@ -473,7 +505,7 @@ harnesses.
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds
-six directly linked C harnesses:
+seven directly linked C harnesses:
 
 - the contract harness checks the marker, numeric version, and platform
   requirements;
@@ -489,11 +521,14 @@ six directly linked C harnesses:
 - the I/O-defect harness uses child processes to keep invalid selectors,
   modes, handles, and pointer/length pairs on the private hard-failure path;
 - the panic harness captures exact stderr for empty, ordinary, embedded-zero,
-  and embedded-newline messages, verifies reporter-output failure, and keeps
-  invalid reporter input on a silent private hard-failure path.
+  and embedded-newline messages; single, nested, replaced, capped, over-cap,
+  and cyclic traces; injected reporter-output failure after trace output has
+  begun; and invalid reporter input on a silent private hard-failure path; and
+- the panic-allocation harness link-wraps heap operations so any allocation
+  attempted while rendering a valid trace hard-fails the test process.
 
 [Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that a stale
-version-7 archive fails the version-8 link guard without replacing an existing
+version-8 archive fails the version-9 link guard without replacing an existing
 output artifact. Native golden programs exercise public standard-I/O functions
 over private intrinsic lowering through the real archive, including checked
 ranges, ordinary negative host failures, and exact stdout expectations.

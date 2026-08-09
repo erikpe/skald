@@ -5,8 +5,42 @@
 
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(8)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v8
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(9)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v9
+
+typedef struct SkaRtTraceContext SkaRtTraceContext;
+typedef struct SkaRtTraceLocation SkaRtTraceLocation;
+typedef struct SkaRtTraceFrame SkaRtTraceFrame;
+
+/* Immutable, length-delimited metadata emitted by the compiler. */
+struct SkaRtTraceContext {
+    const uint8_t* name;
+    uint64_t name_length;
+    const uint8_t* path;
+    uint64_t path_length;
+};
+
+struct SkaRtTraceLocation {
+    const SkaRtTraceContext* context;
+    uint64_t line;
+    uint64_t column;
+};
+
+/* Live native-frame record maintained by compiler-generated code. */
+struct SkaRtTraceFrame {
+    SkaRtTraceFrame* previous;
+    const SkaRtTraceLocation* location;
+};
+
+/* Compiler/runtime-private trace state. This is a direct TLS dependency, not
+   a source-callable ABI entry point. */
+#if defined(__GNUC__) || defined(__clang__)
+#define SKA_RT_HIDDEN __attribute__((visibility("hidden")))
+#else
+#error "Skald runtime requires compiler support for hidden ELF visibility"
+#endif
+extern SKA_RT_HIDDEN _Thread_local SkaRtTraceFrame* ska_rt_trace_top;
+#undef SKA_RT_HIDDEN
 
 /* Version-specific link guard required by compiler-generated executables. */
 void SKALD_RUNTIME_ABI_MARKER(void);
@@ -21,9 +55,9 @@ void* ska_rt_alloc(uint64_t byte_count);
 /* Releases the exact base pointer returned by one successful ska_rt_alloc. */
 void ska_rt_free(void* allocation);
 
-/* Writes "panic: ", exactly length message bytes, and one LF directly to
-   stderr, then terminates unsuccessfully. bytes may be NULL only when length
-   is zero. */
+/* Writes the length-delimited panic record and any active runtime trace
+   directly to stderr, then terminates unsuccessfully. bytes may be NULL only
+   when length is zero. */
 _Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
 
 /* Returns the raw POSIX descriptor for stdin (0), stdout (1), or stderr (2).

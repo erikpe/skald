@@ -56,7 +56,7 @@ fn selects_explicit_checks_and_exact_x86_shift_flavors() {
         assert!(!function[..valid_jump].contains("rcx"));
         assert!(!function.contains("and rcx"));
         assert!(!output.contains("ska_rt_shift"));
-        assert!(output.contains("call ska_rt_abi_v8"));
+        assert!(output.contains("call ska_rt_abi_v9"));
         assert_system_assembler_accepts(&output);
 
         if operation.left == MirIntegerType::U8 {

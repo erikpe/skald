@@ -178,19 +178,19 @@ stored-value HIR, structurally verified preliminary MIR, exhaustive
 whole-program effect inference, deterministic lifetime planning, and an
 independently verified final lifecycle certificate. The x86-64 backend emits
 private slots and dependency-ordered initializer/finalizer coordinators around
-entry without changing runtime ABI version 8. The authoritative boundaries are
+entry without changing runtime ABI version 9. The authoritative boundaries are
 [Static Fields](../language/STATIC_FIELDS.md) and
 [Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#pipeline-contract).
 
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64
-pointer/length lowering, and runtime ABI version 8. It deliberately leaves
+pointer/length lowering, and runtime ABI version 9. It deliberately leaves
 buffering, completion loops, `Str` conversion, and public failures in Skald
-standard-library code. Runtime ABI version 8 implements the independently
+standard-library code. Runtime ABI version 9 implements the independently
 tested host byte operations. The closed intrinsic registry and dedicated HIR
 are implemented together with semantic MIR operations, checked range offsets,
 backing-anchor verification, and exact scalar results. The x86-64 target forms
-checked byte pointer/remaining-length pairs and calls the exact version-8
+checked byte pointer/remaining-length pairs and calls the exact version-9
 runtime operations. The complete nine-function public surface is implemented
 in Skald, including primitive line output, partial-write completion, and
 growable read-until-EOF loops.

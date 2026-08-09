@@ -246,7 +246,7 @@ Top-level corpus and fixture formats are documented locally:
 
 The implemented [standard I/O compiler contract](../compiler/IO.md#verification-obligations)
 assigns coverage across these same layers. Direct runtime harnesses now own
-the version-8 handle and one-transfer byte boundary. Phase tests own canonical
+the version-9 handle and one-transfer byte boundary. Phase tests own canonical
 identities, types, access modes, anchors, and deterministic dumps; backend
 tests own pointer/length lowering and exact symbols; private-standard-library
 native goldens own checked calls and host failures. Public I/O goldens and
@@ -584,8 +584,8 @@ of compiler coverage.
 
 ## Frozen runtime-trace coverage
 
-Runtime traces are frozen but not yet implemented. Their coverage must remain
-split by owner:
+Runtime traces are frozen and their version-9 runtime foundation is
+implemented; compiler emission is not. Coverage remains split by owner:
 
 - source and source-database tests own one-based line and Unicode-scalar
   column mapping at span starts;
@@ -596,8 +596,8 @@ split by owner:
   placement, every return path, transient scratch clobbers, helper suppression,
   local-exec TLS relocations, and zero-cost omission;
 - direct C runtime tests own exact empty, single, nested, replaced, capped,
-  cyclic-chain cap, partial-write, and failed-write behavior without
-  allocation;
+  over-cap, cyclic-chain cap, and failed-write behavior, plus separately
+  link-wrapped proof that valid rendering performs no allocation;
 - driver and CLI tests own default enablement, the value-free
   `--omit-runtime-trace` option, source-database handoff, and repeated-option
   rejection;

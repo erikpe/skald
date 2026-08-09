@@ -112,7 +112,7 @@ fn selects_every_integer_comparison_with_exact_signedness_and_canonical_results(
         lines.iter().filter(|line| **line == "cmp rax, rcx").count(),
         18
     );
-    assert!(output.contains("call ska_rt_abi_v8"));
+    assert!(output.contains("call ska_rt_abi_v9"));
     assert!(!output.contains("ska_rt_compare"));
 }
 

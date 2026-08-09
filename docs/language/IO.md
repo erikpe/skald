@@ -6,7 +6,7 @@ This document defines the source-level contract for Skald's first standard I/O
 module. The installed module exposes its public functions as ordinary Skald
 code over five private byte-array intrinsics. The compiler resolves and types
 intrinsic calls into dedicated I/O HIR and verified MIR, and x86-64 lowers
-them to the narrow host byte operations provided by runtime ABI version 8.
+them to the narrow host byte operations provided by runtime ABI version 9.
 
 The compiler and runtime contract behind this API is specified in
 [Standard I/O compiler and runtime contract](../compiler/IO.md). Current

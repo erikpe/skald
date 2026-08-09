@@ -24,7 +24,7 @@ The `std::io` module has an implemented
 [whole-stream source contract](../docs/language/IO.md) and a separate
 [compiler/runtime contract](../docs/compiler/IO.md). Its five private
 byte-array declarations, compiler HIR/MIR, and x86-64 lowering are implemented,
-and runtime ABI version 8 provides independently tested host byte operations.
+and runtime ABI version 9 provides independently tested host byte operations.
 All nine public functions are ordinary Skald library code over those private
 `u8[]` intrinsics and the canonical primitive `Str` conversions. Reads own
 geometric buffering, EOF loops, exact-length trimming, normal file close, and
