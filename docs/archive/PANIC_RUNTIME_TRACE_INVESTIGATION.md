@@ -517,8 +517,10 @@ Review froze the observable policies before roadmap creation:
    initiating source operation, and generated return paths use the unchecked
    two-instruction pop.
 
-The [frozen design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md) and living
-contracts are authoritative where they refine this earlier investigation.
+The [frozen design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md), active
+[implementation roadmap](../roadmaps/PANIC_RUNTIME_TRACE_ROADMAP.md), and
+living contracts are authoritative where they refine this earlier
+investigation.
 
 ## Suggested implementation order
 

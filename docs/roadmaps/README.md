@@ -10,14 +10,20 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently waiting to start.
+[Panic Runtime Trace Roadmap](PANIC_RUNTIME_TRACE_ROADMAP.md) is planned;
+runtime ABI version 9 and allocation-free trace rendering are next. It
+implements the archived frozen design through runtime foundation,
+source-aware backend metadata, inline TLS frame maintenance, complete source
+location attribution, default-on CLI/golden coverage, and measured closeout.
+It has no dependency on another active roadmap; Linux AArch64 and recoverable
+exceptions remain outside its scope.
 
 ## Design proposals
 
 No design proposal is currently under review. The frozen panic runtime-trace
 design and its supporting investigation are preserved in the
-[archive](../archive/README.md); an
-implementation roadmap may now be created from the promoted contracts.
+[archive](../archive/README.md) and feed the planned implementation roadmap
+above.
 
 ## Pending discoveries
 
