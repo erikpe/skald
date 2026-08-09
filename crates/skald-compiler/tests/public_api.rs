@@ -40,7 +40,10 @@ use skald_compiler::{
         NormalizedProvider, ProgramModuleTable, ProgramModuleTableError,
         ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
-    passes::run_mir_pipeline,
+    passes::{
+        run_mir_pipeline,
+        static_lifecycle::{dump_static_effects, infer_static_effects, StaticEffectAnalysis},
+    },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
         ResolvedClassMember, ResolvedModuleBinding, ResolvedModuleBindingTable,
@@ -182,6 +185,8 @@ fn intentional_phase_and_dump_paths_compose() {
     let preliminary = lower_preliminary_hir(hir);
     verify_preliminary_mir(&preliminary).unwrap();
     let _preliminary_dump = dump_preliminary_mir(&preliminary);
+    let static_effects: StaticEffectAnalysis = infer_static_effects(&preliminary);
+    let _static_effect_dump = dump_static_effects(&static_effects);
     assert!(!preliminary.has_static_initializers());
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);

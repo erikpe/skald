@@ -1,7 +1,7 @@
 # Static Fields
 
 Status: **complete zero-default storage profile implemented; declaration
-initializer syntax through preliminary MIR implemented**. This document is
+initializer syntax through transitive static-effect inference implemented**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -13,7 +13,7 @@ established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
 type-checked as direct stored-value initialization, and lowered to structurally
 verified preliminary lifecycle MIR. The compiler deliberately stops before
-dependency analysis, lifecycle planning, and executable output.
+lifetime dependency planning and executable output.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
@@ -23,7 +23,11 @@ and MIR places. It also retains and resolves optional declaration initializer
 expressions under stable identities, selects their ordinary stored-value
 operations, and retains those operations in typed HIR. These expressions do
 not yet execute; preliminary MIR makes their calls, temporaries, ownership
-operations, cleanup, and publication boundary available to the next analysis.
+operations, cleanup, and publication boundary available to whole-program
+static-effect inference. That analysis now conservatively summarizes direct
+and deep static uses across calls, dynamic dispatch, copy operations,
+destructors, shared releases, optionals, and arrays. It does not yet select a
+safe activation order or diagnose dependency cycles.
 
 ## Declaration syntax
 
@@ -258,8 +262,10 @@ order, import order, dependency order, or lazy first-use order to observe.
 Explicitly initialized declarations cannot yet reach executable compilation;
 after producing and structurally verifying preliminary lifecycle MIR the
 driver reports `DRV001` rather than silently discarding the initializer or
-emitting zero-only assembly. Their eventual dependency plan, startup, and
-shutdown semantics are owned by the active static initialization roadmap.
+emitting zero-only assembly. Before reporting that boundary, the compiler
+constructs deterministic transitive static-effect summaries and source-facing
+call/lifecycle witnesses. Their eventual dependency plan, startup, and shutdown
+semantics are owned by the active static initialization roadmap.
 
 A static slot has process lifetime. It is not registered in any lexical scope,
 does not begin or end lifetime on a function call, and is not cleaned when the
@@ -297,7 +303,7 @@ and `TYP042` rejects either an initializer-free declaration whose type lacks a
 complete all-zero live value or an explicit declaration whose type cannot
 store a value. Explicit expressions otherwise use ordinary type, overload,
 privacy, copy-capability, and ownership diagnostics. `DRV001` marks the current
-post-preliminary-MIR dependency-planning boundary. Every initializer-free declaration
+post-effect-inference lifetime-planning boundary. Every initializer-free declaration
 accepted by zero-default validation can be used through its documented
 primitive, inline-optional, optional shared-owner, or inline-array operations
 and reaches verified MIR and native execution.

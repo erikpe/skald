@@ -16,7 +16,10 @@ use skald_compiler::{
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
-    passes::run_mir_pipeline,
+    passes::{
+        run_mir_pipeline,
+        static_lifecycle::{dump_static_effects, infer_static_effects},
+    },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
     syntax::{dump_ast, parse},
@@ -1472,14 +1475,16 @@ fn preliminary_phase_dump(text: &str) -> String {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
+    let static_effects = infer_static_effects(&preliminary);
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}STATIC EFFECTS\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
         dump_hir(&hir),
         dump_preliminary_mir(&preliminary),
+        dump_static_effects(&static_effects),
     )
 }
 

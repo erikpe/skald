@@ -28,7 +28,8 @@ The target-independent compiler path is:
 | Resolution | `resolve::resolve`, `resolve::resolve_module_graph` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
-| Static lifecycle analysis and planning | not yet implemented | eventually converts preliminary MIR to planned `MirProgram` |
+| Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects with witnesses for every callable and implicit lifecycle operation |
+| Static lifecycle planning | not yet implemented | eventually converts preliminary MIR and inferred effects to planned `MirProgram` |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
@@ -167,14 +168,33 @@ set of compatible class or array lifecycle implementations.
 The structural preliminary verifier checks the ordinary program and every
 initializer body's identities, types, selected targets, ownership metadata,
 control flow, exact destination, and publication boundary without assuming a
-global activation order. A product containing explicit lifecycle bodies cannot
-be converted to `MirProgram`, passed to ordinary MIR passes, or consumed by a
-backend. The driver therefore reports `DRV001` only after preliminary lowering
-and verification, at the not-yet-implemented dependency-analysis and planning
-boundary. A lifecycle-free preliminary product converts to the existing final
-MIR path. MIR continues to model accepted zero-default places as initialized,
-always-live program-owned roots without startup or cleanup instructions. The
-source-visible lifetime rule is owned by the
+global activation order.
+
+`passes::static_lifecycle::infer_static_effects` then scans every instruction,
+terminator, static-rooted place, direct or dynamic call, selected initializer
+or copy operation, complete finalizer, shared release, optional cleanup, and
+array lifecycle operation. Its exhaustive enum matches make a new MIR
+operation a compile-time maintenance point. Virtual and interface calls and
+shared-owner finalizers expand to closed-world target sets. Compiler-generated
+copy, complete-finalizer, and array operations have distinct graph nodes, so
+their backend-realized calls do not disappear behind user body identities.
+The pass condenses recursive components, propagates field sets over the
+component DAG, and retains a minimum-call-edge, deterministically tied witness
+for each field in every node summary. Direct evidence keeps access kind,
+source span, and initializer publication phase; a transitive initializer
+witness carries the phase of its first call or lifecycle edge. The stable
+`passes::static_lifecycle::dump_static_effects` renderer exposes this product.
+This is effect inference only: it neither chooses field order nor diagnoses
+static dependency cycles.
+
+A product containing explicit lifecycle bodies cannot be converted to
+`MirProgram`, passed to ordinary MIR passes, or consumed by a backend. The
+driver therefore reports `DRV001` after preliminary verification and static
+effect inference, at the not-yet-implemented lifetime-planning boundary. A
+lifecycle-free preliminary product converts to the existing final MIR path.
+MIR continues to model accepted zero-default places as initialized, always-live
+program-owned roots without startup or cleanup instructions. The source-visible
+lifetime rule is owned by the
 [static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 The optional-values contract assigns each decision to these same phase owners.

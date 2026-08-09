@@ -399,26 +399,26 @@ public API composition, and cross-process dumps are covered. `make check`,
 or shutdown targets a value live at that point, including uses hidden by deep
 call stacks and implicit lifecycle operations.
 
-- [ ] Add a responsibility-oriented `passes::static_lifecycle` analysis after
+- [x] Add a responsibility-oriented `passes::static_lifecycle` analysis after
       preliminary MIR lowering and before the ordinary verified MIR pipeline;
       keep it target-independent and before optimization.
-- [ ] Build one whole-program callable effect graph from MIR, with every place
+- [x] Build one whole-program callable effect graph from MIR, with every place
       rooted at a static field and its source span as a seed effect.
-- [ ] Add edges for direct and static calls, selected initializers and copy
+- [x] Add edges for direct and static calls, selected initializers and copy
       constructors, user destructors, compiler-generated complete finalizers,
       temporary cleanup, optional and array lifecycle, string language-item
       calls, and other implicit executable operations.
-- [ ] Expand virtual/interface calls to every possible linked implementation
+- [x] Expand virtual/interface calls to every possible linked implementation
       and shared-owner cleanup to every compatible dynamic finalizer that the
       closed program can produce.
-- [ ] Condense recursive callable components and propagate effects over the
+- [x] Condense recursive callable components and propagate effects over the
       resulting DAG. Retain a minimum-edge witness for each transitive static
       effect, with equal-length paths ordered by stable target identity, edge
       kind, and source span.
-- [ ] Keep access kind and lifecycle phase in effect evidence where they
+- [x] Keep access kind and lifecycle phase in effect evidence where they
       improve diagnostics, while treating every read, write, borrow, or other
       ordinary access as requiring the target field to be live.
-- [ ] Verify effect extraction exhaustively against the MIR instruction and
+- [x] Verify effect extraction exhaustively against the MIR instruction and
       terminator inventory so adding a new executable operation cannot silently
       bypass lifecycle analysis.
 
@@ -431,6 +431,22 @@ determinism.
 **Exit criteria:** Every callable and lifecycle body has one conservative,
 deterministic summary of the static fields it may access, including a source-
 facing witness for each reported effect.
+
+**Implementation result:** `passes::static_lifecycle::infer_static_effects`
+builds one closed-world graph over ordinary/static-initializer bodies plus
+explicit compiler-generated copy, complete-finalizer, and array-lifecycle
+nodes. Exhaustive instruction, terminator, rvalue, nested lifecycle, and
+destruction matches collect static-rooted evidence and implicit edges;
+virtual/interface dispatch and shared cleanup expand through linked target
+sets. An iterative SCC condensation and DAG propagation computes conservative
+field sets without call-stack recursion, while deterministic breadth-first
+witness selection retains minimum-edge source-facing paths, access kinds, and
+initializer publication phase. The driver runs inference after preliminary
+verification, and stable dumps plus focused and cross-process tests cover deep
+calls, recursion, dispatch, construction/copy/assignment, strings, temporary
+and optional cleanup, shared finalizers, arrays, unreachable branches, and
+witness ordering. `make check`, `make golden-determinism-test`, and
+`git diff --check` pass.
 
 ### SI5 — Plan and diagnose static lifetimes
 

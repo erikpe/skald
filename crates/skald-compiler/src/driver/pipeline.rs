@@ -10,7 +10,7 @@ use crate::{
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
-    passes::run_mir_pipeline,
+    passes::{run_mir_pipeline, static_lifecycle::infer_static_effects},
     resolve::{resolve, resolve_module_graph, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
@@ -128,6 +128,7 @@ fn finish_compilation(
         .expect("type checking without errors must produce typed HIR");
     let preliminary = lower_preliminary_hir(&hir);
     verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
+    let _static_effects = infer_static_effects(&preliminary);
     for initializer in preliminary.static_initializers() {
         diagnostics.push(
             Diagnostic::error(

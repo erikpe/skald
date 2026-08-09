@@ -3,6 +3,8 @@
 //! Pass ordering belongs in named pipelines rather than being hidden inside
 //! unrelated phase implementations.
 
+pub mod static_lifecycle;
+
 use crate::mir::{verify_mir, MirProgram, MirVerificationErrors};
 
 /// Runs the target-independent MIR pass pipeline.

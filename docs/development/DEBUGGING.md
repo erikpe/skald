@@ -15,12 +15,15 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Reachable module graph | `module::dump_module_graph` | entry selection and module loader |
 | Resolved program | `resolve::dump_resolved` | resolver and stable identities |
 | Typed HIR | `hir::dump_hir` | type checker and semantic operation selection |
+| Preliminary MIR | `mir::dump_preliminary_mir` | unplanned static initializer bodies and publication boundaries |
+| Static effects | `passes::static_lifecycle::dump_static_effects` | closed-world static access summaries and call/lifecycle witnesses |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
 | GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
 
 The phase renderers are repository-internal Rust APIs. There are no CLI modes
-for token, AST, resolved, HIR, or MIR dumps. Their text is a deterministic
+for token, AST, resolved, HIR, preliminary MIR, static-effect, or MIR dumps.
+Their text is a deterministic
 debugging and regression format, not a stable interchange format.
 
 When hand-built or future lowered MIR uses path-dependent state, the MIR dump
@@ -49,6 +52,7 @@ cargo test --locked -p skald-compiler identities_and_dump_follow_canonical_modul
 cargo test --locked -p skald-compiler resolved_dump
 cargo test --locked -p skald-compiler hir_dump
 cargo test --locked -p skald-compiler mir_dump
+cargo test --locked -p skald-compiler passes::static_lifecycle
 ```
 
 These tests normally assert rather than print. While investigating, call the
