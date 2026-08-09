@@ -12,7 +12,7 @@ use super::{
     layout::DataLayout,
     literal_data::LiteralPool,
     machine::{AssemblyFunction, AssemblyProgram, Instruction, Label, Register},
-    symbol,
+    runtime_trace, symbol,
 };
 
 mod array;
@@ -41,6 +41,7 @@ pub(super) fn lower(
     program: &MirProgram,
     data_layout: &DataLayout,
     dispatch: &DispatchMetadata,
+    activations: &runtime_trace::Activations,
 ) -> Result<AssemblyProgram, BackendError> {
     let literal_pool = LiteralPool::build(program);
     let context = LoweringContext {
@@ -48,6 +49,7 @@ pub(super) fn lower(
         data_layout,
         dispatch,
         literal_pool: &literal_pool,
+        activations,
     };
     let mut functions = program
         .executable_definitions()
@@ -88,6 +90,7 @@ struct LoweringContext<'program> {
     data_layout: &'program DataLayout,
     dispatch: &'program DispatchMetadata,
     literal_pool: &'program LiteralPool,
+    activations: &'program runtime_trace::Activations,
 }
 
 fn lower_definition(
@@ -95,7 +98,12 @@ fn lower_definition(
     signature: MirCallableSignature<'_>,
     function: MirDefinitionRef<'_>,
 ) -> Result<AssemblyFunction, BackendError> {
-    let frame = FrameLayout::plan(function, context.data_layout)?;
+    let initial_location = context.activations.initial_location(function.callable());
+    let frame = if initial_location.is_some() {
+        FrameLayout::plan_with_runtime_trace(function, context.data_layout)?
+    } else {
+        FrameLayout::plan(function, context.data_layout)?
+    };
     let mut instructions = vec![
         Instruction::Push(Register::Rbp),
         Instruction::Move {
@@ -108,6 +116,9 @@ fn lower_definition(
     }
 
     call::spill_parameters(signature, function, &frame, &mut instructions)?;
+    if let (Some(trace_frame), Some(initial_location)) = (frame.runtime_trace(), initial_location) {
+        runtime_trace::emit_push(trace_frame, initial_location, &mut instructions);
+    }
     if function.body().blocks[0].id != function.body().entry {
         instructions.push(Instruction::Jump(block_label(
             context.program,

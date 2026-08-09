@@ -318,11 +318,13 @@ frame, so a runtime containing this support still produces the current
 single-line record for an omitted-trace program.
 
 The compiler references the version-9 compatibility marker and its x86-64
-backend can plan and emit deterministic requested context/location metadata.
-The production driver still requests complete omission, and frame publication
-and location updates are not implemented yet. Consequently compiled programs
-still observe a null trace top and the unchanged single-line output. The
-compiler contract remains described by the phase and backend sections below.
+backend can plan and emit deterministic requested context/location metadata
+and maintain one linked frame for every enabled source activation. The
+production driver still requests complete omission, and precise interior
+location updates are not implemented yet. Consequently ordinary compiled
+programs still observe a null trace top and the unchanged single-line output.
+The compiler contract remains described by the phase and backend sections
+below.
 
 ## Responsibility boundary
 

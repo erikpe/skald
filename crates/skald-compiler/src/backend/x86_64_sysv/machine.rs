@@ -190,6 +190,19 @@ pub(super) enum Instruction {
         symbol: String,
         destination: Register,
     },
+    /// Loads the hidden runtime TLS trace-top pointer using local-exec TLS.
+    LoadRuntimeTraceTop {
+        destination: Register,
+    },
+    /// Stores the hidden runtime TLS trace-top pointer using local-exec TLS.
+    StoreRuntimeTraceTop {
+        source: Register,
+    },
+    /// Materializes an immutable runtime-trace location with RIP-relative LEA.
+    LoadRuntimeTraceLocationAddress {
+        symbol: String,
+        destination: Register,
+    },
     MoveImmediate64 {
         bits: u64,
         destination: Register,

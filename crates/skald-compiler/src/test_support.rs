@@ -333,6 +333,50 @@ pub(crate) fn run_native_assembly_output(output: &str) -> std::process::Output {
     command.output().unwrap()
 }
 
+/// Links generated assembly with the real runtime and the trace-chain probe
+/// used by backend activation tests. The probe also validates at process exit
+/// that the source entry function restored the outermost TLS link to null.
+pub(crate) fn run_native_assembly_with_runtime_trace_probe(output: &str) -> std::process::Output {
+    let executable = TemporaryFile::new("native-runtime-trace-executable").unwrap();
+    let repository = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("compiler crate must live beneath the repository root");
+    let include = repository.join("runtime/include");
+    let runtime = repository.join("runtime/src");
+    let probe = repository.join("tests/runtime/compiler_trace_probe.c");
+    let mut child = Command::new("cc")
+        .args(["-std=c11", "-Wall", "-Wextra", "-Werror"])
+        .arg("-I")
+        .arg(include)
+        .args(["-x", "assembler", "-", "-x", "c"])
+        .arg(runtime.join("skald_runtime.c"))
+        .arg(runtime.join("panic.c"))
+        .arg(runtime.join("io.c"))
+        .arg(probe)
+        .arg("-o")
+        .arg(executable.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("runtime-trace tests require the Linux `cc` toolchain");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(output.as_bytes())
+        .unwrap();
+    let linked = child.wait_with_output().unwrap();
+    assert!(
+        linked.status.success(),
+        "linker rejected generated runtime-trace output:\n{}\nassembly:\n{output}",
+        String::from_utf8_lossy(&linked.stderr)
+    );
+
+    Command::new(executable.path()).output().unwrap()
+}
+
 fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
     let executable = TemporaryFile::new("native-executable").unwrap();
     // Backend execution tests deliberately avoid depending on a prebuilt C

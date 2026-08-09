@@ -7,7 +7,8 @@ use crate::{
     source::Span,
     test_support::{
         assembly_relocations, assert_system_assembler_accepts, load_module_sources,
-        lower_hir_to_final_mir, lower_source_to_final_mir_with_sources, FinalMirWithSources,
+        lower_hir_to_final_mir, lower_source_to_final_mir_with_sources,
+        run_native_assembly_with_runtime_trace_probe, FinalMirWithSources,
     },
     typeck::type_check,
 };
@@ -16,6 +17,7 @@ use super::*;
 use crate::backend::x86_64_sysv::{
     emit,
     machine::{AssemblyProgram, AssemblyRuntimeTraceMetadata},
+    symbol,
 };
 
 const CALLABLE_SOURCE: &str = concat!(
@@ -209,7 +211,11 @@ fn runtime_trace_metadata_omission_never_requests_or_emits_trace_data() {
     let omitted = fixture
         .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Omitted)
         .unwrap();
-    assert_eq!(enabled, omitted, "no request means no trace-only emission");
+    assert_ne!(
+        enabled, omitted,
+        "enabled lowering requests activation locations"
+    );
+    assert!(enabled.contains("ska_rt_trace_top@tpoff"));
     assert!(!omitted.contains(".Lska.trace."));
 }
 
@@ -240,4 +246,233 @@ fn runtime_trace_metadata_rejects_invalid_source_ownership() {
     let error = metadata.request_location(callable, span).unwrap_err();
     assert_eq!(error.callable(), Some(callable));
     assert!(error.message().contains("different source"));
+}
+
+fn assembly_function<'assembly>(assembly: &'assembly str, symbol: &str) -> &'assembly str {
+    let start_marker = format!("{symbol}:\n");
+    let start = assembly
+        .find(&start_marker)
+        .unwrap_or_else(|| panic!("assembly must define `{symbol}`"));
+    let end_marker = format!(".size {symbol}, .-{symbol}");
+    let end = assembly[start..]
+        .find(&end_marker)
+        .map(|offset| start + offset + end_marker.len())
+        .expect("assembly function must have a size directive");
+    &assembly[start..end]
+}
+
+fn trace_frame_fixture() -> FinalMirWithSources {
+    lower_source_to_final_mir_with_sources(
+        "app/main.ska",
+        concat!(
+            "fn increment(value: i64) -> i64 { return value + 1; }\n",
+            "fn main() -> i64 { return increment(41); }\n",
+        ),
+    )
+}
+
+#[test]
+fn runtime_trace_frame_emits_the_frozen_push_and_pop_sequences() {
+    let fixture = trace_frame_fixture();
+    let increment = function(&fixture, "increment");
+    let symbol = symbol::callable(&fixture.mir, increment);
+    let assembly = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+        .unwrap();
+    let function = assembly_function(&assembly, &symbol);
+    let lines = function.lines().collect::<Vec<_>>();
+    let push = lines
+        .iter()
+        .position(|line| *line == "    mov r11, qword ptr fs:ska_rt_trace_top@tpoff")
+        .expect("traced source body must load the prior TLS top");
+
+    assert!(lines[..push].contains(&"    sub rsp, 48"));
+    assert!(
+        lines[..push].iter().any(|line| line.contains(", rdi")),
+        "parameter spill must precede trace publication"
+    );
+    assert!(lines[push + 1].starts_with("    mov qword ptr [rbp - "));
+    assert!(lines[push + 1].ends_with(", r11"));
+    assert!(lines[push + 2].starts_with("    lea r11, [rip + .Lska.trace.location."));
+    assert!(lines[push + 3].starts_with("    mov qword ptr [rbp - "));
+    assert!(lines[push + 3].ends_with(", r11"));
+    let previous = lines[push + 1]
+        .strip_prefix("    mov qword ptr ")
+        .and_then(|line| line.strip_suffix(", r11"))
+        .unwrap();
+    assert_eq!(lines[push + 4], format!("    lea r11, {previous}"));
+    assert_eq!(
+        lines[push + 5],
+        "    mov qword ptr fs:ska_rt_trace_top@tpoff, r11"
+    );
+
+    let pop = lines
+        .iter()
+        .rposition(|line| line.starts_with("    mov r11, qword ptr [rbp - "))
+        .expect("normal return must restore the prior trace top");
+    assert_eq!(
+        lines[pop + 1],
+        "    mov qword ptr fs:ska_rt_trace_top@tpoff, r11"
+    );
+    assert!(lines[pop + 2].starts_with("    mov rax, qword ptr [rbp - "));
+}
+
+#[test]
+fn runtime_trace_frame_adds_one_aligned_record_only_to_source_bodies() {
+    let fixture = lower_source_to_final_mir_with_sources(
+        "app/main.ska",
+        concat!(
+            "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+            "fn main() -> i64 { var owner: shared Item = new Item(7); return owner->value; }\n",
+        ),
+    );
+    let enabled = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+        .unwrap();
+    let omitted = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Omitted)
+        .unwrap();
+    let definition_count = fixture.mir.executable_definitions().count();
+
+    assert_eq!(
+        enabled
+            .matches("mov r11, qword ptr fs:ska_rt_trace_top@tpoff")
+            .count(),
+        definition_count,
+        "only source definitions publish trace frames"
+    );
+    assert_eq!(
+        enabled.matches(".Lska.trace.location.").count(),
+        definition_count * 4
+    );
+    assert!(!assembly_function(&enabled, "main").contains("ska_rt_trace_top"));
+    assert!(
+        enabled.contains("ska_rt_alloc"),
+        "fixture must generate runtime/helper calls"
+    );
+    assert!(!omitted.contains("ska_rt_trace_top"));
+    assert!(!omitted.contains(".Lska.trace."));
+}
+
+#[test]
+fn runtime_trace_frame_uses_local_exec_tls_relocations_and_caller_saved_scratch() {
+    let fixture = trace_frame_fixture();
+    let assembly = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+        .unwrap();
+    assert_system_assembler_accepts(&assembly);
+    let relocations = assembly_relocations(&assembly);
+
+    assert_eq!(relocations.matches("R_X86_64_TPOFF32").count(), 6);
+    assert!(relocations.contains("ska_rt_trace_top"));
+    for callee_saved in ["rbx", "r12", "r13", "r14", "r15"] {
+        assert!(!assembly.contains(callee_saved));
+    }
+}
+
+#[test]
+fn runtime_trace_frame_omission_preserves_the_pre_trace_function_shape() {
+    let fixture = trace_frame_fixture();
+    let increment = function(&fixture, "increment");
+    let symbol = symbol::callable(&fixture.mir, increment);
+    let omitted = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Omitted)
+        .unwrap();
+    let function = assembly_function(&omitted, &symbol);
+
+    assert_eq!(
+        function,
+        format!(
+            "{symbol}:\n\
+             \x20   push rbp\n\
+             \x20   mov rbp, rsp\n\
+             \x20   sub rsp, 32\n\
+             \x20   mov qword ptr [rbp - 8], rdi\n\
+             {symbol}.block_0:\n\
+             \x20   mov rax, qword ptr [rbp - 8]\n\
+             \x20   mov qword ptr [rbp - 16], rax\n\
+             \x20   mov rax, 1\n\
+             \x20   mov qword ptr [rbp - 24], rax\n\
+             \x20   mov rax, qword ptr [rbp - 16]\n\
+             \x20   mov rcx, qword ptr [rbp - 24]\n\
+             \x20   add rax, rcx\n\
+             \x20   mov qword ptr [rbp - 32], rax\n\
+             \x20   mov rax, qword ptr [rbp - 32]\n\
+             \x20   jmp {symbol}.epilogue\n\
+             {symbol}.epilogue:\n\
+             \x20   leave\n\
+             \x20   ret\n\
+             .size {symbol}, .-{symbol}"
+        )
+    );
+    assert!(!function.contains("r11"));
+    assert!(!function.contains("ska_rt_trace_top"));
+    assert!(!omitted.contains(".Lska.trace."));
+}
+
+#[test]
+fn runtime_trace_frame_recursive_panic_reports_newest_first_with_real_runtime() {
+    let fixture = lower_source_to_final_mir_with_sources(
+        "app/main.ska",
+        concat!(
+            "fn recurse(depth: i64) -> i64 { if (depth == 0) { return 1 / depth; } return recurse(depth - 1); }\n",
+            "fn main() -> i64 { return recurse(3); }\n",
+        ),
+    );
+    let assembly = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+        .unwrap();
+    let result = run_native_assembly_with_runtime_trace_probe(&assembly);
+
+    assert_eq!(result.status.code(), Some(1));
+    assert!(result.stdout.is_empty());
+    assert_eq!(
+        result.stderr,
+        concat!(
+            "panic: integer division by zero\n",
+            "stacktrace:\n",
+            "  at main::recurse (app/main.ska:1:1)\n",
+            "  at main::recurse (app/main.ska:1:1)\n",
+            "  at main::recurse (app/main.ska:1:1)\n",
+            "  at main::recurse (app/main.ska:1:1)\n",
+            "  at main::main (app/main.ska:2:1)\n",
+        )
+        .as_bytes()
+    );
+}
+
+#[test]
+fn runtime_trace_frame_mixed_returns_preserve_results_and_restore_null() {
+    let fixture = lower_source_to_final_mir_with_sources(
+        "app/main.ska",
+        concat!(
+            "extern fn ska_test_trace_depth() -> i64;\n",
+            "class Value { marker: i64; init(marker: i64) { self.marker = marker; } }\n",
+            "fn scalar() -> i64 { return 4; }\n",
+            "fn floating() -> f64 { return 2.5; }\n",
+            "fn nothing() -> unit {}\n",
+            "fn object() -> Value { return Value(5); }\n",
+            "fn owner() -> shared Value { return new Value(6); }\n",
+            "fn optional_owner() -> shared? Value { return owner(); }\n",
+            "fn recurse(depth: i64) -> i64 { if (depth == 0) { return 1; } return recurse(depth - 1) + 1; }\n",
+            "fn main() -> i64 {\n",
+            "  var value: Value = object();\n",
+            "  var shared_value: shared Value = owner();\n",
+            "  var maybe: shared? Value = optional_owner();\n",
+            "  nothing();\n",
+            "  if (floating() == 2.5) {\n",
+            "    return scalar() + value.marker + shared_value->marker + maybe!->marker + recurse(3) + ska_test_trace_depth();\n",
+            "  }\n",
+            "  return 1;\n",
+            "}\n",
+        ),
+    );
+    let assembly = fixture
+        .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+        .unwrap();
+    let result = run_native_assembly_with_runtime_trace_probe(&assembly);
+
+    assert_eq!(result.status.code(), Some(26), "{assembly}");
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
 }

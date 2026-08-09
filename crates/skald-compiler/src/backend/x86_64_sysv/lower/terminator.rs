@@ -6,7 +6,7 @@ use super::{
     super::machine::{
         AssemblyFunction, AssemblyPanicMessage, Instruction, Label, Register, XmmRegister,
     },
-    block_label, value, FrameLayout, InstructionSelector,
+    block_label, runtime_trace, value, FrameLayout, InstructionSelector,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -250,6 +250,7 @@ pub(super) fn select(
 ) {
     match terminator {
         MirTerminator::Return { value: result, .. } => {
+            runtime_trace::emit_pop(frame.runtime_trace(), output);
             if let Some(result) = result {
                 let source = value::frame_value(frame, *result);
                 if return_type == MirType::F64 {
@@ -263,6 +264,7 @@ pub(super) fn select(
         }
         MirTerminator::ReturnShared { owner, .. }
         | MirTerminator::ReturnOptionalShared { owner, .. } => {
+            runtime_trace::emit_pop(frame.runtime_trace(), output);
             value::load_rax(value::frame_storage(frame, *owner), output);
             output.push(Instruction::Jump(epilogue.clone()));
         }

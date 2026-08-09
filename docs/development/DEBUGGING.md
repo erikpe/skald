@@ -222,9 +222,10 @@ target-specific legality or lowering contract.
 
 ## Inspect frozen runtime traces
 
-The version-9 runtime renderer and x86-64 requested metadata planner are
-implemented, while frame and location instruction emission is not. A directly
-constructed chain can isolate runtime formatting from future backend faults.
+The version-9 runtime renderer, x86-64 requested metadata planner, and inline
+activation-frame maintenance are implemented; interior location replacement
+is not. A directly constructed chain can isolate runtime formatting from
+backend faults.
 For metadata faults, run the focused `runtime_trace_metadata` tests and begin
 with the existing MIR span at the reported operation; MIR deliberately
 contains no trace instruction or
@@ -232,11 +233,11 @@ metadata identity. Then inspect backend planning for the source-callable
 context, escaped provider-relative path, span-start line and column, frame
 eligibility, and whether the operation requires a replacement.
 
-Once frame lowering is implemented, enabled x86-64 assembly must give an
-eligible source callable one linked 16-byte record, one six-instruction publish
-sequence after its ordinary entry setup, one two-instruction restore on every
-normal return, and a two-instruction location replacement at each required
-call or taken failure edge. Generated
+Enabled x86-64 assembly gives an eligible source callable one linked 16-byte
+record, one six-instruction publish sequence after incoming parameters are
+preserved, and one two-instruction restore before the final result reload on
+every normal return. The pending location work adds a two-instruction
+replacement at each required call or taken failure edge. Generated
 helpers and wrappers must have none. `r11` is only a transient clobber; a
 persistent trace register or a C maintenance call is a lowering defect.
 Indirect calls require particular attention because the trace replacement

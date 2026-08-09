@@ -14,6 +14,7 @@ mod x86_64_sysv;
 // docs/compiler/RUNTIME_ABI.md. Every incompatible runtime ABI revision must
 // use a new symbol name.
 pub(crate) const RUNTIME_ABI_MARKER_SYMBOL: &str = "ska_rt_abi_v9";
+pub(crate) const RUNTIME_TRACE_TOP_SYMBOL: &str = "ska_rt_trace_top";
 
 pub const DEFAULT_TARGET_NAME: &str = "x86_64-sysv";
 pub const SUPPORTED_TARGET_NAMES: &[&str] = &[DEFAULT_TARGET_NAME];

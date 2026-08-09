@@ -241,10 +241,12 @@ fn intentional_phase_and_dump_paths_compose() {
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);
     let target = target_by_name("x86_64-sysv").unwrap();
-    let _assembly = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();
-    let enabled_without_requests =
-        emit_assembly(target, BackendInput::with_runtime_trace(&mir, &sources)).unwrap();
-    assert!(!enabled_without_requests.contains(".Lska.trace."));
+    let omitted = emit_assembly(target, BackendInput::without_runtime_trace(&mir)).unwrap();
+    let enabled = emit_assembly(target, BackendInput::with_runtime_trace(&mir, &sources)).unwrap();
+    assert!(!omitted.contains(".Lska.trace."));
+    assert!(!omitted.contains("ska_rt_trace_top"));
+    assert!(enabled.contains(".Lska.trace."));
+    assert!(enabled.contains("ska_rt_trace_top@tpoff"));
     let diagnostics: &Diagnostics = &checked.diagnostics;
     let _diagnostics = render_diagnostics(&sources, diagnostics);
     let _identity_path: Option<CallableId> = None;

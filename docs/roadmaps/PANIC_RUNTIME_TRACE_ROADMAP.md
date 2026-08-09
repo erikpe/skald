@@ -1,6 +1,6 @@
 # Panic Runtime Trace Roadmap
 
-Status: in progress; TRACE2 is next.
+Status: in progress; TRACE2 is complete and TRACE3 is next.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
@@ -45,7 +45,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 
 - [x] TRACE0 — Establish runtime ABI version 9 and trace rendering
 - [x] TRACE1 — Add explicit backend trace input and deterministic metadata
-- [ ] TRACE2 — Maintain source-callable trace frames with inline TLS
+- [x] TRACE2 — Maintain source-callable trace frames with inline TLS
 - [ ] TRACE3 — Record source calls and reporter failure locations
 - [ ] TRACE4 — Complete generated-helper and runtime-failure attribution
 - [ ] TRACE5 — Expose default-on tracing and migrate native observations
@@ -150,30 +150,30 @@ records, or relocations; phase products and dumps remain target-independent.
 of interior location coverage, while the production driver still requests
 complete omission.
 
-- [ ] Classify every `MirProgram::executable_definitions` source body as an
+- [x] Classify every `MirProgram::executable_definitions` source body as an
   eligible context and keep generated array, ownership, copy, finalization,
   static coordinator, process wrapper, and target thunk functions ineligible.
-- [ ] Extend `FrameLayout` with an optional aligned 16-byte record whose first
+- [x] Extend `FrameLayout` with an optional aligned 16-byte record whose first
   word is `previous` and second word is `location`; include it before final
   16-byte frame rounding and retain checked displacement/size failures.
-- [ ] Use the callable definition span as the initial location until a more
+- [x] Use the callable definition span as the initial location until a more
   precise panic-observable operation replaces it.
-- [ ] Add explicit target-machine instructions and Intel-syntax emission for
+- [x] Add explicit target-machine instructions and Intel-syntax emission for
   local-exec TLS load/store and RIP-relative location-address materialization;
   require `R_X86_64_TPOFF32` against hidden `ska_rt_trace_top`.
-- [ ] Emit the six-instruction push after incoming parameters are preserved and
+- [x] Emit the six-instruction push after incoming parameters are preserved and
   before body execution. Publish the top pointer only after both record words
   are initialized.
-- [ ] Emit an unchecked two-instruction pop on every normal return before the
+- [x] Emit an unchecked two-instruction pop on every normal return before the
   final scalar, floating, shared, optional-shared, unit, or caller-destination
   result reload/return sequence.
-- [ ] Model `r11` as a local trace-sequence clobber rather than global target
+- [x] Model `r11` as a local trace-sequence clobber rather than global target
   reservation and preserve the existing no-unpreserved-callee-saved-register
   invariant.
-- [ ] Add recursive and mixed-return native probes using the real runtime to
+- [x] Add recursive and mixed-return native probes using the real runtime to
   prove newest-first activation order, balanced normal returns, null outermost
   restoration, and intact ABI results.
-- [ ] Require omitted output to preserve the pre-trace frame sizes and exact
+- [x] Require omitted output to preserve the pre-trace frame sizes and exact
   assembly shape, including no TLS relocation or scratch constraint.
 
 **Tests:** Frame allocator and exact assembly tests via

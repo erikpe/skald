@@ -16,6 +16,9 @@ use super::{
 
 const SCALAR_HOME_SIZE: usize = 8;
 const SCALAR_HOME_ALIGNMENT: usize = 8;
+const TRACE_RECORD_SIZE: usize = 16;
+const TRACE_RECORD_ALIGNMENT: usize = 16;
+const TRACE_WORD_SIZE: i32 = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct FramePlace {
@@ -79,9 +82,37 @@ impl FramePlace {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct FrameLayout {
     size: u32,
+    runtime_trace: Option<TraceFrameLayout>,
     storage_offsets: Vec<i32>,
     object_origins: Vec<Option<ObjectOriginHomes>>,
     value_offsets: Vec<i32>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct TraceFrameLayout {
+    previous: TraceFrameWord,
+    location: TraceFrameWord,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct TraceFrameWord {
+    displacement: i32,
+}
+
+impl TraceFrameLayout {
+    pub(super) const fn previous(self) -> TraceFrameWord {
+        self.previous
+    }
+
+    pub(super) const fn location(self) -> TraceFrameWord {
+        self.location
+    }
+}
+
+impl TraceFrameWord {
+    pub(super) const fn displacement(self) -> i32 {
+        self.displacement
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -104,6 +135,21 @@ impl FrameLayout {
     pub(super) fn plan(
         function: MirDefinitionRef<'_>,
         data_layout: &DataLayout,
+    ) -> Result<Self, BackendError> {
+        Self::plan_with_trace_requirement(function, data_layout, false)
+    }
+
+    pub(super) fn plan_with_runtime_trace(
+        function: MirDefinitionRef<'_>,
+        data_layout: &DataLayout,
+    ) -> Result<Self, BackendError> {
+        Self::plan_with_trace_requirement(function, data_layout, true)
+    }
+
+    fn plan_with_trace_requirement(
+        function: MirDefinitionRef<'_>,
+        data_layout: &DataLayout,
+        include_runtime_trace: bool,
     ) -> Result<Self, BackendError> {
         let mut allocator = FrameAllocator::new(function);
         let mut storage_offsets = Vec::with_capacity(function.storage_entries().len());
@@ -166,10 +212,14 @@ impl FrameLayout {
         for _ in function.values() {
             value_offsets.push(allocator.allocate(SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)?);
         }
+        let runtime_trace = include_runtime_trace
+            .then(|| allocator.allocate_runtime_trace())
+            .transpose()?;
         let size = allocator.finish()?;
 
         Ok(Self {
             size,
+            runtime_trace,
             storage_offsets,
             object_origins,
             value_offsets,
@@ -178,6 +228,10 @@ impl FrameLayout {
 
     pub(super) const fn size(&self) -> u32 {
         self.size
+    }
+
+    pub(super) const fn runtime_trace(&self) -> Option<TraceFrameLayout> {
+        self.runtime_trace
     }
 
     pub(super) fn storage(&self, id: StorageId) -> i32 {
@@ -390,6 +444,21 @@ impl FrameAllocator {
         Ok(displacement)
     }
 
+    fn allocate_runtime_trace(&mut self) -> Result<TraceFrameLayout, BackendError> {
+        let previous = self.allocate(TRACE_RECORD_SIZE, TRACE_RECORD_ALIGNMENT)?;
+        let location = previous
+            .checked_add(TRACE_WORD_SIZE)
+            .ok_or_else(|| self.error())?;
+        Ok(TraceFrameLayout {
+            previous: TraceFrameWord {
+                displacement: previous,
+            },
+            location: TraceFrameWord {
+                displacement: location,
+            },
+        })
+    }
+
     fn finish(&self) -> Result<u32, BackendError> {
         let size = abi::align_up(self.used, abi::STACK_ALIGNMENT).ok_or_else(|| self.error())?;
         if size > i32::MAX as usize {
@@ -467,5 +536,19 @@ mod tests {
             error.message(),
             "stack frame is too large for x86-64 frame-relative addressing"
         );
+    }
+
+    #[test]
+    fn runtime_trace_frame_record_is_contiguous_aligned_and_grows_frame_by_sixteen_bytes() {
+        let callable = CallableId::Function(FunctionId::new(0));
+        let mut allocator = FrameAllocator { callable, used: 8 };
+        let untraced_size = allocator.finish().unwrap();
+
+        let trace = allocator.allocate_runtime_trace().unwrap();
+
+        assert_eq!(trace.previous().displacement(), -32);
+        assert_eq!(trace.location().displacement(), -24);
+        assert_eq!(trace.previous().displacement() % 16, 0);
+        assert_eq!(allocator.finish().unwrap(), untraced_size + 16);
     }
 }

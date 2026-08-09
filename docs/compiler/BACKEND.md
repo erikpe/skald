@@ -473,17 +473,18 @@ A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
 `panic:` record. The production driver explicitly omits trace generation, so
 version-9 runtime trace rendering observes a null top for compiler-generated
-programs. The target metadata foundation below is implemented, while frame
-publication and location replacement remain pending. Trace state applies only
-to source-level panic reporting, not to hard traps.
+programs. The target metadata and frame-maintenance foundation below is
+implemented, while precise call and failure location replacement remains
+pending. Trace state applies only to source-level panic reporting, not to hard
+traps.
 
 ## Frozen runtime trace target boundary
 
 Runtime-trace input and deterministic static metadata are implemented for
-Linux x86-64. The production driver remains explicitly omitted until frame and
-location coverage is complete, so ordinary builds still contain no trace
+Linux x86-64. The production driver remains explicitly omitted until location
+coverage is complete, so ordinary builds still contain no trace
 records. The version-9 runtime owns the hidden TLS state and allocation-free
-renderer. Each traced source callable will receive one 16-byte linked trace
+renderer. Each traced source callable receives one 16-byte linked trace
 record inside its ordinary fixed native frame: an eight-byte pointer to the
 previous record and an eight-byte pointer to immutable static location
 metadata. The runtime owns one hidden C11 thread-local top pointer. Generated
@@ -491,13 +492,14 @@ code accesses that symbol directly with the local-exec TLS model and
 `R_X86_64_TPOFF32`; it makes no C call and performs no allocation, capacity
 check, or depth check while maintaining the trace.
 
-The x86-64 target objective is six instructions at callable entry to initialize
-and publish the record, two instructions at each required location replacement
-to store a new metadata pointer, and two instructions on every normal return
-to restore `previous`. `r11` is transient scratch for the representative
-sequence, not a reserved register. Lowering must model that clobber and order
-an indirect-call target load accordingly. A future register allocator may use
-every general-purpose register outside these short sequences.
+The x86-64 target emits six instructions at callable entry to initialize and
+publish the record and two instructions on every normal return to restore
+`previous`. The pending interior-location work will emit two instructions at
+each required replacement to store a new metadata pointer. `r11` is transient
+scratch for these sequences, not a reserved register. Lowering models that
+local clobber; future indirect-call replacement must occur before loading its
+target into `r11`. A future register allocator may use every general-purpose
+register outside these short sequences.
 
 The pop is unchecked generated code. A null `previous` is the valid outermost
 state; a stale or corrupt link is a compiler/runtime defect. Frame-layout,

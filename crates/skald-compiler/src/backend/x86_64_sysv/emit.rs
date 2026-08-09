@@ -2,6 +2,8 @@
 
 use std::fmt::Write;
 
+use crate::backend::RUNTIME_TRACE_TOP_SYMBOL;
+
 use super::machine::{AssemblyProgram, FloatOperand, Instruction, Operand};
 
 pub(super) fn emit(program: &AssemblyProgram) -> String {
@@ -157,6 +159,22 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         )
         .unwrap(),
         Instruction::LoadSymbolAddress {
+            symbol,
+            destination,
+        } => write!(output, "lea {}, [rip + {symbol}]", destination.name()).unwrap(),
+        Instruction::LoadRuntimeTraceTop { destination } => write!(
+            output,
+            "mov {}, qword ptr fs:{RUNTIME_TRACE_TOP_SYMBOL}@tpoff",
+            destination.name()
+        )
+        .unwrap(),
+        Instruction::StoreRuntimeTraceTop { source } => write!(
+            output,
+            "mov qword ptr fs:{RUNTIME_TRACE_TOP_SYMBOL}@tpoff, {}",
+            source.name()
+        )
+        .unwrap(),
+        Instruction::LoadRuntimeTraceLocationAddress {
             symbol,
             destination,
         } => write!(output, "lea {}, [rip + {symbol}]", destination.name()).unwrap(),
