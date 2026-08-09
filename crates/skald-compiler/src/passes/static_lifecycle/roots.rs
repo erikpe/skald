@@ -1,7 +1,7 @@
 //! Shared lifecycle-root semantics used by planning and verification.
 
 use crate::mir::{
-    MirSharedTarget, MirType, PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget,
+    MirProgram, MirSharedTarget, MirType, PreliminaryMirSharedLifecycleTarget,
     StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
     StaticClassLifecycleOperation, StaticEffectNode, StaticEffectPhase,
 };
@@ -18,10 +18,7 @@ pub(crate) fn is_lifecycle_destination_or_published_self(
                 && effect.access == StaticAccessKind::Initialize))
 }
 
-pub(crate) fn destruction_roots(
-    program: &PreliminaryMirProgram,
-    ty: MirType,
-) -> Vec<StaticEffectNode> {
+pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<StaticEffectNode> {
     match ty {
         MirType::Class(class) | MirType::OptionalClass(class) => vec![StaticEffectNode::class(
             class,
@@ -40,14 +37,12 @@ pub(crate) fn destruction_roots(
         | MirType::F64
         | MirType::Bool
         | MirType::OptionalPrimitive(_) => Vec::new(),
-        MirType::Interface(_) | MirType::Obj | MirType::Unit => {
-            unreachable!("verified static fields always have a storable type")
-        }
+        MirType::Interface(_) | MirType::Obj | MirType::Unit => Vec::new(),
     }
 }
 
 fn shared_destruction_roots(
-    program: &PreliminaryMirProgram,
+    program: &MirProgram,
     target: MirSharedTarget,
 ) -> Vec<StaticEffectNode> {
     program

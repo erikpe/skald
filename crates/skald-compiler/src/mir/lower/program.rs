@@ -111,6 +111,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         declarations: MirFunctionDeclarationTable::new(declarations),
         definitions: MirFunctionDefinitionTable::new(definitions),
         member_definitions: MirMemberDefinitionTable::new(member_definitions),
+        static_lifecycle: None,
         entry_function: hir.entry_function,
         span: hir.span,
     }

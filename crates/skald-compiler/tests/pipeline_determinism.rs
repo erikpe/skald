@@ -18,7 +18,7 @@ use skald_compiler::{
     },
     passes::{
         run_mir_pipeline,
-        static_lifecycle::{dump_planned_mir, plan_static_lifetimes},
+        static_lifecycle::{dump_planned_mir, plan_static_lifetimes, synthesize_static_lifecycle},
     },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
@@ -123,10 +123,10 @@ const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_
 const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
-const STATIC_INITIALIZER_PLANNED_HELPER_OUTPUT: &str =
-    "SKALD_STATIC_INITIALIZER_PLANNED_DETERMINISM_OUTPUT";
-const STATIC_INITIALIZER_PLANNED_TEST_NAME: &str =
-    "static_initializer_planned_products_are_deterministic_across_processes";
+const STATIC_INITIALIZER_LIFECYCLE_HELPER_OUTPUT: &str =
+    "SKALD_STATIC_INITIALIZER_LIFECYCLE_DETERMINISM_OUTPUT";
+const STATIC_INITIALIZER_LIFECYCLE_TEST_NAME: &str =
+    "static_initializer_lifecycle_products_are_deterministic_across_processes";
 const STATIC_LIFETIME_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_STATIC_LIFETIME_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME: &str =
@@ -220,12 +220,12 @@ fn static_field_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn static_initializer_planned_products_are_deterministic_across_processes() {
+fn static_initializer_lifecycle_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
-        "static-initializer-planned",
-        STATIC_INITIALIZER_PLANNED_HELPER_OUTPUT,
-        STATIC_INITIALIZER_PLANNED_TEST_NAME,
-        static_initializer_planned_phase_dump,
+        "static-initializer-lifecycle",
+        STATIC_INITIALIZER_LIFECYCLE_HELPER_OUTPUT,
+        STATIC_INITIALIZER_LIFECYCLE_TEST_NAME,
+        static_initializer_lifecycle_phase_dump,
     );
 }
 
@@ -944,7 +944,7 @@ fn static_field_phase_dump() -> String {
     ))
 }
 
-fn static_initializer_planned_phase_dump() -> String {
+fn static_initializer_lifecycle_phase_dump() -> String {
     planned_lifecycle_phase_dump(concat!(
         "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
         "class State {\n",
@@ -1520,14 +1520,17 @@ fn planned_lifecycle_phase_dump(text: &str) -> String {
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
     let planned = plan_static_lifetimes(preliminary).unwrap();
+    let planned_dump = dump_planned_mir(&planned);
+    let final_mir = synthesize_static_lifecycle(planned).unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
         dump_hir(&hir),
-        dump_planned_mir(&planned),
+        planned_dump,
+        dump_mir(&final_mir),
     )
 }
 

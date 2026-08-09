@@ -153,14 +153,8 @@ fn verify_activation_transitions(
 ) {
     let transitions = program.lifecycle_mir().activation();
     let order = program.lifecycle().activation();
-    if transitions.len() != order.len() * 2 {
-        program_error(
-            errors,
-            "static activation transition table has incomplete phase coverage",
-        );
-        return;
-    }
-    for (field, pair) in order.iter().zip(transitions.chunks_exact(2)) {
+    let mut transitions = transitions.iter();
+    for field in order {
         let declaration = program
             .preliminary()
             .static_fields()
@@ -174,18 +168,38 @@ fn verify_activation_transitions(
         let expected_begin_span = initializer.map_or(declaration.span, |body| body.span);
         let expected_publish_span =
             initializer.map_or(declaration.span, |body| body.publication.span);
-        if pair[0].field != *field
-            || pair[0].kind != MirStaticLifecycleTransitionKind::BeginInitialization
-            || pair[0].span != expected_begin_span
-            || pair[1].field != *field
-            || pair[1].kind != MirStaticLifecycleTransitionKind::PublishLive
-            || pair[1].span != expected_publish_span
-        {
+        let valid = if initializer.is_some() {
+            matches!(
+                (transitions.next(), transitions.next()),
+                (Some(begin), Some(publish))
+                    if begin.field == *field
+                        && begin.kind == MirStaticLifecycleTransitionKind::BeginInitialization
+                        && begin.span == expected_begin_span
+                        && publish.field == *field
+                        && publish.kind == MirStaticLifecycleTransitionKind::PublishLive
+                        && publish.span == expected_publish_span
+            )
+        } else {
+            matches!(
+                transitions.next(),
+                Some(activate)
+                    if activate.field == *field
+                        && activate.kind == MirStaticLifecycleTransitionKind::ActivateZeroDefault
+                        && activate.span == expected_publish_span
+            )
+        };
+        if !valid {
             program_error(
                 errors,
                 format!("activation phase partition for {field} is malformed"),
             );
         }
+    }
+    if transitions.next().is_some() {
+        program_error(
+            errors,
+            "static activation transition table has trailing phases",
+        );
     }
 }
 

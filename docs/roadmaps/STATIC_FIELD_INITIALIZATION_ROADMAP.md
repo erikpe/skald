@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI6 are
-complete, and SI7 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI7 are
+complete, and SI8 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -234,7 +234,7 @@ moves that slot before `destination`.
 - [x] SI4 — Infer transitive static effects
 - [x] SI5 — Plan and diagnose static lifetimes
 - [x] SI6 — Define and verify lifecycle MIR
-- [ ] SI7 — Synthesize the lifecycle coordinator
+- [x] SI7 — Synthesize the lifecycle coordinator
 - [ ] SI8 — Execute eager startup
 - [ ] SI9 — Execute reverse normal-return shutdown
 - [ ] SI10 — Harden and publish initialized static fields
@@ -566,23 +566,23 @@ remain solely in the analysis pass. `make check`,
 **Purpose:** Turn the verified plan and preliminary initializer bodies into the
 single final MIR program consumed by ordinary passes and every backend.
 
-- [ ] Move each already-lowered preliminary initializer body into its planned
+- [x] Move each already-lowered preliminary initializer body into its planned
       program-owned lifecycle region without reinterpreting HIR or changing
       expression evaluation and cleanup order.
-- [ ] Emit zero-default activation at its planned position, including no-op
+- [x] Emit zero-default activation at its planned position, including no-op
       value work for primitive slots, and wrap explicit bodies with begin and
       publish transitions at the checked completion boundary.
-- [ ] Preserve post-publication full-expression cleanup before beginning the
+- [x] Preserve post-publication full-expression cleanup before beginning the
       next field and reject control flow that bypasses publication or cleanup.
-- [ ] Synthesize reverse-order destruction with begin and finish transitions
+- [x] Synthesize reverse-order destruction with begin and finish transitions
       around ordinary complete-object, optional, shared-owner, and array
       cleanup operations.
-- [ ] Extend ownership, array, cleanup, lifetime, and control-flow verification
+- [x] Extend ownership, array, cleanup, lifetime, and control-flow verification
       for the synthesized coordinator, including exact coverage, unique legal
       transitions, and destination non-escape.
-- [ ] Verify every ordinary static access in a lifecycle region through the
+- [x] Verify every ordinary static access in a lifecycle region through the
       checked effect certificate and plan; emit no runtime access guard.
-- [ ] Run the ordinary target-independent MIR pipeline only after synthesis
+- [x] Run the ordinary target-independent MIR pipeline only after synthesis
       produces the final, fully verified `MirProgram`.
 
 **Tests:** Exact synthesized MIR for every storage and cleanup category;
@@ -594,6 +594,25 @@ and deterministic dumps.
 **Exit criteria:** Final verified MIR alone proves complete static activation,
 publication, ordinary-access validity, and reverse destruction, and no backend
 can observe preliminary or merely planned MIR.
+
+**Completed:** `synthesize_static_lifecycle` consumes only a verified planned
+product and moves each independently identified initializer CFG unchanged into
+the activation order retained by final `MirProgram`. Zero-default fields use a
+single direct activation-to-live transition; explicit fields retain begin and
+publication transitions on the checked body edge so post-publication
+full-expression cleanup completes before the next region. Exact-reverse
+destruction regions surround target-independent no-op, complete-object,
+optional-class, shared-owner, optional-shared, and array cleanup semantics.
+`verify_synthesized_mir` rechecks moved bodies through ordinary structural,
+ownership, optional, array, cleanup, lifetime, and CFG verification, then
+checks region coverage/order, publication dominance, transition uniqueness,
+destination non-escape, and the effect/dependency certificate using final MIR
+alone. The driver now synthesizes and fully verifies final MIR before the
+ordinary pass pipeline; `DRV001` has moved to the SI8 backend-startup boundary.
+Focused schema, cleanup-matrix, publication-cleanup, mutation, driver,
+public-API, backend-boundary, and cross-process deterministic-dump coverage
+accompany the phase. `make check`, `cargo test --locked -p skald-compiler`,
+`make golden-determinism-test`, and `git diff --check` pass.
 
 ### SI8 — Execute eager startup
 

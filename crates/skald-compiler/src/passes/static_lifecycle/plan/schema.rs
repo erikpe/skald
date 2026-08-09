@@ -64,21 +64,31 @@ pub(super) fn build_planned_program(
                 .initializer
                 .and_then(|initializer| preliminary.static_initializer(initializer))
                 .map_or(declaration.span, |initializer| initializer.span);
-            [
-                MirStaticLifecycleTransition {
-                    field: *field,
-                    kind: MirStaticLifecycleTransitionKind::BeginInitialization,
-                    span: begin_span,
+            let publish = MirStaticLifecycleTransition {
+                field: *field,
+                kind: if declaration.initializer.is_some() {
+                    MirStaticLifecycleTransitionKind::PublishLive
+                } else {
+                    MirStaticLifecycleTransitionKind::ActivateZeroDefault
                 },
-                MirStaticLifecycleTransition {
-                    field: *field,
-                    kind: MirStaticLifecycleTransitionKind::PublishLive,
-                    span: declaration
-                        .initializer
-                        .and_then(|initializer| preliminary.static_initializer(initializer))
-                        .map_or(declaration.span, |initializer| initializer.publication.span),
+                span: declaration
+                    .initializer
+                    .and_then(|initializer| preliminary.static_initializer(initializer))
+                    .map_or(declaration.span, |initializer| initializer.publication.span),
+            };
+            declaration.initializer.map_or_else(
+                || vec![publish],
+                |_| {
+                    vec![
+                        MirStaticLifecycleTransition {
+                            field: *field,
+                            kind: MirStaticLifecycleTransitionKind::BeginInitialization,
+                            span: begin_span,
+                        },
+                        publish,
+                    ]
                 },
-            ]
+            )
         })
         .collect();
     let shutdown = plan

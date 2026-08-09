@@ -45,9 +45,9 @@ a dependency cycle, with declaration, static-use, and transitive
 call/lifecycle evidence. A valid plan retains deterministic activation and
 exact-reverse shutdown order in a separately verified lifecycle-MIR
 certificate; malformed certificate metadata is a MIR verification failure.
-The driver reports `DRV001` at the subsequent not-yet-implemented
-coordinator-synthesis boundary rather than forming an executable that ignores
-it. Every accepted
+The driver reports `DRV001` after final coordinator synthesis and verification,
+at the subsequent not-yet-implemented backend startup boundary rather than
+forming an executable that ignores it. Every accepted
 initializer-free primitive, inline-optional, optional shared-owner, and
 inline-array declaration can be read or mutated through its documented
 operations and lowers through typed static places to verified always-live MIR

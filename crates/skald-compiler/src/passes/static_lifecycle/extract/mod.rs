@@ -16,9 +16,10 @@ use crate::{
         MirCallTarget, MirClassOptionalSource, MirCopyCapability, MirDefinitionRef,
         MirDestructionStep, MirInstruction, MirIoOperation, MirMethodCallTarget, MirObjectOrigin,
         MirObjectView, MirOptionalSharedSource, MirOptionalSource, MirPlace, MirPlaceBase,
-        MirPlaceProjection, MirRvalue, MirRvalueKind, MirSelectedCopyOperation,
-        MirSharedCastSource, MirSharedTarget, MirSynthesizedCopy, MirSynthesizedFieldCopy,
-        MirTerminator, MirType, PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget,
+        MirPlaceProjection, MirProgram, MirRvalue, MirRvalueKind, MirSelectedCopyOperation,
+        MirSharedCastSource, MirSharedTarget, MirStaticInitializerBody, MirSynthesizedCopy,
+        MirSynthesizedFieldCopy, MirTerminator, MirType, PreliminaryMirProgram,
+        PreliminaryMirSharedLifecycleTarget,
     },
     source::Span,
 };
@@ -40,8 +41,23 @@ pub(crate) struct ExtractedGraph {
 }
 
 pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
+    extract_parts(program.program(), program.static_initializer_bodies())
+}
+
+pub(crate) fn extract_final(
+    program: &MirProgram,
+    initializers: &[MirStaticInitializerBody],
+) -> ExtractedGraph {
+    extract_parts(program, initializers)
+}
+
+fn extract_parts(
+    program: &MirProgram,
+    initializers: &[MirStaticInitializerBody],
+) -> ExtractedGraph {
     let mut extractor = Extractor {
         program,
+        initializers,
         nodes: BTreeMap::new(),
     };
     extractor.seed_nodes();
@@ -51,7 +67,8 @@ pub(crate) fn extract(program: &PreliminaryMirProgram) -> ExtractedGraph {
 }
 
 struct Extractor<'mir> {
-    program: &'mir PreliminaryMirProgram,
+    program: &'mir MirProgram,
+    initializers: &'mir [MirStaticInitializerBody],
     nodes: BTreeMap<StaticEffectNode, NodeDraft>,
 }
 
@@ -74,12 +91,24 @@ impl Extractor<'_> {
     }
 
     fn seed_nodes(&mut self) {
-        for definition in self.program.executable_definitions() {
+        for definition in self
+            .program
+            .definitions
+            .iter()
+            .map(MirDefinitionRef::Function)
+            .chain(
+                self.program
+                    .member_definitions
+                    .iter()
+                    .map(MirDefinitionRef::Member),
+            )
+            .chain(self.initializers.iter().map(MirDefinitionRef::from))
+        {
             self.nodes
                 .entry(StaticEffectNode::Callable(definition.callable()))
                 .or_default();
         }
-        for class in self.program.program().classes.iter() {
+        for class in self.program.classes.iter() {
             for operation in [
                 StaticClassLifecycleOperation::CopyConstructor,
                 StaticClassLifecycleOperation::CopyAssignment,
@@ -90,7 +119,7 @@ impl Extractor<'_> {
                     .or_default();
             }
         }
-        for array in self.program.program().array_types.iter() {
+        for array in self.program.array_types.iter() {
             for operation in [
                 StaticArrayLifecycleOperation::Default,
                 StaticArrayLifecycleOperation::Copy,

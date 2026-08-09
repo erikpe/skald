@@ -349,6 +349,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
         interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),
         member_definitions: MirMemberDefinitionTable::default(),
+        static_lifecycle: None,
         declarations: MirFunctionDeclarationTable::new(vec![
             fixture_function_declaration(
                 compute_id,
@@ -603,6 +604,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
         interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),
         member_definitions: MirMemberDefinitionTable::default(),
+        static_lifecycle: None,
         declarations: MirFunctionDeclarationTable::new(vec![
             fixture_function_declaration(
                 mixed_id,

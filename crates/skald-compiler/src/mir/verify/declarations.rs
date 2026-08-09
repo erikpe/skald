@@ -244,6 +244,12 @@ impl<'mir> Verifier<'mir> {
             };
             self.verify_definition(parameters, return_type, definition.into());
         }
+
+        if let Some(coordinator) = &self.program.static_lifecycle {
+            for initializer in coordinator.initializers() {
+                self.verify_definition(&[], MirType::Unit, initializer.into());
+            }
+        }
     }
 
     fn verify_external_links(&mut self) {

@@ -7,7 +7,7 @@ pub mod static_lifecycle;
 
 mod graph;
 
-use crate::mir::{verify_mir, MirProgram, MirVerificationErrors};
+use crate::mir::{MirProgram, MirVerificationErrors};
 
 /// Runs the target-independent MIR pass pipeline.
 ///
@@ -16,7 +16,7 @@ use crate::mir::{verify_mir, MirProgram, MirVerificationErrors};
 /// runs here after MIR construction and backends verify again at their trust
 /// boundary before target lowering.
 pub fn run_mir_pipeline(program: MirProgram) -> Result<MirProgram, MirVerificationErrors> {
-    verify_mir(&program)?;
+    static_lifecycle::verify_synthesized_mir(&program)?;
     Ok(program)
 }
 

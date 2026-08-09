@@ -2,7 +2,7 @@ use super::*;
 
 impl Extractor<'_> {
     pub(super) fn extract_implicit_lifecycle(&mut self) {
-        for class in self.program.program().classes.iter() {
+        for class in self.program.classes.iter() {
             self.extract_copy_constructor(class.id, &class.copy_constructor, class.span);
             self.extract_copy_assignment(class.id, &class.copy_assignment, class.span);
             let source =
@@ -24,7 +24,6 @@ impl Extractor<'_> {
                     | MirDestructionStep::OptionalClassField(field) => {
                         let declaration = self
                             .program
-                            .program()
                             .field(field)
                             .expect("verified destruction field must exist");
                         let target = match declaration.ty {
@@ -46,7 +45,6 @@ impl Extractor<'_> {
                     | MirDestructionStep::OptionalSharedField(field) => {
                         let declaration = self
                             .program
-                            .program()
                             .field(field)
                             .expect("verified shared destruction field must exist");
                         let target = match declaration.ty {
@@ -64,7 +62,6 @@ impl Extractor<'_> {
                     MirDestructionStep::ArrayField(field) => {
                         let declaration = self
                             .program
-                            .program()
                             .field(field)
                             .expect("verified array destruction field must exist");
                         let MirType::Array(array) = declaration.ty else {
@@ -97,8 +94,8 @@ impl Extractor<'_> {
             }
         }
 
-        for array in self.program.program().array_types.iter() {
-            let span = self.program.program().span;
+        for array in self.program.array_types.iter() {
+            let span = self.program.span;
             if let Some(operation) = array.lifecycle.default {
                 let source =
                     StaticEffectNode::array(array.id, StaticArrayLifecycleOperation::Default);
@@ -180,7 +177,6 @@ impl Extractor<'_> {
         for field in &copy.fields {
             let field_span = self
                 .program
-                .program()
                 .field(field.field())
                 .map_or(span, |declaration| declaration.span);
             match *field {
@@ -260,7 +256,6 @@ impl Extractor<'_> {
         for field in &copy.fields {
             let field_span = self
                 .program
-                .program()
                 .field(field.field())
                 .map_or(span, |declaration| declaration.span);
             match *field {

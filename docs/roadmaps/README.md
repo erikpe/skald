@@ -11,8 +11,8 @@ progress. Completed roadmaps and resolved discovery records move to
   initializer syntax, resolution, typed stored-value HIR, and structurally
   verified preliminary lifecycle MIR are complete. Transitive static-effect
   inference, deterministic lifetime planning with cycle diagnostics, and the
-  verified lifecycle-MIR certificate are complete; coordinator synthesis is
-  next. The roadmap adds eager initialization, checked
+  verified lifecycle-MIR certificate and final coordinator synthesis are
+  complete; eager x86-64 startup execution is next. The roadmap adds eager initialization, checked
   program-owned lifecycle state, and reverse normal-return cleanup on top of
   the implemented zero-default static-storage baseline.
 

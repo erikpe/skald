@@ -12,7 +12,9 @@ use crate::{
     },
     passes::{
         run_mir_pipeline,
-        static_lifecycle::{plan_static_lifetimes, verify_planned_mir},
+        static_lifecycle::{
+            plan_static_lifetimes, synthesize_static_lifecycle, verify_planned_mir,
+        },
     },
     resolve::{resolve, resolve_module_graph, ResolvedProgram},
     source::SourceDatabase,
@@ -22,8 +24,8 @@ use crate::{
 
 use super::CompilationRequest;
 
-/// Temporary driver boundary while verified static lifecycle MIR awaits
-/// coordinator synthesis.
+/// Temporary driver boundary while final lifecycle MIR awaits backend startup
+/// execution (SI8).
 pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS: &str = "DRV001";
 
 #[derive(Debug)]
@@ -139,26 +141,28 @@ fn finish_compilation(
         }
     };
     verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
-    for initializer in planned.static_initializers() {
+    let mir = synthesize_static_lifecycle(planned).map_err(CompilationError::MirVerification)?;
+    let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
+    for initializer in mir
+        .static_lifecycle
+        .iter()
+        .flat_map(|coordinator| coordinator.initializers())
+    {
         diagnostics.push(
             Diagnostic::error(
                 STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS,
-                "static field lifecycle coordinator cannot be synthesized yet",
+                "static field lifecycle startup cannot be emitted yet",
             )
             .with_primary_label(
                 initializer.span,
-                "lifecycle MIR and its effect certificate are verified, but coordinator synthesis is not implemented",
+                "final lifecycle coordinator MIR is verified, but backend startup lowering is not implemented",
             )
-            .with_note("verified initializer MIR cannot be consumed by a backend before coordinator synthesis"),
+            .with_note("SI8 will lower the final coordinator and call it before the selected entry function"),
         );
     }
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
     }
-    let mir = planned
-        .try_into_final()
-        .expect("initializer-free planned MIR must convert to final MIR");
-    let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {

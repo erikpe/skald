@@ -4,21 +4,31 @@ use crate::{
     backend::{BackendError, Target},
     identity::CallableId,
     mir::{
-        verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind,
-        MirParameter, MirProgram,
+        MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind, MirParameter, MirProgram,
     },
 };
 
 use super::{abi, array_legality, dispatch::DispatchMetadata, layout::DataLayout};
 
 pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadata), BackendError> {
-    verify_mir(program).map_err(|errors| {
+    crate::passes::static_lifecycle::verify_synthesized_mir(program).map_err(|errors| {
         BackendError::new(
             Target::X86_64SysV,
             None,
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+    if program
+        .static_lifecycle
+        .as_ref()
+        .is_some_and(|coordinator| !coordinator.initializers().is_empty())
+    {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "verified static lifecycle startup lowering is not implemented",
+        ));
+    }
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;

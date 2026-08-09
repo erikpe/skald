@@ -2,7 +2,19 @@ use super::*;
 
 impl Extractor<'_> {
     pub(super) fn extract_bodies(&mut self) {
-        for definition in self.program.executable_definitions() {
+        for definition in self
+            .program
+            .definitions
+            .iter()
+            .map(MirDefinitionRef::Function)
+            .chain(
+                self.program
+                    .member_definitions
+                    .iter()
+                    .map(MirDefinitionRef::Member),
+            )
+            .chain(self.initializers.iter().map(MirDefinitionRef::from))
+        {
             let source = StaticEffectNode::Callable(definition.callable());
             let after_publication = after_publication_blocks(definition);
             for block in &definition.body().blocks {

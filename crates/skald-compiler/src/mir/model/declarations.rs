@@ -38,6 +38,9 @@ pub struct MirProgram {
     pub declarations: MirFunctionDeclarationTable,
     pub definitions: MirFunctionDefinitionTable,
     pub member_definitions: MirMemberDefinitionTable,
+    /// Present after static-lifecycle synthesis. Backends never receive the
+    /// preliminary or merely planned products.
+    pub static_lifecycle: Option<super::MirStaticLifecycleCoordinator>,
     pub entry_function: FunctionId,
     pub span: Span,
 }
@@ -141,6 +144,42 @@ impl MirProgram {
             .iter()
             .map(MirDefinitionRef::Function)
             .chain(self.member_definitions.iter().map(MirDefinitionRef::Member))
+            .chain(
+                self.static_lifecycle
+                    .iter()
+                    .flat_map(|coordinator| coordinator.initializers())
+                    .map(MirDefinitionRef::from),
+            )
+    }
+
+    /// Expands a shared static view to the finite set of linked dynamic
+    /// lifecycle implementations that may own its allocation.
+    pub(crate) fn shared_lifecycle_targets(
+        &self,
+        target: MirSharedTarget,
+    ) -> Vec<super::PreliminaryMirSharedLifecycleTarget> {
+        match target {
+            MirSharedTarget::Array(array) => {
+                vec![super::PreliminaryMirSharedLifecycleTarget::Array(array)]
+            }
+            MirSharedTarget::Obj => self
+                .classes
+                .iter()
+                .map(|class| super::PreliminaryMirSharedLifecycleTarget::Class(class.id))
+                .collect(),
+            MirSharedTarget::Class(base) => self
+                .classes
+                .iter()
+                .filter(|class| class.id == base || self.is_ancestor(base, class.id))
+                .map(|class| super::PreliminaryMirSharedLifecycleTarget::Class(class.id))
+                .collect(),
+            MirSharedTarget::Interface(interface) => self
+                .classes
+                .iter()
+                .filter(|class| self.conformance(class.id, interface).is_some())
+                .map(|class| super::PreliminaryMirSharedLifecycleTarget::Class(class.id))
+                .collect(),
+        }
     }
 
     pub fn callable_signature(&self, callable: CallableId) -> Option<MirCallableSignature<'_>> {
@@ -153,7 +192,19 @@ impl MirProgram {
                         return_type: declaration.return_type,
                     })
             }
-            CallableId::StaticInitializer(_) => None,
+            CallableId::StaticInitializer(initializer) => self
+                .static_lifecycle
+                .as_ref()
+                .and_then(|coordinator| {
+                    coordinator
+                        .initializers()
+                        .iter()
+                        .find(|body| body.id == initializer)
+                })
+                .map(|_| MirCallableSignature {
+                    parameters: &[],
+                    return_type: MirType::Unit,
+                }),
             CallableId::Initializer(initializer) => {
                 self.initializer(initializer)
                     .map(|declaration| MirCallableSignature {

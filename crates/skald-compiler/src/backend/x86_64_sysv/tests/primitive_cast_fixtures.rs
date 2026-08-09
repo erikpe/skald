@@ -147,6 +147,7 @@ pub(super) fn primitive_cast_program(
         interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),
         member_definitions: MirMemberDefinitionTable::default(),
+        static_lifecycle: None,
         declarations: MirFunctionDeclarationTable::new(vec![
             fixture_function_declaration(
                 cast_id,

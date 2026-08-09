@@ -20,8 +20,12 @@ pub struct MirStaticPublication {
 }
 
 /// One independently analyzable explicit static declaration initializer.
+///
+/// The body is lowered before lifecycle planning, then moved unchanged into
+/// the final program-owned coordinator. Its name therefore describes its
+/// lasting MIR role rather than the temporary product that first owns it.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PreliminaryMirStaticInitializer {
+pub struct MirStaticInitializerBody {
     pub id: StaticInitializerId,
     pub field: StaticFieldId,
     pub destination_type: MirType,
@@ -31,6 +35,9 @@ pub struct PreliminaryMirStaticInitializer {
     pub body: MirBody,
     pub span: Span,
 }
+
+/// Compatibility name for the body while it is owned by preliminary MIR.
+pub use MirStaticInitializerBody as PreliminaryMirStaticInitializer;
 
 /// Preliminary initialization mode retained for every declared static slot.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -49,7 +56,7 @@ pub enum PreliminaryMirSharedLifecycleTarget {
     Array(ArrayTypeId),
 }
 
-impl PreliminaryMirStaticInitializer {
+impl MirStaticInitializerBody {
     pub const fn callable(&self) -> crate::identity::CallableId {
         crate::identity::CallableId::StaticInitializer(self.id)
     }
@@ -147,31 +154,7 @@ impl PreliminaryMirProgram {
         &self,
         target: MirSharedTarget,
     ) -> Vec<PreliminaryMirSharedLifecycleTarget> {
-        match target {
-            MirSharedTarget::Array(array) => {
-                vec![PreliminaryMirSharedLifecycleTarget::Array(array)]
-            }
-            MirSharedTarget::Obj => self
-                .program
-                .classes
-                .iter()
-                .map(|class| PreliminaryMirSharedLifecycleTarget::Class(class.id))
-                .collect(),
-            MirSharedTarget::Class(base) => self
-                .program
-                .classes
-                .iter()
-                .filter(|class| class.id == base || self.program.is_ancestor(base, class.id))
-                .map(|class| PreliminaryMirSharedLifecycleTarget::Class(class.id))
-                .collect(),
-            MirSharedTarget::Interface(interface) => self
-                .program
-                .classes
-                .iter()
-                .filter(|class| self.program.conformance(class.id, interface).is_some())
-                .map(|class| PreliminaryMirSharedLifecycleTarget::Class(class.id))
-                .collect(),
-        }
+        self.program.shared_lifecycle_targets(target)
     }
 
     /// Converts only a lifecycle-free product into backend-consumable MIR.
@@ -189,6 +172,20 @@ impl PreliminaryMirProgram {
 
     pub(crate) fn program_mut(&mut self) -> &mut MirProgram {
         &mut self.program
+    }
+
+    pub(crate) fn static_initializer_bodies(&self) -> &[MirStaticInitializerBody] {
+        &self.static_initializers
+    }
+
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        MirProgram,
+        Vec<PreliminaryMirStaticField>,
+        Vec<MirStaticInitializerBody>,
+    ) {
+        (self.program, self.static_fields, self.static_initializers)
     }
 
     #[cfg(test)]

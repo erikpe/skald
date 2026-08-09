@@ -67,8 +67,9 @@ pub use optional::{
 };
 pub use path_condition::MirPathCondition;
 pub use preliminary::{
-    MirStaticPublication, PreliminaryMirProgram, PreliminaryMirSharedLifecycleTarget,
-    PreliminaryMirStaticField, PreliminaryMirStaticInitializer,
+    MirStaticInitializerBody, MirStaticPublication, PreliminaryMirProgram,
+    PreliminaryMirSharedLifecycleTarget, PreliminaryMirStaticField,
+    PreliminaryMirStaticInitializer,
 };
 pub use primitive::{
     MirF64ToIntegerRange, MirF64ToIntegerRounding, MirPrimitiveCast, MirPrimitiveCastKind,
@@ -82,9 +83,11 @@ pub use shared::{
 };
 pub use shift::{MirRightShiftFlavor, MirShiftCountCheck, MirShiftDirection, MirShiftOperation};
 pub use static_lifecycle::{
-    MirProgramLifecycle, MirStaticFieldInitialization, MirStaticLifecycleCertificate,
-    MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleTransition,
-    MirStaticLifecycleTransitionKind, PlannedMirProgram, StaticAccessEvidence, StaticAccessKind,
+    MirProgramLifecycle, MirStaticActivationRegion, MirStaticActivationWork,
+    MirStaticDestructionRegion, MirStaticFieldInitialization, MirStaticLifecycleCertificate,
+    MirStaticLifecycleCoordinator, MirStaticLifecycleDefinition, MirStaticLifecycleIndices,
+    MirStaticLifecycleTransition, MirStaticLifecycleTransitionKind, MirStaticSharedCleanup,
+    MirStaticValueCleanup, PlannedMirProgram, StaticAccessEvidence, StaticAccessKind,
     StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
     StaticEffectSummary, StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence,

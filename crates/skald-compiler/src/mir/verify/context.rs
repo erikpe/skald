@@ -52,20 +52,29 @@ impl<'mir> Verifier<'mir> {
                     | MirType::OptionalShared(_)
                     | MirType::Array(_)
             );
-        let Some(fields) = self.preliminary_static_fields else {
-            return zero_default;
-        };
-        fields
-            .iter()
-            .find(|candidate| candidate.field == field)
-            .is_some_and(|declaration| {
-                declaration.ty == ty
-                    && if declaration.initializer.is_some() {
+        if let Some(fields) = self.preliminary_static_fields {
+            return fields
+                .iter()
+                .find(|candidate| candidate.field == field)
+                .is_some_and(|declaration| {
+                    declaration.ty == ty
+                        && if declaration.initializer.is_some() {
+                            !matches!(ty, MirType::Unit | MirType::Obj | MirType::Interface(_))
+                        } else {
+                            zero_default
+                        }
+                });
+        }
+        self.program.static_field(field).is_some_and(|declaration| {
+            declaration.ty == ty
+                && match declaration.initialization {
+                    crate::mir::MirStaticFieldInitialization::Explicit(_) => {
                         !matches!(ty, MirType::Unit | MirType::Obj | MirType::Interface(_))
-                    } else {
-                        zero_default
+                            && self.program.static_lifecycle.is_some()
                     }
-            })
+                    crate::mir::MirStaticFieldInitialization::ZeroDefault => zero_default,
+                }
+        })
     }
 
     /// Whether this destination is the complete program-owned slot belonging

@@ -30,6 +30,7 @@ The target-independent compiler path is:
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
 | Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects with witnesses for every callable and implicit lifecycle operation |
 | Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | `PlannedMirProgram` with effect summaries, evidenced dependencies, and deterministic activation/reverse-shutdown order |
+| Static lifecycle synthesis | `passes::static_lifecycle::synthesize_static_lifecycle` | final `MirProgram` with program-owned activation, publication, and reverse-destruction regions |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
@@ -217,16 +218,31 @@ shutdown without repeating fixed-point solving or topological sorting. Stable
 private ownership boundary prevents final MIR passes and backends from
 consuming or re-inferring unplanned initializer bodies.
 
-A product containing explicit lifecycle bodies cannot be converted to
-`MirProgram`, passed to ordinary MIR passes, or consumed by a backend. The
-driver reports lifetime graph failures as ordinary source diagnostics after
-preliminary verification, independently of malformed-MIR verification errors.
-For a valid explicit initializer it reports `DRV001` at the not-yet-implemented
-coordinator-synthesis boundary. An initializer-free planned product converts to
-the existing final MIR path.
-MIR continues to model accepted zero-default places as initialized, always-live
-program-owned roots without startup or cleanup instructions. The source-visible
-lifetime rule is owned by the
+`synthesize_static_lifecycle` consumes that verified product, moves every
+initializer body unchanged into the planned activation order, and produces the
+only final `MirProgram` used by the ordinary MIR pipeline. A zero-default field
+has one direct activation-to-live transition at its planned position. An
+explicit field has begin and publish transitions, with publication fixed to the
+checked CFG edge before its preserved post-publication full-expression cleanup.
+The coordinator also owns exact-reverse destruction regions whose begin and
+finish transitions surround type-selected no-op, complete-object,
+optional-class, shared-owner, optional-shared, or array cleanup semantics.
+
+`verify_synthesized_mir` independently checks final definitions, exact region
+coverage and order, unique legal transitions, initializer publication and
+cleanup control flow, ordinary ownership/array/lifetime rules, lifecycle
+destination non-escape, and the complete effect/dependency certificate using
+only final MIR. `run_mir_pipeline` and the backend trust boundary call this
+combined verifier. No runtime access guard is represented; certified ordinary
+static accesses are valid because their targets are earlier in activation and
+later in shutdown.
+
+Preliminary and planned products remain unavailable to ordinary passes and
+backends. The driver reports lifetime graph failures as ordinary source
+diagnostics after preliminary verification, independently of malformed-MIR
+verification errors. A valid explicit initializer now reaches final verified
+MIR and then reports `DRV001` at the not-yet-implemented backend startup
+lowering boundary. The source-visible lifetime rule is owned by the
 [static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 The optional-values contract assigns each decision to these same phase owners.

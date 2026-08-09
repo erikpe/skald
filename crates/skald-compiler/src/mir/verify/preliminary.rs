@@ -137,12 +137,13 @@ impl<'mir> Verifier<'mir> {
             return;
         }
 
-        let initialization = reachable_blocks(
+        let initialization = reachable_static_initializer_blocks(
             initializer,
             initializer.body.entry,
             Some((publication.initialization_exit, publication.cleanup_entry)),
         );
-        let cleanup = reachable_blocks(initializer, publication.cleanup_entry, None);
+        let cleanup =
+            reachable_static_initializer_blocks(initializer, publication.cleanup_entry, None);
         if !initialization.contains(&publication.initialization_exit) {
             self.function_error(
                 initializer.callable(),
@@ -197,7 +198,7 @@ impl<'mir> Verifier<'mir> {
     }
 }
 
-fn destination_completed_on_every_publication_path(
+pub(crate) fn destination_completed_on_every_publication_path(
     initializer: &PreliminaryMirStaticInitializer,
 ) -> bool {
     let publication = initializer.publication;
@@ -233,7 +234,7 @@ fn destination_completed_on_every_publication_path(
     reached_publication
 }
 
-fn reachable_blocks(
+pub(crate) fn reachable_static_initializer_blocks(
     initializer: &PreliminaryMirStaticInitializer,
     entry: crate::mir::BlockId,
     excluded_edge: Option<(crate::mir::BlockId, crate::mir::BlockId)>,
@@ -260,7 +261,7 @@ fn reachable_blocks(
     reached
 }
 
-fn initializes_static_field(
+pub(crate) fn initializes_static_field(
     instruction: &MirInstruction,
     field: crate::identity::StaticFieldId,
 ) -> bool {

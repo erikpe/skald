@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::mir::{
-    MirVerificationError, PlannedMirProgram, StaticAccessEvidence, StaticEffectNode,
+    MirStaticFieldInitialization, MirVerificationError, StaticAccessEvidence, StaticEffectNode,
     StaticEffectSummary, StaticLifetimeDependency, StaticLifetimePhase,
 };
 
@@ -12,12 +12,12 @@ use super::{
         extract,
         roots::{destruction_roots, is_lifecycle_destination_or_published_self},
     },
-    program_error,
+    program_error, LifecycleMirView,
 };
 
-pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificationError>) {
-    let extracted = extract::extract(program.preliminary());
-    let analysis = program.effects();
+pub(super) fn verify(program: LifecycleMirView<'_>, errors: &mut Vec<MirVerificationError>) {
+    let extracted = extract::extract_final(program.program, program.initializers);
+    let analysis = program.lifecycle.certificate().effects();
     let mut summaries = BTreeMap::new();
     for summary in analysis.summaries() {
         if summaries.insert(summary.node, summary).is_some() {
@@ -69,7 +69,7 @@ pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificati
 }
 
 fn verify_summary(
-    program: &PlannedMirProgram,
+    program: LifecycleMirView<'_>,
     summary: &StaticEffectSummary,
     summaries: &BTreeMap<StaticEffectNode, &StaticEffectSummary>,
     errors: &mut Vec<MirVerificationError>,
@@ -138,12 +138,7 @@ fn verify_summary(
         }
     }
     for effect in &summary.effects {
-        if program
-            .preliminary()
-            .program()
-            .static_field(effect.field)
-            .is_none()
-        {
+        if program.program.static_field(effect.field).is_none() {
             program_error(
                 errors,
                 format!(
@@ -194,17 +189,19 @@ fn witness_is_valid(
 }
 
 fn verify_dependencies(
-    program: &PlannedMirProgram,
+    program: LifecycleMirView<'_>,
     summaries: &BTreeMap<StaticEffectNode, &StaticEffectSummary>,
     errors: &mut Vec<MirVerificationError>,
 ) {
     let fields = program
-        .preliminary()
-        .static_fields()
-        .map(|field| (field.field, *field))
+        .lifecycle
+        .definitions()
+        .iter()
+        .map(|field| (field.field, CertificateField::from(*field)))
         .collect::<BTreeMap<_, _>>();
     let positions = program
-        .lifecycle()
+        .lifecycle
+        .plan()
         .activation()
         .iter()
         .copied()
@@ -212,7 +209,7 @@ fn verify_dependencies(
         .map(|(index, field)| (field, index))
         .collect::<BTreeMap<_, _>>();
     let mut pairs = BTreeSet::new();
-    for dependency in program.dependencies() {
+    for dependency in program.lifecycle.certificate().dependencies() {
         if !pairs.insert((dependency.prerequisite, dependency.dependent)) {
             program_error(
                 errors,
@@ -241,7 +238,7 @@ fn verify_dependencies(
                 }
             }
         }
-        for root in destruction_roots(program.preliminary(), field.ty) {
+        for root in destruction_roots(program.program, field.ty) {
             if let Some(summary) = summaries.get(&root) {
                 for effect in &summary.effects {
                     if !pairs.contains(&(effect.field, field.field)) {
@@ -260,9 +257,9 @@ fn verify_dependencies(
 }
 
 fn verify_dependency(
-    program: &PlannedMirProgram,
+    program: LifecycleMirView<'_>,
     dependency: &StaticLifetimeDependency,
-    fields: &BTreeMap<crate::identity::StaticFieldId, crate::mir::PreliminaryMirStaticField>,
+    fields: &BTreeMap<crate::identity::StaticFieldId, CertificateField>,
     positions: &BTreeMap<crate::identity::StaticFieldId, usize>,
     summaries: &BTreeMap<StaticEffectNode, &StaticEffectSummary>,
     errors: &mut Vec<MirVerificationError>,
@@ -285,8 +282,7 @@ fn verify_dependency(
     }
     let evidence = &dependency.evidence;
     let expected_target_span = program
-        .preliminary()
-        .program()
+        .program
         .static_field(prerequisite.field)
         .map(|field| field.span);
     if evidence.root != dependent.field
@@ -304,7 +300,7 @@ fn verify_dependency(
             evidence.root_effect == StaticEffectNode::callable(initializer.into())
         }),
         StaticLifetimePhase::Destruction => {
-            destruction_roots(program.preliminary(), dependent.ty).contains(&evidence.root_effect)
+            destruction_roots(program.program, dependent.ty).contains(&evidence.root_effect)
         }
     };
     if !legitimate_root {
@@ -326,6 +322,28 @@ fn verify_dependency(
             errors,
             "static lifetime edge is not justified by its root summary",
         );
+    }
+}
+
+#[derive(Clone, Copy)]
+struct CertificateField {
+    field: crate::identity::StaticFieldId,
+    ty: crate::mir::MirType,
+    initializer: Option<crate::identity::StaticInitializerId>,
+    span: crate::source::Span,
+}
+
+impl From<crate::mir::MirStaticLifecycleDefinition> for CertificateField {
+    fn from(definition: crate::mir::MirStaticLifecycleDefinition) -> Self {
+        Self {
+            field: definition.field,
+            ty: definition.ty,
+            initializer: match definition.initialization {
+                MirStaticFieldInitialization::ZeroDefault => None,
+                MirStaticFieldInitialization::Explicit(initializer) => Some(initializer),
+            },
+            span: definition.span,
+        }
     }
 }
 

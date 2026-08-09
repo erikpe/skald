@@ -71,7 +71,7 @@ impl LifetimeGraph {
                 }
             }
 
-            for root in destruction_roots(program, field.ty) {
+            for root in destruction_roots(program.program(), field.ty) {
                 let summary = effects
                     .summary(root)
                     .expect("verified destruction root must have an effect summary");

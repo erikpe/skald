@@ -43,7 +43,8 @@ use skald_compiler::{
     passes::{
         run_mir_pipeline,
         static_lifecycle::{
-            dump_planned_mir, dump_static_effects, plan_static_lifetimes, verify_planned_mir,
+            dump_planned_mir, dump_static_effects, plan_static_lifetimes,
+            synthesize_static_lifecycle, verify_planned_mir, verify_synthesized_mir,
             PlannedMirProgram, StaticEffectAnalysis, StaticLifecyclePlan, StaticLifetimeDependency,
         },
     },
@@ -196,6 +197,9 @@ fn intentional_phase_and_dump_paths_compose() {
     let _planned_dump = dump_planned_mir(&planned);
     let _lifecycle: &StaticLifecyclePlan = planned.lifecycle();
     let _dependencies: &[StaticLifetimeDependency] = planned.dependencies();
+    let synthesized = synthesize_static_lifecycle(planned).unwrap();
+    verify_synthesized_mir(&synthesized).unwrap();
+    assert!(synthesized.static_lifecycle.is_some());
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;

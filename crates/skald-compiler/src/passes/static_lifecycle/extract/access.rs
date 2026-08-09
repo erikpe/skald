@@ -229,7 +229,7 @@ impl Extractor<'_> {
     ) -> Option<MirType> {
         let mut ty = match place.base {
             MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
-                self.program.program().static_field(field)?.ty
+                self.program.static_field(field)?.ty
             }
             base => definition.storage(base.local_storage()?)?.ty,
         };
@@ -238,7 +238,7 @@ impl Extractor<'_> {
                 MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
                     MirType::Class(class)
                 }
-                MirPlaceProjection::Field(field) => self.program.program().field(field)?.ty,
+                MirPlaceProjection::Field(field) => self.program.field(field)?.ty,
                 MirPlaceProjection::ArrayElement { array, .. } => {
                     self.program.array_type(array)?.element
                 }
@@ -256,7 +256,7 @@ impl Extractor<'_> {
     ) {
         match target {
             MirCallTarget::Direct(function) => {
-                if self.program.program().definitions.get(function).is_some() {
+                if self.program.definitions.get(function).is_some() {
                     self.add_edge(
                         source,
                         StaticEffectNode::Callable(function.into()),
@@ -283,7 +283,6 @@ impl Extractor<'_> {
             MirCallTarget::Method(MirMethodCallTarget::Virtual { family, .. }) => {
                 let members = self
                     .program
-                    .program()
                     .virtual_family(family)
                     .expect("verified virtual family must exist")
                     .members
@@ -301,14 +300,9 @@ impl Extractor<'_> {
             MirCallTarget::Interface(target) => {
                 let methods = self
                     .program
-                    .program()
                     .classes
                     .iter()
-                    .filter_map(|class| {
-                        self.program
-                            .program()
-                            .conformance(class.id, target.interface)
-                    })
+                    .filter_map(|class| self.program.conformance(class.id, target.interface))
                     .flat_map(|conformance| &conformance.implementations)
                     .filter(|implementation| implementation.requirement == target.requirement)
                     .map(|implementation| implementation.method)
