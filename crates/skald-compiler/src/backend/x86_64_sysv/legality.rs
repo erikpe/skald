@@ -18,17 +18,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
-    if program
-        .static_lifecycle
-        .as_ref()
-        .is_some_and(|coordinator| !coordinator.initializers().is_empty())
-    {
-        return Err(BackendError::new(
-            Target::X86_64SysV,
-            None,
-            "verified static lifecycle startup lowering is not implemented",
-        ));
-    }
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;

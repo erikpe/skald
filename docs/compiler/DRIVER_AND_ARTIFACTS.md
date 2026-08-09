@@ -61,9 +61,10 @@ edges, and plan indices are verified again at a dedicated trust boundary.
 Static self-dependencies and cycles are ordinary source diagnostics; malformed
 preliminary or planned MIR remains a distinct verification failure. A valid
 explicit initializer is synthesized into final coordinator MIR and passes the
-ordinary target-independent verifier pipeline. It currently stops with
-`DRV001` because x86-64 startup lowering and wrapper invocation are not yet
-implemented.
+ordinary target-independent verifier pipeline. The x86-64 backend then emits
+private initializer bodies and a dependency-ordered program initializer, and
+the existing host wrapper calls it after the runtime ABI marker and before the
+selected Skald entry function.
 Static inheritance, inherited access, class/`Obj` alias views, and inline
 slicing reach verified target-independent MIR and execute through the current
 x86-64 base layout and internal static-view calling convention.

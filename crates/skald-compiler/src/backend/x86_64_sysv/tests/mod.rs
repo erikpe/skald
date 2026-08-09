@@ -39,7 +39,7 @@ use crate::{
         StorageId, ValueId,
     },
     source::SourceDatabase,
-    test_support::{lower_source_to_assembly, lower_source_to_mir},
+    test_support::{lower_source_to_assembly, lower_source_to_final_mir, lower_source_to_mir},
 };
 
 mod source_support;
@@ -84,6 +84,7 @@ mod shared_ownership;
 mod shifts;
 mod static_fields;
 mod static_inheritance;
+mod static_initialization;
 mod strings;
 mod termination;
 mod type_operations;

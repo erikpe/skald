@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI7 are
-complete, and SI8 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI8 are
+complete, and SI9 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -235,7 +235,7 @@ moves that slot before `destination`.
 - [x] SI5 — Plan and diagnose static lifetimes
 - [x] SI6 — Define and verify lifecycle MIR
 - [x] SI7 — Synthesize the lifecycle coordinator
-- [ ] SI8 — Execute eager startup
+- [x] SI8 — Execute eager startup
 - [ ] SI9 — Execute reverse normal-return shutdown
 - [ ] SI10 — Harden and publish initialized static fields
 
@@ -608,7 +608,8 @@ ownership, optional, array, cleanup, lifetime, and CFG verification, then
 checks region coverage/order, publication dominance, transition uniqueness,
 destination non-escape, and the effect/dependency certificate using final MIR
 alone. The driver now synthesizes and fully verifies final MIR before the
-ordinary pass pipeline; `DRV001` has moved to the SI8 backend-startup boundary.
+ordinary pass pipeline; backend startup lowering remained the SI8 boundary at
+that milestone.
 Focused schema, cleanup-matrix, publication-cleanup, mutation, driver,
 public-API, backend-boundary, and cross-process deterministic-dump coverage
 accompany the phase. `make check`, `cargo test --locked -p skald-compiler`,
@@ -619,20 +620,20 @@ accompany the phase. `make check`, `cargo test --locked -p skald-compiler`,
 **Purpose:** Make every initialized field available in the statically proven
 dependency order before user entry.
 
-- [ ] Extend x86-64 static planning for the complete stored type matrix while
+- [x] Extend x86-64 static planning for the complete stored type matrix while
       keeping one private aligned value slot per declaration and leaving
       instance layout, dispatch tables, callable ABI, and source visibility
       unchanged.
-- [ ] Lower verified lifecycle transitions mechanically without adding a
+- [x] Lower verified lifecycle transitions mechanically without adding a
       state load and branch to ordinary static accesses.
-- [ ] Lower the program initializer as an ordinary private generated function
+- [x] Lower the program initializer as an ordinary private generated function
       so constructors, calls, allocations, ownership, arrays, and cleanup use
       existing instruction selection.
-- [ ] Call the initializer from the existing host `main` wrapper after the ABI
+- [x] Call the initializer from the existing host `main` wrapper after the ABI
       marker and before the selected Skald entry callable.
-- [ ] Preserve deterministic symbols, section choice, alignment, relocations,
+- [x] Preserve deterministic symbols, section choice, alignment, relocations,
       literal data, panic pools, dumps, and assembly across compiler processes.
-- [ ] Retain structured backend errors for malformed MIR instead of silently
+- [x] Retain structured backend errors for malformed MIR instead of silently
       fabricating states, slots, or lifecycle order.
 
 **Tests:** Focused backend tests for slot layout and symbols,
@@ -644,6 +645,22 @@ MIR.
 **Exit criteria:** Successful startup publishes every declaration exactly once
 before user entry in the checked dependency order, with no ordinary static-
 access runtime overhead.
+
+**Implementation result:** The x86-64 backend plans the complete checked static
+storage matrix into the existing private aligned `.bss` slots and accepts
+lifecycle destinations through the same place, object-origin, optional,
+shared-owner, and array lowering paths as ordinary storage. Every initializer
+body receives a deterministic field-derived private symbol and passes through
+ordinary frame planning and instruction selection. One private program
+initializer mechanically skips zero work and calls explicit bodies in verified
+activation order; the host wrapper calls it after `ska_rt_abi_v8` and before
+the selected entry. Lifecycle transitions require no emitted state or access
+guard. Backend re-verification retains structured malformed-MIR errors, and
+focused assembly/native tests cover the complete storage matrix, dependency and
+wrapper order, side effects, post-publication cleanup, allocation, ownership,
+arrays, deterministic output, assembler acceptance, and absent access guards.
+`make check`, `cargo test --locked -p skald-compiler`,
+`make golden-determinism-test`, and `git diff --check` pass.
 
 ### SI9 — Execute reverse normal-return shutdown
 

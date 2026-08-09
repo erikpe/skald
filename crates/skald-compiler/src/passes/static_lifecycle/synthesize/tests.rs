@@ -308,14 +308,12 @@ fn ordinary_ownership_verification_covers_moved_initializer_bodies() {
 }
 
 #[test]
-fn backend_boundary_accepts_only_final_mir_and_rejects_unimplemented_startup_structurally() {
+fn backend_boundary_accepts_synthesized_static_startup() {
     let program = synthesized(
         "class State { static value: i64 = 1; init() {} }
          fn main() -> i64 { return 0; }",
     );
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert_eq!(
-        error.message(),
-        "verified static lifecycle startup lowering is not implemented"
-    );
+    let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert!(assembly.contains(".Lska.static.initialize:"));
+    assert!(assembly.contains("call .Lska.static.initialize"));
 }

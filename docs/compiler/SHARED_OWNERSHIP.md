@@ -257,14 +257,18 @@ The MIR verifier must reject a program unless all of the following hold:
   copy, owner copy, anchor, call, result, or assignment independently creates
   an allocation operation;
 - each dynamic class identifies exactly one compatible complete finalizer; and
-- shared values are absent from external signatures, and non-optional shared
-  values are absent from static storage.
+- shared values are absent from external signatures, and every non-optional
+  shared static value is established by verified eager initialization before
+  ordinary access.
 
-The implemented [zero-default static-field profile](../language/STATIC_FIELDS.md)
-admits optional `shared? T` statics, whose zero state owns nothing. Present
-values use ordinary ownership transitions during execution, while final static
-owners remain live at process termination. The profile does not admit a zero
-or uninitialized ordinary `shared T` handle.
+The implemented [static-field profile](../language/STATIC_FIELDS.md) admits
+initializer-free optional `shared? T` statics, whose zero state owns nothing,
+and explicitly initialized ordinary or optional shared statics. Initializers
+reuse ordinary adoption, copy, allocation, publication, and full-expression
+cleanup. Present values use ordinary ownership transitions during execution,
+while final static owners remain live until reverse normal-return shutdown is
+implemented. The profile never admits a zero or uninitialized ordinary
+`shared T` handle.
 
 As with existing MIR, invalid public or mutated MIR fails verification before
 target layout or code generation. Reference-count underflow and dangling

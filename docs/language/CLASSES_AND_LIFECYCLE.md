@@ -43,7 +43,7 @@ The implemented class model uses these member categories:
 | Static method | A class-owned operation with no receiver or `self`; it is selected through a class spelling. |
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
-The implemented [zero-default static-field contract](STATIC_FIELDS.md) adds a
+The implemented [static-field contract](STATIC_FIELDS.md) adds a
 separate class-owned storage category with independent declaration identity,
 typed places, verified program-owned MIR roots, and target-private storage. A
 static field is never an instance field, lifecycle slot, or receiver
@@ -742,8 +742,9 @@ field order. Checked optional-class payload access uses bounded presence
 guards. Optional `shared? T` fields also execute: absence owns nothing,
 presence owns one strong handle, synthesized copy retains conditionally, and
 assignment/destruction conditionally release in the ordinary reverse field
-order. The model executes the implemented zero-default static-field profile but
-does not include broader static state, lifecycle-member
+order. The model executes dependency-ordered eager static initialization for
+ordinary stored class values but does not yet execute reverse normal-return
+static destruction. It does not include lifecycle-member
 visibility, protected access, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields

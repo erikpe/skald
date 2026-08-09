@@ -160,13 +160,14 @@ the explicit copy-allocation form.
 Shared types are distinct from inline exact-class values and from non-owning
 aliases. There is no implicit conversion between an inline owning value and a
 shared owner. Shared values are permitted as locals, value parameters,
-results, and class fields. They are not permitted in external signatures or
-non-optional static storage. The frozen
-[zero-default static-field contract](STATIC_FIELDS.md) permits only
-`shared? T` static storage, initially absent; it does not make zero a valid
-ordinary `shared T` handle. Optional static owners use ordinary replacement,
-cast, view, and anchoring rules while executing; their final owner is retained
-under the static-field contract's process-lifetime rule.
+results, class fields, and explicitly initialized static fields. They are not
+permitted in external signatures. The [static-field contract](STATIC_FIELDS.md)
+permits initializer-free `shared? T` storage, initially absent, and explicitly
+initialized `shared T` or `shared? T` storage through ordinary adoption or
+copy. It does not make zero a valid ordinary `shared T` handle. Static owners
+use ordinary replacement, cast, view, and anchoring rules while executing;
+their final owner remains retained until reverse normal-return shutdown is
+implemented.
 
 ## Strong-owner value semantics
 

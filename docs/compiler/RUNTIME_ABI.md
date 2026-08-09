@@ -21,15 +21,16 @@ Optional values add no runtime entry point or ABI-version change. The
 never passed to allocation, deallocation, finalization, or ordinary
 shared-owner machinery.
 
-The implemented
-[zero-default static-field contract](../language/STATIC_FIELDS.md) likewise adds
-no public symbol, startup or shutdown call, root-registration service, panic
-reason, or ABI-version change. Static slots and their zero establishment are
-compiler/backend-owned, and generated code intentionally performs no final
-static cleanup. Runtime ABI version 8, `skald_runtime.h`, its compatibility
-marker, and the generated process-entry wrapper remain unchanged. Static
-fields do not alter instance object layouts, dispatch metadata, internal call
-classification, or the primitive-only external ABI.
+The implemented [static-field contract](../language/STATIC_FIELDS.md) likewise
+adds no public symbol, runtime startup or shutdown service, root-registration
+service, panic reason, or ABI-version change. Static slots, eager initializer
+bodies, and the private program initializer are compiler/backend-owned. The
+generated process-entry wrapper calls that private initializer after the
+unchanged compatibility marker and before Skald entry; generated code still
+performs no final static cleanup. Runtime ABI version 8,
+`skald_runtime.h`, and its marker remain unchanged. Static fields do not alter
+instance object layouts, dispatch metadata, internal call classification, or
+the primitive-only external ABI.
 
 The implemented [process-argument contract](../language/PROCESS.md) also leaves
 this surface unchanged. Its Linux implementation is ordinary Skald source

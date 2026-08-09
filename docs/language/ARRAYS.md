@@ -724,15 +724,18 @@ array construction can throw.
 
 ## Static storage
 
-The implemented [zero-default static-field contract](STATIC_FIELDS.md) permits an
-inline `T[]` as class-owned static storage for every legal array element
-type. It begins as the existing allocation-free empty descriptor, constructs
-no elements, and therefore does not require its element type to be default
-initializable. Later replacement, indexing, slicing, aliases, anchors, and
-standard-I/O buffer use retain this document's ordinary rules. Displaced
-backing receives ordinary cleanup. The static-field contract is authoritative
-for final process-lifetime retention. This static-array profile is implemented across
-replacement, projections, copied slices, call aliases, and byte-I/O buffers.
+The implemented [static-field contract](STATIC_FIELDS.md) permits an inline
+`T[]` as class-owned static storage for every legal array element type. An
+initializer-free declaration begins as the existing allocation-free empty
+descriptor, constructs no elements, and therefore does not require its element
+type to be default initializable. An explicit initializer uses ordinary array
+construction, copy, or produced-backing adoption before entry. Later
+replacement, indexing, slicing, aliases, anchors, and standard-I/O buffer use
+retain this document's ordinary rules. Displaced backing receives ordinary
+cleanup; final static backing remains retained until reverse normal-return
+shutdown is implemented. This static-array profile is implemented across eager
+initialization, replacement, projections, copied slices, call aliases, and
+byte-I/O buffers.
 
 ## Failure
 

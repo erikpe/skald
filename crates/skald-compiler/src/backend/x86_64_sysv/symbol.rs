@@ -46,6 +46,10 @@ pub(super) fn static_field(program: &MirProgram, field: StaticFieldId) -> String
     )
 }
 
+pub(super) fn program_initializer() -> String {
+    ".Lska.static.initialize".to_owned()
+}
+
 pub(super) fn complete_finalizer(program: &MirProgram, class: ClassId) -> String {
     format!(".Lska.{}.finalize_complete", class_stem(program, class))
 }
@@ -116,8 +120,22 @@ fn callable_stem(program: &MirProgram, callable: CallableId) -> String {
                 function.index()
             )
         }
-        CallableId::StaticInitializer(_) => {
-            unreachable!("static initializer symbols are introduced with lifecycle MIR")
+        CallableId::StaticInitializer(initializer) => {
+            let body = program
+                .static_lifecycle
+                .as_ref()
+                .and_then(|coordinator| {
+                    coordinator
+                        .initializers()
+                        .iter()
+                        .find(|body| body.id == initializer)
+                })
+                .expect("verified static initializer callable must have a lifecycle body");
+            format!(
+                "{}.static.s{}.initialize",
+                class_stem(program, body.field.class()),
+                body.field.index()
+            )
         }
         CallableId::Initializer(initializer) => format!(
             "{}.init.i{}",

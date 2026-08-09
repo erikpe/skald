@@ -28,6 +28,7 @@ mod optional;
 mod ownership;
 mod primitive_cast;
 mod shift;
+mod static_lifecycle;
 mod strings;
 mod terminator;
 mod type_operations;
@@ -57,6 +58,9 @@ pub(super) fn lower(
     functions.extend(array::lower_helpers(program, data_layout)?);
     functions.extend(ownership::lower_helpers(program, dispatch));
     functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
+    if let Some(initializer) = static_lifecycle::lower_program_initializer(program) {
+        functions.push(initializer);
+    }
     let entry = program
         .declarations
         .get(program.entry_function)
@@ -148,20 +152,26 @@ fn lower_definition(
 /// exposes its low 32 bits as C `main`'s `int`; Linux subsequently observes
 /// the low eight bits as the process exit status.
 fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
+    let mut instructions = vec![
+        Instruction::Push(Register::Rbp),
+        Instruction::Move {
+            source: Register::Rsp.into(),
+            destination: Register::Rbp.into(),
+        },
+        Instruction::Call(RUNTIME_ABI_MARKER_SYMBOL.to_owned()),
+    ];
+    if static_lifecycle::has_program_initializer(program) {
+        instructions.push(Instruction::Call(symbol::program_initializer()));
+    }
+    instructions.extend([
+        Instruction::Call(symbol::callable(program, entry)),
+        Instruction::Leave,
+        Instruction::Return,
+    ]);
     AssemblyFunction {
         symbol: "main".to_owned(),
         exported: true,
-        instructions: vec![
-            Instruction::Push(Register::Rbp),
-            Instruction::Move {
-                source: Register::Rsp.into(),
-                destination: Register::Rbp.into(),
-            },
-            Instruction::Call(RUNTIME_ABI_MARKER_SYMBOL.to_owned()),
-            Instruction::Call(symbol::callable(program, entry)),
-            Instruction::Leave,
-            Instruction::Return,
-        ],
+        instructions,
     }
 }
 

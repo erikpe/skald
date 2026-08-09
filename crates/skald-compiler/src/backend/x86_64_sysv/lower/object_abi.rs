@@ -50,6 +50,15 @@ impl InstructionSelector<'_, '_> {
                 origin_locations,
             );
         }
+        if let Some((complete, dynamic_class)) = self.static_exact_object(place) {
+            return self.select_object_origin(
+                ObjectOriginOperand::Exact {
+                    complete: &complete,
+                    dynamic_class,
+                },
+                origin_locations,
+            );
+        }
         let carrier = place.base.expect_local_storage();
         if self.frame.object_origin(carrier).is_some() {
             self.select_forwarded_origin(carrier, origin_locations);
@@ -72,6 +81,20 @@ impl InstructionSelector<'_, '_> {
             },
             origin_locations,
         )
+    }
+
+    fn static_exact_object(&self, place: &MirPlace) -> Option<(MirPlace, ClassId)> {
+        let field = match place.base {
+            crate::mir::MirPlaceBase::StaticField(field)
+            | crate::mir::MirPlaceBase::StaticLifecycleDestination(field) => field,
+            _ => return None,
+        };
+        let MirType::Class(dynamic_class) = self.program.static_field(field)?.ty else {
+            return None;
+        };
+        let mut complete = place.clone();
+        complete.projections.clear();
+        Some((complete, dynamic_class))
     }
 
     fn projected_exact_object(&self, place: &MirPlace) -> Option<(MirPlace, ClassId)> {

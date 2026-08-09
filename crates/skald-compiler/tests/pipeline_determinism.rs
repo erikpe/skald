@@ -1522,15 +1522,17 @@ fn planned_lifecycle_phase_dump(text: &str) -> String {
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let final_mir = synthesize_static_lifecycle(planned).unwrap();
+    let assembly = emit_assembly(Target::X86_64SysV, &final_mir).unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}ASSEMBLY\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
         dump_hir(&hir),
         planned_dump,
         dump_mir(&final_mir),
+        assembly,
     )
 }
 

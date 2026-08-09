@@ -1,7 +1,7 @@
 # Static Fields
 
-Status: **complete zero-default storage profile implemented; declaration
-initializer syntax through verified final lifecycle MIR implemented**. This document is
+Status: **eager static initialization implemented; reverse normal-return
+shutdown remains planned**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -13,9 +13,9 @@ established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
 type-checked as direct stored-value initialization, and lowered to structurally
 verified preliminary lifecycle MIR, planned into an explicit lifecycle schema,
-checked with a target-independent effect/dependency certificate, and moved
-unchanged into verified final coordinator MIR. The compiler deliberately stops
-before backend startup execution and executable initialized-field output.
+checked with a target-independent effect/dependency certificate, moved
+unchanged into verified final coordinator MIR, and executed eagerly before the
+selected Skald entry function.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
@@ -23,15 +23,16 @@ complete zero-default storage-type set, and lowers primitive, inline-optional,
 optional shared-owner, and inline-array operations to receiver-free typed HIR
 and MIR places. It also retains and resolves optional declaration initializer
 expressions under stable identities, selects their ordinary stored-value
-operations, and retains those operations in typed HIR. These expressions do
-not yet execute; preliminary MIR makes their calls, temporaries, ownership
+operations, and retains those operations in typed HIR. Preliminary MIR makes
+their calls, temporaries, ownership
 operations, cleanup, and publication boundary available to whole-program
 static-effect inference. That analysis conservatively summarizes direct
 and deep static uses across calls, dynamic dispatch, copy operations,
 destructors, shared releases, optionals, and arrays. Static-lifetime planning
 then includes eventual-value destruction of every owning-capable field,
 rejects self-dependencies and cycles, and selects one deterministic activation
-order with exact-reverse shutdown. The plan does not yet execute.
+order with exact-reverse shutdown. The x86-64 backend executes the activation
+half of that plan before entry; reverse normal-return shutdown remains planned.
 
 ## Declaration syntax
 
@@ -230,8 +231,8 @@ constructor and copy selections, temporary ownership, and source spans.
 Preliminary MIR then lowers the selected operations through the ordinary body
 machinery and places full-expression cleanup after an explicit destination
 publication edge. Dependency analysis therefore scans executable operations
-instead of reconstructing source intent. This milestone does not yet define or
-run an activation order.
+instead of reconstructing source intent. The resulting activation order is
+then verified before target lowering.
 
 ## Reads, writes, and replacement
 
@@ -258,24 +259,27 @@ when its operand or buffer happens to come from a static place.
 
 ## Initialization and lifetime
 
-Every initializer-free supported static field in the reachable program is
-live with the value listed above before the selected Skald entry function
-begins. All such slots become available simultaneously. No source code runs
-to establish them, so there is no declaration order, class order, module
-order, import order, dependency order, or lazy first-use order to observe.
-Explicitly initialized declarations cannot yet reach executable compilation;
-after producing preliminary lifecycle MIR, the compiler constructs and verifies
-explicit lifecycle definitions, begin/publish/destroy transitions,
+Every supported static field in the reachable program is live before the
+selected Skald entry function begins. After producing preliminary lifecycle
+MIR, the compiler constructs and verifies explicit lifecycle definitions,
+begin/publish/destroy transitions,
 deterministic transitive static-effect summaries, conservative dynamic targets,
 source-facing witnesses, evidenced lifetime dependencies, and the complete
 activation and reverse-shutdown plan. It then moves the unchanged initializer
 bodies into final coordinator activation regions, retains post-publication
 full-expression cleanup, synthesizes type-selected reverse destruction regions,
-and independently verifies that final MIR and its certificate. The driver then
-reports `DRV001` rather than silently discarding the initializer or emitting
-zero-only assembly. `DRV001` marks unavailable backend startup execution rather
-than unavailable coordinator synthesis, dependency planning, or lifecycle
-verification.
+and independently verifies that final MIR and its certificate.
+
+The x86-64 backend emits one private initializer body for every explicit
+declaration and one private program initializer that invokes those bodies in
+the verified activation order. The exported host `main` wrapper calls the
+runtime ABI marker, then the program initializer, then the selected Skald entry
+function. Initializer-free fields perform no Skald value work at their planned
+positions because their all-zero values already occupy valid private storage.
+An explicit initializer executes exactly once, publishes its completed value,
+finishes post-publication full-expression cleanup, and only then permits the
+next activation region to begin. Ordinary static access performs no lifecycle
+state check and never initializes a slot lazily.
 
 Planning rejects an initializer that can directly or transitively access its
 own field before publication. Cleanup proven to occur after publication may
@@ -286,14 +290,15 @@ initializer-free optional, shared-owner, or array field whose owning contents
 could be installed by ordinary replacement. Callable recursion alone is not a
 field-lifetime cycle.
 
-A static slot has process lifetime. It is not registered in any lexical scope,
-does not begin or end lifetime on a function call, and is not cleaned when the
-selected Skald entry function or generated host entry returns. The final
+A static slot is program-owned rather than registered in any lexical scope.
+In the current executable milestone, it is not yet cleaned when the selected
+Skald entry function or generated host entry returns. The final
 contents remain live until process termination. In particular, a final
 present optional object, optional shared owner, or nonempty inline-array
 backing is deliberately not destroyed or released by generated shutdown code.
 The host operating system may reclaim process resources without invoking
-Skald lifecycle operations.
+Skald lifecycle operations. Verified reverse destruction is retained in final
+MIR for the planned normal-return shutdown implementation.
 
 This final no-cleanup rule does not suppress ordinary replacement effects
 during execution. It also does not change cleanup of locals, parameters,
@@ -323,21 +328,21 @@ complete all-zero live value or an explicit declaration whose type cannot
 store a value. Explicit expressions otherwise use ordinary type, overload,
 privacy, copy-capability, and ownership diagnostics. `STA001` and `STA002`
 report static lifetime self-dependencies and cycles with declaration, access,
-and transitive call/lifecycle evidence. `DRV001` marks the current
-post-synthesis backend-startup boundary. Every initializer-free declaration
-accepted by zero-default validation can be used through its documented
-primitive, inline-optional, optional shared-owner, or inline-array operations
-and reaches verified MIR and native execution.
+and transitive call/lifecycle evidence. Every valid explicit initializer and
+every initializer-free declaration accepted by zero-default validation reaches
+verified MIR, deterministic x86-64 startup, and native execution.
 
 ## Runtime, ABI, and representation boundary
 
-Static fields add no public C symbol, runtime call, allocator behavior, panic
-reason, garbage-collector root, trace operation, startup hook, shutdown hook,
-or process-wrapper lifecycle step. Runtime ABI version 8 and its compatibility
-marker remain unchanged. Source `public` visibility does not export a native
-static symbol, and static fields are not permitted in external declarations.
+Static fields add no public C symbol, runtime service, allocator behavior,
+panic reason, garbage-collector root, trace operation, linker startup hook, or
+shutdown hook. Runtime ABI version 8 and its compatibility marker remain
+unchanged. The existing process wrapper gains only a compiler-private program
+initializer call after that marker. Source `public` visibility does not export
+a native static symbol, and static fields are not permitted in external
+declarations.
 
-For every initializer-free declaration that reaches the backend, the x86-64
+For every declaration that reaches the backend, the x86-64
 implementation emits one deterministic, target-private, writable, aligned,
 zero-filled slot and addresses it through ordinary verified typed places.
 Symbol spelling, section choice, alignment calculation, relocation form,
@@ -350,12 +355,8 @@ callable-ABI changes.
 
 The executable profile does not yet include:
 
-- executable declaration initialization, dependency ordering, or arbitrary
-  constant evaluation;
 - static initializer blocks, lifecycle members, or deinitializers;
 - module initialization or shutdown and their ordering;
-- executable exact inline-class or non-optional shared-owner static
-  initialization;
 - top-level or module-owned global variables;
 - interface-owned static fields;
 - external, exported, thread-local, atomic, synchronized, `final`, or constant
@@ -365,7 +366,6 @@ The executable profile does not yet include:
 - cleanup of final static contents at normal process exit.
 
 The active [static-initialization roadmap](../roadmaps/STATIC_FIELD_INITIALIZATION_ROADMAP.md)
-owns lifecycle MIR lowering, dependency ordering, eager startup, and reverse
-normal-return shutdown items above. Extending the remaining boundaries
+owns reverse normal-return shutdown and broad hardening. Extending the remaining boundaries
 requires a separate design rather than an inference from either the
 zero-default profile or initializer syntax.

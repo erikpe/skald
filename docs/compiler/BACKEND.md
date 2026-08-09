@@ -20,12 +20,14 @@ The [standard I/O compiler and runtime contract](IO.md) separately owns the
 implemented byte-array operations and runtime-call boundary, including current
 x86-64 backend input.
 
-Verified zero-default static fields are current backend input. The x86-64
+Verified eager static lifecycle MIR is current backend input. The x86-64
 target emits one aligned, writable, target-private `.bss` slot per canonical
 declaration and addresses it with identity-derived RIP-relative relocations.
-Static slots reuse ordinary value layouts and place operations; they add no
-object-layout, dispatch, callable-ABI, external-ABI, process-wrapper, or
-runtime-marker rule. Their source lifetime is owned by the
+It lowers explicit initializer bodies through ordinary frame planning,
+instruction selection, calls, allocation, ownership, arrays, and cleanup, then
+invokes them from one private program initializer in the verified activation
+order. Static slots add no object-layout, dispatch, callable-ABI, external-ABI,
+or runtime-marker rule. Their source lifetime is owned by the
 [language contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 ## Backend interface and target registry
@@ -766,11 +768,17 @@ Static-field symbols are deterministic target-private object symbols derived
 from canonical module, class, and field identities. Source visibility does not
 export them, inherited or aliased selection does not duplicate them, and their
 spelling remains a debugging detail rather than a source or ABI identity.
+Each explicit initializer also receives one deterministic target-private
+callable symbol derived from its canonical field identity. One fixed private
+program-initializer symbol coordinates those callables. Verified lifecycle
+transitions select call order but emit no state slot, load, branch, or ordinary
+static-access guard; zero-default activation emits no instruction.
 
 External calls preserve the exact declared symbol. The backend also emits one
 exported C-compatible `main` wrapper, which checks runtime ABI compatibility
-through the current marker, calls the identity-selected Skald entry function,
-and returns its low C `int` result. Runtime marker ownership belongs to the
+through the current marker, calls the private program initializer when explicit
+static work exists, calls the identity-selected Skald entry function, and
+returns its low C `int` result. Runtime marker ownership belongs to the
 [runtime ABI](RUNTIME_ABI.md#version-and-link-compatibility) rather than the
 internal symbol scheme.
 

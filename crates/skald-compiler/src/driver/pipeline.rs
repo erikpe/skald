@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::Diagnostics,
     lexer::lex,
     mir::{lower_preliminary_hir, verify_preliminary_mir},
     module::{
@@ -23,10 +23,6 @@ use crate::{
 };
 
 use super::CompilationRequest;
-
-/// Temporary driver boundary while final lifecycle MIR awaits backend startup
-/// execution (SI8).
-pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -143,26 +139,6 @@ fn finish_compilation(
     verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
     let mir = synthesize_static_lifecycle(planned).map_err(CompilationError::MirVerification)?;
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
-    for initializer in mir
-        .static_lifecycle
-        .iter()
-        .flat_map(|coordinator| coordinator.initializers())
-    {
-        diagnostics.push(
-            Diagnostic::error(
-                STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS,
-                "static field lifecycle startup cannot be emitted yet",
-            )
-            .with_primary_label(
-                initializer.span,
-                "final lifecycle coordinator MIR is verified, but backend startup lowering is not implemented",
-            )
-            .with_note("SI8 will lower the final coordinator and call it before the selected entry function"),
-        );
-    }
-    if diagnostics.has_errors() {
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {

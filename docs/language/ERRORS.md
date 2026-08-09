@@ -31,7 +31,7 @@ than source-language exceptions.
 
 ### Static-field declaration boundary
 
-The implemented [zero-default static-field contract](STATIC_FIELDS.md) assigns
+The implemented [static-field contract](STATIC_FIELDS.md) assigns
 malformed shapes to syntax analysis and member collisions, inherited identity,
 wrong-kind selection, non-callable use, and declaring-class privacy to
 resolution. Type checking reports `TYP042` at an initializer-free declaration
@@ -45,13 +45,11 @@ a dependency cycle, with declaration, static-use, and transitive
 call/lifecycle evidence. A valid plan retains deterministic activation and
 exact-reverse shutdown order in a separately verified lifecycle-MIR
 certificate; malformed certificate metadata is a MIR verification failure.
-The driver reports `DRV001` after final coordinator synthesis and verification,
-at the subsequent not-yet-implemented backend startup boundary rather than
-forming an executable that ignores it. Every accepted
-initializer-free primitive, inline-optional, optional shared-owner, and
-inline-array declaration can be read or mutated through its documented
-operations and lowers through typed static places to verified always-live MIR
-roots.
+Every accepted initializer executes once in the verified dependency order
+before entry, while initializer-free fields activate without Skald value work.
+Primitive, object, optional, shared-owner, and inline-array declarations lower
+through typed static places to verified lifecycle MIR and deterministic x86-64
+startup.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

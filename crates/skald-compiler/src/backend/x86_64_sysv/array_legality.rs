@@ -305,12 +305,17 @@ fn require_executable_array_place(
         .local_storage()
         .and_then(|storage| definition.storage(storage));
     let root_ty = match place.base {
-        MirPlaceBase::StaticField(field) => program.static_field(field).map(|field| field.ty),
+        MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
+            program.static_field(field).map(|field| field.ty)
+        }
         _ => local_storage.map(|storage| storage.ty),
     }
     .expect("verified array place has a declared root");
     let direct_static = place.projections.is_empty()
-        && matches!(place.base, MirPlaceBase::StaticField(_))
+        && matches!(
+            place.base,
+            MirPlaceBase::StaticField(_) | MirPlaceBase::StaticLifecycleDestination(_)
+        )
         && matches!(root_ty, MirType::Array(_));
     let direct_local = place.projections.is_empty()
         && matches!(

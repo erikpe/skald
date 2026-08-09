@@ -201,7 +201,9 @@ impl FrameLayout {
         data_layout: &DataLayout,
         place: &MirPlace,
     ) -> Result<FramePlace, BackendError> {
-        if let MirPlaceBase::StaticField(field_id) = place.base {
+        if let MirPlaceBase::StaticField(field_id)
+        | MirPlaceBase::StaticLifecycleDestination(field_id) = place.base
+        {
             let field = program
                 .static_field(field_id)
                 .expect("verified static place must name a declaration");
@@ -219,9 +221,6 @@ impl FrameLayout {
                 ty,
                 byte_access: matches!(ty, MirType::U8 | MirType::Bool),
             });
-        }
-        if matches!(place.base, MirPlaceBase::StaticLifecycleDestination(_)) {
-            unreachable!("unpublished static lifecycle destinations never reach a backend")
         }
         let storage_id = place.base.expect_local_storage();
         let storage = function

@@ -1085,7 +1085,8 @@ fn array_for_place(
     place: &MirPlace,
 ) -> Result<crate::identity::ArrayTypeId, BackendError> {
     let mut ty = match place.base {
-        crate::mir::MirPlaceBase::StaticField(field) => {
+        crate::mir::MirPlaceBase::StaticField(field)
+        | crate::mir::MirPlaceBase::StaticLifecycleDestination(field) => {
             program
                 .static_field(field)
                 .expect("verified static array place has a declaration")

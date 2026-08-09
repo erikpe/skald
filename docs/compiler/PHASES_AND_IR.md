@@ -240,9 +240,9 @@ later in shutdown.
 Preliminary and planned products remain unavailable to ordinary passes and
 backends. The driver reports lifetime graph failures as ordinary source
 diagnostics after preliminary verification, independently of malformed-MIR
-verification errors. A valid explicit initializer now reaches final verified
-MIR and then reports `DRV001` at the not-yet-implemented backend startup
-lowering boundary. The source-visible lifetime rule is owned by the
+verification errors. A valid explicit initializer reaches final verified MIR,
+ordinary x86-64 instruction selection, and the private dependency-ordered
+program initializer called before entry. The source-visible lifetime rule is owned by the
 [static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 The optional-values contract assigns each decision to these same phase owners.

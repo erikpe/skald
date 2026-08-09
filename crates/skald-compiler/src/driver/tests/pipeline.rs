@@ -924,28 +924,21 @@ fn primitive_static_programs_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn synthesized_static_initializers_stop_before_unavailable_backend_startup() {
-    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+fn synthesized_static_initializers_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
         "static-initializer.ska",
         concat!(
             "class State { static count: i64 = 42; init() {} }\n",
-            "fn main() -> i64 { return 0; }\n",
+            "fn main() -> i64 { return State.count; }\n",
         ),
         Target::X86_64SysV,
     )
-    .unwrap_err() else {
-        panic!("verified static initializer must stop at the backend startup boundary");
-    };
+    .expect("verified static initializer must lower through x86-64 startup");
 
-    assert_eq!(report.diagnostics.len(), 1);
-    let diagnostic = report.diagnostics.iter().next().unwrap();
-    assert_eq!(
-        diagnostic.code,
-        STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS
-    );
-    assert!(diagnostic.labels.iter().any(|label| label
-        .message
-        .contains("final lifecycle coordinator MIR is verified")));
+    assert!(artifact.assembly.contains(".Lska.static.initialize:"));
+    assert!(artifact.assembly.contains(
+        "    call ska_rt_abi_v8\n    call .Lska.static.initialize\n    call .Lska.fn.main.main.f0"
+    ));
 }
 
 #[test]

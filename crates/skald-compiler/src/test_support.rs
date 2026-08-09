@@ -15,7 +15,7 @@ use crate::{
     backend::{emit_assembly, BackendError, Target, RUNTIME_ABI_MARKER_SYMBOL},
     driver::EntrySelector,
     lexer::{lex, LexOutput},
-    mir::{lower_hir, MirProgram},
+    mir::{lower_hir, lower_preliminary_hir, MirProgram},
     module::{load_module_graph, normalize_provider_roots, ModuleGraph, ProviderRootConfiguration},
     resolve::{resolve, ResolveOutput},
     source::{SourceDatabase, SourceId},
@@ -111,6 +111,26 @@ pub(crate) fn lower_source_to_mir(text: impl Into<String>) -> MirProgram {
             .hir
             .expect("successful type checking must produce typed HIR"),
     )
+}
+
+/// Lowers source through static lifecycle planning and synthesis into the
+/// exact final MIR product accepted by target backends.
+pub(crate) fn lower_source_to_final_mir(text: impl Into<String>) -> MirProgram {
+    let checked = type_check_source(text);
+    assert_phase_succeeded("type checking", &checked.diagnostics);
+    let hir = checked
+        .hir
+        .expect("successful type checking must produce typed HIR");
+    let preliminary = lower_preliminary_hir(&hir);
+    let planned = crate::passes::static_lifecycle::plan_static_lifetimes(preliminary)
+        .unwrap_or_else(|failure| {
+            panic!(
+                "test source failed during static lifecycle planning: {:?}",
+                failure.into_diagnostics()
+            )
+        });
+    crate::passes::static_lifecycle::synthesize_static_lifecycle(planned)
+        .expect("test source must produce valid synthesized MIR")
 }
 
 pub(crate) fn lower_source_to_assembly(
