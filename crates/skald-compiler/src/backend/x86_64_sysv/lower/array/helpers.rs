@@ -10,7 +10,7 @@ use super::super::super::{
     machine::{AssemblyFunction, ByteRegister, Instruction, Label, Operand, Register},
     symbol,
 };
-use super::super::value;
+use super::super::{call, value};
 
 const RUNTIME_FREE: &str = "ska_rt_free";
 
@@ -115,7 +115,10 @@ fn lower_shared_finalizer(
                 source: index_home,
                 destination: Register::Rsi.into(),
             },
-            Instruction::Call(symbol::array_destroy_element(array)),
+            call::direct_instruction(
+                symbol::array_destroy_element(array),
+                call::TraceAttribution::InheritedSourceOperation,
+            ),
             Instruction::Jump(header),
             Instruction::Label(complete),
             Instruction::Leave,
@@ -241,7 +244,10 @@ fn lower_clone(
             source: Register::Rax.into(),
             destination: Register::Rdi.into(),
         },
-        Instruction::Call("ska_rt_alloc".to_owned()),
+        call::direct_instruction(
+            "ska_rt_alloc",
+            call::TraceAttribution::InheritedSourceOperation,
+        ),
         Instruction::Move {
             source: Register::Rax.into(),
             destination: destination_home,
@@ -298,7 +304,10 @@ fn lower_clone(
             source: Register::Rcx.into(),
             destination: index_home,
         },
-        Instruction::Call(symbol::array_copy_element(array)),
+        call::direct_instruction(
+            symbol::array_copy_element(array),
+            call::TraceAttribution::InheritedSourceOperation,
+        ),
         Instruction::Move {
             source: index_home,
             destination: Register::Rcx.into(),
@@ -448,7 +457,10 @@ fn lower_copier(
                 source,
                 destination: Register::Rsi,
             },
-            Instruction::Call(symbol::class_copy_helper(program, class)),
+            call::direct_instruction(
+                symbol::class_copy_helper(program, class),
+                call::TraceAttribution::InheritedSourceOperation,
+            ),
         ],
         MirType::OptionalClass(class) => {
             lower_optional_class_copier(program, array, class, source, destination, data_layout)?
@@ -462,9 +474,7 @@ fn lower_copier(
             )));
         }
     };
-    let calls = instructions
-        .iter()
-        .any(|instruction| matches!(instruction, Instruction::Call(_)));
+    let calls = instructions.iter().any(call::is_call_instruction);
     if calls {
         instructions.insert(0, Instruction::Push(Register::Rbp));
         instructions.insert(
@@ -531,7 +541,10 @@ fn lower_optional_class_copier(
             source: source_payload,
             destination: Register::Rsi,
         },
-        Instruction::Call(symbol::class_copy_helper(program, class)),
+        call::direct_instruction(
+            symbol::class_copy_helper(program, class),
+            call::TraceAttribution::InheritedSourceOperation,
+        ),
         Instruction::Move {
             source: value::memory(Register::Rsp, 0),
             destination: Register::R11.into(),
@@ -569,7 +582,10 @@ fn lower_nested_array_copier(
             source,
             destination: Register::Rdi.into(),
         },
-        Instruction::Call(symbol::array_clone(inner)),
+        call::direct_instruction(
+            symbol::array_clone(inner),
+            call::TraceAttribution::InheritedSourceOperation,
+        ),
         Instruction::Move {
             source: value::memory(Register::Rsp, 0),
             destination: Register::R11.into(),
@@ -615,7 +631,10 @@ fn lower_shared_copier(
         ]);
     }
     instructions.extend([
-        Instruction::Call(symbol::shared_handle_retain()),
+        call::direct_instruction(
+            symbol::shared_handle_retain(),
+            call::TraceAttribution::InheritedSourceOperation,
+        ),
         Instruction::Move {
             source: value::memory(Register::Rsp, 0),
             destination: Register::R11.into(),
@@ -688,7 +707,10 @@ fn lower_destroyer(
                 source: element_address,
                 destination: Register::Rdi,
             },
-            Instruction::Call(symbol::complete_finalizer(program, class)),
+            call::direct_instruction(
+                symbol::complete_finalizer(program, class),
+                call::TraceAttribution::InheritedSourceOperation,
+            ),
         ],
         MirType::OptionalClass(class) => {
             let payload_offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
@@ -714,7 +736,10 @@ fn lower_destroyer(
                     source: offset_operand(element_address, payload_offset)?,
                     destination: Register::Rdi,
                 },
-                Instruction::Call(symbol::complete_finalizer(program, class)),
+                call::direct_instruction(
+                    symbol::complete_finalizer(program, class),
+                    call::TraceAttribution::InheritedSourceOperation,
+                ),
                 Instruction::Label(complete),
             ]
         }
@@ -723,14 +748,20 @@ fn lower_destroyer(
                 source: element_address,
                 destination: Register::Rdi.into(),
             },
-            Instruction::Call(symbol::array_release(inner)),
+            call::direct_instruction(
+                symbol::array_release(inner),
+                call::TraceAttribution::InheritedSourceOperation,
+            ),
         ],
         MirType::Shared(_) => vec![
             Instruction::Move {
                 source: element_address,
                 destination: Register::Rdi.into(),
             },
-            Instruction::Call(symbol::shared_handle_release()),
+            call::direct_instruction(
+                symbol::shared_handle_release(),
+                call::TraceAttribution::InheritedSourceOperation,
+            ),
         ],
         MirType::OptionalShared(_) => {
             let complete = Label::new(format!(
@@ -744,7 +775,10 @@ fn lower_destroyer(
                 },
                 Instruction::Test(Register::Rdi),
                 Instruction::JumpIfEqual(complete.clone()),
-                Instruction::Call(symbol::shared_handle_release()),
+                call::direct_instruction(
+                    symbol::shared_handle_release(),
+                    call::TraceAttribution::InheritedSourceOperation,
+                ),
                 Instruction::Label(complete),
             ]
         }
@@ -754,9 +788,7 @@ fn lower_destroyer(
             )));
         }
     };
-    let calls = instructions
-        .iter()
-        .any(|instruction| matches!(instruction, Instruction::Call(_)));
+    let calls = instructions.iter().any(call::is_call_instruction);
     if calls {
         instructions.insert(0, Instruction::Push(Register::Rbp));
         instructions.insert(
@@ -854,14 +886,17 @@ fn lower_release(array: crate::identity::ArrayTypeId) -> Result<AssemblyFunction
             source: Register::Rax.into(),
             destination: Register::Rsi.into(),
         },
-        Instruction::Call(symbol::array_destroy_element(array)),
+        call::direct_instruction(
+            symbol::array_destroy_element(array),
+            call::TraceAttribution::InheritedSourceOperation,
+        ),
         Instruction::Jump(destroy_header),
         Instruction::Label(free),
         Instruction::Move {
             source: backing_home,
             destination: Register::Rdi.into(),
         },
-        Instruction::Call(RUNTIME_FREE.to_owned()),
+        call::direct_instruction(RUNTIME_FREE, call::TraceAttribution::HardDefectOnly),
         Instruction::Label(complete),
         Instruction::Leave,
         Instruction::Return,

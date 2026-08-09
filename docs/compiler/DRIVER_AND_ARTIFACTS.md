@@ -75,7 +75,8 @@ The frozen runtime-trace extension changes the final handoff only: the driver
 passes final verified MIR, the report's read-only `SourceDatabase`, and the
 selected trace policy together to backend emission. Source ownership remains
 with the compilation report, and no target trace record or rendered path is
-written back into MIR. This extension is not yet implemented.
+written back into MIR. This handoff is implemented, but the production driver
+deliberately selects complete omission until the default-on CLI rollout.
 
 ## Command-line modes
 

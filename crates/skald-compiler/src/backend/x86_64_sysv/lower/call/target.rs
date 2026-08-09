@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::super::super::machine::{Instruction, Register};
+use super::super::super::machine::Register;
 use super::super::{
     object_abi::{ObjectOriginOperand, ReceiverOperand},
     InstructionSelector,
@@ -114,26 +114,26 @@ impl CallTarget {
         selector.record_current_runtime_trace_location()?;
         match self {
             Self::Direct(target) => {
-                selector
-                    .output
-                    .push(Instruction::Call(super::super::super::symbol::callable(
-                        selector.program,
-                        target,
-                    )));
+                selector.output.push(super::direct_instruction(
+                    super::super::super::symbol::callable(selector.program, target),
+                    super::TraceAttribution::SourceOperation,
+                ));
             }
             Self::Virtual { slot, .. } => {
                 let receiver = receiver.expect("virtual call has a receiver");
                 selector.select_virtual_target(receiver.origin, slot)?;
-                selector
-                    .output
-                    .push(Instruction::CallIndirect(Register::R11));
+                selector.output.push(super::indirect_instruction(
+                    Register::R11,
+                    super::TraceAttribution::SourceOperation,
+                ));
             }
             Self::Interface(requirement) => {
                 let receiver = receiver.expect("interface call has a receiver");
                 selector.select_interface_target(receiver.origin, requirement)?;
-                selector
-                    .output
-                    .push(Instruction::CallIndirect(Register::R11));
+                selector.output.push(super::indirect_instruction(
+                    Register::R11,
+                    super::TraceAttribution::SourceOperation,
+                ));
             }
         }
         Ok(())

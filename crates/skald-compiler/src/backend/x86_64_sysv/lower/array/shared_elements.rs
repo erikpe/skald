@@ -32,8 +32,7 @@ impl InstructionSelector<'_, '_> {
             bits: byte_count,
             destination: Register::Rdi,
         });
-        self.output
-            .push(Instruction::Call(RUNTIME_ALLOC.to_owned()));
+        self.emit_source_operation_call(RUNTIME_ALLOC.to_owned())?;
         self.preserve_shared_element_handle();
         self.select_shared_initialize_at_handle(initializer, value::memory(Register::Rsp, 0))?;
         self.publish_preserved_class_handle(class);
@@ -55,8 +54,7 @@ impl InstructionSelector<'_, '_> {
                 .expect("shared empty array size fits u64"),
             destination: Register::Rdi,
         });
-        self.output
-            .push(Instruction::Call(RUNTIME_ALLOC.to_owned()));
+        self.emit_source_operation_call(RUNTIME_ALLOC.to_owned())?;
         self.preserve_shared_element_handle();
         self.output.push(Instruction::Move {
             source: Register::Rax.into(),

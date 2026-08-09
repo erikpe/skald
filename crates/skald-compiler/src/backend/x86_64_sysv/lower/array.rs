@@ -71,8 +71,7 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rdi.into(),
         });
         value::store_rax(value::memory(Register::Rdx, 0), self.output);
-        self.output
-            .push(Instruction::Call(symbol::array_release(array)));
+        self.emit_source_operation_call(symbol::array_release(array))?;
         Ok(())
     }
 
@@ -87,8 +86,7 @@ impl InstructionSelector<'_, '_> {
             source: Register::Rax.into(),
             destination: Register::Rdi.into(),
         });
-        self.output
-            .push(Instruction::Call(symbol::array_release(array)));
+        self.emit_source_operation_call(symbol::array_release(array))?;
         Ok(())
     }
 
@@ -336,8 +334,7 @@ impl InstructionSelector<'_, '_> {
                 value::load_rax(value::frame_storage(self.frame, *source), self.output);
                 value::store_rax(destination, self.output);
                 self.clear_storage(*source);
-                self.output
-                    .push(Instruction::Call(symbol::array_release(*array)));
+                self.emit_source_operation_call(symbol::array_release(*array))?;
                 Ok(())
             }
             MirArrayInstruction::ElementAssign {
@@ -353,8 +350,7 @@ impl InstructionSelector<'_, '_> {
                     source: Register::Rax.into(),
                     destination: Register::Rdi.into(),
                 });
-                self.output
-                    .push(Instruction::Call(symbol::array_release(*array)));
+                self.emit_source_operation_call(symbol::array_release(*array))?;
                 self.clear_place(owner)
             }
             MirArrayInstruction::DestroyNext {
@@ -641,8 +637,7 @@ impl InstructionSelector<'_, '_> {
             source: Register::Rax.into(),
             destination: Register::Rdi.into(),
         });
-        self.output
-            .push(Instruction::Call(RUNTIME_ALLOC.to_owned()));
+        self.emit_source_operation_call(RUNTIME_ALLOC.to_owned())?;
         value::store_rax(value::frame_storage(self.frame, backing), self.output);
         self.output.push(Instruction::Move {
             source: Register::Rax.into(),
@@ -1008,8 +1003,7 @@ impl InstructionSelector<'_, '_> {
             source: Register::Rax.into(),
             destination: Register::Rdi.into(),
         });
-        self.output
-            .push(Instruction::Call(symbol::array_clone(array)));
+        self.emit_source_operation_call(symbol::array_clone(array))?;
         self.output.push(Instruction::Move {
             source: value::memory(Register::Rsp, 0),
             destination: Register::Rdx.into(),

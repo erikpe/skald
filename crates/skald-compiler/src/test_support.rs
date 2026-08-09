@@ -354,6 +354,7 @@ pub(crate) fn run_native_assembly_with_runtime_trace_probe(output: &str) -> std:
         .arg(runtime.join("panic.c"))
         .arg(runtime.join("io.c"))
         .arg(probe)
+        .arg("-Wl,--wrap=malloc")
         .arg("-o")
         .arg(executable.path())
         .stdin(Stdio::piped())

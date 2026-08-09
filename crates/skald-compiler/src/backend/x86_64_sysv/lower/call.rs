@@ -15,8 +15,14 @@ use super::{
     FrameLayout, InstructionSelector,
 };
 
+mod emission;
 mod marshal;
 mod target;
+
+pub(super) use emission::TraceAttribution;
+pub(super) use emission::{
+    direct as direct_instruction, indirect as indirect_instruction, is_call as is_call_instruction,
+};
 
 use target::CallTarget;
 

@@ -16,7 +16,7 @@ use super::super::{
     machine::{AssemblyFunction, Instruction, Label, Operand, Register},
     symbol,
 };
-use super::ownership::emit_release_loaded_handle;
+use super::{call, ownership::emit_release_loaded_handle};
 
 const COMPLETE_HOME: i32 = -8;
 const FINALIZER_FRAME_SIZE: u32 = 16;
@@ -106,7 +106,10 @@ fn select_plan(
                     source: memory(Register::R11, 0),
                     destination: Register::Rdi.into(),
                 });
-                output.push(Instruction::Call(symbol::array_release(array)));
+                output.push(call::direct_instruction(
+                    symbol::array_release(array),
+                    call::TraceAttribution::InheritedSourceOperation,
+                ));
             }
             MirDestructionStep::UserBody(destructor) => {
                 load_complete_address(complete_offset, Register::Rdi, output);
@@ -115,10 +118,10 @@ fn select_plan(
                     symbol: symbol::dispatch_table(program, class),
                     destination: Register::Rdx,
                 });
-                output.push(Instruction::Call(symbol::callable(
-                    program,
-                    destructor.into(),
-                )));
+                output.push(call::direct_instruction(
+                    symbol::callable(program, destructor.into()),
+                    call::TraceAttribution::SourceBodyFromOmittedHelper,
+                ));
             }
             MirDestructionStep::Field(field) => {
                 let field_declaration = program
@@ -179,6 +182,8 @@ fn select_plan(
                     labels.last,
                     labels.complete.clone(),
                     dispatch.finalizer_displacement(),
+                    None,
+                    super::call::TraceAttribution::InheritedSourceOperation,
                     output,
                 );
                 output.push(Instruction::Label(labels.complete));
@@ -223,6 +228,8 @@ fn select_plan(
                     labels.last,
                     labels.complete.clone(),
                     dispatch.finalizer_displacement(),
+                    None,
+                    super::call::TraceAttribution::InheritedSourceOperation,
                     output,
                 );
                 output.push(Instruction::Label(labels.complete));

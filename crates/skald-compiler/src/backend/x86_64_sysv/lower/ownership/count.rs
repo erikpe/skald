@@ -3,9 +3,13 @@
 use crate::backend::x86_64_sysv::{
     layout::{SHARED_DYNAMIC_METADATA_OFFSET, SHARED_HEADER_SIZE},
     machine::{Instruction, Label, Operand, Register},
+    runtime_trace::LocationReplacement,
 };
 
-use super::{super::value, PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET};
+use super::{
+    super::{call, value},
+    PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET,
+};
 
 pub(in super::super) fn emit_retain_loaded_handle(
     invalid: Label,
@@ -59,6 +63,8 @@ pub(in super::super) fn emit_release_loaded_handle(
     last: Label,
     complete: Label,
     finalizer_displacement: i32,
+    location: Option<&LocationReplacement>,
+    attribution: call::TraceAttribution,
     output: &mut Vec<Instruction>,
 ) {
     output.push(Instruction::Test(Register::Rax));
@@ -106,6 +112,9 @@ pub(in super::super) fn emit_release_loaded_handle(
         source: Register::R11.into(),
         destination: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
     });
+    if let Some(location) = location {
+        location.emit(output);
+    }
     output.push(Instruction::Move {
         source: value::memory(Register::Rax, SHARED_DYNAMIC_METADATA_OFFSET),
         destination: Register::R11.into(),
@@ -130,13 +139,16 @@ pub(in super::super) fn emit_release_loaded_handle(
         source: value::memory(Register::Rax, SHARED_HEADER_SIZE as i32),
         destination: Register::Rdi,
     });
-    output.push(Instruction::CallIndirect(Register::R11));
+    output.push(call::indirect_instruction(Register::R11, attribution));
     output.push(Instruction::Move {
         source: stack_handle(),
         destination: Register::Rdi.into(),
     });
     output.push(Instruction::ReleaseStack(PRESERVED_HANDLE_STACK_SIZE));
-    output.push(Instruction::Call(RUNTIME_FREE.to_owned()));
+    output.push(call::direct_instruction(
+        RUNTIME_FREE,
+        call::TraceAttribution::HardDefectOnly,
+    ));
     output.push(Instruction::Jump(complete));
 
     output.push(Instruction::Label(failure));

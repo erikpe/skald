@@ -249,8 +249,7 @@ impl InstructionSelector<'_, '_> {
             source: Register::Rax.into(),
             destination: Register::Rdi.into(),
         });
-        self.output
-            .push(Instruction::Call(RUNTIME_ALLOC.to_owned()));
+        self.emit_source_operation_call(RUNTIME_ALLOC.to_owned())?;
         value::store_rax(value::frame_storage(self.frame, destination), self.output);
         self.output.push(Instruction::Move {
             source: Register::Rax.into(),
@@ -339,8 +338,7 @@ impl InstructionSelector<'_, '_> {
             source: value::memory(Register::Rsp, 16),
             destination: Register::Rcx.into(),
         });
-        self.output
-            .push(Instruction::Call(symbol::array_copy_element(array)));
+        self.emit_source_operation_call(symbol::array_copy_element(array))?;
         self.increment_stack_home(16);
         self.increment_stack_home(24);
         self.output.push(Instruction::Jump(header));

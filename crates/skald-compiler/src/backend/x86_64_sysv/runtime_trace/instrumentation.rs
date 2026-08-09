@@ -7,6 +7,22 @@ use super::super::{
 
 const TRACE_SCRATCH: Register = Register::R11;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(in crate::backend::x86_64_sysv) struct LocationReplacement {
+    frame: TraceFrameLayout,
+    symbol: String,
+}
+
+impl LocationReplacement {
+    pub(in crate::backend::x86_64_sysv) fn new(frame: TraceFrameLayout, symbol: String) -> Self {
+        Self { frame, symbol }
+    }
+
+    pub(in crate::backend::x86_64_sysv) fn emit(&self, output: &mut Vec<Instruction>) {
+        emit_location_replace(self.frame, &self.symbol, output);
+    }
+}
+
 pub(in crate::backend::x86_64_sysv) fn emit_push(
     frame: TraceFrameLayout,
     initial_location: &str,
@@ -56,11 +72,7 @@ pub(in crate::backend::x86_64_sysv) fn emit_pop(
     ]);
 }
 
-pub(in crate::backend::x86_64_sysv) fn emit_location_replace(
-    frame: TraceFrameLayout,
-    location: &str,
-    output: &mut Vec<Instruction>,
-) {
+fn emit_location_replace(frame: TraceFrameLayout, location: &str, output: &mut Vec<Instruction>) {
     output.extend([
         Instruction::LoadRuntimeTraceLocationAddress {
             symbol: location.to_owned(),

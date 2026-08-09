@@ -473,17 +473,17 @@ A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
 `panic:` record. The production driver explicitly omits trace generation, so
 version-9 runtime trace rendering observes a null top for compiler-generated
-programs. The target metadata, frame-maintenance, source-call, and central
-reporter location support below is implemented. Attribution around generated
-helpers and lower-level runtime calls remains pending. Trace state applies
-only to source-level panic reporting, not to hard traps.
+programs. The target metadata, frame maintenance, source-call, central
+reporter, generated-helper, and lower-level runtime attribution support below
+is implemented. Trace state applies only to source-level panic reporting, not
+to hard traps.
 
 ## Frozen runtime trace target boundary
 
 Runtime-trace input and deterministic static metadata are implemented for
-Linux x86-64. The production driver remains explicitly omitted until
-attribution coverage is complete, so ordinary builds still contain no trace
-records. The version-9 runtime owns the hidden TLS state and allocation-free
+Linux x86-64. The production driver remains explicitly omitted until the
+public rollout, so ordinary builds still contain no trace records. The
+version-9 runtime owns the hidden TLS state and allocation-free
 renderer. Each traced source callable receives one 16-byte linked trace
 record inside its ordinary fixed native frame: an eight-byte pointer to the
 previous record and an eight-byte pointer to immutable static location
@@ -528,9 +528,14 @@ lifecycle bodies do push. Direct, static, virtual, interface, external,
 initializer, copy, assignment, destruction, and other source calls record
 their originating MIR operation. Taken dynamic-panic and static-termination
 edges record the failing operation immediately before their reporter call,
-while successful checks and hard traps execute no failure replacement. The
-remaining generated-helper and panic-capable runtime operations will record
-their initiating source operation as that attribution coverage is completed.
+while successful checks and hard traps execute no failure replacement. Source
+operations record their location before entering generated array, ownership,
+copy, destruction, finalization, anchoring, or allocation paths. Omitted
+helpers retain that attribution across nested calls and push no artificial
+frame; a source-authored body entered from such a helper pushes normally.
+Inline ownership overflow replaces the location only on its taken failure
+edge. Known non-reporting runtime calls, deallocation, process/static
+coordination, and hard-defect paths perform no unnecessary replacement.
 
 The frozen completed design makes trace emission default-on. During staged
 implementation the production driver still constructs the explicit omitted

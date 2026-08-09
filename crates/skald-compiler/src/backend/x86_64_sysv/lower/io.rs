@@ -11,7 +11,7 @@ use super::{
         machine::{Instruction, Label, Register},
         symbol,
     },
-    value, InstructionSelector,
+    call, value, InstructionSelector,
 };
 
 const RUNTIME_IO_STANDARD_HANDLE: &str = "ska_rt_io_standard_handle";
@@ -142,7 +142,10 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn call_io_runtime(&mut self, symbol: &str, result: crate::mir::ValueId) {
-        self.output.push(Instruction::Call(symbol.to_owned()));
+        self.output.push(call::direct_instruction(
+            symbol,
+            call::TraceAttribution::NonReporting,
+        ));
         value::store_canonical_rax(
             MirType::I64,
             value::frame_value(self.frame, result),

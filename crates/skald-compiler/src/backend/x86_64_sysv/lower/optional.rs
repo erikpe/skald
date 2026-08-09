@@ -86,7 +86,12 @@ impl InstructionSelector<'_, '_> {
                     emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
                     self.output.push(Instruction::Jump(complete.clone()));
                     self.output.push(Instruction::Label(overflow));
-                    super::terminator::emit_ownership_overflow(self.output);
+                    let location = self.current_runtime_trace_location()?;
+                    super::terminator::emit_ownership_overflow(
+                        super::call::TraceAttribution::SourceOperation,
+                        location.as_ref(),
+                        self.output,
+                    );
                     self.output.push(Instruction::Label(invalid));
                     // A present optional owner must contain a verified live handle.
                     self.output.push(Instruction::Trap);
@@ -110,11 +115,14 @@ impl InstructionSelector<'_, '_> {
         self.output.push(Instruction::JumpIfEqual(complete.clone()));
         let failure = self.next_optional_label(&format!("{purpose}_invalid"));
         let last = self.next_optional_label(&format!("{purpose}_last"));
+        let location = self.current_runtime_trace_location()?;
         emit_release_loaded_handle(
             failure,
             last,
             complete.clone(),
             self.dispatch.finalizer_displacement(),
+            location.as_ref(),
+            super::call::TraceAttribution::SourceOperation,
             self.output,
         );
         self.output.push(Instruction::Label(complete));
@@ -394,7 +402,7 @@ impl InstructionSelector<'_, '_> {
                 unwrap,
                 success_target,
                 failure_target,
-                ..
+                span,
             } => {
                 let (_, source) = self.frame_place(&unwrap.source)?;
                 value::load_rax(source, self.output);
@@ -415,7 +423,12 @@ impl InstructionSelector<'_, '_> {
                     *success_target,
                 )));
                 self.output.push(Instruction::Label(overflow));
-                super::terminator::emit_ownership_overflow(self.output);
+                let location = self.runtime_trace_location(*span)?;
+                super::terminator::emit_ownership_overflow(
+                    super::call::TraceAttribution::SourceOperation,
+                    location.as_ref(),
+                    self.output,
+                );
                 self.output.push(Instruction::Label(invalid));
                 // The presence branch proves a non-null verified live handle.
                 self.output.push(Instruction::Trap);

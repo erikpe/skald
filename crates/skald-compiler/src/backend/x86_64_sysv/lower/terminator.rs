@@ -6,7 +6,7 @@ use super::{
     super::machine::{
         AssemblyFunction, AssemblyPanicMessage, Instruction, Label, Register, XmmRegister,
     },
-    block_label, runtime_trace, value, FrameLayout, InstructionSelector,
+    block_label, call, runtime_trace, value, FrameLayout, InstructionSelector,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -137,8 +137,16 @@ impl PanicMessagePool {
     }
 }
 
-pub(super) fn emit_ownership_overflow(output: &mut Vec<Instruction>) {
-    emit_static_panic(PanicMessage::OwnershipCountOverflow, output);
+pub(super) fn emit_ownership_overflow(
+    attribution: call::TraceAttribution,
+    location: Option<&runtime_trace::LocationReplacement>,
+    output: &mut Vec<Instruction>,
+) {
+    emit_static_panic_arguments(PanicMessage::OwnershipCountOverflow, output);
+    if let Some(location) = location {
+        location.emit(output);
+    }
+    emit_reporter_call(attribution, output);
 }
 
 impl InstructionSelector<'_, '_> {
@@ -217,7 +225,7 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rsi.into(),
         });
         self.record_runtime_trace_location(span)?;
-        emit_reporter_call(self.output);
+        emit_reporter_call(call::TraceAttribution::SourceOperation, self.output);
         Ok(())
     }
 
@@ -228,14 +236,9 @@ impl InstructionSelector<'_, '_> {
     ) -> Result<(), crate::backend::BackendError> {
         emit_static_panic_arguments(message, self.output);
         self.record_runtime_trace_location(span)?;
-        emit_reporter_call(self.output);
+        emit_reporter_call(call::TraceAttribution::SourceOperation, self.output);
         Ok(())
     }
-}
-
-fn emit_static_panic(message: PanicMessage, output: &mut Vec<Instruction>) {
-    emit_static_panic_arguments(message, output);
-    emit_reporter_call(output);
 }
 
 fn emit_static_panic_arguments(message: PanicMessage, output: &mut Vec<Instruction>) {
@@ -249,8 +252,8 @@ fn emit_static_panic_arguments(message: PanicMessage, output: &mut Vec<Instructi
     });
 }
 
-fn emit_reporter_call(output: &mut Vec<Instruction>) {
-    output.push(Instruction::Call("ska_rt_panic".to_owned()));
+fn emit_reporter_call(attribution: call::TraceAttribution, output: &mut Vec<Instruction>) {
+    output.push(call::direct_instruction("ska_rt_panic", attribution));
 }
 
 pub(super) fn select(

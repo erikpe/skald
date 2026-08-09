@@ -11,6 +11,7 @@ use super::super::{
     machine::{AssemblyFunction, Instruction, Label, Operand, Register},
     symbol,
 };
+use super::call;
 
 pub(super) fn has_program_initializer(program: &MirProgram) -> bool {
     program
@@ -40,10 +41,10 @@ pub(super) fn lower_program_initializer(program: &MirProgram) -> Option<Assembly
         let MirStaticActivationWork::Explicit(initializer) = region.work else {
             return None;
         };
-        Some(Instruction::Call(symbol::callable(
-            program,
-            CallableId::StaticInitializer(initializer),
-        )))
+        Some(call::direct_instruction(
+            symbol::callable(program, CallableId::StaticInitializer(initializer)),
+            call::TraceAttribution::SourceBodyFromOmittedHelper,
+        ))
     }));
     instructions.extend([Instruction::Leave, Instruction::Return]);
 
@@ -112,10 +113,10 @@ fn lower_cleanup(
         MirStaticValueCleanup::None => {}
         MirStaticValueCleanup::CompleteObject(cleanup) => {
             load_static_address(program, field, Register::Rdi, output);
-            output.push(Instruction::Call(symbol::complete_finalizer(
-                program,
-                cleanup.target,
-            )));
+            output.push(call::direct_instruction(
+                symbol::complete_finalizer(program, cleanup.target),
+                call::TraceAttribution::ProcessBoundary,
+            ));
         }
         MirStaticValueCleanup::OptionalClass(cleanup) => {
             let layout = data_layout.optional_class(cleanup.class)?;
@@ -139,10 +140,10 @@ fn lower_cleanup(
                 source: memory(Register::R11, payload_offset),
                 destination: Register::Rdi,
             });
-            output.push(Instruction::Call(symbol::complete_finalizer(
-                program,
-                cleanup.class,
-            )));
+            output.push(call::direct_instruction(
+                symbol::complete_finalizer(program, cleanup.class),
+                call::TraceAttribution::ProcessBoundary,
+            ));
             load_static_address(program, field, Register::R11, output);
             output.push(Instruction::MoveImmediate64 {
                 bits: 0,
@@ -156,7 +157,10 @@ fn lower_cleanup(
         }
         MirStaticValueCleanup::Shared(_) => {
             load_static_word(program, field, output);
-            output.push(Instruction::Call(symbol::shared_handle_release()));
+            output.push(call::direct_instruction(
+                symbol::shared_handle_release(),
+                call::TraceAttribution::ProcessBoundary,
+            ));
         }
         MirStaticValueCleanup::OptionalShared(_) => {
             let complete = Label::new(format!(
@@ -167,14 +171,20 @@ fn lower_cleanup(
             load_static_word(program, field, output);
             output.push(Instruction::Test(Register::Rdi));
             output.push(Instruction::JumpIfEqual(complete.clone()));
-            output.push(Instruction::Call(symbol::shared_handle_release()));
+            output.push(call::direct_instruction(
+                symbol::shared_handle_release(),
+                call::TraceAttribution::ProcessBoundary,
+            ));
             output.push(Instruction::Label(complete));
         }
         MirStaticValueCleanup::Array(MirArrayInstruction::Release {
             owner: _, array, ..
         }) => {
             load_static_word(program, field, output);
-            output.push(Instruction::Call(symbol::array_release(*array)));
+            output.push(call::direct_instruction(
+                symbol::array_release(*array),
+                call::TraceAttribution::ProcessBoundary,
+            ));
         }
         MirStaticValueCleanup::Array(_) => {
             unreachable!("verified static array cleanup is always a release")

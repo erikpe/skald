@@ -180,12 +180,21 @@ fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
             source: Register::Rsp.into(),
             destination: Register::Rbp.into(),
         },
-        Instruction::Call(RUNTIME_ABI_MARKER_SYMBOL.to_owned()),
+        call::direct_instruction(
+            RUNTIME_ABI_MARKER_SYMBOL,
+            call::TraceAttribution::ProcessBoundary,
+        ),
     ];
     if static_lifecycle::has_program_initializer(program) {
-        instructions.push(Instruction::Call(symbol::program_initializer()));
+        instructions.push(call::direct_instruction(
+            symbol::program_initializer(),
+            call::TraceAttribution::ProcessBoundary,
+        ));
     }
-    instructions.push(Instruction::Call(symbol::callable(program, entry)));
+    instructions.push(call::direct_instruction(
+        symbol::callable(program, entry),
+        call::TraceAttribution::ProcessBoundary,
+    ));
     if static_lifecycle::has_program_finalizer(program) {
         instructions.extend([
             Instruction::ReserveStack(ENTRY_RESULT_FRAME_SIZE),
@@ -193,7 +202,10 @@ fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
                 source: Register::Rax.into(),
                 destination: value::memory(Register::Rbp, ENTRY_RESULT_HOME),
             },
-            Instruction::Call(symbol::program_finalizer()),
+            call::direct_instruction(
+                symbol::program_finalizer(),
+                call::TraceAttribution::ProcessBoundary,
+            ),
             Instruction::Move {
                 source: value::memory(Register::Rbp, ENTRY_RESULT_HOME),
                 destination: Register::Rax.into(),
@@ -280,9 +292,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::SharedPublish(publish) => self.select_shared_publish(publish)?,
             MirInstruction::SharedStatic(static_owner) => self.select_shared_static(static_owner),
             MirInstruction::SharedAdopt(adopt) => self.select_shared_adopt(adopt),
-            MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
+            MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy)?,
             MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),
-            MirInstruction::SharedRelease(release) => self.select_shared_release(release),
+            MirInstruction::SharedRelease(release) => self.select_shared_release(release)?,
             MirInstruction::SharedFieldCopy(copy) => self.select_shared_field_copy(copy)?,
             MirInstruction::SharedCast(cast) => self.select_shared_cast(cast)?,
             MirInstruction::SharedFieldInitialize(initialize) => {
@@ -336,14 +348,45 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
     }
 
     fn record_runtime_trace_location(&mut self, span: Span) -> Result<(), BackendError> {
-        let Some(trace_frame) = self.frame.runtime_trace() else {
+        let Some(replacement) = self.runtime_trace_location(span)? else {
             return Ok(());
+        };
+        replacement.emit(self.output);
+        Ok(())
+    }
+
+    fn current_runtime_trace_location(
+        &self,
+    ) -> Result<Option<runtime_trace::LocationReplacement>, BackendError> {
+        let span = self
+            .active_instruction_span
+            .expect("trace-attributed lowering must originate from one MIR instruction");
+        self.runtime_trace_location(span)
+    }
+
+    fn runtime_trace_location(
+        &self,
+        span: Span,
+    ) -> Result<Option<runtime_trace::LocationReplacement>, BackendError> {
+        let Some(trace_frame) = self.frame.runtime_trace() else {
+            return Ok(None);
         };
         let location = self
             .metadata
             .request_location(self.function.callable(), span)?
             .expect("a trace frame requires enabled runtime-trace metadata");
-        runtime_trace::emit_location_replace(trace_frame, &location, self.output);
+        Ok(Some(runtime_trace::LocationReplacement::new(
+            trace_frame,
+            location,
+        )))
+    }
+
+    fn emit_source_operation_call(&mut self, symbol: String) -> Result<(), BackendError> {
+        self.record_current_runtime_trace_location()?;
+        self.output.push(call::direct_instruction(
+            symbol,
+            call::TraceAttribution::SourceOperation,
+        ));
         Ok(())
     }
 }

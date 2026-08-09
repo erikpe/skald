@@ -322,12 +322,13 @@ single-line record for an omitted-trace program.
 The compiler references the version-9 compatibility marker and its x86-64
 backend can plan and emit deterministic requested context/location metadata
 and maintain one linked frame for every enabled source activation. It replaces
-the active location at source/external calls and taken dynamic or static
-reporter edges. Generated-helper and lower-level runtime attribution remains
-incomplete, so the production driver still requests complete omission.
-Consequently ordinary compiled programs still observe a null trace top and
-the unchanged single-line output. The compiler contract remains described by
-the phase and backend sections below.
+the active location at source/external calls, taken dynamic or static reporter
+edges, source operations entering generated helpers or allocation, and taken
+inline ownership-overflow edges. Omitted helpers inherit their caller's
+location and never publish a frame. The production driver still requests
+complete omission until the public rollout, so ordinary compiled programs
+continue to observe a null trace top and unchanged single-line output. The
+compiler contract remains described by the phase and backend sections below.
 
 ## Responsibility boundary
 

@@ -1,6 +1,6 @@
 # Panic Runtime Trace Roadmap
 
-Status: in progress; TRACE3 is complete and TRACE4 is next.
+Status: in progress; TRACE4 is complete and TRACE5 is next.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
@@ -34,9 +34,9 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
   remain visible; the bodyless panic intrinsic remains absent.
 - Render at most 256 newest frames and append the uncounted outer-frame marker
   when a further link remains.
-- Keep the production compiler on complete omission while backend trace
-  support is incomplete. Make tracing default-on only after frame maintenance
-  and every panic-observable location family are covered.
+- Keep the production compiler on complete omission through TRACE4. Make
+  tracing default-on only after frame maintenance and every panic-observable
+  location family are covered.
 - Treat Linux AArch64 as a future target. This roadmap adds no target entry,
   instruction sequence, or AArch64 test obligation.
 - Use the Makefile as the repository automation interface; add no CI system.
@@ -47,7 +47,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 - [x] TRACE1 — Add explicit backend trace input and deterministic metadata
 - [x] TRACE2 — Maintain source-callable trace frames with inline TLS
 - [x] TRACE3 — Record source calls and reporter failure locations
-- [ ] TRACE4 — Complete generated-helper and runtime-failure attribution
+- [x] TRACE4 — Complete generated-helper and runtime-failure attribution
 - [ ] TRACE5 — Expose default-on tracing and migrate native observations
 - [ ] TRACE6 — Measure overhead, harden determinism, and close the rollout
 
@@ -229,30 +229,30 @@ by the exact caller call site without artificial intrinsic or runtime frames.
 so enabling tracing cannot expose stale locations in less obvious array,
 ownership, allocation, or static-lifecycle paths.
 
-- [ ] Inventory every direct and indirect call emitted outside ordinary call
+- [x] Inventory every direct and indirect call emitted outside ordinary call
   lowering and classify it as source-attributed, non-reporting, source-body
   entry from an omitted helper, or hard-defect-only.
-- [ ] Route target-generated call construction through a narrow audited helper
+- [x] Route target-generated call construction through a narrow audited helper
   that requires the appropriate trace-attribution classification, leaving only
   documented process-wrapper/ABI exceptions.
-- [ ] Record the initiating MIR operation before every generated array,
+- [x] Record the initiating MIR operation before every generated array,
   ownership, copy, destruction, finalization, anchoring, and static-lifecycle
   helper that may transitively enter a source body or reporter.
-- [ ] Record the source allocation operation before every valid
+- [x] Record the source allocation operation before every valid
   `ska_rt_alloc` call, including nested array/shared helper paths, so host
   exhaustion reports the initiating source location.
-- [ ] Propagate source spans through target-private helper selection only as
+- [x] Propagate source spans through target-private helper selection only as
   needed for attribution; do not create synthetic MIR operations or visible
   generated contexts.
-- [ ] Add failure-edge replacement for inline ownership-count overflow and
+- [x] Add failure-edge replacement for inline ownership-count overflow and
   ensure overflow inside an omitted helper observes the source caller's
   already-established location.
-- [ ] Keep `ska_rt_free`, known non-reporting helpers, process entry, static
+- [x] Keep `ska_rt_free`, known non-reporting helpers, process entry, static
   coordination, and hard-defect `ud2` paths free of unnecessary updates.
-- [ ] Test source-authored standard-library calls as visible frames while the
+- [x] Test source-authored standard-library calls as visible frames while the
   canonical bodyless panic intrinsic and private runtime C operations remain
   absent.
-- [ ] Add a backend audit test that fails when a new call-emission site bypasses
+- [x] Add a backend audit test that fails when a new call-emission site bypasses
   the classified helper without joining the documented exception set.
 
 **Tests:** Focused allocation, arrays, ownership, copy, destruction,

@@ -197,8 +197,8 @@ line during the staged rollout. Exceptions remain deferred.
 
 Panic runtime traces are frozen for implementation. The version-9 runtime can
 render a chain, and enabled Linux x86-64 backend emission now supplies frames
-with precise source-call and central failure locations. With tracing enabled,
-every source-authored executable
+with precise source-call, generated-helper/runtime, and failure-edge
+locations. With tracing enabled, every source-authored executable
 callable contributes one active frame. This includes ordinary functions,
 methods, initializers, explicit static-field initializer bodies, and
 source-authored copy, assignment, and destruction bodies in application or

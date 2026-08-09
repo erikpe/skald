@@ -32,7 +32,7 @@ impl InstructionSelector<'_, '_> {
                     destination: Register::Rax,
                 });
             } else {
-                self.retain_inline_array_backing();
+                self.retain_inline_array_backing()?;
             }
         } else if is_shared_anchor(kind) {
             let array = self.array_for_storage(anchor)?;
@@ -73,8 +73,7 @@ impl InstructionSelector<'_, '_> {
                 source: Register::Rax.into(),
                 destination: Register::Rdi.into(),
             });
-            self.output
-                .push(Instruction::Call(symbol::array_release(array)));
+            self.emit_source_operation_call(symbol::array_release(array))?;
         }
         self.clear_storage(anchor);
         Ok(())
@@ -114,7 +113,7 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn retain_inline_array_backing(&mut self) {
+    fn retain_inline_array_backing(&mut self) -> Result<(), BackendError> {
         let empty = self.next_array_label("anchor_retain_empty");
         let invalid = self.next_array_label("anchor_retain_invalid");
         let overflow = self.next_array_label("anchor_retain_overflow");
@@ -150,12 +149,18 @@ impl InstructionSelector<'_, '_> {
         });
         self.output.push(Instruction::Jump(complete.clone()));
         self.output.push(Instruction::Label(overflow));
-        super::super::terminator::emit_ownership_overflow(self.output);
+        let location = self.current_runtime_trace_location()?;
+        super::super::terminator::emit_ownership_overflow(
+            super::super::call::TraceAttribution::SourceOperation,
+            location.as_ref(),
+            self.output,
+        );
         self.output.push(Instruction::Label(invalid));
         // A non-empty inline backing has a positive owner count.
         self.output.push(Instruction::Trap);
         self.output.push(Instruction::Label(empty));
         self.output.push(Instruction::Label(complete));
+        Ok(())
     }
 }
 

@@ -16,7 +16,7 @@ use super::super::super::{
     machine::{AssemblyFunction, ByteRegister, Instruction, Label, Operand, Register},
     symbol,
 };
-use super::super::{ownership::emit_retain_loaded_handle, value};
+use super::super::{call, ownership::emit_retain_loaded_handle, value};
 
 const DESTINATION_HOME: i32 = -8;
 const SOURCE_HOME: i32 = -16;
@@ -124,10 +124,10 @@ fn lower_class_copy(
                 symbol: symbol::dispatch_table(program, class),
                 destination: Register::R9,
             });
-            output.push(Instruction::Call(symbol::callable(
-                program,
-                copy.operation.into(),
-            )));
+            output.push(call::direct_instruction(
+                symbol::callable(program, copy.operation.into()),
+                call::TraceAttribution::SourceBodyFromOmittedHelper,
+            ));
         }
         MirCopyCapability::Synthesized(copy) => {
             if let Some(base) = copy.base {
@@ -197,7 +197,10 @@ fn emit_field_copy<I: Copy>(
                 source: memory(Register::R11, 0),
                 destination: Register::Rdi.into(),
             });
-            output.push(Instruction::Call(symbol::array_clone(array)));
+            output.push(call::direct_instruction(
+                symbol::array_clone(array),
+                call::TraceAttribution::InheritedSourceOperation,
+            ));
             load_home_address(DESTINATION_HOME, offset, Register::R11, output);
             value::store_rax(memory(Register::R11, 0), output);
         }
@@ -239,7 +242,10 @@ fn emit_helper_call_at(
 ) {
     load_home_address(DESTINATION_HOME, destination_offset, Register::Rdi, output);
     load_home_address(SOURCE_HOME, source_offset, Register::Rsi, output);
-    output.push(Instruction::Call(symbol::class_copy_helper(program, class)));
+    output.push(call::direct_instruction(
+        symbol::class_copy_helper(program, class),
+        call::TraceAttribution::InheritedSourceOperation,
+    ));
 }
 
 fn emit_optional_copy(
@@ -366,7 +372,11 @@ fn emit_shared_copy(
         output.push(Instruction::Jump(complete.clone()));
     }
     output.push(Instruction::Label(overflow));
-    super::super::terminator::emit_ownership_overflow(output);
+    super::super::terminator::emit_ownership_overflow(
+        super::super::call::TraceAttribution::InheritedSourceOperation,
+        None,
+        output,
+    );
     output.push(Instruction::Label(invalid));
     // Generated field lifecycle code receives only verified live handles.
     output.push(Instruction::Trap);

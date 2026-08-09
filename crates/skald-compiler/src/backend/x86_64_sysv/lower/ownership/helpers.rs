@@ -9,6 +9,7 @@ use crate::{
     mir::{MirProgram, MirType},
 };
 
+use super::super::call;
 use super::{emit_release_loaded_handle, emit_retain_loaded_handle};
 
 pub(super) fn lower_all(
@@ -50,7 +51,11 @@ fn lower_retain() -> AssemblyFunction {
     }];
     emit_retain_loaded_handle(invalid.clone(), overflow.clone(), &mut instructions);
     instructions.extend([Instruction::Return, Instruction::Label(overflow)]);
-    super::super::terminator::emit_ownership_overflow(&mut instructions);
+    super::super::terminator::emit_ownership_overflow(
+        call::TraceAttribution::InheritedSourceOperation,
+        None,
+        &mut instructions,
+    );
     instructions.extend([
         Instruction::Label(invalid),
         // Array lifecycle helpers pass only verified live shared handles.
@@ -83,6 +88,8 @@ fn lower_release(dispatch: &DispatchMetadata) -> AssemblyFunction {
         last,
         complete.clone(),
         dispatch.finalizer_displacement(),
+        None,
+        call::TraceAttribution::InheritedSourceOperation,
         &mut instructions,
     );
     instructions.extend([
