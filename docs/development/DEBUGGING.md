@@ -378,13 +378,16 @@ Inspect optional frontend behavior at the narrowest owner defined by the
   origin metadata; reserved boxed/nested optional forms and aliases to
   optional shared owners remain frontend diagnostics; and
 - static-field HIR/MIR dumps expose optional shared owners through canonical
-  identity-based static places, with no function-local storage carrier or
-  generated exit cleanup.
+  identity-based static places, with no function-local storage carrier; final
+  MIR also exposes planned activation, publication, and reverse-destruction
+  regions.
 
 For a static-field issue, first compare the declaration identity in the
 resolved, HIR, and MIR dumps. In assembly, its target-private object should
 appear once in `.bss` with `.zero`, declared alignment, and RIP-relative
 address formation. An inherited class spelling, module alias, or second use
-must not create another object symbol. The generated wrapper should still
-reference only the runtime-v8 marker and contain no static startup or shutdown
-call.
+must not create another object symbol. The generated wrapper should call the
+runtime-v8 marker, the private program initializer, and Skald entry in that
+order, then preserve the entry result across the private program finalizer.
+Neither lifecycle function nor a field initializer may be exported with
+`.globl`, and ordinary field access should contain no lifecycle-state guard.

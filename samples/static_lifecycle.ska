@@ -1,0 +1,35 @@
+import std::io;
+
+fn announce(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+fn read_base() -> i64 {
+    return Startup.base + 1;
+}
+
+class Resource {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value);
+    }
+}
+
+class Startup {
+    // Dependency order overrides declaration order: base initializes first.
+    static dependent: Resource? = Resource(read_base());
+    static base: i64 = announce(40);
+
+    init() {}
+}
+
+fn main() -> i64 {
+    std::io::println_i64(Startup.dependent!.value + 1);
+    return 0;
+}

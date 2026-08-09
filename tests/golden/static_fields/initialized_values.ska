@@ -1,0 +1,65 @@
+from std::str import Str;
+from std::test import assert_eq_i64, assert_false, assert_true;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref other: Item) {
+        self.value = other.value;
+    }
+}
+
+class State {
+    private static hidden: i64 = 40;
+    static signed: i64 = State.hidden + 1;
+    static unsigned: u64 = 2u;
+    static byte: u8 = 3u8;
+    static ratio: f64 = 4.5;
+    static ready: bool = true;
+    static text: Str = "ready";
+    static item: Item = Item(5);
+    static owner: shared Item = new Item(6);
+    static maybe_number: i64? = 7;
+    static maybe_item: Item? = Item(8);
+    static maybe_owner: shared? Item = new Item(9);
+    static empty: i64[] = i64[]{};
+    static values: i64[] = i64[]{10, 11};
+    static items: Item[] = Item[]{Item(12), Item(13)};
+
+    init() {}
+
+    static fn hidden_value() -> i64 {
+        return State.hidden;
+    }
+}
+
+fn main() -> i64 {
+    var text: Str = State.text;
+    var item: Item = State.item;
+    var owner: shared Item = State.owner;
+    assert_eq_i64(State.hidden_value(), 40);
+    assert_eq_i64(State.signed, 41);
+    assert_true(State.unsigned == 2u);
+    assert_true(State.byte == 3u8);
+    assert_true(State.ratio == 4.5);
+    assert_true(State.ready);
+    assert_eq_i64((i64) text.len(), 5);
+    assert_eq_i64(item.value + owner->value, 11);
+    assert_eq_i64(State.maybe_number!, 7);
+    assert_eq_i64(State.maybe_item!.value + State.maybe_owner!->value, 17);
+    assert_true(State.empty.len() == 0u);
+    assert_eq_i64(State.values[0] + State.values[1], 21);
+    assert_eq_i64(State.items[0].value + State.items[1].value, 25);
+
+    State.maybe_item = Item(14);
+    State.maybe_owner = new Item(15);
+    State.values = i64[]{16, 17};
+    assert_eq_i64(State.maybe_item!.value + State.maybe_owner!->value, 29);
+    assert_eq_i64(State.values[0] + State.values[1], 33);
+    assert_false(State.empty.len() != 0u);
+    return 0;
+}

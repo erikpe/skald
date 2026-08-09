@@ -1,0 +1,35 @@
+import std::io;
+
+fn mark(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+fn read_seed() -> i64 {
+    return State.seed + 10;
+}
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        std::io::println_i64(self.value);
+    }
+}
+
+class State {
+    static dependent: Item = Item(read_seed());
+    static independent: Item = Item(mark(2));
+    static items: Item[] = Item[]{Item(mark(3)), Item(mark(4))};
+    static seed: i64 = mark(1);
+
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

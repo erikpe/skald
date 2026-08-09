@@ -49,7 +49,9 @@ Every accepted initializer executes once in the verified dependency order
 before entry, while initializer-free fields activate without Skald value work.
 Primitive, object, optional, shared-owner, and inline-array declarations lower
 through typed static places to verified lifecycle MIR and deterministic x86-64
-startup.
+startup. On normal entry return, the generated finalizer destroys current
+values in the verified exact-reverse order; abrupt termination and a panic
+during destruction remain non-unwinding.
 
 Static storage adds no runtime failure or panic reason. Operations performed
 through a static place retain their existing failures, such as optional

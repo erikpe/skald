@@ -39,9 +39,13 @@ fn self_dependency_diagnostic(
     let evidence = &dependency.evidence;
     let field = field_name(program, dependency.dependent);
     let phase = phase_name(evidence.phase);
+    let article = match evidence.phase {
+        StaticLifetimePhase::Initialization => "an",
+        StaticLifetimePhase::Destruction => "a",
+    };
     let mut diagnostic = Diagnostic::error(
         STATIC_LIFECYCLE_SELF_DEPENDENCY,
-        format!("static field `{field}` has a {phase} self-dependency"),
+        format!("static field `{field}` has {article} {phase} self-dependency"),
     )
     .with_primary_label(
         evidence.root_span,

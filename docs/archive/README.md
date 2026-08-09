@@ -65,6 +65,7 @@ Archived plans:
 - [Standard I/O](STANDARD_IO_ROADMAP.md)
 - [Primitive string conversions](PRIMITIVE_STRING_CONVERSIONS_ROADMAP.md)
 - [Zero-default static fields](STATIC_FIELDS_ROADMAP.md)
+- [Static field initialization and shutdown](STATIC_FIELD_INITIALIZATION_ROADMAP.md)
 - [Compact Ryū binary64 formatting](COMPACT_RYU_F64_FORMATTING_ROADMAP.md)
 - [Efficient binary64 parsing](EFFICIENT_F64_PARSING_ROADMAP.md)
 - [Integer string helper modules](INTEGER_STRING_HELPER_MODULES_ROADMAP.md)

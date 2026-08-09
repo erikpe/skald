@@ -12,3 +12,15 @@ compiler_args = [
 [[test.run]]
 name = "default"
 expect = { exit = 42 }
+
+[[test]]
+name = "initialized_modules"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/initialized_modules/modules",
+]
+
+[[test.run]]
+name = "imports_inheritance_and_privacy"
+expect = { stdout = { file = "data/initialized_modules.stdout" } }

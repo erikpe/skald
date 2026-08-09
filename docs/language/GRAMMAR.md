@@ -326,9 +326,9 @@ expressions, and their inherited identity. Static-field parsing also retains
 declaration's type span. The grammar alone does not decide which storage types
 are zero-valid or define executable access, initialization, mutation, or
 lifetime. Those settled rules belong to [Static Fields](STATIC_FIELDS.md).
-Type checking currently lowers
-primitive, inline-optional, optional shared-owner, and inline-array static
-places through HIR and MIR.
+Type checking lowers all supported stored static types—including primitives,
+exact classes, optionals, shared owners, strings, and inline arrays—through
+typed HIR and verified lifecycle MIR.
 
 ### Construction-selection syntax
 

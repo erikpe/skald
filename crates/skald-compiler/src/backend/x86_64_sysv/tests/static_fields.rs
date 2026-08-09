@@ -151,7 +151,7 @@ fn absent_static_unwrap_and_guarded_reentrant_clear_terminate() {
 }
 
 #[test]
-fn class_optional_static_replacement_destroys_old_payload_but_not_final_payload() {
+fn class_optional_static_replacement_and_shutdown_destroy_current_payloads() {
     let source = concat!(
         "extern fn test_record_i64(value: i64) -> unit;\n",
         "class Item {\n",
@@ -173,16 +173,14 @@ fn class_optional_static_replacement_destroys_old_payload_but_not_final_payload(
     let result = run_native_assembly_output(&output);
 
     assert_eq!(result.status.code(), Some(42));
-    assert_eq!(result.stdout, b"7\n42\n");
+    // Replacement destroys 7, named copying cleans its source temporary, and
+    // shutdown destroys the copied slot before the original slot.
+    assert_eq!(result.stdout, b"7\n42\n42\n42\n");
     assert!(result.stderr.is_empty());
 }
 
 fn record_seven_then_42_stub() -> &'static str {
     concat!(
-        ".bss\n",
-        ".align 8\n",
-        ".Lrecord_optional_count:\n",
-        "    .zero 8\n",
         ".section .rodata\n",
         ".Lrecord_optional_output:\n",
         "    .ascii \"7\\n42\\n\"\n",
@@ -190,24 +188,17 @@ fn record_seven_then_42_stub() -> &'static str {
         ".globl test_record_i64\n",
         ".type test_record_i64, @function\n",
         "test_record_i64:\n",
-        "    mov r10, qword ptr [rip + .Lrecord_optional_count]\n",
-        "    cmp r10, 0\n",
-        "    jne .Lrecord_optional_second\n",
         "    cmp rdi, 7\n",
-        "    jne .Lrecord_optional_bad_value\n",
+        "    jne .Lrecord_optional_42\n",
         "    mov rsi, 0\n",
         "    mov rdx, 2\n",
         "    jmp .Lrecord_optional_write\n",
-        ".Lrecord_optional_second:\n",
-        "    cmp r10, 1\n",
-        "    jne .Lrecord_optional_bad_value\n",
+        ".Lrecord_optional_42:\n",
         "    cmp rdi, 42\n",
         "    jne .Lrecord_optional_bad_value\n",
         "    mov rsi, 2\n",
         "    mov rdx, 3\n",
         ".Lrecord_optional_write:\n",
-        "    add r10, 1\n",
-        "    mov qword ptr [rip + .Lrecord_optional_count], r10\n",
         "    mov rax, 1\n",
         "    mov rdi, 1\n",
         "    lea r11, [rip + .Lrecord_optional_output]\n",
@@ -223,7 +214,7 @@ fn record_seven_then_42_stub() -> &'static str {
 }
 
 #[test]
-fn optional_shared_statics_preserve_replacement_counts_and_final_owner() {
+fn optional_shared_statics_preserve_replacement_counts_and_release_final_owner() {
     let source = concat!(
         "extern fn test_record_i64(value: i64) -> unit;\n",
         "class Item {\n",
@@ -250,11 +241,11 @@ fn optional_shared_statics_preserve_replacement_counts_and_final_owner() {
     );
     assert!(assembly.contains(".Lska.class.main.State.c1.static.s0:\n    .zero 8"));
     assembly.push_str(native_allocator());
-    assembly.push_str(record_single_seven_stub());
+    assembly.push_str(record_seven_then_42_shutdown_stub());
     let result = run_native_assembly_output(&assembly);
 
     assert_eq!(result.status.code(), Some(42));
-    assert_eq!(result.stdout, b"7\n");
+    assert_eq!(result.stdout, b"7\n42\n");
     assert!(result.stderr.is_empty());
 }
 
@@ -380,7 +371,7 @@ fn inline_array_statics_support_replacement_projection_aliases_and_detached_back
 }
 
 #[test]
-fn static_array_replacement_releases_old_elements_but_not_final_backing() {
+fn static_array_replacement_and_shutdown_release_each_backing() {
     let source = concat!(
         "extern fn test_record_i64(value: i64) -> unit;\n",
         "class Item {\n",
@@ -397,11 +388,11 @@ fn static_array_replacement_releases_old_elements_but_not_final_backing() {
     );
     let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
     assembly.push_str(native_allocator());
-    assembly.push_str(record_single_seven_stub());
+    assembly.push_str(record_two_sevens_stub());
     let result = run_native_assembly_output(&assembly);
 
     assert_eq!(result.status.code(), Some(42));
-    assert_eq!(result.stdout, b"7\n");
+    assert_eq!(result.stdout, b"7\n7\n");
     assert!(result.stderr.is_empty());
 }
 
@@ -424,24 +415,78 @@ fn static_array_checked_failures_terminate_before_addressing() {
     assert!(!run_native_assembly(&slice_assembly).success());
 }
 
-fn record_single_seven_stub() -> &'static str {
+fn record_seven_then_42_shutdown_stub() -> &'static str {
     concat!(
+        ".bss\n",
+        ".align 8\n",
+        ".Lrecord_shared_count:\n",
+        "    .zero 8\n",
         ".section .rodata\n",
-        ".Lrecord_single_seven_output:\n",
+        ".Lrecord_shared_output:\n",
+        "    .ascii \"7\\n42\\n\"\n",
+        ".text\n",
+        ".globl test_record_i64\n",
+        ".type test_record_i64, @function\n",
+        "test_record_i64:\n",
+        "    mov r10, qword ptr [rip + .Lrecord_shared_count]\n",
+        "    cmp r10, 0\n",
+        "    jne .Lrecord_shared_second\n",
+        "    cmp rdi, 7\n",
+        "    jne .Lrecord_shared_bad_value\n",
+        "    mov rsi, 0\n",
+        "    mov rdx, 2\n",
+        "    jmp .Lrecord_shared_write\n",
+        ".Lrecord_shared_second:\n",
+        "    cmp r10, 1\n",
+        "    jne .Lrecord_shared_bad_value\n",
+        "    cmp rdi, 42\n",
+        "    jne .Lrecord_shared_bad_value\n",
+        "    mov rsi, 2\n",
+        "    mov rdx, 3\n",
+        ".Lrecord_shared_write:\n",
+        "    add r10, 1\n",
+        "    mov qword ptr [rip + .Lrecord_shared_count], r10\n",
+        "    mov rax, 1\n",
+        "    mov rdi, 1\n",
+        "    lea r11, [rip + .Lrecord_shared_output]\n",
+        "    add rsi, r11\n",
+        "    syscall\n",
+        "    ret\n",
+        ".Lrecord_shared_bad_value:\n",
+        "    mov rax, 60\n",
+        "    mov rdi, 99\n",
+        "    syscall\n",
+        ".size test_record_i64, .-test_record_i64\n",
+    )
+}
+
+fn record_two_sevens_stub() -> &'static str {
+    concat!(
+        ".bss\n",
+        ".align 8\n",
+        ".Lrecord_array_count:\n",
+        "    .zero 8\n",
+        ".section .rodata\n",
+        ".Lrecord_array_output:\n",
         "    .ascii \"7\\n\"\n",
         ".text\n",
         ".globl test_record_i64\n",
         ".type test_record_i64, @function\n",
         "test_record_i64:\n",
         "    cmp rdi, 7\n",
-        "    jne .Lrecord_single_seven_bad_value\n",
+        "    jne .Lrecord_array_bad_value\n",
+        "    mov r10, qword ptr [rip + .Lrecord_array_count]\n",
+        "    cmp r10, 2\n",
+        "    jae .Lrecord_array_bad_value\n",
+        "    add r10, 1\n",
+        "    mov qword ptr [rip + .Lrecord_array_count], r10\n",
         "    mov rax, 1\n",
         "    mov rdi, 1\n",
-        "    lea rsi, [rip + .Lrecord_single_seven_output]\n",
+        "    lea rsi, [rip + .Lrecord_array_output]\n",
         "    mov rdx, 2\n",
         "    syscall\n",
         "    ret\n",
-        ".Lrecord_single_seven_bad_value:\n",
+        ".Lrecord_array_bad_value:\n",
         "    mov rax, 60\n",
         "    mov rdi, 99\n",
         "    syscall\n",

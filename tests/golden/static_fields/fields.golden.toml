@@ -17,6 +17,22 @@ name = "selection_and_dispatch"
 expect = { stdout = { file = "data/static_inheritance.stdout" } }
 
 [[test]]
+name = "initialized_values"
+mode = "run"
+source = "initialized_values.ska"
+[[test.run]]
+name = "storage_matrix_and_replacement"
+expect = { stdout = { file = "data/initialized_values.stdout" } }
+
+[[test]]
+name = "lifecycle_order"
+mode = "run"
+source = "lifecycle_order.ska"
+[[test.run]]
+name = "startup_and_shutdown"
+expect = { stdout = { file = "data/lifecycle_order.stdout" } }
+
+[[test]]
 name = "selection"
 mode = "compile-fail"
 source = "static_field_selection.ska"
@@ -42,3 +58,84 @@ source = "static_field_types.ska"
 match = "starts-with"
 inline = """error[TYP042]: static field `item` cannot have type `class c0`
  --> tests/golden/static_fields/static_field_types.ska:8:18"""
+
+[[test]]
+name = "invalid_initializer_syntax"
+mode = "compile-fail"
+source = "invalid_initializer_syntax.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR004]: expected an expression
+ --> tests/golden/static_fields/invalid_initializer_syntax.ska:2:25"""
+
+[[test]]
+name = "invalid_initialized_storage"
+mode = "compile-fail"
+source = "invalid_initialized_storage.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP042]: static field `value` cannot store type `unit`
+ --> tests/golden/static_fields/invalid_initialized_storage.ska:4:19"""
+
+[[test]]
+name = "initializer_self_dependency"
+mode = "compile-fail"
+source = "initializer_self_dependency.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[STA001]: static field `State.value` has an initialization self-dependency
+ --> tests/golden/static_fields/initializer_self_dependency.ska:2:5"""
+
+[[test]]
+name = "initializer_transitive_cycle"
+mode = "compile-fail"
+source = "initializer_transitive_cycle.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[STA002]: static field lifetimes contain a dependency cycle
+ --> tests/golden/static_fields/initializer_transitive_cycle.ska:11:5"""
+
+[[test]]
+name = "destructor_dependency_cycle"
+mode = "compile-fail"
+source = "destructor_dependency_cycle.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[STA002]: static field lifetimes contain a dependency cycle
+ --> tests/golden/static_fields/destructor_dependency_cycle.ska:27:5"""
+
+[[test]]
+name = "dynamic_dispatch_dependency_cycle"
+mode = "compile-fail"
+source = "dynamic_dispatch_dependency_cycle.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[STA001]: static field `State.result` has an initialization self-dependency
+ --> tests/golden/static_fields/dynamic_dispatch_dependency_cycle.ska:23:5"""
+
+[[test]]
+name = "initializer_overload_failure"
+mode = "compile-fail"
+source = "initializer_overload_failure.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP030]: no initializer of class `Item` matches these arguments
+ --> tests/golden/static_fields/initializer_overload_failure.ska:6:25"""
+
+[[test]]
+name = "initializer_private_access"
+mode = "compile-fail"
+source = "initializer_private_access.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP040]: initializer of class `Secret` is private
+ --> tests/golden/static_fields/initializer_private_access.ska:6:28"""
+
+[[test]]
+name = "initializer_wrong_kind"
+mode = "compile-fail"
+source = "initializer_wrong_kind.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES009]: field `value` requires an object receiver
+ --> tests/golden/static_fields/initializer_wrong_kind.ska:3:32"""

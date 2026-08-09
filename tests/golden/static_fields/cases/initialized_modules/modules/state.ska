@@ -1,0 +1,15 @@
+public class Base {
+    private static hidden: i64 = 40;
+    static value: i64 = Base.hidden + 1;
+    init() {}
+
+    static fn hidden_value() -> i64 {
+        return Base.hidden;
+    }
+}
+
+public class Derived extends Base {
+    init() {
+        super();
+    }
+}

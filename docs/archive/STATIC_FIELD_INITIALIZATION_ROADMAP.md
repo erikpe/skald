@@ -1,7 +1,8 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI9 are
-complete, and SI10 is next.
+Status: **complete and archived**. SI0 through SI10 delivered the frozen
+design, executable eager initialization, exact-reverse normal-return shutdown,
+full lifecycle hardening, and authoritative living documentation.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -237,7 +238,7 @@ moves that slot before `destination`.
 - [x] SI7 — Synthesize the lifecycle coordinator
 - [x] SI8 — Execute eager startup
 - [x] SI9 — Execute reverse normal-return shutdown
-- [ ] SI10 — Harden and publish initialized static fields
+- [x] SI10 — Harden and publish initialized static fields
 
 ## PR-sized implementation sequence
 
@@ -719,28 +720,28 @@ normal-return shutdown. Runtime ABI v8 and its public surface are unchanged.
 **Purpose:** Audit the complete lifecycle matrix, update authoritative living
 contracts, and remove migration-only assumptions.
 
-- [ ] Add end-to-end success goldens for primitive constants, strings, exact
+- [x] Add end-to-end success goldens for primitive constants, strings, exact
       inline objects, constructor arguments, shared singletons, optional
       caches, empty/nonempty arrays, imports, inherited aliases, privacy,
       side-effect order, dependencies, replacement, and reverse destruction.
-- [ ] Add compile-failure goldens for malformed syntax, invalid storage,
+- [x] Add compile-failure goldens for malformed syntax, invalid storage,
       direct and transitive dependency cycles, destructor dependency cycles,
       conservative dynamic-dispatch effects, copy or overload failure,
       private access, and wrong-kind uses.
-- [ ] Audit source-reachable assertions, effect-graph coverage, generated
+- [x] Audit source-reachable assertions, effect-graph coverage, generated
       symbol privacy, phase determinism, normal-return cleanup, and artifact-
       free repeated compilation.
-- [ ] Update the implemented grammar, static-field language contract, classes
+- [x] Update the implemented grammar, static-field language contract, classes
       and lifecycle, functions and evaluation order, shared ownership, arrays,
       errors, status matrix, phases and IR, backend, runtime ABI, testing,
       debugging, README summaries, and a focused sample where useful.
-- [ ] Remove the zero-default-only title and process-retention language only
+- [x] Remove the zero-default-only title and process-retention language only
       when the new behavior is executable across the supported target.
-- [ ] Run `make check`, `make msrv-check`, `make robustness-long`,
+- [x] Run `make check`, `make msrv-check`, `make robustness-long`,
       `make golden-determinism-test`, and `git diff --check`.
-- [ ] Close and archive this roadmap only after every task, test plan, and exit
+- [x] Close and archive this roadmap only after every task, test plan, and exit
       criterion is complete.
-- [ ] Preserve this combined design and delivery record in the archive while
+- [x] Preserve this combined design and delivery record in the archive while
       making living language and compiler documents the sole authority for
       implemented behavior.
 

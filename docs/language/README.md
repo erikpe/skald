@@ -159,9 +159,10 @@ makes a result source-observable.
   exact-class, inline-optional, recursively nested
   inline-array, shared-owner, and optional shared-owner families execute
   through one verified initialized-prefix protocol.
-- [Zero-default static fields](STATIC_FIELDS.md) defines the implemented
-  class-owned declaration, selection, zero-state type set, process lifetime,
-  replacement, diagnostic, and unchanged runtime-ABI contract.
+- [Static fields](STATIC_FIELDS.md) defines class-owned zero-default and
+  explicit initialization, dependency-ordered eager startup, replacement,
+  exact-reverse normal-return shutdown, diagnostics, and the unchanged
+  runtime-ABI contract.
 - [Optional values](OPTIONAL_VALUES.md) defines the explicit `T?` and
   `shared? T` source contract, including presence, checked
   access, lifecycle, failure, and the remaining aliasing exclusions.

@@ -9,6 +9,8 @@ Small Skald programs used for language bring-up and manual experimentation belon
   read-only receiver methods, field access, and runtime output.
 - `deterministic_destruction.ska` demonstrates automatic local and contained-
   field cleanup, including user-body-before-field and reverse-order semantics.
+- `static_lifecycle.ska` demonstrates dependency-ordered eager static
+  initialization and reverse normal-return destruction around program entry.
 - `object_value_semantics.ska` demonstrates copy construction and assignment,
   internal object parameters/results, bounded produced-object temporaries,
   deterministic cleanup, and the direct constructor-elision cases.

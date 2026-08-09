@@ -665,13 +665,16 @@ the extended robustness suite mutates optional punctuation deterministically.
 Static-field tests are divided by responsibility: syntax recovery owns
 modifier and declaration shape; resolution owns identities, collisions,
 privacy, inheritance, shadowing, qualification, and cyclic modules; type
-checking and HIR own the exact zero-default set and typed operation families;
-MIR mutation tests own always-live roots, place types, ownership, anchors, and
-the absence of exit cleanup; backend tests own layout, symbols, relocations,
-sections, legality, and native behavior. Compile-failure goldens freeze each
-owning phase's diagnostics, while native goldens cover zero defaults,
-replacement cleanup, final retention, arrays, inheritance, module aliases,
-and cyclic imports. The pipeline determinism suite compares static AST,
-resolved IR, HIR, MIR, diagnostics, symbols, and assembly across processes and
-module-source permutations; the golden runner's full audit independently
-compares assembly and repeated stdout, stderr, and status.
+checking and HIR own separate zero-default and explicit stored-value matrices.
+Preliminary, planned, and final MIR tests own publication, ownership, effects,
+evidenced dependencies, deterministic plan indices, and reverse destruction;
+mutation tests break each certificate invariant independently. Backend tests
+own private symbols, layout, relocations, sections, startup/finalizer calls,
+result preservation, native order, and the absence of per-access guards.
+Compile-failure goldens cover syntax, storage, access, overloads, wrong-kind
+uses, direct/transitive initialization cycles, destructor cycles, and
+conservative dynamic dispatch. Native goldens cover every supported stored
+family, imports, inherited aliases, privacy, side-effect and dependency order,
+replacement, and reverse destruction. Cross-process phase tests and the golden
+runner's full audit compare deterministic diagnostics, products, assembly,
+stdout, stderr, and status; passing sandboxes are removed after each run.

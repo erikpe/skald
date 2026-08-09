@@ -166,8 +166,7 @@ permits initializer-free `shared? T` storage, initially absent, and explicitly
 initialized `shared T` or `shared? T` storage through ordinary adoption or
 copy. It does not make zero a valid ordinary `shared T` handle. Static owners
 use ordinary replacement, cast, view, and anchoring rules while executing;
-their final owner remains retained until reverse normal-return shutdown is
-implemented.
+their current final owner is released during reverse normal-return shutdown.
 
 ## Strong-owner value semantics
 
@@ -427,8 +426,9 @@ This profile does not include:
 - custom allocators;
 - shared values in external signatures or other public object ABI;
 - atomic reference counts, concurrency, or thread-safety guarantees;
-- non-optional static or global shared storage; the implemented static-field
-  profile permits only optional shared owners as class-owned statics;
+- module-owned or top-level global shared storage; class-owned statics permit
+  explicitly initialized `shared T` and zero-default or explicitly initialized
+  `shared? T`;
 - recoverable allocation failure; or
 - exceptional cleanup or failed-construction unwinding.
 

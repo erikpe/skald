@@ -40,6 +40,8 @@ fn lowers_the_complete_initialized_static_storage_matrix() {
         assert!(assembly.contains(&format!("{symbol}.initialize:")));
     }
     assert!(assembly.contains(".Lska.static.initialize:"));
+    assert!(!assembly.contains(".globl .Lska.static"));
+    assert!(!assembly.contains(".globl .Lska.class.main.State.c1.static"));
     assert_system_assembler_accepts(&assembly);
 }
 

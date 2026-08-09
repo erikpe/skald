@@ -173,6 +173,15 @@ recursive deep copy or produced-backing adoption, and shared-owner families
 reuse ordinary retain/adopt/release and zero-niche optional operations.
 Availability remains authoritative in the [status matrix](../language/STATUS.md).
 
+Class-owned static fields pass through delayed initializer resolution,
+stored-value HIR, structurally verified preliminary MIR, exhaustive
+whole-program effect inference, deterministic lifetime planning, and an
+independently verified final lifecycle certificate. The x86-64 backend emits
+private slots and dependency-ordered initializer/finalizer coordinators around
+entry without changing runtime ABI version 8. The authoritative boundaries are
+[Static Fields](../language/STATIC_FIELDS.md) and
+[Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#pipeline-contract).
+
 The [standard I/O compiler and runtime contract](IO.md) defines the implemented
 five-intrinsic boundary over `u8[]`, dedicated HIR/MIR operations, x86-64
 pointer/length lowering, and runtime ABI version 8. It deliberately leaves

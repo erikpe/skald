@@ -366,6 +366,15 @@ or consume the selected place retain the same ordering, short-circuiting,
 loop, panic, and full-expression rules as the corresponding local or instance
 place operation.
 
+Each explicit static initializer is one ordinary full expression with these
+same evaluation rules. Whole-program dependencies choose which field's full
+expression runs next, so declaration order is only the deterministic tie-break
+for otherwise independent fields. Every initializer publishes its completed
+value and finishes post-publication temporary cleanup before the next field
+activates. Program entry starts only after all fields are live; after a normal
+entry return, current static values are destroyed in exact reverse activation
+order while the entry result is preserved.
+
 The frozen [object-cast profile](OBJECT_CASTS.md) evaluates its source once,
 establishes any required lifetime anchor, performs a dynamic check when needed,
 then supplies the checked place or shared owner to its consuming context.

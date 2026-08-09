@@ -370,7 +370,7 @@ The executable profile does not yet include:
 - reflection or source-visible static symbol identity;
 - garbage collection or runtime root registration.
 
-The active [static-initialization roadmap](../roadmaps/STATIC_FIELD_INITIALIZATION_ROADMAP.md)
-owns broad hardening of the completed lifecycle. Extending the remaining
-boundaries requires a separate design rather than an inference from either the
-zero-default profile or initializer syntax.
+The archived [static-initialization roadmap](../archive/STATIC_FIELD_INITIALIZATION_ROADMAP.md)
+preserves the design and delivery record for this profile. Extending the
+remaining boundaries requires a separate design rather than an inference from
+either the zero-default profile or initializer syntax.

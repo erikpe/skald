@@ -1,0 +1,33 @@
+class Left {
+    value: i64;
+
+    init() {
+        self.value = 1;
+    }
+
+    destroy {
+        var observed: i64 = State.right!.value;
+    }
+}
+
+class Right {
+    value: i64;
+
+    init() {
+        self.value = 2;
+    }
+
+    destroy {
+        var observed: i64 = State.left!.value;
+    }
+}
+
+class State {
+    static left: Left?;
+    static right: Right?;
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

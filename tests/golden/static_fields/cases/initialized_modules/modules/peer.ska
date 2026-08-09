@@ -1,0 +1,5 @@
+import state;
+
+public fn read() -> i64 {
+    return state::Derived.value + 1;
+}

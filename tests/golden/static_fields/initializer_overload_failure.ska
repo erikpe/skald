@@ -1,0 +1,12 @@
+class Item {
+    init(value: i64) {}
+}
+
+class State {
+    static item: Item = Item(true);
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

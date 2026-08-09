@@ -307,9 +307,10 @@ size-optimized constants using portable `64 × 64 -> 128` limb arithmetic. The
 constants occupy an 832-byte canonical little-endian encoding split into five
 immortal string-literal sections. On first use, the formatter decodes them
 into one zero-default static 104-word `u64[]`
-and reuses that process-lifetime array; table decoding and numeric conversion
-perform no per-value allocation. The current single-threaded execution model
-permits the empty static array to serve as the initialization sentinel.
+and reuses that program-owned array; table decoding and numeric conversion
+perform no per-value allocation. Reverse normal-return shutdown releases its
+backing. The current single-threaded execution model permits the empty static
+array to serve as the initialization sentinel.
 
 The exact parser fallback retains at most 768 significant digits plus a
 nonzero-tail bit. Every binary64 rounding boundary can be decided within that

@@ -137,7 +137,7 @@ pub(crate) fn lower_source_to_assembly(
     text: impl Into<String>,
     target: Target,
 ) -> Result<String, BackendError> {
-    emit_assembly(target, &lower_source_to_mir(text))
+    emit_assembly(target, &lower_source_to_final_mir(text))
 }
 
 pub(crate) fn load_module_sources(

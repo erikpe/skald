@@ -743,8 +743,8 @@ guards. Optional `shared? T` fields also execute: absence owns nothing,
 presence owns one strong handle, synthesized copy retains conditionally, and
 assignment/destruction conditionally release in the ordinary reverse field
 order. The model executes dependency-ordered eager static initialization for
-ordinary stored class values but does not yet execute reverse normal-return
-static destruction. It does not include lifecycle-member
+ordinary stored class values and complete-object destruction during exact-
+reverse normal-return static shutdown. It does not include lifecycle-member
 visibility, protected access, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
@@ -771,7 +771,7 @@ Shared-field semantics and lifecycle are specified by
 excluded from finite inline containment, must be initialized exactly once,
 participate in user and synthesized copy operations, and appear as distinct
 reverse-order release steps in target-independent destruction plans. Their
-target layout and execution remain pending. The explicit
+target layout and execution are implemented. The explicit
 `new T(copy source)` copy-allocation form invokes this document's selected
 exact-`T` copy constructor once from a target-directed checked `T` place and
 is not eligible for copy elision.
