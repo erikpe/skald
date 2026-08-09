@@ -54,6 +54,11 @@ root discovery. After lexing and parsing, it uses the same program resolver,
 type checker, MIR pipeline, and backend completion path as request
 compilation. A source-phase error stops later phases. HIR lowering, MIR
 verification, and backend failures remain distinct structured categories.
+After structural preliminary-MIR verification, static effect inference and
+lifetime planning run before final MIR conversion. Static self-dependencies
+and cycles are ordinary source diagnostics; malformed preliminary MIR remains
+a distinct verification failure. A valid explicit initializer currently stops
+with `DRV001` because planned lifecycle MIR synthesis is not yet implemented.
 Static inheritance, inherited access, class/`Obj` alias views, and inline
 slicing reach verified target-independent MIR and execute through the current
 x86-64 base layout and internal static-view calling convention.

@@ -48,7 +48,7 @@ pub fn dump_static_effects(analysis: &StaticEffectAnalysis) -> String {
     output
 }
 
-fn write_node(output: &mut String, node: StaticEffectNode) {
+pub(crate) fn write_node(output: &mut String, node: StaticEffectNode) {
     match node {
         StaticEffectNode::Callable(callable) => {
             let _ = write!(output, "callable {callable}");

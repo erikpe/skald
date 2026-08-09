@@ -10,7 +10,7 @@ use crate::{
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
-    passes::{run_mir_pipeline, static_lifecycle::infer_static_effects},
+    passes::{run_mir_pipeline, static_lifecycle::plan_static_lifetimes},
     resolve::{resolve, resolve_module_graph, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
@@ -19,9 +19,9 @@ use crate::{
 
 use super::CompilationRequest;
 
-/// Temporary driver boundary while preliminary static lifecycle MIR awaits
-/// dependency analysis and planning.
-pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_PLANNING: &str = "DRV001";
+/// Temporary driver boundary while planned static lifecycle MIR awaits final
+/// lifecycle MIR synthesis.
+pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -128,26 +128,32 @@ fn finish_compilation(
         .expect("type checking without errors must produce typed HIR");
     let preliminary = lower_preliminary_hir(&hir);
     verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
-    let _static_effects = infer_static_effects(&preliminary);
-    for initializer in preliminary.static_initializers() {
+    let planned = match plan_static_lifetimes(preliminary) {
+        Ok(planned) => planned,
+        Err(failure) => {
+            diagnostics.append(failure.into_diagnostics());
+            return Err(diagnostic_failure(sources, diagnostics));
+        }
+    };
+    for initializer in planned.static_initializers() {
         diagnostics.push(
             Diagnostic::error(
-                STATIC_INITIALIZER_REQUIRES_LIFECYCLE_PLANNING,
-                "static field initialization cannot be planned yet",
+                STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS,
+                "static field lifecycle code cannot be synthesized yet",
             )
             .with_primary_label(
                 initializer.span,
-                "preliminary lifecycle MIR is complete, but dependency planning is not implemented",
+                "lifetime effects, dependencies, and order are planned, but lifecycle MIR synthesis is not implemented",
             )
-            .with_note("unplanned lifecycle MIR cannot be consumed by a backend"),
+            .with_note("planned initializer MIR cannot be consumed by a backend before synthesis"),
         );
     }
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
     }
-    let mir = preliminary
+    let mir = planned
         .try_into_final()
-        .expect("initializer-free preliminary MIR must convert to final MIR");
+        .expect("initializer-free planned MIR must convert to final MIR");
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 

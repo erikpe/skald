@@ -29,7 +29,7 @@ The target-independent compiler path is:
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
 | Preliminary MIR lowering | `mir::lower_preliminary_hir` | closed-world `PreliminaryMirProgram` with unplanned static lifecycle bodies |
 | Static effect inference | `passes::static_lifecycle::infer_static_effects` | deterministic direct and transitive static effects with witnesses for every callable and implicit lifecycle operation |
-| Static lifecycle planning | not yet implemented | eventually converts preliminary MIR and inferred effects to planned `MirProgram` |
+| Static lifecycle planning | `passes::static_lifecycle::plan_static_lifetimes` | `PlannedMirProgram` with effect summaries, evidenced dependencies, and deterministic activation/reverse-shutdown order |
 | Ordinary MIR lowering | `mir::lower_hir` | target-independent `MirProgram` when no explicit static lifecycle work exists |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
@@ -179,19 +179,46 @@ shared-owner finalizers expand to closed-world target sets. Compiler-generated
 copy, complete-finalizer, and array operations have distinct graph nodes, so
 their backend-realized calls do not disappear behind user body identities.
 The pass condenses recursive components, propagates field sets over the
-component DAG, and retains a minimum-call-edge, deterministically tied witness
-for each field in every node summary. Direct evidence keeps access kind,
-source span, and initializer publication phase; a transitive initializer
-witness carries the phase of its first call or lifecycle edge. The stable
+component DAG, and retains minimum-call-edge, deterministically tied witnesses
+for each field in every node summary. Distinct access-kind and root-phase
+witnesses remain separate, so a lifecycle destination write cannot hide an
+ordinary access to the same field. Direct evidence keeps source span and
+initializer publication phase; a transitive initializer witness carries the
+phase of its first call or lifecycle edge. The stable
 `passes::static_lifecycle::dump_static_effects` renderer exposes this product.
-This is effect inference only: it neither chooses field order nor diagnoses
-static dependency cycles.
+
+`passes::static_lifecycle::plan_static_lifetimes` runs inference once and
+builds a second graph over every canonical static declaration. An edge from
+`T` to `F` records that initialization or eventual-value destruction of `F`
+may access `T`. Destruction roots come from the stored type even for
+initializer-free optional, shared, and array slots, because ordinary execution
+may replace their values. Each edge retains its startup or shutdown root,
+declaration and access spans, access kind, and call/lifecycle witness.
+Iterative strongly connected component analysis remains separate from
+callable recursion and reports deterministic `STA001` self-dependency or
+`STA002` cycle source diagnostics. An acyclic graph is topologically ordered
+with canonical field identity as the ready-node tie-breaker, and shutdown is
+stored as the exact reverse.
+
+An initializer's own destination write is lifecycle-owned rather than a
+self-dependency. Other pre-publication accesses to that field are invalid;
+cleanup proven to start after publication may use the newly live field.
+Accesses to other fields in either region remain ordinary dependencies.
+
+`PlannedMirProgram` privately owns preliminary MIR and attaches the effect
+analysis, one representative evidence record per lifetime edge, and the
+complete plan. Stable `dump_planned_mir` and `dump_static_lifetime_plan`
+renderers expose the phase product. The private ownership boundary prevents
+final MIR passes and backends from consuming or re-inferring unplanned
+initializer bodies.
 
 A product containing explicit lifecycle bodies cannot be converted to
 `MirProgram`, passed to ordinary MIR passes, or consumed by a backend. The
-driver therefore reports `DRV001` after preliminary verification and static
-effect inference, at the not-yet-implemented lifetime-planning boundary. A
-lifecycle-free preliminary product converts to the existing final MIR path.
+driver reports lifetime graph failures as ordinary source diagnostics after
+preliminary verification, independently of malformed-MIR verification errors.
+For a valid explicit initializer it reports `DRV001` at the not-yet-implemented
+lifecycle MIR synthesis boundary. An initializer-free planned product converts
+to the existing final MIR path.
 MIR continues to model accepted zero-default places as initialized, always-live
 program-owned roots without startup or cleanup instructions. The source-visible
 lifetime rule is owned by the

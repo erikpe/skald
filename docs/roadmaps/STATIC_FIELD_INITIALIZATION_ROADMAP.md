@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI3 are
-complete, and SI4 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI5 are
+complete, and SI6 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -231,8 +231,8 @@ moves that slot before `destination`.
 - [x] SI1 — Retain and resolve declaration initializers
 - [x] SI2 — Type-check direct stored-value initialization
 - [x] SI3 — Lower analyzable static lifecycle bodies to preliminary MIR
-- [ ] SI4 — Infer transitive static effects
-- [ ] SI5 — Plan and diagnose static lifetimes
+- [x] SI4 — Infer transitive static effects
+- [x] SI5 — Plan and diagnose static lifetimes
 - [ ] SI6 — Define and verify lifecycle MIR
 - [ ] SI7 — Synthesize the lifecycle coordinator
 - [ ] SI8 — Execute eager startup
@@ -453,28 +453,28 @@ witness ordering. `make check`, `make golden-determinism-test`, and
 **Purpose:** Convert transitive effects into one deterministic activation and
 shutdown plan, or reject the program with actionable cycle diagnostics.
 
-- [ ] Build the static-lifetime graph over every field. Add `T -> F` when
+- [x] Build the static-lifetime graph over every field. Add `T -> F` when
       initialization or eventual-value destruction of `F` may access `T`,
       including destruction of an initializer-free field whose owning value
       can be replaced during ordinary execution.
-- [ ] Reject initializer or destructor self-dependencies and dependency cycles
+- [x] Reject initializer or destructor self-dependencies and dependency cycles
       by finding static-lifetime strongly connected components separately from
       callable recursion; label declarations, direct static uses, and the
       transitive call/lifecycle path.
-- [ ] Produce one deterministic topological activation plan using canonical
+- [x] Produce one deterministic topological activation plan using canonical
       declaration identity as the tie-breaker; produce shutdown as its exact
       reverse.
-- [ ] Verify phase-sensitive publication: accesses before a field publishes
+- [x] Verify phase-sensitive publication: accesses before a field publishes
       are dependencies, while full-expression cleanup proven to occur after
       publication may use that field.
-- [ ] Retain one evidence record per lifetime edge with root field, startup or
+- [x] Retain one evidence record per lifetime edge with root field, startup or
       shutdown phase, call/lifecycle witness, target static access, and source
       spans. Select a stable representative cycle when an SCC contains several
       possible cycles or parallel evidence paths.
-- [ ] Attach effect summaries, dependency evidence, and the completed lifecycle
+- [x] Attach effect summaries, dependency evidence, and the completed lifecycle
       plan to a dedicated planned-MIR product so final MIR verification and
       backends never repeat call-graph or dependency inference.
-- [ ] Report lifecycle failures as ordinary source diagnostics from the driver,
+- [x] Report lifecycle failures as ordinary source diagnostics from the driver,
       separately from malformed-MIR verification errors.
 
 **Tests:** Initialization-only and destruction-only dependencies; destruction
@@ -489,6 +489,22 @@ diagnostics; and cross-process determinism.
 and reverse-shutdown plan over every static field, and valid Skald code has a
 conservative proof that no startup or shutdown path can access a not-live
 static field.
+
+**Implementation result:** `passes::static_lifecycle::plan_static_lifetimes`
+builds a canonical static-declaration graph from initializer summaries and
+type-derived eventual-value destruction roots, including initializer-free
+replaceable owning slots. It retains one stable startup/shutdown evidence
+record per `T -> F` edge, distinguishes lifecycle destination publication from
+ordinary access, rejects self-edges and deterministic representative SCC
+cycles with `STA001`/`STA002` source diagnostics, and uses canonical identity
+for topological tie-breaking and exact-reverse shutdown. `PlannedMirProgram`
+privately owns preliminary MIR together with effect summaries, dependencies,
+and the completed plan so later phases cannot repeat inference. Effect
+summaries now retain distinct access/phase witnesses when destination
+initialization and ordinary access reach the same field. Focused graph,
+publication, destruction, recursion, mixed-cycle, overlapping-cycle, dump,
+driver, public-API, and cross-process determinism tests cover the phase.
+`make check`, `make golden-determinism-test`, and `git diff --check` pass.
 
 ### SI6 — Define and verify lifecycle MIR
 

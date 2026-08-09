@@ -10,7 +10,8 @@ progress. Completed roadmaps and resolved discovery records move to
   is in progress. Its combined design record is frozen, declaration
   initializer syntax, resolution, typed stored-value HIR, and structurally
   verified preliminary lifecycle MIR are complete. Transitive static-effect
-  inference is next. The roadmap adds eager initialization, checked
+  inference and deterministic lifetime planning with cycle diagnostics are
+  complete; verified lifecycle MIR is next. The roadmap adds eager initialization, checked
   program-owned lifecycle state, and reverse normal-return cleanup on top of
   the implemented zero-default static-storage baseline.
 

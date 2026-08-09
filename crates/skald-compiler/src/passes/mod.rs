@@ -5,6 +5,8 @@
 
 pub mod static_lifecycle;
 
+mod graph;
+
 use crate::mir::{verify_mir, MirProgram, MirVerificationErrors};
 
 /// Runs the target-independent MIR pass pipeline.

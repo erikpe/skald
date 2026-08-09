@@ -12,13 +12,13 @@ use skald_compiler::{
     driver::EntrySelector,
     hir::dump_hir,
     lexer::{dump_tokens, lex},
-    mir::{dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir},
+    mir::{dump_mir, lower_hir, lower_preliminary_hir},
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
     passes::{
         run_mir_pipeline,
-        static_lifecycle::{dump_static_effects, infer_static_effects},
+        static_lifecycle::{dump_planned_mir, plan_static_lifetimes},
     },
     resolve::{dump_resolved, resolve, resolve_module_graph},
     source::SourceDatabase,
@@ -123,10 +123,14 @@ const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_
 const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
-const STATIC_INITIALIZER_PRELIMINARY_HELPER_OUTPUT: &str =
-    "SKALD_STATIC_INITIALIZER_PRELIMINARY_DETERMINISM_OUTPUT";
-const STATIC_INITIALIZER_PRELIMINARY_TEST_NAME: &str =
-    "static_initializer_preliminary_products_are_deterministic_across_processes";
+const STATIC_INITIALIZER_PLANNED_HELPER_OUTPUT: &str =
+    "SKALD_STATIC_INITIALIZER_PLANNED_DETERMINISM_OUTPUT";
+const STATIC_INITIALIZER_PLANNED_TEST_NAME: &str =
+    "static_initializer_planned_products_are_deterministic_across_processes";
+const STATIC_LIFETIME_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_STATIC_LIFETIME_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME: &str =
+    "static_lifetime_cycle_diagnostics_are_deterministic_across_processes";
 const STATIC_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_STATIC_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const STATIC_FIELD_DIAGNOSTIC_TEST_NAME: &str =
@@ -216,12 +220,22 @@ fn static_field_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn static_initializer_preliminary_products_are_deterministic_across_processes() {
+fn static_initializer_planned_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
-        "static-initializer-preliminary",
-        STATIC_INITIALIZER_PRELIMINARY_HELPER_OUTPUT,
-        STATIC_INITIALIZER_PRELIMINARY_TEST_NAME,
-        static_initializer_preliminary_phase_dump,
+        "static-initializer-planned",
+        STATIC_INITIALIZER_PLANNED_HELPER_OUTPUT,
+        STATIC_INITIALIZER_PLANNED_TEST_NAME,
+        static_initializer_planned_phase_dump,
+    );
+}
+
+#[test]
+fn static_lifetime_cycle_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "static-lifetime-diagnostics",
+        STATIC_LIFETIME_DIAGNOSTIC_HELPER_OUTPUT,
+        STATIC_LIFETIME_DIAGNOSTIC_TEST_NAME,
+        static_lifetime_cycle_diagnostic_dump,
     );
 }
 
@@ -930,8 +944,8 @@ fn static_field_phase_dump() -> String {
     ))
 }
 
-fn static_initializer_preliminary_phase_dump() -> String {
-    preliminary_phase_dump(concat!(
+fn static_initializer_planned_phase_dump() -> String {
+    planned_lifecycle_phase_dump(concat!(
         "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
         "class State {\n",
         "  static count: i64 = combine(20, 22);\n",
@@ -944,6 +958,36 @@ fn static_initializer_preliminary_phase_dump() -> String {
         "fn combine(left: i64, right: i64) -> i64 { return left + right; }\n",
         "fn main() -> i64 { return 0; }\n",
     ))
+}
+
+fn static_lifetime_cycle_diagnostic_dump() -> String {
+    let text = concat!(
+        "fn read_left() -> i64 { return State.left; }\n",
+        "fn read_right() -> i64 { return State.right; }\n",
+        "class State {\n",
+        "  static left: i64 = read_right();\n",
+        "  static right: i64 = read_left();\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("static-lifetime-diagnostics.ska", text);
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let preliminary = lower_preliminary_hir(&checked.hir.unwrap());
+    let diagnostics = plan_static_lifetimes(preliminary)
+        .unwrap_err()
+        .into_diagnostics();
+
+    render_diagnostics(&sources, &diagnostics)
 }
 
 fn static_field_diagnostic_dump() -> String {
@@ -1460,7 +1504,7 @@ fn complete_phase_dump(text: &str) -> String {
     )
 }
 
-fn preliminary_phase_dump(text: &str) -> String {
+fn planned_lifecycle_phase_dump(text: &str) -> String {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("typed-hir-determinism.ska", text);
     let source = sources.get(source_id).unwrap();
@@ -1475,16 +1519,15 @@ fn preliminary_phase_dump(text: &str) -> String {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
     let preliminary = lower_preliminary_hir(&hir);
-    let static_effects = infer_static_effects(&preliminary);
+    let planned = plan_static_lifetimes(preliminary).unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}STATIC EFFECTS\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
         dump_hir(&hir),
-        dump_preliminary_mir(&preliminary),
-        dump_static_effects(&static_effects),
+        dump_planned_mir(&planned),
     )
 }
 

@@ -1,7 +1,7 @@
 # Static Fields
 
 Status: **complete zero-default storage profile implemented; declaration
-initializer syntax through transitive static-effect inference implemented**. This document is
+initializer syntax through static-lifetime planning implemented**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -13,7 +13,7 @@ established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
 type-checked as direct stored-value initialization, and lowered to structurally
 verified preliminary lifecycle MIR. The compiler deliberately stops before
-lifetime dependency planning and executable output.
+lifecycle MIR synthesis and executable initialized-field output.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
@@ -24,10 +24,12 @@ expressions under stable identities, selects their ordinary stored-value
 operations, and retains those operations in typed HIR. These expressions do
 not yet execute; preliminary MIR makes their calls, temporaries, ownership
 operations, cleanup, and publication boundary available to whole-program
-static-effect inference. That analysis now conservatively summarizes direct
+static-effect inference. That analysis conservatively summarizes direct
 and deep static uses across calls, dynamic dispatch, copy operations,
-destructors, shared releases, optionals, and arrays. It does not yet select a
-safe activation order or diagnose dependency cycles.
+destructors, shared releases, optionals, and arrays. Static-lifetime planning
+then includes eventual-value destruction of every owning-capable field,
+rejects self-dependencies and cycles, and selects one deterministic activation
+order with exact-reverse shutdown. The plan does not yet execute.
 
 ## Declaration syntax
 
@@ -263,9 +265,19 @@ Explicitly initialized declarations cannot yet reach executable compilation;
 after producing and structurally verifying preliminary lifecycle MIR the
 driver reports `DRV001` rather than silently discarding the initializer or
 emitting zero-only assembly. Before reporting that boundary, the compiler
-constructs deterministic transitive static-effect summaries and source-facing
-call/lifecycle witnesses. Their eventual dependency plan, startup, and shutdown
-semantics are owned by the active static initialization roadmap.
+constructs deterministic transitive static-effect summaries, source-facing
+call/lifecycle witnesses, evidenced lifetime dependencies, and the complete
+activation and reverse-shutdown plan. `DRV001` now marks unavailable lifecycle
+MIR synthesis rather than unavailable dependency planning.
+
+Planning rejects an initializer that can directly or transitively access its
+own field before publication. Cleanup proven to occur after publication may
+use the newly live field. If initialization or eventual-value destruction of
+field `F` may access field `T`, `T` must activate before `F`; a self-edge or
+cycle is diagnosed as `STA001` or `STA002`. This includes destruction of an
+initializer-free optional, shared-owner, or array field whose owning contents
+could be installed by ordinary replacement. Callable recursion alone is not a
+field-lifetime cycle.
 
 A static slot has process lifetime. It is not registered in any lexical scope,
 does not begin or end lifetime on a function call, and is not cleaned when the
@@ -302,8 +314,10 @@ are syntax errors, namespace and privacy rules are enforced during resolution,
 and `TYP042` rejects either an initializer-free declaration whose type lacks a
 complete all-zero live value or an explicit declaration whose type cannot
 store a value. Explicit expressions otherwise use ordinary type, overload,
-privacy, copy-capability, and ownership diagnostics. `DRV001` marks the current
-post-effect-inference lifetime-planning boundary. Every initializer-free declaration
+privacy, copy-capability, and ownership diagnostics. `STA001` and `STA002`
+report static lifetime self-dependencies and cycles with declaration, access,
+and transitive call/lifecycle evidence. `DRV001` marks the current
+post-planning lifecycle-synthesis boundary. Every initializer-free declaration
 accepted by zero-default validation can be used through its documented
 primitive, inline-optional, optional shared-owner, or inline-array operations
 and reaches verified MIR and native execution.

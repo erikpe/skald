@@ -3,10 +3,14 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::identity::StaticFieldId;
+use crate::passes::graph::strongly_connected_components;
 
 use super::{
     extract::{ExtractedGraph, NodeDraft},
-    model::{StaticAccessEvidence, StaticEffectAnalysis, StaticEffectNode, StaticEffectSummary},
+    model::{
+        edge_key, evidence_key, StaticAccessEvidence, StaticAccessKind, StaticEffectAnalysis,
+        StaticEffectNode, StaticEffectPhase, StaticEffectSummary,
+    },
 };
 
 pub(crate) fn solve(graph: ExtractedGraph) -> StaticEffectAnalysis {
@@ -48,7 +52,7 @@ pub(crate) fn solve(graph: ExtractedGraph) -> StaticEffectAnalysis {
             let draft = &graph.nodes[node];
             let effects = component_fields[components[index]]
                 .iter()
-                .filter_map(|field| witness_for(*node, *field, &graph.nodes))
+                .flat_map(|field| witnesses_for(*node, *field, &graph.nodes))
                 .collect();
             StaticEffectSummary {
                 node: *node,
@@ -60,59 +64,6 @@ pub(crate) fn solve(graph: ExtractedGraph) -> StaticEffectAnalysis {
     let recursive_components = recursive_component_count(&adjacency, &components, component_count);
 
     StaticEffectAnalysis::new(summaries, recursive_components)
-}
-
-fn strongly_connected_components(adjacency: &[Vec<usize>]) -> Vec<usize> {
-    let mut visited = vec![false; adjacency.len()];
-    let mut finish_order = Vec::with_capacity(adjacency.len());
-    for node in 0..adjacency.len() {
-        if visited[node] {
-            continue;
-        }
-        visited[node] = true;
-        let mut pending = vec![(node, 0)];
-        while let Some((current, next_edge)) = pending.last_mut() {
-            if let Some(target) = adjacency[*current].get(*next_edge).copied() {
-                *next_edge += 1;
-                if !std::mem::replace(&mut visited[target], true) {
-                    pending.push((target, 0));
-                }
-            } else {
-                finish_order.push(*current);
-                pending.pop();
-            }
-        }
-    }
-
-    let mut reverse = vec![Vec::new(); adjacency.len()];
-    for (source, targets) in adjacency.iter().enumerate() {
-        for target in targets {
-            reverse[*target].push(source);
-        }
-    }
-    for edges in &mut reverse {
-        edges.sort_unstable();
-        edges.dedup();
-    }
-
-    let mut components = vec![usize::MAX; adjacency.len()];
-    let mut component = 0;
-    for node in finish_order.into_iter().rev() {
-        if components[node] == usize::MAX {
-            components[node] = component;
-            let mut pending = vec![node];
-            while let Some(current) = pending.pop() {
-                for target in &reverse[current] {
-                    if components[*target] == usize::MAX {
-                        components[*target] = component;
-                        pending.push(*target);
-                    }
-                }
-            }
-            component += 1;
-        }
-    }
-    components
 }
 
 fn propagated_component_fields(
@@ -168,38 +119,72 @@ fn propagated_component_fields(
     propagated
 }
 
-fn witness_for(
+fn witnesses_for(
     root: StaticEffectNode,
     field: StaticFieldId,
     drafts: &BTreeMap<StaticEffectNode, NodeDraft>,
-) -> Option<StaticAccessEvidence> {
-    let mut queue = VecDeque::from([(root, Vec::new())]);
+) -> Vec<StaticAccessEvidence> {
+    let mut queue = VecDeque::from([(root, None, Vec::new())]);
     let mut visited = BTreeSet::new();
-    while let Some((node, path)) = queue.pop_front() {
-        if !visited.insert(node) {
+    let mut representatives =
+        BTreeMap::<(StaticEffectPhase, StaticAccessKind), StaticAccessEvidence>::new();
+    while let Some((node, root_phase, path)) = queue.pop_front() {
+        if !visited.insert((node, root_phase)) {
             continue;
         }
-        if let Some(direct) = drafts[&node]
+        for direct in drafts[&node]
             .direct
             .iter()
-            .find(|effect| effect.field == field)
+            .filter(|effect| effect.field == field)
         {
             let mut evidence = direct.clone();
-            evidence.witness = path;
-            if let Some(first) = evidence.witness.first() {
-                evidence.phase = first.phase;
+            evidence.witness.clone_from(&path);
+            if let Some(phase) = root_phase {
+                evidence.phase = phase;
             }
-            return Some(evidence);
+            let key = (evidence.phase, evidence.access);
+            match representatives.entry(key) {
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    entry.insert(evidence);
+                }
+                std::collections::btree_map::Entry::Occupied(mut entry) => {
+                    if compare_witness(&evidence, entry.get()).is_lt() {
+                        entry.insert(evidence);
+                    }
+                }
+            }
         }
         for edge in &drafts[&node].edges {
-            if !visited.contains(&edge.target) {
+            let target_phase = root_phase.or(Some(edge.phase));
+            if !visited.contains(&(edge.target, target_phase)) {
                 let mut target_path = path.clone();
                 target_path.push(edge.clone());
-                queue.push_back((edge.target, target_path));
+                queue.push_back((edge.target, target_phase, target_path));
             }
         }
     }
-    None
+    representatives.into_values().collect()
+}
+
+fn compare_witness(
+    left: &StaticAccessEvidence,
+    right: &StaticAccessEvidence,
+) -> std::cmp::Ordering {
+    left.witness
+        .len()
+        .cmp(&right.witness.len())
+        .then_with(|| {
+            left.witness
+                .iter()
+                .map(|edge| (edge_key(edge), edge.phase))
+                .cmp(
+                    right
+                        .witness
+                        .iter()
+                        .map(|edge| (edge_key(edge), edge.phase)),
+                )
+        })
+        .then_with(|| evidence_key(left).cmp(&evidence_key(right)))
 }
 
 fn recursive_component_count(
@@ -225,12 +210,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn condenses_self_and_mutually_recursive_components() {
+    fn counts_recursive_components_separately_from_acyclic_nodes() {
         let adjacency = vec![vec![0], vec![2], vec![1], vec![]];
         let components = strongly_connected_components(&adjacency);
 
-        assert_eq!(components[1], components[2]);
-        assert_ne!(components[0], components[1]);
         assert_eq!(
             recursive_component_count(
                 &adjacency,

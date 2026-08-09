@@ -924,7 +924,7 @@ fn primitive_static_programs_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn preliminary_static_initializers_stop_before_unavailable_lifecycle_planning() {
+fn planned_static_initializers_stop_before_unavailable_lifecycle_synthesis() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "static-initializer.ska",
         concat!(
@@ -941,9 +941,41 @@ fn preliminary_static_initializers_stop_before_unavailable_lifecycle_planning() 
     let diagnostic = report.diagnostics.iter().next().unwrap();
     assert_eq!(
         diagnostic.code,
-        STATIC_INITIALIZER_REQUIRES_LIFECYCLE_PLANNING
+        STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS
     );
     assert!(diagnostic.labels.iter().any(|label| label
         .message
-        .contains("preliminary lifecycle MIR is complete")));
+        .contains("effects, dependencies, and order are planned")));
+}
+
+#[test]
+fn static_lifetime_cycles_are_reported_as_source_diagnostics_before_synthesis() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "static-cycle.ska",
+        concat!(
+            "fn read_left() -> i64 { return State.left; }\n",
+            "fn read_right() -> i64 { return State.right; }\n",
+            "class State {\n",
+            "  static left: i64 = read_right();\n",
+            "  static right: i64 = read_left();\n",
+            "  init() {}\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err() else {
+        panic!("static lifetime cycles must be ordinary source diagnostics");
+    };
+
+    assert_eq!(report.diagnostics.len(), 1);
+    let diagnostic = report.diagnostics.iter().next().unwrap();
+    assert_eq!(
+        diagnostic.code,
+        crate::passes::static_lifecycle::STATIC_LIFECYCLE_DEPENDENCY_CYCLE
+    );
+    assert!(diagnostic
+        .labels
+        .iter()
+        .any(|label| label.message.contains("DirectCall")));
 }

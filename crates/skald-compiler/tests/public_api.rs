@@ -42,7 +42,10 @@ use skald_compiler::{
     },
     passes::{
         run_mir_pipeline,
-        static_lifecycle::{dump_static_effects, infer_static_effects, StaticEffectAnalysis},
+        static_lifecycle::{
+            dump_planned_mir, dump_static_effects, plan_static_lifetimes, PlannedMirProgram,
+            StaticEffectAnalysis, StaticLifecyclePlan, StaticLifetimeDependency,
+        },
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
@@ -185,9 +188,13 @@ fn intentional_phase_and_dump_paths_compose() {
     let preliminary = lower_preliminary_hir(hir);
     verify_preliminary_mir(&preliminary).unwrap();
     let _preliminary_dump = dump_preliminary_mir(&preliminary);
-    let static_effects: StaticEffectAnalysis = infer_static_effects(&preliminary);
-    let _static_effect_dump = dump_static_effects(&static_effects);
     assert!(!preliminary.has_static_initializers());
+    let planned: PlannedMirProgram = plan_static_lifetimes(preliminary).unwrap();
+    let static_effects: &StaticEffectAnalysis = planned.effects();
+    let _static_effect_dump = dump_static_effects(static_effects);
+    let _planned_dump = dump_planned_mir(&planned);
+    let _lifecycle: &StaticLifecyclePlan = planned.lifecycle();
+    let _dependencies: &[StaticLifetimeDependency] = planned.dependencies();
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;
