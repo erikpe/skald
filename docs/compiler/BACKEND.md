@@ -34,8 +34,10 @@ ABI, external-ABI, or runtime-marker rule. Their source lifetime is owned by the
 
 ## Backend interface and target registry
 
-Backends consume target-independent `MirProgram` values. They do not inspect
-the AST, resolved IR, HIR, or type-checker state. The public backend facade
+Backends currently consume target-independent `MirProgram` values. The frozen
+runtime-trace extension changes emission to accept the verified MIR together
+with read-only source lookup and trace policy; it still does not expose AST,
+resolved IR, HIR, or type-checker state to a backend. The public backend facade
 provides:
 
 - `backend::Target`, the selected target identity;
@@ -468,8 +470,60 @@ being compiled into either a panic or a hard trap.
 
 A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
-`panic:` record. Source locations, shadow trace maintenance, and stacktrace
-printing are deferred; this target contract allocates no trace state.
+`panic:` record. The current target allocates no trace state; the frozen
+extension below adds source locations and a shadow stack only to source-level
+panic reporting, not to hard traps.
+
+## Frozen runtime trace target boundary
+
+Runtime tracing is frozen for Linux x86-64 implementation but is not yet
+emitted. Each traced source callable receives one 16-byte linked trace record
+inside its ordinary fixed native frame: an eight-byte pointer to the previous
+record and an eight-byte pointer to immutable static location metadata. The
+runtime owns one hidden C11 thread-local top pointer. Generated code accesses
+that symbol directly with the local-exec TLS model and
+`R_X86_64_TPOFF32`; it makes no C call and performs no allocation, capacity
+check, or depth check while maintaining the trace.
+
+The x86-64 target objective is six instructions at callable entry to initialize
+and publish the record, two instructions at each required location replacement
+to store a new metadata pointer, and two instructions on every normal return
+to restore `previous`. `r11` is transient scratch for the representative
+sequence, not a reserved register. Lowering must model that clobber and order
+an indirect-call target load accordingly. A future register allocator may use
+every general-purpose register outside these short sequences.
+
+The pop is unchecked generated code. A null `previous` is the valid outermost
+state; a stale or corrupt link is a compiler/runtime defect. Frame-layout,
+assembly, and nesting tests own the invariant rather than adding a comparison
+and branch to every return. Panic does not unwind, so all published records
+remain live while the reporter walks them.
+
+The backend emits deterministic, relocation-read-only metadata consisting of
+one context per used traced source callable and one location per distinct used
+callable and span-start line/column. Contexts hold length-delimited pointers
+and lengths for semantic callable names and escaped module-provider-relative
+paths. Positional sources outside a configured root use their configured
+relative display spelling when available and otherwise may remain absolute.
+Locations hold a context pointer plus `u64` line and column. Bytes and records
+are interned and ordered by semantic identity and location rather than address
+or hash traversal. No record is emitted for an unused location.
+
+Eligible frames and update sites are fixed by the
+[phase boundary](PHASES_AND_IR.md#frozen-runtime-trace-phase-boundary). The
+bodyless panic intrinsic, process wrapper, generated static coordinator,
+generated lifecycle/array/ownership/finalization helpers, runtime C frames,
+and target thunks never push. Ordinary source-authored standard-library and
+lifecycle bodies do push. Before an omitted helper, external call, or
+panic-capable runtime operation, the source caller records the initiating
+operation.
+
+Trace emission is on by default. Omission removes the record homes, TLS
+instructions and references, location replacements, metadata and strings, and
+trace-only source lookup. Thus `--omit-runtime-trace` has zero target execution
+or metadata cost. Linux AArch64 may later realize the same frame semantics
+through target-specific ELF TLS access, but no AArch64 instruction sequence or
+implementation scope is frozen here.
 
 ## Data layout
 
@@ -637,7 +691,10 @@ The current backend gives every MIR storage entry and transient scalar value a
 fixed stack home. Scalar values and pointer homes use eight-byte size and
 alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
-`rbp`-relative addressing.
+`rbp`-relative addressing. Under the frozen runtime-trace extension, each
+eligible traced callable adds exactly one 16-byte trace record before that
+rounding; generated helpers add none, and omitted tracing leaves frame layout
+unchanged.
 
 Primitive, inline-optional, optional shared-owner, and inline-array static
 roots do not

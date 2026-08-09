@@ -129,6 +129,13 @@ An incompatible runtime change must update all of these together:
 The marker name is deliberately version-specific. Keeping the old marker on an
 incompatible runtime would defeat the link guard.
 
+The frozen runtime-trace extension is an incompatible compiler/runtime state
+contract and therefore advances the implementation target once to ABI version
+9 with marker `ska_rt_abi_v9`. Version 8 remains the current implemented ABI
+until that extension lands. The version-9 change must update the numeric
+constant, public marker macro and declaration, runtime definition, backend
+reference, link-mismatch tests, and every version assertion together.
+
 ## C platform requirements
 
 The current runtime implementation requires:
@@ -209,8 +216,80 @@ signal is private, but normal return is forbidden.
 
 The source-level API, flow behavior, and sole static-message catalog are owned
 by the [frozen language panic design](../language/ERRORS.md#frozen-panic-design).
-Source locations, shadow trace state, stacktrace output, and exceptions are
-not carried by this ABI and remain deferred.
+The current version-8 reporter has no source locations or shadow state. The
+frozen version-9 extension below adds trace discovery through hidden TLS while
+keeping this reporter signature. Exceptions remain deferred.
+
+## Frozen runtime trace ABI version 9
+
+Runtime traces are frozen for ABI version 9 but are not yet implemented. The
+compiler/runtime-private record contract is:
+
+```c
+typedef struct SkaRtTraceContext SkaRtTraceContext;
+typedef struct SkaRtTraceLocation SkaRtTraceLocation;
+typedef struct SkaRtTraceFrame SkaRtTraceFrame;
+
+struct SkaRtTraceContext {
+    const uint8_t* name;
+    uint64_t name_length;
+    const uint8_t* path;
+    uint64_t path_length;
+};
+
+struct SkaRtTraceLocation {
+    const SkaRtTraceContext* context;
+    uint64_t line;
+    uint64_t column;
+};
+
+struct SkaRtTraceFrame {
+    SkaRtTraceFrame* previous;
+    const SkaRtTraceLocation* location;
+};
+
+extern _Thread_local SkaRtTraceFrame* ska_rt_trace_top;
+```
+
+On Linux x86-64 the records occupy 32, 24, and 16 bytes respectively. The
+runtime defines `ska_rt_trace_top` as zero-initialized, hidden, and
+non-preemptible; generated statically linked code accesses it directly with
+the local-exec TLS model. The symbol is a versioned compiler/runtime
+compatibility dependency, not a source-callable C entry point. The runtime
+does not push, pop, replace, allocate, validate, or impose an execution-depth
+limit. Generated code owns those operations and publishes only live native
+frame records.
+
+`SkaRtTraceContext` and `SkaRtTraceLocation` point only to immutable,
+length-delimited compiler-emitted metadata. The stack record copies no name,
+path, line, or column: it stores only its previous link and current location
+pointer. One eight-byte TLS top pointer is the only per-thread runtime state.
+The runtime interprets no Skald string, module, declaration identity,
+`SourceId`, `Span`, MIR, or object layout.
+
+The version-9 `ska_rt_panic(bytes, length)` signature and initial panic record
+remain unchanged. After writing its line feed, a non-null trace top adds:
+
+```text
+stacktrace:
+  at app::load (app/load.ska:18:9)
+  at app::main (app/main.ska:7:5)
+```
+
+The reporter walks newest first, writes length-delimited context and path
+bytes directly, and converts each `u64` line and column in fixed local buffers.
+It allocates nothing and applies the existing retry, partial-write, immediate
+write-failure exit, and final `_Exit(EXIT_FAILURE)` rules to the complete
+output. It renders at most 256 frames; if another non-null link remains, it
+writes `  ... outer frames omitted` plus one line feed without counting the
+tail. A null top preserves the current single-line panic output.
+
+Frame-chain corruption is a compiler/runtime defect. The renderer's fixed cap
+prevents an unbounded cycle, but it does not attempt to validate arbitrary
+non-null addresses or recover from an invalid link. Hard-failure paths remain
+silent and never request trace rendering. Compile-time omission publishes no
+frame, so a runtime containing this support still produces the current
+single-line record for an omitted-trace program.
 
 ## Responsibility boundary
 
@@ -222,7 +301,7 @@ operations above. It has no public ABI for:
 - object, class, interface, or dynamic-type metadata;
 - garbage collection, roots, tracing, safepoints, or write barriers;
 - strings, array descriptors, source-level files/streams, or broader I/O;
-- runtime traces;
+- runtime traces (until the frozen version-9 extension is implemented);
 - recoverable or checked exceptions.
 
 Produced exact-class objects passed to read-only class, interface, or `Obj`

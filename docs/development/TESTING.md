@@ -582,6 +582,47 @@ both real sources into their filesystem fixtures. This keeps the public
 surface, panic dependency, and lifecycle behavior from drifting independently
 of compiler coverage.
 
+## Frozen runtime-trace coverage
+
+Runtime traces are frozen but not yet implemented. Their coverage must remain
+split by owner:
+
+- source and source-database tests own one-based line and Unicode-scalar
+  column mapping at span starts;
+- backend metadata tests own callable-name construction, semantic initializer
+  signatures, provider-relative path escaping, interning, deterministic
+  ordering, relocation-read-only placement, and omission of unused records;
+- x86-64 frame and assembly tests own exact push/pop/replacement counts and
+  placement, every return path, transient scratch clobbers, helper suppression,
+  local-exec TLS relocations, and zero-cost omission;
+- direct C runtime tests own exact empty, single, nested, replaced, capped,
+  cyclic-chain cap, partial-write, and failed-write behavior without
+  allocation;
+- driver and CLI tests own default enablement, the value-free
+  `--omit-runtime-trace` option, source-database handoff, and repeated-option
+  rejection;
+- native goldens own exact direct, recursive, virtual/interface, standard-
+  library, lifecycle, and static-initializer traces plus explicit panic, every
+  static termination family, allocation failure, and ownership overflow; and
+- independent-process tests own identical metadata, assembly, paths, stderr,
+  and status across different temporary provider roots.
+
+Generated lifecycle, array, ownership, finalization, coordinator, wrapper, and
+target helpers must be tested as omitted frames whose failure remains
+attributed to the initiating source operation. Source-authored standard-library
+and lifecycle bodies must be tested as visible. A separate omitted build of
+each representative case must preserve the current single-line panic output
+and contain no trace-only frame bytes, instructions, symbols, relocations,
+metadata, or source lookup.
+
+Performance acceptance compares enabled and omitted builds for tiny call-heavy
+recursion, a pure tight loop, allocation-heavy execution, and representative
+goldens. Record instruction counts and measured execution/code-size effects;
+understand any material regression before default-on tracing ships. The
+repository gates remain `make check`, `make msrv-check`, and
+`git diff --check`; the implementation roadmap supplies focused commands as
+the test owners land.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.

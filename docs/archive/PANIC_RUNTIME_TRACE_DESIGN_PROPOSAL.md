@@ -1,22 +1,24 @@
-# Panic Runtime Trace Design Proposal
+# Panic Runtime Trace Design Record
 
-Status: draft for review; every decision below is proposed, none is frozen or
+Status: frozen design; ready for an implementation roadmap, but not yet
 implemented. The completed
 [runtime trace investigation](PANIC_RUNTIME_TRACE_INVESTIGATION.md) provides
-the Skald and Niflheim implementation evidence behind this proposal.
+the Skald and Niflheim implementation evidence behind this design.
 
-This proposal adds source locations and a shadow call stack to Skald panic
+This design adds source locations and a shadow call stack to Skald panic
 output while holding successful-execution cost to a small fixed sequence of
 inline Linux x86-64 instructions. It deliberately avoids heap-backed trace
 storage, per-location runtime calls, and a permanently reserved register.
 
-The proposal is a design for review and iteration. Current behavior remains
-authoritative in
-[Errors and Exceptional Control Flow](../language/ERRORS.md#frozen-panic-design),
-[Compiler Phases and IR](../compiler/PHASES_AND_IR.md#frozen-panic-and-termination-representation),
-[Backend and Target Contract](../compiler/BACKEND.md#panic-and-hard-trap-boundary),
-and [Runtime ABI](../compiler/RUNTIME_ABI.md#panic-reporting-abi) until a
-reviewed design is frozen, implemented, and promoted into those documents.
+The language and implementation-dependent choices in this record are frozen.
+Current implemented behavior remains distinguished from the frozen extension
+in
+[Errors and Exceptional Control Flow](../language/ERRORS.md#frozen-panic-runtime-traces),
+[Compiler Phases and IR](../compiler/PHASES_AND_IR.md#frozen-runtime-trace-phase-boundary),
+[Backend and Target Contract](../compiler/BACKEND.md#frozen-runtime-trace-target-boundary),
+and
+[Runtime ABI](../compiler/RUNTIME_ABI.md#frozen-runtime-trace-abi-version-9),
+which now own the living contracts.
 
 ## Intended outcome
 
@@ -26,7 +28,7 @@ callable pushes that frame, reaching a panic-observable source location
 replaces the frame's location pointer, and every normal return pops the frame.
 Panic leaves the active frames in place and renders them newest first.
 
-On Linux x86-64 with the local-exec TLS model, the proposed steady-state
+On Linux x86-64 with the local-exec TLS model, the frozen steady-state
 instrumentation is:
 
 - six instructions to push one frame;
@@ -47,7 +49,7 @@ descriptor. Explicit panic, compiler-known MIR termination, valid host
 allocation failure, and legal ownership-count overflow share this reporter.
 Compiler/runtime defects remain silent hard traps.
 
-The compiler already retains the information needed by this proposal:
+The compiler already retains the information needed by this design:
 
 - `SourceDatabase` maps a `Span` start to a one-based line and Unicode-scalar
   column;
@@ -63,7 +65,7 @@ source syntax or source text copied into MIR.
 
 ## Scope and invariants
 
-The proposal includes:
+The frozen design includes:
 
 - source-callable shadow frames on Linux x86-64;
 - direct local-exec TLS access to the current frame pointer;
@@ -88,7 +90,7 @@ The following invariants apply:
 10. The runtime learns only the trace ABI records, not Skald strings, MIR,
     modules, `SourceId`, or object layouts.
 
-This proposal does not include:
+This design does not include:
 
 - recoverable exceptions, unwinding, handlers, or exceptional cleanup;
 - signal or hard-trap stack reporting;
@@ -100,29 +102,29 @@ This proposal does not include:
 
 The representation is intended to remain realizable on a future Linux
 AArch64 backend through target-specific TLS addressing, but that work is not
-part of this proposal's first implementation scope.
+part of this design's first implementation scope.
 
 ## Decision register
 
-Every row is open for review. “Proposed” records the coherent direction of
-this draft, not a frozen contract.
+Every row is frozen for implementation. Reopening one requires an explicit
+contract revision before dependent implementation proceeds.
 
-| ID | Decision | Proposed direction | State |
+| ID | Decision | Frozen direction | State |
 |---|---|---|---|
-| [TR1](#tr1--trace-frame-and-tls-state) | Dynamic trace state | One linked frame in each source native frame; one hidden thread-local top pointer | **Proposed** |
-| [TR2](#tr2--inline-x86-64-instrumentation) | Hot-path realization | Inline local-exec TLS push/pop and direct location replacement with `r11` as transient scratch | **Proposed** |
-| [TR3](#tr3--source-context-boundary) | Visible frames | Source functions and source-owned lifecycle/static-initializer bodies only; omit generated helpers and wrappers | **Proposed** |
-| [TR4](#tr4--location-update-boundary) | Update sites | Calls, panic-capable runtime operations, and failure-only reporter edges rather than every MIR instruction | **Proposed** |
-| [TR5](#tr5--static-metadata) | Trace records | Interned length-delimited context/path bytes and fixed-width context/location records | **Proposed** |
-| [TR6](#tr6--context-names-and-source-paths) | Human-facing identity | Semantic callable names plus escaped provider-relative paths | **Proposed** |
-| [TR7](#tr7--panic-output) | Rendering | Existing panic record followed by non-duplicated newest-first `stacktrace:` rows | **Proposed** |
-| [TR8](#tr8--enablement) | Compilation policy | Enabled by default; `--omit-runtime-trace` provides zero-cost omission | **Proposed** |
-| [TR9](#tr9--depth-and-defect-boundary) | Depth and corruption | No execution depth limit; render at most 256 frames and mark omitted outer frames | **Proposed** |
-| [TR10](#tr10--compiler-and-abi-ownership) | Phase and ABI boundary | Backend receives sources/options explicitly; runtime ABI advances while `ska_rt_panic` keeps its signature | **Proposed** |
-| [TR11](#tr11--performance-and-verification) | Acceptance evidence | Exact hook counts, complete native traces, deterministic output, and measured enabled/omitted overhead | **Proposed** |
-| [TR12](#tr12--promotion-boundary) | Design maturity | Freeze all rows before creating an implementation roadmap | **Proposed** |
+| [TR1](#tr1--trace-frame-and-tls-state) | Dynamic trace state | One linked frame in each source native frame; one hidden thread-local top pointer | **Frozen** |
+| [TR2](#tr2--inline-x86-64-instrumentation) | Hot-path realization | Inline local-exec TLS push/pop and direct location replacement with `r11` as transient scratch | **Frozen** |
+| [TR3](#tr3--source-context-boundary) | Visible frames | Source functions and source-owned lifecycle/static-initializer bodies only; omit generated helpers and wrappers | **Frozen** |
+| [TR4](#tr4--location-update-boundary) | Update sites | Calls, panic-capable runtime operations, and failure-only reporter edges rather than every MIR instruction | **Frozen** |
+| [TR5](#tr5--static-metadata) | Trace records | Interned length-delimited context/path bytes and fixed-width context/location records | **Frozen** |
+| [TR6](#tr6--context-names-and-source-paths) | Human-facing identity | Semantic callable names plus escaped provider-relative paths | **Frozen** |
+| [TR7](#tr7--panic-output) | Rendering | Existing panic record followed by non-duplicated newest-first `stacktrace:` rows | **Frozen** |
+| [TR8](#tr8--enablement) | Compilation policy | Enabled by default; `--omit-runtime-trace` provides zero-cost omission | **Frozen** |
+| [TR9](#tr9--depth-and-defect-boundary) | Depth and corruption | No execution depth limit; render at most 256 frames and mark omitted outer frames | **Frozen** |
+| [TR10](#tr10--compiler-and-abi-ownership) | Phase and ABI boundary | Backend receives sources/options explicitly; runtime ABI advances to version 9 while `ska_rt_panic` keeps its signature | **Frozen** |
+| [TR11](#tr11--performance-and-verification) | Acceptance evidence | Exact hook counts, complete native traces, deterministic output, and measured enabled/omitted overhead | **Frozen** |
+| [TR12](#tr12--promotion-boundary) | Design maturity | Freeze all rows and promote the contracts before creating an implementation roadmap | **Complete** |
 
-## Proposed design
+## Frozen design
 
 ### TR1 — Trace frame and TLS state
 
@@ -298,7 +300,7 @@ values or hash iteration. Unused records are not emitted.
 ### TR6 — Context names and source paths
 
 Context names derive from semantic module and declaration metadata rather than
-native mangling. Proposed spellings are:
+native mangling. The spellings are:
 
 ```text
 app::main
@@ -350,7 +352,7 @@ their current behavior.
 
 ### TR8 — Enablement
 
-Trace emission is proposed to be enabled by default for native executable and
+Trace emission is enabled by default for native executable and
 assembly output. `--omit-runtime-trace` disables the complete feature at
 compile time.
 
@@ -419,7 +421,7 @@ the active trace through TLS.
 Linux x86-64 instruction selection owns `fs:` addressing and ELF TLS
 relocations. A future Linux AArch64 backend may realize the same target-
 independent frame semantics through `TPIDR_EL0` and its ELF TLS relocations,
-but this proposal does not freeze AArch64 instruction counts or implementation
+but this design does not freeze AArch64 instruction counts or implementation
 work.
 
 ### TR11 — Performance and verification
@@ -440,7 +442,7 @@ Acceptance must measure rather than infer the cost. Benchmarks should include
 tiny call-heavy recursion, a pure tight loop, allocation-heavy execution, and
 representative golden programs, each with tracing enabled and omitted. The
 first implementation need not promise a numeric overhead ceiling, but a
-material regression must be understood before default-on policy is frozen.
+material regression must be understood before default-on tracing ships.
 
 Verification ownership is:
 
@@ -462,38 +464,28 @@ defined by the eventual implementation roadmap.
 
 ### TR12 — Promotion boundary
 
-No row in this proposal is frozen by creating the document. Review may change
-output, paths, context names, depth, default enablement, metadata, or even the
-TLS realization while the status remains draft.
+The pre-roadmap promotion boundary is complete:
 
-Before an implementation roadmap is created:
+1. every decision row is confirmed;
+2. the complete design is promoted into the language error, compiler phase,
+   backend, runtime ABI, driver, debugging, testing, and status documents;
+3. the implemented grammar was checked and remains unchanged;
+4. exact stderr examples and omission behavior agree across contracts;
+5. runtime ABI version 9 and marker `ska_rt_abi_v9` are selected for the
+   incompatible trace-state addition; and
+6. this proposal and its supporting investigation are archived as durable
+   design records.
 
-1. every decision row must be confirmed or explicitly replaced;
-2. the complete confirmed design must be promoted into the language error,
-   compiler phase, backend, runtime ABI, driver, debugging, testing, and
-   status documents;
-3. the implemented grammar must be checked and left unchanged;
-4. exact stderr examples and omission behavior must agree across contracts;
-5. the runtime ABI version transition must be selected; and
-6. the proposal must be archived as the durable decision record.
-
-Only then should a roadmap divide implementation by contract, runtime
+An implementation roadmap may now divide work by contract, runtime
 foundation, metadata/frame representation, location coverage, CLI/goldens,
-performance, and closeout.
+performance, and closeout without reopening these choices.
 
-## Review questions
+## Resolved review decisions
 
-The first review should concentrate on these choices:
-
-1. Is direct access to one hidden TLS symbol an acceptable compiler/runtime
-   ABI dependency, given the static runtime and current Linux x86-64 target?
-2. Should tracing be default-on, or should measurements precede that choice?
-3. Are provider-relative paths the right balance of reproducibility and user
-   usefulness for every module source?
-4. Are semantic initializer signatures preferable to shorter ordinal names?
-5. Is a 256-row rendering cap appropriate, and is an uncounted omitted-frame
-   marker sufficient?
-6. Should any generated lifecycle helper appear as a frame, or should all
-   remain attributed to the initiating source operation?
-7. Does two-instruction unchecked pop provide the intended performance/defect
-   tradeoff?
+Review confirmed direct hidden local-exec TLS access, default-on emission with
+compile-time omission, escaped provider-relative paths, semantic initializer
+signatures, a 256-row rendering cap with an uncounted omitted-tail marker,
+omission of all generated lifecycle helpers, and the two-instruction unchecked
+pop. Ordinary source-authored standard-library and lifecycle bodies remain
+visible; only generated helpers, wrappers, runtime C frames, and the bodyless
+panic intrinsic are omitted.

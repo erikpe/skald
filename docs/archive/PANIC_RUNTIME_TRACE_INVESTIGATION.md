@@ -1,10 +1,10 @@
 # Panic Runtime Trace Investigation
 
-Status: investigation complete against Skald commit
+Status: completed and archived investigation against Skald commit
 `49899bac3e6cedf79703d5a0656747f433b7c0fc` and Niflheim commit
-`3dcd543620bfdc14c0b7c70a09364960e28174c9`. The current reviewable direction
-is recorded in the
-[panic runtime trace design proposal](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md),
+`3dcd543620bfdc14c0b7c70a09364960e28174c9`. The frozen direction is recorded
+in the
+[panic runtime trace design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md),
 which refines the linked native-frame design below by performing push and pop
 through direct Linux x86-64 TLS access rather than per-activation C calls.
 
@@ -498,27 +498,27 @@ ABI-preserving return order. Native goldens should own complete source-to-
 stderr call chains. Existing plain panic expectations can remain useful under
 the omit-trace compiler variant.
 
-## Decisions required before promotion
+## Decisions resolved during promotion
 
-The implementation mechanism is sufficiently clear, but these observable
-policies should be confirmed before creating a roadmap:
+Review froze the observable policies before roadmap creation:
 
-1. **Output:** use only `stacktrace:` rows after the panic record, or also add
-   a redundant top-level `location:` row as Niflheim does.
-2. **Paths:** prefer stable provider-relative paths, diagnostic display paths,
-   logical module names, or a composed form.
-3. **Enablement:** enable trace emission by default with an omit flag, or make
-   it opt-in.
-4. **Context spelling:** choose exact names for lifecycle bodies, initializer
-   overloads, and static initializers.
-5. **Depth/corruption defense:** decide whether the allocation-free linked
-   walk prints every valid frame or applies a high deterministic row limit
-   with an omitted-frame marker.
+1. **Output:** only `stacktrace:` rows follow the panic record; there is no
+   redundant top-level `location:` row.
+2. **Paths:** escaped provider-relative display paths provide stable,
+   useful source identity.
+3. **Enablement:** tracing is default-on and `--omit-runtime-trace` removes it
+   completely at compilation.
+4. **Context spelling:** semantic callable names identify source-owned
+   lifecycle bodies and static initializers; initializer parameter signatures
+   distinguish overloads without source-order ordinals.
+5. **Depth/corruption defense:** execution has no separate trace-depth limit;
+   rendering stops after 256 newest frames and marks an uncounted outer tail.
+6. **Frame visibility and pop:** generated helpers remain attributed to their
+   initiating source operation, and generated return paths use the unchecked
+   two-instruction pop.
 
-The recommendation is: non-duplicated stack rows, provider-relative escaped
-paths, semantic context names with initializer ordinals, default-on tracing
-plus `--omit-runtime-trace`, and a high deterministic rendering limit that
-does not limit valid execution or require trace allocation.
+The [frozen design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md) and living
+contracts are authoritative where they refine this earlier investigation.
 
 ## Suggested implementation order
 

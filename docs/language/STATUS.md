@@ -81,6 +81,7 @@ changes only when feature maturity or compiler support changes.
 | Target registry | **Implemented contract** | `x86_64-sysv` is the only accepted target name and the default. |
 | Host/toolchain execution | **Implemented contract** | Linux x86-64 System V assembly and native executable linking through the configured C compiler driver and versioned C runtime. |
 | Artifacts | **Implemented contract** | Textual assembly with `--emit asm`, or a linked executable by default. |
+| [Panic runtime traces](ERRORS.md#frozen-panic-runtime-traces) | **Frozen design** | Default-on source-callable shadow frames, exact source-operation locations, allocation-free newest-first panic stacktraces, and zero-cost `--omit-runtime-trace` compilation are settled for Linux x86-64. The compiler, CLI, runtime ABI version 9, metadata, TLS maintenance, and tests are not yet implemented. The source grammar and panic API are unchanged. |
 | Linux AArch64 backend | **Exploratory direction** | Named as a future backend direction; no target entry or active backend implementation roadmap exists. |
 
 Target ABI and runtime mechanics are implementation details owned by the

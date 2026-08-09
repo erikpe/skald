@@ -185,8 +185,65 @@ The exact reporter signature, stderr bytes, and ABI-version transition are
 implementation contracts rather than portable source representation. They
 are frozen in the
 [runtime ABI](../compiler/RUNTIME_ABI.md#panic-reporting-abi).
-Source locations, a shadow trace stack, rendered stacktraces, trace-related
-command-line policy, and exceptions are deliberately deferred.
+The implemented reporter still emits only that single panic line. The frozen
+[runtime-trace extension](#frozen-panic-runtime-traces) below adds locations
+and stacktrace rows without changing the panic API, failure catalog, or
+non-unwinding semantics. Exceptions remain deferred.
+
+## Frozen panic runtime traces
+
+Panic runtime traces are frozen for implementation but are not yet emitted by
+the current compiler. With tracing enabled, every source-authored executable
+callable contributes one active frame. This includes ordinary functions,
+methods, initializers, explicit static-field initializer bodies, and
+source-authored copy, assignment, and destruction bodies in application or
+standard-library code. The bodyless `std::error::panic` intrinsic, runtime C
+code, the process wrapper, static coordinator, and all compiler-generated
+lifecycle, array, ownership, finalization, and target helpers do not appear as
+frames.
+
+Each frame reports the source location most recently made panic-observable.
+A callee failure appears at the callee's failure operation, followed by the
+caller's call site. Checked casts, optional access, bounds checks, division or
+remainder by zero, invalid shifts, checked floating-to-integer casts, explicit
+panic, and other compiler-known failures report the span start of the failing
+source operation. A generated helper or panic-capable runtime operation is
+attributed to the initiating source operation in its caller rather than to an
+artificial helper frame. Hard compiler/runtime defects remain silent hard
+traps and acquire no trace.
+
+The exact enabled output is the existing panic record followed immediately by
+newest-first trace rows:
+
+```text
+panic: configuration is missing
+stacktrace:
+  at app::load (app/load.ska:18:9)
+  at app::main (app/main.ska:7:5)
+```
+
+There is no duplicate `location:` row. A reporter reached without an active
+Skald frame preserves the implemented single-line record. Context names use
+semantic module and callable identity; overloaded initializer names include
+their canonical parameter types rather than source-order ordinals. Paths are
+compile-time escaped module-provider-relative display paths. A positional
+source outside a configured root retains its configured relative spelling
+when available and otherwise may remain absolute. Line and column are
+one-based, with columns measured in Unicode scalar values as for diagnostics.
+
+Trace execution has no separate depth limit. Rendering emits at most 256
+newest frames and, when an outer frame remains, ends with
+`  ... outer frames omitted`. Rendering remains allocation-free and uses the
+same retrying direct-write and immediate-failure policy as the panic record.
+Tracing is frozen as default-on for native executables and assembly; the
+`--omit-runtime-trace` compilation option removes all trace frame storage,
+maintenance instructions, metadata, and trace-only source lookup.
+
+This extension adds no syntax and leaves the implemented grammar unchanged.
+Its compiler, target, and runtime representation belongs to
+[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-runtime-trace-phase-boundary),
+the [backend](../compiler/BACKEND.md#frozen-runtime-trace-target-boundary), and
+the [runtime ABI](../compiler/RUNTIME_ABI.md#frozen-runtime-trace-abi-version-9).
 
 ## Optional failures
 
@@ -329,9 +386,10 @@ must settle:
 
 Lowering through native unwinding, explicit control flow, hidden results, or
 another mechanism is a compiler decision. No source rule should be inferred
-from a possible implementation strategy. Shadow trace stacks, panic source
-locations, and stacktrace rendering are also deferred, but are independent of
-the exception model and may be implemented before it.
+from a possible implementation strategy. The frozen panic runtime trace is
+independent of the exception model and may be implemented before it; a future
+exception design must separately decide whether recoverable transfers use or
+extend that diagnostic state.
 
 ## Implementation boundary
 

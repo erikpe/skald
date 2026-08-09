@@ -1306,6 +1306,45 @@ not acquire a termination reason. They remain structured verifier errors
 before target lowering, or hard compiler-defect traps if an invalid state is
 somehow reached after the trust boundary.
 
+### Frozen runtime trace phase boundary
+
+Runtime traces are frozen for implementation but are not yet present in phase
+products or backend output. They add no AST, resolved, HIR, or MIR operation.
+MIR continues to own the semantic spans already carried by definitions,
+instructions, calls, blocks, `Panic`, and every `Terminate` reason; it must not
+gain target trace-record identities, rendered paths, TLS operations, or stack
+frame offsets.
+
+Backend emission will receive one explicit input containing the final verified
+`MirProgram`, read-only `SourceDatabase` access when tracing is enabled, and
+the selected trace policy. It will also consume the program's existing
+semantic declaration and module provenance needed to form source-callable
+names and provider-relative display paths. `SourceDatabase` resolves used span
+starts to one-based line and Unicode-scalar column once during target metadata
+planning. Trace-disabled emission performs no trace-only source lookup.
+
+The target boundary decides which source definitions contribute frames and
+which existing spans require location records. Source functions, methods,
+ordinary initializers, explicit static-field initializer bodies, and
+source-authored copy, assignment, and destruction bodies are eligible.
+Generated wrappers, coordinators, lifecycle/array/ownership/finalization
+helpers, and target thunks are not. Before an omitted helper or runtime
+operation can report, its source caller's current location is the initiating
+MIR operation span.
+
+Location replacement is required before every source or external call, before
+every generated helper call representing a source operation, before a runtime
+operation permitted to report, and on each taken explicit-panic or static
+termination edge. Failure-only placement means a successful checked operation
+does not execute a trace update. A later target-private dataflow optimization
+may remove a replacement already established on every incoming path, but
+correctness never depends on that optimization.
+
+The public verifier continues to validate target-independent spans and control
+flow only. Trace-frame layout, metadata interning, update placement, and TLS
+sequences are target legality and lowering responsibilities described by the
+[backend contract](BACKEND.md#frozen-runtime-trace-target-boundary).
+
 ## While-loop representation
 
 The source behavior of `while`, `break`, and `continue` is specified in

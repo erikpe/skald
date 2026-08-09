@@ -101,6 +101,11 @@ Resolved golden-test-runner design inputs:
 
 - [Spec-driven parallel golden test runner design](GOLDEN_TEST_RUNNER_DESIGN_PROPOSAL.md)
 
+Resolved panic runtime-trace inputs:
+
+- [Panic runtime trace design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md)
+- [Panic runtime trace investigation](PANIC_RUNTIME_TRACE_INVESTIGATION.md)
+
 Supporting records for the documentation overhaul:
 
 - [migration inventory](DOCUMENTATION_OVERHAUL_INVENTORY.md)

@@ -14,17 +14,10 @@ No implementation roadmap is currently waiting to start.
 
 ## Design proposals
 
-[Panic Runtime Trace Design Proposal](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md)
-is a draft for review. It proposes linked native-frame trace records, inline
-Linux x86-64 local-exec TLS push/pop, direct location replacement, no reserved
-register, allocation-free panic rendering, and zero-cost compile-time
-omission. Every decision remains open; contract promotion and an
-implementation roadmap follow only after review and freezing.
-
-The supporting
-[Panic Runtime Trace Investigation](PANIC_RUNTIME_TRACE_INVESTIGATION.md)
-audits current Skald and Niflheim behavior and compares the rejected and
-retained implementation alternatives.
+No design proposal is currently under review. The frozen panic runtime-trace
+design and its supporting investigation are preserved in the
+[archive](../archive/README.md); an
+implementation roadmap may now be created from the promoted contracts.
 
 ## Pending discoveries
 

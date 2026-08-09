@@ -220,6 +220,40 @@ with `input MIR failed verification` means malformed MIR reached the final
 trust boundary; another structured backend error means verified MIR violates a
 target-specific legality or lowering contract.
 
+## Inspect frozen runtime traces
+
+Runtime traces are frozen but not yet implemented. Once present, begin with
+the existing MIR span at the reported operation; MIR deliberately contains no
+trace instruction or metadata identity. Then inspect backend planning for the
+source-callable context, escaped provider-relative path, span-start line and
+column, frame eligibility, and whether the operation requires a replacement.
+
+In enabled x86-64 assembly, an eligible source callable must have one linked
+16-byte record, one six-instruction publish sequence after its ordinary entry
+setup, one two-instruction restore on every normal return, and a two-instruction
+location replacement at each required call or taken failure edge. Generated
+helpers and wrappers must have none. `r11` is only a transient clobber; a
+persistent trace register or a C maintenance call is a lowering defect.
+Indirect calls require particular attention because the trace replacement
+must occur before the target is loaded into the same scratch register.
+
+Use ELF relocation and section inspection to distinguish a textual assembly
+mistake from a link-model mistake. TLS access must use local-exec
+`R_X86_64_TPOFF32` relocations to the hidden `ska_rt_trace_top`; context and
+location records must be deterministic relocation-read-only data. A build
+with `--omit-runtime-trace` must contain no trace symbol reference, metadata,
+frame home, or maintenance instruction.
+
+For incorrect output, reproduce first with the direct runtime harness using a
+hand-built valid frame chain, then with the smallest native golden. The former
+owns empty, nested, replaced, capped, and failed-write rendering; the latter
+owns source-frame selection and operation attribution. A missing caller row
+usually indicates an omitted push or premature pop. A correct caller with the
+wrong line usually indicates replacement placement or span selection. A
+generated helper name indicates a frame-eligibility defect. A crash while
+walking a non-null link indicates compiler/runtime corruption rather than a
+source panic.
+
 Verifier tests use crate-visible `cfg(test)` fixture constructors and mutation
 accessors such as `entries_mut_for_test`, `get_mut_for_test`, and
 `remove_for_test`. They are intentionally unavailable to integration tests and

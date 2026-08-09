@@ -71,6 +71,12 @@ x86-64 base layout and internal static-view calling convention.
 
 Neither assembly API invokes the host toolchain or publishes an artifact.
 
+The frozen runtime-trace extension changes the final handoff only: the driver
+passes final verified MIR, the report's read-only `SourceDatabase`, and the
+selected trace policy together to backend emission. Source ownership remains
+with the compilation report, and no target trace record or rendered path is
+written back into MIR. This extension is not yet implemented.
+
 ## Command-line modes
 
 `skac --help` is the exact option reference. One invocation requires exactly
@@ -87,6 +93,13 @@ is mutually exclusive with `--no-stdlib`.
 `-o` or `--output` selects another destination. Assembly mode runs the same
 frontend and backend but does not require a runtime archive or invoke the host
 toolchain. `--version`, `-h`, and `--help` complete without compilation.
+
+Runtime traces are frozen as enabled by default for both executable and
+assembly modes. `--omit-runtime-trace` selects compile-time omission for that
+invocation. It is a trace policy rather than a runtime toggle: omitted output
+contains no trace frame homes, TLS maintenance, trace metadata, or trace-only
+source lookup. The option takes no value and repeated use is a command-usage
+error. The current CLI does not yet accept it.
 
 For example, split application, dependency, and SDK trees compose without
 source-visible root bindings:
@@ -197,9 +210,9 @@ details and are not portable compiler wording.
 Driver tests are divided by responsibility:
 
 - CLI tests cover help, version, selectors, roots, argument rejection, output
-  defaults, suffix, target, and OS-string rules;
-- pipeline tests compose singleton and request-based whole-program phases and
-  structured failures;
+  defaults, suffix, target, trace omission, and OS-string rules;
+- pipeline tests compose singleton and request-based whole-program phases,
+  trace policy/source handoff, and structured failures;
 - artifact tests cover assembly output, source alias rejection, preservation,
   and temporary cleanup;
 - toolchain tests cover missing archives, process failures, unresolved
