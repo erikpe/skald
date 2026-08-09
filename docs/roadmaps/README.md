@@ -14,7 +14,11 @@ No implementation roadmap is currently waiting to start.
 
 ## Design proposals
 
-No design proposals are currently awaiting decisions or promotion.
+[Panic Runtime Trace Investigation](PANIC_RUNTIME_TRACE_INVESTIGATION.md) is
+complete and recommends allocation-free linked shadow frames with direct
+location-address replacement. Exact output, path, context-name, depth, and
+default-enable policies await confirmation before contract promotion and an
+implementation roadmap.
 
 ## Pending discoveries
 
