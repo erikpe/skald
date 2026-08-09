@@ -34,6 +34,9 @@ mod terminator;
 mod type_operations;
 mod value;
 
+const ENTRY_RESULT_HOME: i32 = -8;
+const ENTRY_RESULT_FRAME_SIZE: u32 = 16;
+
 pub(super) fn lower(
     program: &MirProgram,
     data_layout: &DataLayout,
@@ -60,6 +63,9 @@ pub(super) fn lower(
     functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
     if let Some(initializer) = static_lifecycle::lower_program_initializer(program) {
         functions.push(initializer);
+    }
+    if let Some(finalizer) = static_lifecycle::lower_program_finalizer(program, data_layout)? {
+        functions.push(finalizer);
     }
     let entry = program
         .declarations
@@ -163,11 +169,22 @@ fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
     if static_lifecycle::has_program_initializer(program) {
         instructions.push(Instruction::Call(symbol::program_initializer()));
     }
-    instructions.extend([
-        Instruction::Call(symbol::callable(program, entry)),
-        Instruction::Leave,
-        Instruction::Return,
-    ]);
+    instructions.push(Instruction::Call(symbol::callable(program, entry)));
+    if static_lifecycle::has_program_finalizer(program) {
+        instructions.extend([
+            Instruction::ReserveStack(ENTRY_RESULT_FRAME_SIZE),
+            Instruction::Move {
+                source: Register::Rax.into(),
+                destination: value::memory(Register::Rbp, ENTRY_RESULT_HOME),
+            },
+            Instruction::Call(symbol::program_finalizer()),
+            Instruction::Move {
+                source: value::memory(Register::Rbp, ENTRY_RESULT_HOME),
+                destination: Register::Rax.into(),
+            },
+        ]);
+    }
+    instructions.extend([Instruction::Leave, Instruction::Return]);
     AssemblyFunction {
         symbol: "main".to_owned(),
         exported: true,

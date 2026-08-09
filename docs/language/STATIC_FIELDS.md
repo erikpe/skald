@@ -1,7 +1,7 @@
 # Static Fields
 
-Status: **eager static initialization implemented; reverse normal-return
-shutdown remains planned**. This document is
+Status: **eager static initialization and reverse normal-return shutdown
+implemented**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -31,8 +31,8 @@ and deep static uses across calls, dynamic dispatch, copy operations,
 destructors, shared releases, optionals, and arrays. Static-lifetime planning
 then includes eventual-value destruction of every owning-capable field,
 rejects self-dependencies and cycles, and selects one deterministic activation
-order with exact-reverse shutdown. The x86-64 backend executes the activation
-half of that plan before entry; reverse normal-return shutdown remains planned.
+order with exact-reverse shutdown. The x86-64 backend executes both halves of
+that verified plan around the selected entry function.
 
 ## Declaration syntax
 
@@ -274,12 +274,14 @@ The x86-64 backend emits one private initializer body for every explicit
 declaration and one private program initializer that invokes those bodies in
 the verified activation order. The exported host `main` wrapper calls the
 runtime ABI marker, then the program initializer, then the selected Skald entry
-function. Initializer-free fields perform no Skald value work at their planned
-positions because their all-zero values already occupy valid private storage.
-An explicit initializer executes exactly once, publishes its completed value,
-finishes post-publication full-expression cleanup, and only then permits the
-next activation region to begin. Ordinary static access performs no lifecycle
-state check and never initializes a slot lazily.
+function. When entry returns normally, the wrapper preserves its `i64` result,
+calls one private program finalizer, restores the result, and returns it to the
+host. Initializer-free fields perform no Skald value work at their planned
+activation positions because their all-zero values already occupy valid
+private storage. An explicit initializer executes exactly once, publishes its
+completed value, finishes post-publication full-expression cleanup, and only
+then permits the next activation region to begin. Ordinary static access
+performs no lifecycle state check and never initializes a slot lazily.
 
 Planning rejects an initializer that can directly or transitively access its
 own field before publication. Cleanup proven to occur after publication may
@@ -291,18 +293,22 @@ could be installed by ordinary replacement. Callable recursion alone is not a
 field-lifetime cycle.
 
 A static slot is program-owned rather than registered in any lexical scope.
-In the current executable milestone, it is not yet cleaned when the selected
-Skald entry function or generated host entry returns. The final
-contents remain live until process termination. In particular, a final
-present optional object, optional shared owner, or nonempty inline-array
-backing is deliberately not destroyed or released by generated shutdown code.
-The host operating system may reclaim process resources without invoking
-Skald lifecycle operations. Verified reverse destruction is retained in final
-MIR for the planned normal-return shutdown implementation.
+On normal entry return, the program finalizer visits every field in exact
+reverse activation order. Primitive and primitive-optional slots need no value
+work. Exact objects use complete-object destruction, present optional objects
+destroy their current payload, shared owners perform ordinary strong release,
+and arrays release their current backing and destroy elements in reverse index
+order. This includes initializer-free owning slots whose contents were
+installed later by replacement. Semantic `destroying` and `dead` transitions
+remain in verified MIR and need no emitted state byte; the dependency proof
+keeps every not-yet-destroyed field live for later-field destructors.
 
-This final no-cleanup rule does not suppress ordinary replacement effects
-during execution. It also does not change cleanup of locals, parameters,
-results, temporaries, instance fields, or full-expression anchors.
+Shutdown is deliberately non-unwinding. Initializer failure, entry panic,
+destructor panic, signals, and foreign process termination do not attempt
+remaining-static cleanup. A destructor panic stops the program finalizer at
+that point. Ordinary replacement effects during execution and cleanup of
+locals, parameters, results, temporaries, instance fields, or full-expression
+anchors remain unchanged.
 
 ## Failure and diagnostics
 
@@ -335,11 +341,11 @@ verified MIR, deterministic x86-64 startup, and native execution.
 ## Runtime, ABI, and representation boundary
 
 Static fields add no public C symbol, runtime service, allocator behavior,
-panic reason, garbage-collector root, trace operation, linker startup hook, or
-shutdown hook. Runtime ABI version 8 and its compatibility marker remain
-unchanged. The existing process wrapper gains only a compiler-private program
-initializer call after that marker. Source `public` visibility does not export
-a native static symbol, and static fields are not permitted in external
+panic reason, garbage-collector root, trace operation, or linker lifecycle
+hook. Runtime ABI version 8 and its compatibility marker remain unchanged. The
+existing process wrapper calls compiler-private program initializer and
+finalizer functions around Skald entry. Source `public` visibility does not
+export a native static symbol, and static fields are not permitted in external
 declarations.
 
 For every declaration that reaches the backend, the x86-64
@@ -356,16 +362,15 @@ callable-ABI changes.
 The executable profile does not yet include:
 
 - static initializer blocks, lifecycle members, or deinitializers;
-- module initialization or shutdown and their ordering;
+- source-defined module initialization or shutdown blocks;
 - top-level or module-owned global variables;
 - interface-owned static fields;
 - external, exported, thread-local, atomic, synchronized, `final`, or constant
   static storage;
 - reflection or source-visible static symbol identity;
-- garbage collection or runtime root registration; or
-- cleanup of final static contents at normal process exit.
+- garbage collection or runtime root registration.
 
 The active [static-initialization roadmap](../roadmaps/STATIC_FIELD_INITIALIZATION_ROADMAP.md)
-owns reverse normal-return shutdown and broad hardening. Extending the remaining boundaries
-requires a separate design rather than an inference from either the
+owns broad hardening of the completed lifecycle. Extending the remaining
+boundaries requires a separate design rather than an inference from either the
 zero-default profile or initializer syntax.

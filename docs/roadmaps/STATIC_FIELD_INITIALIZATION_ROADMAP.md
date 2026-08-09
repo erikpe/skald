@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI8 are
-complete, and SI9 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI9 are
+complete, and SI10 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -236,7 +236,7 @@ moves that slot before `destination`.
 - [x] SI6 — Define and verify lifecycle MIR
 - [x] SI7 — Synthesize the lifecycle coordinator
 - [x] SI8 — Execute eager startup
-- [ ] SI9 — Execute reverse normal-return shutdown
+- [x] SI9 — Execute reverse normal-return shutdown
 - [ ] SI10 — Harden and publish initialized static fields
 
 ## PR-sized implementation sequence
@@ -667,25 +667,25 @@ arrays, deterministic output, assembler acceptance, and absent access guards.
 **Purpose:** End program-owned resources deterministically while preserving
 the selected entry result and existing abrupt-termination behavior.
 
-- [ ] Lower the verified program finalizer through ordinary complete-object,
+- [x] Lower the verified program finalizer through ordinary complete-object,
       optional, shared-owner, and array cleanup operations in exact reverse
       activation order.
-- [ ] Preserve the verified semantic `destroying` and `dead` transitions in
+- [x] Preserve the verified semantic `destroying` and `dead` transitions in
       MIR order; keep not-yet-destroyed dependencies live during later-field
       destructors without requiring emitted per-slot state bytes.
-- [ ] Include initializer-free optional, optional-shared, and array fields so
+- [x] Include initializer-free optional, optional-shared, and array fields so
       contents acquired by replacement during execution are cleaned normally.
-- [ ] Spill the selected entry's `i64` result in the host wrapper, call the
+- [x] Spill the selected entry's `i64` result in the host wrapper, call the
       generated finalizer after the entry callable returns, restore the result,
       and preserve System V stack alignment and callee-clobber rules.
-- [ ] Keep panic, initializer failure, entry panic, destructor panic, signals,
+- [x] Keep panic, initializer failure, entry panic, destructor panic, signals,
       and foreign process termination non-unwinding with no remaining-static
       cleanup attempt.
-- [ ] Cover destructor reads of still-live dependencies, compile-time
+- [x] Cover destructor reads of still-live dependencies, compile-time
       rejection of current or already-dead dependencies, shared last-owner
       destruction, reverse array element cleanup, and inherited complete-
       object destruction.
-- [ ] Confirm the feature needs no public runtime ABI change; if evidence
+- [x] Confirm the feature needs no public runtime ABI change; if evidence
       contradicts that assumption, stop this task and revise the runtime
       contract before changing C symbols.
 
@@ -698,6 +698,21 @@ goldens.
 **Exit criteria:** Normal entry return destroys the current contents of every
 static field once in the frozen reverse order and returns the original `i64`;
 abrupt termination retains the documented no-unwind behavior.
+
+**Completed:** The x86-64 backend now emits one private program finalizer from
+the verified destruction regions, preserving their exact reverse order and
+using existing complete-object, shared-owner, and array lifecycle helpers plus
+presence-checked optional cleanup. Initializer-free owning slots participate,
+while semantic lifecycle transitions still require no target state bytes. The
+host wrapper keeps System V call alignment, spills the selected entry `i64`,
+calls the finalizer only after normal return, and restores the result. Focused
+assembly/native coverage exercises primitive no-op regions, dependency-live
+destructors, optional current contents, shared last-owner release, reverse
+array elements, inherited complete destruction, and entry/destructor panic
+boundaries. Living contracts and the affected static-field golden now describe
+normal-return shutdown. Runtime ABI v8 and its public surface are unchanged.
+`make check`, `cargo test --locked -p skald-compiler`,
+`make golden-determinism-test`, and `git diff --check` pass.
 
 ### SI10 — Harden and publish initialized static fields
 

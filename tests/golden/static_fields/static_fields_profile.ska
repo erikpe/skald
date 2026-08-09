@@ -39,13 +39,13 @@ fn main() -> i64 {
     increment(State.number);
     State.maybe = Item(7);
     // Replacing the payload destroys 7; the assigned producer cleans its
-    // distinct temporary 41 after copying. The retained static 41 does not
-    // produce a second line at process exit.
+    // distinct temporary 41 after copying. Reverse normal-return shutdown
+    // later destroys the retained static 41.
     State.maybe = Item(41);
     State.owner = new Item(8);
     State.owner = none;
     State.owner = new Item(42);
-    // The final static owner likewise does not print 42 at process exit.
+    // Reverse shutdown releases this final owner before the optional payload.
     State.flag = true;
     assert_true(State.flag);
     assert_eq_i64(State.number, 41);

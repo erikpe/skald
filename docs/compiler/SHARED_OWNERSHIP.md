@@ -265,10 +265,11 @@ The implemented [static-field profile](../language/STATIC_FIELDS.md) admits
 initializer-free optional `shared? T` statics, whose zero state owns nothing,
 and explicitly initialized ordinary or optional shared statics. Initializers
 reuse ordinary adoption, copy, allocation, publication, and full-expression
-cleanup. Present values use ordinary ownership transitions during execution,
-while final static owners remain live until reverse normal-return shutdown is
-implemented. The profile never admits a zero or uninitialized ordinary
-`shared T` handle.
+cleanup. Present values use ordinary ownership transitions during execution.
+Reverse normal-return shutdown releases the final current owner; last-owner
+release uses the same dynamic complete finalizer and allocation-freeing path as
+ordinary owners. Abrupt termination remains non-unwinding. The profile never
+admits a zero or uninitialized ordinary `shared T` handle.
 
 As with existing MIR, invalid public or mutated MIR fails verification before
 target layout or code generation. Reference-count underflow and dangling

@@ -242,8 +242,12 @@ backends. The driver reports lifetime graph failures as ordinary source
 diagnostics after preliminary verification, independently of malformed-MIR
 verification errors. A valid explicit initializer reaches final verified MIR,
 ordinary x86-64 instruction selection, and the private dependency-ordered
-program initializer called before entry. The source-visible lifetime rule is owned by the
-[static-field contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
+program initializer called before entry. The backend also lowers the verified
+reverse destruction regions into one private program finalizer, using existing
+complete-object, optional, shared-owner, and array lifecycle helpers. The host
+wrapper preserves the entry result across that normal-return call. The
+source-visible lifetime rule is owned by the [static-field
+contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional

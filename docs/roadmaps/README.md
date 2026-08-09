@@ -12,10 +12,11 @@ progress. Completed roadmaps and resolved discovery records move to
   verified preliminary lifecycle MIR are complete. Transitive static-effect
   inference, deterministic lifetime planning with cycle diagnostics, and the
   verified lifecycle-MIR certificate and final coordinator synthesis are
-  complete. Eager x86-64 startup now executes the verified dependency order
-  before entry without per-access guards; reverse normal-return shutdown is
-  next. The roadmap adds checked program-owned lifecycle state and deterministic
-  cleanup on top of the implemented static-storage baseline.
+  complete. Eager x86-64 startup executes the verified dependency order before
+  entry without per-access guards, and normal-return shutdown executes
+  exact-reverse cleanup while preserving the entry result. Broad hardening is
+  next. The roadmap adds checked program-owned lifecycle state and
+  deterministic cleanup on top of the implemented static-storage baseline.
 
 ## Planned
 

@@ -50,6 +50,10 @@ pub(super) fn program_initializer() -> String {
     ".Lska.static.initialize".to_owned()
 }
 
+pub(super) fn program_finalizer() -> String {
+    ".Lska.static.finalize".to_owned()
+}
+
 pub(super) fn complete_finalizer(program: &MirProgram, class: ClassId) -> String {
     format!(".Lska.{}.finalize_complete", class_stem(program, class))
 }

@@ -85,6 +85,7 @@ mod shifts;
 mod static_fields;
 mod static_inheritance;
 mod static_initialization;
+mod static_shutdown;
 mod strings;
 mod termination;
 mod type_operations;

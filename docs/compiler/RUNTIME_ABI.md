@@ -24,10 +24,11 @@ shared-owner machinery.
 The implemented [static-field contract](../language/STATIC_FIELDS.md) likewise
 adds no public symbol, runtime startup or shutdown service, root-registration
 service, panic reason, or ABI-version change. Static slots, eager initializer
-bodies, and the private program initializer are compiler/backend-owned. The
-generated process-entry wrapper calls that private initializer after the
-unchanged compatibility marker and before Skald entry; generated code still
-performs no final static cleanup. Runtime ABI version 8,
+bodies, and the private program initializer and finalizer are
+compiler/backend-owned. The generated process-entry wrapper calls the
+initializer after the unchanged compatibility marker and before Skald entry,
+then preserves the entry result across the finalizer on normal return. Abrupt
+termination does not unwind static state. Runtime ABI version 8,
 `skald_runtime.h`, and its marker remain unchanged. Static fields do not alter
 instance object layouts, dispatch metadata, internal call classification, or
 the primitive-only external ABI.

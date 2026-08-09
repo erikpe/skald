@@ -1,4 +1,4 @@
-//! Private shared-handle helpers used by generated array lifecycle functions.
+//! Private shared-handle helpers used by generated lifecycle functions.
 
 use crate::{
     backend::x86_64_sysv::{
@@ -15,15 +15,30 @@ pub(super) fn lower_all(
     program: &MirProgram,
     dispatch: &DispatchMetadata,
 ) -> Vec<AssemblyFunction> {
-    if !program.array_types.iter().any(|array| {
+    let array_lifecycle_needs_helpers = program.array_types.iter().any(|array| {
         matches!(
             array.element,
             MirType::Shared(_) | MirType::OptionalShared(_)
         )
-    }) {
-        return Vec::new();
+    });
+    let static_lifecycle_needs_helpers =
+        program.static_lifecycle.as_ref().is_some_and(|lifecycle| {
+            lifecycle.shutdown().iter().any(|region| {
+                matches!(
+                    region.cleanup,
+                    crate::mir::MirStaticValueCleanup::Shared(_)
+                        | crate::mir::MirStaticValueCleanup::OptionalShared(_)
+                )
+            })
+        });
+    let mut helpers = Vec::new();
+    if array_lifecycle_needs_helpers {
+        helpers.push(lower_retain());
     }
-    vec![lower_retain(), lower_release(dispatch)]
+    if array_lifecycle_needs_helpers || static_lifecycle_needs_helpers {
+        helpers.push(lower_release(dispatch));
+    }
+    helpers
 }
 
 fn lower_retain() -> AssemblyFunction {

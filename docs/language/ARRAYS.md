@@ -732,10 +732,11 @@ type to be default initializable. An explicit initializer uses ordinary array
 construction, copy, or produced-backing adoption before entry. Later
 replacement, indexing, slicing, aliases, anchors, and standard-I/O buffer use
 retain this document's ordinary rules. Displaced backing receives ordinary
-cleanup; final static backing remains retained until reverse normal-return
-shutdown is implemented. This static-array profile is implemented across eager
-initialization, replacement, projections, copied slices, call aliases, and
-byte-I/O buffers.
+cleanup; reverse normal-return shutdown releases the current final backing and
+destroys its elements in reverse index order. Abrupt termination does not
+unwind remaining static arrays. This static-array profile is implemented
+across eager initialization, replacement, projections, copied slices, call
+aliases, and byte-I/O buffers.
 
 ## Failure
 
