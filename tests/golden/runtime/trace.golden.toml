@@ -78,10 +78,11 @@ stacktrace:
 """ } }
 
 [[test]]
-name = "omitted"
+name = "chains_without_runtime_trace"
 mode = "run"
-source = "panic_omitted.ska"
-compiler_args = ["--omit-runtime-trace"]
+source = "trace_chains.ska"
+variants = ["omit-runtime-trace"]
 [[test.run]]
-name = "single_line"
-expect = { exit = "failure", stderr = { inline = "panic: omitted trace\n" } }
+name = "direct"
+args = ["direct"]
+expect = { exit = "failure", stderr = { inline = "panic: direct failure\n" } }

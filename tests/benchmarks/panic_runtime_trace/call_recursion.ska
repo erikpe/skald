@@ -1,0 +1,19 @@
+fn descend(depth: i64) -> i64 {
+    if (depth == 0) {
+        return 1;
+    }
+    return descend(depth - 1) + 1;
+}
+
+fn main() -> i64 {
+    var round: i64 = 0;
+    var total: i64 = 0;
+    while (round < 1000000) {
+        total = total + descend(16);
+        round = round + 1;
+    }
+    if (total == 17000000) {
+        return 0;
+    }
+    return 1;
+}

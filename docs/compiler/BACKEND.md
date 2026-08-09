@@ -707,7 +707,7 @@ The current backend gives every MIR storage entry and transient scalar value a
 fixed stack home. Scalar values and pointer homes use eight-byte size and
 alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
-`rbp`-relative addressing. Under the frozen runtime-trace extension, each
+`rbp`-relative addressing. With the implemented runtime-trace extension, each
 eligible traced callable adds exactly one 16-byte trace record before that
 rounding; generated helpers add none, and omitted tracing leaves frame layout
 unchanged.

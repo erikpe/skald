@@ -1,8 +1,7 @@
 # Panic Runtime Trace Design Record
 
-Status: frozen design; implementation is planned by the
-[panic runtime trace roadmap](../roadmaps/PANIC_RUNTIME_TRACE_ROADMAP.md), but
-is not yet implemented. The completed
+Status: frozen design; implementation was completed by the
+[panic runtime trace roadmap](PANIC_RUNTIME_TRACE_ROADMAP.md). The completed
 [runtime trace investigation](PANIC_RUNTIME_TRACE_INVESTIGATION.md) provides
 the Skald and Niflheim implementation evidence behind this design.
 
@@ -477,8 +476,8 @@ The pre-roadmap promotion boundary is complete:
 6. this proposal and its supporting investigation are archived as durable
    design records.
 
-The active
-[implementation roadmap](../roadmaps/PANIC_RUNTIME_TRACE_ROADMAP.md) divides
+The completed
+[implementation roadmap](PANIC_RUNTIME_TRACE_ROADMAP.md) divided
 work by runtime foundation, metadata/frame representation, location coverage,
 CLI/goldens, performance, and closeout without reopening these choices.
 

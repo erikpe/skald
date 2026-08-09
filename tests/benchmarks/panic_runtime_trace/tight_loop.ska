@@ -1,0 +1,12 @@
+fn main() -> i64 {
+    var iteration: i64 = 0;
+    var state: i64 = 1;
+    while (iteration < 20000000) {
+        state = (state + iteration) ^ (iteration << 3u);
+        iteration = iteration + 1;
+    }
+    if (iteration == 20000000 && state == 200083963002241) {
+        return 0;
+    }
+    return 1;
+}

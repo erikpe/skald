@@ -2,11 +2,13 @@ use super::*;
 
 use std::{env, fs, process::Command};
 
+use crate::backend::RuntimeTracePolicy;
 use crate::test_support::{run_native_assembly_with_runtime_trace_probe, TemporaryDirectory};
 
 const DETERMINISM_OUTPUT: &str = "SKALD_RUNTIME_TRACE_DETERMINISM_OUTPUT";
+const DETERMINISM_POLICY: &str = "SKALD_RUNTIME_TRACE_DETERMINISM_POLICY";
 const DETERMINISM_TEST: &str =
-    "driver::tests::runtime_trace::enabled_trace_products_are_deterministic_across_processes";
+    "driver::tests::runtime_trace::trace_products_are_deterministic_across_processes_and_provider_roots";
 
 fn compile_and_run(path: &str, source: &str) -> std::process::Output {
     let artifact = compile_source_to_assembly(path, source, Target::X86_64SysV)
@@ -58,37 +60,54 @@ fn singleton_pipeline_renders_semantic_initializer_signatures() {
 }
 
 #[test]
-fn enabled_trace_products_are_deterministic_across_processes() {
+fn trace_products_are_deterministic_across_processes_and_provider_roots() {
     if let Some(output) = env::var_os(DETERMINISM_OUTPUT) {
-        fs::write(output, enabled_trace_products()).unwrap();
+        let policy = match env::var(DETERMINISM_POLICY).as_deref() {
+            Ok("enabled") => RuntimeTracePolicy::Enabled,
+            Ok("omitted") => RuntimeTracePolicy::Omitted,
+            value => panic!("invalid runtime-trace determinism policy: {value:?}"),
+        };
+        fs::write(output, trace_products(policy)).unwrap();
         return;
     }
 
     let directory = TemporaryDirectory::new("runtime-trace-determinism-output").unwrap();
-    let first = directory.join("first.txt");
-    let second = directory.join("second.txt");
-    run_determinism_process(&first);
-    run_determinism_process(&second);
+    let enabled = assert_deterministic_policy(&directory, "enabled");
+    let omitted = assert_deterministic_policy(&directory, "omitted");
 
+    assert!(enabled.contains("STATUS\n1\n"));
+    assert!(enabled.contains("  at app::main::fail (app/main.ska:2:10)\n"));
+    assert!(enabled.contains("  at app::main::main (app/main.ska:5:10)\n"));
+    assert!(enabled.contains("ASSEMBLY\n"));
+    assert!(enabled.contains("ska_rt_trace_top@tpoff"));
+    assert!(enabled.contains(".Lska.trace.context."));
+    assert!(enabled.contains(".Lska.trace.location."));
+
+    assert!(omitted.contains("STATUS\n1\nSTDERR\npanic: integer division by zero\nASSEMBLY\n"));
+    assert!(!omitted.contains("stacktrace:"));
+    assert!(!omitted.contains("ska_rt_trace_top"));
+    assert!(!omitted.contains(".Lska.trace."));
+}
+
+fn assert_deterministic_policy(directory: &TemporaryDirectory, policy: &str) -> String {
+    let first = directory.join(format!("{policy}-first.txt"));
+    let second = directory.join(format!("{policy}-second.txt"));
+    run_determinism_process(&first, policy);
+    run_determinism_process(&second, policy);
     let first = fs::read_to_string(first).unwrap();
     let second = fs::read_to_string(second).unwrap();
     assert_eq!(
         first, second,
-        "enabled trace products depend on provider roots"
+        "{policy} trace products depend on temporary provider roots"
     );
-    assert!(first.contains("STATUS\n1\n"));
-    assert!(first.contains("  at app::main::fail (app/main.ska:2:10)\n"));
-    assert!(first.contains("  at app::main::main (app/main.ska:5:10)\n"));
-    assert!(first.contains("ASSEMBLY\n"));
-    assert!(first.contains("ska_rt_trace_top@tpoff"));
-    assert!(first.contains(".Lska.trace.context."));
-    assert!(first.contains(".Lska.trace.location."));
+    first
 }
 
-fn run_determinism_process(output: &std::path::Path) {
+fn run_determinism_process(output: &std::path::Path, policy: &str) {
     let result = Command::new(env::current_exe().unwrap())
         .args(["--exact", DETERMINISM_TEST, "--nocapture"])
         .env(DETERMINISM_OUTPUT, output)
+        .env(DETERMINISM_POLICY, policy)
         .output()
         .unwrap();
     assert!(
@@ -98,7 +117,7 @@ fn run_determinism_process(output: &std::path::Path) {
     );
 }
 
-fn enabled_trace_products() -> String {
+fn trace_products(policy: RuntimeTracePolicy) -> String {
     let directory = TemporaryDirectory::new("runtime-trace-provider").unwrap();
     let provider = directory.join("provider");
     fs::create_dir_all(provider.join("app")).unwrap();
@@ -119,7 +138,7 @@ fn enabled_trace_products() -> String {
         vec![provider],
         StandardLibrarySelection::Disabled,
         Target::X86_64SysV,
-        ArtifactOptions::new(ArtifactKind::Assembly, None),
+        ArtifactOptions::new(ArtifactKind::Assembly, None).with_runtime_trace_policy(policy),
         CompilationEnvironment::new(directory.path().to_owned(), directory.join("unused-std")),
     );
 

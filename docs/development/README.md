@@ -4,6 +4,8 @@ Status: authoritative for contributor prerequisites, Makefile entry points,
 supported Rust toolchains, and local/external validation. See
 [Testing](TESTING.md) for test ownership and selection and
 [Debugging the Compiler](DEBUGGING.md) for inspection workflows.
+The reproducible enabled-versus-omitted trace measurement is documented in
+[Panic Runtime Trace Performance](PANIC_RUNTIME_TRACE_PERFORMANCE.md).
 
 ## Prerequisites
 
@@ -15,6 +17,9 @@ Skald development currently requires:
 - GNU Make;
 - a C11 compiler driver; and
 - a static archiver.
+
+The optional panic runtime-trace benchmark additionally requires Python 3;
+neither normal builds nor repository validation use Python.
 
 Production compiler crates and the documentation checker have no third-party
 crate dependencies. The `skald-golden` repository tool is the narrow
@@ -58,6 +63,11 @@ in the default determinism-off mode. Use `make golden-filter` or
 [`scripts/golden.sh`](../../scripts/README.md) convenience wrapper exposes the
 runner's full filtering and reporting surface while preserving those Makefile
 validation entry points.
+
+`make runtime-trace-benchmark` builds the compiler and runtime, then compares
+the default enabled trace policy with complete compile-time omission. It is a
+measurement procedure, not a timing gate, and is intentionally excluded from
+`make check`.
 
 ## Minimum supported Rust version
 

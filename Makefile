@@ -5,7 +5,7 @@ GOLDEN_COMPILER := target/debug/skac
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
 	compiler-test cli-test docs-test golden-runner-test golden-tools \
 	golden-expectations-test golden-test golden-filter golden-exact \
-	golden-determinism-test runtime-test test \
+	golden-determinism-test runtime-test runtime-trace-benchmark test \
 	msrv-check robustness-long check
 
 help:
@@ -36,6 +36,7 @@ help:
 	@echo ""
 	@echo "Extended validation:"
 	@echo "  make golden-determinism-test Run all goldens in full determinism mode"
+	@echo "  make runtime-trace-benchmark Compare enabled and omitted panic trace overhead"
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
 	@echo ""
@@ -98,6 +99,10 @@ golden-exact: golden-tools
 
 golden-determinism-test: golden-tools
 	$(GOLDEN_RUNNER) --compiler $(GOLDEN_COMPILER) --determinism full
+
+runtime-trace-benchmark: runtime
+	cargo build --locked -p skac
+	python3 scripts/measure_panic_runtime_trace.py --compiler target/debug/skac
 
 runtime-test: runtime
 	$(MAKE) -C runtime test

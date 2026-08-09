@@ -59,17 +59,30 @@ source = "std_io_read_file_failures.ska"
 name = "directory"
 args = ["directory"]
 cwd = { fixture = "read_files" }
-expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to read file" } }
+expect = { exit = "failure", stderr = { inline = """panic: io: failed to read file
+stacktrace:
+  at std::io::_read_all (std/io.ska:34:13)
+  at std::io::read_file (std/io.ska:86:23)
+  at std_io_read_file_failures::main (tests/golden/standard_io/std_io_read_file_failures.ska:14:25)
+""" } }
 
 [[test.run]]
 name = "embedded_zero"
 args = ["embedded-zero"]
-expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
+expect = { exit = "failure", stderr = { inline = """panic: io: failed to open file
+stacktrace:
+  at std::io::read_file (std/io.ska:83:9)
+  at std_io_read_file_failures::main (tests/golden/standard_io/std_io_read_file_failures.ska:14:25)
+""" } }
 
 [[test.run]]
 name = "missing"
 args = ["missing"]
-expect = { exit = "failure", stderr = { match = "contains", inline = "io: failed to open file" } }
+expect = { exit = "failure", stderr = { inline = """panic: io: failed to open file
+stacktrace:
+  at std::io::read_file (std/io.ska:83:9)
+  at std_io_read_file_failures::main (tests/golden/standard_io/std_io_read_file_failures.ska:14:25)
+""" } }
 
 [[test]]
 name = "read_stdin"

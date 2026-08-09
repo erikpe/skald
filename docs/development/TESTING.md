@@ -619,13 +619,12 @@ lifecycle bodies are visible. Representative omitted builds preserve the
 single-line panic output and contain no trace-only frame bytes, instructions,
 symbols, relocations, metadata, or source lookup.
 
-TRACE6 performance closeout compares enabled and omitted builds for tiny call-heavy
-recursion, a pure tight loop, allocation-heavy execution, and representative
-goldens. Record instruction counts and measured execution/code-size effects;
-understand and address any material regression before closing the roadmap. The
-repository gates remain `make check`, `make msrv-check`, and
-`git diff --check`; the implementation roadmap supplies focused commands as
-the test owners land.
+The [runtime-trace performance procedure](PANIC_RUNTIME_TRACE_PERFORMANCE.md)
+compares enabled and omitted builds for call-heavy recursion, a pure tight
+loop, allocation-heavy execution, and a representative golden. It records
+instruction counts, code size, and repeated wall time without turning noisy
+host timing into a correctness gate. The repository gates remain `make check`,
+`make msrv-check`, and `git diff --check`.
 
 ## Determinism and process isolation
 

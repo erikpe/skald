@@ -1,6 +1,0 @@
-from std::error import panic;
-
-fn main() -> i64 {
-    panic("omitted trace");
-    return 0;
-}

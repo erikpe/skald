@@ -1,12 +1,12 @@
 # Panic Runtime Trace Roadmap
 
-Status: in progress; TRACE5 is complete and TRACE6 is next.
+Status: complete; all tasks and closeout gates passed.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
 reports exact source locations and newest-first call chains, and
 `--omit-runtime-trace` removes the complete compiler-generated cost. The
-[frozen design record](../archive/PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md) owns
+[frozen design record](PANIC_RUNTIME_TRACE_DESIGN_PROPOSAL.md) owns
 the reviewed decisions; this roadmap owns implementation order and evidence.
 
 ## Scope and invariants
@@ -49,7 +49,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 - [x] TRACE3 — Record source calls and reporter failure locations
 - [x] TRACE4 — Complete generated-helper and runtime-failure attribution
 - [x] TRACE5 — Expose default-on tracing and migrate native observations
-- [ ] TRACE6 — Measure overhead, harden determinism, and close the rollout
+- [x] TRACE6 — Measure overhead, harden determinism, and close the rollout
 
 ## PR-sized implementation sequence
 
@@ -316,25 +316,25 @@ documentation describes implementation rather than planned direction.
 **Purpose:** Validate the performance premise and repository-wide stability,
 then close the roadmap only with measured and reproducible evidence.
 
-- [ ] Add or document a narrow reproducible benchmark procedure comparing
+- [x] Add or document a narrow reproducible benchmark procedure comparing
   enabled and omitted builds for tiny call-heavy recursion, a pure tight loop,
   allocation-heavy execution, and representative golden workloads.
-- [ ] Record code-size, instruction-count, and repeated wall-time observations;
+- [x] Record code-size, instruction-count, and repeated wall-time observations;
   confirm the six/two/two sequences and explain any material regression before
   accepting the default-on result.
-- [ ] Apply only semantics-preserving target-private improvements supported by
+- [x] Apply only semantics-preserving target-private improvements supported by
   measurements, such as removing a replacement already established on every
   incoming path. Correctness and test expectations must not depend on such an
   optimization.
-- [ ] Run complete independent-process determinism with tracing enabled and
+- [x] Run complete independent-process determinism with tracing enabled and
   omitted, including alternate temporary roots and native stderr/status.
-- [ ] Audit source-callable eligibility, all raw call sites, every normal
+- [x] Audit source-callable eligibility, all raw call sites, every normal
   return form, reporter families, ABI/header symbol sets, current-version
   wording, and stale frozen rollout language.
-- [ ] Audit changed backend/runtime modules by responsibility; resolve
+- [x] Audit changed backend/runtime modules by responsibility; resolve
   high-priority maintainability issues and place bounded lower-priority
   findings in an indexed discoveries document instead of expanding closeout.
-- [ ] Run the full repository and MSRV gates from an artifact-free snapshot,
+- [x] Run the full repository and MSRV gates from an artifact-free snapshot,
   verify link/index/diff hygiene, mark all progress complete, archive this
   roadmap, and repair incoming links.
 
@@ -346,6 +346,24 @@ inspection; `make golden-determinism-test`; `make check`; `make msrv-check`;
 measurements, enabled and omitted builds are deterministic, all implementation
 and documentation audits are clean or have bounded indexed follow-ups, every
 roadmap checkbox and test obligation is complete, and the roadmap is archived.
+
+**Closeout evidence:** The reproducible
+[performance record](../development/PANIC_RUNTIME_TRACE_PERFORMANCE.md) shows
+that every enabled instruction delta is exactly the six/two/two maintenance
+sequences, with no per-iteration work in a pure tight loop and an expected
+concentrated cost in call-heavy recursion. No optimization was applied because
+the measurements exposed no redundant instruction family and no incoming-
+location fact strong enough to remove an update safely. Independent compiler
+processes now compare enabled and omitted assembly, metadata, stderr, and
+status across distinct temporary provider roots. The final responsibility
+audit covered source-body eligibility, the complete x86-64 raw-call
+construction tree, all MIR return forms, reporter families, ABI/header/runtime
+symbols, version wording, and rollout language. The trace backend remains a
+small facade over activation, instrumentation, metadata, and semantic naming;
+the C reporter remains one cohesive allocation-free rendering owner. The only
+small maintainability issue found was the lowering-subtree scope of the
+raw-call audit, which was expanded to the entire x86-64 target. No pending
+discovery remains.
 
 ## Ordering and dependencies
 

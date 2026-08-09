@@ -1,0 +1,21 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+fn main() -> i64 {
+    var iteration: i64 = 0;
+    var total: i64 = 0;
+    while (iteration < 3000000) {
+        var owner: shared Item = new Item(iteration);
+        total = total + owner->value;
+        iteration = iteration + 1;
+    }
+    if (total == 4499998500000) {
+        return 0;
+    }
+    return 1;
+}

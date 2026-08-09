@@ -81,9 +81,9 @@ fn native_result(fixture: &FinalMirWithSources) -> std::process::Output {
 }
 
 #[test]
-fn runtime_trace_attribution_routes_all_lowering_calls_through_the_audited_facade() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/backend/x86_64_sysv/lower");
-    let facade = root.join("call/emission.rs");
+fn runtime_trace_attribution_routes_all_target_calls_through_the_audited_facade() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/backend/x86_64_sysv");
+    let allowed = [root.join("emit.rs"), root.join("lower/call/emission.rs")];
     let mut pending = vec![root];
     let mut violations = Vec::new();
 
@@ -97,12 +97,26 @@ fn runtime_trace_attribution_routes_all_lowering_calls_through_the_audited_facad
             if entry.is_dir() {
                 pending.push(entry);
             } else if entry.extension().and_then(|extension| extension.to_str()) == Some("rs")
-                && entry != facade
+                && !allowed.contains(&entry)
+                && !entry
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| {
+                        name == "tests.rs"
+                            || name == "test_support.rs"
+                            || name.ends_with("_tests.rs")
+                    })
+                && !entry
+                    .components()
+                    .any(|component| component.as_os_str() == "tests")
             {
                 let source = fs::read_to_string(&entry).unwrap();
-                if source.contains("Instruction::Call")
-                    || source.contains("Instruction::CallIndirect")
-                {
+                let constructs_raw_call = source.lines().any(|line| {
+                    let line = line.replace("MirInstruction::Call", "");
+                    line.contains("Instruction::Call(")
+                        || line.contains("Instruction::CallIndirect(")
+                });
+                if constructs_raw_call {
                     violations.push(entry);
                 }
             }

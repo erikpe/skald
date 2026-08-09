@@ -1,1 +1,4 @@
 schema = 1
+
+[variant.omit-runtime-trace]
+compiler_args = ["--omit-runtime-trace"]

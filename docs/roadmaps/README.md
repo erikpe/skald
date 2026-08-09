@@ -6,16 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-[Panic Runtime Trace Roadmap](PANIC_RUNTIME_TRACE_ROADMAP.md) is in progress;
-the version-9 runtime, source-aware metadata, inline TLS frame maintenance,
-source-call/failure location replacement, and generated-helper/runtime-failure
-attribution are complete. Default-on request/CLI exposure and exact native
-observation migration are complete; performance measurement and rollout
-closeout are next. It
-implements the archived frozen design through complete source location
-attribution, default-on CLI/golden coverage, and measured closeout. It has no
-dependency on another active roadmap; Linux AArch64 and recoverable exceptions
-remain outside its scope.
+No implementation roadmap is currently in progress.
 
 ## Planned
 
@@ -25,8 +16,8 @@ No implementation roadmap is currently only planned.
 
 No design proposal is currently under review. The frozen panic runtime-trace
 design and its supporting investigation are preserved in the
-[archive](../archive/README.md) and feed the planned implementation roadmap
-above.
+[archive](../archive/README.md), together with the completed implementation
+roadmap.
 
 ## Pending discoveries
 

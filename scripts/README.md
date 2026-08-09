@@ -19,3 +19,17 @@ scripts/golden.sh --filter 'declarations/**' --determinism compile
 
 The Makefile remains authoritative for complete ordinary and full-determinism
 validation through `make golden-test` and `make golden-determinism-test`.
+
+`measure_panic_runtime_trace.py` performs the reproducible, non-gating
+enabled-versus-omitted measurement documented in
+[Panic Runtime Trace Performance](../docs/development/PANIC_RUNTIME_TRACE_PERFORMANCE.md).
+The standard invocation builds its prerequisites and runs all four workload
+profiles:
+
+```text
+make runtime-trace-benchmark
+```
+
+Call the script directly to change repeat counts, select workloads, or emit
+JSON after building `skac` and the runtime. Generated measurement artifacts
+remain under the ignored `build/measurements/panic-runtime-trace/` directory.
