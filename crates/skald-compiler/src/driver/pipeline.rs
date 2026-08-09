@@ -10,7 +10,10 @@ use crate::{
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
-    passes::{run_mir_pipeline, static_lifecycle::plan_static_lifetimes},
+    passes::{
+        run_mir_pipeline,
+        static_lifecycle::{plan_static_lifetimes, verify_planned_mir},
+    },
     resolve::{resolve, resolve_module_graph, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
@@ -19,8 +22,8 @@ use crate::{
 
 use super::CompilationRequest;
 
-/// Temporary driver boundary while planned static lifecycle MIR awaits final
-/// lifecycle MIR synthesis.
+/// Temporary driver boundary while verified static lifecycle MIR awaits
+/// coordinator synthesis.
 pub const STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS: &str = "DRV001";
 
 #[derive(Debug)]
@@ -135,17 +138,18 @@ fn finish_compilation(
             return Err(diagnostic_failure(sources, diagnostics));
         }
     };
+    verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
     for initializer in planned.static_initializers() {
         diagnostics.push(
             Diagnostic::error(
                 STATIC_INITIALIZER_REQUIRES_LIFECYCLE_SYNTHESIS,
-                "static field lifecycle code cannot be synthesized yet",
+                "static field lifecycle coordinator cannot be synthesized yet",
             )
             .with_primary_label(
                 initializer.span,
-                "lifetime effects, dependencies, and order are planned, but lifecycle MIR synthesis is not implemented",
+                "lifecycle MIR and its effect certificate are verified, but coordinator synthesis is not implemented",
             )
-            .with_note("planned initializer MIR cannot be consumed by a backend before synthesis"),
+            .with_note("verified initializer MIR cannot be consumed by a backend before coordinator synthesis"),
         );
     }
     if diagnostics.has_errors() {

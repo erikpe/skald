@@ -247,7 +247,8 @@ impl Verifier<'_> {
             }
             MirArrayInstruction::Release { owner, array, .. } => {
                 let owning_base = match owner.base {
-                    crate::mir::MirPlaceBase::StaticField(_) => true,
+                    crate::mir::MirPlaceBase::StaticField(_)
+                    | crate::mir::MirPlaceBase::StaticLifecycleDestination(_) => true,
                     crate::mir::MirPlaceBase::Storage(storage) => {
                         function.storage(storage).is_some_and(|storage| {
                             matches!(

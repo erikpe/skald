@@ -220,6 +220,9 @@ impl FrameLayout {
                 byte_access: matches!(ty, MirType::U8 | MirType::Bool),
             });
         }
+        if matches!(place.base, MirPlaceBase::StaticLifecycleDestination(_)) {
+            unreachable!("unpublished static lifecycle destinations never reach a backend")
+        }
         let storage_id = place.base.expect_local_storage();
         let storage = function
             .storage(storage_id)
@@ -286,7 +289,7 @@ impl FrameLayout {
                     .map_err(|_| place_address_error(function.callable()))?,
             ),
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
-            MirPlaceBase::StaticField(_) => {
+            MirPlaceBase::StaticField(_) | MirPlaceBase::StaticLifecycleDestination(_) => {
                 unreachable!("static roots return before frame storage selection")
             }
         };

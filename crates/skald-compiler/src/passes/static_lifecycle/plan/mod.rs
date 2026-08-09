@@ -4,6 +4,7 @@ mod diagnostics;
 mod dump;
 mod graph;
 mod model;
+mod schema;
 
 pub use diagnostics::{STATIC_LIFECYCLE_DEPENDENCY_CYCLE, STATIC_LIFECYCLE_SELF_DEPENDENCY};
 pub use dump::{dump_planned_mir, dump_static_lifetime_plan};
@@ -35,7 +36,7 @@ pub fn plan_static_lifetimes(
     }
 
     let lifecycle = graph.plan();
-    Ok(PlannedMirProgram::new(
+    Ok(schema::build_planned_program(
         preliminary,
         effects,
         graph.dependencies().to_vec(),

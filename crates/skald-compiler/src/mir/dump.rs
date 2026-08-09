@@ -201,7 +201,14 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
     for field in &class.static_fields {
         let _ = write!(output, "      StaticField {} ", field.id);
         write_quoted(output, &field.name);
-        let _ = write!(output, " : {}", field.ty);
+        let _ = write!(output, " : {} {}", field.ty, field.initialization);
+        if let Some(indices) = field.lifecycle {
+            let _ = write!(
+                output,
+                " activation={} shutdown={}",
+                indices.activation, indices.shutdown
+            );
+        }
         write_span(output, field.span);
         output.push('\n');
     }
@@ -1319,6 +1326,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
     match place.base {
         MirPlaceBase::StaticField(field) => {
             let _ = write!(output, "static({field})");
+        }
+        MirPlaceBase::StaticLifecycleDestination(field) => {
+            let _ = write!(output, "static_destination({field})");
         }
         MirPlaceBase::Storage(storage) => {
             let _ = write!(output, "{storage}");

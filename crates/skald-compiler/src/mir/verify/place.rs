@@ -42,7 +42,9 @@ impl Verifier<'_> {
         place: &MirPlace,
         allow_allocation_payload: bool,
     ) -> Option<VerifiedPlace> {
-        if let MirPlaceBase::StaticField(field_id) = place.base {
+        if let MirPlaceBase::StaticField(field_id)
+        | MirPlaceBase::StaticLifecycleDestination(field_id) = place.base
+        {
             let Some(field) = self.program.static_field(field_id) else {
                 self.block_error(
                     function.callable(),
@@ -56,6 +58,21 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!("static place {field_id} has unsupported type {}", field.ty),
+                );
+                return None;
+            }
+            if matches!(place.base, MirPlaceBase::StaticLifecycleDestination(_))
+                && !matches!(
+                    function.callable(),
+                    CallableId::StaticInitializer(initializer) if initializer.field() == field_id
+                )
+            {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!(
+                        "static lifecycle destination {field_id} is foreign to this initializer"
+                    ),
                 );
                 return None;
             }
@@ -171,7 +188,7 @@ impl Verifier<'_> {
                 return None;
             }
             (MirPlaceBase::Storage(_), _) => self.storage_access(function, storage),
-            (MirPlaceBase::StaticField(_), _) => {
+            (MirPlaceBase::StaticField(_) | MirPlaceBase::StaticLifecycleDestination(_), _) => {
                 unreachable!("static roots return before local-storage verification")
             }
         };

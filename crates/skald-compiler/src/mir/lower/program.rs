@@ -285,6 +285,13 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 id: field.id,
                 name: field.name.clone(),
                 ty: lower_type(field.ty),
+                initialization: field
+                    .initializer
+                    .as_ref()
+                    .map_or(MirStaticFieldInitialization::ZeroDefault, |initializer| {
+                        MirStaticFieldInitialization::Explicit(initializer.id)
+                    }),
+                lifecycle: None,
                 span: field.span,
             })
             .collect(),

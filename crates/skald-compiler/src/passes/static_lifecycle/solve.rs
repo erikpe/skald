@@ -57,6 +57,7 @@ pub(crate) fn solve(graph: ExtractedGraph) -> StaticEffectAnalysis {
             StaticEffectSummary {
                 node: *node,
                 direct_effects: draft.direct.clone(),
+                possible_targets: draft.edges.clone(),
                 effects,
             }
         })

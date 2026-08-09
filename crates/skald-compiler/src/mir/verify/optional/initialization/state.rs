@@ -156,7 +156,8 @@ impl InitializationState {
                             .and_then(|storage| function.storage(storage))
                             .map(|storage| storage.ty)
                             .or_else(|| match destination.base {
-                                MirPlaceBase::StaticField(field) => {
+                                MirPlaceBase::StaticField(field)
+                                | MirPlaceBase::StaticLifecycleDestination(field) => {
                                     program.static_field(field).map(|field| field.ty)
                                 }
                                 _ => None,
@@ -376,7 +377,9 @@ fn complete_class_storage(
         .projections
         .is_empty()
         .then(|| match place.base {
-            MirPlaceBase::StaticField(field) => program.static_field(field).map(|field| field.ty),
+            MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
+                program.static_field(field).map(|field| field.ty)
+            }
             _ => place
                 .base
                 .local_storage()

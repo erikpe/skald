@@ -205,20 +205,25 @@ self-dependency. Other pre-publication accesses to that field are invalid;
 cleanup proven to start after publication may use the newly live field.
 Accesses to other fields in either region remain ordinary dependencies.
 
-`PlannedMirProgram` privately owns preliminary MIR and attaches the effect
-analysis, one representative evidence record per lifetime edge, and the
-complete plan. Stable `dump_planned_mir` and `dump_static_lifetime_plan`
-renderers expose the phase product. The private ownership boundary prevents
-final MIR passes and backends from consuming or re-inferring unplanned
-initializer bodies.
+`PlannedMirProgram` privately owns preliminary MIR and explicit program
+lifecycle definitions. Those definitions retain field initialization modes,
+typed initializer bodies, begin/publish/destroy transitions, plan indices,
+direct effects, conservative summaries, possible targets, and one
+representative evidence record per lifetime edge. `verify_planned_mir`
+re-extracts direct effects and possible callees and checks summary closure,
+field and phase coverage, evidence, dependency order, and exact-reverse
+shutdown without repeating fixed-point solving or topological sorting. Stable
+`dump_planned_mir` and `dump_static_lifetime_plan` render the phase product. The
+private ownership boundary prevents final MIR passes and backends from
+consuming or re-inferring unplanned initializer bodies.
 
 A product containing explicit lifecycle bodies cannot be converted to
 `MirProgram`, passed to ordinary MIR passes, or consumed by a backend. The
 driver reports lifetime graph failures as ordinary source diagnostics after
 preliminary verification, independently of malformed-MIR verification errors.
 For a valid explicit initializer it reports `DRV001` at the not-yet-implemented
-lifecycle MIR synthesis boundary. An initializer-free planned product converts
-to the existing final MIR path.
+coordinator-synthesis boundary. An initializer-free planned product converts to
+the existing final MIR path.
 MIR continues to model accepted zero-default places as initialized, always-live
 program-owned roots without startup or cleanup instructions. The source-visible
 lifetime rule is owned by the

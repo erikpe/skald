@@ -68,7 +68,7 @@ fn lower_static_initializer(
         literal_data: &hir.literal_data,
     });
 
-    let destination = MirPlace::static_field(field);
+    let destination = MirPlace::static_lifecycle_destination(field);
     lowerer.lower_stored_value_initialization(
         destination,
         destination_type,

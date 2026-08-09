@@ -133,6 +133,15 @@ impl MirPlace {
         }
     }
 
+    /// Creates the unpublished program-owned destination of one static
+    /// initializer. Ordinary HIR lowering cannot construct this root.
+    pub(crate) fn static_lifecycle_destination(field: StaticFieldId) -> Self {
+        Self {
+            base: MirPlaceBase::StaticLifecycleDestination(field),
+            projections: Vec::new(),
+        }
+    }
+
     pub fn project_field(mut self, field: FieldId) -> Self {
         self.projections.push(MirPlaceProjection::Field(field));
         self
@@ -165,6 +174,8 @@ impl MirPlace {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPlaceBase {
     StaticField(StaticFieldId),
+    /// An unpublished destination owned exclusively by its static initializer.
+    StaticLifecycleDestination(StaticFieldId),
     Storage(StorageId),
     AliasParameter(StorageId),
     CheckedView(StorageId),
@@ -176,6 +187,15 @@ pub enum MirPlaceBase {
 }
 
 impl MirPlaceBase {
+    /// Returns the declaration identity for either a live static root or its
+    /// lifecycle-owned unpublished destination.
+    pub const fn static_field(self) -> Option<StaticFieldId> {
+        match self {
+            Self::StaticField(field) | Self::StaticLifecycleDestination(field) => Some(field),
+            _ => None,
+        }
+    }
+
     /// Returns the function-local carrier for roots backed by MIR storage.
     /// Static roots deliberately have no carrier and are always live.
     pub const fn local_storage(self) -> Option<StorageId> {
@@ -186,7 +206,7 @@ impl MirPlaceBase {
             | Self::ArrayAlias(storage)
             | Self::SharedPointee(storage)
             | Self::SharedAllocationPayload(storage) => Some(storage),
-            Self::StaticField(_) => None,
+            Self::StaticField(_) | Self::StaticLifecycleDestination(_) => None,
         }
     }
 

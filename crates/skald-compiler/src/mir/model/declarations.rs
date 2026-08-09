@@ -59,6 +59,13 @@ impl MirProgram {
         self.class(id.class())?.static_field(id)
     }
 
+    pub(crate) fn static_field_mut(
+        &mut self,
+        id: StaticFieldId,
+    ) -> Option<&mut MirStaticFieldDeclaration> {
+        self.classes.get_mut(id.class())?.static_field_mut(id)
+    }
+
     pub fn direct_base(&self, class: ClassId) -> Option<ClassId> {
         self.class(class)?.direct_base.map(|base| base.class)
     }
@@ -289,6 +296,10 @@ impl MirClassDeclarationTable {
         self.entries.get(id, |declaration| declaration.id)
     }
 
+    pub(crate) fn get_mut(&mut self, id: ClassId) -> Option<&mut MirClassDeclaration> {
+        self.entries.get_mut(id, |declaration| declaration.id)
+    }
+
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirClassDeclaration> {
         self.entries.iter()
     }
@@ -337,6 +348,8 @@ pub struct MirStaticFieldDeclaration {
     pub id: StaticFieldId,
     pub name: String,
     pub ty: MirType,
+    pub initialization: super::MirStaticFieldInitialization,
+    pub lifecycle: Option<super::MirStaticLifecycleIndices>,
     pub span: Span,
 }
 
@@ -351,6 +364,16 @@ impl MirClassDeclaration {
     pub fn static_field(&self, id: StaticFieldId) -> Option<&MirStaticFieldDeclaration> {
         (id.class() == self.id)
             .then(|| self.static_fields.get(id.index()))
+            .flatten()
+            .filter(|field| field.id == id)
+    }
+
+    pub(crate) fn static_field_mut(
+        &mut self,
+        id: StaticFieldId,
+    ) -> Option<&mut MirStaticFieldDeclaration> {
+        (id.class() == self.id)
+            .then(|| self.static_fields.get_mut(id.index()))
             .flatten()
             .filter(|field| field.id == id)
     }

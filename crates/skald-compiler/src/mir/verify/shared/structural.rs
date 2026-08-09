@@ -6,13 +6,12 @@ use crate::identity::CallableId;
 
 use super::super::{
     super::model::{
-        BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceBase,
-        MirPlaceProjection, MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode,
-        MirSharedAllocationOrigin, MirSharedCast, MirSharedCastSource, MirSharedCastTransfer,
-        MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace,
-        MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget,
-        MirStorageKind, MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId,
-        ValueId,
+        BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceProjection,
+        MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
+        MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy,
+        MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize,
+        MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
+        MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId, ValueId,
     },
     context::Verifier,
     type_operations::TypeRelation,
@@ -299,7 +298,7 @@ impl<'mir> Verifier<'mir> {
                                     | MirPlaceProjection::ArrayElement { .. }
                             )
                         )
-                        || (matches!(copy.source.base, MirPlaceBase::StaticField(_))
+                        || (copy.source.base.static_field().is_some()
                             && copy.source.projections.is_empty()))
         ) {
             self.block_error(

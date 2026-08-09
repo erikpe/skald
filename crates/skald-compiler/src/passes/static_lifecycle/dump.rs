@@ -23,7 +23,19 @@ pub fn dump_static_effects(analysis: &StaticEffectAnalysis) -> String {
                 "    Direct {} {:?} {:?}",
                 direct.field, direct.access, direct.phase
             );
+            if direct.lifecycle_owned {
+                output.push_str(" lifecycle-destination");
+            }
             write_span(&mut output, direct.span);
+            output.push('\n');
+        }
+        for edge in &summary.possible_targets {
+            output.push_str("    Target ");
+            write_node(&mut output, edge.source);
+            output.push_str(" -> ");
+            write_node(&mut output, edge.target);
+            let _ = write!(output, " {:?} {:?}", edge.kind, edge.phase);
+            write_span(&mut output, edge.span);
             output.push('\n');
         }
         for effect in &summary.effects {
@@ -32,6 +44,9 @@ pub fn dump_static_effects(analysis: &StaticEffectAnalysis) -> String {
                 "    Effect {} {:?} {:?}",
                 effect.field, effect.access, effect.phase
             );
+            if effect.lifecycle_owned {
+                output.push_str(" lifecycle-destination");
+            }
             write_span(&mut output, effect.span);
             output.push('\n');
             for edge in &effect.witness {

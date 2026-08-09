@@ -33,6 +33,32 @@ pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {
         let _ = write!(output, " {field}");
     }
     output.push('\n');
+    output.push_str("ProgramLifecycle\n");
+    for definition in program.lifecycle_mir().definitions() {
+        let _ = write!(
+            output,
+            "  Field {} {} {} activation={} shutdown={}",
+            definition.field,
+            definition.ty,
+            definition.initialization,
+            definition.indices.activation,
+            definition.indices.shutdown
+        );
+        write_span(&mut output, definition.span);
+        output.push('\n');
+    }
+    output.push_str("  ActivationTransitions\n");
+    for transition in program.lifecycle_mir().activation() {
+        let _ = write!(output, "    {} {:?}", transition.field, transition.kind);
+        write_span(&mut output, transition.span);
+        output.push('\n');
+    }
+    output.push_str("  ShutdownTransitions\n");
+    for transition in program.lifecycle_mir().shutdown() {
+        let _ = write!(output, "    {} {:?}", transition.field, transition.kind);
+        write_span(&mut output, transition.span);
+        output.push('\n');
+    }
     output
 }
 

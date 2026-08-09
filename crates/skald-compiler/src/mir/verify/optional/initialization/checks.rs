@@ -191,7 +191,8 @@ fn verify_instruction(
                     .and_then(|storage| function.storage(storage))
                     .map(|storage| storage.ty)
                     .or_else(|| match destination.base {
-                        MirPlaceBase::StaticField(field) => {
+                        MirPlaceBase::StaticField(field)
+                        | MirPlaceBase::StaticLifecycleDestination(field) => {
                             verifier.program.static_field(field).map(|field| field.ty)
                         }
                         _ => None,

@@ -420,13 +420,15 @@ fn array_borrow_requires_anchor(
     function: MirDefinitionRef<'_>,
     place: &MirPlace,
 ) -> bool {
-    matches!(place.base, crate::mir::MirPlaceBase::StaticField(field)
-        if program.static_field(field).is_some_and(|field| matches!(field.ty, MirType::Array(_))))
-        || place
-            .base
-            .local_storage()
-            .and_then(|storage| function.storage(storage))
-            .is_some_and(|storage| matches!(storage.ty, MirType::Array(_)))
+    place.base.static_field().is_some_and(|field| {
+        program
+            .static_field(field)
+            .is_some_and(|field| matches!(field.ty, MirType::Array(_)))
+    }) || place
+        .base
+        .local_storage()
+        .and_then(|storage| function.storage(storage))
+        .is_some_and(|storage| matches!(storage.ty, MirType::Array(_)))
         || place
             .projections
             .iter()

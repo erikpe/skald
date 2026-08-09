@@ -80,8 +80,8 @@ impl<'mir> Verifier<'mir> {
             (function.callable(), place.base, place.projections.as_slice()),
             (
                 CallableId::StaticInitializer(initializer),
-                MirPlaceBase::StaticField(field),
-                []
+                MirPlaceBase::StaticLifecycleDestination(field),
+                _
             ) if initializer.field() == field
                 && self.program.static_field(field).is_some_and(|entry| entry.ty == ty)
         )

@@ -80,7 +80,8 @@ fn operation_names(initializer: &PreliminaryMirStaticInitializer) -> Vec<&'stati
 
 fn has_static_destination(instruction: &MirInstruction, field: StaticFieldId) -> bool {
     let is_destination = |place: &MirPlace| {
-        place.base == MirPlaceBase::StaticField(field) && place.projections.is_empty()
+        place.base == MirPlaceBase::StaticLifecycleDestination(field)
+            && place.projections.is_empty()
     };
     match instruction {
         MirInstruction::Store(operation) => is_destination(&operation.destination),
@@ -242,7 +243,7 @@ fn lowers_named_static_sources_through_selected_copy_operations() {
     assert!(dump.contains("static(c1:static2)"), "{dump}");
     assert!(dump.contains("static(c1:static4)"), "{dump}");
     assert!(dump.contains("static(c1:static6)"), "{dump}");
-    assert!(dump.contains("static(c1:static8)"), "{dump}");
+    assert!(dump.contains("static_destination(c1:static8)"), "{dump}");
     assert!(dump.contains("static(c1:static10)"), "{dump}");
 }
 
@@ -266,7 +267,7 @@ fn cleanup_of_initializer_temporaries_starts_after_publication() {
         .iter()
         .position(|instruction| {
             matches!(instruction, MirInstruction::CopyConstruct(operation)
-            if operation.destination == MirPlace::static_field(initializer.field))
+            if operation.destination == MirPlace::static_lifecycle_destination(initializer.field))
         })
         .unwrap();
     assert!(copy_index > 0);
@@ -324,7 +325,10 @@ fn lowers_string_static_initialization_with_ordinary_temporary_cleanup() {
 
     let dump = dump_preliminary_mir(&preliminary);
     assert!(dump.contains("string-initialize"), "{dump}");
-    assert!(dump.contains("copy-construct static("), "{dump}");
+    assert!(
+        dump.contains("copy-construct static_destination("),
+        "{dump}"
+    );
 }
 
 #[test]

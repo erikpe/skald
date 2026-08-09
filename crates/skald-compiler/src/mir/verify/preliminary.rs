@@ -6,7 +6,8 @@ use crate::{
     identity::StaticInitializerId,
     mir::{
         MirArrayInstruction, MirDefinitionRef, MirInstruction, MirPlace, MirPlaceBase,
-        MirTerminator, MirType, PreliminaryMirProgram, PreliminaryMirStaticInitializer,
+        MirStaticFieldInitialization, MirTerminator, MirType, PreliminaryMirProgram,
+        PreliminaryMirStaticInitializer,
     },
 };
 
@@ -47,6 +48,16 @@ impl<'mir> Verifier<'mir> {
             {
                 self.program_error(format!(
                     "preliminary static-field inventory entry {index} does not match {}",
+                    ordinary.id
+                ));
+            }
+            let expected_mode = field.initializer.map_or(
+                MirStaticFieldInitialization::ZeroDefault,
+                MirStaticFieldInitialization::Explicit,
+            );
+            if ordinary.initialization != expected_mode {
+                self.program_error(format!(
+                    "static field {} has initialization mode inconsistent with its preliminary inventory",
                     ordinary.id
                 ));
             }
@@ -254,7 +265,8 @@ fn initializes_static_field(
     field: crate::identity::StaticFieldId,
 ) -> bool {
     let exact = |place: &MirPlace| {
-        place.base == MirPlaceBase::StaticField(field) && place.projections.is_empty()
+        place.base == MirPlaceBase::StaticLifecycleDestination(field)
+            && place.projections.is_empty()
     };
     match instruction {
         MirInstruction::Store(operation) => exact(&operation.destination),

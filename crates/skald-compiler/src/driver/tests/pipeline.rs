@@ -924,7 +924,7 @@ fn primitive_static_programs_cross_the_complete_driver_pipeline() {
 }
 
 #[test]
-fn planned_static_initializers_stop_before_unavailable_lifecycle_synthesis() {
+fn verified_static_initializers_stop_before_unavailable_coordinator_synthesis() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "static-initializer.ska",
         concat!(
@@ -934,7 +934,7 @@ fn planned_static_initializers_stop_before_unavailable_lifecycle_synthesis() {
         Target::X86_64SysV,
     )
     .unwrap_err() else {
-        panic!("typed static initializer must stop at the lifecycle MIR boundary");
+        panic!("verified static initializer must stop at the coordinator boundary");
     };
 
     assert_eq!(report.diagnostics.len(), 1);
@@ -945,7 +945,7 @@ fn planned_static_initializers_stop_before_unavailable_lifecycle_synthesis() {
     );
     assert!(diagnostic.labels.iter().any(|label| label
         .message
-        .contains("effects, dependencies, and order are planned")));
+        .contains("lifecycle MIR and its effect certificate are verified")));
 }
 
 #[test]

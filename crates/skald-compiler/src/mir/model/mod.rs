@@ -16,6 +16,7 @@ mod preliminary;
 mod primitive;
 mod shared;
 mod shift;
+mod static_lifecycle;
 mod strings;
 mod value;
 
@@ -80,6 +81,15 @@ pub use shared::{
     MirSharedPublish, MirSharedRelease, MirSharedStatic, MirSharedTarget,
 };
 pub use shift::{MirRightShiftFlavor, MirShiftCountCheck, MirShiftDirection, MirShiftOperation};
+pub use static_lifecycle::{
+    MirProgramLifecycle, MirStaticFieldInitialization, MirStaticLifecycleCertificate,
+    MirStaticLifecycleDefinition, MirStaticLifecycleIndices, MirStaticLifecycleTransition,
+    MirStaticLifecycleTransitionKind, PlannedMirProgram, StaticAccessEvidence, StaticAccessKind,
+    StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
+    StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
+    StaticEffectSummary, StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence,
+    StaticLifetimePhase,
+};
 pub use strings::{
     MirLiteralData, MirLiteralDataTable, MirStaticAllocationOrigin, MirStaticDataMutability,
     MirStringInitialize, MirStringLanguageItem,

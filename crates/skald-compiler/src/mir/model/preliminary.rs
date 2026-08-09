@@ -187,6 +187,10 @@ impl PreliminaryMirProgram {
         &self.program
     }
 
+    pub(crate) fn program_mut(&mut self) -> &mut MirProgram {
+        &mut self.program
+    }
+
     #[cfg(test)]
     pub(crate) fn static_initializers_mut_for_test(
         &mut self,

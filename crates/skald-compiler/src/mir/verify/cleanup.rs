@@ -47,8 +47,11 @@ impl<'mir> Verifier<'mir> {
                 "cleanup destination must be owning storage",
             );
         }
-        if function
-            .storage(cleanup.destination.base.expect_local_storage())
+        if cleanup
+            .destination
+            .base
+            .local_storage()
+            .and_then(|storage| function.storage(storage))
             .is_some_and(|storage| {
                 matches!(
                     storage.kind,
@@ -749,7 +752,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
     ) {
         if matches!(
             destination.base,
-            MirPlaceBase::SharedPointee(_) | MirPlaceBase::StaticField(_)
+            MirPlaceBase::SharedPointee(_)
+                | MirPlaceBase::StaticField(_)
+                | MirPlaceBase::StaticLifecycleDestination(_)
         ) {
             // Static destination completion belongs to the preliminary
             // publication verifier and, later, the global lifecycle plan. It
@@ -950,7 +955,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 
     fn place_is_live(&self, state: &OwnerState, place: &MirPlace) -> bool {
-        if matches!(place.base, MirPlaceBase::StaticField(_)) {
+        if place.base.static_field().is_some() {
             // Preliminary static dependency analysis decides whether a static
             // root is live at a particular lifecycle point. The structural
             // owner verifier must still validate all local carriers around it.
@@ -1015,7 +1020,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
 
     fn place_type(&self, place: &MirPlace) -> Option<MirType> {
         let mut ty = match place.base {
-            MirPlaceBase::StaticField(field) => self.program.static_field(field)?.ty,
+            MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
+                self.program.static_field(field)?.ty
+            }
             _ => self.function.storage(place.base.local_storage()?)?.ty,
         };
         for projection in &place.projections {
@@ -1058,9 +1065,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
 
     fn is_owning_local_root(&self, place: &MirPlace) -> bool {
         place.projections.is_empty()
-            && self
-                .function
-                .storage(place.base.expect_local_storage())
+            && place
+                .base
+                .local_storage()
+                .and_then(|storage| self.function.storage(storage))
                 .is_some_and(|storage| storage.kind == MirStorageKind::Local)
     }
 

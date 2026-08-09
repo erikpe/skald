@@ -8,7 +8,9 @@ mod dump;
 mod extract;
 mod model;
 mod plan;
+mod roots;
 mod solve;
+mod verify;
 
 pub use dump::dump_static_effects;
 pub use model::{
@@ -22,6 +24,7 @@ pub use plan::{
     StaticLifetimeEvidence, StaticLifetimePhase, STATIC_LIFECYCLE_DEPENDENCY_CYCLE,
     STATIC_LIFECYCLE_SELF_DEPENDENCY,
 };
+pub use verify::verify_planned_mir;
 
 use crate::mir::PreliminaryMirProgram;
 

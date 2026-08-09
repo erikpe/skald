@@ -1,7 +1,7 @@
 # Static Fields
 
 Status: **complete zero-default storage profile implemented; declaration
-initializer syntax through static-lifetime planning implemented**. This document is
+initializer syntax through verified lifecycle MIR implemented**. This document is
 authoritative for the current source-visible static-field profile. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
@@ -12,8 +12,10 @@ use the implemented zero-default profile: their initial live value is
 established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
 type-checked as direct stored-value initialization, and lowered to structurally
-verified preliminary lifecycle MIR. The compiler deliberately stops before
-lifecycle MIR synthesis and executable initialized-field output.
+verified preliminary lifecycle MIR, planned into an explicit lifecycle schema,
+and checked with a target-independent effect/dependency certificate. The
+compiler deliberately stops before coordinator synthesis and executable
+initialized-field output.
 
 The compiler parses static-field declarations, assigns independent resolved
 identities, includes them in the inherited member namespace, validates the
@@ -262,13 +264,14 @@ begins. All such slots become available simultaneously. No source code runs
 to establish them, so there is no declaration order, class order, module
 order, import order, dependency order, or lazy first-use order to observe.
 Explicitly initialized declarations cannot yet reach executable compilation;
-after producing and structurally verifying preliminary lifecycle MIR the
-driver reports `DRV001` rather than silently discarding the initializer or
-emitting zero-only assembly. Before reporting that boundary, the compiler
-constructs deterministic transitive static-effect summaries, source-facing
-call/lifecycle witnesses, evidenced lifetime dependencies, and the complete
-activation and reverse-shutdown plan. `DRV001` now marks unavailable lifecycle
-MIR synthesis rather than unavailable dependency planning.
+after producing preliminary lifecycle MIR, the compiler constructs and verifies
+explicit lifecycle definitions, begin/publish/destroy transitions,
+deterministic transitive static-effect summaries, conservative dynamic targets,
+source-facing witnesses, evidenced lifetime dependencies, and the complete
+activation and reverse-shutdown plan. The driver then reports `DRV001` rather
+than silently discarding the initializer or emitting zero-only assembly.
+`DRV001` marks unavailable coordinator synthesis rather than unavailable
+dependency planning or lifecycle verification.
 
 Planning rejects an initializer that can directly or transitively access its
 own field before publication. Cleanup proven to occur after publication may

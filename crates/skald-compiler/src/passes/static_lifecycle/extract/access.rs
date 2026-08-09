@@ -192,20 +192,22 @@ impl Extractor<'_> {
         mut access: StaticAccessKind,
         span: Span,
     ) {
-        let MirPlaceBase::StaticField(field) = place.base else {
-            return;
-        };
-        if let CallableId::StaticInitializer(initializer) = definition.callable() {
-            if initializer.field() == field
-                && phase == StaticEffectPhase::InitializerBeforePublication
-                && matches!(
+        let (field, lifecycle_owned) = match place.base {
+            MirPlaceBase::StaticField(field) => (field, false),
+            MirPlaceBase::StaticLifecycleDestination(field) => {
+                debug_assert!(
+                    matches!(definition.callable(), CallableId::StaticInitializer(id) if id.field() == field)
+                );
+                if matches!(
                     access,
                     StaticAccessKind::Write | StaticAccessKind::Initialize
-                )
-            {
-                access = StaticAccessKind::Initialize;
+                ) {
+                    access = StaticAccessKind::Initialize;
+                }
+                (field, true)
             }
-        }
+            _ => return,
+        };
         self.nodes
             .get_mut(&source)
             .expect("seeded source node")
@@ -214,6 +216,7 @@ impl Extractor<'_> {
                 field,
                 access,
                 phase,
+                lifecycle_owned,
                 span,
                 witness: Vec::new(),
             });
@@ -225,7 +228,9 @@ impl Extractor<'_> {
         place: &MirPlace,
     ) -> Option<MirType> {
         let mut ty = match place.base {
-            MirPlaceBase::StaticField(field) => self.program.program().static_field(field)?.ty,
+            MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
+                self.program.program().static_field(field)?.ty
+            }
             base => definition.storage(base.local_storage()?)?.ty,
         };
         for projection in &place.projections {

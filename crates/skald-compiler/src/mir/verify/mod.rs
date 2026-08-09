@@ -65,6 +65,10 @@ pub struct MirVerificationErrors {
 }
 
 impl MirVerificationErrors {
+    pub(crate) fn new(errors: Vec<MirVerificationError>) -> Self {
+        Self { errors }
+    }
+
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirVerificationError> {
         self.errors.iter()
     }

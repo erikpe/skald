@@ -1,7 +1,7 @@
 # Static Field Initialization and Shutdown Roadmap
 
-Status: in progress; the combined design record is frozen, SI0 through SI5 are
-complete, and SI6 is next.
+Status: in progress; the combined design record is frozen, SI0 through SI6 are
+complete, and SI7 is next.
 
 This roadmap extends the implemented zero-default static-field profile with
 eager declaration initializers and deterministic normal-return shutdown. The
@@ -233,7 +233,7 @@ moves that slot before `destination`.
 - [x] SI3 — Lower analyzable static lifecycle bodies to preliminary MIR
 - [x] SI4 — Infer transitive static effects
 - [x] SI5 — Plan and diagnose static lifetimes
-- [ ] SI6 — Define and verify lifecycle MIR
+- [x] SI6 — Define and verify lifecycle MIR
 - [ ] SI7 — Synthesize the lifecycle coordinator
 - [ ] SI8 — Execute eager startup
 - [ ] SI9 — Execute reverse normal-return shutdown
@@ -511,29 +511,29 @@ driver, public-API, and cross-process determinism tests cover the phase.
 **Purpose:** Give the planned lifecycle and its effect certificate an explicit,
 target-independent MIR schema with a verifier-owned trust boundary.
 
-- [ ] Add dedicated MIR program-lifecycle definitions or tables with stable
+- [x] Add dedicated MIR program-lifecycle definitions or tables with stable
       identities, typed storage, values, blocks, and dumps; do not masquerade
       them as source functions or receiver members.
-- [ ] Widen `MirStaticFieldDeclaration` from the zero-default subset to the
+- [x] Widen `MirStaticFieldDeclaration` from the zero-default subset to the
       complete checked HIR storage matrix and retain initialization mode and
       lifecycle order.
-- [ ] Represent `begin initialization`, `publish live`, `begin destruction`,
+- [x] Represent `begin initialization`, `publish live`, `begin destruction`,
       and `finish destruction` as explicit MIR semantics tied to one
       `StaticFieldId`.
-- [ ] Distinguish lifecycle-owned uninitialized destination access from
+- [x] Distinguish lifecycle-owned uninitialized destination access from
       ordinary static-place access without exposing an uninitialized form to
       ordinary source lowering.
-- [ ] Represent per-body direct effects, conservative transitive summaries,
+- [x] Represent per-body direct effects, conservative transitive summaries,
       possible dynamic targets, lifetime edges, and plan indices as a
       checkable certificate rather than backend-owned metadata.
-- [ ] Extend structural, place, and type verification for program-owned roots,
+- [x] Extend structural, place, and type verification for program-owned roots,
       lifecycle identities, destination types, phase partitions, and complete
       field coverage.
-- [ ] Verify certificate soundness by scanning every instruction and
+- [x] Verify certificate soundness by scanning every instruction and
       terminator for direct effects and possible callees, requiring each
       transitive summary to be a conservative superset, and checking every
       lifetime edge against the planned order.
-- [ ] Keep least-fixed-point computation, topological sorting, and diagnostic
+- [x] Keep least-fixed-point computation, topological sorting, and diagnostic
       witness selection in the analysis pass; verification checks soundness
       without silently repairing or trusting an incomplete certificate.
 
@@ -545,6 +545,21 @@ identities; exact dumps; and verifier determinism.
 **Exit criteria:** The lifecycle MIR schema can carry the complete plan and a
 verifier can establish its soundness without target layout, backend inference,
 or runtime access guards.
+
+**Completed:** `PlannedMirProgram` now owns explicit MIR lifecycle definitions,
+field-derived initializer identities with typed storage/value/block bodies,
+activation and shutdown transitions, declaration plan indices, and a
+certificate containing direct effects, conservative summaries, possible
+targets, and evidenced lifetime edges. `verify_planned_mir` first applies the
+ordinary preliminary-MIR structural/type checks, then exhaustively re-extracts
+direct effects and call targets and checks certificate coverage, summary
+closure, evidence, field coverage, phase partitions, dependency order, and
+exact-reverse shutdown. The unpublished destination has a distinct MIR place
+root that ordinary lowering cannot construct and backends cannot consume.
+Mutation, exact-dump, public-API, driver-boundary, and determinism tests cover
+the new trust boundary. SCC solving, topological sorting, and witness selection
+remain solely in the analysis pass. `make check`,
+`make golden-determinism-test`, and `git diff --check` pass.
 
 ### SI7 — Synthesize the lifecycle coordinator
 
