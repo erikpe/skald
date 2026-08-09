@@ -1,6 +1,6 @@
 # Panic Runtime Trace Roadmap
 
-Status: in progress; TRACE2 is complete and TRACE3 is next.
+Status: in progress; TRACE3 is complete and TRACE4 is next.
 
 Implement the frozen panic runtime-trace design on Linux x86-64 so every
 source-authored callable maintains an allocation-free shadow frame, panic
@@ -46,7 +46,7 @@ the reviewed decisions; this roadmap owns implementation order and evidence.
 - [x] TRACE0 — Establish runtime ABI version 9 and trace rendering
 - [x] TRACE1 — Add explicit backend trace input and deterministic metadata
 - [x] TRACE2 — Maintain source-callable trace frames with inline TLS
-- [ ] TRACE3 — Record source calls and reporter failure locations
+- [x] TRACE3 — Record source calls and reporter failure locations
 - [ ] TRACE4 — Complete generated-helper and runtime-failure attribution
 - [ ] TRACE5 — Expose default-on tracing and migrate native observations
 - [ ] TRACE6 — Measure overhead, harden determinism, and close the rollout
@@ -191,24 +191,24 @@ record, and omitted assembly is byte-for-byte free of trace effects.
 **Purpose:** Make all explicit source-call and central reporter boundaries
 precise before auditing lower-level generated helper calls.
 
-- [ ] Add one target-private location-replacement primitive that emits the
+- [x] Add one target-private location-replacement primitive that emits the
   frozen RIP-relative `lea` plus frame-home store and is unavailable to
   ineligible generated functions.
-- [ ] Replace the active location before direct, static, virtual, interface,
+- [x] Replace the active location before direct, static, virtual, interface,
   and external calls using the originating MIR call span.
-- [ ] Cover ordinary initializer, user copy constructor, copy assignment,
+- [x] Cover ordinary initializer, user copy constructor, copy assignment,
   destructor, and other source-call operations selected from MIR while
   preserving receiver-before-arguments and left-to-right evaluation.
-- [ ] For indirect calls, emit the location replacement before loading the
+- [x] For indirect calls, emit the location replacement before loading the
   dispatch target into `r11`; prove the trace scratch cannot destroy that
   target or marshalled arguments.
-- [ ] Replace the location on the taken failure edge immediately before both
+- [x] Replace the location on the taken failure edge immediately before both
   dynamic explicit-panic reporting and every static `MirTerminationReason`
   reporter call.
-- [ ] Keep successful checked casts, optional access, bounds, division,
+- [x] Keep successful checked casts, optional access, bounds, division,
   remainder, shifts, and checked primitive casts free of failure-site stores.
-- [ ] Preserve hard-trap paths without trace replacement or reporter calls.
-- [ ] Add focused native chains that distinguish callee failure locations from
+- [x] Preserve hard-trap paths without trace replacement or reporter calls.
+- [x] Add focused native chains that distinguish callee failure locations from
   caller call sites across recursion, direct/static methods, virtual/interface
   dispatch, external boundaries, and source-authored lifecycle bodies.
 

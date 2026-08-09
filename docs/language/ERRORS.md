@@ -188,14 +188,17 @@ are frozen in the
 The version-9 reporter can append the frozen
 [runtime-trace rows](#frozen-panic-runtime-traces) from a valid active shadow
 chain without changing the panic API, failure catalog, or non-unwinding
-semantics. The current compiler does not yet publish that chain, so its
-programs still emit only the single panic line. Exceptions remain deferred.
+semantics. Enabled Linux x86-64 backend emission now publishes the chain and
+records source-call and central failure locations. The production driver still
+requests omission, so ordinary compiler invocations emit only the single panic
+line during the staged rollout. Exceptions remain deferred.
 
 ## Frozen panic runtime traces
 
-Panic runtime traces are frozen for implementation and the version-9 runtime
-can render a directly supplied chain, but traces are not yet emitted by the
-current compiler. With tracing enabled, every source-authored executable
+Panic runtime traces are frozen for implementation. The version-9 runtime can
+render a chain, and enabled Linux x86-64 backend emission now supplies frames
+with precise source-call and central failure locations. With tracing enabled,
+every source-authored executable
 callable contributes one active frame. This includes ordinary functions,
 methods, initializers, explicit static-field initializer bodies, and
 source-authored copy, assignment, and destruction bodies in application or

@@ -6,7 +6,7 @@ mod metadata;
 mod names;
 
 pub(super) use activation::Activations;
-pub(super) use instrumentation::{emit_pop, emit_push};
+pub(super) use instrumentation::{emit_location_replace, emit_pop, emit_push};
 pub(super) use metadata::Metadata;
 
 #[cfg(test)]
@@ -14,3 +14,6 @@ pub(super) use metadata::escape_path_bytes;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod location_tests;

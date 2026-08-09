@@ -1,6 +1,10 @@
 //! Requested-only runtime-trace metadata planning for Linux x86-64.
 
-use std::{collections::BTreeMap, path::Path};
+use std::{
+    cell::RefCell,
+    collections::{btree_map::Entry, BTreeMap},
+    path::Path,
+};
 
 use crate::{
     backend::{BackendError, BackendInput, RuntimeTracePolicy, Target},
@@ -32,15 +36,15 @@ impl<'input> Metadata<'input> {
                 sources: input
                     .sources()
                     .expect("enabled backend input must retain its source database"),
-                contexts: BTreeMap::new(),
-                locations: BTreeMap::new(),
+                contexts: RefCell::new(BTreeMap::new()),
+                locations: RefCell::new(BTreeMap::new()),
             }),
             RuntimeTracePolicy::Omitted => Self::Omitted,
         }
     }
 
     pub(in crate::backend::x86_64_sysv) fn request_location(
-        &mut self,
+        &self,
         callable: CallableId,
         span: Span,
     ) -> Result<Option<String>, BackendError> {
@@ -61,8 +65,8 @@ impl<'input> Metadata<'input> {
 pub(in crate::backend::x86_64_sysv) struct EnabledMetadata<'input> {
     program: &'input MirProgram,
     sources: &'input SourceDatabase,
-    contexts: BTreeMap<CallableId, PendingContext>,
-    locations: BTreeMap<LocationKey, PendingLocation>,
+    contexts: RefCell<BTreeMap<CallableId, PendingContext>>,
+    locations: RefCell<BTreeMap<LocationKey, PendingLocation>>,
 }
 
 struct PendingContext {
@@ -84,11 +88,7 @@ struct PendingLocation {
 }
 
 impl EnabledMetadata<'_> {
-    fn request_location(
-        &mut self,
-        callable: CallableId,
-        span: Span,
-    ) -> Result<String, BackendError> {
+    fn request_location(&self, callable: CallableId, span: Span) -> Result<String, BackendError> {
         if !self
             .program
             .executable_definitions()
@@ -138,33 +138,30 @@ impl EnabledMetadata<'_> {
             )
         })?;
 
-        if !self.contexts.contains_key(&callable) {
-            self.contexts.insert(
+        let mut contexts = self.contexts.borrow_mut();
+        if let Entry::Vacant(entry) = contexts.entry(callable) {
+            entry.insert(PendingContext {
                 callable,
-                PendingContext {
-                    callable,
-                    symbol: symbol::trace_context(self.program, callable),
-                    name: names::callable(self.program, callable)?.into_bytes(),
-                    path: escape_path(provenance.source_location().trace_source_path()),
-                },
-            );
+                symbol: symbol::trace_context(self.program, callable),
+                name: names::callable(self.program, callable)?.into_bytes(),
+                path: escape_path(provenance.source_location().trace_source_path()),
+            });
         }
         let key = LocationKey {
             callable,
             line,
             column,
         };
-        let location = self
-            .locations
-            .entry(key)
-            .or_insert_with(|| PendingLocation {
-                symbol: symbol::trace_location(self.program, callable, line, column),
-            });
+        drop(contexts);
+        let mut locations = self.locations.borrow_mut();
+        let location = locations.entry(key).or_insert_with(|| PendingLocation {
+            symbol: symbol::trace_location(self.program, callable, line, column),
+        });
         Ok(location.symbol.clone())
     }
 
     fn finish(self) -> AssemblyRuntimeTraceMetadata {
-        let mut contexts = self.contexts.into_values().collect::<Vec<_>>();
+        let mut contexts = self.contexts.into_inner().into_values().collect::<Vec<_>>();
         contexts.sort_by(|left, right| {
             (&left.name, &left.path, left.callable).cmp(&(&right.name, &right.path, right.callable))
         });
@@ -173,7 +170,7 @@ impl EnabledMetadata<'_> {
             .iter()
             .map(|context| (context.callable, context))
             .collect::<BTreeMap<_, _>>();
-        let mut locations = self.locations.into_iter().collect::<Vec<_>>();
+        let mut locations = self.locations.into_inner().into_iter().collect::<Vec<_>>();
         locations.sort_by(|(left, _), (right, _)| {
             let left_context = &context_by_callable[&left.callable];
             let right_context = &context_by_callable[&right.callable];

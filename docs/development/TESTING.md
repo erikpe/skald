@@ -585,8 +585,9 @@ of compiler coverage.
 ## Frozen runtime-trace coverage
 
 Runtime traces are frozen; the version-9 runtime foundation and x86-64
-requested metadata emission and activation-frame maintenance are implemented.
-Complete interior location coverage and production enablement remain pending.
+requested metadata emission, activation-frame maintenance, source-call
+replacement, and central reporter-edge replacement are implemented.
+Generated-helper/runtime attribution and production enablement remain pending.
 Coverage remains split by owner:
 
 - source and source-database tests own one-based line and Unicode-scalar
@@ -595,8 +596,9 @@ Coverage remains split by owner:
   signatures, provider-relative path escaping, interning, deterministic
   ordering, relocation-read-only placement, and omission of unused records;
 - x86-64 frame and assembly tests own exact push/pop/replacement counts and
-  placement, every return path, transient scratch clobbers, helper suppression,
-  local-exec TLS relocations, and zero-cost omission;
+  placement, every return path, direct/static/virtual/interface/external and
+  lifecycle calls, failure-only reporter updates, transient scratch clobbers,
+  helper suppression, local-exec TLS relocations, and zero-cost omission;
 - direct C runtime tests own exact empty, single, nested, replaced, capped,
   over-cap, cyclic-chain cap, and failed-write behavior, plus separately
   link-wrapped proof that valid rendering performs no allocation;

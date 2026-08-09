@@ -107,6 +107,11 @@ impl CallTarget {
         selector: &mut InstructionSelector<'_, '_>,
         receiver: Option<ReceiverOperand<'_>>,
     ) -> Result<(), BackendError> {
+        // Inputs are already marshalled into ABI homes/registers here. Record
+        // the source call site before either a direct call or an indirect
+        // target load; the trace scratch may therefore clobber `r11` without
+        // destroying a selected dispatch target.
+        selector.record_current_runtime_trace_location()?;
         match self {
             Self::Direct(target) => {
                 selector

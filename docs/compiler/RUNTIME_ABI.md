@@ -242,9 +242,11 @@ signal is private, but normal return is forbidden.
 The source-level API, flow behavior, and sole static-message catalog are owned
 by the [frozen language panic design](../language/ERRORS.md#frozen-panic-design).
 The version-9 reporter discovers an optional active trace through hidden TLS
-while keeping this reporter signature. The current compiler does not yet
-publish trace frames, so compiler-generated programs retain the single-line
-record until the backend trace work lands. Exceptions remain deferred.
+while keeping this reporter signature. Enabled Linux x86-64 backend emission
+publishes frames and precise source-call and central failure locations. The
+production driver still requests omission, so ordinary compiler-generated
+programs retain the single-line record during the staged rollout. Exceptions
+remain deferred.
 
 ## Frozen runtime trace ABI version 9
 
@@ -319,12 +321,13 @@ single-line record for an omitted-trace program.
 
 The compiler references the version-9 compatibility marker and its x86-64
 backend can plan and emit deterministic requested context/location metadata
-and maintain one linked frame for every enabled source activation. The
-production driver still requests complete omission, and precise interior
-location updates are not implemented yet. Consequently ordinary compiled
-programs still observe a null trace top and the unchanged single-line output.
-The compiler contract remains described by the phase and backend sections
-below.
+and maintain one linked frame for every enabled source activation. It replaces
+the active location at source/external calls and taken dynamic or static
+reporter edges. Generated-helper and lower-level runtime attribution remains
+incomplete, so the production driver still requests complete omission.
+Consequently ordinary compiled programs still observe a null trace top and
+the unchanged single-line output. The compiler contract remains described by
+the phase and backend sections below.
 
 ## Responsibility boundary
 

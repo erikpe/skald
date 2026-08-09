@@ -1324,7 +1324,8 @@ names and provider-relative display paths. `SourceDatabase` resolves used span
 starts to checked one-based `u64` line and Unicode-scalar column values only
 when target lowering requests a location. Trace-disabled emission has no
 source access and performs no trace-only lookup. The production driver remains
-explicitly omitted until later roadmap tasks complete location coverage.
+explicitly omitted until generated-helper and runtime-failure attribution is
+complete and the public rollout begins.
 
 The target boundary decides which source definitions contribute frames and
 which existing spans require location records. Source functions, methods,
@@ -1338,10 +1339,12 @@ MIR operation span.
 Location replacement is required before every source or external call, before
 every generated helper call representing a source operation, before a runtime
 operation permitted to report, and on each taken explicit-panic or static
-termination edge. Failure-only placement means a successful checked operation
-does not execute a trace update. A later target-private dataflow optimization
-may remove a replacement already established on every incoming path, but
-correctness never depends on that optimization.
+termination edge. Source/external calls and central reporter edges currently
+implement that rule; generated-helper and lower-level runtime attribution is
+the remaining coverage. Failure-only placement means a successful checked
+operation does not execute a trace update. A later target-private dataflow
+optimization may remove a replacement already established on every incoming
+path, but correctness never depends on that optimization.
 
 The public verifier continues to validate target-independent spans and control
 flow only. Trace-frame layout, metadata interning, update placement, and TLS

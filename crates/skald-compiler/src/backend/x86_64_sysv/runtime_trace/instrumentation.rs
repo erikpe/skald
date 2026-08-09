@@ -56,6 +56,23 @@ pub(in crate::backend::x86_64_sysv) fn emit_pop(
     ]);
 }
 
+pub(in crate::backend::x86_64_sysv) fn emit_location_replace(
+    frame: TraceFrameLayout,
+    location: &str,
+    output: &mut Vec<Instruction>,
+) {
+    output.extend([
+        Instruction::LoadRuntimeTraceLocationAddress {
+            symbol: location.to_owned(),
+            destination: TRACE_SCRATCH,
+        },
+        Instruction::Move {
+            source: TRACE_SCRATCH.into(),
+            destination: word_operand(frame.location()),
+        },
+    ]);
+}
+
 fn word_operand(word: TraceFrameWord) -> Operand {
     Operand::Memory {
         base: Register::Rbp,

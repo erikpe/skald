@@ -59,7 +59,7 @@ fn requested_metadata(
     fixture: &FinalMirWithSources,
     requests: &[(CallableId, Span)],
 ) -> AssemblyRuntimeTraceMetadata {
-    let mut metadata = Metadata::new(BackendInput::with_runtime_trace(
+    let metadata = Metadata::new(BackendInput::with_runtime_trace(
         &fixture.mir,
         &fixture.sources,
     ));
@@ -197,7 +197,7 @@ fn runtime_trace_metadata_omission_never_requests_or_emits_trace_data() {
         .find(|definition| definition.callable() == callable)
         .unwrap()
         .span();
-    let mut metadata = Metadata::new(BackendInput::without_runtime_trace(&fixture.mir));
+    let metadata = Metadata::new(BackendInput::without_runtime_trace(&fixture.mir));
 
     assert_eq!(metadata.request_location(callable, span).unwrap(), None);
     let assembly = metadata_assembly(metadata.finish());
@@ -238,7 +238,7 @@ fn runtime_trace_metadata_rejects_invalid_source_ownership() {
     let callable = function(&fixture, "main");
     let other = fixture.sources.add("other.ska", "x");
     let span = fixture.sources.get(other).unwrap().span(0, 0).unwrap();
-    let mut metadata = Metadata::new(BackendInput::with_runtime_trace(
+    let metadata = Metadata::new(BackendInput::with_runtime_trace(
         &fixture.mir,
         &fixture.sources,
     ));
@@ -342,8 +342,13 @@ fn runtime_trace_frame_adds_one_aligned_record_only_to_source_bodies() {
         "only source definitions publish trace frames"
     );
     assert_eq!(
-        enabled.matches(".Lska.trace.location.").count(),
-        definition_count * 4
+        enabled.matches(".size .Lska.trace.context.").count(),
+        definition_count,
+        "each source definition owns exactly one trace context"
+    );
+    assert!(
+        enabled.matches(".size .Lska.trace.location.").count() > definition_count,
+        "source operations may add locations without adding trace frames"
     );
     assert!(!assembly_function(&enabled, "main").contains("ska_rt_trace_top"));
     assert!(
@@ -431,11 +436,11 @@ fn runtime_trace_frame_recursive_panic_reports_newest_first_with_real_runtime() 
         concat!(
             "panic: integer division by zero\n",
             "stacktrace:\n",
-            "  at main::recurse (app/main.ska:1:1)\n",
-            "  at main::recurse (app/main.ska:1:1)\n",
-            "  at main::recurse (app/main.ska:1:1)\n",
-            "  at main::recurse (app/main.ska:1:1)\n",
-            "  at main::main (app/main.ska:2:1)\n",
+            "  at main::recurse (app/main.ska:1:58)\n",
+            "  at main::recurse (app/main.ska:1:78)\n",
+            "  at main::recurse (app/main.ska:1:78)\n",
+            "  at main::recurse (app/main.ska:1:78)\n",
+            "  at main::main (app/main.ska:2:27)\n",
         )
         .as_bytes()
     );

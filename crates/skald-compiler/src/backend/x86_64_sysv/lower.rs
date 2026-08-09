@@ -4,6 +4,7 @@ use crate::{
     backend::{BackendError, RUNTIME_ABI_MARKER_SYMBOL},
     identity::CallableId,
     mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
+    source::Span,
 };
 
 use super::{
@@ -42,6 +43,7 @@ pub(super) fn lower(
     data_layout: &DataLayout,
     dispatch: &DispatchMetadata,
     activations: &runtime_trace::Activations,
+    metadata: &runtime_trace::Metadata<'_>,
 ) -> Result<AssemblyProgram, BackendError> {
     let literal_pool = LiteralPool::build(program);
     let context = LoweringContext {
@@ -50,6 +52,7 @@ pub(super) fn lower(
         dispatch,
         literal_pool: &literal_pool,
         activations,
+        metadata,
     };
     let mut functions = program
         .executable_definitions()
@@ -91,6 +94,7 @@ struct LoweringContext<'program> {
     dispatch: &'program DispatchMetadata,
     literal_pool: &'program LiteralPool,
     activations: &'program runtime_trace::Activations,
+    metadata: &'program runtime_trace::Metadata<'program>,
 }
 
 fn lower_definition(
@@ -209,6 +213,7 @@ struct InstructionSelector<'program, 'output> {
     data_layout: &'program DataLayout,
     dispatch: &'program DispatchMetadata,
     literal_pool: &'program LiteralPool,
+    metadata: &'program runtime_trace::Metadata<'program>,
     function: MirDefinitionRef<'program>,
     frame: &'program FrameLayout,
     block: BlockId,
@@ -218,6 +223,7 @@ struct InstructionSelector<'program, 'output> {
     io_sequence: usize,
     primitive_cast_sequence: usize,
     output: &'output mut Vec<Instruction>,
+    active_instruction_span: Option<Span>,
 }
 
 impl<'program, 'output> InstructionSelector<'program, 'output> {
@@ -233,6 +239,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             data_layout: context.data_layout,
             dispatch: context.dispatch,
             literal_pool: context.literal_pool,
+            metadata: context.metadata,
             function,
             frame,
             block,
@@ -242,12 +249,14 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             io_sequence: 0,
             primitive_cast_sequence: 0,
             output,
+            active_instruction_span: None,
         }
     }
 
     /// Exhaustive MIR instruction dispatch. Operation-specific selection lives
     /// in sibling modules so adding an instruction identifies one clear owner.
     fn select(&mut self, instruction: &MirInstruction) -> Result<(), BackendError> {
+        self.active_instruction_span = Some(instruction.span());
         match instruction {
             MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
             MirInstruction::Assign(assignment) => self.select_assignment(assignment)?,
@@ -316,6 +325,25 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::Array(array) => self.select_array_instruction(array)?,
             MirInstruction::Io(io) => self.select_io_instruction(io)?,
         }
+        Ok(())
+    }
+
+    fn record_current_runtime_trace_location(&mut self) -> Result<(), BackendError> {
+        let span = self
+            .active_instruction_span
+            .expect("call selection must originate from one MIR instruction");
+        self.record_runtime_trace_location(span)
+    }
+
+    fn record_runtime_trace_location(&mut self, span: Span) -> Result<(), BackendError> {
+        let Some(trace_frame) = self.frame.runtime_trace() else {
+            return Ok(());
+        };
+        let location = self
+            .metadata
+            .request_location(self.function.callable(), span)?
+            .expect("a trace frame requires enabled runtime-trace metadata");
+        runtime_trace::emit_location_replace(trace_frame, &location, self.output);
         Ok(())
     }
 }

@@ -222,10 +222,12 @@ target-specific legality or lowering contract.
 
 ## Inspect frozen runtime traces
 
-The version-9 runtime renderer, x86-64 requested metadata planner, and inline
-activation-frame maintenance are implemented; interior location replacement
-is not. A directly constructed chain can isolate runtime formatting from
-backend faults.
+The version-9 runtime renderer, x86-64 requested metadata planner, inline
+activation-frame maintenance, source-call replacement, and central reporter
+failure replacement are implemented. Generated-helper and lower-level runtime
+attribution is not yet complete. A directly constructed chain can isolate
+runtime formatting from backend faults.
+
 For metadata faults, run the focused `runtime_trace_metadata` tests and begin
 with the existing MIR span at the reported operation; MIR deliberately
 contains no trace instruction or
@@ -236,12 +238,12 @@ eligibility, and whether the operation requires a replacement.
 Enabled x86-64 assembly gives an eligible source callable one linked 16-byte
 record, one six-instruction publish sequence after incoming parameters are
 preserved, and one two-instruction restore before the final result reload on
-every normal return. The pending location work adds a two-instruction
-replacement at each required call or taken failure edge. Generated
-helpers and wrappers must have none. `r11` is only a transient clobber; a
-persistent trace register or a C maintenance call is a lowering defect.
-Indirect calls require particular attention because the trace replacement
-must occur before the target is loaded into the same scratch register.
+every normal return. A two-instruction replacement appears at each source call
+or taken central failure edge. Generated helpers and wrappers have no frame;
+their source-operation attribution is the remaining work. `r11` is only a
+transient clobber; a persistent trace register or a C maintenance call is a
+lowering defect. Indirect calls require the trace replacement before the
+target is loaded into the same scratch register.
 
 Use ELF relocation and section inspection to distinguish a textual assembly
 mistake from a link-model mistake. TLS access must use local-exec

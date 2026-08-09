@@ -473,16 +473,16 @@ A violated public runtime ABI precondition follows the runtime's private hard
 failure path. It never calls the user-facing reporter and never emits a
 `panic:` record. The production driver explicitly omits trace generation, so
 version-9 runtime trace rendering observes a null top for compiler-generated
-programs. The target metadata and frame-maintenance foundation below is
-implemented, while precise call and failure location replacement remains
-pending. Trace state applies only to source-level panic reporting, not to hard
-traps.
+programs. The target metadata, frame-maintenance, source-call, and central
+reporter location support below is implemented. Attribution around generated
+helpers and lower-level runtime calls remains pending. Trace state applies
+only to source-level panic reporting, not to hard traps.
 
 ## Frozen runtime trace target boundary
 
 Runtime-trace input and deterministic static metadata are implemented for
-Linux x86-64. The production driver remains explicitly omitted until location
-coverage is complete, so ordinary builds still contain no trace
+Linux x86-64. The production driver remains explicitly omitted until
+attribution coverage is complete, so ordinary builds still contain no trace
 records. The version-9 runtime owns the hidden TLS state and allocation-free
 renderer. Each traced source callable receives one 16-byte linked trace
 record inside its ordinary fixed native frame: an eight-byte pointer to the
@@ -494,12 +494,13 @@ check, or depth check while maintaining the trace.
 
 The x86-64 target emits six instructions at callable entry to initialize and
 publish the record and two instructions on every normal return to restore
-`previous`. The pending interior-location work will emit two instructions at
-each required replacement to store a new metadata pointer. `r11` is transient
-scratch for these sequences, not a reserved register. Lowering models that
-local clobber; future indirect-call replacement must occur before loading its
-target into `r11`. A future register allocator may use every general-purpose
-register outside these short sequences.
+`previous`. Source calls and taken central reporter edges use the exact
+two-instruction RIP-relative address load and frame-home store. `r11` is
+transient scratch for these sequences, not a reserved register. Lowering emits
+the replacement after call arguments are marshalled and before an indirect
+target is loaded into `r11`, so neither the target nor arguments are lost. A
+future register allocator may use every general-purpose register outside
+these short sequences.
 
 The pop is unchecked generated code. A null `previous` is the valid outermost
 state; a stale or corrupt link is a compiler/runtime defect. Frame-layout,
@@ -523,9 +524,13 @@ Eligible frames and update sites are fixed by the
 bodyless panic intrinsic, process wrapper, generated static coordinator,
 generated lifecycle/array/ownership/finalization helpers, runtime C frames,
 and target thunks never push. Ordinary source-authored standard-library and
-lifecycle bodies do push. Before an omitted helper, external call, or
-panic-capable runtime operation, the source caller records the initiating
-operation.
+lifecycle bodies do push. Direct, static, virtual, interface, external,
+initializer, copy, assignment, destruction, and other source calls record
+their originating MIR operation. Taken dynamic-panic and static-termination
+edges record the failing operation immediately before their reporter call,
+while successful checks and hard traps execute no failure replacement. The
+remaining generated-helper and panic-capable runtime operations will record
+their initiating source operation as that attribution coverage is completed.
 
 The frozen completed design makes trace emission default-on. During staged
 implementation the production driver still constructs the explicit omitted

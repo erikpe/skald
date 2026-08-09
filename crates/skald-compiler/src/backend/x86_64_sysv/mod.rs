@@ -26,9 +26,9 @@ use super::{BackendError, BackendInput};
 pub fn emit_assembly(input: BackendInput<'_>) -> Result<String, BackendError> {
     let program = input.program();
     let (data_layout, dispatch) = legality::check(program)?;
-    let mut metadata = runtime_trace::Metadata::new(input);
-    let activations = runtime_trace::Activations::plan(program, &mut metadata)?;
-    let mut assembly = lower::lower(program, &data_layout, &dispatch, &activations)?;
+    let metadata = runtime_trace::Metadata::new(input);
+    let activations = runtime_trace::Activations::plan(program, &metadata)?;
+    let mut assembly = lower::lower(program, &data_layout, &dispatch, &activations, &metadata)?;
     assembly.runtime_trace = metadata.finish();
     Ok(emit::emit(&assembly))
 }

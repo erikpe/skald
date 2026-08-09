@@ -23,3 +23,8 @@ int64_t ska_test_trace_depth(void) {
     }
     return depth;
 }
+
+void ska_test_external_panic(void) {
+    static const uint8_t message[] = "external failure";
+    ska_rt_panic(message, sizeof(message) - 1u);
+}

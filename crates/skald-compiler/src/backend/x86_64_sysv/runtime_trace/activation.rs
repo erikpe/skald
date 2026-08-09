@@ -18,7 +18,7 @@ pub(in crate::backend::x86_64_sysv) struct Activations {
 impl Activations {
     pub(in crate::backend::x86_64_sysv) fn plan(
         program: &MirProgram,
-        metadata: &mut Metadata<'_>,
+        metadata: &Metadata<'_>,
     ) -> Result<Self, BackendError> {
         let mut locations = BTreeMap::new();
         for definition in program.executable_definitions() {

@@ -147,11 +147,11 @@ impl InstructionSelector<'_, '_> {
         terminator: &MirTerminator,
     ) -> Result<bool, crate::backend::BackendError> {
         match terminator {
-            MirTerminator::Panic { message, .. } => {
-                self.select_dynamic_panic(message)?;
+            MirTerminator::Panic { message, span } => {
+                self.select_dynamic_panic(message, *span)?;
                 Ok(true)
             }
-            MirTerminator::Terminate { reason, .. } => {
+            MirTerminator::Terminate { reason, span } => {
                 let Some(message) = PanicMessage::for_reason(*reason) else {
                     return Err(crate::backend::BackendError::new(
                         crate::backend::Target::X86_64SysV,
@@ -162,7 +162,7 @@ impl InstructionSelector<'_, '_> {
                         ),
                     ));
                 };
-                self.select_static_panic(message);
+                self.select_static_panic(message, *span)?;
                 Ok(true)
             }
             _ => Ok(false),
@@ -172,6 +172,7 @@ impl InstructionSelector<'_, '_> {
     fn select_dynamic_panic(
         &mut self,
         message: &crate::mir::MirPlace,
+        span: crate::source::Span,
     ) -> Result<(), crate::backend::BackendError> {
         let item = self
             .program
@@ -215,16 +216,29 @@ impl InstructionSelector<'_, '_> {
             source: value::memory(Register::Rdx, field_offset(item.length_field)),
             destination: Register::Rsi.into(),
         });
+        self.record_runtime_trace_location(span)?;
         emit_reporter_call(self.output);
         Ok(())
     }
 
-    fn select_static_panic(&mut self, message: PanicMessage) {
-        emit_static_panic(message, self.output);
+    fn select_static_panic(
+        &mut self,
+        message: PanicMessage,
+        span: crate::source::Span,
+    ) -> Result<(), crate::backend::BackendError> {
+        emit_static_panic_arguments(message, self.output);
+        self.record_runtime_trace_location(span)?;
+        emit_reporter_call(self.output);
+        Ok(())
     }
 }
 
 fn emit_static_panic(message: PanicMessage, output: &mut Vec<Instruction>) {
+    emit_static_panic_arguments(message, output);
+    emit_reporter_call(output);
+}
+
+fn emit_static_panic_arguments(message: PanicMessage, output: &mut Vec<Instruction>) {
     output.push(Instruction::LoadSymbolAddress {
         symbol: message.symbol().to_owned(),
         destination: Register::Rdi,
@@ -233,7 +247,6 @@ fn emit_static_panic(message: PanicMessage, output: &mut Vec<Instruction>) {
         bits: message.bytes().len() as u64,
         destination: Register::Rsi,
     });
-    emit_reporter_call(output);
 }
 
 fn emit_reporter_call(output: &mut Vec<Instruction>) {
