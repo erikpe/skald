@@ -144,6 +144,12 @@ optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
 zero-niche optional owners, and exact virtual/interface signatures.
 
+That same contract freezes the migration from flat optional families to
+deterministic recursive optional identities and lifecycle plans, followed by
+arbitrary nesting and optional inline arrays. The implemented grammar and
+phase products remain authoritative until each roadmap task lands. The frozen
+work adds no shared box target for `shared T?` and no C runtime ABI surface.
+
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
 The x86-64 target executes inline and shared-outer arrays containing

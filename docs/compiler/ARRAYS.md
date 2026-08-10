@@ -95,8 +95,12 @@ compiler's ordinary nesting budget.
 `shared T[]` and `(shared T)[]` must resolve differently. The former is a
 shared owner whose target is an exact array identity; the latter is an inline
 array identity whose element is a shared owner. `shared? T[]` wraps shared
-array ownership in absence. No phase may represent it as an inline optional
-array payload.
+array ownership in absence. No implemented phase may represent it as an inline
+optional array payload. The frozen
+[compositional optional compiler direction](OPTIONAL_VALUES.md#frozen-compositional-implementation-direction)
+later represents `T[]?` as an optional identity whose immediate payload is this
+canonical inline array identity; it remains distinct from optional shared
+array ownership and reuses this table's lifecycle plans.
 
 Array types do not enter class hierarchy, interface conformance, `Obj`,
 dynamic metadata relation, cast, or type-test tables. Compatibility is exact
@@ -692,7 +696,7 @@ loops, finalizers, and cleanup. The C runtime must not learn array type
 identities, element kinds, reference scanning, lifecycle callbacks, bounds,
 or slice semantics. The currently implemented design therefore requires no
 new public C symbol or runtime ABI version change. Central termination
-lowering calls the version-6 panic reporter for array failure reasons without
+lowering calls the version-9 panic reporter for array failure reasons without
 exposing an array layout or adding an array-specific helper. Any other
 implementation that needs a new public symbol must revise
 this contract and the versioned runtime boundary before relying on it.
@@ -752,8 +756,10 @@ private:
 - optimization of empty arrays, bounds checks, copies, and slice temporaries.
 
 The compiler design also excludes the language extensions listed in
-[Arrays](../language/ARRAYS.md#deferred-extensions), especially inline optional
-array payloads, richer element initialization, slice views, resizing,
-iteration protocols, external ABI, recoverable failures, and concurrency.
-Those require explicit language and compiler contract revisions rather than
-being inferred from the current representation.
+[Arrays](../language/ARRAYS.md#deferred-extensions), including richer element
+initialization, slice views, resizing, iteration protocols, external ABI,
+recoverable failures, and concurrency. The separately frozen
+[optional-array direction](OPTIONAL_VALUES.md#array-composition-and-runtime-boundary)
+does not alter current availability; it will reuse canonical array identities,
+lifecycle plans, descriptors, and helpers rather than infer a second array
+model from the current representation.

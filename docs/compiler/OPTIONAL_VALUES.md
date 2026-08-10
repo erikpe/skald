@@ -3,7 +3,9 @@
 Status: authoritative implemented compiler contract for primitive and exact
 inline-class optionals, optional shared owners, and supported inline
 optional-container aliases through HIR, MIR verification, x86-64 lowering,
-and native execution.
+and native execution. This document also freezes the compiler direction for
+recursive optional identities, arbitrary nesting, and optional inline arrays;
+that extension is not yet executable.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -65,6 +67,210 @@ owners, and invalid payload families reach focused diagnostic boundaries and
 never become executable HIR types. Alias binding mode may designate an
 existing primitive or exact-class inline optional place; it does not add a
 reference or optional-reference type identity.
+
+## Frozen compositional implementation direction
+
+This section is a **frozen design** for the planned compositional extension.
+The flat identities and executable operations described elsewhere in this
+document remain the implemented compiler contract until the responsible
+roadmap tasks replace them. The migration must keep every current program's
+diagnostics, evaluation order, lifecycle, layout, ABI, dumps, and native
+behavior stable before it enables a new payload category.
+
+### Source shape and canonical identity
+
+Syntax changes from a closed optional-payload enum to a recursive type node.
+It preserves every `?`, `[]`, `shared`, and grouping span and records whether
+the user wrote the `shared?` shorthand. Syntax identity remains source-shaped;
+semantic identity does not.
+
+Resolution interns optionals bottom-up into a deterministic table:
+
+```text
+OptionalTypeId -> {
+    payload: ResolvedType
+}
+```
+
+The exact Rust names remain private. The durable requirements are:
+
+- resolved, HIR, and MIR types carry a small copyable optional identity rather
+  than recursively owning another type node;
+- an optional entry names its complete immediate payload, which may be a
+  primitive, exact class, inline array, ordinary shared owner, or earlier
+  optional identity;
+- source spans, grouping, and shorthand provenance do not participate in
+  equality or interning keys;
+- inner types are interned before their wrappers, repeated spellings reuse one
+  identity, and module traversal produces deterministic IDs and dumps;
+- `(shared P)?` and `shared? P` normalize to one
+  `Optional<Shared<P>>` identity; and
+- `shared P?` is instead `Shared<Optional<P>>`, remains an unsupported box
+  target, and never receives an optional or shared-target identity in
+  executable HIR during this roadmap.
+
+This follows the existing array-table pattern without requiring one universal
+type interner. Optional and array entries may name one another through their
+small IDs because finite source syntax is interned from the innermost complete
+type outward. Named inline-class containment remains a separate semantic graph
+and traverses through every optional payload.
+
+### Type checking and lifecycle capabilities
+
+Type checking owns an ID-indexed optional description whose immediate payload
+selects:
+
+- storage and representation category;
+- absence and presence initialization;
+- copy construction, assignment, and destruction capability;
+- direct final-destination construction or produced-value transfer;
+- scalar extraction, owning aggregate extraction, secured shared-owner
+  extraction, or checked-place access;
+- guard and shared-root anchor requirements;
+- parameter, result, alias, field, static, and array-element eligibility; and
+- the exact operation required when an outer transition recursively consumes
+  the payload.
+
+The description may use private enums and references to existing class and
+array lifecycle plans, but it must not enumerate combinations such as
+`OptionalOptionalClass` or duplicate array element lifecycle selection. A
+payload capability is computed once by its ordinary owner and reused by the
+optional wrapper.
+
+Compatibility has only two relevant relations: exact optional identity and
+one-layer injection from exact payload `P` to `Optional<P>`. Resolution and
+type checking never search a transitive injection chain. `some(expression)` is
+checked only under one unambiguous expected optional identity and supplies the
+entry's payload as the expected type of its argument. `none` likewise targets
+the outer expected identity. Exact overload matches outrank one-layer
+injection; contextual `none` or `some` does not invent specificity.
+
+### Typed HIR and executable MIR
+
+Typed HIR carries canonical optional identities and explicit semantic plans
+for absent/present initialization, `some`, one-layer injection, optional copy
+and assignment, recursive cleanup, presence tests, one-layer unwrap, checked
+views, aliases, arguments/results, statics, and array elements. HIR selects
+the immediate payload operation; MIR and the backend never rediscover it from
+the source type.
+
+The migration first introduces generalized HIR with an exhaustive adapter to
+the current primitive, class, and optional-shared MIR operations. No new
+source form reaches MIR through that adapter. MIR is then generalized around
+the canonical optional identity and explicit payload lifecycle before nested
+optionals or optional arrays are enabled.
+
+MIR represents the outer wrapper state independently from the immediate
+payload state. An outer operation branches on or changes only its own state,
+then invokes the selected payload operation when required. Publication occurs
+only after the complete immediate payload has initialized successfully.
+Recursive cleanup consumes one initialized outer wrapper and conditionally
+cleans one complete immediate payload; it does not flatten nested state or
+infer cleanup from raw loads and stores.
+
+Each unwrap terminator checks one wrapper. Scalar payloads are copied,
+ordinary shared-owner payloads are secured into owner storage, and owning
+aggregate payloads are copied or transferred according to their selected
+source category. A payload place carries its exact optional root and identity.
+Every active checked view guards the wrapper whose payload it exposes; nested
+unwraps may therefore have multiple balanced guards. Shared-root anchors cover
+container storage independently of those guards.
+
+### Verification
+
+Generalized MIR verification must prove, recursively and without source
+inspection, that:
+
+- every optional identity and payload identity exists and is legal for its
+  storage position;
+- wrapper initialization is distinct from dynamic presence and is established
+  exactly once per storage epoch;
+- an absent wrapper owns no live payload and a present wrapper owns exactly one
+  complete compatible payload;
+- each initialization, copy, assignment, cleanup, argument/result transfer,
+  static transition, and array-element operation carries the capability
+  selected for that immediate payload;
+- nested publication and cleanup order is outer/inner state-safe and no absent
+  bytes are addressed as a payload;
+- each unwrap removes one layer, has distinct success and non-returning failure
+  edges, and yields the declared immediate payload category;
+- guards name the correct wrapper identity, are balanced around their complete
+  consumers, and block every presence-changing transition at that layer;
+- shared anchors outlive every optional place rooted in their allocation;
+- CFG joins agree on initialized owning wrapper storage even when runtime
+  presence differs; and
+- external signatures and unsupported shared-box targets never enter
+  executable MIR.
+
+Malformed public or test-mutated MIR fails at this target-independent boundary
+before target layout or code generation.
+
+### x86-64 layout and internal ABI
+
+For an inline optional without a valid niche, layout applies the existing
+formula recursively to the complete immediate payload layout:
+
+```text
+state offset   = 0
+payload offset = align_up(8, align_of(P))
+alignment      = max(8, align_of(P))
+size           = align_up(payload offset + size_of(P), alignment)
+```
+
+Every addition and alignment is checked against target limits. A nested
+optional reserves the complete inner wrapper as `P`; each layer keeps its own
+state and guard count. `Optional<Array<T>>` uses this tagged layout around the
+complete inline descriptor because the empty descriptor is already a valid
+present array. No absence niche changes array descriptor meaning.
+
+`Optional<Shared<P>>` retains the existing one-word zero-handle niche and
+direct integer-class shared-owner convention. Only that immediate
+optional-of-shared identity receives the niche. Wrapping it in another
+optional produces an ordinary tagged outer aggregate, so
+`Optional<Optional<Shared<P>>>` is not flattened to one word.
+
+All non-niche inline optional parameters continue to use one pointer-sized
+internal argument referring to caller-prepared owning aggregate storage, and
+results continue to use caller-provided destination storage. This convention
+applies equally to nested and optional-array aggregates. A call-scoped alias
+passes the address of the existing wrapper and owns no payload. The optimized
+optional-of-shared form continues to pass and return one integer-class word.
+These remain compiler-private conventions; every external optional signature
+is rejected.
+
+Static slots use the same target layout as equivalent non-static storage.
+Exact-reverse normal-return shutdown recursively destroys a present payload or
+releases a present owner. Abrupt termination remains non-unwinding.
+
+### Array composition and runtime boundary
+
+The optional type table names an existing canonical array identity as the
+payload of `T[]?`. Type checking reuses that array's default, copy, assignment,
+destruction, backing-transfer, alias-anchor, and element lifecycle plans.
+Optional lowering may branch around those operations but does not create a
+second array capability system or new array descriptor.
+
+An optional array used as an array element defaults its outer wrapper to
+absence. Explicit element lists initialize the wrapper directly and advance
+the unpublished prefix only after the complete absent or present wrapper is
+live. Present payload cleanup reuses the existing array release helper and
+reverse element lifecycle.
+
+The compositional extension adds no C runtime symbol and does not revise
+runtime ABI version 9. Tags, guard counts, recursive state, optional-array
+layout, shared-owner zero niches, and checked unwrap remain compiler-owned.
+The existing allocator and deallocator see only ordinary valid array backing
+requests and exact allocation bases.
+
+### Shared-box exclusion
+
+No phase adds a box target for `Shared<Optional<P>>` in this roadmap. There is
+no provisional box ID, allocation origin, initialization/publication node,
+metadata record, finalizer, pointee projection, mutation operation, target
+layout, or backend helper. `shared P?` and the shorthand-derived
+`shared? P?` remain focused semantic diagnostics. A later shared-box design may
+consume the completed optional lifecycle as its pointee plan, but it must own
+all allocation and shared-target changes separately.
 
 ## Source-shaped IR
 
@@ -356,8 +562,9 @@ payload.
 
 An exact-class optional static uses this same layout in a separate program
 slot. It adds neither an inline-class containment edge nor bytes to instances
-of its declaring class, and its final present payload receives no generated
-process-exit cleanup.
+of its declaring class. On normal entry return, generated exact-reverse static
+shutdown conditionally destroys its final present payload; abrupt termination
+remains non-unwinding.
 
 Zero means absent, one means present without an active view, and values from
 two through the maximum word value represent a present payload with one or
@@ -440,7 +647,7 @@ optional lowering does not own a private reporter.
 The currently implemented optional profile adds no C runtime symbol and
 requires no runtime ABI version bump. Optional state, guard counts,
 conditional ownership, and checked access remain compiler-owned. The
-version-6 reporter is a common termination ABI, not an optional-specific
+version-9 reporter is a common termination ABI, not an optional-specific
 helper.
 
 The current allocator and deallocator continue to receive only the same valid
@@ -501,14 +708,43 @@ Tests must continue to prove that plain `T` and `shared T` never acquire absent
 or zero states and that no optional feature changes the C runtime ABI
 accidentally.
 
+### Frozen extension test matrix
+
+The compositional rollout uses the narrowest test layer that owns each
+contract and adds source-to-native coverage only where phase tests cannot prove
+observable behavior:
+
+| Concern | Required focused evidence |
+|---|---|
+| Source syntax | Tokens and AST for general grouping, left-to-right `?`/`[]` suffixes, `(shared T)?`, `shared? T`, nested depth, `some(expression)`, malformed punctuation, recovery spans, and the syntax budget |
+| Canonical identity | Resolution interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused shared-box rejection before HIR |
+| Type and lifecycle selection | Exact payload eligibility, one-layer injection, overload ranking, `none`/`some` expectations, recursive containment, copy/assignment/destruction capabilities, aliases, statics, and array-element plans |
+| HIR and MIR shape | Explicit outer-layer operations, recursive payload plans, publication order, one-layer unwrap, guards and anchors, arguments/results, optional arrays, selected-path cleanup, and deterministic dumps |
+| Verification | Mutations for missing or mismatched identities, absent payload use, wrong lifecycle capability, premature publication, duplicate/missing cleanup, bad transfers, unbalanced or wrong-layer guards, invalid anchors, malformed CFG joins, and leaked box targets |
+| Target layout | Depth-two, depth-five, optional-shared niche, tagged outer-over-niche, optional-array descriptor, class containment, statics, alignment, checked size overflow, frames, and helper identity |
+| Internal ABI | Register/stack pressure, recursion, methods, interfaces, virtual dispatch, hidden aggregate results, direct optional-shared words, aliases, statics, and produced array results |
+| Native success | Every presence depth, `some(none)`, chained unwrap, lifecycle traces, self-assignment, alias mutation, optional arrays including present-empty, array elements/lists/slices, and exact reverse cleanup |
+| Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
+| Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
+
+The current compile-failure suites for `T??`, `T[]?`, `(shared T)?`,
+`shared T?`, and `shared? T?` remain required until the task responsible for a
+form changes its expected phase and outcome. Box forms remain compile failures
+after this roadmap completes.
+
 ## Exclusions
 
-This compiler contract does not design generalized shared boxes, nested
-optionals, inline optional array payloads, optional function values,
-first-class references, optional casts, equality or operator lifting,
-chaining/coalescing/propagation, recoverable failures, concurrency or atomic
-guards, external optional ABI, or dynamic-type-preserving cloning. The implemented
-[array compiler contract](ARRAYS.md) extends optional shared-owner
-targets to exact arrays and permits already-supported optional non-array
-element types. Explicit array element lists reuse the same generic-place
-optional initialization, conditional owner transfer, zero niche, and cleanup.
+The implemented compiler continues to reject nested optionals, optional inline
+arrays, `(shared T)?`, and `some(expression)` until their roadmap tasks land;
+their compiler direction is frozen above. This contract does not design
+generalized shared boxes, optional function values, first-class references,
+optional casts, equality or operator lifting, chaining/coalescing/propagation,
+recoverable failures, concurrency or atomic guards, external optional ABI, or
+dynamic-type-preserving cloning.
+
+The implemented [array compiler contract](ARRAYS.md) extends optional
+shared-owner targets to exact arrays and permits already-supported optional
+non-array element types. Explicit array element lists reuse the same
+generic-place optional initialization, conditional owner transfer, zero niche,
+and cleanup. The frozen optional-array extension reuses that array machinery
+as specified above; it does not alter current compiler availability.

@@ -99,7 +99,11 @@ guarded checked class payload views and secured ordinary owners from
 in [Optional Values](OPTIONAL_VALUES.md): `T?` and `shared? T` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
-access. Exceptional control flow remains unimplemented and exploratory.
+access. Its frozen compositional extension makes `(shared T)?` canonical with
+`shared? T` as shorthand, defines recursive optionals and `some(...)`, and
+defines optional inline arrays without making those new forms current compiler
+syntax. Shared boxes containing optionals remain outside that extension.
+Exceptional control flow remains unimplemented and exploratory.
 The separate uncatchable panic and common unrecoverable-failure reporting
 contract is implemented.
 

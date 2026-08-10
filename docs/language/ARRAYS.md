@@ -83,10 +83,13 @@ Legal element types are:
 - inline array types recursively.
 
 `unit`, bare interface and `Obj` views, aliases, and function types are not
-array element types. Inline optional arrays are deliberately not part of the
-contract: no source form makes an array type itself an inline optional
-payload. This does not prevent `shared? T[]`, whose absence belongs to the
-shared owner rather than to an inline optional array payload.
+array element types. Inline optional arrays are not part of the implemented
+contract: no currently accepted source form makes an array type itself an
+inline optional payload. The frozen
+[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
+defines `T[]?` and `(T[])?` as equivalent spellings for that future value. This
+does not change current compiler availability or `shared? T[]`, whose absence
+belongs to the shared owner rather than to an inline optional array payload.
 
 ## Construction and default initialization
 
@@ -757,9 +760,14 @@ array ownership combinations are compile-time errors.
 
 ## Deferred extensions
 
+The frozen
+[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
+specifies inline optional arrays as `T[]?`, distinct from both `T?[]` and
+`shared? T[]`. The current compiler continues to reject that form until its
+implementation roadmap completes.
+
 The following are intentionally outside the implemented array profile:
 
-- inline optional array payloads and their eventual source spelling;
 - inferred array literals, expected-type-only lists, fill-value, per-index
   generator, comprehensions, spreads, repetition, and rectangular-shape
   initialization syntax;

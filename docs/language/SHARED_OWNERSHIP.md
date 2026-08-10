@@ -412,12 +412,33 @@ Future checked exceptions may extend allocation and cleanup behavior only by
 explicitly revising this contract. They are not implied by the shared
 ownership design.
 
+## Compositional optional boundary
+
+The frozen
+[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
+makes `(shared T)?` the canonical form of an optional ordinary shared owner and
+retains `shared? T` as exact shorthand. Both normalize to
+`Optional<Shared<T>>`. This composition changes no allocation, header,
+metadata, finalizer, dynamic type, strong-count, access, or last-owner rule:
+when present, the payload is one ordinary non-null owner governed by this
+contract; when absent, it accounts for no owner.
+
+Optionality inside the operand of ordinary `shared` has a different meaning:
+`shared T?` denotes `Shared<Optional<T>>`, a non-null owner of a new shared-box
+allocation kind. Neither that box nor its optional-owner shorthand
+`shared? T?` belongs to the compositional optional roadmap. The parser may
+preserve those source shapes, but semantic analysis continues to reject them.
+This contract adds no provisional box target, allocation form, metadata,
+finalizer, pointee mutation, cast, or runtime rule.
+
 ## Exclusions
 
 This profile does not include:
 
 - generalized `shared T?` or `shared? T?` boxes;
-- aliases whose designated container type is `shared? T`;
+- aliases whose designated container type is `shared? T` in the current
+  implementation; the frozen optional extension specifies such container
+  aliases without changing ordinary shared-pointee aliases;
 - weak ownership;
 - explicit early release or user-visible reference counts;
 - raw pointers or unsafe handle construction;

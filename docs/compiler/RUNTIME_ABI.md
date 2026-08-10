@@ -370,7 +370,7 @@ Shared ownership uses this minimal boundary as defined in the
 Reference counting, metadata, anchors, and finalizer selection remain
 compiler-owned.
 
-The frozen
+The implemented
 [optional-values compiler contract](OPTIONAL_VALUES.md#c-runtime-abi)
 adds no public C symbol and requires no runtime ABI version change. Optional
 state, presence guards, conditional lifecycle, and failure traps are
@@ -379,6 +379,14 @@ shared-owner or allocator operations. Primitive and exact-class inline
 optionals, including checked payload guard counts and failure traps, implement
 this compiler-owned boundary without changing the runtime marker or adding a
 runtime symbol.
+
+The frozen
+[compositional optional direction](OPTIONAL_VALUES.md#array-composition-and-runtime-boundary)
+preserves that boundary for recursive tagged wrappers and optional inline
+arrays. It reuses ordinary array backing allocation and cleanup and adds no C
+symbol or ABI-version change. Shared boxes containing optional pointees remain
+outside that design; no allocation metadata or finalizer contract for them is
+reserved here.
 
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,

@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: planned; CO0 is next.
+Status: in progress; CO1 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -96,7 +96,7 @@ pointee is an optional value.
 
 ## Progress
 
-- [ ] CO0 — Freeze compositional optional contracts
+- [x] CO0 — Freeze compositional optional contracts
 - [ ] CO1 — Introduce compositional type syntax and canonical shared optionals
 - [ ] CO2 — Canonicalize recursive optional identities
 - [ ] CO3 — Generalize typed optional lifecycle planning
@@ -114,27 +114,27 @@ pointee is an optional value.
 **Purpose:** Resolve every source and representation decision used by later
 tasks while keeping the implemented grammar and availability unchanged.
 
-- [ ] Update the optional-values language contract with general postfix and
+- [x] Update the optional-values language contract with general postfix and
       grouping semantics, canonical and shorthand shared-owner spellings,
       arbitrary nesting, optional arrays, `none`, `some(expression)`,
       one-layer injection, one-layer unwrap, overload ranking, and eligible
       declaration positions.
-- [ ] Freeze an exact precedence and equivalence table for `T?[]`, `T[]?`,
+- [x] Freeze an exact precedence and equivalence table for `T?[]`, `T[]?`,
       `(T[])?`, `(shared T)?`, `shared? T`, `(shared T)??`, `shared T?`, and
       `shared? T?`.
-- [ ] Specify all nested presence shapes, recursive lifecycle transitions,
+- [x] Specify all nested presence shapes, recursive lifecycle transitions,
       checked payload access, guard and anchor interaction, containment, failure
       order, and eligible/ineligible payload categories.
-- [ ] Update the optional-values compiler contract with recursive interned
+- [x] Update the optional-values compiler contract with recursive interned
       identities, phase ownership, lifecycle capability plans, HIR/MIR
       direction, tagged and niche layouts, internal ABI behavior, verifier
       obligations, and the unchanged C runtime boundary.
-- [ ] Preserve shared optional boxes as a focused exclusion in optional and
+- [x] Preserve shared optional boxes as a focused exclusion in optional and
       shared-ownership contracts without reserving implementation structures
       for them.
-- [ ] Mark compositional optionals as a frozen design in the status matrix
+- [x] Mark compositional optionals as a frozen design in the status matrix
       while leaving the implemented grammar and current support claims exact.
-- [ ] Define positive, compile-failure, runtime-failure, malformed-MIR,
+- [x] Define positive, compile-failure, runtime-failure, malformed-MIR,
       determinism, nesting-budget, layout-overflow, ABI-pressure, and lifecycle
       test matrices for the remaining tasks.
 

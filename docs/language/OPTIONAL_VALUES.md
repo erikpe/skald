@@ -2,7 +2,9 @@
 
 Status: implemented language contract for primitive, exact inline-class, and
 optional shared-owner values across owning locals, fields, internal callable
-boundaries, and aliases to supported inline optional containers. The
+boundaries, and aliases to supported inline optional containers. This document
+also freezes the compositional extension for recursive optionals and optional
+inline arrays; that extension is not yet accepted by the compiler. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -79,7 +81,7 @@ partially destroyed value of type `T`. When an optional is absent, there is no
 The implemented profile separates optional inline payloads from optional shared
 ownership:
 
-| Type | Meaning | Frozen profile |
+| Type | Meaning | Implemented profile |
 |---|---|---|
 | `T` | Always-present inline `T` | Existing contract |
 | primitive `T?` | Inline optional containing zero or one primitive `T` | Owning locals, fields, and internal callable boundaries execute |
@@ -89,9 +91,10 @@ ownership:
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
 | `shared? T?` | Optional owner of a non-null shared box containing `T?` | Reserved and rejected |
 
-`shared?` is the contextual word `shared` followed by the `?` punctuation
-token. Ordinary trivia may separate those tokens, although documentation and
-dumps use `shared? T` as the canonical spelling.
+In the implemented grammar, `shared?` is the contextual word `shared` followed
+by the `?` punctuation token. Ordinary trivia may separate those tokens, and
+current dumps use `shared? T`. The frozen compositional extension below makes
+`(shared T)?` canonical while retaining `shared? T` as exact shorthand.
 
 Inline `T?` is valid when `T` is a primitive or exact inline class type.
 `shared? T` accepts the same class, interface, and `Obj` targets as ordinary
@@ -111,6 +114,180 @@ These exclusions are deliberate. In particular, `shared T?` requires a
 generalized non-null shared box whose allocation, payload metadata, mutation,
 and finalization are separate from optional ownership. This design reserves
 the spelling without defining or implementing that box.
+
+## Frozen compositional extension
+
+The compositional extension is a **frozen design**, not current compiler
+behavior. Until its implementation tasks land, the
+[implemented grammar](GRAMMAR.md) and the implemented profile above remain
+authoritative for accepted source.
+
+### Type construction, grouping, and precedence
+
+Postfix `?` constructs one optional layer around the complete type expression
+immediately to its left. Parentheses group any storage type before another
+postfix suffix is applied. Postfix `?` and `[]` associate from left to right:
+
+```text
+T?[]   = Array<Optional<T>>
+T[]?   = Optional<Array<T>>
+T??    = Optional<Optional<T>>
+```
+
+An ordinary leading `shared` consumes the complete following inline type,
+including its postfix suffixes. Optionality written inside that operand belongs
+to the allocation target:
+
+```text
+shared T?   = Shared<Optional<T>>
+shared T[]  = Shared<Array<T>>
+```
+
+The first form requires a new shared-box allocation kind and remains outside
+this frozen extension. To place optionality around an existing shared owner,
+group the shared type first:
+
+```text
+(shared T)? = Optional<Shared<T>>
+```
+
+`shared? P` is exact shorthand for `(shared P)?`. The shorthand marker is the
+`?` immediately following the contextual `shared` word; it is not a postfix
+marker on `P`. Expanding the shorthand before interpreting the payload gives:
+
+```text
+shared? T   = (shared T)?
+shared? T[] = (shared T[])?
+shared? T?  = (shared T?)?
+```
+
+The last form still contains the unsupported inner
+`Shared<Optional<T>>` box and therefore remains outside this roadmap.
+
+The exact spelling and identity matrix is:
+
+| Source spelling | Normalized type | Meaning | Current availability |
+|---|---|---|---|
+| `T?[]` | `Array<Optional<T>>` | Array whose elements are optional `T` values | Implemented for currently eligible `T` |
+| `T[]?` | `Optional<Array<T>>` | Optional inline array value | Frozen; rejected |
+| `(T[])?` | `Optional<Array<T>>` | Grouped spelling equivalent to `T[]?` | Frozen; rejected |
+| `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Frozen canonical spelling; rejected |
+| `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented shorthand |
+| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Frozen; rejected |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Reserved box form; rejected |
+| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Reserved box form; rejected |
+
+Canonical documentation and semantic dumps use `T[]?` for an optional array
+and `(shared T)?` for an optional shared owner once those forms become
+executable. Source-shaped syntax inspection may retain the user's grouping or
+`shared?` shorthand for diagnostics. Alias spelling never creates a distinct
+type identity or conversion.
+
+### Recursive states and explicit presence
+
+Every optional layer independently has an absent state and a present state
+containing one complete live value of its immediate payload type. Nested
+optionals are never flattened. `T??`, for example, has these three shapes:
+
+```text
+none                 outer absent
+some(none)           outer present, inner absent
+some(value)          outer present, inner present with T
+```
+
+The final example uses the ordinary one-layer injection from `T` to the inner
+expected `T?`. More generally, `N` optional layers around `T` have `N + 1`
+observable presence shapes: absence at any one of the nested layers, or every
+layer present with a `T` payload.
+
+`some(expression)` is an expected-type-directed primary expression. It is
+valid only where one unambiguous expected `Optional<P>` type exists. It creates
+the outer optional as present and checks `expression` against expected payload
+type `P`. Like `none`, it has no universal standalone type. This makes inner
+absence explicit without adding recursive implicit conversion:
+
+```ska
+var outer_absent: Item?? = none;
+var inner_absent: Item?? = some(none);
+var fully_present: Item?? = some(Item());
+```
+
+Implicit injection always adds exactly one layer. A source of exact type `P`
+may satisfy expected `P?`; a source of `T` does not directly satisfy `T??`.
+An existing `T?` may satisfy `T??` by one injection, and
+`some(value_of_type_T)` may construct a fully present `T??` because its
+argument is checked against the immediate payload `T?` and uses one injection
+there. The compiler never searches an arbitrary chain of optional liftings.
+
+Exact type matches outrank one-layer injection. `none` and `some(...)` use each
+candidate's expected optional type during overload selection, but neither
+contributes an invented payload type or breaks a remaining ambiguity. Optional
+types remain exact components of virtual overrides and interface signatures.
+
+### Recursive lifecycle and checked access
+
+Initialization, copying, assignment, and destruction first inspect the outer
+layer, then perform the already-selected operation for its immediate payload
+only when that layer is present. The existing transition matrix therefore
+applies recursively. Publication of a present outer layer occurs only after
+its complete immediate payload, including every inner wrapper, is initialized.
+
+Each postfix `!` evaluates its source once, checks one outer layer, and removes
+only that layer. Chained `!` operations perform their checks from outermost to
+innermost in source order. A failure terminates before any later check or
+consumer runs.
+
+When the immediate payload is another optional or an inline array, an owning
+consumer receives the ordinary copy or transfer selected for that complete
+payload. A non-owning consumer uses the same bounded checked-place discipline
+as existing class payloads where a place is required. Every checked view pins
+the particular optional layer whose payload it exposes. Nested views may
+therefore hold nested guards; clearing, replacing, or destroying any guarded
+container terminates before changing that layer. A shared-root anchor keeps
+the containing allocation alive independently of every optional guard.
+
+The completed extension permits supported optionals in internal locals,
+fields, class-owned statics, value parameters/results, methods, interfaces,
+overrides, initializer overloads, temporaries, array elements, and explicit
+element-list destinations. `ref` and `mut ref` parameters may designate any
+supported optional container, including nested optionals, optional arrays, and
+optional shared owners. Such an alias borrows the always-present wrapper; it
+does not create an optional reference. External optional signatures remain
+unsupported.
+
+Static optionals begin absent when the underlying static-field contract permits
+zero-default initialization. On normal program return, a present payload uses
+the ordinary recursive cleanup selected for its immediate type during exact
+reverse static shutdown. Abrupt termination remains non-unwinding.
+
+### Optional arrays and containment
+
+`T[]?` contains either no array value or one complete live inline `T[]`
+descriptor. A present empty array and an absent optional array are distinct.
+The wrapper therefore uses the ordinary explicit optional state rather than
+reusing the valid empty descriptor representation.
+
+Present optional arrays retain ordinary array invariance, backing ownership,
+copy construction, produced-backing transfer, assignment, alias anchors,
+element lifecycle, and reverse cleanup. Optional arrays may themselves be
+array elements and optional payloads recursively. `shared? T[]`, normalized as
+`(shared T[])?`, remains an optional owner of a shared array allocation and is
+not an inline optional array.
+
+Optional containment follows the complete immediate payload. Wrapping an
+inline class in any number of optional layers does not break an inline
+containment cycle. An array descriptor remains an indirection boundary, and a
+shared owner remains a shared edge, even when either is wrapped in optionals.
+
+### Shared-box boundary
+
+This extension deliberately does not define `Shared<Optional<P>>`. It adds no
+shared-box target identity, construction syntax, allocation provenance,
+metadata, finalizer, dereference, mutation, cast, or backend operation.
+Consequently `shared T?` and `shared? T?` remain focused semantic errors after
+the compositional parser preserves their source shape. A later shared-box
+design may reuse the completed optional payload lifecycle without changing the
+meaning frozen here.
 
 ## Empty and present values
 
@@ -448,10 +625,10 @@ primitive and exact-class `T?` and every currently supported `shared? T`
 target as class-owned static storage. An initializer-free container begins as
 `none`; an explicit initializer uses the ordinary absent/present construction,
 copy, adoption, publication, and cleanup rules before entry. Static optionals
-perform ordinary conditional replacement while the program runs and currently
-do not clean a final present payload or owner at process exit. That staged
-lifetime rule does not change the local, instance-field, or callable-boundary
-optional contract.
+perform ordinary conditional replacement while the program runs. On normal
+entry return, exact-reverse static shutdown conditionally destroys a present
+inline payload or releases a present owner. Abrupt termination remains
+non-unwinding and does not guarantee static cleanup.
 
 External declarations continue to reject every optional parameter and result.
 No C representation, calling convention, ownership transfer, or foreign
@@ -459,11 +636,11 @@ lifetime contract is frozen.
 
 ## Explicit exclusions
 
-The frozen profile does not include:
+The implemented profile continues to reject the frozen compositional forms
+until their roadmap tasks land. The frozen compositional extension itself does
+not include:
 
 - generalized `shared T?` boxes or `shared? T?`;
-- inline optional array payloads;
-- nested optionals;
 - optional function values;
 - first-class or optional references;
 - optional equality or lifted arithmetic;
@@ -475,13 +652,15 @@ The frozen profile does not include:
 - external optional ABI mappings.
 
 These exclusions are not implied language behavior. Each requires a separate
-focused design before implementation.
+focused design before implementation. Nested optionals and inline optional
+arrays are not on this exclusion list: their semantics are frozen above, but
+the current compiler still rejects them.
 
 The implemented [array design](ARRAYS.md) permits existing optional
 non-array element types to default to `none` inside arrays and extends
 `shared?` to exact shared array targets. It continues to exclude inline
-optional array payloads; `shared? T[]` is optional shared ownership, not an
-inline optional array.
+optional array payloads until the compositional roadmap is implemented;
+`shared? T[]` is optional shared ownership, not an inline optional array.
 
 Its implemented
 [explicit element-list form](ARRAYS.md#explicit-element-list-construction)
@@ -493,4 +672,5 @@ produced owners, and represent absence with the ordinary zero niche.
 An eligible ungrouped exact-class construction initializes a present payload
 directly; named and otherwise materialized sources retain their existing
 conditional copy behavior. The list adds no universal `none` type, implicit
-unwrap, nested optional, or inline optional-array payload.
+unwrap, nested optional, or inline optional-array payload to the current
+compiler.

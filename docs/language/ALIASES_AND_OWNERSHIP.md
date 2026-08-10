@@ -387,6 +387,15 @@ polymorphic alias conversions and checked casts are defined by
 [object casts](OBJECT_CASTS.md). Checked places exist only for one consuming
 full expression; they do not introduce local aliases.
 
+The frozen
+[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
+later admits aliases whose designated container is any supported optional,
+including an optional shared owner, nested optional, or optional array. That
+extension continues to treat the alias as a borrow of an always-present
+wrapper and does not add `ref?`, stored references, or escaping payload views.
+The current compiler boundary above remains unchanged until that roadmap task
+lands.
+
 ## Implementation boundary
 
 The language requires an alias call to preserve place identity, access,

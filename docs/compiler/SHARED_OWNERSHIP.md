@@ -446,6 +446,23 @@ The skipped alternative acquires and releases no owner. A selected checked
 view must still end before its matching owner or anchor is released, including
 when nested logical selections establish several owners before cleanup.
 
+## Compositional optional boundary
+
+The frozen
+[compositional optional compiler direction](OPTIONAL_VALUES.md#frozen-compositional-implementation-direction)
+normalizes `(shared T)?` and its `shared? T` shorthand as
+`Optional<Shared<T>>`. Target-independent optional operations conditionally
+invoke the ordinary copy, adopt, release, anchor, metadata, and finalization
+operations defined here. The x86-64 zero-handle niche remains an optional
+representation choice; zero never enters a plain-owner operation.
+
+This composition introduces no new shared allocation target or backend
+metadata. In particular, `shared T?` would require
+`Shared<Optional<T>>`: a box allocation with its own initialization,
+publication, metadata, finalizer, pointee projection, and mutation rules.
+`shared T?` and the derived `shared? T?` remain rejected, and no phase reserves
+provisional box IR or target hooks during the compositional optional roadmap.
+
 ## Minimal C runtime ABI
 
 Runtime ABI version 9 carries its version-specific marker, the common panic
@@ -526,7 +543,8 @@ native execution.
 Strong cycles intentionally remain allocated, so leak detection must
 distinguish that specified behavior from an owner lost by incorrect lowering.
 
-Future optional-owner lowering must prove that zero represents only absent
+Implemented optional-owner lowering proves that zero represents only absent
 `shared? T` storage and never reaches the non-null operations in this
 contract. Present optional owners reuse the same copy, adopt, release,
-metadata, finalization, and anchor rules.
+metadata, finalization, and anchor rules. The frozen canonical spelling
+`(shared T)?` preserves this exact obligation.
