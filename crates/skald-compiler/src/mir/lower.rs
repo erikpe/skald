@@ -18,6 +18,7 @@ mod expression;
 mod full_expression;
 mod integer_division;
 mod io;
+mod legacy_optional_adapter;
 mod logical;
 #[allow(dead_code)]
 mod loop_context;
@@ -90,6 +91,7 @@ struct BodyLoweringInput<'hir> {
     receiver_class: Option<ClassId>,
     string_language_item: Option<MirStringLanguageItem>,
     literal_data: &'hir crate::hir::HirLiteralDataTable,
+    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'hir>,
 }
 
 struct LoweredBody {
@@ -138,6 +140,10 @@ struct ActiveOptionalGuard {
 }
 
 impl<'hir> BodyLowerer<'hir> {
+    fn lower_type(&self, ty: Type) -> MirType {
+        self.input.optional_adapter.lower_type(ty)
+    }
+
     fn lower(input: BodyLoweringInput<'hir>) -> LoweredBody {
         let mut lowerer = Self::new(input);
         lowerer.allocate_storage();
@@ -152,12 +158,16 @@ impl<'hir> BodyLowerer<'hir> {
                 match parameter.ty {
                     Type::Class(class) => lowerer.cleanup.register_owned(*storage, class),
                     Type::Shared(_) => lowerer.cleanup.register_shared(*storage),
-                    Type::OptionalClass(class) => {
-                        lowerer.cleanup.register_class_optional(*storage, class)
-                    }
-                    Type::OptionalShared(target) => lowerer
-                        .cleanup
-                        .register_optional_shared(*storage, lower_shared_target(target)),
+                    Type::Optional(optional) => match lowerer.input.optional_adapter.kind(optional)
+                    {
+                        legacy_optional_adapter::LegacyOptionalKind::Class(class) => {
+                            lowerer.cleanup.register_class_optional(*storage, class)
+                        }
+                        legacy_optional_adapter::LegacyOptionalKind::Shared(target) => lowerer
+                            .cleanup
+                            .register_optional_shared(*storage, lower_shared_target(target)),
+                        legacy_optional_adapter::LegacyOptionalKind::Primitive(_) => {}
+                    },
                     Type::Array(array) => lowerer.cleanup.register_array(*storage, array),
                     _ => {}
                 }
@@ -243,10 +253,10 @@ impl<'hir> BodyLowerer<'hir> {
                 source: None,
                 name: "shared-return".to_owned(),
                 kind: MirStorageKind::Return,
-                ty: lower_type(Type::Shared(target)),
+                ty: self.lower_type(Type::Shared(target)),
                 span: self.input.source_body.span,
             });
-        } else if let Type::OptionalPrimitive(payload) = self.input.return_type {
+        } else if matches!(self.input.return_type, Type::Optional(_)) {
             let id = StorageId::new(self.input.callable, self.storage.len());
             self.return_storage = Some(id);
             self.storage.push(MirStorage {
@@ -254,29 +264,7 @@ impl<'hir> BodyLowerer<'hir> {
                 source: None,
                 name: "optional-return".to_owned(),
                 kind: MirStorageKind::Return,
-                ty: MirType::OptionalPrimitive(primitive::lower_primitive_type(payload)),
-                span: self.input.source_body.span,
-            });
-        } else if let Type::OptionalClass(class) = self.input.return_type {
-            let id = StorageId::new(self.input.callable, self.storage.len());
-            self.return_storage = Some(id);
-            self.storage.push(MirStorage {
-                id,
-                source: None,
-                name: "class-optional-return".to_owned(),
-                kind: MirStorageKind::Return,
-                ty: MirType::OptionalClass(class),
-                span: self.input.source_body.span,
-            });
-        } else if let Type::OptionalShared(target) = self.input.return_type {
-            let id = StorageId::new(self.input.callable, self.storage.len());
-            self.return_storage = Some(id);
-            self.storage.push(MirStorage {
-                id,
-                source: None,
-                name: "optional-shared-return".to_owned(),
-                kind: MirStorageKind::Return,
-                ty: lower_type(Type::OptionalShared(target)),
+                ty: self.lower_type(self.input.return_type),
                 span: self.input.source_body.span,
             });
         }
@@ -308,7 +296,7 @@ impl<'hir> BodyLowerer<'hir> {
                         MirStorageKind::AliasParameter(MirAliasAccess::Mutable)
                     }
                 },
-                ty: lower_type(parameter.ty),
+                ty: self.lower_type(parameter.ty),
                 span: parameter.span,
             });
         }
@@ -320,7 +308,7 @@ impl<'hir> BodyLowerer<'hir> {
                 source: Some(BindingId::Local(local.id)),
                 name: local.name.clone(),
                 kind: MirStorageKind::Local,
-                ty: lower_type(local.ty),
+                ty: self.lower_type(local.ty),
                 span: local.span,
             });
         }
@@ -426,7 +414,7 @@ impl<'hir> BodyLowerer<'hir> {
     }
 }
 
-fn lower_type(ty: Type) -> MirType {
+fn lower_non_optional_type(ty: Type) -> MirType {
     match ty {
         Type::I64 => MirType::I64,
         Type::U64 => MirType::U64,
@@ -445,18 +433,9 @@ fn lower_type(ty: Type) -> MirType {
             }
             crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
         }),
-        Type::OptionalShared(target) => MirType::OptionalShared(match target {
-            crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
-            crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
-            crate::hir::HirSharedTarget::Interface(interface) => {
-                MirSharedTarget::Interface(interface)
-            }
-            crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
-        }),
-        Type::OptionalPrimitive(payload) => {
-            MirType::OptionalPrimitive(primitive::lower_primitive_type(payload))
+        Type::Optional(_) => {
+            unreachable!("optional types require the legacy compatibility adapter")
         }
-        Type::OptionalClass(class) => MirType::OptionalClass(class),
         Type::Array(array) => MirType::Array(array),
     }
 }

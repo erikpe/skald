@@ -12,32 +12,32 @@ impl BodyLowerer<'_> {
         match &expression.kind {
             HirExpressionKind::Binding(binding) => Some(self.assign(
                 MirRvalueKind::Load(self.lower_binding_place(*binding)),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::I64(value) => Some(self.assign(
                 MirRvalueKind::ConstantI64(*value),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::U64(value) => Some(self.assign(
                 MirRvalueKind::ConstantU64(*value),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::U8(value) => Some(self.assign(
                 MirRvalueKind::ConstantU8(*value),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::F64Bits(bits) => Some(self.assign(
                 MirRvalueKind::ConstantF64Bits(*bits),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::Boolean(value) => Some(self.assign(
                 MirRvalueKind::ConstantBool(*value),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::Unary { operation, operand } => {
@@ -77,7 +77,7 @@ impl BodyLowerer<'_> {
                 let place = self.lower_field_place(place);
                 let result = self.assign(
                     MirRvalueKind::Load(place),
-                    lower_type(expression.ty),
+                    self.lower_type(expression.ty),
                     expression.span,
                 );
                 self.end_optional_views_from(optional_mark, expression.span);
@@ -85,7 +85,7 @@ impl BodyLowerer<'_> {
             }
             HirExpressionKind::StaticRead(place) => Some(self.assign(
                 MirRvalueKind::Load(MirPlace::static_field(place.field)),
-                lower_type(expression.ty),
+                self.lower_type(expression.ty),
                 expression.span,
             )),
             HirExpressionKind::MethodCall {
@@ -119,7 +119,7 @@ impl BodyLowerer<'_> {
                 let place = self.lower_array_element_place(element);
                 Some(self.assign(
                     MirRvalueKind::Load(place),
-                    lower_type(expression.ty),
+                    self.lower_type(expression.ty),
                     expression.span,
                 ))
             }
@@ -150,7 +150,7 @@ impl BodyLowerer<'_> {
                 },
                 operand,
             },
-            lower_type(expression.ty),
+            self.lower_type(expression.ty),
             expression.span,
         ))
     }
@@ -165,7 +165,7 @@ impl BodyLowerer<'_> {
         let (left, right) = self.lower_binary_operands(
             left,
             right,
-            lower_type(operation.operand_type()),
+            self.lower_type(operation.operand_type()),
             expression,
         );
         Some(self.assign(
@@ -198,7 +198,7 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             },
-            lower_type(expression.ty),
+            self.lower_type(expression.ty),
             expression.span,
         ))
     }

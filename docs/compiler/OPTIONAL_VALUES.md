@@ -161,9 +161,12 @@ views, aliases, arguments/results, statics, and array elements. HIR selects
 the immediate payload operation; MIR and the backend never rediscover it from
 the source type.
 
-The migration first introduces generalized HIR with an exhaustive adapter to
-the current primitive, class, and optional-shared MIR operations. No new
-source form reaches MIR through that adapter. MIR is then generalized around
+Typed HIR now uses one `OptionalTypeId` vocabulary and an ID-indexed semantic
+description with payload, storage, representation, lifecycle, checked-access,
+and boundary plans. The executable boundary uses an exhaustive adapter to the
+current primitive, class, and optional-shared MIR operations; nested and
+optional-array cases are deliberately rejected by that adapter and remain
+behind the source eligibility gate. MIR is next generalized around
 the canonical optional identity and explicit payload lifecycle before nested
 optionals or optional arrays are enabled.
 

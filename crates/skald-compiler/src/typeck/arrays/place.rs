@@ -181,11 +181,14 @@ impl CallableChecker<'_, '_> {
                 }
                 let checked = self.check_expression(expression)?;
                 let Type::Array(array) = checked.ty else {
-                    if matches!(
-                        checked.ty,
-                        Type::Shared(HirSharedTarget::Array(_))
-                            | Type::OptionalShared(HirSharedTarget::Array(_))
-                    ) {
+                    if matches!(checked.ty, Type::Shared(HirSharedTarget::Array(_)))
+                        || matches!(
+                            self.optional_kind(checked.ty),
+                            Some(super::super::optional_types::LegacyOptionalKind::Shared(
+                                HirSharedTarget::Array(_)
+                            ))
+                        )
+                    {
                         self.diagnostics.push(
                             Diagnostic::error(
                                 IMPLICIT_SHARED_DEREFERENCE,
@@ -258,7 +261,7 @@ impl CallableChecker<'_, '_> {
             HirSharedSource::Place(HirSharedPlace::Static { .. }) => {
                 HirArrayAnchor::CopiedSharedOwner
             }
-            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => {
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap { .. }) => {
                 HirArrayAnchor::SecuredOptionalSharedOwner
             }
             HirSharedSource::Produced(_) => HirArrayAnchor::AdoptedSharedOwner,

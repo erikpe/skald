@@ -98,7 +98,7 @@ impl BodyLowerer<'_> {
         expression: &HirExpression,
     ) -> Option<ValueId> {
         let result = (expression.ty != Type::Unit)
-            .then(|| self.new_value(lower_type(expression.ty), expression.span));
+            .then(|| self.new_value(self.lower_type(expression.ty), expression.span));
         self.emit(MirInstruction::Call(MirCall {
             target,
             receiver,
@@ -384,8 +384,11 @@ impl BodyLowerer<'_> {
                         .lower_expression(expression)
                         .expect("typed value argument must produce a scalar value");
                     if later_branch {
-                        let (storage, ty) =
-                            self.spill_scalar(value, lower_type(expression.ty), expression.span);
+                        let (storage, ty) = self.spill_scalar(
+                            value,
+                            self.lower_type(expression.ty),
+                            expression.span,
+                        );
                         LoweredArgument::Spilled {
                             storage,
                             ty,
@@ -396,7 +399,9 @@ impl BodyLowerer<'_> {
                     }
                 }
                 HirCallArgument::Optional { source, payload } => {
-                    let ty = Type::OptionalPrimitive(*payload);
+                    let ty = MirType::OptionalPrimitive(super::primitive::lower_primitive_type(
+                        *payload,
+                    ));
                     let storage = self.new_optional_storage(
                         MirStorageKind::Argument,
                         "optional-argument",
@@ -415,7 +420,7 @@ impl BodyLowerer<'_> {
                     let storage = self.new_optional_storage(
                         MirStorageKind::Argument,
                         "class-optional-argument",
-                        Type::OptionalClass(value.class),
+                        MirType::OptionalClass(value.class),
                         value.span,
                     );
                     self.lower_class_optional_initialize(storage, value);
@@ -425,7 +430,7 @@ impl BodyLowerer<'_> {
                     let storage = self.new_optional_storage(
                         MirStorageKind::Argument,
                         "optional-shared-argument",
-                        Type::OptionalShared(value.target),
+                        MirType::OptionalShared(super::lower_shared_target(value.target)),
                         value.span,
                     );
                     self.lower_optional_shared_initialize(storage, value);
@@ -488,7 +493,7 @@ impl BodyLowerer<'_> {
                         source: None,
                         name: format!("shared-argument-{}", storage.index()),
                         kind: MirStorageKind::Argument,
-                        ty: lower_type(Type::Shared(transfer.target)),
+                        ty: self.lower_type(Type::Shared(transfer.target)),
                         span: transfer.span,
                     });
                     self.track_full_expression_storage(storage, transfer.span);
@@ -533,7 +538,9 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
         let produced_class = match &view.source {
             HirViewSource::Produced { producer, .. } => Some(producer.class()),
-            HirViewSource::OptionalPayload { view, .. } => Some(view.source.class()),
+            HirViewSource::OptionalPayload { view, .. } => {
+                Some(self.input.optional_adapter.operand_class(&view.source))
+            }
             _ => None,
         };
         let source = match &view.source {

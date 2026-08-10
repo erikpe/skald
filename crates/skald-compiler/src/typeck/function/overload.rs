@@ -208,12 +208,9 @@ impl CallableChecker<'_, '_> {
             ty,
             absent: false,
             object,
-            optional_place_access: matches!(
-                ty,
-                Type::OptionalPrimitive(_) | Type::OptionalClass(_)
-            )
-            .then(|| self.static_place_access(expression))
-            .flatten(),
+            optional_place_access: matches!(ty, Type::Optional(_))
+                .then(|| self.static_place_access(expression))
+                .flatten(),
         }
     }
 
@@ -245,11 +242,12 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Absent(_) => Type::Unit,
             ResolvedExpression::PresenceTest(_) => Type::Bool,
             ResolvedExpression::Unwrap(unwrap) => {
-                match self.static_expression_type(&unwrap.source) {
-                    Type::OptionalPrimitive(payload) => payload.value_type(),
-                    Type::OptionalClass(class) => Type::Class(class),
-                    _ => Type::Unit,
-                }
+                let source = self.static_expression_type(&unwrap.source);
+                super::super::optional_types::optional_id(source)
+                    .map(|optional| {
+                        super::super::optional_types::payload_type(self.program, optional)
+                    })
+                    .unwrap_or(Type::Unit)
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
@@ -493,28 +491,8 @@ impl CallableChecker<'_, '_> {
         let expected = lower_type(self.program, &parameter.type_syntax);
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value => match expected {
-                Type::OptionalPrimitive(payload) => {
-                    argument.absent
-                        || argument.ty == Type::OptionalPrimitive(payload)
-                        || argument.ty == payload.value_type()
-                }
-                Type::OptionalClass(class) => {
-                    argument.absent
-                        || argument.ty == Type::OptionalClass(class)
-                        || argument.ty == Type::Class(class)
-                }
-                Type::OptionalShared(expected) => {
-                    argument.absent
-                        || match argument.ty {
-                            Type::OptionalShared(actual) | Type::Shared(actual) => {
-                                crate::typeck::shared::target_accepts(
-                                    self.program,
-                                    expected,
-                                    actual,
-                                )
-                            }
-                            _ => false,
-                        }
+                Type::Optional(optional) => {
+                    argument.absent || self.optional_parameter_accepts(optional, argument.ty)
                 }
                 Type::Class(target) => {
                     let Type::Class(actual) = argument.ty else {
@@ -546,10 +524,7 @@ impl CallableChecker<'_, '_> {
                     ResolvedParameterBindingMode::MutableAlias { .. } => HirAccess::Mutable,
                     ResolvedParameterBindingMode::Value => unreachable!(),
                 };
-                if matches!(
-                    expected,
-                    Type::OptionalPrimitive(_) | Type::OptionalClass(_)
-                ) {
+                if matches!(expected, Type::Optional(_)) {
                     return argument.ty == expected
                         && argument
                             .optional_place_access
@@ -584,10 +559,7 @@ impl CallableChecker<'_, '_> {
             (Type::Shared(actual), Type::Shared(expected)) => {
                 crate::typeck::shared::target_accepts(self.program, expected, actual)
             }
-            (Type::OptionalShared(actual), Type::OptionalShared(expected))
-            | (Type::Shared(actual), Type::OptionalShared(expected)) => {
-                crate::typeck::shared::target_accepts(self.program, expected, actual)
-            }
+            (actual, Type::Optional(optional)) => self.optional_parameter_accepts(optional, actual),
             _ => false,
         }
     }
@@ -605,32 +577,43 @@ impl CallableChecker<'_, '_> {
             .all(|(candidate, other)| {
                 let candidate = lower_type(self.program, &candidate.type_syntax);
                 let other = lower_type(self.program, &other.type_syntax);
-                let compatible = self.parameter_type_accepts(candidate, other)
-                    || matches!(
-                        (candidate, other),
-                        (candidate, Type::OptionalPrimitive(payload))
-                            if candidate == payload.value_type()
-                    )
-                    || matches!(
-                        (candidate, other),
-                        (Type::Class(candidate), Type::OptionalClass(payload))
-                            if candidate == payload
-                    )
-                    || matches!(
-                        (candidate, other),
-                        (
-                            Type::Shared(candidate) | Type::OptionalShared(candidate),
-                            Type::OptionalShared(expected)
-                        ) if crate::typeck::shared::target_accepts(
-                            self.program,
-                            expected,
-                            candidate
-                        )
-                    );
+                let compatible = self.parameter_type_accepts(candidate, other);
                 strict |= compatible && candidate != other;
                 compatible
             })
             && strict
+    }
+
+    fn optional_parameter_accepts(
+        &self,
+        expected: crate::identity::OptionalTypeId,
+        actual: Type,
+    ) -> bool {
+        if actual == Type::Optional(expected)
+            || actual == super::super::optional_types::payload_type(self.program, expected)
+        {
+            return true;
+        }
+        let Some(super::super::optional_types::LegacyOptionalKind::Shared(expected_target)) =
+            super::super::optional_types::legacy_kind(self.program, expected)
+        else {
+            return false;
+        };
+        let actual_target = match actual {
+            Type::Shared(target) => Some(target),
+            Type::Optional(actual) => {
+                match super::super::optional_types::legacy_kind(self.program, actual) {
+                    Some(super::super::optional_types::LegacyOptionalKind::Shared(target)) => {
+                        Some(target)
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+        actual_target.is_some_and(|actual_target| {
+            crate::typeck::shared::target_accepts(self.program, expected_target, actual_target)
+        })
     }
 
     fn report_no_matching_initializer(
@@ -741,8 +724,15 @@ impl CallableChecker<'_, '_> {
         format!("init({parameters})")
     }
 
-    fn type_name(&self, ty: Type) -> String {
+    pub(in crate::typeck) fn type_name(&self, ty: Type) -> String {
         match ty {
+            Type::Optional(optional) => format!(
+                "{}?",
+                self.type_name(super::super::optional_types::payload_type(
+                    self.program,
+                    optional
+                ))
+            ),
             Type::Class(class) => self
                 .program
                 .class(class)

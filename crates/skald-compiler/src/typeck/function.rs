@@ -86,6 +86,69 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
 }
 
 impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
+    pub(super) fn optional_kind(
+        &self,
+        ty: Type,
+    ) -> Option<super::optional_types::LegacyOptionalKind> {
+        super::optional_types::optional_id(ty)
+            .and_then(|optional| super::optional_types::legacy_kind(self.program, optional))
+    }
+
+    pub(super) fn optional_operand_class(
+        &self,
+        operand: &crate::hir::HirOptionalOperand,
+    ) -> ClassId {
+        match operand {
+            crate::hir::HirOptionalOperand::ClassPlace(place) => place.class,
+            crate::hir::HirOptionalOperand::ClassProduced(expression) => {
+                let Some(super::optional_types::LegacyOptionalKind::Class(class)) =
+                    self.optional_kind(expression.ty)
+                else {
+                    unreachable!("class optional operand must retain class metadata")
+                };
+                class
+            }
+            _ => unreachable!("expected a class optional operand"),
+        }
+    }
+
+    pub(super) fn diagnostic_type_name(&self, ty: Type) -> String {
+        match ty {
+            Type::Optional(optional) => format!(
+                "{}?",
+                self.diagnostic_type_name(super::optional_types::payload_type(
+                    self.program,
+                    optional
+                ))
+            ),
+            _ => ty.name().into_owned(),
+        }
+    }
+
+    pub(super) fn require_exact_type(
+        &mut self,
+        actual: Type,
+        expected: Type,
+        span: crate::source::Span,
+        context: &'static str,
+    ) -> bool {
+        if actual == expected {
+            return true;
+        }
+        self.diagnostics.push(
+            Diagnostic::error(
+                super::program::TYPE_MISMATCH,
+                format!(
+                    "{context} has type `{}` but `{}` is required",
+                    self.diagnostic_type_name(actual),
+                    self.diagnostic_type_name(expected),
+                ),
+            )
+            .with_primary_label(span, "type mismatch"),
+        );
+        false
+    }
+
     pub(super) fn new(
         program: &'program ResolvedProgram,
         copy_capabilities: &'program CopyCapabilities,

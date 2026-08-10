@@ -123,8 +123,6 @@ pub(super) const fn has_zero_default(ty: Type) -> bool {
             | Type::F64
             | Type::Bool
             | Type::Array(_)
-            | Type::OptionalPrimitive(_)
-            | Type::OptionalClass(_)
-            | Type::OptionalShared(_)
+            | Type::Optional(_)
     )
 }

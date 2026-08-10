@@ -230,8 +230,20 @@ impl CallableChecker<'_, '_> {
                     self.report_non_shared_source(expression, cast_source);
                     return None;
                 }
+                let target = match &operand {
+                    crate::hir::HirOptionalOperand::SharedPlace(place) => place.target,
+                    crate::hir::HirOptionalOperand::SharedProduced(expression) => {
+                        let Some(super::optional_types::LegacyOptionalKind::Shared(target)) =
+                            self.optional_kind(expression.ty)
+                        else {
+                            unreachable!("shared optional operand must retain shared metadata")
+                        };
+                        target
+                    }
+                    _ => unreachable!("non-shared optional operands were rejected above"),
+                };
                 Some(HirSharedSource::Produced(
-                    HirSharedProducer::OptionalUnwrap(operand),
+                    HirSharedProducer::OptionalUnwrap { operand, target },
                 ))
             }
             ResolvedExpression::Dereference(dereference) => {
@@ -526,10 +538,10 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirSharedTarget> {
         let resolved = match expression {
             ResolvedExpression::Binding(binding) => {
-                return match self.binding_type(binding.binding) {
-                    Type::OptionalShared(target) => Some(target),
+                return match self.optional_kind(self.binding_type(binding.binding)) {
+                    Some(super::optional_types::LegacyOptionalKind::Shared(target)) => Some(target),
                     _ => None,
-                }
+                };
             }
             ResolvedExpression::FieldAccess(access) => {
                 self.program.field(access.field)?.type_syntax.kind

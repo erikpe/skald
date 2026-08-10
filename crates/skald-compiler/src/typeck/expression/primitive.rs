@@ -141,7 +141,7 @@ impl CallableChecker<'_, '_> {
                         )
                         .with_secondary_label(
                             unary.operand.span(),
-                            format!("operand has type `{}`", actual.name()),
+                            format!("operand has type `{}`", self.diagnostic_type_name(actual)),
                         ),
                     );
                     return None;
@@ -239,11 +239,17 @@ impl CallableChecker<'_, '_> {
                 )
                 .with_secondary_label(
                     left.span,
-                    format!("left operand has type `{}`", left.ty.name()),
+                    format!(
+                        "left operand has type `{}`",
+                        self.diagnostic_type_name(left.ty)
+                    ),
                 )
                 .with_secondary_label(
                     right.span,
-                    format!("right operand has type `{}`", right.ty.name()),
+                    format!(
+                        "right operand has type `{}`",
+                        self.diagnostic_type_name(right.ty)
+                    ),
                 )
                 .with_note(format!(
                     "numeric operand types are {}",
@@ -349,9 +355,7 @@ fn select_arithmetic_operation(
             | Type::Class(_)
             | Type::Interface(_)
             | Type::Shared(_)
-            | Type::OptionalShared(_)
-            | Type::OptionalPrimitive(_)
-            | Type::OptionalClass(_)
+            | Type::Optional(_)
             | Type::Array(_),
         ) => None,
     }

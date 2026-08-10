@@ -252,11 +252,14 @@ contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns recursive, bottom-up
 interned optional identities whose payloads may name earlier optional or array
-identities. Type checking rejects deferred payload categories before adapting
-the already executable identities to the current HIR. For optional owning values, type checking selects explicit
+identities. Type checking owns a canonical ID-indexed HIR description of every
+optional payload's storage, representation, lifecycle, checked access, and
+argument/result/static/array-element plans. For optional owning values, it selects explicit
 absent or present initialization, copy, assignment, overload injection,
 field/call boundaries, presence, primitive extraction, checked class payload
-views, and optional shared copy/adopt/move/release and secured unwrap. MIR owns
+views, and optional shared copy/adopt/move/release and secured unwrap. An
+exhaustive compatibility adapter lowers only the already executable primitive,
+class, and shared-owner plans to the current MIR. MIR owns
 initialized places, caller-owned argument/result
 aggregates, explicit unwrap success/failure control flow, begin/end guard
 operations, and guarded-mutation checks. Verification proves compatible
@@ -265,8 +268,8 @@ anchor ordering, isolation of the zero niche from ordinary owners, and
 identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types;
 reserved boxes remain resolution exclusions; nested and optional-array
-identities stop at the type-checking eligibility gate; optional-reference
-shapes remain syntax diagnostics. None enter HIR.
+identities stop at the type-checking eligibility gate and cannot reach the MIR
+adapter; optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes

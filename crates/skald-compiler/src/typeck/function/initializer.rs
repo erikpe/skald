@@ -87,37 +87,104 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
-            (Type::OptionalShared(shared_target), body_kind) => {
-                let destination = crate::hir::HirOptionalSharedPlace {
-                    storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
-                    target: shared_target,
-                    span: assignment.span,
-                };
-                if body_kind.initializes_receiver() {
-                    self.check_optional_shared_initialize(
-                        shared_target,
+            (ty @ Type::Optional(_), body_kind) => match self
+                .optional_kind(ty)
+                .expect("enabled optional field must have legacy metadata")
+            {
+                super::super::optional_types::LegacyOptionalKind::Shared(shared_target) => {
+                    let destination = crate::hir::HirOptionalSharedPlace {
+                        storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
+                        target: shared_target,
+                        span: assignment.span,
+                    };
+                    if body_kind.initializes_receiver() {
+                        self.check_optional_shared_initialize(
+                            shared_target,
+                            &assignment.value,
+                            "optional shared field initializer",
+                        )
+                        .map(|value| {
+                            HirStatement::OptionalSharedAssignment(
+                                crate::hir::HirOptionalSharedAssignment {
+                                    destination,
+                                    source: value.source,
+                                    kind: crate::hir::HirOptionalWriteKind::Initialize,
+                                    span: assignment.span,
+                                },
+                            )
+                        })
+                    } else {
+                        self.check_optional_shared_assignment(
+                            destination,
+                            &assignment.value,
+                            "optional shared field assignment",
+                        )
+                        .map(HirStatement::OptionalSharedAssignment)
+                    }
+                }
+                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                    .check_optional_source(
                         &assignment.value,
-                        "optional shared field initializer",
+                        payload,
+                        if body_kind.initializes_receiver() {
+                            "primitive optional field initializer"
+                        } else {
+                            "primitive optional field assignment"
+                        },
                     )
-                    .map(|value| {
-                        HirStatement::OptionalSharedAssignment(
-                            crate::hir::HirOptionalSharedAssignment {
-                                destination,
-                                source: value.source,
-                                kind: crate::hir::HirOptionalWriteKind::Initialize,
+                    .map(|source| {
+                        HirStatement::OptionalAssignment(crate::hir::HirOptionalAssignment {
+                            destination: crate::hir::HirOptionalPlace {
+                                storage: crate::hir::HirOptionalStorage::Field(
+                                    target.place.clone(),
+                                ),
+                                payload,
                                 span: assignment.span,
                             },
+                            payload,
+                            source,
+                            kind: if body_kind.initializes_receiver() {
+                                crate::hir::HirOptionalWriteKind::Initialize
+                            } else {
+                                crate::hir::HirOptionalWriteKind::Assign
+                            },
+                            span: assignment.span,
+                        })
+                    }),
+                super::super::optional_types::LegacyOptionalKind::Class(class) => {
+                    let destination = crate::hir::HirClassOptionalPlace {
+                        storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
+                        class,
+                        span: assignment.span,
+                    };
+                    if body_kind.initializes_receiver() {
+                        self.check_class_optional_initialize(
+                            class,
+                            &assignment.value,
+                            "class optional field initializer",
                         )
-                    })
-                } else {
-                    self.check_optional_shared_assignment(
-                        destination,
-                        &assignment.value,
-                        "optional shared field assignment",
-                    )
-                    .map(HirStatement::OptionalSharedAssignment)
+                        .map(|value| {
+                            HirStatement::ClassOptionalAssignment(
+                                crate::hir::HirClassOptionalAssignment {
+                                    destination,
+                                    source: value.source,
+                                    copy_constructor: value.copy_constructor,
+                                    copy_assignment: None,
+                                    kind: crate::hir::HirOptionalWriteKind::Initialize,
+                                    span: assignment.span,
+                                },
+                            )
+                        })
+                    } else {
+                        self.check_class_optional_assignment(
+                            destination,
+                            &assignment.value,
+                            "class optional field assignment",
+                        )
+                        .map(HirStatement::ClassOptionalAssignment)
+                    }
                 }
-            }
+            },
             (
                 Type::Bool
                 | Type::I64
@@ -136,66 +203,6 @@ impl CallableChecker<'_, '_> {
             ),
             (Type::Class(_), MemberBodyKind::MethodOrDestructor) => {
                 unreachable!("method field copy assignment is handled before initializer policy")
-            }
-            (Type::OptionalPrimitive(payload), body_kind) => self
-                .check_optional_source(
-                    &assignment.value,
-                    payload,
-                    if body_kind.initializes_receiver() {
-                        "primitive optional field initializer"
-                    } else {
-                        "primitive optional field assignment"
-                    },
-                )
-                .map(|source| {
-                    HirStatement::OptionalAssignment(crate::hir::HirOptionalAssignment {
-                        destination: crate::hir::HirOptionalPlace {
-                            storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
-                            payload,
-                            span: assignment.span,
-                        },
-                        payload,
-                        source,
-                        kind: if body_kind.initializes_receiver() {
-                            crate::hir::HirOptionalWriteKind::Initialize
-                        } else {
-                            crate::hir::HirOptionalWriteKind::Assign
-                        },
-                        span: assignment.span,
-                    })
-                }),
-            (Type::OptionalClass(class), body_kind) => {
-                let destination = crate::hir::HirClassOptionalPlace {
-                    storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
-                    class,
-                    span: assignment.span,
-                };
-                if body_kind.initializes_receiver() {
-                    self.check_class_optional_initialize(
-                        class,
-                        &assignment.value,
-                        "class optional field initializer",
-                    )
-                    .map(|value| {
-                        HirStatement::ClassOptionalAssignment(
-                            crate::hir::HirClassOptionalAssignment {
-                                destination,
-                                source: value.source,
-                                copy_constructor: value.copy_constructor,
-                                copy_assignment: None,
-                                kind: crate::hir::HirOptionalWriteKind::Initialize,
-                                span: assignment.span,
-                            },
-                        )
-                    })
-                } else {
-                    self.check_class_optional_assignment(
-                        destination,
-                        &assignment.value,
-                        "class optional field assignment",
-                    )
-                    .map(HirStatement::ClassOptionalAssignment)
-                }
             }
         };
         self.finish_field_assignment(target, body_kind, hir)

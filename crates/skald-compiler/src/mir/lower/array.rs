@@ -216,7 +216,7 @@ impl BodyLowerer<'_> {
             source: None,
             name: format!("array-alias-{}", alias.index()),
             kind: MirStorageKind::ArrayAlias(type_operations::lower_access(access)),
-            ty: lower_type(element.element),
+            ty: self.lower_type(element.element),
             span: element.span,
         });
         self.track_full_expression_storage(alias, element.span);

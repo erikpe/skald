@@ -16,7 +16,8 @@ use crate::{
 };
 
 use super::{
-    expression::is_call_through_groups, function::CallableChecker, program::TYPE_MISMATCH,
+    expression::is_call_through_groups, function::CallableChecker,
+    optional_types::LegacyOptionalKind, program::TYPE_MISMATCH,
 };
 
 impl CallableChecker<'_, '_> {
@@ -95,7 +96,7 @@ impl CallableChecker<'_, '_> {
         }
         if is_call_through_groups(source) {
             let expression = self.check_expression(source)?;
-            if let Type::OptionalShared(actual) = expression.ty {
+            if let Some(LegacyOptionalKind::Shared(actual)) = self.optional_kind(expression.ty) {
                 if super::shared::target_accepts(self.program, target, actual) {
                     return Some(HirOptionalSharedSource::Produced(Box::new(expression)));
                 }
@@ -128,7 +129,9 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirOptionalSharedPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                let Type::OptionalShared(target) = self.binding_type(binding.binding) else {
+                let Some(LegacyOptionalKind::Shared(target)) =
+                    self.optional_kind(self.binding_type(binding.binding))
+                else {
                     return None;
                 };
                 Some(HirOptionalSharedPlace {
@@ -145,7 +148,7 @@ impl CallableChecker<'_, '_> {
                 }),
             ResolvedExpression::StaticFieldAccess(access) => {
                 let (place, ty) = self.check_static_place(access.field, access.span)?;
-                let Type::OptionalShared(target) = ty else {
+                let Some(LegacyOptionalKind::Shared(target)) = self.optional_kind(ty) else {
                     return None;
                 };
                 Some(HirOptionalSharedPlace {
@@ -156,7 +159,8 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
-                let Type::OptionalShared(target) = expression.ty else {
+                let Some(LegacyOptionalKind::Shared(target)) = self.optional_kind(expression.ty)
+                else {
                     return None;
                 };
                 let HirExpressionKind::FieldRead(place) = expression.kind else {
@@ -170,7 +174,8 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayProjection(_) => {
                 let expression = self.check_expression(expression)?;
-                let Type::OptionalShared(target) = expression.ty else {
+                let Some(LegacyOptionalKind::Shared(target)) = self.optional_kind(expression.ty)
+                else {
                     return None;
                 };
                 let HirExpressionKind::ArrayElement(place) = expression.kind else {
@@ -281,10 +286,10 @@ impl CallableChecker<'_, '_> {
         }
         if is_call_through_groups(source) {
             let expression = self.check_expression(source)?;
-            if expression.ty == Type::OptionalClass(class) {
-                return Some(HirClassOptionalSource::Produced(Box::new(expression)));
-            }
-            if let Type::OptionalClass(actual) = expression.ty {
+            if let Some(LegacyOptionalKind::Class(actual)) = self.optional_kind(expression.ty) {
+                if actual == class {
+                    return Some(HirClassOptionalSource::Produced(Box::new(expression)));
+                }
                 self.diagnostics.push(
                     Diagnostic::error(
                         TYPE_MISMATCH,
@@ -311,7 +316,10 @@ impl CallableChecker<'_, '_> {
                 )
                 .with_primary_label(
                     expression.span,
-                    format!("source has type `{}`", expression.ty.name()),
+                    format!(
+                        "source has type `{}`",
+                        self.diagnostic_type_name(expression.ty)
+                    ),
                 ),
             );
             return None;
@@ -326,7 +334,9 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirClassOptionalPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                let Type::OptionalClass(class) = self.binding_type(binding.binding) else {
+                let Some(LegacyOptionalKind::Class(class)) =
+                    self.optional_kind(self.binding_type(binding.binding))
+                else {
                     return None;
                 };
                 Some(HirClassOptionalPlace {
@@ -343,7 +353,7 @@ impl CallableChecker<'_, '_> {
                 }),
             ResolvedExpression::StaticFieldAccess(access) => {
                 let (place, ty) = self.check_static_place(access.field, access.span)?;
-                let Type::OptionalClass(class) = ty else {
+                let Some(LegacyOptionalKind::Class(class)) = self.optional_kind(ty) else {
                     return None;
                 };
                 Some(HirClassOptionalPlace {
@@ -354,7 +364,8 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
-                let Type::OptionalClass(class) = expression.ty else {
+                let Some(LegacyOptionalKind::Class(class)) = self.optional_kind(expression.ty)
+                else {
                     return None;
                 };
                 let HirExpressionKind::FieldRead(place) = expression.kind else {
@@ -368,7 +379,8 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayProjection(_) => {
                 let expression = self.check_expression(expression)?;
-                let Type::OptionalClass(class) = expression.ty else {
+                let Some(LegacyOptionalKind::Class(class)) = self.optional_kind(expression.ty)
+                else {
                     return None;
                 };
                 let HirExpressionKind::ArrayElement(place) = expression.kind else {
@@ -402,7 +414,7 @@ impl CallableChecker<'_, '_> {
         }
 
         let value = self.check_expression(source)?;
-        if value.ty == Type::OptionalPrimitive(payload) {
+        if self.optional_kind(value.ty) == Some(LegacyOptionalKind::Primitive(payload)) {
             return Some(HirOptionalSource::Produced(Box::new(value)));
         }
         if value.ty != payload.value_type() {
@@ -415,7 +427,10 @@ impl CallableChecker<'_, '_> {
                         payload.name()
                     ),
                 )
-                .with_primary_label(value.span, format!("source has type `{}`", value.ty.name())),
+                .with_primary_label(
+                    value.span,
+                    format!("source has type `{}`", self.diagnostic_type_name(value.ty)),
+                ),
             );
             return None;
         }
@@ -465,7 +480,18 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         }
-        let payload = source.payload();
+        let payload = match &source {
+            HirOptionalOperand::Place(place) => place.payload,
+            HirOptionalOperand::Produced(expression) => {
+                let Some(LegacyOptionalKind::Primitive(payload)) =
+                    self.optional_kind(expression.ty)
+                else {
+                    unreachable!("primitive optional operand must retain primitive metadata")
+                };
+                payload
+            }
+            _ => unreachable!("non-scalar optional operands were rejected above"),
+        };
         Some(HirExpression {
             kind: HirExpressionKind::Unwrap(source),
             ty: payload.value_type(),
@@ -527,19 +553,17 @@ impl CallableChecker<'_, '_> {
         }
         if is_call_through_groups(expression) {
             if let Some(value) = self.check_expression(expression) {
-                if matches!(
-                    value.ty,
-                    Type::OptionalPrimitive(_) | Type::OptionalClass(_) | Type::OptionalShared(_)
-                ) {
-                    return Some(match value.ty {
-                        Type::OptionalPrimitive(_) => HirOptionalOperand::Produced(Box::new(value)),
-                        Type::OptionalClass(_) => {
+                if let Some(kind) = self.optional_kind(value.ty) {
+                    return Some(match kind {
+                        LegacyOptionalKind::Primitive(_) => {
+                            HirOptionalOperand::Produced(Box::new(value))
+                        }
+                        LegacyOptionalKind::Class(_) => {
                             HirOptionalOperand::ClassProduced(Box::new(value))
                         }
-                        Type::OptionalShared(_) => {
+                        LegacyOptionalKind::Shared(_) => {
                             HirOptionalOperand::SharedProduced(Box::new(value))
                         }
-                        _ => unreachable!(),
                     });
                 }
                 self.report_non_optional_operand(value.ty, span, context);
@@ -549,7 +573,12 @@ impl CallableChecker<'_, '_> {
         let actual = self.check_expression(expression).map(|value| value.ty);
         let label = actual.map_or_else(
             || "expected a primitive optional local".to_owned(),
-            |ty| format!("expression has non-optional type `{}`", ty.name()),
+            |ty| {
+                format!(
+                    "expression has non-optional type `{}`",
+                    self.diagnostic_type_name(ty)
+                )
+            },
         );
         self.diagnostics.push(
             Diagnostic::error(
@@ -567,7 +596,9 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirOptionalPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                let Type::OptionalPrimitive(payload) = self.binding_type(binding.binding) else {
+                let Some(LegacyOptionalKind::Primitive(payload)) =
+                    self.optional_kind(self.binding_type(binding.binding))
+                else {
                     return None;
                 };
                 Some(HirOptionalPlace {
@@ -585,7 +616,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::StaticFieldAccess(access) => {
                 let (place, ty) = self.check_static_place(access.field, access.span)?;
-                let Type::OptionalPrimitive(payload) = ty else {
+                let Some(LegacyOptionalKind::Primitive(payload)) = self.optional_kind(ty) else {
                     return None;
                 };
                 Some(HirOptionalPlace {
@@ -596,7 +627,9 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
-                let Type::OptionalPrimitive(payload) = expression.ty else {
+                let Some(LegacyOptionalKind::Primitive(payload)) =
+                    self.optional_kind(expression.ty)
+                else {
                     return None;
                 };
                 let HirExpressionKind::FieldRead(place) = expression.kind else {
@@ -610,7 +643,9 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayProjection(_) => {
                 let expression = self.check_expression(expression)?;
-                let Type::OptionalPrimitive(payload) = expression.ty else {
+                let Some(LegacyOptionalKind::Primitive(payload)) =
+                    self.optional_kind(expression.ty)
+                else {
                     return None;
                 };
                 let HirExpressionKind::ArrayElement(place) = expression.kind else {
@@ -639,7 +674,10 @@ impl CallableChecker<'_, '_> {
             )
             .with_primary_label(
                 span,
-                format!("expression has non-optional type `{}`", actual.name()),
+                format!(
+                    "expression has non-optional type `{}`",
+                    self.diagnostic_type_name(actual)
+                ),
             ),
         );
     }

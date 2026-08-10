@@ -99,6 +99,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     validate_override_signatures(program, &mut diagnostics);
     let interface_analysis = analyze_interfaces(program, &mut diagnostics);
     let copy_capabilities = CopyCapabilities::compute(program);
+    let optional_types = super::optional_types::lower_optional_types(program, &copy_capabilities);
     let classes = lower_class_declarations(
         program,
         &copy_capabilities,
@@ -135,6 +136,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
             modules: program.modules.clone(),
             external_links: program.external_links.clone(),
             array_types: copy_capabilities.array_types(),
+            optional_types,
             string_language_item: program.string_language_item.as_ref().map(|item| {
                 HirStringLanguageItem {
                     class: item.class,
@@ -234,20 +236,7 @@ fn validate_parameters(
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. }
-                if !matches!(
-                    ty,
-                    Type::I64
-                        | Type::U64
-                        | Type::U8
-                        | Type::F64
-                        | Type::Bool
-                        | Type::Class(_)
-                        | Type::Obj
-                        | Type::Interface(_)
-                        | Type::Array(_)
-                        | Type::OptionalPrimitive(_)
-                        | Type::OptionalClass(_)
-                ) =>
+                if !is_supported_alias_type(program, ty) =>
             {
                 diagnostics.push(
                     Diagnostic::error(
@@ -268,6 +257,28 @@ fn validate_parameters(
         }
     }
     valid
+}
+
+fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
+    match ty {
+        Type::I64
+        | Type::U64
+        | Type::U8
+        | Type::F64
+        | Type::Bool
+        | Type::Class(_)
+        | Type::Obj
+        | Type::Interface(_)
+        | Type::Array(_) => true,
+        Type::Optional(optional) => matches!(
+            super::optional_types::legacy_kind(program, optional),
+            Some(
+                super::optional_types::LegacyOptionalKind::Primitive(_)
+                    | super::optional_types::LegacyOptionalKind::Class(_)
+            )
+        ),
+        Type::Unit | Type::Shared(_) => false,
+    }
 }
 
 fn lower_parameter(program: &ResolvedProgram, parameter: &ResolvedParameter) -> HirParameter {
@@ -451,7 +462,7 @@ fn lower_declaration(
     }
 }
 
-pub(super) fn lower_type(program: &ResolvedProgram, type_syntax: &ResolvedType) -> Type {
+pub(super) fn lower_type(_program: &ResolvedProgram, type_syntax: &ResolvedType) -> Type {
     match type_syntax.kind {
         ResolvedTypeKind::I64 => Type::I64,
         ResolvedTypeKind::U64 => Type::U64,
@@ -466,24 +477,7 @@ pub(super) fn lower_type(program: &ResolvedProgram, type_syntax: &ResolvedType) 
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }
-        ResolvedTypeKind::Optional(optional) => match program
-            .optional_types
-            .get(optional)
-            .expect("resolved optional identities must name table entries")
-            .payload
-            .kind
-        {
-            ResolvedTypeKind::I64 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::I64),
-            ResolvedTypeKind::U64 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U64),
-            ResolvedTypeKind::U8 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U8),
-            ResolvedTypeKind::F64 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::F64),
-            ResolvedTypeKind::Bool => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::Bool),
-            ResolvedTypeKind::Class(class) => Type::OptionalClass(class),
-            ResolvedTypeKind::Shared(target) => {
-                Type::OptionalShared(crate::typeck::shared::lower_shared_target(target))
-            }
-            _ => unreachable!("deferred optional payloads must be rejected before HIR lowering"),
-        },
+        ResolvedTypeKind::Optional(optional) => Type::Optional(optional),
     }
 }
 

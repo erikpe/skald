@@ -8,18 +8,28 @@ use crate::hir::{
 };
 
 pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
+    let optional_adapter = legacy_optional_adapter::LegacyOptionalAdapter::new(&hir.optional_types);
     let string_language_item = hir
         .string_language_item
         .as_ref()
         .map(|item| lower_string_language_item(hir, item));
-    let classes = hir.classes.iter().map(lower_class_declaration).collect();
-    let declarations = hir.declarations.iter().map(lower_declaration).collect();
+    let classes = hir
+        .classes
+        .iter()
+        .map(|class| lower_class_declaration(class, optional_adapter))
+        .collect();
+    let declarations = hir
+        .declarations
+        .iter()
+        .map(|declaration| lower_declaration(declaration, optional_adapter))
+        .collect();
     let definitions = hir
         .declarations
         .iter()
         .map(|declaration| {
             hir.definitions.get(declaration.id).map(|definition| {
                 lower_function_definition(
+                    hir,
                     declaration,
                     definition,
                     string_language_item,
@@ -45,7 +55,12 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
     MirProgram {
         modules: hir.modules.clone(),
         external_links: hir.external_links.clone(),
-        array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
+        array_types: MirArrayTypeTable::new(
+            hir.array_types
+                .iter()
+                .map(|array| lower_array_type(array, optional_adapter))
+                .collect(),
+        ),
         string_language_item,
         literal_data: MirLiteralDataTable::new(
             hir.literal_data
@@ -70,7 +85,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         interfaces: MirInterfaceDeclarationTable::new(
             hir.interfaces
                 .iter()
-                .map(lower_interface_declaration)
+                .map(|interface| lower_interface_declaration(interface, optional_adapter))
                 .collect(),
         ),
         virtual_families: MirVirtualFamilyTable::new(
@@ -136,14 +151,17 @@ fn lower_string_language_item(
     }
 }
 
-fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
+fn lower_array_type(
+    array: &crate::hir::HirArrayType,
+    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'_>,
+) -> MirArrayType {
     use crate::hir::{
         HirArrayAssignElement as A, HirArrayCopyElement as C, HirArrayDefaultElement as D,
         HirArrayDestroyElement as X,
     };
     MirArrayType {
         id: array.id,
-        element: lower_type(array.element),
+        element: optional_adapter.lower_type(array.element),
         lifecycle: MirArrayLifecycle {
             default: array.lifecycle.default.map(|operation| match operation {
                 D::Primitive => MirArrayDefaultElement::Primitive,
@@ -210,14 +228,17 @@ fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
     }
 }
 
-fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
+fn lower_class_declaration(
+    class: &HirClassDeclaration,
+    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'_>,
+) -> MirClassDeclaration {
     let fields: Vec<_> = class
         .fields
         .iter()
         .map(|field| MirFieldDeclaration {
             id: field.id,
             name: field.name.clone(),
-            ty: lower_type(field.ty),
+            ty: optional_adapter.lower_type(field.ty),
             span: field.span,
         })
         .collect();
@@ -285,7 +306,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             .map(|field| MirStaticFieldDeclaration {
                 id: field.id,
                 name: field.name.clone(),
-                ty: lower_type(field.ty),
+                ty: optional_adapter.lower_type(field.ty),
                 initialization: field
                     .initializer
                     .as_ref()
@@ -301,14 +322,22 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             .iter()
             .map(|initializer| MirInitializerDeclaration {
                 id: initializer.id,
-                parameters: initializer.parameters.iter().map(lower_parameter).collect(),
+                parameters: initializer
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_parameter(parameter, optional_adapter))
+                    .collect(),
                 span: initializer.span,
             })
             .collect(),
         copy_constructor_declaration: class.copy_constructor_declaration.as_ref().map(|copy| {
             MirCopyConstructorDeclaration {
                 id: copy.id,
-                parameters: copy.parameters.iter().map(lower_parameter).collect(),
+                parameters: copy
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_parameter(parameter, optional_adapter))
+                    .collect(),
                 span: copy.span,
             }
         }),
@@ -316,7 +345,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
         copy_assignment_declaration: class.copy_assignment_declaration.as_ref().map(|copy| {
             MirCopyAssignmentDeclaration {
                 id: copy.id,
-                parameter: lower_parameter(&copy.parameter),
+                parameter: lower_parameter(&copy.parameter, optional_adapter),
                 span: copy.span,
             }
         }),
@@ -343,8 +372,12 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                     },
                     HirMethodKind::Static => MirMethodKind::Static,
                 },
-                parameters: method.parameters.iter().map(lower_parameter).collect(),
-                return_type: lower_type(method.return_type),
+                parameters: method
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_parameter(parameter, optional_adapter))
+                    .collect(),
+                return_type: optional_adapter.lower_type(method.return_type),
                 span: method.span,
             })
             .collect(),
@@ -352,7 +385,10 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
     }
 }
 
-fn lower_interface_declaration(interface: &HirInterfaceDeclaration) -> MirInterfaceDeclaration {
+fn lower_interface_declaration(
+    interface: &HirInterfaceDeclaration,
+    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'_>,
+) -> MirInterfaceDeclaration {
     MirInterfaceDeclaration {
         id: interface.id,
         module: interface.module,
@@ -371,7 +407,7 @@ fn lower_interface_declaration(interface: &HirInterfaceDeclaration) -> MirInterf
                     .parameters
                     .iter()
                     .map(|parameter| {
-                        let ty = lower_type(parameter.ty);
+                        let ty = optional_adapter.lower_type(parameter.ty);
                         match parameter.mode {
                             crate::hir::HirParameterMode::Value => MirParameter::value(ty),
                             crate::hir::HirParameterMode::ReadOnlyAlias => {
@@ -383,7 +419,7 @@ fn lower_interface_declaration(interface: &HirInterfaceDeclaration) -> MirInterf
                         }
                     })
                     .collect(),
-                return_type: lower_type(requirement.return_type),
+                return_type: optional_adapter.lower_type(requirement.return_type),
                 span: requirement.span,
             })
             .collect(),
@@ -456,13 +492,20 @@ fn lower_base_copy<I: Copy>(copy: crate::hir::HirBaseCopy<I>) -> MirBaseCopy<I> 
     }
 }
 
-fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclaration {
+fn lower_declaration(
+    declaration: &HirFunctionDeclaration,
+    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'_>,
+) -> MirFunctionDeclaration {
     MirFunctionDeclaration {
         id: declaration.id,
         module: declaration.module,
         name: declaration.name.clone(),
-        parameters: declaration.parameters.iter().map(lower_parameter).collect(),
-        return_type: lower_type(declaration.return_type),
+        parameters: declaration
+            .parameters
+            .iter()
+            .map(|parameter| lower_parameter(parameter, optional_adapter))
+            .collect(),
+        return_type: optional_adapter.lower_type(declaration.return_type),
         linkage: match &declaration.linkage {
             HirFunctionLinkage::Internal => MirFunctionLinkage::Internal,
             HirFunctionLinkage::External { link } => MirFunctionLinkage::External { link: *link },
@@ -475,6 +518,7 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
 }
 
 fn lower_function_definition(
+    hir: &HirProgram,
     declaration: &HirFunctionDeclaration,
     definition: &HirFunctionDefinition,
     string_language_item: Option<MirStringLanguageItem>,
@@ -489,6 +533,7 @@ fn lower_function_definition(
         receiver_class: None,
         string_language_item,
         literal_data,
+        optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter::new(&hir.optional_types),
     });
     MirFunctionDefinition {
         function: declaration.id,
@@ -519,6 +564,7 @@ fn lower_member_definition(
         receiver_class: definition.receiver_class,
         string_language_item,
         literal_data: &hir.literal_data,
+        optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter::new(&hir.optional_types),
     });
     MirMemberDefinition {
         callable: definition.callable,
@@ -533,8 +579,11 @@ fn lower_member_definition(
     }
 }
 
-fn lower_parameter(parameter: &HirParameter) -> MirParameter {
-    let ty = lower_type(parameter.ty);
+fn lower_parameter(
+    parameter: &HirParameter,
+    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'_>,
+) -> MirParameter {
+    let ty = optional_adapter.lower_type(parameter.ty);
     match parameter.mode {
         HirParameterMode::Value => MirParameter::value(ty),
         HirParameterMode::ReadOnlyAlias => MirParameter::read_only_alias(ty),

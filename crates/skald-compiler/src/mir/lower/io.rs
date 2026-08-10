@@ -69,7 +69,7 @@ impl BodyLowerer<'_> {
     }
 
     fn lower_io_scalar(&mut self, expression: &HirExpression, ty: MirType) -> ValueId {
-        debug_assert_eq!(lower_type(expression.ty), ty);
+        debug_assert_eq!(self.lower_type(expression.ty), ty);
         self.lower_expression(expression)
             .expect("typed standard-I/O scalar input must produce a MIR value")
     }

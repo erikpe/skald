@@ -11,7 +11,7 @@ use crate::{
         HirStatement, HirWhile, Type,
     },
     resolve::{
-        ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedContinue,
+        ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedContinue, ResolvedExpression,
         ResolvedExpressionStatement, ResolvedLocalDecl, ResolvedReturn, ResolvedStatement,
         ResolvedWhile,
     },
@@ -180,43 +180,48 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
-            Type::OptionalPrimitive(payload) => self
-                .check_optional_source(&assignment.value, payload, "optional static assignment")
-                .map(|source| {
-                    HirStatement::OptionalAssignment(HirOptionalAssignment {
-                        destination: HirOptionalPlace {
-                            storage: HirOptionalStorage::Static(place),
+            Type::Optional(_) => match self
+                .optional_kind(ty)
+                .expect("enabled optional static must have legacy metadata")
+            {
+                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                    .check_optional_source(&assignment.value, payload, "optional static assignment")
+                    .map(|source| {
+                        HirStatement::OptionalAssignment(HirOptionalAssignment {
+                            destination: HirOptionalPlace {
+                                storage: HirOptionalStorage::Static(place),
+                                payload,
+                                span: assignment.span,
+                            },
                             payload,
+                            source,
+                            kind: HirOptionalWriteKind::Assign,
+                            span: assignment.span,
+                        })
+                    }),
+                super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                    .check_class_optional_assignment(
+                        crate::hir::HirClassOptionalPlace {
+                            storage: HirOptionalStorage::Static(place),
+                            class,
                             span: assignment.span,
                         },
-                        payload,
-                        source,
-                        kind: HirOptionalWriteKind::Assign,
-                        span: assignment.span,
-                    })
-                }),
-            Type::OptionalClass(class) => self
-                .check_class_optional_assignment(
-                    crate::hir::HirClassOptionalPlace {
-                        storage: HirOptionalStorage::Static(place),
-                        class,
-                        span: assignment.span,
-                    },
-                    &assignment.value,
-                    "class optional static assignment",
-                )
-                .map(HirStatement::ClassOptionalAssignment),
-            Type::OptionalShared(target) => self
-                .check_optional_shared_assignment(
-                    crate::hir::HirOptionalSharedPlace {
-                        storage: HirOptionalStorage::Static(place),
-                        target,
-                        span: assignment.span,
-                    },
-                    &assignment.value,
-                    "optional shared static assignment",
-                )
-                .map(HirStatement::OptionalSharedAssignment),
+                        &assignment.value,
+                        "class optional static assignment",
+                    )
+                    .map(HirStatement::ClassOptionalAssignment),
+                super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                    .check_optional_shared_assignment(
+                        crate::hir::HirOptionalSharedPlace {
+                            storage: HirOptionalStorage::Static(place),
+                            target,
+                            span: assignment.span,
+                        },
+                        &assignment.value,
+                        "optional shared static assignment",
+                    )
+                    .map(HirStatement::OptionalSharedAssignment),
+            },
             Type::Array(array) => self
                 .check_array_initialize(array, &assignment.value, "static array replacement")
                 .map(|value| {
@@ -273,8 +278,11 @@ impl CallableChecker<'_, '_> {
             );
             return CheckedStatement::falls_through(None);
         }
-        match self.binding_type(assignment.destination) {
-            Type::OptionalPrimitive(payload) => {
+        match self
+            .optional_kind(self.binding_type(assignment.destination))
+            .expect("optional assignment must retain supported metadata")
+        {
+            super::super::optional_types::LegacyOptionalKind::Primitive(payload) => {
                 let source = self.check_optional_source(
                     &assignment.source,
                     payload,
@@ -294,7 +302,7 @@ impl CallableChecker<'_, '_> {
                     })
                 }))
             }
-            Type::OptionalClass(class) => {
+            super::super::optional_types::LegacyOptionalKind::Class(class) => {
                 let destination = crate::hir::HirClassOptionalPlace {
                     storage: HirOptionalStorage::Binding(assignment.destination),
                     class,
@@ -307,7 +315,7 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::ClassOptionalAssignment))
             }
-            Type::OptionalShared(target) => {
+            super::super::optional_types::LegacyOptionalKind::Shared(target) => {
                 let destination = crate::hir::HirOptionalSharedPlace {
                     storage: HirOptionalStorage::Binding(assignment.destination),
                     target,
@@ -320,7 +328,6 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::OptionalSharedAssignment))
             }
-            _ => unreachable!("resolved optional assignment must target optional storage"),
         }
     }
 
@@ -387,36 +394,40 @@ impl CallableChecker<'_, '_> {
             Type::Shared(target) => self
                 .check_shared_transfer(&local.initializer, target, "shared local initializer")
                 .map(HirLocalInitializer::Shared),
-            Type::OptionalPrimitive(payload) => self
-                .check_optional_source(
-                    &local.initializer,
-                    payload,
-                    "primitive optional local initializer",
-                )
-                .map(HirLocalInitializer::Optional),
-            Type::OptionalClass(class) => self
-                .check_class_optional_initialize(
-                    class,
-                    &local.initializer,
-                    "class optional local initializer",
-                )
-                .map(HirLocalInitializer::ClassOptional),
-            Type::OptionalShared(target) => self
-                .check_optional_shared_initialize(
-                    target,
-                    &local.initializer,
-                    "optional shared local initializer",
-                )
-                .map(HirLocalInitializer::OptionalShared),
+            Type::Optional(_) => match self
+                .optional_kind(expected)
+                .expect("enabled optional local must have legacy metadata")
+            {
+                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                    .check_optional_source(
+                        &local.initializer,
+                        payload,
+                        "primitive optional local initializer",
+                    )
+                    .map(HirLocalInitializer::Optional),
+                super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                    .check_class_optional_initialize(
+                        class,
+                        &local.initializer,
+                        "class optional local initializer",
+                    )
+                    .map(HirLocalInitializer::ClassOptional),
+                super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                    .check_optional_shared_initialize(
+                        target,
+                        &local.initializer,
+                        "optional shared local initializer",
+                    )
+                    .map(HirLocalInitializer::OptionalShared),
+            },
             _ => self
                 .check_expression(&local.initializer)
                 .and_then(|initializer| {
-                    require_type(
+                    self.require_exact_type(
                         initializer.ty,
                         expected,
                         initializer.span,
                         "local initializer",
-                        self.diagnostics,
                     )
                     .then_some(HirLocalInitializer::Value(initializer))
                 }),
@@ -593,74 +604,51 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            (Type::OptionalPrimitive(payload), Some(value)) => self
-                .check_optional_source(value, payload, "primitive optional return")
-                .map(|value| {
-                    HirStatement::Return(HirReturn {
-                        value: Some(HirReturnValue::Optional(value)),
-                        span: statement.span,
-                    })
-                }),
-            (Type::OptionalPrimitive(payload), None) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_RETURN,
-                        format!(
-                            "{} must return a `{}` value",
-                            self.callable_name,
-                            Type::OptionalPrimitive(payload).name()
-                        ),
-                    )
-                    .with_primary_label(statement.span, "expected `return optional_expression;`"),
-                );
-                None
-            }
-            (Type::OptionalClass(class), Some(value)) => self
-                .check_class_optional_initialize(class, value, "class optional return")
-                .map(|value| {
-                    HirStatement::Return(HirReturn {
-                        value: Some(HirReturnValue::ClassOptional(value)),
-                        span: statement.span,
-                    })
-                }),
-            (Type::OptionalClass(class), None) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_RETURN,
-                        format!(
-                            "{} must return a `{}` value",
-                            self.callable_name,
-                            Type::OptionalClass(class).name()
-                        ),
-                    )
-                    .with_primary_label(statement.span, "expected an optional object value"),
-                );
-                None
-            }
-            (Type::OptionalShared(target), Some(value)) => self
-                .check_optional_shared_initialize(target, value, "optional shared return")
-                .map(|value| {
-                    HirStatement::Return(HirReturn {
-                        value: Some(HirReturnValue::OptionalShared(value)),
-                        span: statement.span,
-                    })
-                }),
-            (Type::OptionalShared(target), None) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_RETURN,
-                        format!(
-                            "{} must return a `{}` value",
-                            self.callable_name,
-                            Type::OptionalShared(target).name()
-                        ),
-                    )
-                    .with_primary_label(statement.span, "expected an optional shared-owner value"),
-                );
-                None
+            (ty @ Type::Optional(_), value) => {
+                self.check_optional_return(ty, value.as_ref(), statement.span)
             }
         };
         CheckedStatement::exits_function(hir)
+    }
+
+    fn check_optional_return(
+        &mut self,
+        ty: Type,
+        value: Option<&ResolvedExpression>,
+        span: crate::source::Span,
+    ) -> Option<HirStatement> {
+        let Some(value) = value else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_RETURN,
+                    format!(
+                        "{} must return a `{}` value",
+                        self.callable_name,
+                        self.diagnostic_type_name(ty)
+                    ),
+                )
+                .with_primary_label(span, "expected `return optional_expression;`"),
+            );
+            return None;
+        };
+        let result = match self
+            .optional_kind(ty)
+            .expect("enabled optional result must have legacy metadata")
+        {
+            super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                .check_optional_source(value, payload, "primitive optional return")
+                .map(HirReturnValue::Optional),
+            super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                .check_class_optional_initialize(class, value, "class optional return")
+                .map(HirReturnValue::ClassOptional),
+            super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                .check_optional_shared_initialize(target, value, "optional shared return")
+                .map(HirReturnValue::OptionalShared),
+        }?;
+        Some(HirStatement::Return(HirReturn {
+            value: Some(result),
+            span,
+        }))
     }
 
     fn check_call_statement(
@@ -745,12 +733,11 @@ impl CallableChecker<'_, '_> {
             effects = effects.union(body.effects.clone());
             match condition {
                 Some(condition)
-                    if require_type(
+                    if self.require_exact_type(
                         condition.ty,
                         Type::Bool,
                         condition.span,
                         "conditional condition",
-                        self.diagnostics,
                     ) =>
                 {
                     arms.push(HirConditionalArm {
@@ -807,13 +794,7 @@ impl CallableChecker<'_, '_> {
         let effects = body.effects.clone().through_loop(statement.loop_id);
         let hir = condition
             .filter(|condition| {
-                require_type(
-                    condition.ty,
-                    Type::Bool,
-                    condition.span,
-                    "while condition",
-                    self.diagnostics,
-                )
+                self.require_exact_type(condition.ty, Type::Bool, condition.span, "while condition")
             })
             .map(|condition| {
                 HirStatement::While(HirWhile::new(

@@ -35,11 +35,11 @@ impl CallableChecker<'_, '_> {
                 )
                 .with_secondary_label(
                     binary.left.span(),
-                    format!("left operand has type `{}`", left_type.name()),
+                    format!("left operand has type `{}`", self.diagnostic_type_name(left_type)),
                 )
                 .with_secondary_label(
                     binary.right.span(),
-                    format!("count operand has type `{}`", count_type.name()),
+                    format!("count operand has type `{}`", self.diagnostic_type_name(count_type)),
                 )
                 .with_note(format!(
                     "left operand types are {}; the count type is exactly `u64`",

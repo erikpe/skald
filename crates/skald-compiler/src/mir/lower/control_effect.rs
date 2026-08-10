@@ -109,7 +109,7 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
                 cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
                     || shared_source_contains_control_effect(&cast.source)
             }
-            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap { .. }) => true,
             HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
                 array_construction_contains_control_effect(construction)
             }
@@ -138,7 +138,7 @@ fn shared_source_contains_control_effect(source: &HirSharedSource) -> bool {
             cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
                 || shared_source_contains_control_effect(&cast.source)
         }
-        HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
+        HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap { .. }) => true,
         HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
             array_construction_contains_control_effect(construction)
         }

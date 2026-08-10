@@ -166,11 +166,29 @@ impl HirOptionalOperand {
         }
     }
 
-    pub const fn payload(&self) -> HirPrimitiveType {
+    pub fn payload(&self, optional_types: &super::HirOptionalTypeTable) -> HirPrimitiveType {
         match self {
             Self::Place(place) => place.payload,
             Self::Produced(expression) => match expression.ty {
-                super::Type::OptionalPrimitive(payload) => payload,
+                super::Type::Optional(optional) => match optional_types
+                    .get(optional)
+                    .expect("optional operand must name typed metadata")
+                    .storage
+                {
+                    super::HirOptionalStorageCategory::Scalar => match optional_types
+                        .get(optional)
+                        .expect("optional operand must name typed metadata")
+                        .payload
+                    {
+                        super::Type::I64 => HirPrimitiveType::I64,
+                        super::Type::U64 => HirPrimitiveType::U64,
+                        super::Type::U8 => HirPrimitiveType::U8,
+                        super::Type::F64 => HirPrimitiveType::F64,
+                        super::Type::Bool => HirPrimitiveType::Bool,
+                        _ => panic!("scalar optional metadata must have a primitive payload"),
+                    },
+                    _ => panic!("produced primitive operand must have scalar optional metadata"),
+                },
                 _ => panic!("produced optional operand must have optional type"),
             },
             Self::ClassPlace(_)
@@ -182,11 +200,18 @@ impl HirOptionalOperand {
         }
     }
 
-    pub const fn class(&self) -> ClassId {
+    pub fn class(&self, optional_types: &super::HirOptionalTypeTable) -> ClassId {
         match self {
             Self::ClassPlace(place) => place.class,
             Self::ClassProduced(expression) => match expression.ty {
-                super::Type::OptionalClass(class) => class,
+                super::Type::Optional(optional) => match optional_types
+                    .get(optional)
+                    .expect("optional operand must name typed metadata")
+                    .storage
+                {
+                    super::HirOptionalStorageCategory::InlineClass(class) => class,
+                    _ => panic!("produced class operand must have inline-class metadata"),
+                },
                 _ => panic!("produced class optional operand must have optional class type"),
             },
             Self::Place(_) | Self::Produced(_) | Self::SharedPlace(_) | Self::SharedProduced(_) => {
@@ -195,11 +220,18 @@ impl HirOptionalOperand {
         }
     }
 
-    pub const fn shared_target(&self) -> HirSharedTarget {
+    pub fn shared_target(&self, optional_types: &super::HirOptionalTypeTable) -> HirSharedTarget {
         match self {
             Self::SharedPlace(place) => place.target,
             Self::SharedProduced(expression) => match expression.ty {
-                super::Type::OptionalShared(target) => target,
+                super::Type::Optional(optional) => match optional_types
+                    .get(optional)
+                    .expect("optional operand must name typed metadata")
+                    .storage
+                {
+                    super::HirOptionalStorageCategory::SharedOwner(target) => target,
+                    _ => panic!("produced shared operand must have shared-owner metadata"),
+                },
                 _ => panic!("produced optional owner operand must have optional shared type"),
             },
             Self::Place(_) | Self::Produced(_) | Self::ClassPlace(_) | Self::ClassProduced(_) => {

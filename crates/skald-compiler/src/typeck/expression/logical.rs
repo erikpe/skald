@@ -36,11 +36,17 @@ impl CallableChecker<'_, '_> {
                 )
                 .with_secondary_label(
                     logical.left.span(),
-                    format!("left operand has type `{}`", left_type.name()),
+                    format!(
+                        "left operand has type `{}`",
+                        self.diagnostic_type_name(left_type)
+                    ),
                 )
                 .with_secondary_label(
                     logical.right.span(),
-                    format!("right operand has type `{}`", right_type.name()),
+                    format!(
+                        "right operand has type `{}`",
+                        self.diagnostic_type_name(right_type)
+                    ),
                 )
                 .with_note(format!(
                     "`{spelling}` does not perform implicit conversion or truthiness testing"

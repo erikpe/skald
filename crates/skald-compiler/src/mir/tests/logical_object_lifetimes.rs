@@ -233,6 +233,12 @@ fn optional_presence_call(
         .get(function)
         .expect("fixture function must be declared")
         .span;
+    let optional = program
+        .optional_types
+        .iter()
+        .find(|optional| optional.payload == Type::Class(class))
+        .expect("fixture class optional must have typed metadata")
+        .id;
     let arguments = marker
         .map(|marker| {
             vec![HirCallArgument::Value(HirExpression {
@@ -249,7 +255,7 @@ fn optional_presence_call(
                     function,
                     arguments,
                 },
-                ty: Type::OptionalClass(class),
+                ty: Type::Optional(optional),
                 span,
             })),
             kind: HirPresenceTestKind::Some,

@@ -181,8 +181,7 @@ fn validate_requirement_signature(
                     crate::hir::Type::Class(_)
                         | crate::hir::Type::Obj
                         | crate::hir::Type::Interface(_)
-                        | crate::hir::Type::OptionalPrimitive(_)
-                        | crate::hir::Type::OptionalClass(_)
+                        | crate::hir::Type::Optional(_)
                 )
             }
         };

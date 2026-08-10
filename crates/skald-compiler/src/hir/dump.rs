@@ -10,7 +10,7 @@ use crate::{
 use super::ir::*;
 
 pub fn dump_hir(program: &HirProgram) -> String {
-    let mut dumper = HirDumper::default();
+    let mut dumper = HirDumper::new(&program.optional_types);
     dumper.line("HirProgram", program.span);
     dumper.indented(|dumper| {
         dumper.raw_line(&format!("SelectedModule {}", program.modules.selected()));
@@ -32,6 +32,40 @@ pub fn dump_hir(program: &HirProgram) -> String {
                 "StringLanguageItem class {} fields {} {} {}",
                 item.class, item.storage_field, item.start_field, item.length_field
             ));
+        }
+        if !program.optional_types.is_empty() {
+            dumper.heading("OptionalTypes");
+            dumper.indented(|dumper| {
+                for optional in program.optional_types.iter() {
+                    dumper.raw_line(&format!(
+                        "OptionalType {} payload {} storage={:?} representation={:?}",
+                        optional.id,
+                        dumper.type_name(optional.payload),
+                        optional.storage,
+                        optional.representation,
+                    ));
+                    dumper.indented(|dumper| {
+                        dumper.raw_line(&format!(
+                            "Lifecycle initialization={:?} injection={:?} copy={:?} assignment={:?} destruction={:?} presence={:?} unwrap={:?} checked={:?}",
+                            optional.lifecycle.initialization,
+                            optional.lifecycle.injection,
+                            optional.lifecycle.copy,
+                            optional.lifecycle.assignment,
+                            optional.lifecycle.destruction,
+                            optional.lifecycle.presence_test,
+                            optional.lifecycle.unwrap,
+                            optional.checked_access,
+                        ));
+                        dumper.raw_line(&format!(
+                            "Boundaries argument={:?} result={:?} static={:?} array-element={:?}",
+                            optional.boundaries.argument,
+                            optional.boundaries.result,
+                            optional.boundaries.static_storage,
+                            optional.boundaries.array_element,
+                        ));
+                    });
+                }
+            });
         }
         if !program.literal_data.is_empty() {
             dumper.heading("LiteralData");
@@ -121,18 +155,40 @@ pub fn dump_hir(program: &HirProgram) -> String {
     dumper.output
 }
 
-#[derive(Default)]
-struct HirDumper {
+struct HirDumper<'types> {
     output: String,
     indentation: usize,
+    optional_types: &'types HirOptionalTypeTable,
 }
 
-impl HirDumper {
+impl<'types> HirDumper<'types> {
+    fn new(optional_types: &'types HirOptionalTypeTable) -> Self {
+        Self {
+            output: String::new(),
+            indentation: 0,
+            optional_types,
+        }
+    }
+
+    fn type_name(&self, ty: Type) -> String {
+        match ty {
+            Type::Optional(optional) => {
+                let payload = self
+                    .optional_types
+                    .get(optional)
+                    .expect("HIR dump optional identity must name metadata")
+                    .payload;
+                format!("{}?", self.type_name(payload))
+            }
+            _ => ty.name().into_owned(),
+        }
+    }
+
     fn array_type(&mut self, array: &HirArrayType) {
         self.raw_line(&format!(
             "ArrayType {} element {}",
             array.id,
-            array.element.name()
+            self.type_name(array.element)
         ));
         self.indented(|dumper| {
             dumper.raw_line(&format!(
@@ -1848,7 +1904,7 @@ impl HirDumper {
                 );
                 self.indented(|dumper| dumper.shared_source(&cast.source));
             }
-            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap { operand, .. }) => {
                 self.line("OptionalSharedUnwrap", operand.span());
                 self.indented(|dumper| dumper.optional_operand(operand));
             }
@@ -2010,7 +2066,26 @@ impl HirDumper {
                     dumper.line(
                         &format!(
                             "CheckedOptionalPayload class {} {}",
-                            view.source.class(),
+                            match &view.source {
+                                HirOptionalOperand::ClassPlace(place) => place.class,
+                                HirOptionalOperand::ClassProduced(expression) => {
+                                    let Type::Optional(optional) = expression.ty else {
+                                        unreachable!()
+                                    };
+                                    match self
+                                        .optional_types
+                                        .get(optional)
+                                        .expect("optional view must name metadata")
+                                        .storage
+                                    {
+                                        HirOptionalStorageCategory::InlineClass(class) => class,
+                                        _ => unreachable!(
+                                            "optional object view must use class metadata"
+                                        ),
+                                    }
+                                }
+                                _ => unreachable!("optional object view must use a class operand"),
+                            },
                             access_name(view.access)
                         ),
                         view.span,
@@ -2392,7 +2467,8 @@ mod tests {
             path,
             access: HirAccess::ReadOnly,
         };
-        let mut dumper = HirDumper::default();
+        let optional_types = HirOptionalTypeTable::default();
+        let mut dumper = HirDumper::new(&optional_types);
 
         dumper.object_place(&place);
 

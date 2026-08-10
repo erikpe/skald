@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO3 is next.
+Status: in progress; CO4 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -99,7 +99,7 @@ pointee is an optional value.
 - [x] CO0 — Freeze compositional optional contracts
 - [x] CO1 — Introduce compositional type syntax and canonical shared optionals
 - [x] CO2 — Canonicalize recursive optional identities
-- [ ] CO3 — Generalize typed optional lifecycle planning
+- [x] CO3 — Generalize typed optional lifecycle planning
 - [ ] CO4 — Generalize executable optional MIR and target realization
 - [ ] CO5 — Execute arbitrarily nested optional lifecycle
 - [ ] CO6 — Complete nested-optional access and callable integration
@@ -213,21 +213,21 @@ is correct, and lower phases never reconstruct type meaning from source shape.
 **Purpose:** Make type checking and HIR describe recursive optional semantics
 without forcing a simultaneous executable-IR rewrite.
 
-- [ ] Add a typed optional table or equivalent ID-indexed metadata carrying the
+- [x] Add a typed optional table or equivalent ID-indexed metadata carrying the
       immediate payload type, storage category, copy/assignment/destruction
       capability, checked-access category, and representation class.
-- [ ] Replace primitive/class/optional-shared HIR type families with canonical
+- [x] Replace primitive/class/optional-shared HIR type families with canonical
       optional identities where their distinction is only payload category.
-- [ ] Select recursive initialization, injection, copy, assignment,
+- [x] Select recursive initialization, injection, copy, assignment,
       destruction, presence-test, unwrap, checked-view, argument/result, static,
       and array-element lifecycle plans in type checking.
-- [ ] Generalize optional compatibility and overload ranking over exact
+- [x] Generalize optional compatibility and overload ranking over exact
       identities while retaining current one-layer injection and existing
       optional-shared target compatibility.
-- [ ] Keep an explicit adapter from generalized typed HIR to the current
+- [x] Keep an explicit adapter from generalized typed HIR to the current
       executable MIR operations for the already supported primitive, class,
       and shared-owner cases; all new recursive cases remain gated.
-- [ ] Update HIR dumps, compiler architecture, phase documentation, debugging,
+- [x] Update HIR dumps, compiler architecture, phase documentation, debugging,
       and testing ownership without exposing implementation-private tables as
       public compiler APIs.
 

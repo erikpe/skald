@@ -520,9 +520,12 @@ fn declarations_and_shared_targets_retain_exact_array_identity() {
         consume.parameters[1].ty,
         Type::Shared(HirSharedTarget::Array(crate::identity::ArrayTypeId::new(0)))
     );
+    let Type::Optional(optional) = consume.parameters[2].ty else {
+        panic!("expected optional")
+    };
     assert_eq!(
-        consume.parameters[2].ty,
-        Type::OptionalShared(HirSharedTarget::Array(crate::identity::ArrayTypeId::new(0)))
+        hir.optional_type(optional).unwrap().payload,
+        Type::Shared(HirSharedTarget::Array(crate::identity::ArrayTypeId::new(0)))
     );
 }
 

@@ -160,8 +160,17 @@ fn lower_class_declaration(
         .filter_map(|field| match field.ty {
             Type::Class(_) => Some(HirDestructionStep::Field(field.id)),
             Type::Shared(_) => Some(HirDestructionStep::SharedField(field.id)),
-            Type::OptionalShared(_) => Some(HirDestructionStep::OptionalSharedField(field.id)),
-            Type::OptionalClass(_) => Some(HirDestructionStep::OptionalClassField(field.id)),
+            Type::Optional(optional) => {
+                match super::super::optional_types::legacy_kind(program, optional) {
+                    Some(super::super::optional_types::LegacyOptionalKind::Shared(_)) => {
+                        Some(HirDestructionStep::OptionalSharedField(field.id))
+                    }
+                    Some(super::super::optional_types::LegacyOptionalKind::Class(_)) => {
+                        Some(HirDestructionStep::OptionalClassField(field.id))
+                    }
+                    _ => None,
+                }
+            }
             Type::Array(_) => Some(HirDestructionStep::ArrayField(field.id)),
             _ => None,
         })

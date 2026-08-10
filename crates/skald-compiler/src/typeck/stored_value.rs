@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    expression::require_type,
     function::{is_ungrouped_object_call, CallableChecker},
+    optional_types::LegacyOptionalKind,
 };
 
 impl CallableChecker<'_, '_> {
@@ -24,24 +24,32 @@ impl CallableChecker<'_, '_> {
             Type::Class(class) => self
                 .check_object_destination_initialization(class, source, context)
                 .map(HirStoredValueInitialization::Class),
-            Type::OptionalClass(class) => self
-                .check_optional_class_destination_initialization(class, source, context)
-                .map(HirStoredValueInitialization::OptionalClass),
             Type::Array(array) => self
                 .check_array_initialize(array, source, context)
                 .map(HirStoredValueInitialization::Array),
             Type::Shared(target) => self
                 .check_shared_transfer(source, target, context)
                 .map(HirStoredValueInitialization::Shared),
-            Type::OptionalShared(target) => self
-                .check_optional_shared_initialize(target, source, context)
-                .map(HirStoredValueInitialization::OptionalShared),
-            Type::OptionalPrimitive(payload) => self
-                .check_optional_source(source, payload, context)
-                .map(|source| HirStoredValueInitialization::OptionalPrimitive { source, payload }),
+            Type::Optional(_) => match self
+                .optional_kind(expected)
+                .expect("enabled optional types must have legacy metadata")
+            {
+                LegacyOptionalKind::Primitive(payload) => self
+                    .check_optional_source(source, payload, context)
+                    .map(|source| HirStoredValueInitialization::OptionalPrimitive {
+                        source,
+                        payload,
+                    }),
+                LegacyOptionalKind::Class(class) => self
+                    .check_optional_class_destination_initialization(class, source, context)
+                    .map(HirStoredValueInitialization::OptionalClass),
+                LegacyOptionalKind::Shared(target) => self
+                    .check_optional_shared_initialize(target, source, context)
+                    .map(HirStoredValueInitialization::OptionalShared),
+            },
             _ => {
                 let value = self.check_expression(source)?;
-                require_type(value.ty, expected, value.span, context, self.diagnostics)
+                self.require_exact_type(value.ty, expected, value.span, context)
                     .then_some(HirStoredValueInitialization::Primitive(value))
             }
         }

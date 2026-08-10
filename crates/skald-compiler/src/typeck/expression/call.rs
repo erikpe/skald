@@ -375,24 +375,31 @@ impl CallableChecker<'_, '_> {
                         .check_array_initialize(array, source, "array value argument")
                         .map(HirCallArgument::Array);
                 }
-                if let Type::OptionalPrimitive(payload) = parameter_type {
-                    return self
-                        .check_optional_source(source, payload, "primitive optional argument")
-                        .map(|source| HirCallArgument::Optional { source, payload });
-                }
-                if let Type::OptionalClass(class) = parameter_type {
-                    return self
-                        .check_class_optional_initialize(class, source, "class optional argument")
-                        .map(HirCallArgument::ClassOptional);
-                }
-                if let Type::OptionalShared(target) = parameter_type {
-                    return self
-                        .check_optional_shared_initialize(
-                            target,
-                            source,
-                            "optional shared argument",
-                        )
-                        .map(HirCallArgument::OptionalShared);
+                if let Some(optional) = self.optional_kind(parameter_type) {
+                    return match optional {
+                        super::super::optional_types::LegacyOptionalKind::Primitive(payload) => {
+                            self.check_optional_source(
+                                source,
+                                payload,
+                                "primitive optional argument",
+                            )
+                            .map(|source| HirCallArgument::Optional { source, payload })
+                        }
+                        super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                            .check_class_optional_initialize(
+                                class,
+                                source,
+                                "class optional argument",
+                            )
+                            .map(HirCallArgument::ClassOptional),
+                        super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                            .check_optional_shared_initialize(
+                                target,
+                                source,
+                                "optional shared argument",
+                            )
+                            .map(HirCallArgument::OptionalShared),
+                    };
                 }
                 let argument = self.check_expression(source)?;
                 require_type(

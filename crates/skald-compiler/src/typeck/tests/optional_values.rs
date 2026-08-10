@@ -1,6 +1,94 @@
 use super::*;
 
 #[test]
+fn optional_metadata_selects_recursive_and_array_payload_plans_before_execution_is_enabled() {
+    let program = resolve_text(
+        "fn nested(value: i64??) -> unit {}\n\
+         fn array(value: (i64[])?) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let capabilities = super::super::capabilities::CopyCapabilities::compute(&program);
+    let optionals = super::super::optional_types::lower_optional_types(&program, &capabilities);
+
+    let scalar = optionals
+        .get(crate::identity::OptionalTypeId::new(0))
+        .unwrap();
+    assert_eq!(scalar.payload, Type::I64);
+    assert_eq!(
+        scalar.storage,
+        crate::hir::HirOptionalStorageCategory::Scalar
+    );
+    assert_eq!(
+        scalar.lifecycle.copy,
+        Some(crate::hir::HirOptionalCopyPlan::Trivial)
+    );
+
+    let nested = optionals
+        .get(crate::identity::OptionalTypeId::new(1))
+        .unwrap();
+    assert_eq!(nested.payload, Type::Optional(scalar.id));
+    assert_eq!(
+        nested.storage,
+        crate::hir::HirOptionalStorageCategory::Nested(scalar.id)
+    );
+    assert_eq!(
+        nested.lifecycle.copy,
+        Some(crate::hir::HirOptionalCopyPlan::Optional(scalar.id))
+    );
+    assert_eq!(
+        nested.lifecycle.unwrap,
+        crate::hir::HirOptionalUnwrapPlan::CheckedNested(scalar.id)
+    );
+
+    let array = optionals
+        .get(crate::identity::OptionalTypeId::new(2))
+        .unwrap();
+    let Type::Array(array_id) = array.payload else {
+        panic!("expected array payload")
+    };
+    assert_eq!(
+        array.storage,
+        crate::hir::HirOptionalStorageCategory::InlineArray(array_id)
+    );
+    assert_eq!(
+        array.lifecycle.copy,
+        Some(crate::hir::HirOptionalCopyPlan::Array(array_id))
+    );
+    assert_eq!(
+        array.boundaries.argument,
+        crate::hir::HirOptionalBoundaryPlan::Copy(crate::hir::HirOptionalCopyPlan::Array(array_id),)
+    );
+}
+
+#[test]
+fn supported_optional_hir_uses_ids_and_dumps_selected_metadata_deterministically() {
+    let output = check_text(
+        "class Item { init() {} }\n\
+         fn main() -> i64 {\n\
+           var number: i64? = 1;\n\
+           var item: Item? = Item();\n\
+           var owner: shared? Item = none;\n\
+           return 0;\n\
+         }\n",
+    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    assert_eq!(hir.optional_types.iter().count(), 3);
+    assert!(hir.optional_types.iter().all(|optional| matches!(
+        optional.storage,
+        crate::hir::HirOptionalStorageCategory::Scalar
+            | crate::hir::HirOptionalStorageCategory::InlineClass(_)
+            | crate::hir::HirOptionalStorageCategory::SharedOwner(_)
+    )));
+    let first = dump_hir(&hir);
+    let second = dump_hir(&hir);
+    assert_eq!(first, second);
+    assert!(first.contains("OptionalTypes"));
+    assert!(first.contains("Lifecycle initialization="));
+    assert!(first.contains("Boundaries argument="));
+}
+
+#[test]
 fn types_primitive_optional_construction_copy_assignment_and_inspection() {
     let output = check_text(
         "fn main() -> i64 {\n\
@@ -22,10 +110,10 @@ fn types_primitive_optional_construction_copy_assignment_and_inspection() {
         .hir
         .expect("primitive optional locals must produce HIR");
     let function = hir.definitions.get(hir.entry_function).unwrap();
-    assert_eq!(
-        function.locals[0].ty,
-        Type::OptionalPrimitive(crate::hir::HirPrimitiveType::I64)
-    );
+    let Type::Optional(optional) = function.locals[0].ty else {
+        panic!("expected optional")
+    };
+    assert_eq!(hir.optional_type(optional).unwrap().payload, Type::I64);
     let dump = dump_hir(&hir);
     assert!(dump.contains("OptionalAbsent"));
     assert!(dump.contains("OptionalPresent"));

@@ -15,7 +15,7 @@ impl BodyLowerer<'_> {
     ) {
         if matches!(
             transfer.source,
-            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_))
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap { .. })
         ) {
             let secured = self.new_shared_temporary(transfer.target, transfer.span);
             self.lower_shared_transfer(secured, transfer);
@@ -104,7 +104,7 @@ impl BodyLowerer<'_> {
             HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
                 self.lower_shared_cast(destination, cast);
             }
-            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap { operand, .. }) => {
                 self.lower_optional_shared_unwrap(operand, destination);
             }
             HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
@@ -313,7 +313,7 @@ impl BodyLowerer<'_> {
             source: None,
             name: format!("shared-temporary-{}", storage.index()),
             kind: MirStorageKind::Temporary,
-            ty: lower_type(Type::Shared(target)),
+            ty: self.lower_type(Type::Shared(target)),
             span,
         });
         self.track_full_expression_storage(storage, span);
@@ -333,7 +333,7 @@ impl BodyLowerer<'_> {
             source: None,
             name: format!("shared-anchor-{}", storage.index()),
             kind: MirStorageKind::SharedAnchor,
-            ty: lower_type(Type::Shared(source.target())),
+            ty: self.lower_type(Type::Shared(source.target())),
             span,
         });
         self.track_full_expression_storage(storage, span);

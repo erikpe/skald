@@ -264,10 +264,12 @@ impl CallableChecker<'_, '_> {
         ) {
             return self.check_primitive_alias_argument(expression, expected, parameter);
         }
-        if matches!(
-            expected,
-            Type::OptionalPrimitive(_) | Type::OptionalClass(_)
-        ) {
+        if matches!(expected, Type::Optional(_))
+            && !matches!(
+                self.optional_kind(expected),
+                Some(super::super::optional_types::LegacyOptionalKind::Shared(_))
+            )
+        {
             return self.check_optional_alias_argument(expression, expected, parameter);
         }
         if let Some(target) = self.resolved_shared_target(expression) {
@@ -435,20 +437,15 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         };
-        let actual = match &place {
-            crate::hir::HirOptionalAliasPlace::Primitive(place) => {
-                Type::OptionalPrimitive(place.payload)
-            }
-            crate::hir::HirOptionalAliasPlace::Class(place) => Type::OptionalClass(place.class),
-        };
+        let actual = self.static_expression_type(expression);
         if actual != expected {
             self.diagnostics.push(
                 Diagnostic::error(
                     TYPE_MISMATCH,
                     format!(
                         "optional alias argument has type `{}`, but `{}` is required",
-                        actual.name(),
-                        expected.name()
+                        self.diagnostic_type_name(actual),
+                        self.diagnostic_type_name(expected)
                     ),
                 )
                 .with_primary_label(place.span(), "this optional container has a different type")
@@ -617,7 +614,7 @@ impl CallableChecker<'_, '_> {
                 .map(CheckedObjectViewSource::Shared),
             ResolvedExpression::Unwrap(unwrap) => {
                 let view = self.check_class_optional_view(unwrap)?;
-                let class = view.source.class();
+                let class = self.optional_operand_class(&view.source);
                 Some(CheckedObjectViewSource::Optional {
                     view,
                     class,
@@ -1165,9 +1162,7 @@ impl CallableChecker<'_, '_> {
                 | Type::F64
                 | Type::Bool
                 | Type::Unit
-                | Type::OptionalPrimitive(_)
-                | Type::OptionalClass(_)
-                | Type::OptionalShared(_)
+                | Type::Optional(_)
                 | Type::Array(_),
             ) => None,
             (_, Type::Shared(_)) => None,

@@ -7,6 +7,7 @@ mod expression;
 mod function;
 mod literal;
 mod optional;
+mod optional_types;
 mod optional_validation;
 mod program;
 mod shared;

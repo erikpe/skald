@@ -127,7 +127,7 @@ impl CallableChecker<'_, '_> {
         {
             let view = self.check_class_optional_view(unwrap)?;
             let access = view.access;
-            let root_class = view.source.class();
+            let root_class = self.optional_operand_class(&view.source);
             let source = crate::hir::HirViewSource::OptionalPayload {
                 view: Box::new(view),
                 projections: projections.clone(),

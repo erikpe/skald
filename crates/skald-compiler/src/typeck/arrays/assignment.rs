@@ -239,19 +239,28 @@ impl CallableChecker<'_, '_> {
             Type::Shared(target) => self
                 .check_shared_transfer(source, target, "shared array element assignment")
                 .map(HirArrayElementValue::Shared),
-            Type::OptionalShared(target) => self
-                .check_optional_shared_initialize(
-                    target,
-                    source,
-                    "optional shared array element assignment",
-                )
-                .map(HirArrayElementValue::OptionalShared),
-            Type::OptionalPrimitive(payload) => self
-                .check_optional_source(source, payload, "optional array element assignment")
-                .map(|source| HirArrayElementValue::Optional { source, payload }),
-            Type::OptionalClass(class) => self
-                .check_class_optional_initialize(class, source, "optional class element assignment")
-                .map(HirArrayElementValue::ClassOptional),
+            Type::Optional(_) => match self
+                .optional_kind(element)
+                .expect("enabled optional array elements must have legacy metadata")
+            {
+                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                    .check_optional_source(source, payload, "optional array element assignment")
+                    .map(|source| HirArrayElementValue::Optional { source, payload }),
+                super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                    .check_class_optional_initialize(
+                        class,
+                        source,
+                        "optional class element assignment",
+                    )
+                    .map(HirArrayElementValue::ClassOptional),
+                super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                    .check_optional_shared_initialize(
+                        target,
+                        source,
+                        "optional shared array element assignment",
+                    )
+                    .map(HirArrayElementValue::OptionalShared),
+            },
             Type::Class(class) => {
                 let source =
                     self.check_object_source(source, class, "class array element assignment")?;
