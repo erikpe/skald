@@ -245,6 +245,9 @@ impl CallableChecker<'_, '_> {
                         )
                     })
                 }
+                super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                    unreachable!("optional-array static fields are rejected by the position gate")
+                }
             },
             Type::Array(array) => self
                 .check_array_initialize(array, &assignment.value, "static array replacement")
@@ -352,14 +355,15 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::OptionalSharedAssignment))
             }
-            super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+            super::super::optional_types::LegacyOptionalKind::Nested(_)
+            | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                 let Type::Optional(optional) = self.binding_type(assignment.destination) else {
                     unreachable!()
                 };
                 let value = self.check_optional_value(
                     optional,
                     &assignment.source,
-                    "nested optional local assignment",
+                    "aggregate optional local assignment",
                 );
                 CheckedStatement::falls_through(value.map(|value| {
                     HirStatement::NestedOptionalAssignment(
@@ -467,14 +471,15 @@ impl CallableChecker<'_, '_> {
                         "optional shared local initializer",
                     )
                     .map(HirLocalInitializer::OptionalShared),
-                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                super::super::optional_types::LegacyOptionalKind::Nested(_)
+                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                     let Type::Optional(optional) = expected else {
                         unreachable!()
                     };
                     self.check_optional_value(
                         optional,
                         &local.initializer,
-                        "nested optional local initializer",
+                        "aggregate optional local initializer",
                     )
                     .map(|value| HirLocalInitializer::NestedOptional(Box::new(value)))
                 }
@@ -703,11 +708,12 @@ impl CallableChecker<'_, '_> {
             super::super::optional_types::LegacyOptionalKind::Shared(target) => self
                 .check_optional_shared_initialize(target, value, "optional shared return")
                 .map(HirReturnValue::OptionalShared),
-            super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+            super::super::optional_types::LegacyOptionalKind::Nested(_)
+            | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                 let Type::Optional(optional) = ty else {
                     unreachable!()
                 };
-                self.check_optional_value(optional, value, "nested optional return")
+                self.check_optional_value(optional, value, "aggregate optional return")
                     .map(Box::new)
                     .map(HirReturnValue::NestedOptional)
             }

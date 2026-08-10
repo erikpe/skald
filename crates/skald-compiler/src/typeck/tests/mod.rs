@@ -87,6 +87,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         | HirExpressionKind::F64Bits(_)
         | HirExpressionKind::Boolean(_) => {}
         HirExpressionKind::ArrayConstruction(_)
+        | HirExpressionKind::OptionalArrayUnwrap(_)
         | HirExpressionKind::ArrayLength(_)
         | HirExpressionKind::ArrayElement(_)
         | HirExpressionKind::ArraySlice(_) => {

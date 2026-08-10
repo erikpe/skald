@@ -401,7 +401,8 @@ impl BodyLowerer<'_> {
             | HirExpressionKind::MethodCall { .. }
             | HirExpressionKind::InterfaceCall { .. }
             | HirExpressionKind::ArrayConstruction(_)
-            | HirExpressionKind::ArraySlice(_) => {
+            | HirExpressionKind::ArraySlice(_)
+            | HirExpressionKind::OptionalArrayUnwrap(_) => {
                 MirPlace::base(self.lower_array_produced_expression(expression))
             }
             _ => invalid_array_hir(),
@@ -426,6 +427,15 @@ impl BodyLowerer<'_> {
                 self.lower_array_construction(construction)
             }
             HirExpressionKind::ArraySlice(slice) => self.lower_array_slice_to_produced(slice),
+            HirExpressionKind::OptionalArrayUnwrap(unwrap) => {
+                let destination = self.new_array_temporary(
+                    unwrap.array,
+                    MirStorageKind::ArrayProduced,
+                    unwrap.span,
+                );
+                self.lower_optional_array_unwrap(destination, unwrap);
+                destination
+            }
             HirExpressionKind::Grouped(inner) => self.lower_array_produced_expression(inner),
             _ => invalid_array_hir(),
         }
@@ -733,6 +743,24 @@ impl BodyLowerer<'_> {
     ) -> StorageId {
         let array = source.array;
         let source = self.lower_array_receiver_place(&source.receiver);
+        let length = self.assign(
+            MirRvalueKind::ArrayLength {
+                source: source.clone(),
+                array,
+            },
+            MirType::U64,
+            span,
+        );
+        self.lower_array_build(array, length, None, Some((source, operation)), span)
+    }
+
+    pub(super) fn lower_array_copy_from_place(
+        &mut self,
+        array: crate::identity::ArrayTypeId,
+        source: MirPlace,
+        operation: MirArrayCopyElement,
+        span: crate::source::Span,
+    ) -> StorageId {
         let length = self.assign(
             MirRvalueKind::ArrayLength {
                 source: source.clone(),
@@ -1065,7 +1093,7 @@ impl BodyLowerer<'_> {
         storage
     }
 
-    fn consume_array_temporary(&mut self, storage: StorageId) {
+    pub(super) fn consume_array_temporary(&mut self, storage: StorageId) {
         self.full_expression.remove_temporary(|temporary| {
             matches!(
                 temporary,

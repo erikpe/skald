@@ -421,8 +421,8 @@ impl InstructionSelector<'_, '_> {
         self.output.push(Instruction::Test(Register::Rax));
         self.output
             .push(Instruction::JumpIfNotZero(destination_present.clone()));
-        self.copy_initialize_optional_value(
-            self.nested_payload_id(assignment.optional)?,
+        self.copy_initialize_aggregate_payload(
+            assignment.optional,
             assignment
                 .destination
                 .clone()
@@ -434,8 +434,8 @@ impl InstructionSelector<'_, '_> {
         self.store_state(&assignment.destination, true)?;
         self.output.push(Instruction::Jump(finished.clone()));
         self.output.push(Instruction::Label(destination_present));
-        self.assign_optional_value(
-            self.nested_payload_id(assignment.optional)?,
+        self.assign_aggregate_payload(
+            assignment.optional,
             assignment
                 .destination
                 .clone()
@@ -463,8 +463,8 @@ impl InstructionSelector<'_, '_> {
         self.store_state(destination, false)?;
         self.output.push(Instruction::Jump(finished.clone()));
         self.output.push(Instruction::Label(present));
-        self.copy_initialize_optional_value(
-            self.nested_payload_id(optional)?,
+        self.copy_initialize_aggregate_payload(
+            optional,
             destination
                 .clone()
                 .project_nested_optional_payload(optional),
@@ -484,8 +484,8 @@ impl InstructionSelector<'_, '_> {
         self.load_state(destination)?;
         self.output.push(Instruction::Test(Register::Rax));
         self.output.push(Instruction::JumpIfEqual(finished.clone()));
-        self.cleanup_optional_value(
-            self.nested_payload_id(optional)?,
+        self.cleanup_aggregate_payload(
+            optional,
             destination
                 .clone()
                 .project_nested_optional_payload(optional),
@@ -495,18 +495,68 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn nested_payload_id(
-        &self,
+    fn copy_initialize_aggregate_payload(
+        &mut self,
         optional: crate::identity::OptionalTypeId,
-    ) -> Result<crate::identity::OptionalTypeId, BackendError> {
+        destination: MirPlace,
+        source: MirPlace,
+    ) -> Result<(), BackendError> {
         match self
             .program
             .optional_type(optional)
             .expect("verified optional identity must exist")
             .storage
         {
-            crate::mir::MirOptionalStorage::Nested(payload) => Ok(payload),
-            _ => unreachable!("recursive optional operation requires nested metadata"),
+            crate::mir::MirOptionalStorage::Nested(payload) => {
+                self.copy_initialize_optional_value(payload, destination, source)
+            }
+            crate::mir::MirOptionalStorage::InlineArray(array) => {
+                self.select_array_copy_construction(&destination, &source, array)
+            }
+            _ => unreachable!("aggregate optional operation requires aggregate metadata"),
+        }
+    }
+
+    fn assign_aggregate_payload(
+        &mut self,
+        optional: crate::identity::OptionalTypeId,
+        destination: MirPlace,
+        source: MirPlace,
+    ) -> Result<(), BackendError> {
+        match self
+            .program
+            .optional_type(optional)
+            .expect("verified optional identity must exist")
+            .storage
+        {
+            crate::mir::MirOptionalStorage::Nested(payload) => {
+                self.assign_optional_value(payload, destination, source)
+            }
+            crate::mir::MirOptionalStorage::InlineArray(array) => {
+                self.select_array_copy_assignment(&destination, &source, array)
+            }
+            _ => unreachable!("aggregate optional operation requires aggregate metadata"),
+        }
+    }
+
+    fn cleanup_aggregate_payload(
+        &mut self,
+        optional: crate::identity::OptionalTypeId,
+        destination: MirPlace,
+    ) -> Result<(), BackendError> {
+        match self
+            .program
+            .optional_type(optional)
+            .expect("verified optional identity must exist")
+            .storage
+        {
+            crate::mir::MirOptionalStorage::Nested(payload) => {
+                self.cleanup_optional_value(payload, destination)
+            }
+            crate::mir::MirOptionalStorage::InlineArray(array) => {
+                self.select_array_field_cleanup(&destination, array)
+            }
+            _ => unreachable!("aggregate optional operation requires aggregate metadata"),
         }
     }
 
@@ -556,8 +606,8 @@ impl InstructionSelector<'_, '_> {
             crate::mir::MirOptionalStorage::Nested(_) => {
                 self.copy_initialize_nested_optional(optional, &destination, &source)
             }
-            crate::mir::MirOptionalStorage::InlineArray(_) => {
-                unreachable!("optional arrays belong to a later roadmap task")
+            crate::mir::MirOptionalStorage::InlineArray(array) => {
+                self.select_array_copy_construction(&destination, &source, array)
             }
         }
     }
@@ -618,8 +668,8 @@ impl InstructionSelector<'_, '_> {
                     span: self.active_instruction_span.expect("active instruction"),
                 })
             }
-            crate::mir::MirOptionalStorage::InlineArray(_) => {
-                unreachable!("optional arrays belong to a later roadmap task")
+            crate::mir::MirOptionalStorage::InlineArray(array) => {
+                self.select_array_copy_assignment(&destination, &source, array)
             }
         }
     }
@@ -652,8 +702,8 @@ impl InstructionSelector<'_, '_> {
             crate::mir::MirOptionalStorage::Nested(_) => {
                 self.cleanup_nested_optional(optional, &destination)
             }
-            crate::mir::MirOptionalStorage::InlineArray(_) => {
-                unreachable!("optional arrays belong to a later roadmap task")
+            crate::mir::MirOptionalStorage::InlineArray(array) => {
+                self.select_array_field_cleanup(&destination, array)
             }
         }
     }

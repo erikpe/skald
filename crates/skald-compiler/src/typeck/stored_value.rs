@@ -46,7 +46,7 @@ impl CallableChecker<'_, '_> {
                 LegacyOptionalKind::Shared(target) => self
                     .check_optional_shared_initialize(target, source, context)
                     .map(HirStoredValueInitialization::OptionalShared),
-                LegacyOptionalKind::Nested(_) => {
+                LegacyOptionalKind::Nested(_) | LegacyOptionalKind::Array(_) => {
                     let Type::Optional(optional) = expected else {
                         unreachable!()
                     };

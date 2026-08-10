@@ -399,12 +399,17 @@ impl CallableChecker<'_, '_> {
                                 "optional shared argument",
                             )
                             .map(HirCallArgument::OptionalShared),
-                        super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                        super::super::optional_types::LegacyOptionalKind::Nested(_)
+                        | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                             let Type::Optional(optional) = parameter_type else {
                                 unreachable!()
                             };
-                            self.check_optional_value(optional, source, "nested optional argument")
-                                .map(HirCallArgument::NestedOptional)
+                            self.check_optional_value(
+                                optional,
+                                source,
+                                "aggregate optional argument",
+                            )
+                            .map(HirCallArgument::NestedOptional)
                         }
                     };
                 }

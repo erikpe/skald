@@ -83,6 +83,7 @@ pub enum HirExpressionKind {
     },
     Unwrap(HirOptionalOperand),
     NestedOptionalUnwrap(Box<super::HirNestedOptionalUnwrap>),
+    OptionalArrayUnwrap(Box<super::HirOptionalArrayUnwrap>),
     Grouped(Box<HirExpression>),
     ArrayConstruction(Box<super::HirArrayConstruction>),
     ArrayLength(Box<super::HirArrayLength>),

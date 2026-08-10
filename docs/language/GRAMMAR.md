@@ -250,9 +250,11 @@ optional ordinary shared owner. `shared? T` is source shorthand for
 normalizes both through the same existing optional-owner semantics.
 
 The parser admits nested optionals, optional arrays, and shared boxes so their
-complete source shapes reach semantic analysis. Resolution still rejects
-`unit?`, standalone optional interface or `Obj` views, nested optionals,
-optional inline arrays, `shared T?`, and `shared? T?`. Optional references
+complete source shapes reach semantic analysis. Nested optionals execute, and
+optional inline arrays execute in core local and top-level internal function
+value positions. Semantic analysis still rejects `unit?`, standalone optional
+interface or `Obj` views, staged optional-array positions, `shared T?`, and
+`shared? T?`. Optional references
 such as `ref?` remain syntax errors. `unit[]` is likewise parsed so later
 semantic analysis can report element ineligibility; bare `unit` remains
 restricted to result positions.
@@ -687,7 +689,7 @@ Postfix `!` binds above prefix `!`, so these shapes are unambiguous:
 ```ska
 !value!      // !(value!)
 !!flag       // !(!flag)
-value!!      // (value!)!; type checking rejects it without nested optionals
+value!!      // (value!)!; checks two nested optional layers
 left != right
 ```
 

@@ -21,6 +21,7 @@ pub(super) enum LegacyOptionalKind {
     Class(crate::identity::ClassId),
     Shared(HirSharedTarget),
     Nested(OptionalTypeId),
+    Array(crate::identity::ArrayTypeId),
 }
 
 pub(super) fn legacy_kind(
@@ -36,6 +37,7 @@ pub(super) fn legacy_kind(
         ResolvedTypeKind::Class(class) => Some(LegacyOptionalKind::Class(class)),
         ResolvedTypeKind::Shared(target) => Some(LegacyOptionalKind::Shared(lower_shared(target))),
         ResolvedTypeKind::Optional(nested) => Some(LegacyOptionalKind::Nested(nested)),
+        ResolvedTypeKind::Array(array) => Some(LegacyOptionalKind::Array(array)),
         _ => None,
     }
 }

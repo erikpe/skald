@@ -637,6 +637,33 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirExpression> {
         let source =
             self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
+        let aggregate_optional = match &source {
+            HirOptionalOperand::NestedPlace(place) => Some(place.optional),
+            HirOptionalOperand::NestedProduced(expression) => {
+                let Type::Optional(optional) = expression.ty else {
+                    unreachable!("aggregate optional producer must retain its optional type")
+                };
+                Some(optional)
+            }
+            _ => None,
+        };
+        if let Some(optional) = aggregate_optional {
+            if let Type::Array(array) = super::optional_types::payload_type(self.program, optional)
+            {
+                return Some(HirExpression {
+                    kind: HirExpressionKind::OptionalArrayUnwrap(Box::new(
+                        crate::hir::HirOptionalArrayUnwrap {
+                            source,
+                            optional,
+                            array,
+                            span: unwrap.span,
+                        },
+                    )),
+                    ty: Type::Array(array),
+                    span: unwrap.span,
+                });
+            }
+        }
         if let HirOptionalOperand::NestedPlace(place) = &source {
             let optional = place.optional;
             let Type::Optional(payload) =
@@ -774,7 +801,7 @@ impl CallableChecker<'_, '_> {
         }
         if matches!(
             self.optional_kind(self.static_expression_type(expression)),
-            Some(LegacyOptionalKind::Nested(_))
+            Some(LegacyOptionalKind::Nested(_) | LegacyOptionalKind::Array(_))
         ) {
             if let Some(place) = self.optional_value_place(expression) {
                 return Some(HirOptionalOperand::NestedPlace(place));
@@ -794,6 +821,9 @@ impl CallableChecker<'_, '_> {
                             HirOptionalOperand::SharedProduced(Box::new(value))
                         }
                         LegacyOptionalKind::Nested(_) => {
+                            HirOptionalOperand::NestedProduced(Box::new(value))
+                        }
+                        LegacyOptionalKind::Array(_) => {
                             HirOptionalOperand::NestedProduced(Box::new(value))
                         }
                     });

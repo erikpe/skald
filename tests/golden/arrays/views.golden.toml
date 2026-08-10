@@ -19,12 +19,11 @@ inline = """error[TYP020]: an array alias root cannot be rebound
 
 [[test]]
 name = "optional_payload"
-mode = "compile-fail"
+mode = "run"
 source = "array_optional_payload.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = """error[TYP043]: inline optional array payloads are not supported yet
- --> tests/golden/arrays/array_optional_payload.ska:1:21"""
+[[test.run]]
+name = "core_function_value"
+expect = { exit = 0 }
 
 [[test]]
 name = "whole_pointee_assignment"

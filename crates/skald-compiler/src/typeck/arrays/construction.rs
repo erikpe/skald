@@ -259,6 +259,7 @@ fn array_provenance(expression: &HirExpression) -> HirArrayProvenance {
         HirExpressionKind::Grouped(inner) => array_provenance(inner),
         HirExpressionKind::ArrayConstruction(_)
         | HirExpressionKind::ArraySlice(_)
+        | HirExpressionKind::OptionalArrayUnwrap(_)
         | HirExpressionKind::DirectCall { .. }
         | HirExpressionKind::StaticCall { .. }
         | HirExpressionKind::MethodCall { .. }

@@ -271,6 +271,9 @@ impl CallableChecker<'_, '_> {
                     )
                     .map(|value| HirArrayElementValue::NestedOptional(Box::new(value)))
                 }
+                super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                    unreachable!("optional-array elements are rejected by the position gate")
+                }
             },
             Type::Class(class) => {
                 let source =

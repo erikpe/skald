@@ -73,6 +73,18 @@ pub struct HirNestedOptionalAssignment {
     pub span: Span,
 }
 
+/// Checked one-layer extraction of an inline array from its optional wrapper.
+///
+/// Array payloads are owning values, so the consumer receives an independent
+/// deep copy rather than a view into guarded wrapper storage.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalArrayUnwrap {
+    pub source: HirOptionalOperand,
+    pub optional: OptionalTypeId,
+    pub array: crate::identity::ArrayTypeId,
+    pub span: Span,
+}
+
 /// A supported inline optional container passed through an alias parameter.
 ///
 /// This is a place category, not a reference type: the binding mode carries

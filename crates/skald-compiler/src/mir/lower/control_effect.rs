@@ -73,7 +73,9 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::F64Bits(_)
         | HirExpressionKind::Boolean(_)
         | HirExpressionKind::PresenceTest { .. } => false,
-        HirExpressionKind::Unwrap(_) | HirExpressionKind::NestedOptionalUnwrap(_) => true,
+        HirExpressionKind::Unwrap(_)
+        | HirExpressionKind::NestedOptionalUnwrap(_)
+        | HirExpressionKind::OptionalArrayUnwrap(_) => true,
         HirExpressionKind::ArrayConstruction(construction) => {
             array_construction_contains_control_effect(construction)
         }

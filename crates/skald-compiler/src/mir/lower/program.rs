@@ -501,6 +501,7 @@ fn lower_function_definition(
         receiver_class: None,
         string_language_item,
         literal_data,
+        array_types: &hir.array_types,
         optional_types: &hir.optional_types,
     });
     MirFunctionDefinition {
@@ -532,6 +533,7 @@ fn lower_member_definition(
         receiver_class: definition.receiver_class,
         string_language_item,
         literal_data: &hir.literal_data,
+        array_types: &hir.array_types,
         optional_types: &hir.optional_types,
     });
     MirMemberDefinition {

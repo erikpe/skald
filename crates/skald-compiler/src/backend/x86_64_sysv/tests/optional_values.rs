@@ -63,6 +63,129 @@ fn every_deep_optional_layer_has_distinct_aligned_state_and_payload_storage() {
 }
 
 #[test]
+fn optional_array_layout_contains_one_tagged_array_descriptor() {
+    let program = lower_text("fn main() -> i64 { var value: i64[]? = none; return 0; }\n");
+    let layouts = layout::DataLayout::compute(&program).unwrap();
+    let array = program.array_types.iter().next().unwrap();
+    let optional_id = program
+        .optional_for_payload(MirType::Array(array.id))
+        .unwrap();
+    let optional = layouts.optional_type(optional_id).unwrap();
+    let descriptor = layouts.array(array.id).unwrap().descriptor();
+
+    assert_eq!(optional.state_offset(), 0);
+    assert_eq!(optional.payload_offset() % descriptor.alignment(), 0);
+    assert!(optional.ty().size() >= optional.payload_offset() + descriptor.size());
+}
+
+#[test]
+fn optional_arrays_execute_absence_empty_copy_assignment_result_and_unwrap() {
+    let source = concat!(
+        "fn make() -> i64[]? { return some(i64[]{20, 22}); }\n",
+        "fn forward(value: i64[]?) -> i64[]? { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var absent: i64[]? = none;\n",
+        "  var empty: (i64[])? = i64[]{};\n",
+        "  if (absent is some) { return 1; }\n",
+        "  if (empty is none) { return 2; }\n",
+        "  var original: i64[]? = some(i64[]{40, 2});\n",
+        "  var copied: i64[]? = forward(original);\n",
+        "  copied = copied;\n",
+        "  original = none;\n",
+        "  var produced: i64[]? = make();\n",
+        "  var values: i64[] = copied!;\n",
+        "  produced = none;\n",
+        "  return values[0] + values[1];\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    assert!(output.contains(".Lska_array_0_clone:"));
+    assert!(output.contains(".Lska_array_0_release:"));
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn optional_nested_arrays_copy_and_unwrap_independently() {
+    let source = "fn main() -> i64 {\n\
+        var value: i64[][]? = some(i64[][]{i64[]{42}});\n\
+        var copied: i64[][]? = value;\n\
+        value = none;\n\
+        var rows: i64[][] = copied!;\n\
+        copied = none;\n\
+        return rows[0][0];\n\
+      }\n";
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn optional_arrays_reuse_owning_element_lifecycle_helpers() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Item {\n",
+        "  marker: i64;\n",
+        "  init(marker: i64) { self.marker = marker; }\n",
+        "  copy(ref other: Item) { self.marker = other.marker; }\n",
+        "  destroy { test_record_i64(self.marker); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var classes: Item[]? = some(Item[]{Item(42)});\n",
+        "  var class_copy: Item[]? = classes;\n",
+        "  classes = none;\n",
+        "  class_copy = none;\n",
+        "  var optional_classes: Item?[]? = some(Item?[]{some(Item(42)), none});\n",
+        "  var optional_copy: Item?[]? = optional_classes;\n",
+        "  optional_classes = none;\n",
+        "  optional_copy = none;\n",
+        "  var owner: shared Item = new Item(42);\n",
+        "  var owners: (shared Item)[]? = some((shared Item)[]{owner});\n",
+        "  var owners_copy: (shared Item)[]? = owners;\n",
+        "  var maybe_owner: shared? Item = new Item(42);\n",
+        "  var maybe_owners: (shared? Item)[]? = some((shared? Item)[]{maybe_owner});\n",
+        "  var maybe_copy: (shared? Item)[]? = maybe_owners;\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    output.push_str(record_i64_stub());
+    let result = run_native_assembly_output(&output);
+
+    assert_eq!(result.status.code(), Some(42), "{output}");
+    assert_eq!(result.stdout, b"42\n42\n42\n42\n42\n42\n");
+}
+
+#[test]
+fn optional_array_dynamic_allocation_failure_uses_array_failure_path() {
+    let source = concat!(
+        "fn too_large() -> u64 { return 9223372036854775807u; }\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[]? = some(i64[](too_large()));\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(concat!(
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    ud2\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    ud2\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    ));
+
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
 fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execute() {
     let source = concat!(
         "extern fn test_record_i64(value: i64) -> unit;\n",

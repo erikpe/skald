@@ -218,6 +218,9 @@ impl CallableChecker<'_, '_> {
                         )
                     })
                 }
+                super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                    unreachable!("optional-array fields are rejected by the position gate")
+                }
             },
             (
                 Type::Bool

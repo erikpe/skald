@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn optional_metadata_selects_recursive_and_array_payload_plans_before_execution_is_enabled() {
+fn optional_metadata_selects_recursive_and_array_payload_plans() {
     let program = resolve_text(
         "fn nested(value: i64??) -> unit {}\n\
          fn array(value: (i64[])?) -> unit {}\n\
@@ -526,4 +526,62 @@ fn nested_optional_conversion_never_lifts_through_multiple_layers() {
         "{:?}",
         output.diagnostics
     );
+}
+
+#[test]
+fn optional_arrays_type_as_core_local_and_function_values() {
+    let output = check_text(
+        "fn forward(value: i64[]?) -> i64[]? { return value; }\n\
+         fn main() -> i64 {\n\
+           var absent: i64[]? = none;\n\
+           var empty: (i64[])? = some(i64[]{});\n\
+           var values: i64[]? = i64[]{40, 2};\n\
+           values = forward(values);\n\
+           if (absent is none && empty is some) { return values![0] + values![1]; }\n\
+           return 0;\n\
+         }\n",
+    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("optional arrays must produce HIR"));
+    assert!(dump.contains("OptionalArrayUnwrap"));
+    assert!(dump.contains("NestedOptionalAssignment"));
+    assert!(dump.contains("ArrayConstruction"));
+}
+
+#[test]
+fn optional_arrays_remain_gated_in_later_aggregate_positions() {
+    let output = check_text(
+        "class Holder {\n\
+           values: i64[]?;\n\
+           init(values: i64[]?) { self.values = values; }\n\
+           fn replace(values: i64[]?) -> i64[]? { return values; }\n\
+         }\n\
+         fn inspect(ref values: i64[]?) -> unit {}\n\
+         fn main() -> i64 { var nested: i64[]?[] = i64[]?[](); return 0; }\n",
+    );
+    assert!(output.hir.is_none());
+    let messages = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE)
+        .map(|diagnostic| diagnostic.message.as_str())
+        .collect::<Vec<_>>();
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("class fields")));
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("initializer parameters")));
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("method parameters")));
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("method results")));
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("array elements")));
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("alias parameters")));
 }

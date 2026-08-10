@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO6 is complete and CO7 is next.
+Status: in progress; CO7 is complete and CO8 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -103,7 +103,7 @@ pointee is an optional value.
 - [x] CO4 — Generalize executable optional MIR and target realization
 - [x] CO5 — Execute arbitrarily nested optional lifecycle
 - [x] CO6 — Complete nested-optional access and callable integration
-- [ ] CO7 — Execute optional inline arrays
+- [x] CO7 — Execute optional inline arrays
 - [ ] CO8 — Integrate optional arrays across stored and aggregate boundaries
 - [ ] CO9 — Harden and publish compositional optionals
 
@@ -343,23 +343,23 @@ paths.
 **Purpose:** Add `T[]?` as a tagged optional owning one complete inline array
 descriptor while keeping neighboring array and ownership forms distinct.
 
-- [ ] Admit `T[]?` and `(T[])?` as one canonical optional identity for every
+- [x] Admit `T[]?` and `(T[])?` as one canonical optional identity for every
       currently legal inline array type, including recursive arrays and owning
       element categories.
-- [ ] Initialize absence from `none`, inject exact array values one layer, and
+- [x] Initialize absence from `none`, inject exact array values one layer, and
       construct explicit presence through `some(expression)` without
       conflating absence and an empty array.
-- [ ] Execute optional-array copy construction, assignment, self-assignment,
+- [x] Execute optional-array copy construction, assignment, self-assignment,
       produced-backing transfer where permitted, conditional backing cleanup,
       direct construction, presence tests, and checked one-layer unwrap.
-- [ ] Reuse canonical array lifecycle capabilities and generated helpers rather
+- [x] Reuse canonical array lifecycle capabilities and generated helpers rather
       than duplicating element copy, assignment, and destruction policy inside
       optional lowering.
-- [ ] Implement tagged optional-array layout, frame storage, internal
+- [x] Implement tagged optional-array layout, frame storage, internal
       parameter/result behavior, verifier rules, failure edges, and native
       x86-64 lowering without changing the inline array descriptor or C runtime
       ABI.
-- [ ] Preserve `shared? T[]` as shorthand for `(shared T[])?`, an optional
+- [x] Preserve `shared? T[]` as shorthand for `(shared T[])?`, an optional
       shared array owner, and keep it distinct from `T[]?`.
 
 **Tests:** Absent versus present-empty arrays; dynamic and element-list

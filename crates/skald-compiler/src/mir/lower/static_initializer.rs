@@ -66,6 +66,7 @@ fn lower_static_initializer(
         receiver_class: None,
         string_language_item,
         literal_data: &hir.literal_data,
+        array_types: &hir.array_types,
         optional_types: &hir.optional_types,
     });
 

@@ -126,7 +126,7 @@ fn optional_presence_refinement(
     let optional = optional_at_place(program, function, source)?;
     matches!(
         program.optional_type(optional)?.storage,
-        crate::mir::MirOptionalStorage::Nested(_)
+        crate::mir::MirOptionalStorage::Nested(_) | crate::mir::MirOptionalStorage::InlineArray(_)
     )
     .then(|| {
         (

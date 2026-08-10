@@ -1216,6 +1216,16 @@ impl<'types> HirDumper<'types> {
                 );
                 self.indented(|dumper| dumper.optional_operand(&unwrap.source));
             }
+            HirExpressionKind::OptionalArrayUnwrap(unwrap) => {
+                self.typed_line(
+                    &format!(
+                        "OptionalArrayUnwrap optional={} array={}",
+                        unwrap.optional, unwrap.array
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| dumper.optional_operand(&unwrap.source));
+            }
             HirExpressionKind::ArrayConstruction(construction) => {
                 self.typed_line("ArrayConstruction", expression);
                 self.indented(|dumper| dumper.array_construction(construction));

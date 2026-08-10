@@ -948,7 +948,11 @@ impl Verifier<'_> {
             .program
             .optional_type(optional)
             .is_some_and(|metadata| {
-                matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                matches!(
+                    metadata.storage,
+                    crate::mir::MirOptionalStorage::Nested(_)
+                        | crate::mir::MirOptionalStorage::InlineArray(_)
+                )
             });
         let destination = self.verify_place(function, block, destination);
         if !valid_metadata

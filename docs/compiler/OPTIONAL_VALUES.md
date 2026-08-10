@@ -5,10 +5,11 @@ inline-class optionals, optional shared owners, and supported inline
 optional-container aliases through HIR, MIR verification, x86-64 lowering,
 and native execution. Recursive source type syntax, canonical `(shared T)?`
 owners, recursive identities, nested owning lifecycle, checked access, aliases,
-and internal callable boundaries are implemented. This document also freezes
-the remaining compiler direction for optional inline arrays. MIR uses canonical
-optional identities and recursive lifecycle metadata; source eligibility gates
-still exclude optional-array execution.
+and internal callable boundaries are implemented. Tagged optional inline
+arrays execute in core local and top-level internal function value positions.
+MIR uses canonical optional identities and recursive lifecycle metadata;
+source eligibility gates retain aggregate and alias optional-array positions
+for their staged integration.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -81,8 +82,9 @@ The recursive syntax and resolved-identity portions of this direction are
 implemented, including grouping, postfix chains, shorthand provenance, and
 bottom-up interning. Canonical HIR and MIR identity tables, lifecycle plans,
 checked access, aliases, and callable integration are also implemented for
-nested storage. The optional-array parts of this section remain a **frozen
-design** for the planned executable extension. The migration keeps every current program's
+nested storage. The optional-array core in this section is implemented;
+aggregate storage, aliases, dispatch boundaries, and array-element integration
+remain a **frozen design** for the next extension. The migration keeps every current program's
 diagnostics, evaluation order, lifecycle, layout, ABI, and native behavior
 stable before enabling a new payload category.
 
@@ -743,9 +745,9 @@ observable behavior:
 | Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
-The current compile-failure suites for `T[]?`, `shared T?`, and `shared? T?`
-remain required until the task responsible for a form changes its expected
-outcome. Nested `T??` requires positive lifecycle, access, alias, and callable
+Compile-failure suites for staged optional-array positions, `shared T?`, and
+`shared? T?` remain required until the feature responsible for a form changes
+its expected outcome. Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage. Box forms remain compile failures after
 this roadmap completes.

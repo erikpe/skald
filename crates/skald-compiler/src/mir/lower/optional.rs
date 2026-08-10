@@ -260,6 +260,61 @@ impl BodyLowerer<'_> {
         );
     }
 
+    pub(super) fn lower_optional_array_unwrap(
+        &mut self,
+        destination: StorageId,
+        unwrap: &crate::hir::HirOptionalArrayUnwrap,
+    ) {
+        let source = self.lower_optional_operand(&unwrap.source);
+        let present = self.assign(
+            MirRvalueKind::OptionalPresence {
+                source: source.clone(),
+                kind: MirPresenceTestKind::Some,
+            },
+            MirType::Bool,
+            unwrap.span,
+        );
+        let success_target = self.body.allocate_block(unwrap.span);
+        let failure_target = self.body.allocate_block(unwrap.span);
+        self.terminate(MirTerminator::Branch {
+            condition: present,
+            true_target: success_target,
+            false_target: failure_target,
+            span: unwrap.span,
+        });
+        self.body
+            .select_block(failure_target)
+            .expect("allocated optional-array failure block must be selectable");
+        self.terminate(MirTerminator::Terminate {
+            reason: MirTerminationReason::OptionalAccessFailure,
+            span: unwrap.span,
+        });
+        self.body
+            .select_block(success_target)
+            .expect("allocated optional-array success block must be selectable");
+        let operation = self
+            .input
+            .array_types
+            .get(unwrap.array)
+            .and_then(|array| array.lifecycle.copy)
+            .expect("typed optional-array unwrap must select array copying");
+        let produced = self.lower_array_copy_from_place(
+            unwrap.array,
+            source.project_nested_optional_payload(unwrap.optional),
+            super::lower_array_copy_element(operation),
+            unwrap.span,
+        );
+        self.consume_array_temporary(produced);
+        self.emit(MirInstruction::Array(
+            crate::mir::MirArrayInstruction::Adopt {
+                destination: crate::mir::MirPlace::base(destination),
+                source: produced,
+                array: unwrap.array,
+                span: unwrap.span,
+            },
+        ));
+    }
+
     fn lower_optional_copy_initialize_at(
         &mut self,
         destination: crate::mir::MirPlace,
@@ -308,7 +363,8 @@ impl BodyLowerer<'_> {
                     },
                 ));
             }
-            crate::hir::HirOptionalStorageCategory::Nested(_) => {
+            crate::hir::HirOptionalStorageCategory::Nested(_)
+            | crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
                 self.emit(MirInstruction::NestedOptionalInitialize(
                     MirNestedOptionalInitialize {
                         optional,
@@ -317,9 +373,6 @@ impl BodyLowerer<'_> {
                         span,
                     },
                 ));
-            }
-            crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
-                unreachable!("optional arrays belong to a later roadmap task")
             }
         }
     }
@@ -356,7 +409,8 @@ impl BodyLowerer<'_> {
                     },
                 )
             }
-            crate::hir::HirOptionalStorageCategory::Nested(_) => {
+            crate::hir::HirOptionalStorageCategory::Nested(_)
+            | crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
                 super::FullExpressionTemporary::NestedOptional(
                     crate::mir::MirNestedOptionalCleanup {
                         optional,
@@ -364,9 +418,6 @@ impl BodyLowerer<'_> {
                         span,
                     },
                 )
-            }
-            crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
-                unreachable!("optional arrays belong to a later roadmap task")
             }
         };
         self.full_expression.register_temporary(temporary);

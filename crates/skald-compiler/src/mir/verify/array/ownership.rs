@@ -729,8 +729,33 @@ impl ArrayOwnerState {
                     );
                 }
             }
-            MirArrayInstruction::Adopt { source, .. }
-            | MirArrayInstruction::Replace { source, .. } => {
+            MirArrayInstruction::Adopt {
+                destination,
+                source,
+                ..
+            } => {
+                if !self.produced.remove(source) || !self.consumed.insert(*source) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "produced array storage must be consumed exactly once",
+                    );
+                }
+                if let Some(storage) = destination.base.local_storage() {
+                    if function
+                        .storage(storage)
+                        .is_some_and(|entry| entry.kind == MirStorageKind::ArrayProduced)
+                        && (!self.produced.insert(storage) || self.consumed.contains(&storage))
+                    {
+                        verifier.block_error(
+                            function.callable(),
+                            block,
+                            "produced array adoption destination is initialized more than once",
+                        );
+                    }
+                }
+            }
+            MirArrayInstruction::Replace { source, .. } => {
                 if !self.produced.remove(source) || !self.consumed.insert(*source) {
                     verifier.block_error(
                         function.callable(),

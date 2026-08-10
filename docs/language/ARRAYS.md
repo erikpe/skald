@@ -83,13 +83,12 @@ Legal element types are:
 - ordinary or optional shared owners, including shared array owners; and
 - inline array types recursively.
 
-`unit`, bare interface and `Obj` views, aliases, and function types are not
-array element types. Inline optional arrays are not part of the executable
-contract. The parser preserves an array type used as an optional payload, and
-resolution rejects it at the deferred optional-array boundary. The frozen
+`unit`, bare interface and `Obj` views, aliases, function types, and optional
+inline arrays are not array element types. An array type may nevertheless be
+the payload of an optional local or top-level internal function value. The
 [compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
-defines `T[]?` and `(T[])?` as equivalent spellings for that future value. This
-does not change executable availability or `(shared T[])?` and its
+defines `T[]?` and `(T[])?` as equivalent spellings for that tagged owning
+value. This does not change `(shared T[])?` and its
 `shared? T[]` shorthand, whose absence belongs to the shared owner rather than
 to an inline optional array payload.
 
@@ -662,8 +661,9 @@ rows[1] = i64[](20u);
 ```
 
 Inner arrays are never implicitly optional. Absence is available through an
-optional shared owner, for example an array whose element type is
-`(shared T[])?`. Inline optional array payloads remain deferred.
+optional inline array value such as `i64[][]?`, or through an optional shared
+owner such as `(shared T[])?`. Optional arrays as array elements remain
+deferred.
 
 ## Aliases, mutation, and backing anchors
 

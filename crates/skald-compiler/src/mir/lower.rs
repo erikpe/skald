@@ -91,6 +91,7 @@ struct BodyLoweringInput<'hir> {
     receiver_class: Option<ClassId>,
     string_language_item: Option<MirStringLanguageItem>,
     literal_data: &'hir crate::hir::HirLiteralDataTable,
+    array_types: &'hir crate::hir::HirArrayTypeTable,
     optional_types: &'hir crate::hir::HirOptionalTypeTable,
 }
 
@@ -177,11 +178,9 @@ impl<'hir> BodyLowerer<'hir> {
                             )
                         }
                         crate::hir::HirOptionalStorageCategory::Scalar => {}
-                        crate::hir::HirOptionalStorageCategory::Nested(_) => {
+                        crate::hir::HirOptionalStorageCategory::Nested(_)
+                        | crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
                             lowerer.cleanup.register_nested_optional(*storage, optional)
-                        }
-                        crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
-                            unreachable!("gated optional payload reached executable MIR lowering")
                         }
                     },
                     Type::Array(array) => lowerer.cleanup.register_array(*storage, array),

@@ -70,6 +70,72 @@ fn optional_assignment_preserves_initialized_wrapper_state_across_cfg_joins() {
 }
 
 #[test]
+fn lowers_optional_array_lifecycle_and_checked_copy_out() {
+    let source = "fn forward(value: i64[]?) -> i64[]? { return value; }\n\
+        fn main() -> i64 {\n\
+          var absent: i64[]? = none;\n\
+          var present: i64[]? = some(i64[]{40, 2});\n\
+          var copied: i64[]? = forward(present);\n\
+          copied = copied;\n\
+          present = none;\n\
+          var values: i64[] = copied!;\n\
+          return values[0] + values[1];\n\
+        }\n";
+    let program = lower_text(source);
+    verify_mir(&program).expect("optional array lifecycle must verify");
+    let dump = dump_mir(&program);
+
+    assert!(dump.contains("storage InlineArray"));
+    assert!(dump.contains("nested-optional-initialize"));
+    assert!(dump.contains("nested-optional-assign"));
+    assert!(dump.contains("nested-optional-cleanup"));
+    assert!(dump.contains("array-copy"));
+    assert!(dump.contains("terminate optional-access-failure"));
+}
+
+#[test]
+fn verifier_rejects_optional_array_metadata_and_operation_mismatches() {
+    let source =
+        "fn main() -> i64 { var scalar: i64? = none; var value: i64[]? = none; return 0; }\n";
+    let mut metadata = lower_text(source);
+    let optional = metadata
+        .optional_types
+        .entries_mut_for_test()
+        .iter_mut()
+        .find(|entry| matches!(entry.storage, MirOptionalStorage::InlineArray(_)))
+        .expect("source must declare an optional array");
+    optional.lifecycle.copy = Some(MirOptionalCopyPlan::Trivial);
+    let errors = verify_mir(&metadata).unwrap_err().to_string();
+    assert!(
+        errors.contains("inconsistent executable lifecycle metadata"),
+        "{errors}"
+    );
+
+    let mut operation = lower_text(source);
+    let scalar = operation.optional_for_payload(MirType::I64).unwrap();
+    let main = operation
+        .definitions
+        .get_mut_for_test(operation.entry_function)
+        .unwrap();
+    let initialize = main
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::NestedOptionalInitialize(initialize) => Some(initialize),
+            _ => None,
+        })
+        .expect("optional array local must use aggregate optional initialization");
+    initialize.optional = scalar;
+    let errors = verify_mir(&operation).unwrap_err().to_string();
+    assert!(
+        errors.contains("incompatible destination metadata"),
+        "{errors}"
+    );
+}
+
+#[test]
 fn lowers_optional_fields_arguments_and_results_as_verified_places() {
     let source = "class Holder {\n\
         value: i64?;\n\

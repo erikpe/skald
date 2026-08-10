@@ -149,7 +149,9 @@ That same contract now carries canonical optional identities and recursive
 lifecycle plans through generalized executable MIR and x86-64 realization.
 Distinct scalar, aggregate, and shared-owner operations remain only where the
 runtime work differs. Nested payload access, aliases, and internal callable
-boundaries use those recursive plans; optional arrays remain gated. The frozen
+boundaries use those recursive plans. Tagged optional arrays reuse ordinary
+array lifecycle for core locals and top-level internal function values, while
+aggregate and alias positions remain gated. The frozen
 work adds no shared box target for `shared T?` and no C runtime ABI surface.
 
 The compiler implements the recursive array source surface, canonical
