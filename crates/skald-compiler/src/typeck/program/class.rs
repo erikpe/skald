@@ -58,7 +58,7 @@ fn lower_class_declaration(
         .fields
         .iter()
         .map(|field| {
-            let ty = lower_type(&field.type_syntax);
+            let ty = lower_type(program, &field.type_syntax);
             if matches!(ty, Type::Unit | Type::Obj | Type::Interface(_)) {
                 let name = ty.name();
                 diagnostics.push(
@@ -108,10 +108,15 @@ fn lower_class_declaration(
         .initializers
         .iter()
         .map(|initializer| {
-            valid &= validate_parameters(&initializer.parameters, diagnostics, "initializer");
+            valid &=
+                validate_parameters(program, &initializer.parameters, diagnostics, "initializer");
             HirInitializerDeclaration {
                 id: initializer.id,
-                parameters: initializer.parameters.iter().map(lower_parameter).collect(),
+                parameters: initializer
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_parameter(program, parameter))
+                    .collect(),
                 span: initializer.span,
             }
         })
@@ -122,7 +127,11 @@ fn lower_class_declaration(
             .as_ref()
             .map(|copy| HirCopyConstructorDeclaration {
                 id: copy.id,
-                parameters: copy.parameters.iter().map(lower_parameter).collect(),
+                parameters: copy
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_parameter(program, parameter))
+                    .collect(),
                 span: copy.span,
             });
     let copy_assignment_declaration =
@@ -131,7 +140,7 @@ fn lower_class_declaration(
             .as_ref()
             .map(|copy| HirCopyAssignmentDeclaration {
                 id: copy.id,
-                parameter: lower_parameter(&copy.parameter),
+                parameter: lower_parameter(program, &copy.parameter),
                 span: copy.span,
             });
     let destructor = class
@@ -166,8 +175,8 @@ fn lower_class_declaration(
         .methods
         .iter()
         .map(|method| {
-            valid &= validate_parameters(&method.parameters, diagnostics, "method");
-            let return_type = lower_type(&method.return_type);
+            valid &= validate_parameters(program, &method.parameters, diagnostics, "method");
+            let return_type = lower_type(program, &method.return_type);
             if matches!(return_type, Type::Obj | Type::Interface(_)) {
                 diagnostics.push(
                     Diagnostic::error(
@@ -186,7 +195,11 @@ fn lower_class_declaration(
                 name: method.name.clone(),
                 name_span: method.name_span,
                 kind: lower_method_kind(method.kind),
-                parameters: method.parameters.iter().map(lower_parameter).collect(),
+                parameters: method
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_parameter(program, parameter))
+                    .collect(),
                 return_type,
                 span: method.span,
             }
@@ -343,7 +356,7 @@ impl ClassDefinitionChecker<'_, '_> {
                     callable: method.id.into(),
                     parameters: &method.parameters,
                     definition: body,
-                    return_type: lower_type(&method.return_type),
+                    return_type: lower_type(self.program, &method.return_type),
                     receiver,
                     body_kind: MemberBodyKind::MethodOrDestructor,
                     callable_name: format!("method `{}`", method.name),

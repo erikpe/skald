@@ -187,7 +187,7 @@ impl CallableChecker<'_, '_> {
         span: Span,
         diagnostic_code: &'static str,
     ) -> Option<HirViewTarget> {
-        match lower_type(target) {
+        match lower_type(self.program, target) {
             Type::Class(class) => Some(HirViewTarget::Class(class)),
             Type::Interface(interface) => Some(HirViewTarget::Interface(interface)),
             Type::Obj => Some(HirViewTarget::Obj),

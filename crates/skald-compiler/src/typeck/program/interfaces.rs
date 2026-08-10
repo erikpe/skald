@@ -116,7 +116,7 @@ fn lower_interfaces(
                             .with_secondary_label(previous, "first declared here"),
                         );
                     }
-                    validate_requirement_signature(requirement, diagnostics);
+                    validate_requirement_signature(program, requirement, diagnostics);
                     HirInterfaceRequirement {
                         id: requirement.id,
                         name: requirement.name.clone(),
@@ -129,9 +129,9 @@ fn lower_interfaces(
                         parameters: requirement
                             .parameters
                             .iter()
-                            .map(lower_interface_parameter)
+                            .map(|parameter| lower_interface_parameter(program, parameter))
                             .collect(),
-                        return_type: lower_type(&requirement.return_type),
+                        return_type: lower_type(program, &requirement.return_type),
                         span: requirement.span,
                     }
                 })
@@ -149,6 +149,7 @@ fn lower_interfaces(
 }
 
 fn validate_requirement_signature(
+    program: &ResolvedProgram,
     requirement: &crate::resolve::ResolvedInterfaceRequirement,
     diagnostics: &mut Diagnostics,
 ) {
@@ -167,7 +168,7 @@ fn validate_requirement_signature(
                 .with_secondary_label(previous, "first declared here"),
             );
         }
-        let ty = lower_type(&parameter.type_syntax);
+        let ty = lower_type(program, &parameter.type_syntax);
         let valid = match parameter.binding_mode {
             crate::resolve::ResolvedParameterBindingMode::Value => !matches!(
                 ty,
@@ -202,7 +203,7 @@ fn validate_requirement_signature(
         }
     }
     if matches!(
-        lower_type(&requirement.return_type),
+        lower_type(program, &requirement.return_type),
         crate::hir::Type::Obj | crate::hir::Type::Interface(_)
     ) {
         diagnostics.push(
@@ -221,12 +222,15 @@ fn validate_requirement_signature(
     }
 }
 
-fn lower_interface_parameter(parameter: &ResolvedInterfaceParameter) -> HirInterfaceParameter {
+fn lower_interface_parameter(
+    program: &ResolvedProgram,
+    parameter: &ResolvedInterfaceParameter,
+) -> HirInterfaceParameter {
     HirInterfaceParameter {
         mode: lower_parameter_mode(parameter.binding_mode),
         name: parameter.name.clone(),
         name_span: parameter.name_span,
-        ty: lower_type(&parameter.type_syntax),
+        ty: lower_type(program, &parameter.type_syntax),
         span: parameter.span,
     }
 }

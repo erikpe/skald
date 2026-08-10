@@ -244,17 +244,10 @@ impl CallableResolver<'_, '_> {
             }),
             ResolvedExpression::Unwrap(unwrap) => {
                 match self.resolved_expression_type(&unwrap.source)? {
-                    ResolvedTypeKind::Optional { payload, .. } => Some(match payload {
-                        ResolvedOptionalPayload::I64 => ResolvedTypeKind::I64,
-                        ResolvedOptionalPayload::U64 => ResolvedTypeKind::U64,
-                        ResolvedOptionalPayload::U8 => ResolvedTypeKind::U8,
-                        ResolvedOptionalPayload::F64 => ResolvedTypeKind::F64,
-                        ResolvedOptionalPayload::Bool => ResolvedTypeKind::Bool,
-                        ResolvedOptionalPayload::Class(class) => ResolvedTypeKind::Class(class),
-                    }),
-                    ResolvedTypeKind::OptionalShared { target, .. } => {
-                        Some(ResolvedTypeKind::Shared(target))
-                    }
+                    ResolvedTypeKind::Optional(optional) => self
+                        .type_interner
+                        .optional(optional)
+                        .map(|entry| entry.payload.kind),
                     _ => None,
                 }
             }
@@ -285,9 +278,10 @@ impl CallableResolver<'_, '_> {
                     _ => return None,
                 };
                 match projection.bounds {
-                    ResolvedArrayProjectionBounds::Index(_) => {
-                        self.array_types.get(array).map(|entry| entry.element.kind)
-                    }
+                    ResolvedArrayProjectionBounds::Index(_) => self
+                        .type_interner
+                        .array(array)
+                        .map(|entry| entry.element.kind),
                     ResolvedArrayProjectionBounds::Slice { .. } => {
                         Some(ResolvedTypeKind::Array(array))
                     }

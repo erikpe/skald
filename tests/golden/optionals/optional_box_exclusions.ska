@@ -1,0 +1,12 @@
+class Value {
+    init() {}
+}
+
+fn excluded(
+    no_boxed_payload: shared Value?,
+    no_optional_boxed_payload: shared? Value?
+) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

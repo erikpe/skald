@@ -83,11 +83,19 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    let optional_types_valid =
+        super::optional_validation::validate_optional_types(program, &mut diagnostics);
+    validate_containment(program, &mut diagnostics);
+    if !optional_types_valid {
+        return TypeCheckOutput {
+            hir: None,
+            diagnostics,
+        };
+    }
     super::arrays::validate_array_types(program, &mut diagnostics);
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
-    validate_containment(program, &mut diagnostics);
     validate_override_signatures(program, &mut diagnostics);
     let interface_analysis = analyze_interfaces(program, &mut diagnostics);
     let copy_capabilities = CopyCapabilities::compute(program);
@@ -97,7 +105,11 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         &interface_analysis.conformances,
         &mut diagnostics,
     );
-    let declarations = program.declarations.iter().map(lower_declaration).collect();
+    let declarations = program
+        .declarations
+        .iter()
+        .map(|declaration| lower_declaration(program, declaration))
+        .collect();
     let definitions = program
         .declarations
         .iter()
@@ -169,9 +181,9 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
 fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
     for declaration in program.declarations.iter() {
         if matches!(declaration.linkage, ResolvedFunctionLinkage::Internal) {
-            validate_parameters(&declaration.parameters, diagnostics, "function");
+            validate_parameters(program, &declaration.parameters, diagnostics, "function");
             if matches!(
-                lower_type(&declaration.return_type),
+                lower_type(program, &declaration.return_type),
                 Type::Obj | Type::Interface(_)
             ) {
                 diagnostics.push(
@@ -193,13 +205,14 @@ fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &m
 }
 
 fn validate_parameters(
+    program: &ResolvedProgram,
     parameters: &[ResolvedParameter],
     diagnostics: &mut Diagnostics,
     owner: &'static str,
 ) -> bool {
     let mut valid = true;
     for parameter in parameters {
-        let ty = lower_type(&parameter.type_syntax);
+        let ty = lower_type(program, &parameter.type_syntax);
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value
                 if matches!(ty, Type::Unit | Type::Obj | Type::Interface(_)) =>
@@ -257,13 +270,13 @@ fn validate_parameters(
     valid
 }
 
-fn lower_parameter(parameter: &ResolvedParameter) -> HirParameter {
+fn lower_parameter(program: &ResolvedProgram, parameter: &ResolvedParameter) -> HirParameter {
     HirParameter {
         id: parameter.id,
         mode: lower_parameter_mode(parameter.binding_mode),
         name: parameter.name.clone(),
         name_span: parameter.name_span,
-        ty: lower_type(&parameter.type_syntax),
+        ty: lower_type(program, &parameter.type_syntax),
         span: parameter.span,
     }
 }
@@ -295,7 +308,7 @@ fn check_entry_point(
         .declarations
         .get(entry_id)
         .expect("resolved entry ID must exist in the declaration table");
-    let return_type = lower_type(&entry.return_type);
+    let return_type = lower_type(program, &entry.return_type);
 
     if !matches!(entry.linkage, ResolvedFunctionLinkage::Internal)
         || program.definitions.get(entry_id).is_none()
@@ -363,21 +376,23 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
             continue;
         }
         if declaration.parameters.iter().any(|parameter| {
-            crate::typeck::arrays::resolved_type_contains_array(parameter.type_syntax.kind)
-        }) || crate::typeck::arrays::resolved_type_contains_array(declaration.return_type.kind)
-        {
+            crate::typeck::arrays::resolved_type_contains_array(program, parameter.type_syntax.kind)
+        }) || crate::typeck::arrays::resolved_type_contains_array(
+            program,
+            declaration.return_type.kind,
+        ) {
             // Array validation emits the more precise external-ABI diagnostic
             // at each offending type rather than duplicating this generic one.
             continue;
         }
         let has_valid_parameters = declaration.parameters.iter().all(|parameter| {
             matches!(
-                lower_type(&parameter.type_syntax),
+                lower_type(program, &parameter.type_syntax),
                 Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
             )
         });
         let has_valid_return = matches!(
-            lower_type(&declaration.return_type),
+            lower_type(program, &declaration.return_type),
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit
         );
         if !has_valid_parameters || !has_valid_return || symbol != &declaration.name {
@@ -403,8 +418,15 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
     }
 }
 
-fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDeclaration {
-    let parameters = function.parameters.iter().map(lower_parameter).collect();
+fn lower_declaration(
+    program: &ResolvedProgram,
+    function: &ResolvedFunctionDeclaration,
+) -> HirFunctionDeclaration {
+    let parameters = function
+        .parameters
+        .iter()
+        .map(|parameter| lower_parameter(program, parameter))
+        .collect();
 
     HirFunctionDeclaration {
         id: function.id,
@@ -412,7 +434,7 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
         name: function.name.clone(),
         name_span: function.name_span,
         parameters,
-        return_type: lower_type(&function.return_type),
+        return_type: lower_type(program, &function.return_type),
         linkage: match &function.linkage {
             ResolvedFunctionLinkage::Internal => HirFunctionLinkage::Internal,
             ResolvedFunctionLinkage::External { link } => {
@@ -429,7 +451,7 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
     }
 }
 
-pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
+pub(super) fn lower_type(program: &ResolvedProgram, type_syntax: &ResolvedType) -> Type {
     match type_syntax.kind {
         ResolvedTypeKind::I64 => Type::I64,
         ResolvedTypeKind::U64 => Type::U64,
@@ -444,42 +466,29 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }
-        ResolvedTypeKind::Optional { payload, .. } => match payload {
-            crate::resolve::ResolvedOptionalPayload::I64 => {
-                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::I64)
+        ResolvedTypeKind::Optional(optional) => match program
+            .optional_types
+            .get(optional)
+            .expect("resolved optional identities must name table entries")
+            .payload
+            .kind
+        {
+            ResolvedTypeKind::I64 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::I64),
+            ResolvedTypeKind::U64 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U64),
+            ResolvedTypeKind::U8 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U8),
+            ResolvedTypeKind::F64 => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::F64),
+            ResolvedTypeKind::Bool => Type::OptionalPrimitive(crate::hir::HirPrimitiveType::Bool),
+            ResolvedTypeKind::Class(class) => Type::OptionalClass(class),
+            ResolvedTypeKind::Shared(target) => {
+                Type::OptionalShared(crate::typeck::shared::lower_shared_target(target))
             }
-            crate::resolve::ResolvedOptionalPayload::U64 => {
-                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U64)
-            }
-            crate::resolve::ResolvedOptionalPayload::U8 => {
-                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U8)
-            }
-            crate::resolve::ResolvedOptionalPayload::F64 => {
-                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::F64)
-            }
-            crate::resolve::ResolvedOptionalPayload::Bool => {
-                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::Bool)
-            }
-            crate::resolve::ResolvedOptionalPayload::Class(class) => Type::OptionalClass(class),
+            _ => unreachable!("deferred optional payloads must be rejected before HIR lowering"),
         },
-        ResolvedTypeKind::OptionalShared { target, .. } => {
-            Type::OptionalShared(crate::typeck::shared::lower_shared_target(target))
-        }
     }
 }
 
 /// Compares resolved type identities while ignoring source-location metadata
 /// carried by compound type syntax.
 pub(super) fn same_resolved_type(left: &ResolvedType, right: &ResolvedType) -> bool {
-    match (&left.kind, &right.kind) {
-        (
-            ResolvedTypeKind::Optional { payload: left, .. },
-            ResolvedTypeKind::Optional { payload: right, .. },
-        ) => left == right,
-        (
-            ResolvedTypeKind::OptionalShared { target: left, .. },
-            ResolvedTypeKind::OptionalShared { target: right, .. },
-        ) => left == right,
-        (left, right) => left == right,
-    }
+    left.kind == right.kind
 }

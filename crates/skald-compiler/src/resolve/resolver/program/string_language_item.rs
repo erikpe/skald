@@ -11,14 +11,14 @@ use crate::{
     },
 };
 
-use super::super::{ArrayTypeInterner, INVALID_STRING_LANGUAGE_ITEM};
+use super::super::{ResolvedTypeInterner, INVALID_STRING_LANGUAGE_ITEM};
 
 pub(super) fn validate_string_language_item(
     modules: &ProgramModuleTable,
     module_declarations: &ResolvedModuleDeclarationTable,
     classes: &ResolvedClassDeclarationTable,
     functions: &ResolvedFunctionDeclarationTable,
-    array_types: &ArrayTypeInterner,
+    type_interner: &ResolvedTypeInterner,
     literal_data: &[ResolvedLiteralData],
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedStringLanguageItem> {
@@ -147,7 +147,7 @@ pub(super) fn validate_string_language_item(
             );
             valid = false;
         }
-        if !expected_type.matches(field.type_syntax.kind, array_types) {
+        if !expected_type.matches(field.type_syntax.kind, type_interner) {
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_STRING_LANGUAGE_ITEM,
@@ -232,7 +232,7 @@ enum ExpectedFieldType {
 }
 
 impl ExpectedFieldType {
-    fn matches(self, actual: ResolvedTypeKind, arrays: &ArrayTypeInterner) -> bool {
+    fn matches(self, actual: ResolvedTypeKind, arrays: &ResolvedTypeInterner) -> bool {
         match self {
             Self::I64 => actual == ResolvedTypeKind::I64,
             Self::U64 => actual == ResolvedTypeKind::U64,
@@ -241,7 +241,7 @@ impl ExpectedFieldType {
                     return false;
                 };
                 arrays
-                    .get(array)
+                    .array(array)
                     .is_some_and(|array| array.element.kind == ResolvedTypeKind::U8)
             }
         }

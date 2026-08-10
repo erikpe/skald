@@ -57,13 +57,8 @@ impl ContainmentGraph {
                 reverse_edges[target.index()].push(class.id.index());
             }
             for field in &class.fields {
-                let target = match field.type_syntax.kind {
-                    ResolvedTypeKind::Class(target)
-                    | ResolvedTypeKind::Optional {
-                        payload: crate::resolve::ResolvedOptionalPayload::Class(target),
-                        ..
-                    } => target,
-                    _ => continue,
+                let Some(target) = inline_class_target(program, field.type_syntax.kind) else {
+                    continue;
                 };
                 if target.index() >= class_count {
                     continue;
@@ -203,6 +198,26 @@ impl ContainmentGraph {
         }
 
         None
+    }
+}
+
+fn inline_class_target(program: &ResolvedProgram, mut kind: ResolvedTypeKind) -> Option<ClassId> {
+    loop {
+        match kind {
+            ResolvedTypeKind::Class(class) => return Some(class),
+            ResolvedTypeKind::Optional(optional) => {
+                kind = program.optional_types.get(optional)?.payload.kind;
+            }
+            ResolvedTypeKind::Array(_) | ResolvedTypeKind::Shared(_) => return None,
+            ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+            | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_) => return None,
+        }
     }
 }
 

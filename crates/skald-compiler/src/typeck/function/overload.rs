@@ -298,17 +298,17 @@ impl CallableChecker<'_, '_> {
                 crate::resolve::ResolvedPrimitiveType::F64 => Type::F64,
                 crate::resolve::ResolvedPrimitiveType::Bool => Type::Bool,
             },
-            ResolvedExpression::ObjectCast(cast) => lower_type(&cast.target),
+            ResolvedExpression::ObjectCast(cast) => lower_type(self.program, &cast.target),
             ResolvedExpression::DirectCall(call) => self
                 .program
                 .declarations
                 .get(call.function)
-                .map(|declaration| lower_type(&declaration.return_type))
+                .map(|declaration| lower_type(self.program, &declaration.return_type))
                 .expect("resolved direct call must reference a declaration"),
             ResolvedExpression::StaticCall(call) => self
                 .program
                 .method(call.method)
-                .map(|method| lower_type(&method.return_type))
+                .map(|method| lower_type(self.program, &method.return_type))
                 .expect("resolved static call must reference a declaration"),
             ResolvedExpression::Grouped(grouped) => {
                 self.static_expression_type(&grouped.expression)
@@ -316,23 +316,23 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => self
                 .program
                 .field(access.field)
-                .map(|field| lower_type(&field.type_syntax))
+                .map(|field| lower_type(self.program, &field.type_syntax))
                 .expect("resolved field access must reference a declaration"),
             ResolvedExpression::StaticFieldAccess(access) => self
                 .program
                 .static_field(access.field)
-                .map(|field| lower_type(&field.type_syntax))
+                .map(|field| lower_type(self.program, &field.type_syntax))
                 .expect("resolved static-field access must reference a declaration"),
             ResolvedExpression::MethodCall(call) => self
                 .program
                 .method(call.method)
-                .map(|method| lower_type(&method.return_type))
+                .map(|method| lower_type(self.program, &method.return_type))
                 .expect("resolved method call must reference a declaration"),
             ResolvedExpression::InterfaceCall(call) => self
                 .program
                 .interface(call.interface)
                 .and_then(|interface| interface.requirements.get(call.requirement.index()))
-                .map(|requirement| lower_type(&requirement.return_type))
+                .map(|requirement| lower_type(self.program, &requirement.return_type))
                 .expect("resolved interface call must reference a requirement"),
             ResolvedExpression::Allocation(allocation) => {
                 Type::Shared(crate::hir::HirSharedTarget::Class(allocation.class))
@@ -490,7 +490,7 @@ impl CallableChecker<'_, '_> {
     }
 
     fn parameter_accepts(&self, parameter: &ResolvedParameter, argument: ArgumentAnalysis) -> bool {
-        let expected = lower_type(&parameter.type_syntax);
+        let expected = lower_type(self.program, &parameter.type_syntax);
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value => match expected {
                 Type::OptionalPrimitive(payload) => {
@@ -603,8 +603,8 @@ impl CallableChecker<'_, '_> {
             .iter()
             .zip(&other.parameters)
             .all(|(candidate, other)| {
-                let candidate = lower_type(&candidate.type_syntax);
-                let other = lower_type(&other.type_syntax);
+                let candidate = lower_type(self.program, &candidate.type_syntax);
+                let other = lower_type(self.program, &other.type_syntax);
                 let compatible = self.parameter_type_accepts(candidate, other)
                     || matches!(
                         (candidate, other),
@@ -733,7 +733,7 @@ impl CallableChecker<'_, '_> {
                 };
                 format!(
                     "{mode}{}",
-                    self.type_name(lower_type(&parameter.type_syntax))
+                    self.type_name(lower_type(self.program, &parameter.type_syntax))
                 )
             })
             .collect::<Vec<_>>()

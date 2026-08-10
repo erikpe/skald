@@ -68,10 +68,11 @@ impl ClassCollectionState {
         &mut self,
         field: &syntax::FieldDecl,
         lookup: ModuleLookup<'_>,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
-        let Some(type_syntax) = resolve_type(&field.type_syntax, lookup, array_types, diagnostics)
+        let Some(type_syntax) =
+            resolve_type(&field.type_syntax, lookup, type_interner, diagnostics)
         else {
             return;
         };
@@ -99,10 +100,11 @@ impl ClassCollectionState {
         member_index: usize,
         field: &syntax::StaticFieldDecl,
         lookup: ModuleLookup<'_>,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
-        let Some(type_syntax) = resolve_type(&field.type_syntax, lookup, array_types, diagnostics)
+        let Some(type_syntax) =
+            resolve_type(&field.type_syntax, lookup, type_interner, diagnostics)
         else {
             return;
         };
@@ -140,7 +142,7 @@ impl ClassCollectionState {
         member_index: usize,
         source: &syntax::InitializerDecl,
         lookup: ModuleLookup<'_>,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         let id = InitializerId::new(self.id, self.lifecycle.initializers.len());
@@ -151,7 +153,7 @@ impl ClassCollectionState {
                 id.into(),
                 &source.parameters,
                 lookup,
-                array_types,
+                type_interner,
                 diagnostics,
             ),
             span: source.span,
@@ -189,7 +191,7 @@ impl ClassCollectionState {
         source: &syntax::CopyConstructorDecl,
         class_name: &str,
         lookup: ModuleLookup<'_>,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         if report_duplicate_lifecycle(
@@ -212,7 +214,7 @@ impl ClassCollectionState {
             },
             &source.parameters,
             lookup,
-            array_types,
+            type_interner,
             diagnostics,
         ) else {
             self.lifecycle.copy_constructor_invalid = true;
@@ -233,7 +235,7 @@ impl ClassCollectionState {
         source: &syntax::CopyAssignmentDecl,
         class_name: &str,
         lookup: ModuleLookup<'_>,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         if report_duplicate_lifecycle(
@@ -256,7 +258,7 @@ impl ClassCollectionState {
             },
             &source.parameters,
             lookup,
-            array_types,
+            type_interner,
             diagnostics,
         ) else {
             self.lifecycle.copy_assignment_invalid = true;
@@ -300,7 +302,7 @@ impl ClassCollectionState {
         member_index: usize,
         method: &syntax::MethodDecl,
         lookup: ModuleLookup<'_>,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         let id = MethodId::new(self.id, self.methods.len());
@@ -342,10 +344,15 @@ impl ClassCollectionState {
                 id.into(),
                 &method.parameters,
                 lookup,
-                array_types,
+                type_interner,
                 diagnostics,
             ),
-            return_type: resolve_result_type(&method.return_type, lookup, array_types, diagnostics),
+            return_type: resolve_result_type(
+                &method.return_type,
+                lookup,
+                type_interner,
+                diagnostics,
+            ),
             span: method.span,
         });
         self.work.method_members.push(member_index);
@@ -417,7 +424,7 @@ pub(super) fn collect_class(
     ast_index: usize,
     class: &syntax::ClassDecl,
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
     let direct_base = resolve_direct_base(id, class, lookup, diagnostics);
@@ -425,16 +432,16 @@ pub(super) fn collect_class(
     for (member_index, member) in class.members.iter().enumerate() {
         match member {
             syntax::ClassMember::Field(field) => {
-                state.collect_field(field, lookup, array_types, diagnostics)
+                state.collect_field(field, lookup, type_interner, diagnostics)
             }
             syntax::ClassMember::StaticField(field) => {
-                state.collect_static_field(member_index, field, lookup, array_types, diagnostics)
+                state.collect_static_field(member_index, field, lookup, type_interner, diagnostics)
             }
             syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
                 member_index,
                 initializer,
                 lookup,
-                array_types,
+                type_interner,
                 diagnostics,
             ),
             syntax::ClassMember::CopyConstructor(constructor) => state.collect_copy_constructor(
@@ -442,7 +449,7 @@ pub(super) fn collect_class(
                 constructor,
                 &class.name.text,
                 lookup,
-                array_types,
+                type_interner,
                 diagnostics,
             ),
             syntax::ClassMember::CopyAssignment(assignment) => state.collect_copy_assignment(
@@ -450,14 +457,14 @@ pub(super) fn collect_class(
                 assignment,
                 &class.name.text,
                 lookup,
-                array_types,
+                type_interner,
                 diagnostics,
             ),
             syntax::ClassMember::Destructor(destructor) => {
                 state.collect_destructor(member_index, destructor, &class.name.text, diagnostics)
             }
             syntax::ClassMember::Method(method) => {
-                state.collect_method(member_index, method, lookup, array_types, diagnostics)
+                state.collect_method(member_index, method, lookup, type_interner, diagnostics)
             }
         }
     }
@@ -589,7 +596,7 @@ fn resolve_copy_source_parameter(
     context: CopySourceContext,
     parameters: &[syntax::Parameter],
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedParameter> {
     let description = context.operation.description();
@@ -624,7 +631,7 @@ fn resolve_copy_source_parameter(
         return None;
     }
 
-    let ty = resolve_type(&parameter.type_syntax, lookup, array_types, diagnostics)?;
+    let ty = resolve_type(&parameter.type_syntax, lookup, type_interner, diagnostics)?;
     if ty.kind != ResolvedTypeKind::Class(context.owner) {
         diagnostics.push(
             Diagnostic::error(

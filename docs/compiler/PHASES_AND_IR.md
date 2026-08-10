@@ -250,8 +250,10 @@ source-visible lifetime rule is owned by the [static-field
 contract](../language/STATIC_FIELDS.md#initialization-and-lifetime).
 
 The optional-values contract assigns each decision to these same phase owners.
-Syntax preserves source shape and resolution assigns non-recursive optional
-target identities. For optional owning values, type checking selects explicit
+Syntax preserves source shape and resolution assigns recursive, bottom-up
+interned optional identities whose payloads may name earlier optional or array
+identities. Type checking rejects deferred payload categories before adapting
+the already executable identities to the current HIR. For optional owning values, type checking selects explicit
 absent or present initialization, copy, assignment, overload injection,
 field/call boundaries, presence, primitive extraction, checked class payload
 views, and optional shared copy/adopt/move/release and secured unwrap. MIR owns
@@ -262,8 +264,9 @@ operations, definite wrapper initialization, balanced compatible guards,
 anchor ordering, isolation of the zero niche from ordinary owners, and
 identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types;
-reserved boxed, nested, and optional-reference shapes remain diagnosed before
-HIR.
+reserved boxes remain resolution exclusions; nested and optional-array
+identities stop at the type-checking eligibility gate; optional-reference
+shapes remain syntax diagnostics. None enter HIR.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes

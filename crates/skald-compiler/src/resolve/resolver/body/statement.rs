@@ -481,10 +481,7 @@ impl CallableResolver<'_, '_> {
                         },
                     ));
                 }
-                if matches!(
-                    binding.ty,
-                    ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. }
-                ) {
+                if matches!(binding.ty, ResolvedTypeKind::Optional(_)) {
                     let source = self.resolve_expression(&assignment.value)?;
                     return Some(ResolvedStatement::OptionalAssignment(
                         ResolvedOptionalAssignment {

@@ -344,3 +344,30 @@ fn class_optional_payloads_participate_in_recursive_containment() {
         .iter()
         .any(|diagnostic| diagnostic.code == RECURSIVE_INLINE_CONTAINMENT));
 }
+
+#[test]
+fn containment_traverses_every_optional_layer_but_stops_at_array_and_shared_edges() {
+    let recursive = check_text(
+        "class Node { next: Node???; init() { self.next = none; } }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(recursive.hir.is_none());
+    assert!(recursive
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == RECURSIVE_INLINE_CONTAINMENT));
+    assert!(recursive
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE));
+
+    let bounded = check_text(
+        "class Node { children: Node[]?; owner: (shared Node)??; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(bounded.hir.is_none());
+    assert!(bounded
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code != RECURSIVE_INLINE_CONTAINMENT));
+}

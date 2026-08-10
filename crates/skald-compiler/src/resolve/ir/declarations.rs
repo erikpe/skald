@@ -6,7 +6,8 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ModuleId, ParameterId, StaticFieldId, StaticInitializerId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, OptionalTypeId, ParameterId, StaticFieldId, StaticInitializerId, VirtualFamilyId,
+        VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -22,6 +23,7 @@ use super::modules::{
     ResolvedModuleBindingTable, ResolvedModuleDeclarationTable, ResolvedOrdinaryBindingTable,
     ResolvedVisibility,
 };
+use super::optional_types::ResolvedOptionalTypeTable;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
@@ -31,6 +33,7 @@ pub struct ResolvedProgram {
     pub ordinary_bindings: ResolvedOrdinaryBindingTable,
     pub module_declarations: ResolvedModuleDeclarationTable,
     pub array_types: ResolvedArrayTypeTable,
+    pub optional_types: ResolvedOptionalTypeTable,
     pub string_language_item: Option<super::ResolvedStringLanguageItem>,
     pub literal_data: super::ResolvedLiteralDataTable,
     pub declarations: ResolvedFunctionDeclarationTable,
@@ -614,7 +617,7 @@ pub struct ResolvedLocal {
     pub span: Span,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ResolvedTypeKind {
     I64,
     U64,
@@ -627,30 +630,10 @@ pub enum ResolvedTypeKind {
     Interface(InterfaceId),
     Array(crate::identity::ArrayTypeId),
     Shared(ResolvedSharedTarget),
-    Optional {
-        payload: ResolvedOptionalPayload,
-        payload_span: Span,
-        question_span: Span,
-    },
-    OptionalShared {
-        target: ResolvedSharedTarget,
-        shared_span: Span,
-        question_span: Span,
-        target_span: Span,
-    },
+    Optional(OptionalTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum ResolvedOptionalPayload {
-    I64,
-    U64,
-    U8,
-    F64,
-    Bool,
-    Class(ClassId),
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedSharedTarget {
     Obj,
     Class(ClassId),

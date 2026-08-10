@@ -254,7 +254,7 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
-        let expected = lower_type(parameter.type_syntax());
+        let expected = lower_type(self.program, parameter.type_syntax());
         if matches!(expected, Type::Array(_)) || is_array_projection_through_groups(expression) {
             return self.check_array_alias_argument(expression, parameter);
         }
@@ -317,7 +317,7 @@ impl CallableChecker<'_, '_> {
         }
         self.convert_alias_argument(
             source,
-            lower_type(parameter.type_syntax()),
+            lower_type(self.program, parameter.type_syntax()),
             required,
             parameter,
         )
@@ -519,7 +519,7 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         }
-        let expected = lower_type(parameter.type_syntax());
+        let expected = lower_type(self.program, parameter.type_syntax());
         let expected_target = match expected {
             Type::Class(class) => HirViewTarget::Class(class),
             Type::Interface(interface) => HirViewTarget::Interface(interface),
@@ -721,7 +721,7 @@ impl CallableChecker<'_, '_> {
                 if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_)) {
                     return self.reject_implicit_shared_view_source(
                         expression,
-                        lower_type(&field.type_syntax),
+                        lower_type(self.program, &field.type_syntax),
                         source_use,
                     );
                 }

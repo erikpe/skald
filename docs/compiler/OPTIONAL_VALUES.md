@@ -3,10 +3,10 @@
 Status: authoritative implemented compiler contract for primitive and exact
 inline-class optionals, optional shared owners, and supported inline
 optional-container aliases through HIR, MIR verification, x86-64 lowering,
-and native execution. Recursive source type syntax and canonical `(shared T)?`
-owners are implemented; this document also freezes the remaining compiler
-direction for recursive optional identities, arbitrary nesting, and optional
-inline arrays, which are not yet executable.
+and native execution. Recursive source type syntax, canonical `(shared T)?`
+owners, and recursive resolved optional identities are implemented; this
+document also freezes the remaining compiler direction for typed lifecycle,
+arbitrary nesting, and optional inline arrays, which are not yet executable.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -15,8 +15,8 @@ authoritative for source currently accepted by the compiler.
 This document defines phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. The AST contains recursive
-source-shaped type nodes, while resolved IR retains the current flat executable
-identities. Primitive and exact-class
+source-shaped type nodes, while resolved IR contains deterministic interned
+optional identities. Primitive and exact-class
 optionals continue through explicit typed HIR and MIR places, calls, and
 lifecycle and checked-view operations; optional shared owners likewise
 continue through explicit owner operations; the verifier proves their storage,
@@ -31,8 +31,8 @@ Each phase owns one stable responsibility:
 | Phase | Optional-value responsibility |
 |---|---|
 | Lexing and parsing | Preserve recursive `?`/`[]` type composition, grouping, postfix `!`, reserved `none`, contextual `some`, `shared?` shorthand provenance, presence tests, precedence, trivia, and recovery spans. |
-| Resolution | Normalize `(shared T)?` and `shared? T`, resolve currently executable inline optional payloads and optional shared targets, and reject deferred recursive payloads without deciding layout or ownership operations. |
-| Type checking and HIR | Decide optional compatibility, injection, overload selection, lifecycle operation, payload value/place category, checked-view extent, access, and shared-anchor requirement. |
+| Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and keep shared boxes outside the resolved type graph. |
+| Type checking and HIR | Reject payload identities not yet executable, then adapt supported primitive, class, and shared-owner identities to the current HIR while deciding compatibility, lifecycle, checked-view, and anchor requirements. |
 | MIR lowering | Make optional storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
 | MIR verification | Prove storage, payload, owner, guard, anchor, transition, failure, and CFG invariants independently of source shape. |
 | Backend | Realize only verified layouts, state transitions, calls, traps, and ownership operations for the selected target. |
@@ -44,15 +44,15 @@ x86-64 byte offsets, tag values, registers, or runtime symbols.
 
 ## Type identities
 
-The initial resolved, HIR, and MIR models require two non-recursive optional
-families:
+HIR and MIR currently retain two non-recursive executable optional families:
 
 - inline optional over a primitive or exact class payload; and
 - optional shared owner over a class, interface, or `Obj` shared target.
 
-Resolution retains compact copyable target enums rather than making every
-existing type recursively heap allocated merely to represent one optional
-layer. Inline optional payloads and optional shared targets are distinct flat
+Resolution instead uses `OptionalTypeId` and a dense canonical payload table.
+All resolved optional uses, including optional shared owners, carry that one
+identity shape. Type checking is the temporary compatibility boundary that
+maps only the already executable payload identities into the flat HIR
 families; repeated phase-local boolean flags are not used.
 
 The type model must preserve these distinctions:
@@ -64,8 +64,9 @@ shared T    ordinary non-null shared owner
 (shared T)? optional shared owner
 ```
 
-`shared? T` is an exact source shorthand for `(shared T)?`; both lower to the
-same existing resolved, HIR, and MIR optional-owner family. `shared T?`,
+`shared? T` is an exact source shorthand for `(shared T)?`; both intern to the
+same resolved identity and lower to the existing HIR and MIR optional-owner
+family. `shared T?`,
 `shared? T?`, nested optionality, aliases to optional shared
 owners, and invalid payload families reach focused diagnostic boundaries and
 never become executable HIR types. Alias binding mode may designate an
@@ -74,12 +75,12 @@ reference or optional-reference type identity.
 
 ## Frozen compositional implementation direction
 
-The recursive syntax-node portion of this direction is implemented, including
-grouping, postfix chains, and shorthand provenance. The remainder of this
-section is a **frozen design** for the planned semantic extension. The flat
-resolved identities and executable operations described elsewhere in this
-document remain the implemented compiler contract until the responsible
-roadmap tasks replace them. The migration must keep every current program's
+The recursive syntax and resolved-identity portions of this direction are
+implemented, including grouping, postfix chains, shorthand provenance, and
+bottom-up interning. The remainder of this section is a **frozen design** for
+the planned typed and executable extension. The flat HIR/MIR operations
+described elsewhere remain the implemented compiler contract until the
+responsible roadmap tasks replace them. The migration must keep every current program's
 diagnostics, evaluation order, lifecycle, layout, ABI, dumps, and native
 behavior stable before it enables a new payload category.
 
@@ -97,7 +98,8 @@ OptionalTypeId -> {
 }
 ```
 
-The exact Rust names remain private. The durable requirements are:
+The public identity and resolved-table facade is intentionally narrow. The
+durable requirements are:
 
 - resolved, HIR, and MIR types carry a small copyable optional identity rather
   than recursively owning another type node;
@@ -744,8 +746,9 @@ this roadmap completes.
 
 ## Exclusions
 
-The implemented compiler parses nested optionals and optional inline arrays but
-continues to reject them during resolution; `some(expression)` remains
+The implemented compiler resolves nested optionals and optional inline arrays
+to canonical identities, then rejects them at the focused type-checking
+eligibility gate before HIR; `some(expression)` remains
 unimplemented syntax. Their compiler direction is frozen above. This contract does not design
 generalized shared boxes, optional function values, first-class references,
 optional casts, equality or operator lifting, chaining/coalescing/propagation,

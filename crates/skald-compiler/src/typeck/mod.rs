@@ -7,6 +7,7 @@ mod expression;
 mod function;
 mod literal;
 mod optional;
+mod optional_validation;
 mod program;
 mod shared;
 mod stored_value;
@@ -16,6 +17,7 @@ pub use arrays::{
     INVALID_ARRAY_ELEMENT,
 };
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
+pub use optional_validation::INVALID_OPTIONAL_TYPE;
 pub use program::{
     type_check, TypeCheckOutput, AMBIGUOUS_INITIALIZER, COPY_OPERATION_UNAVAILABLE,
     F64_LITERAL_OUT_OF_RANGE, FIELD_INITIALIZATION, IMPLICIT_SHARED_DEREFERENCE,

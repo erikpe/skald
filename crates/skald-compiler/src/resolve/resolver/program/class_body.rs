@@ -8,7 +8,7 @@ pub(super) fn resolve_class_bodies(
     work: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
     environment: BodyResolutionEnvironment<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedClassDefinition> {
     let resolver = ClassBodyResolver {
@@ -17,7 +17,7 @@ pub(super) fn resolve_class_bodies(
         environment,
     };
     work.iter()
-        .map(|item| resolver.resolve_class(item, array_types, diagnostics))
+        .map(|item| resolver.resolve_class(item, type_interner, diagnostics))
         .collect()
 }
 
@@ -31,7 +31,7 @@ impl ClassBodyResolver<'_> {
     fn resolve_class(
         &self,
         item: &ClassWorkItem,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) -> ResolvedClassDefinition {
         let declaration = self
@@ -67,7 +67,7 @@ impl ClassBodyResolver<'_> {
                     &metadata.parameters,
                     &source.body,
                     source.span,
-                    array_types,
+                    type_interner,
                     diagnostics,
                 )
             })
@@ -89,7 +89,7 @@ impl ClassBodyResolver<'_> {
                 &metadata.parameters,
                 &source.body,
                 source.span,
-                array_types,
+                type_interner,
                 diagnostics,
             )
         });
@@ -110,7 +110,7 @@ impl ClassBodyResolver<'_> {
                 std::slice::from_ref(&metadata.parameter),
                 &source.body,
                 source.span,
-                array_types,
+                type_interner,
                 diagnostics,
             )
         });
@@ -131,7 +131,7 @@ impl ClassBodyResolver<'_> {
                 &[],
                 &source.body,
                 source.span,
-                array_types,
+                type_interner,
                 diagnostics,
             )
         });
@@ -154,7 +154,7 @@ impl ClassBodyResolver<'_> {
                     &metadata.parameters,
                     &source.body,
                     source.span,
-                    array_types,
+                    type_interner,
                     diagnostics,
                 )
             })
@@ -177,7 +177,7 @@ impl ClassBodyResolver<'_> {
         parameters: &[ResolvedParameter],
         body: &syntax::Block,
         span: Span,
-        array_types: &mut ArrayTypeInterner,
+        type_interner: &mut ResolvedTypeInterner,
         diagnostics: &mut Diagnostics,
     ) -> ResolvedMemberDefinition {
         let callable = context.callable();
@@ -186,7 +186,7 @@ impl ClassBodyResolver<'_> {
             parameters,
             body,
             self.environment,
-            array_types,
+            type_interner,
             diagnostics,
         );
         ResolvedMemberDefinition {

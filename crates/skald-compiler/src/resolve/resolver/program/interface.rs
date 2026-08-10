@@ -8,7 +8,7 @@ pub(super) fn collect_interface_declarations(
     module: ModuleId,
     work: &[(InterfaceId, usize)],
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedInterfaceDeclaration> {
     work.iter()
@@ -31,7 +31,7 @@ pub(super) fn collect_interface_declarations(
                         .parameters
                         .iter()
                         .filter_map(|parameter| {
-                            resolve_type(&parameter.type_syntax, lookup, array_types, diagnostics)
+                            resolve_type(&parameter.type_syntax, lookup, type_interner, diagnostics)
                                 .map(|type_syntax| ResolvedInterfaceParameter {
                                     binding_mode: resolve_parameter_binding_mode(
                                         parameter.binding_mode,
@@ -46,7 +46,7 @@ pub(super) fn collect_interface_declarations(
                     return_type: resolve_result_type(
                         &requirement.return_type,
                         lookup,
-                        array_types,
+                        type_interner,
                         diagnostics,
                     ),
                     span: requirement.span,

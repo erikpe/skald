@@ -102,7 +102,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             body: Some(&definition.body),
             definition_span: definition.span,
             callable_name: format!("function `{}`", declaration.name),
-            return_type: lower_type(&declaration.return_type),
+            return_type: lower_type(program, &declaration.return_type),
             class_owner: None,
             receiver: None,
             member_body_kind: None,
@@ -281,7 +281,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         self.locals
             .iter()
             .map(|local| {
-                let ty = lower_type(&local.type_syntax);
+                let ty = lower_type(self.program, &local.type_syntax);
                 if matches!(ty, Type::Obj | Type::Interface(_)) {
                     self.diagnostics.push(
                         Diagnostic::error(

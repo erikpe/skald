@@ -25,7 +25,7 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
-        let expected = lower_type(parameter.type_syntax());
+        let expected = lower_type(self.program, parameter.type_syntax());
         let required = lower_parameter_mode(parameter.binding_mode())
             .required_access()
             .expect("array alias parameters require place access");

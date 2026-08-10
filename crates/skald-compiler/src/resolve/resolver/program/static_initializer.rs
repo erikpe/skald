@@ -12,7 +12,7 @@ pub(super) fn resolve_static_field_initializers(
     work_items: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
     environment: BodyResolutionEnvironment<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedStaticInitializerUpdate> {
     let mut updates = Vec::new();
@@ -40,7 +40,7 @@ pub(super) fn resolve_static_field_initializers(
                 CallableResolutionContext::static_initializer(initializer_work.id.into(), work.id),
                 &source.expression,
                 environment,
-                array_types,
+                type_interner,
                 diagnostics,
             ) else {
                 continue;

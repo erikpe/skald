@@ -6,7 +6,7 @@ use crate::{
         HirArrayLifecycle, HirArrayType, HirArrayTypeTable, HirSharedTarget,
     },
     identity::ClassId,
-    resolve::{ResolvedOptionalPayload, ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
+    resolve::{ResolvedProgram, ResolvedSharedTarget, ResolvedTypeKind},
 };
 
 use super::super::{capabilities::CopyCapabilities, program::lower_type};
@@ -17,15 +17,20 @@ pub(in crate::typeck) fn lower_array_types(
 ) -> HirArrayTypeTable {
     let mut entries = Vec::with_capacity(program.array_types.len());
     for array in program.array_types.iter() {
-        let element = lower_type(&array.element);
+        let element = lower_type(program, &array.element);
         entries.push(HirArrayType {
             id: array.id,
             element,
             lifecycle: HirArrayLifecycle {
                 default: default_element(program, array.element.kind),
-                copy: copy_element(class_capabilities, &entries, array.element.kind),
-                assignment: assignment_element(class_capabilities, &entries, array.element.kind),
-                destruction: destruction_element(array.element.kind),
+                copy: copy_element(program, class_capabilities, &entries, array.element.kind),
+                assignment: assignment_element(
+                    program,
+                    class_capabilities,
+                    &entries,
+                    array.element.kind,
+                ),
+                destruction: destruction_element(program, array.element.kind),
             },
         });
     }
@@ -42,9 +47,7 @@ fn default_element(
         | ResolvedTypeKind::U8
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool => Some(HirArrayDefaultElement::Primitive),
-        ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. } => {
-            Some(HirArrayDefaultElement::OptionalAbsent)
-        }
+        ResolvedTypeKind::Optional(_) => Some(HirArrayDefaultElement::OptionalAbsent),
         ResolvedTypeKind::Class(class) => zero_argument_initializer(program, class)
             .map(|initializer| HirArrayDefaultElement::Class { class, initializer }),
         ResolvedTypeKind::Array(array) => Some(HirArrayDefaultElement::ArrayEmpty(array)),
@@ -78,6 +81,7 @@ fn zero_argument_initializer(
 }
 
 fn copy_element(
+    program: &ResolvedProgram,
     capabilities: &CopyCapabilities,
     arrays: &[HirArrayType],
     element: ResolvedTypeKind,
@@ -88,26 +92,10 @@ fn copy_element(
         | ResolvedTypeKind::U8
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool => Some(HirArrayCopyElement::Primitive),
-        ResolvedTypeKind::Optional {
-            payload:
-                ResolvedOptionalPayload::I64
-                | ResolvedOptionalPayload::U64
-                | ResolvedOptionalPayload::U8
-                | ResolvedOptionalPayload::F64
-                | ResolvedOptionalPayload::Bool,
-            ..
-        } => Some(HirArrayCopyElement::OptionalPrimitive),
         ResolvedTypeKind::Class(class) => capabilities
             .constructor(class)
             .selected()
             .map(|operation| HirArrayCopyElement::Class { class, operation }),
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Class(class),
-            ..
-        } => capabilities
-            .constructor(class)
-            .selected()
-            .map(|operation| HirArrayCopyElement::OptionalClass { class, operation }),
         ResolvedTypeKind::Array(array) => arrays
             .get(array.index())
             .expect("nested array identities must precede their containing identity")
@@ -117,14 +105,27 @@ fn copy_element(
         ResolvedTypeKind::Shared(target) => {
             Some(HirArrayCopyElement::Shared(lower_shared_target(target)))
         }
-        ResolvedTypeKind::OptionalShared { target, .. } => Some(
-            HirArrayCopyElement::OptionalShared(lower_shared_target(target)),
-        ),
+        ResolvedTypeKind::Optional(optional) => match optional_payload(program, optional) {
+            ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool => Some(HirArrayCopyElement::OptionalPrimitive),
+            ResolvedTypeKind::Class(class) => capabilities
+                .constructor(class)
+                .selected()
+                .map(|operation| HirArrayCopyElement::OptionalClass { class, operation }),
+            ResolvedTypeKind::Shared(target) => Some(HirArrayCopyElement::OptionalShared(
+                lower_shared_target(target),
+            )),
+            _ => unreachable!("deferred optional payloads must not reach array lowering"),
+        },
         ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
     }
 }
 
 fn assignment_element(
+    program: &ResolvedProgram,
     capabilities: &CopyCapabilities,
     arrays: &[HirArrayType],
     element: ResolvedTypeKind,
@@ -135,33 +136,10 @@ fn assignment_element(
         | ResolvedTypeKind::U8
         | ResolvedTypeKind::F64
         | ResolvedTypeKind::Bool => Some(HirArrayAssignElement::Primitive),
-        ResolvedTypeKind::Optional {
-            payload:
-                ResolvedOptionalPayload::I64
-                | ResolvedOptionalPayload::U64
-                | ResolvedOptionalPayload::U8
-                | ResolvedOptionalPayload::F64
-                | ResolvedOptionalPayload::Bool,
-            ..
-        } => Some(HirArrayAssignElement::OptionalPrimitive),
         ResolvedTypeKind::Class(class) => capabilities
             .assignment(class)
             .selected()
             .map(|operation| HirArrayAssignElement::Class { class, operation }),
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Class(class),
-            ..
-        } => capabilities
-            .constructor(class)
-            .selected()
-            .zip(capabilities.assignment(class).selected())
-            .map(
-                |(copy_constructor, copy_assignment)| HirArrayAssignElement::OptionalClass {
-                    class,
-                    copy_constructor,
-                    copy_assignment,
-                },
-            ),
         ResolvedTypeKind::Array(array) => arrays
             .get(array.index())
             .expect("nested array identities must precede their containing identity")
@@ -171,29 +149,63 @@ fn assignment_element(
         ResolvedTypeKind::Shared(target) => {
             Some(HirArrayAssignElement::Shared(lower_shared_target(target)))
         }
-        ResolvedTypeKind::OptionalShared { target, .. } => Some(
-            HirArrayAssignElement::OptionalShared(lower_shared_target(target)),
-        ),
+        ResolvedTypeKind::Optional(optional) => match optional_payload(program, optional) {
+            ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool => Some(HirArrayAssignElement::OptionalPrimitive),
+            ResolvedTypeKind::Class(class) => capabilities
+                .constructor(class)
+                .selected()
+                .zip(capabilities.assignment(class).selected())
+                .map(
+                    |(copy_constructor, copy_assignment)| HirArrayAssignElement::OptionalClass {
+                        class,
+                        copy_constructor,
+                        copy_assignment,
+                    },
+                ),
+            ResolvedTypeKind::Shared(target) => Some(HirArrayAssignElement::OptionalShared(
+                lower_shared_target(target),
+            )),
+            _ => unreachable!("deferred optional payloads must not reach array lowering"),
+        },
         ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
     }
 }
 
-fn destruction_element(element: ResolvedTypeKind) -> HirArrayDestroyElement {
+fn destruction_element(
+    program: &ResolvedProgram,
+    element: ResolvedTypeKind,
+) -> HirArrayDestroyElement {
     match element {
         ResolvedTypeKind::Class(class) => HirArrayDestroyElement::Class(class),
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Class(class),
-            ..
-        } => HirArrayDestroyElement::OptionalClass(class),
         ResolvedTypeKind::Array(array) => HirArrayDestroyElement::Array(array),
         ResolvedTypeKind::Shared(target) => {
             HirArrayDestroyElement::Shared(lower_shared_target(target))
         }
-        ResolvedTypeKind::OptionalShared { target, .. } => {
-            HirArrayDestroyElement::OptionalShared(lower_shared_target(target))
-        }
+        ResolvedTypeKind::Optional(optional) => match optional_payload(program, optional) {
+            ResolvedTypeKind::Class(class) => HirArrayDestroyElement::OptionalClass(class),
+            ResolvedTypeKind::Shared(target) => {
+                HirArrayDestroyElement::OptionalShared(lower_shared_target(target))
+            }
+            _ => HirArrayDestroyElement::Trivial,
+        },
         _ => HirArrayDestroyElement::Trivial,
     }
+}
+
+fn optional_payload(
+    program: &ResolvedProgram,
+    optional: crate::identity::OptionalTypeId,
+) -> ResolvedTypeKind {
+    program
+        .optional_types
+        .get(optional)
+        .expect("resolved optional identities must name table entries")
+        .payload
+        .kind
 }
 
 fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {

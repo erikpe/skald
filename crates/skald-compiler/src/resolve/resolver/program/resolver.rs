@@ -126,7 +126,7 @@ pub(super) struct ProgramResolver<'ast> {
     units: Vec<ModuleUnit<'ast>>,
     modules: ProgramModuleTable,
     has_module_context: bool,
-    array_types: ArrayTypeInterner,
+    type_interner: ResolvedTypeInterner,
     literal_data: Vec<ResolvedLiteralData>,
     literal_ids: HashMap<Span, LiteralDataId>,
     diagnostics: Diagnostics,
@@ -138,7 +138,7 @@ impl<'ast> ProgramResolver<'ast> {
             units: vec![ModuleUnit::new(ast, ModuleId::new(0), false)],
             modules: ProgramModuleTable::singleton(ast.span.source_id(), source_path),
             has_module_context: false,
-            array_types: ArrayTypeInterner::default(),
+            type_interner: ResolvedTypeInterner::default(),
             literal_data: Vec::new(),
             literal_ids: HashMap::new(),
             diagnostics: Diagnostics::new(),
@@ -155,7 +155,7 @@ impl<'ast> ProgramResolver<'ast> {
                 .collect(),
             modules: ProgramModuleTable::from_graph(graph),
             has_module_context: true,
-            array_types: ArrayTypeInterner::default(),
+            type_interner: ResolvedTypeInterner::default(),
             literal_data,
             literal_ids,
             diagnostics: Diagnostics::new(),
@@ -227,7 +227,7 @@ impl<'ast> ProgramResolver<'ast> {
             &self.modules,
             &module_declarations,
             &function_declarations,
-            &self.array_types,
+            &self.type_interner,
             &mut self.diagnostics,
         );
         let mut class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
@@ -257,7 +257,7 @@ impl<'ast> ProgramResolver<'ast> {
             &module_declarations,
             &class_declarations,
             &function_declarations,
-            &self.array_types,
+            &self.type_interner,
             &self.literal_data,
             &mut self.diagnostics,
         );
@@ -286,7 +286,7 @@ impl<'ast> ProgramResolver<'ast> {
                         &self.literal_ids,
                     ),
                 ),
-                &mut self.array_types,
+                &mut self.type_interner,
                 &mut self.diagnostics,
             ));
         }
@@ -324,7 +324,7 @@ impl<'ast> ProgramResolver<'ast> {
                         &self.literal_ids,
                     ),
                 ),
-                &mut self.array_types,
+                &mut self.type_interner,
                 &mut self.diagnostics,
             ));
         }
@@ -340,6 +340,7 @@ impl<'ast> ProgramResolver<'ast> {
                 });
 
         let span = entry_unit.ast.span;
+        let (array_types, optional_types) = self.type_interner.finish();
         ResolveOutput {
             program: ResolvedProgram {
                 modules: self.modules,
@@ -347,7 +348,8 @@ impl<'ast> ProgramResolver<'ast> {
                 module_bindings,
                 ordinary_bindings,
                 module_declarations,
-                array_types: self.array_types.finish(),
+                array_types,
+                optional_types,
                 string_language_item,
                 literal_data: ResolvedLiteralDataTable::new(self.literal_data),
                 declarations: function_declarations,
@@ -524,13 +526,13 @@ impl<'ast> ProgramResolver<'ast> {
                                 item.id.into(),
                                 &function.parameters,
                                 lookup,
-                                &mut self.array_types,
+                                &mut self.type_interner,
                                 &mut self.diagnostics,
                             ),
                             return_type: resolve_result_type(
                                 &function.return_type,
                                 lookup,
-                                &mut self.array_types,
+                                &mut self.type_interner,
                                 &mut self.diagnostics,
                             ),
                             linkage: ResolvedFunctionLinkage::Internal,
@@ -548,13 +550,13 @@ impl<'ast> ProgramResolver<'ast> {
                                 item.id.into(),
                                 &function.parameters,
                                 lookup,
-                                &mut self.array_types,
+                                &mut self.type_interner,
                                 &mut self.diagnostics,
                             ),
                             return_type: resolve_result_type(
                                 &function.return_type,
                                 lookup,
-                                &mut self.array_types,
+                                &mut self.type_interner,
                                 &mut self.diagnostics,
                             ),
                             linkage: ResolvedFunctionLinkage::External {
@@ -581,13 +583,13 @@ impl<'ast> ProgramResolver<'ast> {
                                 item.id.into(),
                                 &function.parameters,
                                 lookup,
-                                &mut self.array_types,
+                                &mut self.type_interner,
                                 &mut self.diagnostics,
                             ),
                             return_type: resolve_result_type(
                                 &function.return_type,
                                 lookup,
-                                &mut self.array_types,
+                                &mut self.type_interner,
                                 &mut self.diagnostics,
                             ),
                             linkage,
@@ -617,7 +619,7 @@ impl<'ast> ProgramResolver<'ast> {
                 unit.module,
                 &unit.interface_work,
                 lookup,
-                &mut self.array_types,
+                &mut self.type_interner,
                 &mut self.diagnostics,
             ));
         }
@@ -649,7 +651,7 @@ impl<'ast> ProgramResolver<'ast> {
                     ast_index,
                     class,
                     lookup,
-                    &mut self.array_types,
+                    &mut self.type_interner,
                     &mut self.diagnostics,
                 );
                 declarations.push(declaration);
@@ -699,7 +701,7 @@ impl<'ast> ProgramResolver<'ast> {
                             &self.literal_ids,
                         ),
                     ),
-                    &mut self.array_types,
+                    &mut self.type_interner,
                     &mut self.diagnostics,
                 );
                 definitions.push(Some(ResolvedFunctionDefinition {
@@ -718,7 +720,7 @@ pub(super) fn resolve_parameters(
     callable: CallableId,
     parameters: &[syntax::Parameter],
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedParameter> {
     let mut names = HashMap::<String, Span>::new();
@@ -737,7 +739,7 @@ pub(super) fn resolve_parameters(
         }
         names.insert(parameter.name.text.to_string(), parameter.name.span);
         let Some(type_syntax) =
-            resolve_type(&parameter.type_syntax, lookup, array_types, diagnostics)
+            resolve_type(&parameter.type_syntax, lookup, type_interner, diagnostics)
         else {
             continue;
         };
@@ -770,10 +772,10 @@ pub(super) const fn resolve_parameter_binding_mode(
 pub(super) fn resolve_result_type(
     type_syntax: &syntax::TypeSyntax,
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedType {
-    resolve_type(type_syntax, lookup, array_types, diagnostics).unwrap_or(ResolvedType {
+    resolve_type(type_syntax, lookup, type_interner, diagnostics).unwrap_or(ResolvedType {
         // Resolution diagnostics stop later phases. Retaining a payload-free
         // placeholder keeps declaration collection total and panic-free.
         kind: ResolvedTypeKind::Unit,

@@ -1,4 +1,5 @@
 use super::*;
+use crate::test_support::load_module_sources;
 
 #[test]
 fn resolves_flat_inline_and_shared_optional_identities() {
@@ -15,34 +16,31 @@ fn resolves_flat_inline_and_shared_optional_identities() {
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let declaration = output.program.declarations.get(FunctionId::new(0)).unwrap();
 
-    assert!(matches!(
-        declaration.parameters[0].type_syntax.kind,
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::I64,
-            ..
-        }
-    ));
-    assert!(matches!(
-        declaration.parameters[1].type_syntax.kind,
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Class(class),
-            ..
-        } if class == ClassId::new(0)
-    ));
-    assert!(matches!(
-        declaration.parameters[2].type_syntax.kind,
-        ResolvedTypeKind::OptionalShared {
-            target: ResolvedSharedTarget::Interface(interface),
-            ..
-        } if interface == crate::identity::InterfaceId::new(0)
-    ));
-    assert!(matches!(
-        declaration.return_type.kind,
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Bool,
-            ..
-        }
-    ));
+    let optional_kinds = declaration
+        .parameters
+        .iter()
+        .map(|parameter| parameter.type_syntax.kind)
+        .chain([declaration.return_type.kind])
+        .collect::<Vec<_>>();
+    assert_eq!(
+        optional_kinds,
+        (0..4)
+            .map(|index| ResolvedTypeKind::Optional(crate::identity::OptionalTypeId::new(index)))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(output.program.optional_types.len(), 4);
+    assert_eq!(optional_payload(&output.program, 0), ResolvedTypeKind::I64);
+    assert_eq!(
+        optional_payload(&output.program, 1),
+        ResolvedTypeKind::Class(ClassId::new(0))
+    );
+    assert_eq!(
+        optional_payload(&output.program, 2),
+        ResolvedTypeKind::Shared(ResolvedSharedTarget::Interface(
+            crate::identity::InterfaceId::new(0)
+        ))
+    );
+    assert_eq!(optional_payload(&output.program, 3), ResolvedTypeKind::Bool);
 
     let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
     assert!(matches!(
@@ -77,19 +75,86 @@ fn canonical_and_shorthand_optional_owners_share_existing_semantics() {
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let declaration = output.program.declarations.get(FunctionId::new(0)).unwrap();
 
-    let optional_target = |ty: &ResolvedType| match ty.kind {
-        ResolvedTypeKind::OptionalShared { target, .. } => target,
+    let optional_id = |ty: &ResolvedType| match ty.kind {
+        ResolvedTypeKind::Optional(optional) => optional,
         _ => panic!("expected an optional shared owner"),
     };
-    let shorthand = optional_target(&declaration.parameters[0].type_syntax);
-    let canonical = optional_target(&declaration.parameters[1].type_syntax);
-    let result = optional_target(&declaration.return_type);
+    let shorthand = optional_id(&declaration.parameters[0].type_syntax);
+    let canonical = optional_id(&declaration.parameters[1].type_syntax);
+    let result = optional_id(&declaration.return_type);
     assert_eq!(shorthand, canonical);
     assert_eq!(canonical, result);
+    assert_eq!(output.program.optional_types.len(), 1);
 
     let checked = crate::typeck::type_check(&output.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     assert!(checked.hir.is_some());
+}
+
+#[test]
+fn interns_recursive_optional_and_array_identities_bottom_up() {
+    let output = resolve_text(
+        "fn shapes(deep: i64?????, elements: i64?[], maybe_elements: i64?[]?) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let shapes = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    assert_eq!(output.program.optional_types.len(), 6);
+    for index in 0..5 {
+        let expected = if index == 0 {
+            ResolvedTypeKind::I64
+        } else {
+            ResolvedTypeKind::Optional(crate::identity::OptionalTypeId::new(index - 1))
+        };
+        assert_eq!(optional_payload(&output.program, index), expected);
+    }
+    assert_eq!(
+        shapes.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::Optional(crate::identity::OptionalTypeId::new(4))
+    );
+    assert_eq!(
+        output
+            .program
+            .array_types
+            .get(crate::identity::ArrayTypeId::new(0))
+            .unwrap()
+            .element
+            .kind,
+        ResolvedTypeKind::Optional(crate::identity::OptionalTypeId::new(0))
+    );
+    assert_eq!(
+        optional_payload(&output.program, 5),
+        ResolvedTypeKind::Array(crate::identity::ArrayTypeId::new(0))
+    );
+}
+
+#[test]
+fn repeated_optional_spellings_share_identities_across_modules() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import model;\nimport helper;\nfn use(value: model::Item?) -> unit {}\nfn main() -> i64 { return 0; }\n",
+            ),
+            (
+                "model.ska",
+                "public class Item { init() {} }\npublic fn keep(value: Item?) -> Item? { return value; }\n",
+            ),
+            (
+                "helper.ska",
+                "import model;\npublic fn keep(value: model::Item?) -> model::Item? { return value; }\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert_eq!(output.program.optional_types.len(), 1);
+    assert_eq!(
+        optional_payload(&output.program, 0),
+        ResolvedTypeKind::Class(ClassId::new(0))
+    );
 }
 
 #[test]
@@ -98,27 +163,50 @@ fn deferred_compositions_stop_at_focused_semantic_gates() {
         "class Thing { init() {} }\n\
          fn nested(value: Thing??) -> unit {}\n\
          fn optional_array(value: Thing[]?) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert_eq!(output.program.optional_types.len(), 3);
+    assert_eq!(
+        optional_payload(&output.program, 1),
+        ResolvedTypeKind::Optional(crate::identity::OptionalTypeId::new(0))
+    );
+    assert!(matches!(
+        optional_payload(&output.program, 2),
+        ResolvedTypeKind::Array(_)
+    ));
+
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.has_errors());
+
+    for message in [
+        "nested optional types are not supported yet",
+        "inline optional array payloads are not supported yet",
+    ] {
+        assert!(
+            checked.diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE
+                    && diagnostic.message == message
+            }),
+            "missing `{message}` diagnostic: {:?}",
+            checked.diagnostics
+        );
+    }
+}
+
+#[test]
+fn shared_boxes_with_optional_payloads_remain_a_resolution_exclusion() {
+    let output = resolve_text(
+        "class Thing { init() {} }\n\
          fn box_value(value: shared Thing?) -> unit {}\n\
          fn maybe_box(value: shared? Thing?) -> unit {}\n\
          fn main() -> i64 { return 0; }\n",
     );
     assert!(output.has_errors());
-
-    for message in [
-        "nested optional types are not supported yet",
-        "inline optional array payloads are not supported yet",
-        "shared boxes containing optional payloads are not supported",
-        "optional shared boxes are not supported",
-    ] {
-        assert!(
-            output.diagnostics.iter().any(|diagnostic| {
-                diagnostic.code == INVALID_OPTIONAL_TYPE && diagnostic.message == message
-            }),
-            "missing `{message}` diagnostic: {:?}",
-            output.diagnostics
-        );
-    }
-    assert!(output.program.entry_function.is_some());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_OPTIONAL_TYPE
+            && diagnostic.message == "shared boxes containing optional payloads are not supported"
+    }));
 }
 
 #[test]
@@ -136,9 +224,9 @@ fn resolved_dump_uses_canonical_optional_spellings_and_explicit_nodes() {
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let dump = dump_resolved(&output.program);
 
-    assert!(dump.contains("Type Optional i64"));
+    assert!(dump.contains("OptionalType o0 payload i64"));
+    assert!(dump.contains("Type Optional o0 i64?"));
     assert!(dump.contains("type (shared Obj)?"));
-    assert!(dump.contains("Question"));
     assert!(dump.contains("Absent"));
     assert!(dump.contains("Unwrap"));
     assert!(dump.contains("PresenceTest None"));
@@ -152,11 +240,23 @@ fn rejects_interface_inline_optionals_but_recovers_other_declarations() {
          fn main() -> i64 { return 0; }\n",
     );
 
-    assert!(output.has_errors());
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OPTIONAL_TYPE && diagnostic.message.contains("interface `View`")
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.has_errors());
+    assert!(checked.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE
+            && diagnostic.message.contains("interfaces")
     }));
     assert!(output.program.entry_function.is_some());
+}
+
+fn optional_payload(program: &ResolvedProgram, index: usize) -> ResolvedTypeKind {
+    program
+        .optional_types
+        .get(crate::identity::OptionalTypeId::new(index))
+        .unwrap()
+        .payload
+        .kind
 }
 
 #[test]

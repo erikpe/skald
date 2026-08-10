@@ -19,7 +19,7 @@ pub(super) fn lower_static_fields(
     let fields = fields
         .iter()
         .map(|field| {
-            let ty = lower_type(&field.type_syntax);
+            let ty = lower_type(program, &field.type_syntax);
             let initializer = if let Some(initializer) = &field.initializer {
                 if !is_stored_value_type(ty) {
                     report_invalid_explicit_storage(field, ty, diagnostics);

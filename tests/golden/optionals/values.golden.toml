@@ -104,12 +104,10 @@ mode = "compile-fail"
 source = "optional_semantic_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "inline optional interface", match = "contains", inline = """error[RES022]: interface `Readable` cannot be an inline optional payload
- --> tests/golden/optionals/optional_semantic_exclusions.ska:22:26""" },
   { name = "member access through optional", match = "contains", inline = """error[RES009]: binding `optional_value` is not an object
- --> tests/golden/optionals/optional_semantic_exclusions.ska:28:23""" },
+ --> tests/golden/optionals/optional_semantic_exclusions.ska:27:23""" },
   { name = "dereference optional owner", match = "contains", inline = """error[RES019]: dereference requires a shared owner
- --> tests/golden/optionals/optional_semantic_exclusions.ska:29:44""" },
+ --> tests/golden/optionals/optional_semantic_exclusions.ska:28:44""" },
 ]
 
 [[test]]
@@ -127,18 +125,26 @@ mode = "compile-fail"
 source = "optional_type_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "optional unit", match = "contains", inline = """error[RES022]: `unit?` is not a valid optional type
- --> tests/golden/optionals/optional_type_exclusions.ska:10:18""" },
-  { name = "optional interface", match = "contains", inline = """error[RES022]: interface `Readable` cannot be an inline optional payload
+  { name = "optional unit", match = "contains", inline = """error[TYP043]: `unit?` is not a valid optional type
+ --> tests/golden/optionals/optional_type_exclusions.ska:10:14""" },
+  { name = "optional interface", match = "contains", inline = """error[TYP043]: interfaces cannot be inline optional payloads
  --> tests/golden/optionals/optional_type_exclusions.ska:11:19""" },
-  { name = "optional object view", match = "contains", inline = """error[RES022]: `Obj?` is not a valid inline optional type
- --> tests/golden/optionals/optional_type_exclusions.ska:12:19""" },
-  { name = "nested optional", match = "contains", inline = """error[RES022]: nested optional types are not supported yet
- --> tests/golden/optionals/optional_type_exclusions.ska:13:20""" },
+  { name = "optional object view", match = "contains", inline = """error[TYP043]: `Obj?` is not a valid inline optional type
+ --> tests/golden/optionals/optional_type_exclusions.ska:12:16""" },
+  { name = "nested optional", match = "contains", inline = """error[TYP043]: nested optional types are not supported yet
+ --> tests/golden/optionals/optional_type_exclusions.ska:13:16""" },
+]
+
+[[test]]
+name = "box_exclusions"
+mode = "compile-fail"
+source = "optional_box_exclusions.ska"
+[test.expect.stderr]
+matches = [
   { name = "shared optional payload", match = "contains", inline = """error[RES022]: shared boxes containing optional payloads are not supported
- --> tests/golden/optionals/optional_type_exclusions.ska:14:35""" },
-  { name = "optional shared optional payload", match = "contains", inline = """error[RES022]: optional shared boxes are not supported
- --> tests/golden/optionals/optional_type_exclusions.ska:15:45""" },
+ --> tests/golden/optionals/optional_box_exclusions.ska:6:35""" },
+  { name = "optional shared optional payload", match = "contains", inline = """error[RES022]: shared boxes containing optional payloads are not supported
+ --> tests/golden/optionals/optional_box_exclusions.ska:7:45""" },
 ]
 
 [[test]]

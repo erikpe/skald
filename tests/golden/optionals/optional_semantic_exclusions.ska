@@ -19,7 +19,6 @@ class Recursive {
 }
 
 fn main() -> i64 {
-    var interface_value: Readable? = none;
     var optional_number: i64? = 1;
     var plain_number: i64 = optional_number;
     var wrong_optional: bool? = optional_number;

@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO2 is next.
+Status: in progress; CO3 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -98,7 +98,7 @@ pointee is an optional value.
 
 - [x] CO0 — Freeze compositional optional contracts
 - [x] CO1 — Introduce compositional type syntax and canonical shared optionals
-- [ ] CO2 — Canonicalize recursive optional identities
+- [x] CO2 — Canonicalize recursive optional identities
 - [ ] CO3 — Generalize typed optional lifecycle planning
 - [ ] CO4 — Generalize executable optional MIR and target realization
 - [ ] CO5 — Execute arbitrarily nested optional lifecycle
@@ -183,19 +183,19 @@ correct semantic gates, and no new payload category otherwise executes.
 **Purpose:** Give resolution and all later semantic phases a deterministic,
 scalable type graph before nested behavior depends on it.
 
-- [ ] Add an `OptionalTypeId` or equivalent small identity and an interned table
+- [x] Add an `OptionalTypeId` or equivalent small identity and an interned table
       whose entries name one complete resolved payload type, including prior
       optional and array identities.
-- [ ] Normalize canonical and shorthand shared-owner spellings to one
+- [x] Normalize canonical and shorthand shared-owner spellings to one
       optional-of-shared identity while keeping source spans outside equality
       and interning keys.
-- [ ] Replace flat resolved optional payload categories with canonical optional
+- [x] Replace flat resolved optional payload categories with canonical optional
       identity queries and preserve narrow public resolution facades.
-- [ ] Define deterministic bottom-up interning, equality, hashing, names, and
+- [x] Define deterministic bottom-up interning, equality, hashing, names, and
       dump order across repeated spellings, modules, arrays, and deep nesting.
-- [ ] Extend inline-containment cycle detection through arbitrary optional
+- [x] Extend inline-containment cycle detection through arbitrary optional
       layers while retaining array descriptor and shared-edge boundaries.
-- [ ] Move payload eligibility and unsupported shared-box decisions to focused
+- [x] Move payload eligibility and unsupported shared-box decisions to focused
       semantic validation so invalid types never enter executable HIR.
 
 **Tests:** Resolution identity and interning tests; canonical/alias equality;

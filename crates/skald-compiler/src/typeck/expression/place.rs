@@ -78,7 +78,7 @@ impl CallableChecker<'_, '_> {
         }
         Some(HirExpression {
             kind: HirExpressionKind::FieldRead(place),
-            ty: lower_type(&field.type_syntax),
+            ty: lower_type(self.program, &field.type_syntax),
             span: access.span,
         })
     }
@@ -537,8 +537,9 @@ impl CallableChecker<'_, '_> {
                     .expect("receiver binding must be checked in a member body")
                     .class,
             ),
-            BindingId::Parameter(id) => lower_type(&self.parameter(id).type_syntax),
+            BindingId::Parameter(id) => lower_type(self.program, &self.parameter(id).type_syntax),
             BindingId::Local(id) => lower_type(
+                self.program,
                 &self
                     .locals
                     .get(id.index())

@@ -373,7 +373,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => self
                 .program
                 .field(access.field)
-                .map(|field| lower_type(&field.type_syntax))
+                .map(|field| lower_type(self.program, &field.type_syntax))
                 .unwrap_or(Type::Unit),
             ResolvedExpression::Allocation(allocation) => {
                 Type::Shared(HirSharedTarget::Class(allocation.class))
@@ -561,8 +561,13 @@ impl CallableChecker<'_, '_> {
             _ => return None,
         };
         match resolved {
-            crate::resolve::ResolvedTypeKind::OptionalShared { target, .. } => {
-                Some(lower_shared_target(target))
+            crate::resolve::ResolvedTypeKind::Optional(optional) => {
+                match self.program.optional_types.get(optional)?.payload.kind {
+                    crate::resolve::ResolvedTypeKind::Shared(target) => {
+                        Some(lower_shared_target(target))
+                    }
+                    _ => None,
+                }
             }
             _ => None,
         }

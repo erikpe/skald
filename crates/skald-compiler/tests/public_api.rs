@@ -20,7 +20,7 @@ use skald_compiler::{
     },
     identity::{
         ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
-        PackageId, ProviderId,
+        OptionalTypeId, PackageId, ProviderId,
     },
     lexer::{dump_tokens, lex, LexOutput},
     literal::{IntegerRadix, NumericLiteralKind},
@@ -213,6 +213,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _mir_interface_call: Option<MirInterfaceCallTarget> = None;
     let _mir_receiver: Option<MirCallReceiver> = None;
     let _mir_array_id: Option<ArrayTypeId> = None;
+    let _resolved_optional_id: Option<OptionalTypeId> = None;
     let _mir_array_table: Option<MirArrayTypeTable> = None;
     let _mir_array_type: Option<MirArrayType> = None;
     let _mir_array_lifecycle: Option<MirArrayLifecycle> = None;

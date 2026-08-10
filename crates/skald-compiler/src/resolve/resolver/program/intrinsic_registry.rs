@@ -13,7 +13,7 @@ use crate::{
     source::Span,
 };
 
-use super::super::{ArrayTypeInterner, INVALID_INTRINSIC_DECLARATION};
+use super::super::{ResolvedTypeInterner, INVALID_INTRINSIC_DECLARATION};
 
 const ERROR_MODULE_PATH: &str = "std::error";
 const F64_MODULE_PATH: &str = "std::f64";
@@ -91,7 +91,7 @@ pub(super) fn validate_intrinsic_declarations(
     modules: &ProgramModuleTable,
     module_declarations: &ResolvedModuleDeclarationTable,
     functions: &ResolvedFunctionDeclarationTable,
-    array_types: &ArrayTypeInterner,
+    type_interner: &ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) {
     for declaration in functions
@@ -142,7 +142,7 @@ pub(super) fn validate_intrinsic_declarations(
         modules,
         module_declarations,
         functions,
-        array_types,
+        type_interner,
         diagnostics,
     );
 }
@@ -331,7 +331,7 @@ fn validate_io_intrinsics(
     modules: &ProgramModuleTable,
     module_declarations: &ResolvedModuleDeclarationTable,
     functions: &ResolvedFunctionDeclarationTable,
-    array_types: &ArrayTypeInterner,
+    type_interner: &ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) {
     let Some(io_module) = canonical_module(modules, IO_MODULE_PATH) else {
@@ -395,14 +395,14 @@ fn validate_io_intrinsics(
             );
             continue;
         }
-        validate_io_signature(declaration, specification, array_types, diagnostics);
+        validate_io_signature(declaration, specification, type_interner, diagnostics);
     }
 }
 
 fn validate_io_signature(
     declaration: &ResolvedFunctionDeclaration,
     specification: &IoIntrinsicSpecification,
-    array_types: &ArrayTypeInterner,
+    type_interner: &ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) {
     let qualified_name = format!("`std::io::{}`", specification.name);
@@ -465,7 +465,10 @@ fn validate_io_signature(
                     .with_primary_label(parameter.span, "wrong parameter binding mode"),
                 );
             }
-            if !expected.ty.matches(parameter.type_syntax.kind, array_types) {
+            if !expected
+                .ty
+                .matches(parameter.type_syntax.kind, type_interner)
+            {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_INTRINSIC_DECLARATION,
@@ -551,13 +554,13 @@ enum ParameterType {
 }
 
 impl ParameterType {
-    fn matches(self, actual: ResolvedTypeKind, array_types: &ArrayTypeInterner) -> bool {
+    fn matches(self, actual: ResolvedTypeKind, type_interner: &ResolvedTypeInterner) -> bool {
         match (self, actual) {
             (Self::I64, ResolvedTypeKind::I64)
             | (Self::U64, ResolvedTypeKind::U64)
             | (Self::U8, ResolvedTypeKind::U8) => true,
-            (Self::U8Array, ResolvedTypeKind::Array(array)) => array_types
-                .get(array)
+            (Self::U8Array, ResolvedTypeKind::Array(array)) => type_interner
+                .array(array)
                 .is_some_and(|array| array.element.kind == ResolvedTypeKind::U8),
             _ => false,
         }

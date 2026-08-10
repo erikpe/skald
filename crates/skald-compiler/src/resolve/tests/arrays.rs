@@ -1,5 +1,5 @@
 use super::*;
-use crate::identity::{ArrayTypeId, InterfaceId};
+use crate::identity::{ArrayTypeId, InterfaceId, OptionalTypeId};
 
 #[test]
 fn interns_exact_recursive_array_identities_in_first_use_order() {
@@ -32,26 +32,14 @@ fn interns_exact_recursive_array_identities_in_first_use_order() {
         kinds[3],
         ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(ArrayTypeId::new(0)))
     );
-    assert!(matches!(
-        kinds[4],
-        ResolvedTypeKind::OptionalShared {
-            target: ResolvedSharedTarget::Array(id),
-            ..
-        } if id == ArrayTypeId::new(0)
-    ));
+    assert_eq!(kinds[4], ResolvedTypeKind::Optional(OptionalTypeId::new(0)));
     assert_eq!(kinds[5], ResolvedTypeKind::Array(ArrayTypeId::new(2)));
     assert_eq!(kinds[6], ResolvedTypeKind::Array(ArrayTypeId::new(3)));
     assert_eq!(
         kinds[7],
         ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(ArrayTypeId::new(2)))
     );
-    assert!(matches!(
-        kinds[8],
-        ResolvedTypeKind::OptionalShared {
-            target: ResolvedSharedTarget::Array(id),
-            ..
-        } if id == ArrayTypeId::new(3)
-    ));
+    assert_eq!(kinds[8], ResolvedTypeKind::Optional(OptionalTypeId::new(2)));
     assert_eq!(kinds[9], ResolvedTypeKind::Array(ArrayTypeId::new(4)));
     assert_eq!(kinds[10], ResolvedTypeKind::Array(ArrayTypeId::new(5)));
     assert_eq!(kinds[11], ResolvedTypeKind::Array(ArrayTypeId::new(6)));
@@ -70,13 +58,20 @@ fn interns_exact_recursive_array_identities_in_first_use_order() {
         table.get(ArrayTypeId::new(2)).unwrap().element.kind,
         ResolvedTypeKind::Shared(ResolvedSharedTarget::Class(ClassId::new(0)))
     );
-    assert!(matches!(
+    assert_eq!(
         table.get(ArrayTypeId::new(3)).unwrap().element.kind,
-        ResolvedTypeKind::OptionalShared {
-            target: ResolvedSharedTarget::Class(class),
-            ..
-        } if class == ClassId::new(0)
-    ));
+        ResolvedTypeKind::Optional(OptionalTypeId::new(1))
+    );
+    assert_eq!(
+        output
+            .program
+            .optional_types
+            .get(OptionalTypeId::new(1))
+            .unwrap()
+            .payload
+            .kind,
+        ResolvedTypeKind::Shared(ResolvedSharedTarget::Class(ClassId::new(0)))
+    );
     assert_eq!(
         table.get(ArrayTypeId::new(4)).unwrap().element.kind,
         ResolvedTypeKind::Interface(InterfaceId::new(0))

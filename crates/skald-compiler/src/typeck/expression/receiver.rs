@@ -35,7 +35,9 @@ impl CallableChecker<'_, '_> {
             let Type::Class(dynamic_class) = self
                 .program
                 .field(field)
-                .map(|declaration| super::super::program::lower_type(&declaration.type_syntax))
+                .map(|declaration| {
+                    super::super::program::lower_type(self.program, &declaration.type_syntax)
+                })
                 .expect("object-place field projection must reference a field")
             else {
                 unreachable!("an object-place field projection must have class type")

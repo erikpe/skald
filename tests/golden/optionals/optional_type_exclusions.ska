@@ -10,9 +10,7 @@ fn excluded(
     no_unit: unit?,
     no_interface: Readable?,
     no_object: Obj?,
-    no_nested: i64??,
-    no_boxed_payload: shared Value?,
-    no_optional_boxed_payload: shared? Value?
+    no_nested: i64??
 ) -> unit {}
 
 fn main() -> i64 {

@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 
 use crate::identity::{
     ArrayTypeId, ClassId, ExternalLinkId, FunctionId, InterfaceId, LiteralDataId, ModuleId,
-    VirtualFamilyId,
+    OptionalTypeId, VirtualFamilyId,
 };
 
 pub(crate) trait DenseId: Copy + Eq {
@@ -45,6 +45,12 @@ impl DenseId for InterfaceId {
 }
 
 impl DenseId for ArrayTypeId {
+    fn index(self) -> usize {
+        self.index()
+    }
+}
+
+impl DenseId for OptionalTypeId {
     fn index(self) -> usize {
         self.index()
     }

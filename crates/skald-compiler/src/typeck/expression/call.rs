@@ -63,7 +63,7 @@ impl CallableChecker<'_, '_> {
                 function: call.function,
                 arguments,
             },
-            ty: lower_type(&target.return_type),
+            ty: lower_type(self.program, &target.return_type),
             span: call.span,
         })
     }
@@ -90,7 +90,7 @@ impl CallableChecker<'_, '_> {
                 method: call.method,
                 arguments,
             },
-            ty: lower_type(&target.return_type),
+            ty: lower_type(self.program, &target.return_type),
             span: call.span,
         })
     }
@@ -193,7 +193,7 @@ impl CallableChecker<'_, '_> {
                 },
                 arguments,
             },
-            ty: lower_type(&requirement.return_type),
+            ty: lower_type(self.program, &requirement.return_type),
             span: call.span,
         })
     }
@@ -291,7 +291,7 @@ impl CallableChecker<'_, '_> {
                 target,
                 arguments,
             },
-            ty: lower_type(&method.return_type),
+            ty: lower_type(self.program, &method.return_type),
             span: call.span,
         })
     }
@@ -350,7 +350,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirCallArgument> {
         match parameter.binding_mode() {
             ResolvedParameterBindingMode::Value => {
-                let parameter_type = lower_type(parameter.type_syntax());
+                let parameter_type = lower_type(self.program, parameter.type_syntax());
                 if let Type::Shared(target) = parameter_type {
                     return self
                         .check_shared_transfer(source, target, "shared value argument")

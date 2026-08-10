@@ -16,15 +16,15 @@ use crate::{
 
 use super::ir::*;
 
-mod array_types;
 mod body;
 mod external_links;
 mod imports;
 mod name_lookup;
 mod program;
+mod type_interner;
 
-use array_types::ArrayTypeInterner;
 use name_lookup::{ModuleLookup, TopLevelLookup};
+use type_interner::ResolvedTypeInterner;
 
 pub const DUPLICATE_TOP_LEVEL: &str = "RES001";
 pub const DUPLICATE_BINDING: &str = "RES002";
@@ -102,7 +102,7 @@ pub fn resolve_module_graph(graph: &ModuleGraph) -> ResolveOutput {
 fn resolve_type(
     type_syntax: &syntax::TypeSyntax,
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedType> {
     let kind = match &type_syntax.kind {
@@ -118,31 +118,22 @@ fn resolve_type(
         } => ResolvedTypeKind::Shared(resolve_shared_target(
             target,
             lookup,
-            array_types,
+            type_interner,
             diagnostics,
             false,
         )?),
-        syntax::TypeKind::Optional {
-            payload,
-            question_span,
-            spelling,
-        } => resolve_optional_type(
-            payload,
-            *question_span,
-            *spelling,
-            lookup,
-            array_types,
-            diagnostics,
-        )?,
+        syntax::TypeKind::Optional { payload, .. } => {
+            resolve_optional_type(payload, lookup, type_interner, diagnostics)?
+        }
         syntax::TypeKind::Grouped { inner, .. } => {
-            return resolve_type(inner, lookup, array_types, diagnostics).map(|mut resolved| {
+            return resolve_type(inner, lookup, type_interner, diagnostics).map(|mut resolved| {
                 resolved.span = type_syntax.span;
                 resolved
             });
         }
         syntax::TypeKind::Array { element, .. } => {
-            let element = resolve_type(element, lookup, array_types, diagnostics)?;
-            ResolvedTypeKind::Array(array_types.intern(element))
+            let element = resolve_type(element, lookup, type_interner, diagnostics)?;
+            ResolvedTypeKind::Array(type_interner.intern_array(element))
         }
         syntax::TypeKind::Named(name) if !name.is_qualified() && name.text == "Obj" => {
             ResolvedTypeKind::Obj
@@ -185,185 +176,27 @@ fn resolve_type(
 
 fn resolve_optional_type(
     payload_syntax: &syntax::TypeSyntax,
-    question_span: Span,
-    spelling: syntax::OptionalTypeSpelling,
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedTypeKind> {
-    let boxed_question_span = if spelling == syntax::OptionalTypeSpelling::SharedShorthand {
-        shared_target_syntax(payload_syntax).and_then(optional_question_span)
-    } else {
-        None
-    };
-    if let Some(boxed_question_span) = boxed_question_span {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_OPTIONAL_TYPE,
-                "optional shared boxes are not supported",
-            )
-            .with_primary_label(
-                boxed_question_span,
-                "`shared? T?` requires a shared box containing an optional payload",
-            ),
-        );
-        return None;
-    }
-
-    let payload = resolve_type(payload_syntax, lookup, array_types, diagnostics)?;
-    let payload_span = payload_syntax.span;
-    if let Some(payload) = flat_optional_payload(payload.kind) {
-        return Some(ResolvedTypeKind::Optional {
-            payload,
-            payload_span,
-            question_span,
-        });
-    }
-    match payload.kind {
-        ResolvedTypeKind::Shared(target) => {
-            let (shared_span, target_span) = shared_syntax_parts(payload_syntax)
-                .expect("resolved shared payload must retain shared source syntax");
-            Some(ResolvedTypeKind::OptionalShared {
-                target,
-                shared_span,
-                question_span,
-                target_span,
-            })
-        }
-        ResolvedTypeKind::Interface(_) => {
-            let name = match &ungroup_type(payload_syntax).kind {
-                syntax::TypeKind::Named(name) => name.text.as_str(),
-                _ => "interface",
-            };
-            diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OPTIONAL_TYPE,
-                    format!("interface `{name}` cannot be an inline optional payload"),
-                )
-                .with_primary_label(
-                    payload_span,
-                    "use `(shared Interface)?` for an optional owning view",
-                ),
-            );
-            None
-        }
-        ResolvedTypeKind::Obj => {
-            diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OPTIONAL_TYPE,
-                    "`Obj?` is not a valid inline optional type",
-                )
-                .with_primary_label(
-                    question_span,
-                    "use `(shared Obj)?` for an optional owning object view",
-                ),
-            );
-            None
-        }
-        ResolvedTypeKind::Unit => {
-            diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OPTIONAL_TYPE,
-                    "`unit?` is not a valid optional type",
-                )
-                .with_primary_label(
-                    question_span,
-                    "`unit` has no value payload to make optional",
-                ),
-            );
-            None
-        }
-        ResolvedTypeKind::Array(_) => {
-            diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OPTIONAL_TYPE,
-                    "inline optional array payloads are not supported yet",
-                )
-                .with_primary_label(
-                    question_span,
-                    "this syntax is reserved for the optional-array implementation",
-                ),
-            );
-            None
-        }
-        ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. } => {
-            diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OPTIONAL_TYPE,
-                    "nested optional types are not supported yet",
-                )
-                .with_primary_label(
-                    question_span,
-                    "this outer optional layer is reserved for recursive optional identities",
-                ),
-            );
-            None
-        }
-        ResolvedTypeKind::I64
-        | ResolvedTypeKind::U64
-        | ResolvedTypeKind::U8
-        | ResolvedTypeKind::F64
-        | ResolvedTypeKind::Bool
-        | ResolvedTypeKind::Class(_) => {
-            unreachable!("flat optional payloads returned before deferred validation")
-        }
-    }
-}
-
-const fn flat_optional_payload(kind: ResolvedTypeKind) -> Option<ResolvedOptionalPayload> {
-    match kind {
-        ResolvedTypeKind::I64 => Some(ResolvedOptionalPayload::I64),
-        ResolvedTypeKind::U64 => Some(ResolvedOptionalPayload::U64),
-        ResolvedTypeKind::U8 => Some(ResolvedOptionalPayload::U8),
-        ResolvedTypeKind::F64 => Some(ResolvedOptionalPayload::F64),
-        ResolvedTypeKind::Bool => Some(ResolvedOptionalPayload::Bool),
-        ResolvedTypeKind::Class(class) => Some(ResolvedOptionalPayload::Class(class)),
-        _ => None,
-    }
-}
-
-fn ungroup_type(mut type_syntax: &syntax::TypeSyntax) -> &syntax::TypeSyntax {
-    while let syntax::TypeKind::Grouped { inner, .. } = &type_syntax.kind {
-        type_syntax = inner;
-    }
-    type_syntax
-}
-
-fn shared_target_syntax(type_syntax: &syntax::TypeSyntax) -> Option<&syntax::TypeSyntax> {
-    match &ungroup_type(type_syntax).kind {
-        syntax::TypeKind::Shared { target, .. } => Some(target),
-        _ => None,
-    }
-}
-
-fn optional_question_span(type_syntax: &syntax::TypeSyntax) -> Option<Span> {
-    match &ungroup_type(type_syntax).kind {
-        syntax::TypeKind::Optional { question_span, .. } => Some(*question_span),
-        _ => None,
-    }
-}
-
-fn shared_syntax_parts(type_syntax: &syntax::TypeSyntax) -> Option<(Span, Span)> {
-    match &ungroup_type(type_syntax).kind {
-        syntax::TypeKind::Shared {
-            shared_span,
-            target,
-        } => Some((*shared_span, target.span)),
-        _ => None,
-    }
+    let payload = resolve_type(payload_syntax, lookup, type_interner, diagnostics)?;
+    let optional = type_interner.intern_optional(payload.clone());
+    Some(ResolvedTypeKind::Optional(optional))
 }
 
 fn resolve_shared_target(
     target: &syntax::TypeSyntax,
     lookup: ModuleLookup<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
     optional: bool,
 ) -> Option<ResolvedSharedTarget> {
     if let syntax::TypeKind::Grouped { inner, .. } = &target.kind {
-        return resolve_shared_target(inner, lookup, array_types, diagnostics, optional);
+        return resolve_shared_target(inner, lookup, type_interner, diagnostics, optional);
     }
     if let syntax::TypeKind::Optional { question_span, .. } = &target.kind {
+        let _ = resolve_type(target, lookup, type_interner, diagnostics);
         diagnostics.push(
             Diagnostic::error(
                 INVALID_OPTIONAL_TYPE,
@@ -377,7 +210,7 @@ fn resolve_shared_target(
         return None;
     }
     if matches!(target.kind, syntax::TypeKind::Array { .. }) {
-        let resolved = resolve_type(target, lookup, array_types, diagnostics)?;
+        let resolved = resolve_type(target, lookup, type_interner, diagnostics)?;
         let ResolvedTypeKind::Array(array) = resolved.kind else {
             unreachable!("an array target must resolve to an array identity")
         };

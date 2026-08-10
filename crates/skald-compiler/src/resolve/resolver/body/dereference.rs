@@ -197,7 +197,12 @@ impl CallableResolver<'_, '_> {
             _ => return None,
         };
         match kind {
-            ResolvedTypeKind::OptionalShared { target, .. } => Some(target),
+            ResolvedTypeKind::Optional(optional) => {
+                match self.type_interner.optional(optional)?.payload.kind {
+                    ResolvedTypeKind::Shared(target) => Some(target),
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }
@@ -254,10 +259,12 @@ impl CallableResolver<'_, '_> {
             _ => return None,
         };
         match kind {
-            ResolvedTypeKind::Optional {
-                payload: ResolvedOptionalPayload::Class(class),
-                ..
-            } => Some(class),
+            ResolvedTypeKind::Optional(optional) => {
+                match self.type_interner.optional(optional)?.payload.kind {
+                    ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }

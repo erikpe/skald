@@ -222,7 +222,7 @@ impl CallableChecker<'_, '_> {
             .field(place.field)
             .expect("selected field must exist");
         let field_name = field.name.clone();
-        let field_type = lower_type(&field.type_syntax);
+        let field_type = lower_type(self.program, &field.type_syntax);
         let mut valid = true;
         if place.receiver.access == HirAccess::ReadOnly
             && !matches!(

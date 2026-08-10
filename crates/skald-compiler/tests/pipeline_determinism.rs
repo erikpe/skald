@@ -879,9 +879,20 @@ fn shared_ownership_phase_dump() -> String {
 }
 
 fn optional_phase_dump() -> String {
-    complete_golden_phase_dump(include_str!(
-        "../../../tests/golden/optionals/optional_shared_profile.ska"
-    ))
+    format!(
+        "SUPPORTED\n{}DEFERRED\n{}",
+        complete_golden_phase_dump(include_str!(
+            "../../../tests/golden/optionals/optional_shared_profile.ska"
+        )),
+        type_error_phase_dump(
+            "recursive-optional-identities.ska",
+            concat!(
+                "class Item { init() {} }\n",
+                "fn inspect(deep: Item?????, values: Item?[]?) -> unit {}\n",
+                "fn main() -> i64 { return 0; }\n",
+            ),
+        )
+    )
 }
 
 fn array_phase_dump() -> String {

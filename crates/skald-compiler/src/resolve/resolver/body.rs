@@ -93,20 +93,21 @@ pub(super) fn resolve_callable_body(
     parameters: &[ResolvedParameter],
     body: &syntax::Block,
     environment: BodyResolutionEnvironment<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedCallableBody {
-    CallableResolver::new(context, parameters, environment, array_types, diagnostics).resolve(body)
+    CallableResolver::new(context, parameters, environment, type_interner, diagnostics)
+        .resolve(body)
 }
 
 pub(super) fn resolve_static_initializer_expression(
     context: CallableResolutionContext,
     expression: &syntax::Expression,
     environment: BodyResolutionEnvironment<'_>,
-    array_types: &mut ArrayTypeInterner,
+    type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedExpression> {
-    CallableResolver::new(context, &[], environment, array_types, diagnostics)
+    CallableResolver::new(context, &[], environment, type_interner, diagnostics)
         .resolve_declaration_expression(expression)
 }
 
@@ -187,7 +188,7 @@ struct CallableResolver<'program, 'state> {
     class_owner: Option<ClassId>,
     receiver_class: Option<ClassId>,
     environment: BodyResolutionEnvironment<'program>,
-    array_types: &'state mut ArrayTypeInterner,
+    type_interner: &'state mut ResolvedTypeInterner,
     diagnostics: &'state mut Diagnostics,
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
@@ -201,7 +202,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         context: CallableResolutionContext,
         parameters: &[ResolvedParameter],
         environment: BodyResolutionEnvironment<'program>,
-        array_types: &'state mut ArrayTypeInterner,
+        type_interner: &'state mut ResolvedTypeInterner,
         diagnostics: &'state mut Diagnostics,
     ) -> Self {
         let parameters = parameters
@@ -222,7 +223,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             class_owner: context.class_owner,
             receiver_class: context.receiver_class,
             environment,
-            array_types,
+            type_interner,
             diagnostics,
             base_initialization: context.base_initialization,
             scopes: vec![parameters],
@@ -286,7 +287,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         super::resolve_type(
             type_syntax,
             self.environment.lookup,
-            self.array_types,
+            self.type_interner,
             self.diagnostics,
         )
     }

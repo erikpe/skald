@@ -55,7 +55,7 @@ impl CallableChecker<'_, '_> {
             .program
             .static_field(field)
             .expect("resolved static-field use must reference a declaration");
-        let ty = lower_type(&declaration.type_syntax);
+        let ty = lower_type(self.program, &declaration.type_syntax);
         Some((HirStaticPlace { field, span }, ty))
     }
 

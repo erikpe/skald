@@ -15,7 +15,7 @@ pub(in crate::typeck) fn validate_array_types(
     diagnostics: &mut Diagnostics,
 ) {
     for array in program.array_types.iter() {
-        let element = lower_type(&array.element);
+        let element = lower_type(program, &array.element);
         if matches!(element, Type::Unit | Type::Obj | Type::Interface(_)) {
             diagnostics.push(
                 Diagnostic::error(
@@ -36,16 +36,16 @@ pub(in crate::typeck) fn validate_array_types(
             crate::resolve::ResolvedFunctionLinkage::External { .. }
         ) {
             for parameter in &function.parameters {
-                reject_external_array(&parameter.type_syntax, diagnostics);
+                reject_external_array(program, &parameter.type_syntax, diagnostics);
             }
-            reject_external_array(&function.return_type, diagnostics);
+            reject_external_array(program, &function.return_type, diagnostics);
         }
     }
 
     for interface in program.interfaces.iter() {
         for requirement in &interface.requirements {
             for parameter in &requirement.parameters {
-                if resolved_type_contains_array(parameter.type_syntax.kind) {
+                if resolved_type_contains_array(program, parameter.type_syntax.kind) {
                     diagnostics.push(
                         Diagnostic::error(
                             super::super::program::INVALID_INTERFACE_REQUIREMENT,
@@ -58,7 +58,7 @@ pub(in crate::typeck) fn validate_array_types(
                     );
                 }
             }
-            if resolved_type_contains_array(requirement.return_type.kind) {
+            if resolved_type_contains_array(program, requirement.return_type.kind) {
                 diagnostics.push(
                     Diagnostic::error(
                         super::super::program::INVALID_INTERFACE_REQUIREMENT,
@@ -74,8 +74,12 @@ pub(in crate::typeck) fn validate_array_types(
     }
 }
 
-fn reject_external_array(ty: &ResolvedType, diagnostics: &mut Diagnostics) {
-    if resolved_type_contains_array(ty.kind) {
+fn reject_external_array(
+    program: &ResolvedProgram,
+    ty: &ResolvedType,
+    diagnostics: &mut Diagnostics,
+) {
+    if resolved_type_contains_array(program, ty.kind) {
         diagnostics.push(
             Diagnostic::error(
                 super::super::program::INVALID_EXTERNAL_DECLARATION,
@@ -86,14 +90,17 @@ fn reject_external_array(ty: &ResolvedType, diagnostics: &mut Diagnostics) {
     }
 }
 
-pub(in crate::typeck) const fn resolved_type_contains_array(kind: ResolvedTypeKind) -> bool {
-    matches!(
-        kind,
+pub(in crate::typeck) fn resolved_type_contains_array(
+    program: &ResolvedProgram,
+    kind: ResolvedTypeKind,
+) -> bool {
+    match kind {
         ResolvedTypeKind::Array(_)
-            | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Array(_))
-            | ResolvedTypeKind::OptionalShared {
-                target: crate::resolve::ResolvedSharedTarget::Array(_),
-                ..
-            }
-    )
+        | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Array(_)) => true,
+        ResolvedTypeKind::Optional(optional) => program
+            .optional_types
+            .get(optional)
+            .is_some_and(|entry| resolved_type_contains_array(program, entry.payload.kind)),
+        _ => false,
+    }
 }

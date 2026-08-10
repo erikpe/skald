@@ -272,30 +272,37 @@ fn compute_class<I: Copy>(
                     ResolvedTypeKind::Shared(_) => {
                         fields.push(HirSynthesizedFieldCopy::Shared { field: field.id });
                     }
-                    ResolvedTypeKind::OptionalShared { target, .. } => {
-                        fields.push(HirSynthesizedFieldCopy::OptionalShared {
-                            field: field.id,
-                            target: crate::typeck::shared::lower_shared_target(target),
-                        });
-                    }
-                    ResolvedTypeKind::Optional { payload, .. } => {
+                    ResolvedTypeKind::Optional(optional) => {
+                        let payload = program
+                            .optional_types
+                            .get(optional)
+                            .expect("resolved optional identities must name table entries")
+                            .payload
+                            .kind;
                         let payload = match payload {
-                            crate::resolve::ResolvedOptionalPayload::I64 => {
+                            ResolvedTypeKind::I64 => {
                                 crate::hir::HirPrimitiveType::I64
                             }
-                            crate::resolve::ResolvedOptionalPayload::U64 => {
+                            ResolvedTypeKind::U64 => {
                                 crate::hir::HirPrimitiveType::U64
                             }
-                            crate::resolve::ResolvedOptionalPayload::U8 => {
+                            ResolvedTypeKind::U8 => {
                                 crate::hir::HirPrimitiveType::U8
                             }
-                            crate::resolve::ResolvedOptionalPayload::F64 => {
+                            ResolvedTypeKind::F64 => {
                                 crate::hir::HirPrimitiveType::F64
                             }
-                            crate::resolve::ResolvedOptionalPayload::Bool => {
+                            ResolvedTypeKind::Bool => {
                                 crate::hir::HirPrimitiveType::Bool
                             }
-                            crate::resolve::ResolvedOptionalPayload::Class(target) => {
+                            ResolvedTypeKind::Shared(target) => {
+                                fields.push(HirSynthesizedFieldCopy::OptionalShared {
+                                    field: field.id,
+                                    target: crate::typeck::shared::lower_shared_target(target),
+                                });
+                                continue;
+                            }
+                            ResolvedTypeKind::Class(target) => {
                                 if let Some(constructors) = required_constructors {
                                     if constructors.capability(target).selected().is_none() {
                                         let mut path = vec![CopyPathElement::Field(field.id)];
@@ -330,6 +337,9 @@ fn compute_class<I: Copy>(
                                 });
                                 continue;
                             }
+                            _ => unreachable!(
+                                "deferred optional payloads must be rejected before capability lowering"
+                            ),
                         };
                         fields.push(HirSynthesizedFieldCopy::OptionalPrimitive {
                             field: field.id,

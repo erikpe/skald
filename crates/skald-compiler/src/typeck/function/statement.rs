@@ -376,7 +376,7 @@ impl CallableChecker<'_, '_> {
             .get(local.local.index())
             .filter(|metadata| metadata.id == local.local)
             .expect("resolved local declaration must reference local metadata");
-        let expected = lower_type(&metadata.type_syntax);
+        let expected = lower_type(self.program, &metadata.type_syntax);
         let initializer = match expected {
             Type::Class(class) => {
                 self.check_object_local_initializer(local.local, class, &local.initializer)

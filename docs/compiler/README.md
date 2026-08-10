@@ -139,16 +139,16 @@ The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Recursive source type
 syntax normalizes canonical `(shared T)?` and `shared? T` shorthand through
-the existing flat resolved identities. Primitive and exact-class optional locals, fields,
+one deterministic recursive resolved identity table. Primitive and exact-class optional locals, fields,
 lifecycle, internal callable boundaries, optional shared owners, and inline
 optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
 zero-niche optional owners, and exact virtual/interface signatures.
 
-That same contract freezes the migration from flat optional families to
-deterministic recursive optional identities and lifecycle plans, followed by
-arbitrary nesting and optional inline arrays. Deferred recursive payloads
-currently stop at resolution, and the implemented phase products remain
+That same contract freezes the migration from the current flat HIR/MIR optional
+families to recursive lifecycle plans, followed by arbitrary nesting and
+optional inline arrays. Deferred recursive payloads receive resolved
+identities and currently stop at type checking, while the implemented phase products remain
 authoritative until each roadmap task lands. The frozen
 work adds no shared box target for `shared T?` and no C runtime ABI surface.
 

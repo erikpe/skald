@@ -7,6 +7,7 @@ mod expression;
 mod hierarchy;
 mod modules;
 mod object_place;
+mod optional_types;
 mod strings;
 
 pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
@@ -27,10 +28,10 @@ pub use declarations::{
     ResolvedInterfaceClaim, ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable,
     ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedLocal,
     ResolvedMemberVisibility, ResolvedMethodDeclaration, ResolvedMethodDispatch,
-    ResolvedMethodKind, ResolvedMethodModifier, ResolvedOptionalPayload, ResolvedParameter,
-    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget,
-    ResolvedStaticFieldDeclaration, ResolvedStaticFieldInitializer, ResolvedType, ResolvedTypeKind,
-    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedMethodKind, ResolvedMethodModifier, ResolvedParameter, ResolvedParameterBindingMode,
+    ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget, ResolvedStaticFieldDeclaration,
+    ResolvedStaticFieldInitializer, ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily,
+    ResolvedVirtualFamilyTable,
 };
 pub use expression::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayConstructionArguments,
@@ -55,6 +56,7 @@ pub use modules::{
     ResolvedTopLevelId, ResolvedVisibility,
 };
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};
+pub use optional_types::{ResolvedOptionalType, ResolvedOptionalTypeTable};
 pub use strings::{ResolvedLiteralData, ResolvedLiteralDataTable, ResolvedStringLanguageItem};
 
 pub(crate) use hierarchy::ResolvedClassHierarchyEntry;
