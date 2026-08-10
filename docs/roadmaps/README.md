@@ -10,11 +10,7 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-- [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md) — **planned**;
-  add exact non-null `shared T?` boxes and their `shared? T?` optional-owner
-  composition using the completed recursive optional lifecycle. SB0 (freeze
-  shared optional-box contracts) is next. Depends on the completed
-  compositional optional types roadmap.
+No implementation roadmap is currently only planned.
 
 ## Design proposals
 
