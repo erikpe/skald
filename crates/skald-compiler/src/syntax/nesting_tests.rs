@@ -154,6 +154,16 @@ fn allocation_recursion_uses_the_common_expression_nesting_budget() {
 }
 
 #[test]
+fn optional_construction_uses_the_common_expression_nesting_budget() {
+    let constructions = format!(
+        "{}none{}",
+        "some(".repeat(MAX_SYNTAX_NESTING),
+        ")".repeat(MAX_SYNTAX_NESTING)
+    );
+    assert_single_nesting_error(&parse_text(source_with_return(&constructions)));
+}
+
+#[test]
 fn bitwise_complement_uses_the_common_expression_nesting_budget() {
     let bitwise_complements = format!("{}1", "~".repeat(MAX_SYNTAX_NESTING));
     assert_single_nesting_error(&parse_text(source_with_return(&bitwise_complements)));

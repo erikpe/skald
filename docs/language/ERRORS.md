@@ -26,9 +26,9 @@ be rejected by later semantic rules; grammar acceptance alone does not make a
 program valid.
 
 Optional type syntax is resolved to canonical identities before payload
-eligibility is checked. `TYP043` rejects identities whose payload category is
-not executable yet, including nested optionals and optional inline arrays, so
-they never enter typed HIR. Unsupported shared boxes remain resolution errors
+eligibility is checked. Nested optional owning lifecycle is executable;
+`TYP043` still rejects optional inline arrays and other payload categories that
+have not reached typed HIR. Unsupported shared boxes remain resolution errors
 because they have no resolved shared-target identity.
 
 Tool usage, source I/O, target selection, backend legality, assembly, linkage,

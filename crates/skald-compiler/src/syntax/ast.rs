@@ -616,6 +616,7 @@ pub struct WhileStatement {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expression {
     Absent(AbsentExpr),
+    Present(PresentExpr),
     Identifier(IdentifierExpr),
     NumericLiteral(NumericLiteralExpr),
     ByteLiteral(ByteLiteralExpr),
@@ -642,6 +643,7 @@ impl Expression {
     pub const fn span(&self) -> Span {
         match self {
             Self::Absent(expression) => expression.span,
+            Self::Present(expression) => expression.span,
             Self::Identifier(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
             Self::ByteLiteral(expression) => expression.span,
@@ -668,6 +670,13 @@ impl Expression {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AbsentExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PresentExpr {
+    pub some_span: Span,
+    pub value: Box<Expression>,
     pub span: Span,
 }
 

@@ -295,6 +295,7 @@ pub enum MirStaticValueCleanup {
     OptionalClass(MirClassOptionalCleanup),
     Shared(MirStaticSharedCleanup),
     OptionalShared(MirOptionalSharedCleanup),
+    NestedOptional(super::MirNestedOptionalCleanup),
     Array(MirArrayInstruction),
 }
 
@@ -337,8 +338,14 @@ impl MirStaticValueCleanup {
                             span,
                         })
                     }
-                    super::MirOptionalStorage::InlineArray(_)
-                    | super::MirOptionalStorage::Nested(_) => return None,
+                    super::MirOptionalStorage::Nested(_) => {
+                        Self::NestedOptional(super::MirNestedOptionalCleanup {
+                            optional,
+                            destination,
+                            span,
+                        })
+                    }
+                    super::MirOptionalStorage::InlineArray(_) => return None,
                 }
             }
             MirType::Array(array) => Self::Array(MirArrayInstruction::Release {

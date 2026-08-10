@@ -419,6 +419,18 @@ fn projected_place(
                     MirType::Class(class),
                 )
             }
+            MirPlaceProjection::NestedOptionalPayload(optional) => {
+                if ty != MirType::Optional(optional) {
+                    return Err(place_metadata_error(function.callable()));
+                }
+                let metadata = program
+                    .optional_type(optional)
+                    .ok_or_else(|| place_metadata_error(function.callable()))?;
+                (
+                    data_layout.optional_type(optional)?.payload_offset(),
+                    metadata.payload,
+                )
+            }
             MirPlaceProjection::ArrayElement { .. } => {
                 unreachable!("array element addresses are selected by array lowering")
             }

@@ -85,6 +85,7 @@ pub enum HirArrayCopyElement {
     Array(ArrayTypeId),
     Shared(HirSharedTarget),
     OptionalShared(HirSharedTarget),
+    Optional(crate::identity::OptionalTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -103,6 +104,7 @@ pub enum HirArrayAssignElement {
     Array(ArrayTypeId),
     Shared(HirSharedTarget),
     OptionalShared(HirSharedTarget),
+    Optional(crate::identity::OptionalTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -113,6 +115,7 @@ pub enum HirArrayDestroyElement {
     Array(ArrayTypeId),
     Shared(HirSharedTarget),
     OptionalShared(HirSharedTarget),
+    Optional(crate::identity::OptionalTypeId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -366,6 +369,7 @@ pub enum HirArrayElementValue {
         payload: super::HirPrimitiveType,
     },
     ClassOptional(super::HirClassOptionalInitialize),
+    NestedOptional(Box<super::HirOptionalValue>),
     Object {
         source: super::HirObjectSource,
         operation: HirSelectedCopyOperation<CopyAssignmentId>,

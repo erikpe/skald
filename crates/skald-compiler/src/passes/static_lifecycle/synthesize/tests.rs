@@ -97,6 +97,7 @@ fn synthesizes_exact_reverse_cleanup_category_matrix() {
             MirStaticValueCleanup::OptionalClass(_) => "optional-class",
             MirStaticValueCleanup::Shared(_) => "shared",
             MirStaticValueCleanup::OptionalShared(_) => "optional-shared",
+            MirStaticValueCleanup::NestedOptional(_) => "nested-optional",
             MirStaticValueCleanup::Array(_) => "array",
         })
         .collect::<Vec<_>>();

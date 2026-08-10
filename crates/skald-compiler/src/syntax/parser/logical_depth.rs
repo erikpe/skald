@@ -17,6 +17,9 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
             | Expression::StringLiteral(_)
             | Expression::Boolean(_)
             | Expression::SelfValue(_) => {}
+            Expression::Present(expression) => {
+                pending.push((&expression.value, depth));
+            }
             Expression::Unary(expression) => {
                 pending.push((&expression.operand, depth));
             }

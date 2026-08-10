@@ -221,6 +221,30 @@ impl CallableChecker<'_, '_> {
                         "optional shared static assignment",
                     )
                     .map(HirStatement::OptionalSharedAssignment),
+                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                    let Type::Optional(optional) = ty else {
+                        unreachable!()
+                    };
+                    self.check_optional_value(
+                        optional,
+                        &assignment.value,
+                        "nested optional static assignment",
+                    )
+                    .map(|value| {
+                        HirStatement::NestedOptionalAssignment(
+                            crate::hir::HirNestedOptionalAssignment {
+                                destination: crate::hir::HirOptionalValuePlace {
+                                    storage: HirOptionalStorage::Static(place),
+                                    optional,
+                                    span: assignment.span,
+                                },
+                                value,
+                                kind: HirOptionalWriteKind::Assign,
+                                span: assignment.span,
+                            },
+                        )
+                    })
+                }
             },
             Type::Array(array) => self
                 .check_array_initialize(array, &assignment.value, "static array replacement")
@@ -328,6 +352,30 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::OptionalSharedAssignment))
             }
+            super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                let Type::Optional(optional) = self.binding_type(assignment.destination) else {
+                    unreachable!()
+                };
+                let value = self.check_optional_value(
+                    optional,
+                    &assignment.source,
+                    "nested optional local assignment",
+                );
+                CheckedStatement::falls_through(value.map(|value| {
+                    HirStatement::NestedOptionalAssignment(
+                        crate::hir::HirNestedOptionalAssignment {
+                            destination: crate::hir::HirOptionalValuePlace {
+                                storage: HirOptionalStorage::Binding(assignment.destination),
+                                optional,
+                                span: assignment.span,
+                            },
+                            value,
+                            kind: HirOptionalWriteKind::Assign,
+                            span: assignment.span,
+                        },
+                    )
+                }))
+            }
         }
     }
 
@@ -419,6 +467,17 @@ impl CallableChecker<'_, '_> {
                         "optional shared local initializer",
                     )
                     .map(HirLocalInitializer::OptionalShared),
+                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                    let Type::Optional(optional) = expected else {
+                        unreachable!()
+                    };
+                    self.check_optional_value(
+                        optional,
+                        &local.initializer,
+                        "nested optional local initializer",
+                    )
+                    .map(|value| HirLocalInitializer::NestedOptional(Box::new(value)))
+                }
             },
             _ => self
                 .check_expression(&local.initializer)
@@ -644,6 +703,16 @@ impl CallableChecker<'_, '_> {
             super::super::optional_types::LegacyOptionalKind::Shared(target) => self
                 .check_optional_shared_initialize(target, value, "optional shared return")
                 .map(HirReturnValue::OptionalShared),
+            super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_RETURN,
+                        "nested optional results are not supported yet",
+                    )
+                    .with_primary_label(span, "nested optional callable integration is deferred"),
+                );
+                None
+            }
         }?;
         Some(HirStatement::Return(HirReturn {
             value: Some(result),

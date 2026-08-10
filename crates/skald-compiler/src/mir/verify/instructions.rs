@@ -133,6 +133,56 @@ impl Verifier<'_> {
                 &assignment.source,
                 defined_in_block,
             ),
+            MirInstruction::NestedOptionalInitialize(initialize) => {
+                self.verify_nested_optional_operation(
+                    function,
+                    block,
+                    initialize.optional,
+                    &initialize.destination,
+                    Some(&initialize.source),
+                    false,
+                );
+            }
+            MirInstruction::NestedOptionalAssign(assignment) => {
+                if matches!(
+                    assignment.source,
+                    crate::mir::MirNestedOptionalSource::Unpublished
+                ) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "nested optional assignment cannot use an unpublished source",
+                    );
+                }
+                self.verify_nested_optional_operation(
+                    function,
+                    block,
+                    assignment.optional,
+                    &assignment.destination,
+                    Some(&assignment.source),
+                    true,
+                );
+            }
+            MirInstruction::NestedOptionalPublish(publish) => {
+                self.verify_nested_optional_operation(
+                    function,
+                    block,
+                    publish.optional,
+                    &publish.destination,
+                    None,
+                    false,
+                );
+            }
+            MirInstruction::NestedOptionalCleanup(cleanup) => {
+                self.verify_nested_optional_operation(
+                    function,
+                    block,
+                    cleanup.optional,
+                    &cleanup.destination,
+                    None,
+                    true,
+                );
+            }
             MirInstruction::OptionalSharedInitialize(initialize) => self
                 .verify_optional_shared_operation(
                     function,
@@ -880,6 +930,57 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!("unary operand is not `{expected}`"),
+                );
+            }
+        }
+    }
+
+    fn verify_nested_optional_operation(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        optional: crate::identity::OptionalTypeId,
+        destination: &MirPlace,
+        source: Option<&crate::mir::MirNestedOptionalSource>,
+        mutable: bool,
+    ) {
+        let valid_metadata = self
+            .program
+            .optional_type(optional)
+            .is_some_and(|metadata| {
+                matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+            });
+        let destination = self.verify_place(function, block, destination);
+        if !valid_metadata
+            || destination.as_ref().map(|place| place.ty) != Some(MirType::Optional(optional))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "nested optional operation has incompatible destination metadata",
+            );
+        }
+        if mutable
+            && destination
+                .as_ref()
+                .is_some_and(|place| place.access != MirAliasAccess::Mutable)
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "nested optional mutation requires mutable access",
+            );
+        }
+        if let Some(crate::mir::MirNestedOptionalSource::Copy(source)) = source {
+            if self
+                .verify_place(function, block, source)
+                .map(|place| place.ty)
+                != Some(MirType::Optional(optional))
+            {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "nested optional copy source has the wrong type",
                 );
             }
         }

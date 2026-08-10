@@ -46,6 +46,13 @@ impl CallableChecker<'_, '_> {
                 LegacyOptionalKind::Shared(target) => self
                     .check_optional_shared_initialize(target, source, context)
                     .map(HirStoredValueInitialization::OptionalShared),
+                LegacyOptionalKind::Nested(_) => {
+                    let Type::Optional(optional) = expected else {
+                        unreachable!()
+                    };
+                    self.check_optional_value(optional, source, context)
+                        .map(|value| HirStoredValueInitialization::Optional(Box::new(value)))
+                }
             },
             _ => {
                 let value = self.check_expression(source)?;
@@ -68,14 +75,18 @@ impl CallableChecker<'_, '_> {
             });
         }
 
+        let direct_source = match source {
+            ResolvedExpression::Present(present) => &*present.value,
+            _ => source,
+        };
         let direct_candidate = matches!(
-            source,
+            direct_source,
             ResolvedExpression::Construct(construction) if construction.class == class
-        ) || (is_ungrouped_object_call(source)
-            && self.resolved_object_class(source) == Some(class));
+        ) || (is_ungrouped_object_call(direct_source)
+            && self.resolved_object_class(direct_source) == Some(class));
         if direct_candidate {
             let initialization =
-                self.check_object_destination_initialization(class, source, context)?;
+                self.check_object_destination_initialization(class, direct_source, context)?;
             let HirObjectDestinationInitialization::Direct { producer, span } = initialization
             else {
                 unreachable!("an exact ungrouped object producer must initialize directly")

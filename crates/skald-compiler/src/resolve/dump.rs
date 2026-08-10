@@ -803,6 +803,10 @@ impl<'types> ResolvedDumper<'types> {
     fn expression(&mut self, expression: &ResolvedExpression) {
         match expression {
             ResolvedExpression::Absent(absent) => self.line("Absent", absent.span),
+            ResolvedExpression::Present(present) => {
+                self.line("Present", present.span);
+                self.indented(|dumper| dumper.expression(&present.value));
+            }
             ResolvedExpression::Binding(binding) => {
                 self.line(&format!("Binding {}", binding.binding), binding.span);
             }

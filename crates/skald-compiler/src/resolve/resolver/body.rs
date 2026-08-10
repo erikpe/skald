@@ -302,6 +302,14 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     span: absent.span,
                 }))
             }
+            syntax::Expression::Present(present) => {
+                let value = self.resolve_expression(&present.value)?;
+                Some(ResolvedExpression::Present(ResolvedPresentExpr {
+                    value: Box::new(value),
+                    some_span: present.some_span,
+                    span: present.span,
+                }))
+            }
             syntax::Expression::Identifier(identifier) => self.resolve_identifier(identifier),
             syntax::Expression::NumericLiteral(literal) => Some(
                 ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {

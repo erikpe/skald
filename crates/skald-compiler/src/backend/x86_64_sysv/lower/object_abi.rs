@@ -111,6 +111,12 @@ impl InstructionSelector<'_, '_> {
                         .ty
                 }
                 MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
+                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                    self.program
+                        .optional_type(optional)
+                        .expect("verified optional projection names metadata")
+                        .payload
+                }
                 MirPlaceProjection::ArrayElement { array, .. } => {
                     self.program
                         .array_type(array)

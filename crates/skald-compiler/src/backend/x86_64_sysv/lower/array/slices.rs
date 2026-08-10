@@ -442,6 +442,14 @@ impl InstructionSelector<'_, '_> {
                     span,
                 })
             }
+            MirArrayAssignElement::Optional(optional) => {
+                self.select_nested_optional_assign(&crate::mir::MirNestedOptionalAssign {
+                    optional,
+                    destination,
+                    source: crate::mir::MirNestedOptionalSource::Copy(source),
+                    span,
+                })
+            }
         }
     }
 
@@ -467,6 +475,12 @@ impl InstructionSelector<'_, '_> {
             ty = match *projection {
                 MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
                     MirType::Class(class)
+                }
+                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                    self.program
+                        .optional_type(optional)
+                        .expect("verified optional")
+                        .payload
                 }
                 MirPlaceProjection::Field(field) => {
                     self.program.field(field).expect("verified field exists").ty

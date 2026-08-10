@@ -101,7 +101,7 @@ pointee is an optional value.
 - [x] CO2 — Canonicalize recursive optional identities
 - [x] CO3 — Generalize typed optional lifecycle planning
 - [x] CO4 — Generalize executable optional MIR and target realization
-- [ ] CO5 — Execute arbitrarily nested optional lifecycle
+- [x] CO5 — Execute arbitrarily nested optional lifecycle
 - [ ] CO6 — Complete nested-optional access and callable integration
 - [ ] CO7 — Execute optional inline arrays
 - [ ] CO8 — Integrate optional arrays across stored and aggregate boundaries
@@ -278,21 +278,21 @@ type family.
 **Purpose:** Enable recursive owning storage and make every finite `T????`
 presence shape constructible and lifecycle-correct.
 
-- [ ] Add `some(expression)` as an expected-type-directed expression that
+- [x] Add `some(expression)` as an expected-type-directed expression that
       creates exactly one present optional layer; `none` continues to create
       outer absence.
-- [ ] Enforce exact or one-layer implicit injection without recursive lifting,
+- [x] Enforce exact or one-layer implicit injection without recursive lifting,
       including deterministic overload ambiguity and mismatch diagnostics.
-- [ ] Admit optional payload identities recursively and execute absent/present
+- [x] Admit optional payload identities recursively and execute absent/present
       initialization, optional copy, assignment, self-assignment, conditional
       recursive cleanup, and direct final-destination construction.
-- [ ] Lay out every non-niche layer as its own state plus complete payload,
+- [x] Lay out every non-niche layer as its own state plus complete payload,
       preserve every distinct presence shape, and reject checked size or
       alignment overflow before code generation.
-- [ ] Carry nested optional fields through synthesized class copying,
+- [x] Carry nested optional fields through synthesized class copying,
       assignment, destruction, inline containment, static initialization, and
       reverse shutdown.
-- [ ] Permit nested optionals as default-absent array elements and explicit
+- [x] Permit nested optionals as default-absent array elements and explicit
       element-list destinations while preserving unpublished-prefix and
       reverse-cleanup invariants.
 

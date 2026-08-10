@@ -83,6 +83,10 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
+            HirStatement::NestedOptionalAssignment(assignment) => {
+                self.lower_nested_optional_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
             HirStatement::ArrayFieldInitialize(initialize) => {
                 let destination = self.lower_field_place(&initialize.place);
                 self.lower_array_initialize(destination, &initialize.value, false);
@@ -195,6 +199,12 @@ impl BodyLowerer<'_> {
                     optional_types::shared_id(self.input.optional_types, value.target),
                     super::lower_shared_target(value.target),
                 );
+                self.finish_full_expression(local.span);
+            }
+            crate::hir::HirLocalInitializer::NestedOptional(value) => {
+                self.lower_nested_optional_initialize_at(MirPlace::base(storage), value);
+                self.cleanup
+                    .register_nested_optional(storage, value.optional);
                 self.finish_full_expression(local.span);
             }
             crate::hir::HirLocalInitializer::Array(initialization) => {

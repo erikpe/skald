@@ -28,6 +28,7 @@ pub enum HirStoredValueInitialization {
     Array(HirArrayInitialize),
     Shared(HirSharedTransfer),
     OptionalShared(HirOptionalSharedInitialize),
+    Optional(Box<super::HirOptionalValue>),
 }
 
 impl HirStoredValueInitialization {
@@ -40,6 +41,7 @@ impl HirStoredValueInitialization {
             Self::Array(value) => value.span,
             Self::Shared(value) => value.span,
             Self::OptionalShared(value) => value.span,
+            Self::Optional(value) => value.span,
         }
     }
 }

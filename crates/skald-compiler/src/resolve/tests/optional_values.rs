@@ -158,7 +158,7 @@ fn repeated_optional_spellings_share_identities_across_modules() {
 }
 
 #[test]
-fn deferred_compositions_stop_at_focused_semantic_gates() {
+fn nested_optionals_cross_type_checking_while_optional_arrays_remain_gated() {
     let output = resolve_text(
         "class Thing { init() {} }\n\
          fn nested(value: Thing??) -> unit {}\n\
@@ -179,19 +179,18 @@ fn deferred_compositions_stop_at_focused_semantic_gates() {
     let checked = crate::typeck::type_check(&output.program);
     assert!(checked.has_errors());
 
-    for message in [
-        "nested optional types are not supported yet",
-        "inline optional array payloads are not supported yet",
-    ] {
-        assert!(
-            checked.diagnostics.iter().any(|diagnostic| {
-                diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE
-                    && diagnostic.message == message
-            }),
-            "missing `{message}` diagnostic: {:?}",
-            checked.diagnostics
-        );
-    }
+    let message = "inline optional array payloads are not supported yet";
+    assert!(
+        checked.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE && diagnostic.message == message
+        }),
+        "missing `{message}` diagnostic: {:?}",
+        checked.diagnostics
+    );
+    assert!(!checked
+        .diagnostics
+        .iter()
+        .any(|diagnostic| { diagnostic.message == "nested optional types are not supported yet" }));
 }
 
 #[test]

@@ -175,6 +175,7 @@ fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
                 C::OptionalShared(target) => {
                     MirArrayCopyElement::OptionalShared(lower_shared_target(target))
                 }
+                C::Optional(optional) => MirArrayCopyElement::Optional(optional),
             }),
             assignment: array.lifecycle.assignment.map(|operation| match operation {
                 A::Primitive => MirArrayAssignElement::Primitive,
@@ -197,6 +198,7 @@ fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
                 A::OptionalShared(target) => {
                     MirArrayAssignElement::OptionalShared(lower_shared_target(target))
                 }
+                A::Optional(optional) => MirArrayAssignElement::Optional(optional),
             }),
             destruction: match array.lifecycle.destruction {
                 X::Trivial => MirArrayDestroyElement::Trivial,
@@ -207,6 +209,7 @@ fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
                 X::OptionalShared(target) => {
                     MirArrayDestroyElement::OptionalShared(lower_shared_target(target))
                 }
+                X::Optional(optional) => MirArrayDestroyElement::Optional(optional),
             },
         },
     }
@@ -251,6 +254,9 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 }
                 HirDestructionStep::OptionalClassField(field) => {
                     MirDestructionStep::OptionalClassField(field)
+                }
+                HirDestructionStep::OptionalField { field, optional } => {
+                    MirDestructionStep::OptionalField { field, optional }
                 }
                 HirDestructionStep::ArrayField(field) => MirDestructionStep::ArrayField(field),
                 HirDestructionStep::Base(base) => MirDestructionStep::Base(base),
@@ -433,6 +439,9 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                                 field,
                                 target: lower_shared_target(target),
                             }
+                        }
+                        HirSynthesizedFieldCopy::Optional { field, optional } => {
+                            MirSynthesizedFieldCopy::Optional { field, optional }
                         }
                         HirSynthesizedFieldCopy::Class { field, operation } => {
                             MirSynthesizedFieldCopy::Class {

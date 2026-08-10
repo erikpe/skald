@@ -125,6 +125,13 @@ impl InstructionSelector<'_, '_> {
                         span: self.function.span(),
                     })?;
                 }
+                MirDestructionStep::OptionalField { field, optional } => {
+                    self.select_nested_optional_cleanup(&crate::mir::MirNestedOptionalCleanup {
+                        optional,
+                        destination: destination.clone().project_field(field),
+                        span: self.function.span(),
+                    })?;
+                }
             }
         }
         Ok(())

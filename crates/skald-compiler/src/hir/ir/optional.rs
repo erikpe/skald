@@ -1,7 +1,7 @@
 //! Typed primitive-optional storage operations.
 
 use crate::{
-    identity::{BindingId, ClassId, CopyAssignmentId, CopyConstructorId},
+    identity::{BindingId, ClassId, CopyAssignmentId, CopyConstructorId, OptionalTypeId},
     source::Span,
 };
 
@@ -36,6 +36,39 @@ pub struct HirClassOptionalPlace {
 pub struct HirOptionalSharedPlace {
     pub storage: HirOptionalStorage,
     pub target: HirSharedTarget,
+    pub span: Span,
+}
+
+/// A place containing one exact canonical optional identity.
+///
+/// Recursive optional lifecycle uses this identity-based place rather than
+/// introducing another payload-specific place family for every nesting depth.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalValuePlace {
+    pub storage: HirOptionalStorage,
+    pub optional: OptionalTypeId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalValue {
+    pub optional: OptionalTypeId,
+    pub source: HirOptionalValueSource,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirOptionalValueSource {
+    Absent,
+    Present(Box<super::HirStoredValueInitialization>),
+    Copy(HirOptionalValuePlace),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirNestedOptionalAssignment {
+    pub destination: HirOptionalValuePlace,
+    pub value: HirOptionalValue,
+    pub kind: HirOptionalWriteKind,
     pub span: Span,
 }
 
@@ -152,6 +185,7 @@ pub enum HirOptionalOperand {
     ClassProduced(Box<HirExpression>),
     SharedPlace(HirOptionalSharedPlace),
     SharedProduced(Box<HirExpression>),
+    NestedPlace(HirOptionalValuePlace),
 }
 
 impl HirOptionalOperand {
@@ -163,6 +197,7 @@ impl HirOptionalOperand {
             Self::ClassProduced(expression) => expression.span,
             Self::SharedPlace(place) => place.span,
             Self::SharedProduced(expression) => expression.span,
+            Self::NestedPlace(place) => place.span,
         }
     }
 
@@ -194,7 +229,8 @@ impl HirOptionalOperand {
             Self::ClassPlace(_)
             | Self::ClassProduced(_)
             | Self::SharedPlace(_)
-            | Self::SharedProduced(_) => {
+            | Self::SharedProduced(_)
+            | Self::NestedPlace(_) => {
                 panic!("class optional payload access is implemented by checked views")
             }
         }
@@ -214,7 +250,11 @@ impl HirOptionalOperand {
                 },
                 _ => panic!("produced class optional operand must have optional class type"),
             },
-            Self::Place(_) | Self::Produced(_) | Self::SharedPlace(_) | Self::SharedProduced(_) => {
+            Self::Place(_)
+            | Self::Produced(_)
+            | Self::SharedPlace(_)
+            | Self::SharedProduced(_)
+            | Self::NestedPlace(_) => {
                 panic!("primitive optional operands have no class payload")
             }
         }
@@ -234,7 +274,11 @@ impl HirOptionalOperand {
                 },
                 _ => panic!("produced optional owner operand must have optional shared type"),
             },
-            Self::Place(_) | Self::Produced(_) | Self::ClassPlace(_) | Self::ClassProduced(_) => {
+            Self::Place(_)
+            | Self::Produced(_)
+            | Self::ClassPlace(_)
+            | Self::ClassProduced(_)
+            | Self::NestedPlace(_) => {
                 panic!("inline optional operands have no shared target")
             }
         }

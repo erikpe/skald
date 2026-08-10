@@ -131,8 +131,6 @@ matches = [
  --> tests/golden/optionals/optional_type_exclusions.ska:11:19""" },
   { name = "optional object view", match = "contains", inline = """error[TYP043]: `Obj?` is not a valid inline optional type
  --> tests/golden/optionals/optional_type_exclusions.ska:12:16""" },
-  { name = "nested optional", match = "contains", inline = """error[TYP043]: nested optional types are not supported yet
- --> tests/golden/optionals/optional_type_exclusions.ska:13:16""" },
 ]
 
 [[test]]

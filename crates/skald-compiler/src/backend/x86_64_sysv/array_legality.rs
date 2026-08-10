@@ -132,7 +132,8 @@ fn check_instruction(
                     | crate::mir::MirArrayCopyElement::OptionalClass { .. }
                     | crate::mir::MirArrayCopyElement::Array(_)
                     | crate::mir::MirArrayCopyElement::Shared(_)
-                    | crate::mir::MirArrayCopyElement::OptionalShared(_),
+                    | crate::mir::MirArrayCopyElement::OptionalShared(_)
+                    | crate::mir::MirArrayCopyElement::Optional(_),
                 ..
             } => {
                 require_executable_array_place(program, definition, source)?;
@@ -161,7 +162,8 @@ fn check_instruction(
                     | crate::mir::MirArrayDestroyElement::OptionalClass(_)
                     | crate::mir::MirArrayDestroyElement::Array(_)
                     | crate::mir::MirArrayDestroyElement::Shared(_)
-                    | crate::mir::MirArrayDestroyElement::OptionalShared(_),
+                    | crate::mir::MirArrayDestroyElement::OptionalShared(_)
+                    | crate::mir::MirArrayDestroyElement::Optional(_),
                 ..
             } => {
                 require_executable_array_place(program, definition, owner)?;
@@ -365,6 +367,9 @@ fn projected_type(program: &MirProgram, mut ty: MirType, place: &MirPlace) -> Op
             MirPlaceProjection::Base(base) => MirType::Class(base),
             MirPlaceProjection::Field(field) => program.field(field)?.ty,
             MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
+            MirPlaceProjection::NestedOptionalPayload(optional) => {
+                program.optional_type(optional)?.payload
+            }
             MirPlaceProjection::ArrayElement { array, .. } => program.array_type(array)?.element,
         };
     }

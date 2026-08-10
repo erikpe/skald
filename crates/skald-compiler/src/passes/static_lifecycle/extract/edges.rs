@@ -148,6 +148,9 @@ impl Extractor<'_> {
             | MirArrayCopyElement::OptionalPrimitive
             | MirArrayCopyElement::Shared(_)
             | MirArrayCopyElement::OptionalShared(_) => {}
+            MirArrayCopyElement::Optional(optional) => {
+                self.add_optional_copy_edges(source, optional, phase, span)
+            }
         }
     }
 
@@ -210,6 +213,9 @@ impl Extractor<'_> {
                 span,
             ),
             MirArrayAssignElement::Primitive | MirArrayAssignElement::OptionalPrimitive => {}
+            MirArrayAssignElement::Optional(optional) => {
+                self.add_optional_assignment_edges(source, optional, phase, span)
+            }
         }
     }
 
@@ -246,6 +252,149 @@ impl Extractor<'_> {
                 span,
             ),
             MirArrayDestroyElement::Trivial => {}
+            MirArrayDestroyElement::Optional(optional) => {
+                self.add_optional_cleanup_edges(source, optional, phase, span)
+            }
+        }
+    }
+
+    pub(super) fn add_optional_copy_edges(
+        &mut self,
+        source: StaticEffectNode,
+        optional: crate::identity::OptionalTypeId,
+        phase: StaticEffectPhase,
+        span: Span,
+    ) {
+        let Some(plan) = self
+            .program
+            .optional_type(optional)
+            .and_then(|ty| ty.lifecycle.copy)
+        else {
+            return;
+        };
+        match plan {
+            crate::mir::MirOptionalCopyPlan::Class { operation, .. } => self
+                .add_copy_constructor_edge(
+                    source,
+                    operation,
+                    StaticEffectEdgeKind::ArrayCopy,
+                    phase,
+                    span,
+                ),
+            crate::mir::MirOptionalCopyPlan::Optional(nested) => {
+                self.add_optional_copy_edges(source, nested, phase, span)
+            }
+            crate::mir::MirOptionalCopyPlan::Array(array) => self.add_edge(
+                source,
+                StaticEffectNode::array(array, StaticArrayLifecycleOperation::Copy),
+                StaticEffectEdgeKind::ArrayCopy,
+                phase,
+                span,
+            ),
+            crate::mir::MirOptionalCopyPlan::Trivial
+            | crate::mir::MirOptionalCopyPlan::Shared(_) => {}
+        }
+    }
+
+    pub(super) fn add_optional_assignment_edges(
+        &mut self,
+        source: StaticEffectNode,
+        optional: crate::identity::OptionalTypeId,
+        phase: StaticEffectPhase,
+        span: Span,
+    ) {
+        let Some(plan) = self
+            .program
+            .optional_type(optional)
+            .and_then(|ty| ty.lifecycle.assignment)
+        else {
+            return;
+        };
+        match plan {
+            crate::mir::MirOptionalAssignmentPlan::Class {
+                class,
+                copy_constructor,
+                copy_assignment,
+            } => {
+                self.add_copy_constructor_edge(
+                    source,
+                    copy_constructor,
+                    StaticEffectEdgeKind::ArrayAssignment,
+                    phase,
+                    span,
+                );
+                self.add_copy_assignment_edge(
+                    source,
+                    copy_assignment,
+                    StaticEffectEdgeKind::ArrayAssignment,
+                    phase,
+                    span,
+                );
+                self.add_complete_finalizer(
+                    source,
+                    class,
+                    StaticEffectEdgeKind::OptionalCleanup,
+                    phase,
+                    span,
+                );
+            }
+            crate::mir::MirOptionalAssignmentPlan::Optional(nested) => {
+                self.add_optional_assignment_edges(source, nested, phase, span)
+            }
+            crate::mir::MirOptionalAssignmentPlan::Array(array) => self.add_edge(
+                source,
+                StaticEffectNode::array(array, StaticArrayLifecycleOperation::Assignment),
+                StaticEffectEdgeKind::ArrayAssignment,
+                phase,
+                span,
+            ),
+            crate::mir::MirOptionalAssignmentPlan::Shared(target) => self.add_shared_finalizers(
+                source,
+                target,
+                StaticEffectEdgeKind::SharedFinalizer,
+                phase,
+                span,
+            ),
+            crate::mir::MirOptionalAssignmentPlan::Trivial => {}
+        }
+    }
+
+    pub(super) fn add_optional_cleanup_edges(
+        &mut self,
+        source: StaticEffectNode,
+        optional: crate::identity::OptionalTypeId,
+        phase: StaticEffectPhase,
+        span: Span,
+    ) {
+        let Some(metadata) = self.program.optional_type(optional) else {
+            return;
+        };
+        match metadata.lifecycle.cleanup {
+            crate::mir::MirOptionalCleanupPlan::Class(class) => self.add_complete_finalizer(
+                source,
+                class,
+                StaticEffectEdgeKind::OptionalCleanup,
+                phase,
+                span,
+            ),
+            crate::mir::MirOptionalCleanupPlan::Optional(nested) => {
+                self.add_optional_cleanup_edges(source, nested, phase, span)
+            }
+            crate::mir::MirOptionalCleanupPlan::Array(array) => self.add_edge(
+                source,
+                StaticEffectNode::array(array, StaticArrayLifecycleOperation::Destruction),
+                StaticEffectEdgeKind::ArrayDestruction,
+                phase,
+                span,
+            ),
+            crate::mir::MirOptionalCleanupPlan::Shared(target) => self.add_shared_finalizers(
+                source,
+                target,
+                StaticEffectEdgeKind::SharedFinalizer,
+                phase,
+                span,
+            ),
+            crate::mir::MirOptionalCleanupPlan::Trivial => {}
         }
     }
 }

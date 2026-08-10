@@ -462,6 +462,15 @@ fn lower_copier(
                     Instruction::Label(complete),
                 ]);
                 instructions
+            } else if matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_)) {
+                lower_nested_optional_copier(
+                    program,
+                    array,
+                    optional,
+                    source,
+                    destination,
+                    data_layout,
+                )?
             } else {
                 return Err(helper_error(format!(
                     "array {array} has a gated optional copy element {element}"
@@ -687,6 +696,227 @@ fn lower_shared_copier(
     instructions
 }
 
+fn lower_nested_optional_copier(
+    program: &MirProgram,
+    array: crate::identity::ArrayTypeId,
+    optional: crate::identity::OptionalTypeId,
+    source: Operand,
+    destination: Operand,
+    data_layout: &DataLayout,
+) -> Result<Vec<Instruction>, BackendError> {
+    let metadata = program
+        .optional_type(optional)
+        .expect("verified optional metadata");
+    match metadata.storage {
+        crate::mir::MirOptionalStorage::Scalar => {
+            let payload = metadata.primitive().expect("scalar optional payload");
+            let layout = data_layout.optional_type(optional)?;
+            let payload_offset = i32::try_from(layout.payload_offset())
+                .map_err(|_| helper_error("optional payload offset exceeds x86-64"))?;
+            let present = Label::new(format!(
+                ".Lska_array_{}_copy_o{}_present",
+                array.index(),
+                optional.index()
+            ));
+            let complete = Label::new(format!(
+                ".Lska_array_{}_copy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            let mut output = vec![
+                Instruction::Move {
+                    source,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfNotZero(present.clone()),
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Jump(complete.clone()),
+                Instruction::Label(present),
+            ];
+            let source_payload = offset_operand(source, payload_offset)?;
+            let destination_payload = offset_operand(destination, payload_offset)?;
+            if matches!(
+                payload,
+                crate::mir::MirPrimitiveType::U8 | crate::mir::MirPrimitiveType::Bool
+            ) {
+                output.push(Instruction::LoadZeroExtendByte {
+                    source: source_payload,
+                    destination: Register::Rax,
+                });
+                output.push(Instruction::MoveByte {
+                    source: ByteRegister::Al,
+                    destination: destination_payload,
+                });
+            } else {
+                value::load_rax(source_payload, &mut output);
+                value::store_rax(destination_payload, &mut output);
+            }
+            output.extend([
+                Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rax,
+                },
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Label(complete),
+            ]);
+            Ok(output)
+        }
+        crate::mir::MirOptionalStorage::InlineClass(class) => {
+            lower_optional_class_copier(program, array, class, source, destination, data_layout)
+        }
+        crate::mir::MirOptionalStorage::SharedOwner(_) => {
+            Ok(lower_shared_copier(array, source, destination, true))
+        }
+        crate::mir::MirOptionalStorage::Nested(nested) => {
+            let payload_offset =
+                i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                    .map_err(|_| helper_error("nested optional payload offset exceeds x86-64"))?;
+            let present = Label::new(format!(
+                ".Lska_array_{}_copy_o{}_present",
+                array.index(),
+                optional.index()
+            ));
+            let complete = Label::new(format!(
+                ".Lska_array_{}_copy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            let mut output = vec![
+                Instruction::Move {
+                    source,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfNotZero(present.clone()),
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Jump(complete.clone()),
+                Instruction::Label(present),
+            ];
+            output.extend(lower_nested_optional_copier(
+                program,
+                array,
+                nested,
+                offset_operand(source, payload_offset)?,
+                offset_operand(destination, payload_offset)?,
+                data_layout,
+            )?);
+            output.extend([
+                Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rax,
+                },
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Label(complete),
+            ]);
+            Ok(output)
+        }
+        crate::mir::MirOptionalStorage::InlineArray(_) => unreachable!("optional arrays are gated"),
+    }
+}
+
+fn lower_nested_optional_destroyer(
+    program: &MirProgram,
+    array: crate::identity::ArrayTypeId,
+    optional: crate::identity::OptionalTypeId,
+    address: Operand,
+    data_layout: &DataLayout,
+) -> Result<Vec<Instruction>, BackendError> {
+    let metadata = program
+        .optional_type(optional)
+        .expect("verified optional metadata");
+    match metadata.storage {
+        crate::mir::MirOptionalStorage::Scalar => Ok(Vec::new()),
+        crate::mir::MirOptionalStorage::SharedOwner(_) => {
+            let complete = Label::new(format!(
+                ".Lska_array_{}_destroy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            Ok(vec![
+                Instruction::Move {
+                    source: address,
+                    destination: Register::Rdi.into(),
+                },
+                Instruction::Test(Register::Rdi),
+                Instruction::JumpIfEqual(complete.clone()),
+                call::direct_instruction(
+                    symbol::shared_handle_release(),
+                    call::TraceAttribution::InheritedSourceOperation,
+                ),
+                Instruction::Label(complete),
+            ])
+        }
+        crate::mir::MirOptionalStorage::InlineClass(class) => {
+            let payload_offset =
+                i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                    .map_err(|_| helper_error("optional payload offset exceeds x86-64"))?;
+            let complete = Label::new(format!(
+                ".Lska_array_{}_destroy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            Ok(vec![
+                Instruction::Move {
+                    source: address,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfEqual(complete.clone()),
+                Instruction::LoadEffectiveAddress {
+                    source: offset_operand(address, payload_offset)?,
+                    destination: Register::Rdi,
+                },
+                call::direct_instruction(
+                    symbol::complete_finalizer(program, class),
+                    call::TraceAttribution::InheritedSourceOperation,
+                ),
+                Instruction::Label(complete),
+            ])
+        }
+        crate::mir::MirOptionalStorage::Nested(nested) => {
+            let payload_offset =
+                i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                    .map_err(|_| helper_error("nested optional payload offset exceeds x86-64"))?;
+            let complete = Label::new(format!(
+                ".Lska_array_{}_destroy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            let mut output = vec![
+                Instruction::Move {
+                    source: address,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfEqual(complete.clone()),
+            ];
+            output.extend(lower_nested_optional_destroyer(
+                program,
+                array,
+                nested,
+                offset_operand(address, payload_offset)?,
+                data_layout,
+            )?);
+            output.push(Instruction::Label(complete));
+            Ok(output)
+        }
+        crate::mir::MirOptionalStorage::InlineArray(_) => unreachable!("optional arrays are gated"),
+    }
+}
+
 fn lower_destroyer(
     program: &MirProgram,
     array: crate::identity::ArrayTypeId,
@@ -782,6 +1012,14 @@ fn lower_destroyer(
                     ),
                     Instruction::Label(complete),
                 ]
+            } else if matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_)) {
+                lower_nested_optional_destroyer(
+                    program,
+                    array,
+                    optional,
+                    element_address,
+                    data_layout,
+                )?
             } else {
                 return Err(helper_error(format!(
                     "array {array} has a gated optional destruction element {element}"

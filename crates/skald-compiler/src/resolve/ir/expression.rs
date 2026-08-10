@@ -14,6 +14,7 @@ use super::object_place::ResolvedObjectReceiver;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedExpression {
     Absent(ResolvedAbsentExpr),
+    Present(ResolvedPresentExpr),
     Binding(ResolvedBindingExpr),
     NumericLiteral(ResolvedNumericLiteralExpr),
     ByteLiteral(ResolvedByteLiteralExpr),
@@ -46,6 +47,7 @@ impl ResolvedExpression {
     pub const fn span(&self) -> Span {
         match self {
             Self::Absent(expression) => expression.span,
+            Self::Present(expression) => expression.span,
             Self::Binding(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
             Self::ByteLiteral(expression) => expression.span,
@@ -159,6 +161,13 @@ pub enum ResolvedArrayProjectionBounds {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ResolvedAbsentExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedPresentExpr {
+    pub value: Box<ResolvedExpression>,
+    pub some_span: Span,
     pub span: Span,
 }
 

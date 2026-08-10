@@ -8,15 +8,214 @@ use crate::{
     },
     mir::{
         MirClassOptionalAssign, MirClassOptionalInitialize, MirClassOptionalPublish,
-        MirClassOptionalSource, MirInstruction, MirOptionalAssign, MirOptionalInitialize,
-        MirOptionalSource, MirPresenceTestKind, MirRvalueKind, MirStorage, MirStorageKind,
-        MirTerminationReason, MirTerminator, MirType, StorageId,
+        MirClassOptionalSource, MirInstruction, MirNestedOptionalAssign,
+        MirNestedOptionalInitialize, MirNestedOptionalPublish, MirNestedOptionalSource,
+        MirOptionalAssign, MirOptionalInitialize, MirOptionalSource, MirPresenceTestKind,
+        MirRvalueKind, MirStorage, MirStorageKind, MirTerminationReason, MirTerminator, MirType,
+        StorageId,
     },
 };
 
 use super::{optional_types, BodyLowerer};
 
 impl BodyLowerer<'_> {
+    /// Lowers one already-selected HIR initialization directly into its final
+    /// destination. Recursive optionals, statics, fields, and array element
+    /// lists all share this path so lifecycle ordering cannot drift.
+    pub(super) fn lower_stored_value_initialize_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        destination_type: Type,
+        initialization: &crate::hir::HirStoredValueInitialization,
+        span: crate::source::Span,
+    ) {
+        use crate::hir::{HirObjectDestinationInitialization, HirStoredValueInitialization};
+        match initialization {
+            HirStoredValueInitialization::Primitive(expression) => {
+                let value = self
+                    .lower_expression(expression)
+                    .expect("typed primitive initialization must produce a MIR value");
+                self.emit(MirInstruction::Store(crate::mir::MirStore {
+                    destination,
+                    value,
+                    span,
+                }));
+            }
+            HirStoredValueInitialization::Class(initialization) => {
+                let Type::Class(class) = destination_type else {
+                    unreachable!("class initialization requires exact-class storage")
+                };
+                match initialization {
+                    HirObjectDestinationInitialization::Direct { producer, .. } => {
+                        self.lower_object_producer(producer, destination);
+                    }
+                    HirObjectDestinationInitialization::Copy {
+                        source, operation, ..
+                    } => {
+                        let optional_mark = self.optional_view_mark();
+                        let source = self.lower_object_source(source);
+                        self.emit(MirInstruction::CopyConstruct(
+                            crate::mir::MirCopyConstruction {
+                                destination,
+                                source,
+                                class,
+                                operation: super::lower_selected_copy_operation(*operation),
+                                span,
+                            },
+                        ));
+                        self.end_optional_views_from(optional_mark, span);
+                    }
+                }
+            }
+            HirStoredValueInitialization::OptionalPrimitive { source, .. } => {
+                self.lower_optional_initialize_at(destination, source, span);
+            }
+            HirStoredValueInitialization::OptionalClass(initialization) => {
+                self.lower_class_optional_destination_initialize(destination, initialization);
+            }
+            HirStoredValueInitialization::Array(initialization) => {
+                self.lower_array_initialize(destination, initialization, false);
+            }
+            HirStoredValueInitialization::Shared(transfer) => {
+                let source = self.new_shared_temporary(transfer.target, transfer.span);
+                self.lower_shared_transfer(source, transfer);
+                self.consume_shared_temporary(source);
+                self.emit(MirInstruction::SharedFieldInitialize(
+                    crate::mir::MirSharedFieldInitialize {
+                        destination,
+                        source,
+                        span,
+                    },
+                ));
+            }
+            HirStoredValueInitialization::OptionalShared(initialization) => {
+                self.lower_optional_shared_initialize_at(destination, initialization);
+            }
+            HirStoredValueInitialization::Optional(value) => {
+                self.lower_nested_optional_initialize_at(destination, value);
+            }
+        }
+    }
+
+    pub(super) fn lower_nested_optional_initialize_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        value: &crate::hir::HirOptionalValue,
+    ) {
+        use crate::hir::HirOptionalValueSource;
+        match &value.source {
+            HirOptionalValueSource::Absent => {
+                self.emit(MirInstruction::NestedOptionalInitialize(
+                    MirNestedOptionalInitialize {
+                        optional: value.optional,
+                        destination,
+                        source: MirNestedOptionalSource::Absent,
+                        span: value.span,
+                    },
+                ));
+            }
+            HirOptionalValueSource::Copy(source) => {
+                let source = self.lower_nested_optional_place(source);
+                self.emit(MirInstruction::NestedOptionalInitialize(
+                    MirNestedOptionalInitialize {
+                        optional: value.optional,
+                        destination,
+                        source: MirNestedOptionalSource::Copy(source),
+                        span: value.span,
+                    },
+                ));
+            }
+            HirOptionalValueSource::Present(payload) => {
+                self.emit(MirInstruction::NestedOptionalInitialize(
+                    MirNestedOptionalInitialize {
+                        optional: value.optional,
+                        destination: destination.clone(),
+                        source: MirNestedOptionalSource::Unpublished,
+                        span: value.span,
+                    },
+                ));
+                let payload_type = self
+                    .input
+                    .optional_types
+                    .get(value.optional)
+                    .expect("typed recursive optional must have metadata")
+                    .payload;
+                self.lower_stored_value_initialize_at(
+                    destination
+                        .clone()
+                        .project_nested_optional_payload(value.optional),
+                    payload_type,
+                    payload,
+                    value.span,
+                );
+                self.emit(MirInstruction::NestedOptionalPublish(
+                    MirNestedOptionalPublish {
+                        optional: value.optional,
+                        destination,
+                        span: value.span,
+                    },
+                ));
+            }
+        }
+    }
+
+    pub(super) fn lower_nested_optional_assignment(
+        &mut self,
+        assignment: &crate::hir::HirNestedOptionalAssignment,
+    ) {
+        let destination = self.lower_nested_optional_place(&assignment.destination);
+        if assignment.kind == crate::hir::HirOptionalWriteKind::Initialize {
+            self.lower_nested_optional_initialize_at(destination, &assignment.value);
+            return;
+        }
+        let source = match &assignment.value.source {
+            crate::hir::HirOptionalValueSource::Absent => MirNestedOptionalSource::Absent,
+            crate::hir::HirOptionalValueSource::Copy(source) => {
+                MirNestedOptionalSource::Copy(self.lower_nested_optional_place(source))
+            }
+            crate::hir::HirOptionalValueSource::Present(_) => {
+                let temporary = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "nested-optional-source",
+                    MirType::Optional(assignment.value.optional),
+                    assignment.value.span,
+                );
+                let place = crate::mir::MirPlace::base(temporary);
+                self.lower_nested_optional_initialize_at(place.clone(), &assignment.value);
+                self.full_expression.register_temporary(
+                    super::FullExpressionTemporary::NestedOptional(
+                        crate::mir::MirNestedOptionalCleanup {
+                            optional: assignment.value.optional,
+                            destination: place.clone(),
+                            span: assignment.value.span,
+                        },
+                    ),
+                );
+                MirNestedOptionalSource::Copy(place)
+            }
+        };
+        self.emit(MirInstruction::NestedOptionalAssign(
+            MirNestedOptionalAssign {
+                optional: assignment.value.optional,
+                destination,
+                source,
+                span: assignment.span,
+            },
+        ));
+    }
+
+    pub(super) fn lower_nested_optional_place(
+        &mut self,
+        place: &crate::hir::HirOptionalValuePlace,
+    ) -> crate::mir::MirPlace {
+        match &place.storage {
+            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
+            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
+            HirOptionalStorage::Field(field) => self.lower_field_place(field),
+            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
+        }
+    }
+
     pub(super) fn lower_class_optional_initialize(
         &mut self,
         destination: StorageId,
@@ -662,6 +861,7 @@ impl BodyLowerer<'_> {
                 );
                 crate::mir::MirPlace::base(destination)
             }
+            HirOptionalOperand::NestedPlace(place) => self.lower_nested_optional_place(place),
         }
     }
 

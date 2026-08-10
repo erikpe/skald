@@ -21,6 +21,146 @@ use super::{
 };
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_optional_value(
+        &mut self,
+        optional: crate::identity::OptionalTypeId,
+        source: &ResolvedExpression,
+        context: &'static str,
+    ) -> Option<crate::hir::HirOptionalValue> {
+        let span = source.span();
+        if matches!(source, ResolvedExpression::Absent(_)) {
+            return Some(crate::hir::HirOptionalValue {
+                optional,
+                source: crate::hir::HirOptionalValueSource::Absent,
+                span,
+            });
+        }
+
+        let payload = super::optional_types::payload_type(self.program, optional);
+        if let ResolvedExpression::Present(present) = source {
+            let value =
+                self.check_stored_value_initialization(payload, &present.value, "`some` payload")?;
+            return Some(crate::hir::HirOptionalValue {
+                optional,
+                source: crate::hir::HirOptionalValueSource::Present(Box::new(value)),
+                span,
+            });
+        }
+
+        let actual = self.static_expression_type(source);
+        if actual == Type::Optional(optional) {
+            let place = self.optional_value_place(source).or_else(|| {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        TYPE_MISMATCH,
+                        "produced nested optional values are not supported in this context yet",
+                    )
+                    .with_primary_label(
+                        span,
+                        "store this value before using it as a recursive optional source",
+                    ),
+                );
+                None
+            })?;
+            return Some(crate::hir::HirOptionalValue {
+                optional,
+                source: crate::hir::HirOptionalValueSource::Copy(place),
+                span,
+            });
+        }
+
+        if actual != payload {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!(
+                        "{context} requires `{}` or `{}`",
+                        self.diagnostic_type_name(payload),
+                        self.diagnostic_type_name(Type::Optional(optional))
+                    ),
+                )
+                .with_primary_label(
+                    span,
+                    format!("source has type `{}`", self.diagnostic_type_name(actual)),
+                )
+                .with_note("implicit optional injection adds exactly one layer"),
+            );
+            return None;
+        }
+
+        let value = self.check_stored_value_initialization(payload, source, context)?;
+        Some(crate::hir::HirOptionalValue {
+            optional,
+            source: crate::hir::HirOptionalValueSource::Present(Box::new(value)),
+            span,
+        })
+    }
+
+    pub(super) fn optional_value_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<crate::hir::HirOptionalValuePlace> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                let Type::Optional(optional) = self.binding_type(binding.binding) else {
+                    return None;
+                };
+                Some(crate::hir::HirOptionalValuePlace {
+                    storage: HirOptionalStorage::Binding(binding.binding),
+                    optional,
+                    span: binding.span,
+                })
+            }
+            ResolvedExpression::Grouped(grouped) => self
+                .optional_value_place(&grouped.expression)
+                .map(|place| crate::hir::HirOptionalValuePlace {
+                    span: grouped.span,
+                    ..place
+                }),
+            ResolvedExpression::StaticFieldAccess(access) => {
+                let (place, Type::Optional(optional)) =
+                    self.check_static_place(access.field, access.span)?
+                else {
+                    return None;
+                };
+                Some(crate::hir::HirOptionalValuePlace {
+                    storage: HirOptionalStorage::Static(place),
+                    optional,
+                    span: access.span,
+                })
+            }
+            ResolvedExpression::FieldAccess(access) => {
+                let expression = self.check_field_read(access)?;
+                let Type::Optional(optional) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::FieldRead(place) = expression.kind else {
+                    unreachable!("field checking must produce a field-read expression");
+                };
+                Some(crate::hir::HirOptionalValuePlace {
+                    storage: HirOptionalStorage::Field(place),
+                    optional,
+                    span: expression.span,
+                })
+            }
+            ResolvedExpression::ArrayProjection(_) => {
+                let expression = self.check_expression(expression)?;
+                let Type::Optional(optional) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::ArrayElement(place) = expression.kind else {
+                    return None;
+                };
+                Some(crate::hir::HirOptionalValuePlace {
+                    storage: HirOptionalStorage::ArrayElement(place),
+                    optional,
+                    span: expression.span,
+                })
+            }
+            _ => None,
+        }
+    }
+
     pub(super) fn inline_optional_alias_place(
         &mut self,
         expression: &ResolvedExpression,
@@ -71,6 +211,11 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirOptionalSharedSource> {
         if let ResolvedExpression::Absent(absent) = source {
             return Some(HirOptionalSharedSource::Absent { span: absent.span });
+        }
+        if let ResolvedExpression::Present(present) = source {
+            return self
+                .check_shared_transfer(&present.value, target, "`some` payload")
+                .map(|transfer| HirOptionalSharedSource::Present(transfer.source));
         }
         if let Some(place) = self.optional_shared_place(source) {
             if super::shared::target_accepts(self.program, target, place.target) {
@@ -268,6 +413,11 @@ impl CallableChecker<'_, '_> {
         if let ResolvedExpression::Absent(absent) = source {
             return Some(HirClassOptionalSource::Absent { span: absent.span });
         }
+        if let ResolvedExpression::Present(present) = source {
+            return self
+                .check_object_source(&present.value, class, "`some` payload")
+                .map(HirClassOptionalSource::Present);
+        }
         if let Some(place) = self.class_optional_place(source) {
             if place.class == class {
                 return Some(HirClassOptionalSource::Copy(place));
@@ -405,6 +555,23 @@ impl CallableChecker<'_, '_> {
         if let ResolvedExpression::Absent(absent) = source {
             return Some(HirOptionalSource::Absent { span: absent.span });
         }
+        if let ResolvedExpression::Present(present) = source {
+            let value = self.check_expression(&present.value)?;
+            if value.ty != payload.value_type() {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        TYPE_MISMATCH,
+                        format!("`some` payload requires `{}`", payload.name()),
+                    )
+                    .with_primary_label(
+                        value.span,
+                        format!("source has type `{}`", self.diagnostic_type_name(value.ty)),
+                    ),
+                );
+                return None;
+            }
+            return Some(HirOptionalSource::Present(value));
+        }
         if let Some(place) = self.optional_place(source) {
             if place.payload == payload {
                 return Some(HirOptionalSource::Copy(place));
@@ -467,6 +634,7 @@ impl CallableChecker<'_, '_> {
                 | HirOptionalOperand::ClassProduced(_)
                 | HirOptionalOperand::SharedPlace(_)
                 | HirOptionalOperand::SharedProduced(_)
+                | HirOptionalOperand::NestedPlace(_)
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -518,7 +686,8 @@ impl CallableChecker<'_, '_> {
             HirOptionalOperand::Place(_)
             | HirOptionalOperand::Produced(_)
             | HirOptionalOperand::SharedPlace(_)
-            | HirOptionalOperand::SharedProduced(_) => {
+            | HirOptionalOperand::SharedProduced(_)
+            | HirOptionalOperand::NestedPlace(_) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         crate::typeck::program::INVALID_OBJECT_CONTEXT,
@@ -551,6 +720,14 @@ impl CallableChecker<'_, '_> {
         if let Some(place) = self.optional_shared_place(expression) {
             return Some(HirOptionalOperand::SharedPlace(place));
         }
+        if matches!(
+            self.optional_kind(self.static_expression_type(expression)),
+            Some(LegacyOptionalKind::Nested(_))
+        ) {
+            if let Some(place) = self.optional_value_place(expression) {
+                return Some(HirOptionalOperand::NestedPlace(place));
+            }
+        }
         if is_call_through_groups(expression) {
             if let Some(value) = self.check_expression(expression) {
                 if let Some(kind) = self.optional_kind(value.ty) {
@@ -563,6 +740,10 @@ impl CallableChecker<'_, '_> {
                         }
                         LegacyOptionalKind::Shared(_) => {
                             HirOptionalOperand::SharedProduced(Box::new(value))
+                        }
+                        LegacyOptionalKind::Nested(_) => {
+                            self.report_non_optional_operand(value.ty, span, context);
+                            return None;
                         }
                     });
                 }

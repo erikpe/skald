@@ -97,6 +97,40 @@ impl BodyLowerer<'_> {
                     },
                 ));
             }
+            crate::hir::HirArrayElementValue::NestedOptional(value) => {
+                let source = match &value.source {
+                    crate::hir::HirOptionalValueSource::Absent => MirNestedOptionalSource::Absent,
+                    crate::hir::HirOptionalValueSource::Copy(source) => {
+                        MirNestedOptionalSource::Copy(self.lower_nested_optional_place(source))
+                    }
+                    crate::hir::HirOptionalValueSource::Present(_) => {
+                        let temporary = self.new_optional_storage(
+                            MirStorageKind::Temporary,
+                            "nested-optional-element-source",
+                            MirType::Optional(value.optional),
+                            value.span,
+                        );
+                        let place = MirPlace::base(temporary);
+                        self.lower_nested_optional_initialize_at(place.clone(), value);
+                        self.full_expression.register_temporary(
+                            FullExpressionTemporary::NestedOptional(MirNestedOptionalCleanup {
+                                optional: value.optional,
+                                destination: place.clone(),
+                                span: value.span,
+                            }),
+                        );
+                        MirNestedOptionalSource::Copy(place)
+                    }
+                };
+                self.emit(MirInstruction::NestedOptionalAssign(
+                    MirNestedOptionalAssign {
+                        optional: value.optional,
+                        destination,
+                        source,
+                        span: assignment.span,
+                    },
+                ));
+            }
         }
     }
 
@@ -664,6 +698,18 @@ impl BodyLowerer<'_> {
                 HirStoredValueInitialization::OptionalShared(initialization) => {
                     let destination = MirPlace::base(backing).project_array_element(array, prefix);
                     self.lower_optional_shared_initialize_at(destination, initialization);
+                    self.emit(MirInstruction::Array(
+                        MirArrayInstruction::CompleteElement {
+                            backing,
+                            prefix,
+                            position,
+                            span: element.span,
+                        },
+                    ));
+                }
+                HirStoredValueInitialization::Optional(value) => {
+                    let destination = MirPlace::base(backing).project_array_element(array, prefix);
+                    self.lower_nested_optional_initialize_at(destination, value);
                     self.emit(MirInstruction::Array(
                         MirArrayInstruction::CompleteElement {
                             backing,

@@ -167,6 +167,18 @@ impl InstructionSelector<'_, '_> {
                                 },
                             )?;
                         }
+                        MirSynthesizedFieldCopy::Optional { field, optional } => {
+                            self.select_nested_optional_initialize(
+                                &crate::mir::MirNestedOptionalInitialize {
+                                    optional,
+                                    destination: destination.clone().project_field(field),
+                                    source: crate::mir::MirNestedOptionalSource::Copy(
+                                        source.clone().project_field(field),
+                                    ),
+                                    span: self.function.span(),
+                                },
+                            )?;
+                        }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_construction_operation(
                                 operation,
@@ -314,6 +326,18 @@ impl InstructionSelector<'_, '_> {
                                         source.clone().project_field(field),
                                     ),
                                     target,
+                                    span: self.function.span(),
+                                },
+                            )?;
+                        }
+                        MirSynthesizedFieldCopy::Optional { field, optional } => {
+                            self.select_nested_optional_assign(
+                                &crate::mir::MirNestedOptionalAssign {
+                                    optional,
+                                    destination: destination.clone().project_field(field),
+                                    source: crate::mir::MirNestedOptionalSource::Copy(
+                                        source.clone().project_field(field),
+                                    ),
                                     span: self.function.span(),
                                 },
                             )?;

@@ -447,7 +447,7 @@ fn containment_traverses_every_optional_layer_but_stops_at_array_and_shared_edge
     assert!(recursive
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE));
+        .all(|diagnostic| diagnostic.code != crate::typeck::INVALID_OPTIONAL_TYPE));
 
     let bounded = check_text(
         "class Node { children: Node[]?; owner: (shared Node)??; }\n\
@@ -458,4 +458,40 @@ fn containment_traverses_every_optional_layer_but_stops_at_array_and_shared_edge
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code != RECURSIVE_INLINE_CONTAINMENT));
+}
+
+#[test]
+fn nested_optional_construction_adds_exactly_one_present_layer() {
+    let output = check_text(
+        "fn main() -> i64 {\n\
+           var inner: i64? = none;\n\
+           var absent: i64?? = none;\n\
+           var present_absent: i64?? = some(none);\n\
+           var copied_payload: i64?? = some(inner);\n\
+           var present_present: i64?? = some(some(42));\n\
+           absent = present_absent;\n\
+           present_absent = some(inner);\n\
+           if (present_present is some) { return 42; }\n\
+           return 0;\n\
+         }\n",
+    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("nested optionals must produce HIR"));
+    assert!(dump.contains("NestedOptionalInitialization"));
+    assert!(dump.contains("Present"));
+    assert!(dump.contains("Absent"));
+    assert!(dump.contains("NestedOptionalAssignment"));
+}
+
+#[test]
+fn nested_optional_conversion_never_lifts_through_multiple_layers() {
+    let output = check_text("fn main() -> i64 { var invalid: i64?? = 1; return 0; }\n");
+    assert!(output.hir.is_none());
+    assert!(
+        output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.message.contains("i64??") && diagnostic.message.contains("i64")
+        }),
+        "{:?}",
+        output.diagnostics
+    );
 }

@@ -101,6 +101,16 @@ pub(super) fn visit_instruction_storage(
             visit_place(&assignment.destination, visit);
             visit_optional_source(&assignment.source, visit);
         }
+        MirInstruction::NestedOptionalInitialize(initialize) => {
+            visit_place(&initialize.destination, visit);
+            visit_nested_optional_source(&initialize.source, visit);
+        }
+        MirInstruction::NestedOptionalAssign(assignment) => {
+            visit_place(&assignment.destination, visit);
+            visit_nested_optional_source(&assignment.source, visit);
+        }
+        MirInstruction::NestedOptionalPublish(publish) => visit_place(&publish.destination, visit),
+        MirInstruction::NestedOptionalCleanup(cleanup) => visit_place(&cleanup.destination, visit),
         MirInstruction::ClassOptionalInitialize(initialize) => {
             visit_place(&initialize.destination, visit);
             visit_class_optional_source(&initialize.source, visit);
@@ -279,6 +289,15 @@ fn visit_shared_cast(cast: &MirSharedCast, visit: &mut impl FnMut(StorageId)) {
 
 fn visit_optional_source(source: &MirOptionalSource, visit: &mut impl FnMut(StorageId)) {
     if let MirOptionalSource::Copy(place) = source {
+        visit_place(place, visit);
+    }
+}
+
+fn visit_nested_optional_source(
+    source: &MirNestedOptionalSource,
+    visit: &mut impl FnMut(StorageId),
+) {
+    if let MirNestedOptionalSource::Copy(place) = source {
         visit_place(place, visit);
     }
 }

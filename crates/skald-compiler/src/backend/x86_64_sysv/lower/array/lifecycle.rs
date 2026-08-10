@@ -231,7 +231,92 @@ fn emit_field_copy<I: Copy>(
         MirSynthesizedFieldCopy::OptionalShared { .. } => {
             emit_shared_copy(program, owner, field_id, offset, true, output);
         }
+        MirSynthesizedFieldCopy::Optional { optional, .. } => {
+            emit_optional_value_copy(
+                program,
+                data_layout,
+                owner,
+                field_id,
+                optional,
+                offset,
+                output,
+            )?;
+        }
     }
+    Ok(())
+}
+
+fn emit_optional_value_copy(
+    program: &MirProgram,
+    data_layout: &DataLayout,
+    owner: ClassId,
+    field: crate::identity::FieldId,
+    optional: crate::identity::OptionalTypeId,
+    offset: i32,
+    output: &mut Vec<Instruction>,
+) -> Result<(), BackendError> {
+    let metadata = program
+        .optional_type(optional)
+        .ok_or_else(|| lifecycle_error(format!("unknown optional copy target {optional}")))?;
+    if matches!(
+        metadata.storage,
+        crate::mir::MirOptionalStorage::SharedOwner(_)
+    ) {
+        emit_shared_copy(program, owner, field, offset, true, output);
+        return Ok(());
+    }
+    let stem = format!(
+        ".Lska.{}.field_{}_nested_optional_copy_{}",
+        symbol::class_label_stem(program, owner),
+        field.index(),
+        output.len()
+    );
+    let present = Label::new(format!("{stem}_present"));
+    let complete = Label::new(format!("{stem}_complete"));
+    load_home_address(SOURCE_HOME, offset, Register::R11, output);
+    output.push(Instruction::Move {
+        source: memory(Register::R11, 0),
+        destination: Register::Rax.into(),
+    });
+    output.push(Instruction::Test(Register::Rax));
+    output.push(Instruction::JumpIfNotZero(present.clone()));
+    load_home_address(DESTINATION_HOME, offset, Register::R11, output);
+    value::store_rax(memory(Register::R11, 0), output);
+    output.push(Instruction::Jump(complete.clone()));
+    output.push(Instruction::Label(present));
+    let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+        .map_err(|_| lifecycle_error("optional payload offset exceeds x86-64"))?;
+    let payload_offset = offset
+        .checked_add(payload)
+        .ok_or_else(|| lifecycle_error("nested optional payload offset exceeds x86-64"))?;
+    match metadata.storage {
+        crate::mir::MirOptionalStorage::Scalar => {
+            emit_scalar_copy(metadata.payload, payload_offset, output);
+        }
+        crate::mir::MirOptionalStorage::InlineClass(class) => {
+            emit_helper_call_at(program, class, payload_offset, payload_offset, output);
+        }
+        crate::mir::MirOptionalStorage::Nested(nested) => {
+            emit_optional_value_copy(
+                program,
+                data_layout,
+                owner,
+                field,
+                nested,
+                payload_offset,
+                output,
+            )?;
+        }
+        crate::mir::MirOptionalStorage::SharedOwner(_)
+        | crate::mir::MirOptionalStorage::InlineArray(_) => unreachable!(),
+    }
+    load_home_address(DESTINATION_HOME, offset, Register::R11, output);
+    output.push(Instruction::MoveImmediate64 {
+        bits: 1,
+        destination: Register::Rax,
+    });
+    value::store_rax(memory(Register::R11, 0), output);
+    output.push(Instruction::Label(complete));
     Ok(())
 }
 

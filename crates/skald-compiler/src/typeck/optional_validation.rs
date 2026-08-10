@@ -20,7 +20,8 @@ pub(super) fn validate_optional_types(
             | ResolvedTypeKind::F64
             | ResolvedTypeKind::Bool
             | ResolvedTypeKind::Class(_)
-            | ResolvedTypeKind::Shared(_) => continue,
+            | ResolvedTypeKind::Shared(_)
+            | ResolvedTypeKind::Optional(_) => continue,
             ResolvedTypeKind::Interface(_) => (
                 "interfaces cannot be inline optional payloads",
                 "use an optional shared owner for an optional owning interface view",
@@ -36,10 +37,6 @@ pub(super) fn validate_optional_types(
             ResolvedTypeKind::Array(_) => (
                 "inline optional array payloads are not supported yet",
                 "this identity is reserved for the optional-array implementation",
-            ),
-            ResolvedTypeKind::Optional(_) => (
-                "nested optional types are not supported yet",
-                "this identity is reserved for recursive optional lifecycle lowering",
             ),
         };
         diagnostics.push(

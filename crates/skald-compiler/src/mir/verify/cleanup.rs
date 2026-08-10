@@ -1059,6 +1059,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     }
                     ty = MirType::Class(class);
                 }
+                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                    if ty != MirType::Optional(optional) {
+                        return None;
+                    }
+                    ty = self.program.optional_type(optional)?.payload;
+                }
                 MirPlaceProjection::ArrayElement { array, .. } => {
                     if ty != MirType::Array(array) {
                         return None;

@@ -573,6 +573,10 @@ pub enum MirSynthesizedFieldCopy<I> {
         field: FieldId,
         target: MirSharedTarget,
     },
+    Optional {
+        field: FieldId,
+        optional: crate::identity::OptionalTypeId,
+    },
     Class {
         field: FieldId,
         operation: MirSelectedCopyOperation<I>,
@@ -591,6 +595,7 @@ impl<I> MirSynthesizedFieldCopy<I> {
             | Self::OptionalClass { field, .. }
             | Self::Shared { field }
             | Self::OptionalShared { field, .. }
+            | Self::Optional { field, .. }
             | Self::Class { field, .. }
             | Self::Array { field, .. } => *field,
         }
@@ -657,6 +662,10 @@ pub enum MirDestructionStep {
     SharedField(FieldId),
     OptionalSharedField(FieldId),
     OptionalClassField(FieldId),
+    OptionalField {
+        field: FieldId,
+        optional: crate::identity::OptionalTypeId,
+    },
     ArrayField(FieldId),
     Base(ClassId),
 }

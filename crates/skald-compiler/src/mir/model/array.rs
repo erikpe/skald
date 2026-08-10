@@ -96,6 +96,7 @@ pub enum MirArrayCopyElement {
     Array(ArrayTypeId),
     Shared(MirSharedTarget),
     OptionalShared(MirSharedTarget),
+    Optional(crate::identity::OptionalTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -114,6 +115,7 @@ pub enum MirArrayAssignElement {
     Array(ArrayTypeId),
     Shared(MirSharedTarget),
     OptionalShared(MirSharedTarget),
+    Optional(crate::identity::OptionalTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -124,6 +126,7 @@ pub enum MirArrayDestroyElement {
     Array(ArrayTypeId),
     Shared(MirSharedTarget),
     OptionalShared(MirSharedTarget),
+    Optional(crate::identity::OptionalTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

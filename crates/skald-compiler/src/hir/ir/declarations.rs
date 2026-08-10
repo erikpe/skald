@@ -327,6 +327,10 @@ pub enum HirDestructionStep {
     SharedField(FieldId),
     OptionalSharedField(FieldId),
     OptionalClassField(FieldId),
+    OptionalField {
+        field: FieldId,
+        optional: crate::identity::OptionalTypeId,
+    },
     ArrayField(FieldId),
     Base(ClassId),
 }

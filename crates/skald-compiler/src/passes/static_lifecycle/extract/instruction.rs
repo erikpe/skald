@@ -294,6 +294,67 @@ impl Extractor<'_> {
                 );
                 self.add_optional_source(source, definition, phase, &assign.source, span);
             }
+            MirInstruction::NestedOptionalInitialize(initialize) => {
+                self.add_place(
+                    source,
+                    definition,
+                    phase,
+                    &initialize.destination,
+                    StaticAccessKind::Initialize,
+                    span,
+                );
+                if let crate::mir::MirNestedOptionalSource::Copy(copy) = &initialize.source {
+                    self.add_place(
+                        source,
+                        definition,
+                        phase,
+                        copy,
+                        StaticAccessKind::Read,
+                        span,
+                    );
+                    self.add_optional_copy_edges(source, initialize.optional, phase, span);
+                }
+            }
+            MirInstruction::NestedOptionalAssign(assign) => {
+                self.add_place(
+                    source,
+                    definition,
+                    phase,
+                    &assign.destination,
+                    StaticAccessKind::Replace,
+                    span,
+                );
+                if let crate::mir::MirNestedOptionalSource::Copy(copy) = &assign.source {
+                    self.add_place(
+                        source,
+                        definition,
+                        phase,
+                        copy,
+                        StaticAccessKind::Read,
+                        span,
+                    );
+                }
+                self.add_optional_assignment_edges(source, assign.optional, phase, span);
+            }
+            MirInstruction::NestedOptionalPublish(publish) => self.add_place(
+                source,
+                definition,
+                phase,
+                &publish.destination,
+                StaticAccessKind::Write,
+                span,
+            ),
+            MirInstruction::NestedOptionalCleanup(cleanup) => {
+                self.add_place(
+                    source,
+                    definition,
+                    phase,
+                    &cleanup.destination,
+                    StaticAccessKind::Destroy,
+                    span,
+                );
+                self.add_optional_cleanup_edges(source, cleanup.optional, phase, span);
+            }
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 self.add_place(
                     source,

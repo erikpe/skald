@@ -30,6 +30,49 @@ pub struct MirOptionalAssign {
     pub span: Span,
 }
 
+/// A source for copying one exact recursive optional value.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirNestedOptionalSource {
+    Absent,
+    /// Reserves an absent outer layer whose payload is about to be initialized
+    /// directly; a matching publish completes the value.
+    Unpublished,
+    Copy(MirPlace),
+}
+
+/// Initializes an exact recursive optional destination. Explicitly-present
+/// construction is represented as absent initialization, destination-directed
+/// payload initialization, and publication.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirNestedOptionalInitialize {
+    pub optional: OptionalTypeId,
+    pub destination: MirPlace,
+    pub source: MirNestedOptionalSource,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirNestedOptionalAssign {
+    pub optional: OptionalTypeId,
+    pub destination: MirPlace,
+    pub source: MirNestedOptionalSource,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirNestedOptionalPublish {
+    pub optional: OptionalTypeId,
+    pub destination: MirPlace,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirNestedOptionalCleanup {
+    pub optional: OptionalTypeId,
+    pub destination: MirPlace,
+    pub span: Span,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirPresenceTestKind {
     Some,

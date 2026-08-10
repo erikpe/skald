@@ -528,6 +528,12 @@ impl<'mir> Verifier<'mir> {
                         Some(crate::mir::MirOptionalStorage::InlineClass(_)) => {
                             Some(MirDestructionStep::OptionalClassField(field.id))
                         }
+                        Some(crate::mir::MirOptionalStorage::Nested(_)) => {
+                            Some(MirDestructionStep::OptionalField {
+                                field: field.id,
+                                optional,
+                            })
+                        }
                         _ => None,
                     },
                     MirType::Array(_) => Some(MirDestructionStep::ArrayField(field.id)),
@@ -787,6 +793,25 @@ impl<'mir> Verifier<'mir> {
                         array: step_array,
                     },
                 ) => *id == field.id && array == *step_array,
+                (
+                    MirType::Optional(optional),
+                    MirSynthesizedFieldCopy::Optional {
+                        field: id,
+                        optional: step_optional,
+                    },
+                ) => {
+                    *id == field.id
+                        && optional == *step_optional
+                        && self
+                            .program
+                            .optional_type(optional)
+                            .is_some_and(|metadata| {
+                                matches!(
+                                    metadata.storage,
+                                    crate::mir::MirOptionalStorage::Nested(_)
+                                )
+                            })
+                }
                 _ => false,
             };
             if !valid {
@@ -888,6 +913,25 @@ impl<'mir> Verifier<'mir> {
                         array: step_array,
                     },
                 ) => *id == field.id && array == *step_array,
+                (
+                    MirType::Optional(optional),
+                    MirSynthesizedFieldCopy::Optional {
+                        field: id,
+                        optional: step_optional,
+                    },
+                ) => {
+                    *id == field.id
+                        && optional == *step_optional
+                        && self
+                            .program
+                            .optional_type(optional)
+                            .is_some_and(|metadata| {
+                                matches!(
+                                    metadata.storage,
+                                    crate::mir::MirOptionalStorage::Nested(_)
+                                )
+                            })
+                }
                 _ => false,
             };
             if !valid {

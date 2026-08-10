@@ -118,6 +118,17 @@ impl Verifier<'_> {
                 self.verify_array_referenced_type(MirType::Shared(target), "copy operation")
             }
             MirArrayCopyElement::Primitive | MirArrayCopyElement::OptionalPrimitive => {}
+            MirArrayCopyElement::Optional(optional) => {
+                if !self
+                    .program
+                    .optional_type(optional)
+                    .is_some_and(|metadata| {
+                        matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                    })
+                {
+                    self.program_error("array copy names an invalid nested optional");
+                }
+            }
         }
     }
 
@@ -161,6 +172,17 @@ impl Verifier<'_> {
                 self.verify_array_referenced_type(MirType::Shared(target), "assignment operation")
             }
             MirArrayAssignElement::Primitive | MirArrayAssignElement::OptionalPrimitive => {}
+            MirArrayAssignElement::Optional(optional) => {
+                if !self
+                    .program
+                    .optional_type(optional)
+                    .is_some_and(|metadata| {
+                        matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                    })
+                {
+                    self.program_error("array assignment names an invalid nested optional");
+                }
+            }
         }
     }
 
@@ -181,6 +203,17 @@ impl Verifier<'_> {
                 self.verify_array_referenced_type(MirType::Shared(target), "destruction operation")
             }
             MirArrayDestroyElement::Trivial => {}
+            MirArrayDestroyElement::Optional(optional) => {
+                if !self
+                    .program
+                    .optional_type(optional)
+                    .is_some_and(|metadata| {
+                        matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                    })
+                {
+                    self.program_error("array destruction names an invalid nested optional");
+                }
+            }
         }
     }
 

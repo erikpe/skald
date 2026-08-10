@@ -109,6 +109,7 @@ enum FullExpressionTemporary {
     Shared(StorageId),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
     OptionalShared(crate::mir::MirOptionalSharedCleanup),
+    NestedOptional(crate::mir::MirNestedOptionalCleanup),
     Array {
         storage: StorageId,
         array: crate::identity::ArrayTypeId,
@@ -348,6 +349,9 @@ impl<'hir> BodyLowerer<'hir> {
                 cleanup::PlannedCleanup::OptionalShared(cleanup) => {
                     self.emit(MirInstruction::OptionalSharedCleanup(cleanup))
                 }
+                cleanup::PlannedCleanup::NestedOptional(cleanup) => {
+                    self.emit(MirInstruction::NestedOptionalCleanup(cleanup))
+                }
                 cleanup::PlannedCleanup::Array {
                     storage,
                     array,
@@ -470,6 +474,7 @@ fn lower_array_copy_element(operation: crate::hir::HirArrayCopyElement) -> MirAr
         H::OptionalShared(target) => {
             MirArrayCopyElement::OptionalShared(lower_shared_target(target))
         }
+        H::Optional(optional) => MirArrayCopyElement::Optional(optional),
     }
 }
 
@@ -498,5 +503,6 @@ fn lower_array_assign_element(
         H::OptionalShared(target) => {
             MirArrayAssignElement::OptionalShared(lower_shared_target(target))
         }
+        H::Optional(optional) => MirArrayAssignElement::Optional(optional),
     }
 }

@@ -118,7 +118,16 @@ fn copy_element(
             ResolvedTypeKind::Shared(target) => Some(HirArrayCopyElement::OptionalShared(
                 lower_shared_target(target),
             )),
-            _ => unreachable!("deferred optional payloads must not reach array lowering"),
+            ResolvedTypeKind::Optional(_) => {
+                optional_copy_available(program, capabilities, optional)
+                    .then_some(HirArrayCopyElement::Optional(optional))
+            }
+            ResolvedTypeKind::Array(_)
+            | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_) => {
+                unreachable!("deferred optional payloads must not reach array lowering")
+            }
         },
         ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
     }
@@ -169,9 +178,67 @@ fn assignment_element(
             ResolvedTypeKind::Shared(target) => Some(HirArrayAssignElement::OptionalShared(
                 lower_shared_target(target),
             )),
-            _ => unreachable!("deferred optional payloads must not reach array lowering"),
+            ResolvedTypeKind::Optional(_) => {
+                optional_assignment_available(program, capabilities, optional)
+                    .then_some(HirArrayAssignElement::Optional(optional))
+            }
+            ResolvedTypeKind::Array(_)
+            | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_) => {
+                unreachable!("deferred optional payloads must not reach array lowering")
+            }
         },
         ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+    }
+}
+
+fn optional_copy_available(
+    program: &ResolvedProgram,
+    capabilities: &CopyCapabilities,
+    optional: crate::identity::OptionalTypeId,
+) -> bool {
+    match optional_payload(program, optional) {
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool
+        | ResolvedTypeKind::Shared(_) => true,
+        ResolvedTypeKind::Class(class) => capabilities.constructor(class).selected().is_some(),
+        ResolvedTypeKind::Optional(nested) => {
+            optional_copy_available(program, capabilities, nested)
+        }
+        ResolvedTypeKind::Array(_)
+        | ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_) => false,
+    }
+}
+
+fn optional_assignment_available(
+    program: &ResolvedProgram,
+    capabilities: &CopyCapabilities,
+    optional: crate::identity::OptionalTypeId,
+) -> bool {
+    match optional_payload(program, optional) {
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool
+        | ResolvedTypeKind::Shared(_) => true,
+        ResolvedTypeKind::Class(class) => {
+            capabilities.constructor(class).selected().is_some()
+                && capabilities.assignment(class).selected().is_some()
+        }
+        ResolvedTypeKind::Optional(nested) => {
+            optional_assignment_available(program, capabilities, nested)
+        }
+        ResolvedTypeKind::Array(_)
+        | ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_) => false,
     }
 }
 
@@ -190,6 +257,7 @@ fn destruction_element(
             ResolvedTypeKind::Shared(target) => {
                 HirArrayDestroyElement::OptionalShared(lower_shared_target(target))
             }
+            ResolvedTypeKind::Optional(_) => HirArrayDestroyElement::Optional(optional),
             _ => HirArrayDestroyElement::Trivial,
         },
         _ => HirArrayDestroyElement::Trivial,

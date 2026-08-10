@@ -386,6 +386,9 @@ impl<'types> HirDumper<'types> {
                             HirDestructionStep::OptionalClassField(field) => {
                                 dumper.raw_line(&format!("OptionalClassField {field}"));
                             }
+                            HirDestructionStep::OptionalField { field, optional } => {
+                                dumper.raw_line(&format!("OptionalField {field} {optional}"));
+                            }
                             HirDestructionStep::ArrayField(field) => {
                                 dumper.raw_line(&format!("ArrayField {field}"));
                             }
@@ -516,6 +519,9 @@ impl<'types> HirDumper<'types> {
                                     "OptionalShared {field} : {}",
                                     optional_shared_target_name(*target)
                                 ));
+                            }
+                            HirSynthesizedFieldCopy::Optional { field, optional } => {
+                                dumper.raw_line(&format!("Optional {field} : {optional}"));
                             }
                             HirSynthesizedFieldCopy::OptionalClass {
                                 field,
@@ -668,6 +674,9 @@ impl<'types> HirDumper<'types> {
                     HirLocalInitializer::ClassOptional(value) => dumper.class_optional_value(value),
                     HirLocalInitializer::OptionalShared(value) => {
                         dumper.optional_shared_value(value)
+                    }
+                    HirLocalInitializer::NestedOptional(value) => {
+                        dumper.nested_optional_value(value)
                     }
                     HirLocalInitializer::Array(value) => dumper.array_initialize(value),
                 });
@@ -853,6 +862,13 @@ impl<'types> HirDumper<'types> {
                     dumper.optional_shared_place(&assignment.destination);
                     dumper.optional_shared_source(&assignment.source);
                 });
+            }
+            HirStatement::NestedOptionalAssignment(assignment) => {
+                self.line(
+                    &format!("NestedOptionalAssignment {}", assignment.value.optional),
+                    assignment.span,
+                );
+                self.indented(|dumper| dumper.nested_optional_value(&assignment.value));
             }
             HirStatement::ArrayFieldInitialize(statement) => {
                 self.line("ArrayFieldInitialization", statement.span);
@@ -1355,6 +1371,9 @@ impl<'types> HirDumper<'types> {
             crate::hir::HirArrayElementValue::ClassOptional(value) => {
                 self.class_optional_value(value)
             }
+            crate::hir::HirArrayElementValue::NestedOptional(value) => {
+                self.nested_optional_value(value)
+            }
             crate::hir::HirArrayElementValue::Object { source, operation } => {
                 self.object_source(source);
                 self.selected_copy_operation(*operation);
@@ -1424,6 +1443,9 @@ impl<'types> HirDumper<'types> {
             crate::hir::HirStoredValueInitialization::Shared(value) => self.shared_transfer(value),
             crate::hir::HirStoredValueInitialization::OptionalShared(value) => {
                 self.optional_shared_value(value)
+            }
+            crate::hir::HirStoredValueInitialization::Optional(value) => {
+                self.nested_optional_value(value)
             }
         }
     }
@@ -1581,7 +1603,30 @@ impl<'types> HirDumper<'types> {
                 self.line("OptionalSharedProduced", expression.span);
                 self.indented(|dumper| dumper.expression(expression));
             }
+            crate::hir::HirOptionalOperand::NestedPlace(place) => {
+                self.line(
+                    &format!("NestedOptionalPlace {}", place.optional),
+                    place.span,
+                );
+            }
         }
+    }
+
+    fn nested_optional_value(&mut self, value: &crate::hir::HirOptionalValue) {
+        self.line(
+            &format!("NestedOptionalInitialization {}", value.optional),
+            value.span,
+        );
+        self.indented(|dumper| match &value.source {
+            crate::hir::HirOptionalValueSource::Absent => dumper.raw_line("Absent"),
+            crate::hir::HirOptionalValueSource::Present(payload) => {
+                dumper.raw_line("Present");
+                dumper.indented(|dumper| dumper.stored_value_initialization(payload));
+            }
+            crate::hir::HirOptionalValueSource::Copy(place) => {
+                dumper.line(&format!("Copy {}", place.optional), place.span);
+            }
+        });
     }
 
     fn optional_place(&mut self, place: &crate::hir::HirOptionalPlace) {
@@ -2385,6 +2430,7 @@ fn array_copy_name(element: HirArrayCopyElement) -> String {
         HirArrayCopyElement::Array(array) => format!("array {array}"),
         HirArrayCopyElement::Shared(target) => shared_target_name(target),
         HirArrayCopyElement::OptionalShared(target) => optional_shared_target_name(target),
+        HirArrayCopyElement::Optional(optional) => format!("optional {optional}"),
     }
 }
 
@@ -2409,6 +2455,7 @@ fn array_assignment_name(element: HirArrayAssignElement) -> String {
         HirArrayAssignElement::Array(array) => format!("array {array}"),
         HirArrayAssignElement::Shared(target) => shared_target_name(target),
         HirArrayAssignElement::OptionalShared(target) => optional_shared_target_name(target),
+        HirArrayAssignElement::Optional(optional) => format!("optional {optional}"),
     }
 }
 
@@ -2427,6 +2474,7 @@ fn array_destruction_name(element: HirArrayDestroyElement) -> String {
         HirArrayDestroyElement::Array(array) => format!("array {array}"),
         HirArrayDestroyElement::Shared(target) => shared_target_name(target),
         HirArrayDestroyElement::OptionalShared(target) => optional_shared_target_name(target),
+        HirArrayDestroyElement::Optional(optional) => format!("optional {optional}"),
     }
 }
 

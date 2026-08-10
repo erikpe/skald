@@ -42,6 +42,27 @@ fn optional_shared_owner_uses_the_zero_niche_one_word_layout() {
 }
 
 #[test]
+fn every_deep_optional_layer_has_distinct_aligned_state_and_payload_storage() {
+    let ty = format!("i64{}", "?".repeat(12));
+    let source = format!("fn main() -> i64 {{ var value: {ty} = none; return 0; }}\n");
+    let program = lower_text(&source);
+    let layouts = layout::DataLayout::compute(&program).unwrap();
+    assert_eq!(program.optional_types.iter().len(), 12);
+
+    let mut previous_size = 0;
+    for optional in program.optional_types.iter() {
+        let current = layouts.optional_type(optional.id).unwrap();
+        assert_eq!(current.state_offset(), 0);
+        assert_eq!(
+            current.payload_offset() % current.ty().alignment().min(8),
+            0
+        );
+        assert!(current.ty().size() > previous_size);
+        previous_size = current.ty().size();
+    }
+}
+
+#[test]
 fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execute() {
     let source = concat!(
         "extern fn test_record_i64(value: i64) -> unit;\n",
@@ -651,4 +672,81 @@ fn optional_alias_signatures_execute_through_virtual_and_interface_dispatch() {
         }\n";
 
     assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}
+
+#[test]
+fn nested_optional_outer_presence_copy_assignment_fields_and_arrays_execute() {
+    let source = "class Holder {\n\
+          value: i64??;\n\
+          init() { self.value = some(none); }\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var absent: i64?? = none;\n\
+          var present_absent: i64?? = some(none);\n\
+          var present_present: i64?? = some(some(7));\n\
+          var holder: Holder = Holder();\n\
+          var copied: Holder = holder;\n\
+          copied = copied;\n\
+          var values: i64??[] = i64??[]{none, some(none), some(some(9))};\n\
+          values[0] = values[2];\n\
+          absent = present_present;\n\
+          present_present = none;\n\
+          if (absent is some) {\n\
+            if (present_absent is some) {\n\
+              if (present_present is none) {\n\
+                if (copied.value is some) {\n\
+                  if (values[0] is some) { return 42; }\n\
+                }\n\
+              }\n\
+            }\n\
+          }\n\
+          return 0;\n\
+        }\n";
+    let mir = lower_text(source);
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("nested-optional-initialize"));
+    assert!(dump.contains("nested-optional-assign"));
+    assert!(dump.contains("nested-optional-cleanup"));
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42));
+}
+
+#[test]
+fn nested_optional_class_and_shared_payload_lifecycles_execute_recursively() {
+    let class_source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Value { marker: i64; init(marker: i64) { self.marker = marker; } destroy { test_record_i64(self.marker); } }\n",
+        "fn main() -> i64 {\n",
+        "  var first: Value?? = some(some(Value(42)));\n",
+        "  var second: Value?? = first;\n",
+        "  first = none;\n",
+        "  second = some(none);\n",
+        "  if (second is some) { return 42; }\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut output = assembly(class_source);
+    output.push_str(record_i64_stub());
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.status.code(), Some(42), "{output}");
+    assert_eq!(result.stdout, b"42\n42\n");
+
+    let shared_source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Value { marker: i64; init(marker: i64) { self.marker = marker; } destroy { test_record_i64(self.marker); } }\n",
+        "fn main() -> i64 {\n",
+        "  var first: (shared? Value)? = some(new Value(42));\n",
+        "  var second: (shared? Value)? = first;\n",
+        "  first = none;\n",
+        "  second = none;\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(shared_source);
+    output.push_str(native_allocator());
+    output.push_str(record_i64_stub());
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.status.code(), Some(42), "{output}");
+    assert_eq!(result.stdout, b"42\n");
 }

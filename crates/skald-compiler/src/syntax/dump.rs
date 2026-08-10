@@ -494,6 +494,13 @@ impl AstDumper {
     fn expression(&mut self, expression: &Expression) {
         match expression {
             Expression::Absent(absent) => self.line("Absent", absent.span),
+            Expression::Present(present) => {
+                self.line("Present", present.span);
+                self.indented(|dumper| {
+                    dumper.line("Some", present.some_span);
+                    dumper.expression(&present.value);
+                });
+            }
             Expression::Identifier(identifier) => {
                 self.named("Identifier", &identifier.name.text, identifier.span);
             }

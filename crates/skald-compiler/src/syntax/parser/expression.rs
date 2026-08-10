@@ -689,6 +689,13 @@ impl Parser<'_> {
             return Some(Expression::Absent(AbsentExpr { span: token.span }));
         }
 
+        if self.at_contextual("some")
+            && self.peek_ahead(1).kind == TokenKind::LeftParen
+            && self.peek_ahead(2).kind != TokenKind::RightParen
+        {
+            return self.parse_present();
+        }
+
         if self.at(TokenKind::Identifier)
             || (self.at_primitive_type_name() && self.peek_ahead(1).kind == TokenKind::DoubleColon)
         {
@@ -764,6 +771,25 @@ impl Parser<'_> {
             "expected an identifier, literal, `none`, `self`, prefix operator, or `(`",
         );
         None
+    }
+
+    // Keep contextual optional construction out of the recursively entered
+    // primary-expression frame. The parser's common nesting limit is chosen
+    // to fail predictably even on the small stacks used by test runners.
+    fn parse_present(&mut self) -> Option<Expression> {
+        let some = self.advance();
+        let left_paren = self.advance();
+        let value =
+            self.with_syntax_nesting(left_paren.span, |parser| parser.parse_expression())?;
+        let right_paren = self.expect(TokenKind::RightParen, "`)` after `some` payload");
+        let end = right_paren
+            .map(|token| token.span)
+            .unwrap_or_else(|| value.span());
+        Some(Expression::Present(PresentExpr {
+            some_span: some.span,
+            value: Box::new(value),
+            span: self.cover(some.span, end),
+        }))
     }
 
     fn parse_byte_literal(&mut self) -> Expression {

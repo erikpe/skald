@@ -99,9 +99,11 @@ guarded checked class payload views and secured ordinary owners from
 in [Optional Values](OPTIONAL_VALUES.md): `T?` and `(shared T)?` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
-access. `shared? T` is an exact source shorthand. Recursive type syntax now
-parses nested optionals and optional arrays through their semantic gates; their
-identities, lifecycle, and `some(...)` construction remain frozen future work.
+access. `shared? T` is an exact source shorthand. Recursive identities, owning
+lifecycle, and expected-type-directed `some(...)` construction now execute for
+nested optionals in stored-value and array-element positions. Nested checked
+access and callable integration remain deferred, and optional arrays continue
+through their semantic gate.
 Shared boxes containing optionals remain outside that extension.
 Exceptional control flow remains unimplemented and exploratory.
 The separate uncatchable panic and common unrecoverable-failure reporting

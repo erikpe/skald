@@ -239,7 +239,7 @@ impl CallableChecker<'_, '_> {
             // `none` has no standalone type. `unit` is the diagnostic-only
             // sentinel already used for malformed projection shapes; callers
             // that select optional arguments handle `none` before this helper.
-            ResolvedExpression::Absent(_) => Type::Unit,
+            ResolvedExpression::Absent(_) | ResolvedExpression::Present(_) => Type::Unit,
             ResolvedExpression::PresenceTest(_) => Type::Bool,
             ResolvedExpression::Unwrap(unwrap) => {
                 let source = self.static_expression_type(&unwrap.source);

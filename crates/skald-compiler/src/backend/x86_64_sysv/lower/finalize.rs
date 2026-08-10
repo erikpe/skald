@@ -304,6 +304,33 @@ fn select_plan(
                 )?;
                 output.push(Instruction::Label(finished));
             }
+            MirDestructionStep::OptionalField { field, optional } => {
+                let field_offset = i32::try_from(
+                    data_layout
+                        .field(field)
+                        .ok_or_else(|| {
+                            finalizer_error(format!("field {field} has no target layout"))
+                        })?
+                        .offset,
+                )
+                .ok()
+                .and_then(|offset| complete_offset.checked_add(offset))
+                .ok_or_else(|| {
+                    finalizer_error("finalizer optional-field address exceeds target limits")
+                })?;
+                select_optional_cleanup_at(
+                    program,
+                    data_layout,
+                    dispatch,
+                    complete_class,
+                    OptionalCleanupAt {
+                        field,
+                        optional,
+                        offset: field_offset,
+                    },
+                    output,
+                )?;
+            }
             MirDestructionStep::Base(base) => {
                 let base_offset = data_layout
                     .class(class)
@@ -332,6 +359,125 @@ fn select_plan(
         }
     }
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct OptionalCleanupAt {
+    field: crate::identity::FieldId,
+    optional: crate::identity::OptionalTypeId,
+    offset: i32,
+}
+
+fn select_optional_cleanup_at(
+    program: &MirProgram,
+    data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
+    complete_class: ClassId,
+    target: OptionalCleanupAt,
+    output: &mut Vec<Instruction>,
+) -> Result<(), BackendError> {
+    let OptionalCleanupAt {
+        field,
+        optional,
+        offset,
+    } = target;
+    let metadata = program
+        .optional_type(optional)
+        .ok_or_else(|| finalizer_error(format!("unknown optional {optional}")))?;
+    match metadata.storage {
+        crate::mir::MirOptionalStorage::Scalar => Ok(()),
+        crate::mir::MirOptionalStorage::SharedOwner(_) => {
+            let finished = Label::new(format!(
+                ".Lska.{}.finalize_nested_shared_{}",
+                symbol::class_label_stem(program, complete_class),
+                output.len()
+            ));
+            load_complete_address(offset, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, 0),
+                destination: Register::Rax.into(),
+            });
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfEqual(finished.clone()));
+            let labels = release_labels(program, complete_class, field, output.len());
+            emit_release_loaded_handle(
+                labels.failure,
+                labels.last,
+                labels.complete.clone(),
+                dispatch.finalizer_displacement(),
+                None,
+                super::call::TraceAttribution::InheritedSourceOperation,
+                output,
+            );
+            output.push(Instruction::Label(labels.complete));
+            output.push(Instruction::Label(finished));
+            Ok(())
+        }
+        crate::mir::MirOptionalStorage::InlineClass(class) => {
+            let finished = Label::new(format!(
+                ".Lska.{}.finalize_nested_class_{}",
+                symbol::class_label_stem(program, complete_class),
+                output.len()
+            ));
+            load_complete_address(offset, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, 0),
+                destination: Register::Rax.into(),
+            });
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfEqual(finished.clone()));
+            let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                .map_err(|_| finalizer_error("optional payload offset exceeds target limits"))?;
+            select_plan(
+                program,
+                data_layout,
+                dispatch,
+                complete_class,
+                class,
+                offset
+                    .checked_add(payload)
+                    .ok_or_else(|| finalizer_error("optional payload exceeds target limits"))?,
+                output,
+            )?;
+            output.push(Instruction::Label(finished));
+            Ok(())
+        }
+        crate::mir::MirOptionalStorage::Nested(nested) => {
+            let finished = Label::new(format!(
+                ".Lska.{}.finalize_nested_optional_{}",
+                symbol::class_label_stem(program, complete_class),
+                output.len()
+            ));
+            load_complete_address(offset, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, 0),
+                destination: Register::Rax.into(),
+            });
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfEqual(finished.clone()));
+            let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                .map_err(|_| finalizer_error("optional payload offset exceeds target limits"))?;
+            select_optional_cleanup_at(
+                program,
+                data_layout,
+                dispatch,
+                complete_class,
+                OptionalCleanupAt {
+                    field,
+                    optional: nested,
+                    offset: offset
+                        .checked_add(payload)
+                        .ok_or_else(|| finalizer_error("optional payload exceeds target limits"))?,
+                },
+                output,
+            )?;
+            output.push(Instruction::Label(finished));
+            Ok(())
+        }
+        crate::mir::MirOptionalStorage::InlineArray(_) => {
+            unreachable!("optional arrays belong to a later roadmap task")
+        }
+    }
 }
 
 struct ReleaseLabels {

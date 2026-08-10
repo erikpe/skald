@@ -337,7 +337,60 @@ fn compute_class<I: Copy>(
                                 });
                                 continue;
                             }
-                            _ => unreachable!(
+                            ResolvedTypeKind::Optional(mut nested) => {
+                                let leaf = loop {
+                                    let kind = program
+                                        .optional_types
+                                        .get(nested)
+                                        .expect("nested optional identity must exist")
+                                        .payload
+                                        .kind;
+                                    match kind {
+                                        ResolvedTypeKind::Optional(inner) => nested = inner,
+                                        leaf => break leaf,
+                                    }
+                                };
+                                if let ResolvedTypeKind::Class(target) = leaf {
+                                    if let Some(constructors) = required_constructors {
+                                        if constructors.capability(target).selected().is_none() {
+                                            let mut path = vec![CopyPathElement::Field(field.id)];
+                                            if let Some(nested_path) = constructors.failure(target) {
+                                                path.extend(nested_path);
+                                            }
+                                            failure = Some(path);
+                                            break;
+                                        }
+                                    }
+                                    if compute_class(
+                                        target,
+                                        program,
+                                        resolved_operation,
+                                        capabilities,
+                                        failure_paths,
+                                        states,
+                                        required_constructors,
+                                    )
+                                    .selected()
+                                    .is_none()
+                                    {
+                                        let mut path = vec![CopyPathElement::Field(field.id)];
+                                        if let Some(nested_path) = &failure_paths[target.index()] {
+                                            path.extend(nested_path);
+                                        }
+                                        failure = Some(path);
+                                        break;
+                                    }
+                                }
+                                fields.push(HirSynthesizedFieldCopy::Optional {
+                                    field: field.id,
+                                    optional,
+                                });
+                                continue;
+                            }
+                            ResolvedTypeKind::Array(_)
+                            | ResolvedTypeKind::Unit
+                            | ResolvedTypeKind::Obj
+                            | ResolvedTypeKind::Interface(_) => unreachable!(
                                 "deferred optional payloads must be rejected before capability lowering"
                             ),
                         };

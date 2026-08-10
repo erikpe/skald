@@ -44,9 +44,10 @@ pub use expression::{
     ResolvedInterfaceCallExpr, ResolvedInterfaceReceiver, ResolvedLogicalExpr,
     ResolvedLogicalOperator, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
     ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
-    ResolvedPresenceTestKind, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType,
-    ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr,
-    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+    ResolvedPresenceTestKind, ResolvedPresentExpr, ResolvedPrimitiveCastExpr,
+    ResolvedPrimitiveType, ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr,
+    ResolvedStringLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

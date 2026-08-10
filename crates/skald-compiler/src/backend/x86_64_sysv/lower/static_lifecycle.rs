@@ -177,6 +177,16 @@ fn lower_cleanup(
             ));
             output.push(Instruction::Label(complete));
         }
+        MirStaticValueCleanup::NestedOptional(cleanup) => {
+            lower_nested_optional_cleanup(
+                program,
+                data_layout,
+                field,
+                cleanup.optional,
+                0,
+                output,
+            )?;
+        }
         MirStaticValueCleanup::Array(MirArrayInstruction::Release {
             owner: _, array, ..
         }) => {
@@ -191,6 +201,116 @@ fn lower_cleanup(
         }
     }
     Ok(())
+}
+
+fn lower_nested_optional_cleanup(
+    program: &MirProgram,
+    data_layout: &DataLayout,
+    field: crate::identity::StaticFieldId,
+    optional: crate::identity::OptionalTypeId,
+    base_offset: i32,
+    output: &mut Vec<Instruction>,
+) -> Result<(), BackendError> {
+    let metadata = program
+        .optional_type(optional)
+        .expect("verified static optional metadata exists");
+    match metadata.storage {
+        crate::mir::MirOptionalStorage::Scalar => Ok(()),
+        crate::mir::MirOptionalStorage::SharedOwner(_) => {
+            let complete = Label::new(format!(
+                ".Lska.static.s{}_{}_nested_shared_complete_{}",
+                field.class().index(),
+                field.index(),
+                output.len()
+            ));
+            load_static_address(program, field, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, base_offset),
+                destination: Register::Rdi.into(),
+            });
+            output.push(Instruction::Test(Register::Rdi));
+            output.push(Instruction::JumpIfEqual(complete.clone()));
+            output.push(call::direct_instruction(
+                symbol::shared_handle_release(),
+                call::TraceAttribution::ProcessBoundary,
+            ));
+            output.push(Instruction::Label(complete));
+            Ok(())
+        }
+        crate::mir::MirOptionalStorage::InlineClass(class) => {
+            let complete = Label::new(format!(
+                ".Lska.static.s{}_{}_nested_class_complete_{}",
+                field.class().index(),
+                field.index(),
+                output.len()
+            ));
+            load_static_address(program, field, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, base_offset),
+                destination: Register::Rax.into(),
+            });
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfEqual(complete.clone()));
+            let payload = displacement(
+                data_layout.optional_type(optional)?.payload_offset(),
+                "optional payload",
+            )?;
+            load_static_address(program, field, Register::R11, output);
+            output.push(Instruction::LoadEffectiveAddress {
+                source: memory(
+                    Register::R11,
+                    base_offset.checked_add(payload).ok_or_else(|| {
+                        static_error("nested optional offset exceeds target limits")
+                    })?,
+                ),
+                destination: Register::Rdi,
+            });
+            output.push(call::direct_instruction(
+                symbol::complete_finalizer(program, class),
+                call::TraceAttribution::ProcessBoundary,
+            ));
+            output.push(Instruction::Label(complete));
+            Ok(())
+        }
+        crate::mir::MirOptionalStorage::Nested(nested) => {
+            let complete = Label::new(format!(
+                ".Lska.static.s{}_{}_nested_optional_complete_{}",
+                field.class().index(),
+                field.index(),
+                output.len()
+            ));
+            load_static_address(program, field, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, base_offset),
+                destination: Register::Rax.into(),
+            });
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfEqual(complete.clone()));
+            let payload = displacement(
+                data_layout.optional_type(optional)?.payload_offset(),
+                "optional payload",
+            )?;
+            lower_nested_optional_cleanup(
+                program,
+                data_layout,
+                field,
+                nested,
+                base_offset
+                    .checked_add(payload)
+                    .ok_or_else(|| static_error("nested optional offset exceeds target limits"))?,
+                output,
+            )?;
+            output.push(Instruction::Label(complete));
+            Ok(())
+        }
+        crate::mir::MirOptionalStorage::InlineArray(_) => {
+            unreachable!("optional arrays belong to a later roadmap task")
+        }
+    }
+}
+
+fn static_error(message: impl Into<String>) -> BackendError {
+    BackendError::new(Target::X86_64SysV, None, message)
 }
 
 fn load_static_address(

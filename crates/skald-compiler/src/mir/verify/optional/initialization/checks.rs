@@ -78,6 +78,73 @@ fn verify_instruction(
             );
             require_initialized_source(verifier, function, block, &assignment.source, state);
         }
+        MirInstruction::NestedOptionalInitialize(initialize) => {
+            if let crate::mir::MirNestedOptionalSource::Copy(source) = &initialize.source {
+                require_initialized(
+                    verifier,
+                    function,
+                    block,
+                    source,
+                    state,
+                    "nested optional copy source",
+                );
+            }
+            let inserted = if matches!(
+                initialize.source,
+                crate::mir::MirNestedOptionalSource::Unpublished
+            ) {
+                state.reserve(initialize.destination.clone())
+            } else {
+                state.insert(initialize.destination.clone())
+            };
+            if !inserted {
+                verifier.block_error(
+                    function.callable(),
+                    block.id,
+                    "nested optional storage is initialized more than once",
+                );
+            }
+        }
+        MirInstruction::NestedOptionalAssign(assignment) => {
+            require_initialized(
+                verifier,
+                function,
+                block,
+                &assignment.destination,
+                state,
+                "nested optional assignment destination",
+            );
+            if let crate::mir::MirNestedOptionalSource::Copy(source) = &assignment.source {
+                require_initialized(
+                    verifier,
+                    function,
+                    block,
+                    source,
+                    state,
+                    "nested optional copy source",
+                );
+            }
+        }
+        MirInstruction::NestedOptionalPublish(publish) => {
+            if !state.publish(&publish.destination) {
+                verifier.block_error(
+                    function.callable(),
+                    block.id,
+                    "nested optional publication requires one unpublished destination",
+                );
+            }
+        }
+        MirInstruction::NestedOptionalCleanup(cleanup) => {
+            require_initialized(
+                verifier,
+                function,
+                block,
+                &cleanup.destination,
+                state,
+                "nested optional cleanup destination",
+            );
+            state.remove(&cleanup.destination);
+        }
         MirInstruction::OptionalSharedInitialize(initialize) => {
             require_initialized_optional_shared_source(
                 verifier,

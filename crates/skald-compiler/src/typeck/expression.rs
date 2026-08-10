@@ -83,6 +83,19 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
+            ResolvedExpression::Present(present) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        TYPE_MISMATCH,
+                        "`some(expression)` requires an expected optional type",
+                    )
+                    .with_primary_label(
+                        present.span,
+                        "use `some` where a declared optional type supplies its payload type",
+                    ),
+                );
+                None
+            }
             ResolvedExpression::PresenceTest(test) => self.check_presence_test(test),
             ResolvedExpression::Unwrap(unwrap) => self.check_optional_unwrap(unwrap),
             ResolvedExpression::Binding(binding) => self.check_binding_expression(binding),

@@ -4,8 +4,9 @@ Status: implemented language contract for primitive, exact inline-class, and
 optional shared-owner values across owning locals, fields, internal callable
 boundaries, and aliases to supported inline optional containers. This document
 also defines the implemented compositional type syntax and freezes the
-remaining semantic extension for recursive optionals and optional inline
-arrays. Those deferred payloads are parsed but are not yet executable. The
+remaining semantic extension for nested access, callable integration, and
+optional inline arrays. Recursive owning lifecycle is executable; the
+remaining deferred positions still stop at focused semantic gates. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -103,19 +104,20 @@ Inline `T?` is valid when `T` is a primitive or exact inline class type.
 `(shared T)?` and its `shared? T` shorthand accept the same class, interface,
 `Obj`, and array targets as ordinary `shared T`.
 
-The first profile rejects:
+The current profile rejects:
 
 - `unit?`;
 - standalone optional interface or `Obj` views;
-- execution of nested `T??`;
 - execution of optional array and function types;
 - `shared T?` and `shared? T?`;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
 
-The recursive syntax tree preserves these complete type shapes. Nested
-optionals, optional arrays, and shared boxes therefore fail at focused semantic
-gates rather than being discarded during parsing.
+The recursive syntax tree preserves these complete type shapes. Optional
+arrays and shared boxes therefore fail at focused semantic gates rather than
+being discarded during parsing. Nested optionals execute in owning locals,
+fields, statics, and array elements; their checked access and callable
+integration remain gated until CO6.
 
 These exclusions are deliberate. In particular, `shared T?` requires a
 generalized non-null shared box whose allocation, payload metadata, mutation,
@@ -125,10 +127,11 @@ the spelling without defining or implementing that box.
 ## Frozen compositional extension
 
 The type construction and grouping rules in this section are implemented
-syntax. Canonical optional shared owners execute through the existing flat
-optional-owner semantics. Recursive optional identities, nested lifecycle,
-`some(expression)`, and optional inline arrays remain a **frozen semantic
-design** until their later implementation tasks land.
+syntax. Canonical optional shared owners execute through the existing owner
+semantics. Recursive optional identities, nested owning lifecycle, and
+`some(expression)` are implemented. Nested access, callable integration, and
+optional inline arrays remain a **frozen semantic design** until their later
+implementation tasks land.
 
 ### Type construction, grouping, and precedence
 
@@ -181,7 +184,7 @@ The exact spelling and identity matrix is:
 | `(T[])?` | `Optional<Array<T>>` | Grouped spelling equivalent to `T[]?` | Parsed; semantically rejected until optional arrays execute |
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
-| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Parsed; semantically rejected until nested optionals execute |
+| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle executes; access and callable integration remain gated |
 | `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Reserved box form; rejected |
 | `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Reserved box form; rejected |
 
@@ -253,7 +256,7 @@ therefore hold nested guards; clearing, replacing, or destroying any guarded
 container terminates before changing that layer. A shared-root anchor keeps
 the containing allocation alive independently of every optional guard.
 
-The completed extension permits supported optionals in internal locals,
+The completed extension will permit supported optionals in internal locals,
 fields, class-owned statics, value parameters/results, methods, interfaces,
 overrides, initializer overloads, temporaries, array elements, and explicit
 element-list destinations. `ref` and `mut ref` parameters may designate any
@@ -643,9 +646,7 @@ lifetime contract is frozen.
 
 ## Explicit exclusions
 
-The implemented profile continues to reject the frozen compositional forms
-until their roadmap tasks land. The frozen compositional extension itself does
-not include:
+The frozen compositional extension does not include:
 
 - generalized `shared T?` boxes or `shared? T?`;
 - optional function values;
@@ -659,9 +660,10 @@ not include:
 - external optional ABI mappings.
 
 These exclusions are not implied language behavior. Each requires a separate
-focused design before implementation. Nested optionals and inline optional
-arrays are not on this exclusion list: their semantics are frozen above, but
-the current compiler still rejects them.
+focused design before implementation. Nested optionals are not on this
+exclusion list and their owning lifecycle executes; nested access and callable
+integration remain staged. Inline optional arrays are likewise specified
+above but remain rejected until their roadmap task lands.
 
 The implemented [array design](ARRAYS.md) permits existing optional
 non-array element types to default to `none` inside arrays and extends
@@ -679,5 +681,5 @@ produced owners, and represent absence with the ordinary zero niche.
 An eligible ungrouped exact-class construction initializes a present payload
 directly; named and otherwise materialized sources retain their existing
 conditional copy behavior. The list adds no universal `none` type, implicit
-unwrap, nested optional, or inline optional-array payload to the current
-compiler.
+unwrap, or inline optional-array payload. Nested optional elements use the
+recursive lifecycle and the same expected-destination rules.

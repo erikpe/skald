@@ -12,6 +12,7 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct InitializationState {
     places: HashSet<MirPlace>,
+    unpublished: HashSet<MirPlace>,
 }
 
 impl InitializationState {
@@ -49,6 +50,7 @@ impl InitializationState {
                 })
                 .chain(static_optionals)
                 .collect(),
+            unpublished: HashSet::new(),
         };
 
         if matches!(
@@ -61,19 +63,33 @@ impl InitializationState {
     }
 
     pub(super) fn contains(&self, place: &MirPlace) -> bool {
-        self.places.contains(place)
+        self.places.contains(place) && !self.unpublished.contains(place)
     }
 
     pub(super) fn insert(&mut self, place: MirPlace) -> bool {
+        self.unpublished.remove(&place);
         self.places.insert(place)
+    }
+
+    pub(super) fn reserve(&mut self, place: MirPlace) -> bool {
+        let inserted = self.places.insert(place.clone());
+        self.unpublished.insert(place);
+        inserted
+    }
+
+    pub(super) fn publish(&mut self, place: &MirPlace) -> bool {
+        self.unpublished.remove(place)
     }
 
     pub(super) fn remove(&mut self, place: &MirPlace) {
         self.places.remove(place);
+        self.unpublished.remove(place);
     }
 
     pub(super) fn reset_storage(&mut self, storage: StorageId) {
         self.places
+            .retain(|place| place.base.local_storage() != Some(storage));
+        self.unpublished
             .retain(|place| place.base.local_storage() != Some(storage));
     }
 
@@ -88,10 +104,22 @@ impl InitializationState {
                     }) if *normalized_index == prefix
                 )
         });
+        self.unpublished.retain(|place| {
+            place.base.local_storage() != Some(backing)
+                || !matches!(
+                    place.projections.first(),
+                    Some(crate::mir::MirPlaceProjection::ArrayElement {
+                        normalized_index,
+                        ..
+                    }) if *normalized_index == prefix
+                )
+        });
     }
 
     pub(super) fn merge(&mut self, incoming: &Self) {
         self.places.retain(|place| incoming.places.contains(place));
+        self.unpublished
+            .retain(|place| incoming.unpublished.contains(place));
     }
 
     pub(super) fn apply_block(
@@ -110,6 +138,22 @@ impl InitializationState {
                 }
                 MirInstruction::OptionalInitialize(initialize) => {
                     self.insert(initialize.destination.clone());
+                }
+                MirInstruction::NestedOptionalInitialize(initialize) => {
+                    if matches!(
+                        initialize.source,
+                        crate::mir::MirNestedOptionalSource::Unpublished
+                    ) {
+                        self.reserve(initialize.destination.clone());
+                    } else {
+                        self.insert(initialize.destination.clone());
+                    }
+                }
+                MirInstruction::NestedOptionalPublish(publish) => {
+                    self.publish(&publish.destination);
+                }
+                MirInstruction::NestedOptionalCleanup(cleanup) => {
+                    self.remove(&cleanup.destination);
                 }
                 MirInstruction::ClassOptionalInitialize(initialize) => {
                     self.insert(initialize.destination.clone());
@@ -243,6 +287,22 @@ impl InitializationState {
                     MirInstruction::OptionalAssign(assignment) => {
                         self.seed_projected(&assignment.destination);
                         if let MirOptionalSource::Copy(source) = &assignment.source {
+                            self.seed_projected(source);
+                        }
+                    }
+                    MirInstruction::NestedOptionalInitialize(initialize) => {
+                        self.seed_projected(&initialize.destination);
+                        if let crate::mir::MirNestedOptionalSource::Copy(source) =
+                            &initialize.source
+                        {
+                            self.seed_projected(source);
+                        }
+                    }
+                    MirInstruction::NestedOptionalAssign(assignment) => {
+                        self.seed_projected(&assignment.destination);
+                        if let crate::mir::MirNestedOptionalSource::Copy(source) =
+                            &assignment.source
+                        {
                             self.seed_projected(source);
                         }
                     }

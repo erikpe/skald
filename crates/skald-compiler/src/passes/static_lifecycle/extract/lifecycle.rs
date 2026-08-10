@@ -88,6 +88,19 @@ impl Extractor<'_> {
                             declaration.span,
                         );
                     }
+                    MirDestructionStep::OptionalField { field, optional } => {
+                        let span = self
+                            .program
+                            .field(field)
+                            .expect("verified optional destruction field must exist")
+                            .span;
+                        self.add_optional_cleanup_edges(
+                            source,
+                            optional,
+                            StaticEffectPhase::Destruction,
+                            span,
+                        );
+                    }
                     MirDestructionStep::Base(base) => self.add_edge(
                         source,
                         StaticEffectNode::class(
@@ -211,6 +224,14 @@ impl Extractor<'_> {
                 | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                 | MirSynthesizedFieldCopy::Shared { .. }
                 | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
+                MirSynthesizedFieldCopy::Optional { optional, .. } => {
+                    self.add_optional_copy_edges(
+                        source,
+                        optional,
+                        StaticEffectPhase::Copy,
+                        field_span,
+                    );
+                }
             }
         }
     }
@@ -314,6 +335,14 @@ impl Extractor<'_> {
                 | MirSynthesizedFieldCopy::OptionalPrimitive { .. }
                 | MirSynthesizedFieldCopy::Shared { .. }
                 | MirSynthesizedFieldCopy::OptionalShared { .. } => {}
+                MirSynthesizedFieldCopy::Optional { optional, .. } => {
+                    self.add_optional_assignment_edges(
+                        source,
+                        optional,
+                        StaticEffectPhase::Copy,
+                        field_span,
+                    );
+                }
             }
         }
     }

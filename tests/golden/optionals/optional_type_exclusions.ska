@@ -9,8 +9,7 @@ class Value {
 fn excluded(
     no_unit: unit?,
     no_interface: Readable?,
-    no_object: Obj?,
-    no_nested: i64??
+    no_object: Obj?
 ) -> unit {}
 
 fn main() -> i64 {

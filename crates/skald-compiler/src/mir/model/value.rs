@@ -152,6 +152,12 @@ impl MirPlace {
         self
     }
 
+    pub fn project_nested_optional_payload(mut self, optional: OptionalTypeId) -> Self {
+        self.projections
+            .push(MirPlaceProjection::NestedOptionalPayload(optional));
+        self
+    }
+
     pub fn project_array_element(
         mut self,
         array: ArrayTypeId,
@@ -225,6 +231,8 @@ pub enum MirPlaceProjection {
     Field(FieldId),
     /// Selects the reserved payload bytes of an inline-class optional.
     OptionalPayload(ClassId),
+    /// Selects the immediate payload storage of an exact recursive optional.
+    NestedOptionalPayload(OptionalTypeId),
     ArrayElement {
         array: ArrayTypeId,
         normalized_index: StorageId,

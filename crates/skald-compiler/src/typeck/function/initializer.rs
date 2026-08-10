@@ -184,6 +184,40 @@ impl CallableChecker<'_, '_> {
                         .map(HirStatement::ClassOptionalAssignment)
                     }
                 }
+                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                    let Type::Optional(optional) = target.ty else {
+                        unreachable!()
+                    };
+                    self.check_optional_value(
+                        optional,
+                        &assignment.value,
+                        if body_kind.initializes_receiver() {
+                            "nested optional field initializer"
+                        } else {
+                            "nested optional field assignment"
+                        },
+                    )
+                    .map(|value| {
+                        HirStatement::NestedOptionalAssignment(
+                            crate::hir::HirNestedOptionalAssignment {
+                                destination: crate::hir::HirOptionalValuePlace {
+                                    storage: crate::hir::HirOptionalStorage::Field(
+                                        target.place.clone(),
+                                    ),
+                                    optional,
+                                    span: assignment.span,
+                                },
+                                value,
+                                kind: if body_kind.initializes_receiver() {
+                                    crate::hir::HirOptionalWriteKind::Initialize
+                                } else {
+                                    crate::hir::HirOptionalWriteKind::Assign
+                                },
+                                span: assignment.span,
+                            },
+                        )
+                    })
+                }
             },
             (
                 Type::Bool

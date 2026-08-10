@@ -270,6 +270,25 @@ impl Verifier<'_> {
                     }
                     ty = MirType::Class(class);
                 }
+                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                    if ty != MirType::Optional(optional) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("nested optional payload projection {optional} has incompatible base type {ty}"),
+                        );
+                        return None;
+                    }
+                    let Some(metadata) = self.program.optional_type(optional) else {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("optional {optional} is not declared"),
+                        );
+                        return None;
+                    };
+                    ty = metadata.payload;
+                }
                 MirPlaceProjection::ArrayElement {
                     array,
                     normalized_index,

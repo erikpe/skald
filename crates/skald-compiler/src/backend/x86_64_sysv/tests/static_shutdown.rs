@@ -95,6 +95,21 @@ fn static_destructors_run_after_entry_with_dependencies_still_live() {
 }
 
 #[test]
+fn nested_optional_static_payload_is_destroyed_at_shutdown() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Item { marker: i64; init(marker: i64) { self.marker = marker; } destroy { test_record_i64(self.marker); } }\n",
+        "class State { static item: Item?? = some(some(Item(42))); init() {} }\n",
+        "fn main() -> i64 { if (State.item is some) { return 42; } return 0; }\n",
+    );
+    let mut output = compile(source);
+    output.push_str(record_i64_stub());
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.status.code(), Some(42), "{output}");
+    assert_eq!(result.stdout, b"42\n");
+}
+
+#[test]
 fn static_arrays_destroy_elements_in_reverse_index_order() {
     let source = concat!(
         "extern fn test_next() -> i64; extern fn test_destroy(value: i64) -> unit;\n",

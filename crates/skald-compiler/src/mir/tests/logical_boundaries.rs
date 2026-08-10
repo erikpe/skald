@@ -338,7 +338,8 @@ fn replace_first_false_expression(
             }
             HirOptionalOperand::Place(_)
             | HirOptionalOperand::ClassPlace(_)
-            | HirOptionalOperand::SharedPlace(_) => false,
+            | HirOptionalOperand::SharedPlace(_)
+            | HirOptionalOperand::NestedPlace(_) => false,
         },
         HirExpressionKind::ArrayElement(element) => {
             replace_first_false_expression(&mut element.index.value, replacement)

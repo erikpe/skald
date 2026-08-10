@@ -279,6 +279,16 @@ impl InstructionSelector<'_, '_> {
                             span: *span,
                         })?;
                     }
+                    MirArrayCopyElement::Optional(optional) => {
+                        self.select_nested_optional_initialize(
+                            &crate::mir::MirNestedOptionalInitialize {
+                                optional,
+                                destination,
+                                source: crate::mir::MirNestedOptionalSource::Copy(source),
+                                span: *span,
+                            },
+                        )?;
+                    }
                 }
                 self.advance_array_index(*index);
                 Ok(())
@@ -412,6 +422,15 @@ impl InstructionSelector<'_, '_> {
                             target,
                             span: *span,
                         })?;
+                    }
+                    MirArrayDestroyElement::Optional(optional) => {
+                        self.select_nested_optional_cleanup(
+                            &crate::mir::MirNestedOptionalCleanup {
+                                optional,
+                                destination: element,
+                                span: *span,
+                            },
+                        )?;
                     }
                 }
                 Ok(())
@@ -824,6 +843,16 @@ impl InstructionSelector<'_, '_> {
                         checked_array_displacement(displacement, offset, self.function.callable())?;
                     ty = MirType::Class(base);
                 }
+                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                    let offset = self.data_layout.optional_type(optional)?.payload_offset();
+                    displacement =
+                        checked_array_displacement(displacement, offset, self.function.callable())?;
+                    ty = self
+                        .program
+                        .optional_type(optional)
+                        .expect("verified optional")
+                        .payload;
+                }
                 MirPlaceProjection::Field(field) => {
                     let offset = self
                         .data_layout
@@ -1127,6 +1156,12 @@ fn array_for_place(
         ty = match *projection {
             MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
                 MirType::Class(class)
+            }
+            MirPlaceProjection::NestedOptionalPayload(optional) => {
+                program
+                    .optional_type(optional)
+                    .expect("verified optional")
+                    .payload
             }
             MirPlaceProjection::Field(field) => {
                 program.field(field).expect("verified field exists").ty

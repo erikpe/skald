@@ -260,6 +260,17 @@ impl CallableChecker<'_, '_> {
                         "optional shared array element assignment",
                     )
                     .map(HirArrayElementValue::OptionalShared),
+                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                    let Type::Optional(optional) = element else {
+                        unreachable!()
+                    };
+                    self.check_optional_value(
+                        optional,
+                        source,
+                        "nested optional array element assignment",
+                    )
+                    .map(|value| HirArrayElementValue::NestedOptional(Box::new(value)))
+                }
             },
             Type::Class(class) => {
                 let source =

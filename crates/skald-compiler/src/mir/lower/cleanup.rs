@@ -145,6 +145,9 @@ impl BodyLowerer<'_> {
             super::FullExpressionTemporary::OptionalShared(cleanup) => {
                 self.emit(MirInstruction::OptionalSharedCleanup(cleanup));
             }
+            super::FullExpressionTemporary::NestedOptional(cleanup) => {
+                self.emit(MirInstruction::NestedOptionalCleanup(cleanup));
+            }
             super::FullExpressionTemporary::Array { storage, array } => {
                 self.emit(MirInstruction::Array(MirArrayInstruction::Release {
                     owner: MirPlace::base(storage),
@@ -224,6 +227,7 @@ enum OwnedStorageKind {
     Shared,
     ClassOptional(crate::identity::OptionalTypeId, ClassId),
     OptionalShared(crate::identity::OptionalTypeId, crate::mir::MirSharedTarget),
+    NestedOptional(crate::identity::OptionalTypeId),
     Array(crate::identity::ArrayTypeId),
 }
 
@@ -232,6 +236,7 @@ pub(super) enum PlannedCleanup {
     Shared(MirSharedRelease),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
     OptionalShared(crate::mir::MirOptionalSharedCleanup),
+    NestedOptional(crate::mir::MirNestedOptionalCleanup),
     Array {
         storage: StorageId,
         array: crate::identity::ArrayTypeId,
@@ -354,6 +359,21 @@ impl CleanupPlanner {
             });
     }
 
+    pub(super) fn register_nested_optional(
+        &mut self,
+        storage: StorageId,
+        optional: crate::identity::OptionalTypeId,
+    ) {
+        self.scopes
+            .last_mut()
+            .expect("an initialized local must belong to an active lexical scope")
+            .initialized
+            .push(InitializedStorage {
+                storage,
+                kind: OwnedStorageKind::NestedOptional(optional),
+            });
+    }
+
     pub(super) fn register_array(
         &mut self,
         storage: StorageId,
@@ -451,6 +471,13 @@ impl InitializedStorage {
                     span,
                 })
             }
+            OwnedStorageKind::NestedOptional(optional) => {
+                PlannedCleanup::NestedOptional(crate::mir::MirNestedOptionalCleanup {
+                    optional,
+                    destination: MirPlace::base(self.storage),
+                    span,
+                })
+            }
             OwnedStorageKind::Array(array) => PlannedCleanup::Array {
                 storage: self.storage,
                 array,
@@ -503,6 +530,9 @@ mod tests {
                     PlannedCleanup::OptionalShared(cleanup) => {
                         cleanup.destination.base.expect_local_storage()
                     }
+                    PlannedCleanup::NestedOptional(cleanup) => {
+                        cleanup.destination.base.expect_local_storage()
+                    }
                     PlannedCleanup::Array { storage, .. } => *storage,
                 })
                 .collect::<Vec<_>>(),
@@ -524,6 +554,8 @@ mod tests {
                 PlannedCleanup::ClassOptional(cleanup) =>
                     cleanup.destination.base.expect_local_storage(),
                 PlannedCleanup::OptionalShared(cleanup) =>
+                    cleanup.destination.base.expect_local_storage(),
+                PlannedCleanup::NestedOptional(cleanup) =>
                     cleanup.destination.base.expect_local_storage(),
                 PlannedCleanup::Array { storage, .. } => *storage,
             },

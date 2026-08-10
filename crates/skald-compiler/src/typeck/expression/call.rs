@@ -399,6 +399,19 @@ impl CallableChecker<'_, '_> {
                                 "optional shared argument",
                             )
                             .map(HirCallArgument::OptionalShared),
+                        super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    crate::typeck::program::TYPE_MISMATCH,
+                                    "nested optional arguments are not supported yet",
+                                )
+                                .with_primary_label(
+                                    source.span(),
+                                    "nested optional callable integration is deferred",
+                                ),
+                            );
+                            None
+                        }
                     };
                 }
                 let argument = self.check_expression(source)?;

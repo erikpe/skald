@@ -318,3 +318,23 @@ fn lowers_class_optional_lifecycle_fields_arguments_results_and_cleanup() {
     assert!(dump.contains("class-optional-cleanup"));
     assert!(dump.contains("OptionalClassField"));
 }
+
+#[test]
+fn verifier_requires_nested_optional_publication_after_payload_construction() {
+    let mut program =
+        lower_text("fn main() -> i64 { var value: i64?? = some(some(42)); return 0; }\n");
+    let main = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    for block in &mut main.body.blocks {
+        block
+            .instructions
+            .retain(|instruction| !matches!(instruction, MirInstruction::NestedOptionalPublish(_)));
+    }
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(
+        errors.contains("nested optional cleanup destination is not definitely initialized"),
+        "{errors}"
+    );
+}
