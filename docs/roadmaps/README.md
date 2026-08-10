@@ -6,15 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Compositional Optional Types](COMPOSITIONAL_OPTIONAL_TYPES_ROADMAP.md) —
-  **in progress**. Makes `(shared T)?` canonical with `shared? T` as an exact
-  shorthand, replaces flat optional families with recursive identities and
-  lifecycle IR, and implements arbitrary nesting plus optional inline arrays.
-  Shared boxes containing optionals remain a separate future roadmap. Core
-  optional inline-array execution is complete; aggregate and alias integration
-  is next. The work builds on
-  the implemented optional, array, shared-ownership, static-field, and verified
-  cleanup contracts and has no active-roadmap dependency.
+No implementation roadmap is currently in progress.
 
 ## Planned
 
@@ -29,7 +21,10 @@ roadmap.
 
 ## Pending discoveries
 
-No implementation discoveries are currently pending.
+- [Compositional optional type discoveries](COMPOSITIONAL_OPTIONAL_TYPES_DISCOVERIES.md)
+  records payload-neutral aggregate-operation naming and private target-lowering
+  module splits. Both are behavior-preserving, lower-priority follow-ups to the
+  implemented optional profile.
 
 ## Implementation baseline
 

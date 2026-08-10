@@ -75,17 +75,15 @@ callable boundaries. Alias binding mode may designate any supported inline
 optional container; it does not add a reference or optional-reference type
 identity.
 
-## Frozen compositional implementation direction
+## Compositional optional implementation
 
 The recursive syntax and resolved-identity portions of this direction are
 implemented, including grouping, postfix chains, shorthand provenance, and
 bottom-up interning. Canonical HIR and MIR identity tables, lifecycle plans,
-checked access, aliases, and callable integration are also implemented for
-nested storage. The optional-array core in this section is implemented;
-aggregate storage, aliases, dispatch boundaries, and array-element integration
-remain a **frozen design** for the next extension. The migration keeps every current program's
-diagnostics, evaluation order, lifecycle, layout, ABI, and native behavior
-stable before enabling a new payload category.
+checked access, aliases, callable integration, and optional arrays are
+implemented across supported storage, aggregate, dispatch, array-element, and
+checked-alias boundaries. Every payload category preserves the established
+diagnostics, evaluation order, lifecycle, layout, ABI, and native behavior.
 
 ### Source shape and canonical identity
 
@@ -117,7 +115,7 @@ durable requirements are:
   `Optional<Shared<P>>` identity; and
 - `shared P?` is instead `Shared<Optional<P>>`, remains an unsupported box
   target, and never receives an optional or shared-target identity in
-  executable HIR during this roadmap.
+  executable HIR.
 
 This follows the existing array-table pattern without requiring one universal
 type interner. Optional and array entries may name one another through their
@@ -171,7 +169,8 @@ there is no compatibility adapter or parallel primitive/class/shared MIR type
 family. Distinct scalar, owning-aggregate, and shared-owner instructions remain
 where they express genuinely different runtime work. Nested owning lifecycle,
 checked access, aliases, and callable cases use recursive outer-wrapper
-operations; optional-array cases remain behind their source eligibility gates.
+operations. Optional arrays use the owning-aggregate operations and reuse the
+ordinary array lifecycle selected by type checking.
 
 MIR represents the outer wrapper state independently from the immediate
 payload state. An outer operation branches on or changes only its own state,
@@ -277,7 +276,7 @@ requests and exact allocation bases.
 
 ### Shared-box exclusion
 
-No phase adds a box target for `Shared<Optional<P>>` in this roadmap. There is
+No phase adds a box target for `Shared<Optional<P>>`. There is
 no provisional box ID, allocation origin, initialization/publication node,
 metadata record, finalizer, pointee projection, mutation operation, target
 layout, or backend helper. `shared P?` and the shorthand-derived
@@ -289,7 +288,7 @@ all allocation and shared-target changes separately.
 
 The AST preserves every optional payload as a recursive type node, including
 grouping, punctuation spans, and `shared?` shorthand provenance. The current
-flat resolved IR preserves:
+resolved expression IR preserves:
 
 - the `?` span on an inline type;
 - the `shared` and owner-optional `?` spans separately;
@@ -725,10 +724,10 @@ Tests must continue to prove that plain `T` and `shared T` never acquire absent
 or zero states and that no optional feature changes the C runtime ABI
 accidentally.
 
-### Frozen extension test matrix
+### Compositional test matrix
 
-The compositional rollout uses the narrowest test layer that owns each
-contract and adds source-to-native coverage only where phase tests cannot prove
+The compositional test matrix uses the narrowest test layer that owns each
+contract and adds source-to-native coverage where phase tests cannot prove
 observable behavior:
 
 | Concern | Required focused evidence |
@@ -747,15 +746,14 @@ observable behavior:
 Compile-failure suites for `shared T?` and `shared? T?` remain required.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
-source-to-native equivalence coverage. Box forms remain compile failures after
-this roadmap completes.
+source-to-native equivalence coverage. Box forms remain compile failures.
 
 ## Exclusions
 
 The implemented compiler executes recursively nested optional owning lifecycle,
 expected-type-directed `some(expression)`, checked access, aliases, and
-internal callable boundaries. Optional inline arrays stop at focused
-type-checking gates; their compiler direction is frozen above. This contract does not design
+internal callable boundaries. Optional inline arrays execute across supported
+owning, aggregate, callable, array-element, and checked-alias boundaries. This contract does not design
 generalized shared boxes, optional function values, first-class references,
 optional casts, equality or operator lifting, chaining/coalescing/propagation,
 recoverable failures, concurrency or atomic guards, external optional ABI, or
@@ -765,5 +763,5 @@ The implemented [array compiler contract](ARRAYS.md) extends optional
 shared-owner targets to exact arrays and permits already-supported optional
 non-array element types. Explicit array element lists reuse the same
 generic-place optional initialization, conditional owner transfer, zero niche,
-and cleanup. The frozen optional-array extension reuses that array machinery
-as specified above; it does not alter current compiler availability.
+and cleanup. Optional inline arrays reuse that array machinery as specified
+above without altering the public C runtime ABI.

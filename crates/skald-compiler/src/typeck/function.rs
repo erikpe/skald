@@ -89,9 +89,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     pub(super) fn optional_kind(
         &self,
         ty: Type,
-    ) -> Option<super::optional_types::LegacyOptionalKind> {
+    ) -> Option<super::optional_types::OptionalPayloadKind> {
         super::optional_types::optional_id(ty)
-            .and_then(|optional| super::optional_types::legacy_kind(self.program, optional))
+            .and_then(|optional| super::optional_types::classify_payload(self.program, optional))
     }
 
     pub(super) fn optional_operand_class(
@@ -101,7 +101,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         match operand {
             crate::hir::HirOptionalOperand::ClassPlace(place) => place.class,
             crate::hir::HirOptionalOperand::ClassProduced(expression) => {
-                let Some(super::optional_types::LegacyOptionalKind::Class(class)) =
+                let Some(super::optional_types::OptionalPayloadKind::Class(class)) =
                     self.optional_kind(expression.ty)
                 else {
                     unreachable!("class optional operand must retain class metadata")

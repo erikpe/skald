@@ -388,10 +388,12 @@ polymorphic alias conversions and checked casts are defined by
 full expression; they do not introduce local aliases.
 
 The implemented
-[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
-admits aliases whose designated container is any supported optional, including
-an optional shared owner, nested optional, or optional array. An alias to an
-optional container borrows the always-present wrapper. Passing `value!` from
+[compositional optional profile](OPTIONAL_VALUES.md#compositional-optional-types)
+admits aliases whose designated container is a supported inline optional,
+including a nested optional or optional array. Optional shared owners remain
+ineligible because their zero-niche representation is an owning handle rather
+than an inline wrapper. An alias to an optional container borrows the
+always-present wrapper. Passing `value!` from
 an optional array to `ref T[]` or `mut ref T[]` instead creates a checked
 call-scoped payload view: a presence guard pins the wrapper and a backing
 anchor covers the immediate call. It does not add `ref?`, stored references,

@@ -1,6 +1,14 @@
 schema = 2
 
 [[test]]
+name = "compositional_profile"
+mode = "run"
+source = "compositional_profile.ska"
+[[test.run]]
+name = "deep_presence_optional_arrays_and_checked_aliases"
+expect = { exit = 42 }
+
+[[test]]
 name = "absent_unwrap"
 mode = "run"
 source = "optional_absent_unwrap.ska"

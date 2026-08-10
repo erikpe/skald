@@ -115,24 +115,25 @@ The current profile rejects:
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
 
-The recursive syntax tree preserves these complete type shapes. Optional
-arrays and shared boxes therefore fail at focused semantic gates rather than
-being discarded during parsing. Nested optionals execute in owning storage,
-aliases, checked access, and every supported internal callable boundary.
+The recursive syntax tree preserves these complete type shapes. Shared boxes
+therefore fail at a focused semantic boundary rather than being discarded
+during parsing. Nested optionals and optional arrays execute in owning
+storage, aliases, checked access, and every supported internal callable
+boundary.
 
 These exclusions are deliberate. In particular, `shared T?` requires a
 generalized non-null shared box whose allocation, payload metadata, mutation,
 and finalization are separate from optional ownership. This design reserves
 the spelling without defining or implementing that box.
 
-## Frozen compositional extension
+## Compositional optional types
 
 The type construction and grouping rules in this section are implemented
 syntax. Canonical optional shared owners execute through the existing owner
 semantics. Recursive optional identities, nested owning lifecycle,
 `some(expression)`, checked access, aliases, and internal callable integration
-are implemented. Optional inline arrays remain a **frozen semantic design**
-until their later implementation tasks land.
+and optional inline arrays are implemented across their supported owning,
+aggregate, callable, array-element, and checked-alias positions.
 
 ### Type construction, grouping, and precedence
 
@@ -156,7 +157,7 @@ shared T[]  = Shared<Array<T>>
 ```
 
 The first form requires a new shared-box allocation kind and remains outside
-this frozen extension. To place optionality around an existing shared owner,
+this profile. To place optionality around an existing shared owner,
 group the shared type first:
 
 ```text
@@ -174,7 +175,7 @@ shared? T?  = (shared T?)?
 ```
 
 The last form still contains the unsupported inner
-`Shared<Optional<T>>` box and therefore remains outside this roadmap.
+`Shared<Optional<T>>` box and therefore remains unsupported.
 
 The exact spelling and identity matrix is:
 
@@ -304,7 +305,7 @@ metadata, finalizer, dereference, mutation, cast, or backend operation.
 Consequently `shared T?` and `shared? T?` remain focused semantic errors after
 the compositional parser preserves their source shape. A later shared-box
 design may reuse the completed optional payload lifecycle without changing the
-meaning frozen here.
+meaning defined here.
 
 ## Empty and present values
 
@@ -613,7 +614,7 @@ interchangeable merely because injection is valid at an ordinary call site.
 
 ## Failure
 
-The frozen profile adds three unrecoverable source-level failure classes:
+The implemented profile has three unrecoverable source-level failure classes:
 
 - unwrapping an absent value;
 - overflowing a dynamic presence-guard count; and
@@ -649,11 +650,11 @@ non-unwinding and does not guarantee static cleanup.
 
 External declarations continue to reject every optional parameter and result.
 No C representation, calling convention, ownership transfer, or foreign
-lifetime contract is frozen.
+lifetime contract is defined.
 
 ## Explicit exclusions
 
-The frozen compositional extension does not include:
+The implemented compositional profile does not include:
 
 - generalized `shared T?` boxes or `shared? T?`;
 - optional function values;

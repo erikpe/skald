@@ -483,12 +483,12 @@ fn optional_layout(payload: crate::mir::MirPrimitiveType) -> Result<OptionalLayo
 fn optional_layout_for(payload: TypeLayout) -> Result<OptionalLayout, BackendError> {
     let alignment = OPTIONAL_STATE_ALIGNMENT.max(payload.alignment());
     let payload_offset = abi::align_up(OPTIONAL_STATE_SIZE, payload.alignment())
-        .ok_or_else(|| layout_error("primitive optional payload offset exceeds target limits"))?;
+        .ok_or_else(|| layout_error("optional payload offset exceeds target limits"))?;
     let size = payload_offset
         .checked_add(payload.size())
         .and_then(|size| abi::align_up(size, alignment))
         .filter(|size| *size <= MAX_ADDRESSABLE_SIZE)
-        .ok_or_else(|| layout_error("primitive optional layout exceeds target limits"))?;
+        .ok_or_else(|| layout_error("optional layout exceeds target limits"))?;
     Ok(OptionalLayout {
         ty: TypeLayout::new(size, alignment),
         payload_offset,
@@ -679,5 +679,14 @@ mod tests {
             &[TypeLayout::new(1, 1)],
         )
         .is_none());
+
+        let oversized_payload = TypeLayout::new(MAX_ADDRESSABLE_SIZE, 8);
+        let error = optional_layout_for(oversized_payload)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("optional layout exceeds target limits"),
+            "{error}"
+        );
     }
 }

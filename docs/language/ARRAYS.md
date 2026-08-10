@@ -86,7 +86,7 @@ Legal element types are:
 `unit`, bare interface and `Obj` views, aliases, and function types are not
 array element types. Optional inline arrays are valid elements and default to
 outer absence. The
-[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
+[compositional optional profile](OPTIONAL_VALUES.md#compositional-optional-types)
 defines `T[]?` and `(T[])?` as equivalent spellings for that tagged owning
 value. This does not change `(shared T[])?` and its
 `shared? T[]` shorthand, whose absence belongs to the shared owner rather than
@@ -763,9 +763,9 @@ array ownership combinations are compile-time errors.
 
 ## Deferred extensions
 
-The frozen
-[compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
-specifies inline optional arrays as `T[]?`, distinct from both `T?[]` and
+The implemented
+[compositional optional profile](OPTIONAL_VALUES.md#compositional-optional-types)
+defines inline optional arrays as `T[]?`, distinct from both `T?[]` and
 `(shared T[])?` (`shared? T[]` shorthand). Optional arrays reuse ordinary
 array lifecycle across fields, statics, internal calls and dispatch,
 initializer overloads, checked aliases, and array elements.

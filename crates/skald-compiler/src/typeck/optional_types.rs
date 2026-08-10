@@ -16,7 +16,7 @@ use crate::{
 use super::{capabilities::CopyCapabilities, program::lower_type};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum LegacyOptionalKind {
+pub(super) enum OptionalPayloadKind {
     Primitive(HirPrimitiveType),
     Class(crate::identity::ClassId),
     Shared(HirSharedTarget),
@@ -24,20 +24,20 @@ pub(super) enum LegacyOptionalKind {
     Array(crate::identity::ArrayTypeId),
 }
 
-pub(super) fn legacy_kind(
+pub(super) fn classify_payload(
     program: &ResolvedProgram,
     optional: OptionalTypeId,
-) -> Option<LegacyOptionalKind> {
-    match payload_kind(program, optional) {
-        ResolvedTypeKind::I64 => Some(LegacyOptionalKind::Primitive(HirPrimitiveType::I64)),
-        ResolvedTypeKind::U64 => Some(LegacyOptionalKind::Primitive(HirPrimitiveType::U64)),
-        ResolvedTypeKind::U8 => Some(LegacyOptionalKind::Primitive(HirPrimitiveType::U8)),
-        ResolvedTypeKind::F64 => Some(LegacyOptionalKind::Primitive(HirPrimitiveType::F64)),
-        ResolvedTypeKind::Bool => Some(LegacyOptionalKind::Primitive(HirPrimitiveType::Bool)),
-        ResolvedTypeKind::Class(class) => Some(LegacyOptionalKind::Class(class)),
-        ResolvedTypeKind::Shared(target) => Some(LegacyOptionalKind::Shared(lower_shared(target))),
-        ResolvedTypeKind::Optional(nested) => Some(LegacyOptionalKind::Nested(nested)),
-        ResolvedTypeKind::Array(array) => Some(LegacyOptionalKind::Array(array)),
+) -> Option<OptionalPayloadKind> {
+    match resolved_payload_kind(program, optional) {
+        ResolvedTypeKind::I64 => Some(OptionalPayloadKind::Primitive(HirPrimitiveType::I64)),
+        ResolvedTypeKind::U64 => Some(OptionalPayloadKind::Primitive(HirPrimitiveType::U64)),
+        ResolvedTypeKind::U8 => Some(OptionalPayloadKind::Primitive(HirPrimitiveType::U8)),
+        ResolvedTypeKind::F64 => Some(OptionalPayloadKind::Primitive(HirPrimitiveType::F64)),
+        ResolvedTypeKind::Bool => Some(OptionalPayloadKind::Primitive(HirPrimitiveType::Bool)),
+        ResolvedTypeKind::Class(class) => Some(OptionalPayloadKind::Class(class)),
+        ResolvedTypeKind::Shared(target) => Some(OptionalPayloadKind::Shared(lower_shared(target))),
+        ResolvedTypeKind::Optional(nested) => Some(OptionalPayloadKind::Nested(nested)),
+        ResolvedTypeKind::Array(array) => Some(OptionalPayloadKind::Array(array)),
         _ => None,
     }
 }
@@ -82,7 +82,7 @@ fn lower_optional_type(
     previous: &[HirOptionalType],
     id: OptionalTypeId,
 ) -> HirOptionalType {
-    let payload = payload_kind(program, id);
+    let payload = resolved_payload_kind(program, id);
     let (storage, representation, injection, copy, assignment, destruction, unwrap, access) =
         match payload {
             ResolvedTypeKind::I64
@@ -216,7 +216,7 @@ fn lower_optional_type(
     }
 }
 
-fn payload_kind(program: &ResolvedProgram, optional: OptionalTypeId) -> ResolvedTypeKind {
+fn resolved_payload_kind(program: &ResolvedProgram, optional: OptionalTypeId) -> ResolvedTypeKind {
     program
         .optional_types
         .get(optional)

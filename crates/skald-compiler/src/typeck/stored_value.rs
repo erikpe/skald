@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     function::{is_ungrouped_object_call, CallableChecker},
-    optional_types::LegacyOptionalKind,
+    optional_types::OptionalPayloadKind,
 };
 
 impl CallableChecker<'_, '_> {
@@ -34,19 +34,19 @@ impl CallableChecker<'_, '_> {
                 .optional_kind(expected)
                 .expect("enabled optional types must have legacy metadata")
             {
-                LegacyOptionalKind::Primitive(payload) => self
+                OptionalPayloadKind::Primitive(payload) => self
                     .check_optional_source(source, payload, context)
                     .map(|source| HirStoredValueInitialization::OptionalPrimitive {
                         source,
                         payload,
                     }),
-                LegacyOptionalKind::Class(class) => self
+                OptionalPayloadKind::Class(class) => self
                     .check_optional_class_destination_initialization(class, source, context)
                     .map(HirStoredValueInitialization::OptionalClass),
-                LegacyOptionalKind::Shared(target) => self
+                OptionalPayloadKind::Shared(target) => self
                     .check_optional_shared_initialize(target, source, context)
                     .map(HirStoredValueInitialization::OptionalShared),
-                LegacyOptionalKind::Nested(_) | LegacyOptionalKind::Array(_) => {
+                OptionalPayloadKind::Nested(_) | OptionalPayloadKind::Array(_) => {
                     let Type::Optional(optional) = expected else {
                         unreachable!()
                     };

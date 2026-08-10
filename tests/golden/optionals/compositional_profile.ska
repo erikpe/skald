@@ -1,0 +1,22 @@
+fn read_deep(value: i64?????) -> i64 {
+    return value!!!!!;
+}
+
+fn mutate(mut ref values: i64[]) -> unit {
+    values[0] = 2;
+}
+
+fn main() -> i64 {
+    var empty: i64[]? = some(i64[]{});
+    if (empty is none) {
+        return 1;
+    }
+
+    var maybe_values: i64[]? = some(i64[]{0});
+    mutate(maybe_values!);
+    var values: i64[]?[] = i64[]?[]{none, maybe_values};
+    var selected: i64[]? = values[1];
+    maybe_values = none;
+
+    return read_deep(some(some(some(some(some(40)))))) + selected![0];
+}

@@ -124,6 +124,25 @@ fn parses_the_compositional_type_precedence_matrix() {
 }
 
 #[test]
+fn parses_deep_grouping_and_hostile_but_valid_optional_trivia() {
+    let (_, output) = parse_text(concat!(
+        "class Thing { init() {} }\n",
+        "fn inspect(\n",
+        "  nested: ((((i64?)?)[])?)?,\n",
+        "  owner: ((shared\n",
+        "    ? Thing))??,\n",
+        "  arrays: (((Thing[])?)[])?\n",
+        ") -> unit {}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_ast(&output.ast);
+    assert_eq!(dump.matches("Type Optional").count(), 9, "{dump}");
+    assert!(dump.contains("Type Optional SharedShorthand"), "{dump}");
+    assert!(dump.contains("Type Array"), "{dump}");
+}
+
+#[test]
 fn none_is_reserved_while_some_remains_an_ordinary_name_outside_presence_tests() {
     let (_, valid) = parse_text(
         "fn some() -> i64 { return 1; }\n\
@@ -206,6 +225,26 @@ fn excessive_postfix_unwrap_nesting_is_bounded_and_recovers() {
         "fn broken(value: i64?) -> i64 {{ return value{}; }}\n\
          fn recovered() -> i64 {{ return 0; }}",
         "!".repeat(MAX_SYNTAX_NESTING)
+    );
+    let (_, output) = parse_text(&source);
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == EXCESSIVE_NESTING)
+            .count(),
+        1
+    );
+    assert_eq!(function(&output.ast, 0).name.text, "recovered");
+}
+
+#[test]
+fn excessive_optional_type_nesting_is_bounded_and_recovers() {
+    let source = format!(
+        "fn broken(value: i64{}) -> unit {{}}\n\
+         fn recovered() -> i64 {{ return 0; }}",
+        "?".repeat(MAX_SYNTAX_NESTING)
     );
     let (_, output) = parse_text(&source);
 

@@ -271,12 +271,12 @@ fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
         | Type::Interface(_)
         | Type::Array(_) => true,
         Type::Optional(optional) => matches!(
-            super::optional_types::legacy_kind(program, optional),
+            super::optional_types::classify_payload(program, optional),
             Some(
-                super::optional_types::LegacyOptionalKind::Primitive(_)
-                    | super::optional_types::LegacyOptionalKind::Class(_)
-                    | super::optional_types::LegacyOptionalKind::Nested(_)
-                    | super::optional_types::LegacyOptionalKind::Array(_)
+                super::optional_types::OptionalPayloadKind::Primitive(_)
+                    | super::optional_types::OptionalPayloadKind::Class(_)
+                    | super::optional_types::OptionalPayloadKind::Nested(_)
+                    | super::optional_types::OptionalPayloadKind::Array(_)
             )
         ),
         Type::Unit | Type::Shared(_) => false,

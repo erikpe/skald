@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO8 is complete and CO9 is next.
+Status: complete.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -105,7 +105,7 @@ pointee is an optional value.
 - [x] CO6 — Complete nested-optional access and callable integration
 - [x] CO7 — Execute optional inline arrays
 - [x] CO8 — Integrate optional arrays across stored and aggregate boundaries
-- [ ] CO9 — Harden and publish compositional optionals
+- [x] CO9 — Harden and publish compositional optionals
 
 ## PR-sized implementation sequence
 
@@ -411,25 +411,25 @@ shared-owner spelling acquires an unintended identity or conversion.
 **Purpose:** Close cross-feature gaps, prove robustness, and promote the
 bounded compositional optional profile to an implemented contract.
 
-- [ ] Complete syntax, identity, eligibility, conversion, overload, lifecycle,
+- [x] Complete syntax, identity, eligibility, conversion, overload, lifecycle,
       alias, array, static, callable, ABI, failure, and diagnostic matrices
       across representative and stress nesting depths.
-- [ ] Add hostile punctuation/grouping, excessive-depth, layout-overflow,
+- [x] Add hostile punctuation/grouping, excessive-depth, layout-overflow,
       malformed-MIR, generated-helper, cross-module, independent-process
       determinism, and native-failure coverage.
-- [ ] Audit optional, array, lifecycle, verifier, and backend modules by
+- [x] Audit optional, array, lifecycle, verifier, and backend modules by
       responsibility; keep recursive identity, capability planning, storage
       state, guards, ownership, and target layout behind cohesive facades.
-- [ ] Audit living language/compiler/runtime/debugging/testing documentation,
+- [x] Audit living language/compiler/runtime/debugging/testing documentation,
       update the implemented grammar and status matrix, and remove stale flat
       optional exclusions and rollout vocabulary.
-- [ ] Prove `shared T?` and `shared? T?` remain focused shared-box exclusions,
+- [x] Prove `shared T?` and `shared? T?` remain focused shared-box exclusions,
       and prove all other non-goals remain rejected without provisional box
       IR, metadata, or backend hooks.
-- [ ] Record lower-priority discoveries in a separately indexed document
+- [x] Record lower-priority discoveries in a separately indexed document
       without expanding this roadmap; resolve every high-priority correctness
       or maintainability finding before closure.
-- [ ] Remove roadmap task codes from living code, tests, dumps, diagnostics,
+- [x] Remove roadmap task codes from living code, tests, dumps, diagnostics,
       and non-roadmap documentation, then archive the completed roadmap and
       update the active and archive indexes.
 

@@ -17,7 +17,7 @@ use crate::{
 
 use super::{
     expression::is_call_through_groups, function::CallableChecker,
-    optional_types::LegacyOptionalKind, program::TYPE_MISMATCH,
+    optional_types::OptionalPayloadKind, program::TYPE_MISMATCH,
 };
 
 impl CallableChecker<'_, '_> {
@@ -250,7 +250,7 @@ impl CallableChecker<'_, '_> {
         }
         if is_call_through_groups(source) {
             let expression = self.check_expression(source)?;
-            if let Some(LegacyOptionalKind::Shared(actual)) = self.optional_kind(expression.ty) {
+            if let Some(OptionalPayloadKind::Shared(actual)) = self.optional_kind(expression.ty) {
                 if super::shared::target_accepts(self.program, target, actual) {
                     return Some(HirOptionalSharedSource::Produced(Box::new(expression)));
                 }
@@ -283,7 +283,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirOptionalSharedPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                let Some(LegacyOptionalKind::Shared(target)) =
+                let Some(OptionalPayloadKind::Shared(target)) =
                     self.optional_kind(self.binding_type(binding.binding))
                 else {
                     return None;
@@ -302,7 +302,7 @@ impl CallableChecker<'_, '_> {
                 }),
             ResolvedExpression::StaticFieldAccess(access) => {
                 let (place, ty) = self.check_static_place(access.field, access.span)?;
-                let Some(LegacyOptionalKind::Shared(target)) = self.optional_kind(ty) else {
+                let Some(OptionalPayloadKind::Shared(target)) = self.optional_kind(ty) else {
                     return None;
                 };
                 Some(HirOptionalSharedPlace {
@@ -313,7 +313,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
-                let Some(LegacyOptionalKind::Shared(target)) = self.optional_kind(expression.ty)
+                let Some(OptionalPayloadKind::Shared(target)) = self.optional_kind(expression.ty)
                 else {
                     return None;
                 };
@@ -328,7 +328,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayProjection(_) => {
                 let expression = self.check_expression(expression)?;
-                let Some(LegacyOptionalKind::Shared(target)) = self.optional_kind(expression.ty)
+                let Some(OptionalPayloadKind::Shared(target)) = self.optional_kind(expression.ty)
                 else {
                     return None;
                 };
@@ -445,7 +445,7 @@ impl CallableChecker<'_, '_> {
         }
         if is_call_through_groups(source) {
             let expression = self.check_expression(source)?;
-            if let Some(LegacyOptionalKind::Class(actual)) = self.optional_kind(expression.ty) {
+            if let Some(OptionalPayloadKind::Class(actual)) = self.optional_kind(expression.ty) {
                 if actual == class {
                     return Some(HirClassOptionalSource::Produced(Box::new(expression)));
                 }
@@ -493,7 +493,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirClassOptionalPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                let Some(LegacyOptionalKind::Class(class)) =
+                let Some(OptionalPayloadKind::Class(class)) =
                     self.optional_kind(self.binding_type(binding.binding))
                 else {
                     return None;
@@ -512,7 +512,7 @@ impl CallableChecker<'_, '_> {
                 }),
             ResolvedExpression::StaticFieldAccess(access) => {
                 let (place, ty) = self.check_static_place(access.field, access.span)?;
-                let Some(LegacyOptionalKind::Class(class)) = self.optional_kind(ty) else {
+                let Some(OptionalPayloadKind::Class(class)) = self.optional_kind(ty) else {
                     return None;
                 };
                 Some(HirClassOptionalPlace {
@@ -523,7 +523,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
-                let Some(LegacyOptionalKind::Class(class)) = self.optional_kind(expression.ty)
+                let Some(OptionalPayloadKind::Class(class)) = self.optional_kind(expression.ty)
                 else {
                     return None;
                 };
@@ -538,7 +538,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayProjection(_) => {
                 let expression = self.check_expression(expression)?;
-                let Some(LegacyOptionalKind::Class(class)) = self.optional_kind(expression.ty)
+                let Some(OptionalPayloadKind::Class(class)) = self.optional_kind(expression.ty)
                 else {
                     return None;
                 };
@@ -590,7 +590,7 @@ impl CallableChecker<'_, '_> {
         }
 
         let value = self.check_expression(source)?;
-        if self.optional_kind(value.ty) == Some(LegacyOptionalKind::Primitive(payload)) {
+        if self.optional_kind(value.ty) == Some(OptionalPayloadKind::Primitive(payload)) {
             return Some(HirOptionalSource::Produced(Box::new(value)));
         }
         if value.ty != payload.value_type() {
@@ -729,7 +729,7 @@ impl CallableChecker<'_, '_> {
         let payload = match &source {
             HirOptionalOperand::Place(place) => place.payload,
             HirOptionalOperand::Produced(expression) => {
-                let Some(LegacyOptionalKind::Primitive(payload)) =
+                let Some(OptionalPayloadKind::Primitive(payload)) =
                     self.optional_kind(expression.ty)
                 else {
                     unreachable!("primitive optional operand must retain primitive metadata")
@@ -801,7 +801,7 @@ impl CallableChecker<'_, '_> {
         }
         if matches!(
             self.optional_kind(self.static_expression_type(expression)),
-            Some(LegacyOptionalKind::Nested(_) | LegacyOptionalKind::Array(_))
+            Some(OptionalPayloadKind::Nested(_) | OptionalPayloadKind::Array(_))
         ) {
             if let Some(place) = self.optional_value_place(expression) {
                 return Some(HirOptionalOperand::NestedPlace(place));
@@ -811,19 +811,19 @@ impl CallableChecker<'_, '_> {
             if let Some(value) = self.check_expression(expression) {
                 if let Some(kind) = self.optional_kind(value.ty) {
                     return Some(match kind {
-                        LegacyOptionalKind::Primitive(_) => {
+                        OptionalPayloadKind::Primitive(_) => {
                             HirOptionalOperand::Produced(Box::new(value))
                         }
-                        LegacyOptionalKind::Class(_) => {
+                        OptionalPayloadKind::Class(_) => {
                             HirOptionalOperand::ClassProduced(Box::new(value))
                         }
-                        LegacyOptionalKind::Shared(_) => {
+                        OptionalPayloadKind::Shared(_) => {
                             HirOptionalOperand::SharedProduced(Box::new(value))
                         }
-                        LegacyOptionalKind::Nested(_) => {
+                        OptionalPayloadKind::Nested(_) => {
                             HirOptionalOperand::NestedProduced(Box::new(value))
                         }
-                        LegacyOptionalKind::Array(_) => {
+                        OptionalPayloadKind::Array(_) => {
                             HirOptionalOperand::NestedProduced(Box::new(value))
                         }
                     });
@@ -858,7 +858,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirOptionalPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                let Some(LegacyOptionalKind::Primitive(payload)) =
+                let Some(OptionalPayloadKind::Primitive(payload)) =
                     self.optional_kind(self.binding_type(binding.binding))
                 else {
                     return None;
@@ -878,7 +878,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::StaticFieldAccess(access) => {
                 let (place, ty) = self.check_static_place(access.field, access.span)?;
-                let Some(LegacyOptionalKind::Primitive(payload)) = self.optional_kind(ty) else {
+                let Some(OptionalPayloadKind::Primitive(payload)) = self.optional_kind(ty) else {
                     return None;
                 };
                 Some(HirOptionalPlace {
@@ -889,7 +889,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 let expression = self.check_field_read(access)?;
-                let Some(LegacyOptionalKind::Primitive(payload)) =
+                let Some(OptionalPayloadKind::Primitive(payload)) =
                     self.optional_kind(expression.ty)
                 else {
                     return None;
@@ -905,7 +905,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayProjection(_) => {
                 let expression = self.check_expression(expression)?;
-                let Some(LegacyOptionalKind::Primitive(payload)) =
+                let Some(OptionalPayloadKind::Primitive(payload)) =
                     self.optional_kind(expression.ty)
                 else {
                     return None;

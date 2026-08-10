@@ -161,16 +161,16 @@ fn lower_class_declaration(
             Type::Class(_) => Some(HirDestructionStep::Field(field.id)),
             Type::Shared(_) => Some(HirDestructionStep::SharedField(field.id)),
             Type::Optional(optional) => {
-                match super::super::optional_types::legacy_kind(program, optional) {
-                    Some(super::super::optional_types::LegacyOptionalKind::Shared(_)) => {
+                match super::super::optional_types::classify_payload(program, optional) {
+                    Some(super::super::optional_types::OptionalPayloadKind::Shared(_)) => {
                         Some(HirDestructionStep::OptionalSharedField(field.id))
                     }
-                    Some(super::super::optional_types::LegacyOptionalKind::Class(_)) => {
+                    Some(super::super::optional_types::OptionalPayloadKind::Class(_)) => {
                         Some(HirDestructionStep::OptionalClassField(field.id))
                     }
                     Some(
-                        super::super::optional_types::LegacyOptionalKind::Nested(_)
-                        | super::super::optional_types::LegacyOptionalKind::Array(_),
+                        super::super::optional_types::OptionalPayloadKind::Nested(_)
+                        | super::super::optional_types::OptionalPayloadKind::Array(_),
                     ) => Some(HirDestructionStep::OptionalField {
                         field: field.id,
                         optional,

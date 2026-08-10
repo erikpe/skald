@@ -267,7 +267,7 @@ impl CallableChecker<'_, '_> {
         if matches!(expected, Type::Optional(_))
             && !matches!(
                 self.optional_kind(expected),
-                Some(super::super::optional_types::LegacyOptionalKind::Shared(_))
+                Some(super::super::optional_types::OptionalPayloadKind::Shared(_))
             )
         {
             return self.check_optional_alias_argument(expression, expected, parameter);

@@ -1,6 +1,7 @@
 # Optional-value fixtures
 
-`values.golden.toml` owns primitive and alias presence, unwrap, conversion,
+`values.golden.toml` owns compositional nesting, optional arrays, checked
+array-payload aliases, primitive and alias presence, unwrap, conversion,
 containment, syntax, and signature behavior. `lifecycle.golden.toml` owns
 inline and shared payload lifecycle, canonical and shorthand optional-owner
 equivalence, direct-local optional shared-owner transfer, produced optional

@@ -233,7 +233,7 @@ impl CallableChecker<'_, '_> {
                 let target = match &operand {
                     crate::hir::HirOptionalOperand::SharedPlace(place) => place.target,
                     crate::hir::HirOptionalOperand::SharedProduced(expression) => {
-                        let Some(super::optional_types::LegacyOptionalKind::Shared(target)) =
+                        let Some(super::optional_types::OptionalPayloadKind::Shared(target)) =
                             self.optional_kind(expression.ty)
                         else {
                             unreachable!("shared optional operand must retain shared metadata")
@@ -539,7 +539,9 @@ impl CallableChecker<'_, '_> {
         let resolved = match expression {
             ResolvedExpression::Binding(binding) => {
                 return match self.optional_kind(self.binding_type(binding.binding)) {
-                    Some(super::optional_types::LegacyOptionalKind::Shared(target)) => Some(target),
+                    Some(super::optional_types::OptionalPayloadKind::Shared(target)) => {
+                        Some(target)
+                    }
                     _ => None,
                 };
             }

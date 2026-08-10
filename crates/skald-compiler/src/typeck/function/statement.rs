@@ -184,7 +184,7 @@ impl CallableChecker<'_, '_> {
                 .optional_kind(ty)
                 .expect("enabled optional static must have legacy metadata")
             {
-                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                super::super::optional_types::OptionalPayloadKind::Primitive(payload) => self
                     .check_optional_source(&assignment.value, payload, "optional static assignment")
                     .map(|source| {
                         HirStatement::OptionalAssignment(HirOptionalAssignment {
@@ -199,7 +199,7 @@ impl CallableChecker<'_, '_> {
                             span: assignment.span,
                         })
                     }),
-                super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                super::super::optional_types::OptionalPayloadKind::Class(class) => self
                     .check_class_optional_assignment(
                         crate::hir::HirClassOptionalPlace {
                             storage: HirOptionalStorage::Static(place),
@@ -210,7 +210,7 @@ impl CallableChecker<'_, '_> {
                         "class optional static assignment",
                     )
                     .map(HirStatement::ClassOptionalAssignment),
-                super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                super::super::optional_types::OptionalPayloadKind::Shared(target) => self
                     .check_optional_shared_assignment(
                         crate::hir::HirOptionalSharedPlace {
                             storage: HirOptionalStorage::Static(place),
@@ -221,8 +221,8 @@ impl CallableChecker<'_, '_> {
                         "optional shared static assignment",
                     )
                     .map(HirStatement::OptionalSharedAssignment),
-                super::super::optional_types::LegacyOptionalKind::Nested(_)
-                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                super::super::optional_types::OptionalPayloadKind::Nested(_)
+                | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                     let Type::Optional(optional) = ty else {
                         unreachable!()
                     };
@@ -307,7 +307,7 @@ impl CallableChecker<'_, '_> {
             .optional_kind(self.binding_type(assignment.destination))
             .expect("optional assignment must retain supported metadata")
         {
-            super::super::optional_types::LegacyOptionalKind::Primitive(payload) => {
+            super::super::optional_types::OptionalPayloadKind::Primitive(payload) => {
                 let source = self.check_optional_source(
                     &assignment.source,
                     payload,
@@ -327,7 +327,7 @@ impl CallableChecker<'_, '_> {
                     })
                 }))
             }
-            super::super::optional_types::LegacyOptionalKind::Class(class) => {
+            super::super::optional_types::OptionalPayloadKind::Class(class) => {
                 let destination = crate::hir::HirClassOptionalPlace {
                     storage: HirOptionalStorage::Binding(assignment.destination),
                     class,
@@ -340,7 +340,7 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::ClassOptionalAssignment))
             }
-            super::super::optional_types::LegacyOptionalKind::Shared(target) => {
+            super::super::optional_types::OptionalPayloadKind::Shared(target) => {
                 let destination = crate::hir::HirOptionalSharedPlace {
                     storage: HirOptionalStorage::Binding(assignment.destination),
                     target,
@@ -353,8 +353,8 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::OptionalSharedAssignment))
             }
-            super::super::optional_types::LegacyOptionalKind::Nested(_)
-            | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+            super::super::optional_types::OptionalPayloadKind::Nested(_)
+            | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                 let Type::Optional(optional) = self.binding_type(assignment.destination) else {
                     unreachable!()
                 };
@@ -448,29 +448,29 @@ impl CallableChecker<'_, '_> {
                 .optional_kind(expected)
                 .expect("enabled optional local must have legacy metadata")
             {
-                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                super::super::optional_types::OptionalPayloadKind::Primitive(payload) => self
                     .check_optional_source(
                         &local.initializer,
                         payload,
                         "primitive optional local initializer",
                     )
                     .map(HirLocalInitializer::Optional),
-                super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                super::super::optional_types::OptionalPayloadKind::Class(class) => self
                     .check_class_optional_initialize(
                         class,
                         &local.initializer,
                         "class optional local initializer",
                     )
                     .map(HirLocalInitializer::ClassOptional),
-                super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                super::super::optional_types::OptionalPayloadKind::Shared(target) => self
                     .check_optional_shared_initialize(
                         target,
                         &local.initializer,
                         "optional shared local initializer",
                     )
                     .map(HirLocalInitializer::OptionalShared),
-                super::super::optional_types::LegacyOptionalKind::Nested(_)
-                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                super::super::optional_types::OptionalPayloadKind::Nested(_)
+                | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                     let Type::Optional(optional) = expected else {
                         unreachable!()
                     };
@@ -697,17 +697,17 @@ impl CallableChecker<'_, '_> {
             .optional_kind(ty)
             .expect("enabled optional result must have legacy metadata")
         {
-            super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+            super::super::optional_types::OptionalPayloadKind::Primitive(payload) => self
                 .check_optional_source(value, payload, "primitive optional return")
                 .map(HirReturnValue::Optional),
-            super::super::optional_types::LegacyOptionalKind::Class(class) => self
+            super::super::optional_types::OptionalPayloadKind::Class(class) => self
                 .check_class_optional_initialize(class, value, "class optional return")
                 .map(HirReturnValue::ClassOptional),
-            super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+            super::super::optional_types::OptionalPayloadKind::Shared(target) => self
                 .check_optional_shared_initialize(target, value, "optional shared return")
                 .map(HirReturnValue::OptionalShared),
-            super::super::optional_types::LegacyOptionalKind::Nested(_)
-            | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+            super::super::optional_types::OptionalPayloadKind::Nested(_)
+            | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                 let Type::Optional(optional) = ty else {
                     unreachable!()
                 };

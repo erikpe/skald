@@ -448,8 +448,8 @@ when nested logical selections establish several owners before cleanup.
 
 ## Compositional optional boundary
 
-The frozen
-[compositional optional compiler direction](OPTIONAL_VALUES.md#frozen-compositional-implementation-direction)
+The implemented
+[compositional optional compiler contract](OPTIONAL_VALUES.md#compositional-optional-implementation)
 normalizes `(shared T)?` and its `shared? T` shorthand as
 `Optional<Shared<T>>`. Target-independent optional operations conditionally
 invoke the ordinary copy, adopt, release, anchor, metadata, and finalization
@@ -461,7 +461,7 @@ metadata. In particular, `shared T?` would require
 `Shared<Optional<T>>`: a box allocation with its own initialization,
 publication, metadata, finalizer, pointee projection, and mutation rules.
 `shared T?` and the derived `shared? T?` remain rejected, and no phase reserves
-provisional box IR or target hooks during the compositional optional roadmap.
+provisional box IR or target hooks.
 
 ## Minimal C runtime ABI
 

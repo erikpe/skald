@@ -46,11 +46,11 @@ copy/adopt/move and conditional release, field and callable ownership,
 self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,
 ABI register/stack pressure, absent-access failure, and exactly-once
 last-owner finalization.
-The compositional optional extension's recursive-syntax, canonical-owner, and
+The compositional optional profile's recursive-syntax, canonical-owner, and
 optional-array coverage, plus its identity, lifecycle, MIR,
 verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
-[optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#frozen-extension-test-matrix).
+[optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#compositional-test-matrix).
 Focused compile failures remain for excluded optional payload categories and
 shared boxes.
 Shared-verifier tests exercise its private propagation, transition,
@@ -689,8 +689,8 @@ The implemented
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)
 requires coverage at every owning layer. Current lexer and parser tests own
 tokens, contextual words, spans, precedence, bounded nesting, reserved forms,
-and recovery. Current resolution tests own flat target identities and
-source-shaped expression nodes. Inline-optional type-check and HIR tests own
+and recovery. Current resolution tests own recursive interned identities and
+source-shaped expression nodes. Optional type-check and HIR tests own
 expected-type-directed `none`, exact injection, initializer ranking, fields,
 calls/results, exact signatures, copy, assignment, presence, unwrap,
 truthiness rejection, external rejection, checked class payload consumers,

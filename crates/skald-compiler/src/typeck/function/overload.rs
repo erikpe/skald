@@ -678,16 +678,16 @@ impl CallableChecker<'_, '_> {
         {
             return true;
         }
-        let Some(super::super::optional_types::LegacyOptionalKind::Shared(expected_target)) =
-            super::super::optional_types::legacy_kind(self.program, expected)
+        let Some(super::super::optional_types::OptionalPayloadKind::Shared(expected_target)) =
+            super::super::optional_types::classify_payload(self.program, expected)
         else {
             return false;
         };
         let actual_target = match actual {
             Type::Shared(target) => Some(target),
             Type::Optional(actual) => {
-                match super::super::optional_types::legacy_kind(self.program, actual) {
-                    Some(super::super::optional_types::LegacyOptionalKind::Shared(target)) => {
+                match super::super::optional_types::classify_payload(self.program, actual) {
+                    Some(super::super::optional_types::OptionalPayloadKind::Shared(target)) => {
                         Some(target)
                     }
                     _ => None,

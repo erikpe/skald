@@ -763,14 +763,12 @@ require no grammar change.
 
 Optional type syntax crosses parsing as a recursive source-shaped node that
 retains grouping, punctuation, and `shared?` shorthand provenance. Resolution
-normalizes executable primitive, exact-class, and shared-owner optionals to the
-existing flat target identities and rejects deferred recursive payloads before
-HIR. Primitive and
-exact-class inline optionals cross explicit HIR, MIR, verification, x86-64
-layout, and execution, including bounded checked class payload views. Optional
-shared owners and aliases to supported inline optional containers cross the
-same explicit phase boundary. The complete implemented semantics belong
-to [Optional Values](OPTIONAL_VALUES.md).
+interns deterministic recursive optional identities for eligible primitive,
+exact-class, shared-owner, optional, and inline-array payloads. These types
+cross explicit HIR, MIR, verification, x86-64 layout, and execution, including
+bounded checked payload views and aliases to supported inline optional
+containers. The complete implemented semantics belong to
+[Optional Values](OPTIONAL_VALUES.md).
 
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with

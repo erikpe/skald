@@ -243,25 +243,25 @@ impl CallableChecker<'_, '_> {
                 .optional_kind(element)
                 .expect("enabled optional array elements must have legacy metadata")
             {
-                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                super::super::optional_types::OptionalPayloadKind::Primitive(payload) => self
                     .check_optional_source(source, payload, "optional array element assignment")
                     .map(|source| HirArrayElementValue::Optional { source, payload }),
-                super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                super::super::optional_types::OptionalPayloadKind::Class(class) => self
                     .check_class_optional_initialize(
                         class,
                         source,
                         "optional class element assignment",
                     )
                     .map(HirArrayElementValue::ClassOptional),
-                super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                super::super::optional_types::OptionalPayloadKind::Shared(target) => self
                     .check_optional_shared_initialize(
                         target,
                         source,
                         "optional shared array element assignment",
                     )
                     .map(HirArrayElementValue::OptionalShared),
-                super::super::optional_types::LegacyOptionalKind::Nested(_)
-                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                super::super::optional_types::OptionalPayloadKind::Nested(_)
+                | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                     let Type::Optional(optional) = element else {
                         unreachable!()
                     };

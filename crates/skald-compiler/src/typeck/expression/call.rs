@@ -377,7 +377,7 @@ impl CallableChecker<'_, '_> {
                 }
                 if let Some(optional) = self.optional_kind(parameter_type) {
                     return match optional {
-                        super::super::optional_types::LegacyOptionalKind::Primitive(payload) => {
+                        super::super::optional_types::OptionalPayloadKind::Primitive(payload) => {
                             self.check_optional_source(
                                 source,
                                 payload,
@@ -385,22 +385,22 @@ impl CallableChecker<'_, '_> {
                             )
                             .map(|source| HirCallArgument::Optional { source, payload })
                         }
-                        super::super::optional_types::LegacyOptionalKind::Class(class) => self
+                        super::super::optional_types::OptionalPayloadKind::Class(class) => self
                             .check_class_optional_initialize(
                                 class,
                                 source,
                                 "class optional argument",
                             )
                             .map(HirCallArgument::ClassOptional),
-                        super::super::optional_types::LegacyOptionalKind::Shared(target) => self
+                        super::super::optional_types::OptionalPayloadKind::Shared(target) => self
                             .check_optional_shared_initialize(
                                 target,
                                 source,
                                 "optional shared argument",
                             )
                             .map(HirCallArgument::OptionalShared),
-                        super::super::optional_types::LegacyOptionalKind::Nested(_)
-                        | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                        super::super::optional_types::OptionalPayloadKind::Nested(_)
+                        | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                             let Type::Optional(optional) = parameter_type else {
                                 unreachable!()
                             };

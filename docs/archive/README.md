@@ -76,6 +76,7 @@ Archived plans:
 - [Spec-driven parallel golden test runner](GOLDEN_TEST_RUNNER_ROADMAP.md)
 - [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md)
 - [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_ROADMAP.md)
+- [Compositional optional types](COMPOSITIONAL_OPTIONAL_TYPES_ROADMAP.md)
 
 Resolved string-design inputs:
 

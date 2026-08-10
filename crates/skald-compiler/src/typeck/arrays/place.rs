@@ -184,7 +184,7 @@ impl CallableChecker<'_, '_> {
                     if matches!(checked.ty, Type::Shared(HirSharedTarget::Array(_)))
                         || matches!(
                             self.optional_kind(checked.ty),
-                            Some(super::super::optional_types::LegacyOptionalKind::Shared(
+                            Some(super::super::optional_types::OptionalPayloadKind::Shared(
                                 HirSharedTarget::Array(_)
                             ))
                         )

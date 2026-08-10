@@ -91,7 +91,7 @@ impl CallableChecker<'_, '_> {
                 .optional_kind(ty)
                 .expect("enabled optional field must have legacy metadata")
             {
-                super::super::optional_types::LegacyOptionalKind::Shared(shared_target) => {
+                super::super::optional_types::OptionalPayloadKind::Shared(shared_target) => {
                     let destination = crate::hir::HirOptionalSharedPlace {
                         storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
                         target: shared_target,
@@ -122,7 +122,7 @@ impl CallableChecker<'_, '_> {
                         .map(HirStatement::OptionalSharedAssignment)
                     }
                 }
-                super::super::optional_types::LegacyOptionalKind::Primitive(payload) => self
+                super::super::optional_types::OptionalPayloadKind::Primitive(payload) => self
                     .check_optional_source(
                         &assignment.value,
                         payload,
@@ -151,7 +151,7 @@ impl CallableChecker<'_, '_> {
                             span: assignment.span,
                         })
                     }),
-                super::super::optional_types::LegacyOptionalKind::Class(class) => {
+                super::super::optional_types::OptionalPayloadKind::Class(class) => {
                     let destination = crate::hir::HirClassOptionalPlace {
                         storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
                         class,
@@ -184,8 +184,8 @@ impl CallableChecker<'_, '_> {
                         .map(HirStatement::ClassOptionalAssignment)
                     }
                 }
-                super::super::optional_types::LegacyOptionalKind::Nested(_)
-                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
+                super::super::optional_types::OptionalPayloadKind::Nested(_)
+                | super::super::optional_types::OptionalPayloadKind::Array(_) => {
                     let Type::Optional(optional) = target.ty else {
                         unreachable!()
                     };

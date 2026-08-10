@@ -97,11 +97,12 @@ shared owner whose target is an exact array identity; the latter is an inline
 array identity whose element is a shared owner. `(shared T[])?` wraps shared
 array ownership in absence, with `shared? T[]` as exact source shorthand; no
 phase represents it as an inline optional array payload. The
-[compositional optional compiler direction](OPTIONAL_VALUES.md#frozen-compositional-implementation-direction)
+[compositional optional implementation](OPTIONAL_VALUES.md#compositional-optional-implementation)
 direction represents `T[]?` as an optional identity whose payload is an array.
 Core optional-array HIR, MIR, verification, layout, and x86-64 lowering use
 this canonical inline array identity and reuse this table's lifecycle plans.
-Aggregate and alias positions remain gated before HIR.
+Optional arrays use the same identity and lifecycle plans in aggregate,
+dispatch, array-element, static, and checked-alias positions.
 
 Array types do not enter class hierarchy, interface conformance, `Obj`,
 dynamic metadata relation, cast, or type-test tables. Compatibility is exact
