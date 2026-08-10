@@ -10,7 +10,14 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently only planned.
+- [Compositional Optional Types](COMPOSITIONAL_OPTIONAL_TYPES_ROADMAP.md) —
+  **planned**. Makes `(shared T)?` canonical with `shared? T` as an exact
+  shorthand, replaces flat optional families with recursive identities and
+  lifecycle IR, and implements arbitrary nesting plus optional inline arrays.
+  Shared boxes containing optionals remain a separate future roadmap. CO0,
+  freezing the source and compiler contracts, is next. The work builds on the
+  implemented optional, array, shared-ownership, static-field, and verified
+  cleanup contracts and has no active-roadmap dependency.
 
 ## Design proposals
 
