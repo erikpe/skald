@@ -704,14 +704,12 @@ impl CallableChecker<'_, '_> {
                 .check_optional_shared_initialize(target, value, "optional shared return")
                 .map(HirReturnValue::OptionalShared),
             super::super::optional_types::LegacyOptionalKind::Nested(_) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_RETURN,
-                        "nested optional results are not supported yet",
-                    )
-                    .with_primary_label(span, "nested optional callable integration is deferred"),
-                );
-                None
+                let Type::Optional(optional) = ty else {
+                    unreachable!()
+                };
+                self.check_optional_value(optional, value, "nested optional return")
+                    .map(Box::new)
+                    .map(HirReturnValue::NestedOptional)
             }
         }?;
         Some(HirStatement::Return(HirReturn {

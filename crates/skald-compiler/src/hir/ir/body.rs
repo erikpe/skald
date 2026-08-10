@@ -312,6 +312,7 @@ pub enum HirReturnValue {
     Object(HirObjectReturn),
     Shared(HirSharedTransfer),
     OptionalShared(HirOptionalSharedInitialize),
+    NestedOptional(Box<super::HirOptionalValue>),
     Array(HirArrayInitialize),
 }
 

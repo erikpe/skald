@@ -275,6 +275,7 @@ fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
             Some(
                 super::optional_types::LegacyOptionalKind::Primitive(_)
                     | super::optional_types::LegacyOptionalKind::Class(_)
+                    | super::optional_types::LegacyOptionalKind::Nested(_)
             )
         ),
         Type::Unit | Type::Shared(_) => false,

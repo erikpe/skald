@@ -4,11 +4,11 @@ Status: authoritative implemented compiler contract for primitive and exact
 inline-class optionals, optional shared owners, and supported inline
 optional-container aliases through HIR, MIR verification, x86-64 lowering,
 and native execution. Recursive source type syntax, canonical `(shared T)?`
-owners, recursive identities, and nested owning lifecycle are implemented.
-This document also freezes the remaining compiler direction for nested access,
-callable integration, and optional inline arrays. MIR uses canonical optional
-identities and recursive lifecycle metadata; source eligibility gates still
-exclude optional-array execution and nested boundary features assigned to CO6.
+owners, recursive identities, nested owning lifecycle, checked access, aliases,
+and internal callable boundaries are implemented. This document also freezes
+the remaining compiler direction for optional inline arrays. MIR uses canonical
+optional identities and recursive lifecycle metadata; source eligibility gates
+still exclude optional-array execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -70,18 +70,18 @@ shared T    ordinary non-null shared owner
 same resolved identity and lower to the existing optional-owner operations.
 `shared T?`, `shared? T?`, and invalid payload families reach focused
 diagnostic boundaries and never become executable HIR types. Nested optionals
-are executable in owning stored-value and array-element positions; their
-aliases and callable boundaries remain gated. Alias binding mode may designate an
-existing primitive or exact-class inline optional place; it does not add a
-reference or optional-reference type identity.
+are executable in owning positions, checked access, aliases, and internal
+callable boundaries. Alias binding mode may designate any supported inline
+optional container; it does not add a reference or optional-reference type
+identity.
 
 ## Frozen compositional implementation direction
 
 The recursive syntax and resolved-identity portions of this direction are
 implemented, including grouping, postfix chains, shorthand provenance, and
-bottom-up interning. Canonical HIR and MIR identity tables and lifecycle plans
-are also implemented for nested owning storage. Nested access, callable
-integration, and optional-array parts of this section remain a **frozen
+bottom-up interning. Canonical HIR and MIR identity tables, lifecycle plans,
+checked access, aliases, and callable integration are also implemented for
+nested storage. The optional-array parts of this section remain a **frozen
 design** for the planned executable extension. The migration keeps every current program's
 diagnostics, evaluation order, lifecycle, layout, ABI, and native behavior
 stable before enabling a new payload category.
@@ -168,10 +168,9 @@ descriptions with payload, storage, representation, lifecycle, checked-access,
 and boundary plans. HIR-to-MIR lowering copies those plans deterministically;
 there is no compatibility adapter or parallel primitive/class/shared MIR type
 family. Distinct scalar, owning-aggregate, and shared-owner instructions remain
-where they express genuinely different runtime work. Nested owning lifecycle
-uses recursive outer-wrapper operations; nested access and callable cases and
-all optional-array cases remain behind their responsible source eligibility
-gates.
+where they express genuinely different runtime work. Nested owning lifecycle,
+checked access, aliases, and callable cases use recursive outer-wrapper
+operations; optional-array cases remain behind their source eligibility gates.
 
 MIR represents the outer wrapper state independently from the immediate
 payload state. An outer operation branches on or changes only its own state,
@@ -746,17 +745,17 @@ observable behavior:
 
 The current compile-failure suites for `T[]?`, `shared T?`, and `shared? T?`
 remain required until the task responsible for a form changes its expected
-outcome. Nested `T??` requires positive owning-lifecycle coverage while gated
-consumers remain negative tests. Both `(shared T)?` and `shared? T` require positive
+outcome. Nested `T??` requires positive lifecycle, access, alias, and callable
+coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage. Box forms remain compile failures after
 this roadmap completes.
 
 ## Exclusions
 
-The implemented compiler executes recursively nested optional owning lifecycle
-and expected-type-directed `some(expression)`. Optional inline arrays and the
-remaining nested access and callable positions stop at focused type-checking
-gates. Their compiler direction is frozen above. This contract does not design
+The implemented compiler executes recursively nested optional owning lifecycle,
+expected-type-directed `some(expression)`, checked access, aliases, and
+internal callable boundaries. Optional inline arrays stop at focused
+type-checking gates; their compiler direction is frozen above. This contract does not design
 generalized shared boxes, optional function values, first-class references,
 optional casts, equality or operator lifting, chaining/coalescing/propagation,
 recoverable failures, concurrency or atomic guards, external optional ABI, or

@@ -750,3 +750,135 @@ fn nested_optional_class_and_shared_payload_lifecycles_execute_recursively() {
     assert_eq!(result.status.code(), Some(42), "{output}");
     assert_eq!(result.stdout, b"42\n");
 }
+
+#[test]
+fn nested_optional_values_cross_calls_and_unwrap_one_layer_at_a_time() {
+    let source = "fn forward(value: i64??) -> i64?? { return value; }\n\
+        fn read(value: i64?) -> i64 {\n\
+          if (value is some) { return value!; }\n\
+          return 0;\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var outer: i64?? = some(some(42));\n\
+          var inner: i64? = forward(outer)!;\n\
+          return read(inner) + forward(outer)!!;\n\
+        }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(84));
+}
+
+#[test]
+fn nested_optional_aliases_mutate_and_read_exact_containers() {
+    let source = "fn replace(mut ref value: i64??) -> unit {\n\
+          value = some(some(42));\n\
+        }\n\
+        fn read(ref value: i64??) -> i64 { return value!!; }\n\
+        fn main() -> i64 {\n\
+          var value: i64?? = none;\n\
+          replace(value);\n\
+          return read(value);\n\
+        }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}
+
+#[test]
+fn nested_optionals_cross_dispatch_recursion_initializers_and_abi_pressure() {
+    let source = "interface Reader { fn read(value: i64??) -> i64??; }\n\
+        class Base {\n\
+          init() {}\n\
+          virtual fn read(value: i64??) -> i64?? { return value; }\n\
+        }\n\
+        class Derived extends Base implements Reader {\n\
+          init() { super(); }\n\
+          override fn read(value: i64??) -> i64?? { return value; }\n\
+        }\n\
+        class Holder {\n\
+          value: i64??;\n\
+          init(value: i64??) { self.value = value; }\n\
+          fn direct(value: i64??) -> i64?? { return value; }\n\
+          static fn pass(value: i64??) -> i64?? { return value; }\n\
+        }\n\
+        fn through_interface(ref source: Reader, value: i64??) -> i64?? {\n\
+          return source.read(value);\n\
+        }\n\
+        fn through_virtual(ref source: Base, value: i64??) -> i64?? {\n\
+          return source.read(value);\n\
+        }\n\
+        fn recurse(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64,\n\
+                   value: i64??, depth: i64) -> i64?? {\n\
+          if (depth == 0) { return value; }\n\
+          return recurse(a, b, c, d, e, f, value, depth - 1);\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var source: Derived = Derived();\n\
+          var value: i64?? = some(some(7));\n\
+          var holder: Holder = Holder(value);\n\
+          return through_interface(source, value)!!\n\
+            + through_virtual(source, value)!!\n\
+            + holder.direct(value)!!\n\
+            + Holder.pass(value)!!\n\
+            + recurse(1, 2, 3, 4, 5, 6, value, 2)!!\n\
+            + holder.value!!;\n\
+        }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}
+
+#[test]
+fn chained_class_and_shared_unwraps_preserve_owned_payloads_across_later_mutation() {
+    let class_source = "class Value {\n\
+          marker: i64;\n\
+          init(marker: i64) { self.marker = marker; }\n\
+        }\n\
+        fn clear(mut ref value: Value??) -> i64 { value = none; return 0; }\n\
+        fn consume(value: Value, later: i64) -> i64 { return value.marker + later; }\n\
+        fn main() -> i64 {\n\
+          var value: Value?? = some(some(Value(42)));\n\
+          return consume(value!!, clear(value));\n\
+        }\n";
+    assert_eq!(
+        run_native_assembly(&assembly(class_source)).code(),
+        Some(42)
+    );
+
+    let shared_source = "class Value {\n\
+          marker: i64;\n\
+          init(marker: i64) { self.marker = marker; }\n\
+        }\n\
+        fn clear(mut ref value: (shared Value)??) -> i64 { value = none; return 0; }\n\
+        fn consume(value: shared Value, later: i64) -> i64 {\n\
+          return value->marker + later;\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var value: (shared Value)?? = some(some(new Value(42)));\n\
+          return consume(value!!, clear(value));\n\
+        }\n";
+    let mut output = assembly(shared_source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42));
+}
+
+#[test]
+fn chained_nested_unwrap_fails_at_each_absent_layer() {
+    for initializer in ["none", "some(none)"] {
+        let source =
+            format!("fn main() -> i64 {{ var value: i64?? = {initializer}; return value!!; }}\n");
+        let status = run_native_assembly(&assembly(&source));
+        assert!(!status.success(), "{source}");
+        assert_ne!(status.code(), Some(0), "{source}");
+    }
+}
+
+#[test]
+fn nested_optional_presence_and_unwrap_compose_with_short_circuit_logic() {
+    let source = "fn read(value: i64??) -> i64 {\n\
+          if ((value is some) && (value! is some)) { return value!!; }\n\
+          return 0;\n\
+        }\n\
+        fn main() -> i64 {\n\
+          return read(none) + read(some(none)) + read(some(some(42)));\n\
+        }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}

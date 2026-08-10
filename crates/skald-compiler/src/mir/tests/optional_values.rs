@@ -338,3 +338,49 @@ fn verifier_requires_nested_optional_publication_after_payload_construction() {
         "{errors}"
     );
 }
+
+#[test]
+fn verifier_rejects_nested_payload_copy_on_the_absent_presence_edge() {
+    let mut program = lower_text(
+        "fn take(value: i64??) -> i64? { return value!; }\n\
+         fn main() -> i64 { return take(some(some(42)))!; }\n",
+    );
+    let take = FunctionId::new(0);
+    let outer_storage = program
+        .definitions
+        .get(take)
+        .unwrap()
+        .storage
+        .iter()
+        .find(|storage| storage.name == "value")
+        .expect("source parameter must retain its storage name")
+        .id;
+    let main = program.definitions.get_mut_for_test(take).unwrap();
+    let assignment = main
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(
+                    &assignment.rvalue.kind,
+                    MirRvalueKind::OptionalPresence { source, .. }
+                        if source.base.local_storage() == Some(outer_storage)
+                ) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .expect("nested unwrap must test outer presence");
+    let MirRvalueKind::OptionalPresence { kind, .. } = &mut assignment.rvalue.kind else {
+        unreachable!()
+    };
+    *kind = MirPresenceTestKind::None;
+
+    let errors = verify_mir(&program)
+        .expect_err("the absent edge must not make nested payload bytes readable")
+        .to_string();
+    assert!(errors.contains("not definitely initialized"), "{errors}");
+}

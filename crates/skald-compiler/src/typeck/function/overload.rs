@@ -21,8 +21,21 @@ use crate::{
 struct ArgumentAnalysis {
     ty: Type,
     absent: bool,
+    contextual_optional: Option<ContextualOptionalArgument>,
     object: Option<ObjectArgument>,
     optional_place_access: Option<HirAccess>,
+}
+
+#[derive(Clone, Copy)]
+struct ContextualOptionalArgument {
+    present_layers: usize,
+    terminal: ContextualOptionalTerminal,
+}
+
+#[derive(Clone, Copy)]
+enum ContextualOptionalTerminal {
+    Absent,
+    Typed(Type),
 }
 
 #[derive(Clone, Copy)]
@@ -196,6 +209,16 @@ impl CallableChecker<'_, '_> {
             return ArgumentAnalysis {
                 ty: Type::Unit,
                 absent: true,
+                contextual_optional: None,
+                object: None,
+                optional_place_access: None,
+            };
+        }
+        if let Some(contextual_optional) = self.contextual_optional_argument(expression) {
+            return ArgumentAnalysis {
+                ty: Type::Unit,
+                absent: false,
+                contextual_optional: Some(contextual_optional),
                 object: None,
                 optional_place_access: None,
             };
@@ -207,10 +230,43 @@ impl CallableChecker<'_, '_> {
         ArgumentAnalysis {
             ty,
             absent: false,
+            contextual_optional: None,
             object,
             optional_place_access: matches!(ty, Type::Optional(_))
                 .then(|| self.static_place_access(expression))
                 .flatten(),
+        }
+    }
+
+    fn contextual_optional_argument(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<ContextualOptionalArgument> {
+        let mut expression = expression;
+        let mut present_layers = 0;
+        loop {
+            match expression {
+                ResolvedExpression::Grouped(grouped) => expression = &grouped.expression,
+                ResolvedExpression::Present(present) => {
+                    present_layers += 1;
+                    expression = &present.value;
+                }
+                ResolvedExpression::Absent(_) if present_layers > 0 => {
+                    return Some(ContextualOptionalArgument {
+                        present_layers,
+                        terminal: ContextualOptionalTerminal::Absent,
+                    });
+                }
+                _ if present_layers > 0 => {
+                    return Some(ContextualOptionalArgument {
+                        present_layers,
+                        terminal: ContextualOptionalTerminal::Typed(
+                            self.static_expression_type(expression),
+                        ),
+                    });
+                }
+                _ => return None,
+            }
         }
     }
 
@@ -484,39 +540,48 @@ impl CallableChecker<'_, '_> {
                 .parameters
                 .iter()
                 .zip(arguments)
-                .all(|(parameter, argument)| self.parameter_accepts(parameter, *argument))
+                .all(|(parameter, argument)| self.parameter_accepts(parameter, argument))
     }
 
-    fn parameter_accepts(&self, parameter: &ResolvedParameter, argument: ArgumentAnalysis) -> bool {
+    fn parameter_accepts(
+        &self,
+        parameter: &ResolvedParameter,
+        argument: &ArgumentAnalysis,
+    ) -> bool {
         let expected = lower_type(self.program, &parameter.type_syntax);
         match parameter.binding_mode {
-            ResolvedParameterBindingMode::Value => match expected {
-                Type::Optional(optional) => {
-                    argument.absent || self.optional_parameter_accepts(optional, argument.ty)
+            ResolvedParameterBindingMode::Value => {
+                if let Some(contextual) = argument.contextual_optional {
+                    return self.contextual_optional_accepts(expected, contextual);
                 }
-                Type::Class(target) => {
-                    let Type::Class(actual) = argument.ty else {
-                        return false;
-                    };
-                    self.program
-                        .hierarchy
-                        .is_subtype(actual, target)
-                        .unwrap_or(false)
-                        && self
-                            .copy_capabilities
-                            .constructor(target)
-                            .selected()
-                            .is_some()
+                match expected {
+                    Type::Optional(optional) => {
+                        argument.absent || self.optional_parameter_accepts(optional, argument.ty)
+                    }
+                    Type::Class(target) => {
+                        let Type::Class(actual) = argument.ty else {
+                            return false;
+                        };
+                        self.program
+                            .hierarchy
+                            .is_subtype(actual, target)
+                            .unwrap_or(false)
+                            && self
+                                .copy_capabilities
+                                .constructor(target)
+                                .selected()
+                                .is_some()
+                    }
+                    Type::Obj | Type::Interface(_) | Type::Unit => false,
+                    Type::Shared(expected) => {
+                        let Type::Shared(actual) = argument.ty else {
+                            return false;
+                        };
+                        crate::typeck::shared::target_accepts(self.program, expected, actual)
+                    }
+                    primitive => !argument.absent && argument.ty == primitive,
                 }
-                Type::Obj | Type::Interface(_) | Type::Unit => false,
-                Type::Shared(expected) => {
-                    let Type::Shared(actual) = argument.ty else {
-                        return false;
-                    };
-                    crate::typeck::shared::target_accepts(self.program, expected, actual)
-                }
-                primitive => !argument.absent && argument.ty == primitive,
-            },
+            }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. } => {
                 let required = match parameter.binding_mode {
@@ -538,6 +603,25 @@ impl CallableChecker<'_, '_> {
                 };
                 object.access.permits(required)
                     && self.parameter_type_accepts(argument.ty, expected)
+            }
+        }
+    }
+
+    fn contextual_optional_accepts(
+        &self,
+        mut expected: Type,
+        argument: ContextualOptionalArgument,
+    ) -> bool {
+        for _ in 0..argument.present_layers {
+            let Type::Optional(optional) = expected else {
+                return false;
+            };
+            expected = super::super::optional_types::payload_type(self.program, optional);
+        }
+        match argument.terminal {
+            ContextualOptionalTerminal::Absent => matches!(expected, Type::Optional(_)),
+            ContextualOptionalTerminal::Typed(actual) => {
+                self.parameter_type_accepts(actual, expected)
             }
         }
     }
@@ -696,6 +780,8 @@ impl CallableChecker<'_, '_> {
             .map(|argument| {
                 if argument.absent {
                     "none".to_owned()
+                } else if argument.contextual_optional.is_some() {
+                    "some(...)".to_owned()
                 } else {
                     self.type_name(argument.ty)
                 }

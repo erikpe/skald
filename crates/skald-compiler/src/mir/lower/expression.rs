@@ -105,6 +105,7 @@ impl BodyLowerer<'_> {
             HirExpressionKind::Unwrap(source) => {
                 Some(self.lower_optional_unwrap(expression, source))
             }
+            HirExpressionKind::NestedOptionalUnwrap(_) => None,
             HirExpressionKind::ArrayLength(length) => Some(self.lower_array_length(length)),
             HirExpressionKind::ArrayElement(element)
                 if matches!(

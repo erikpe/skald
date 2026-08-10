@@ -235,6 +235,11 @@ impl BodyLowerer<'_> {
         destination: MirPlace,
     ) {
         let optional_mark = self.optional_view_mark();
+        if let crate::hir::HirExpressionKind::NestedOptionalUnwrap(unwrap) = &expression.kind {
+            self.lower_nested_optional_unwrap_at(destination, unwrap);
+            self.end_optional_views_from(optional_mark, expression.span);
+            return;
+        }
         let (target, receiver, arguments) = match &expression.kind {
             crate::hir::HirExpressionKind::DirectCall {
                 function,
@@ -300,6 +305,11 @@ impl BodyLowerer<'_> {
         destination: StorageId,
     ) {
         let optional_mark = self.optional_view_mark();
+        if let crate::hir::HirExpressionKind::NestedOptionalUnwrap(unwrap) = &expression.kind {
+            self.lower_nested_optional_unwrap_at(MirPlace::base(destination), unwrap);
+            self.end_optional_views_from(optional_mark, expression.span);
+            return;
+        }
         let (target, receiver, arguments) = match &expression.kind {
             crate::hir::HirExpressionKind::DirectCall {
                 function,
@@ -443,6 +453,16 @@ impl BodyLowerer<'_> {
                     self.lower_optional_shared_initialize(storage, value);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
+                HirCallArgument::NestedOptional(value) => {
+                    let storage = self.new_optional_storage(
+                        MirStorageKind::Argument,
+                        "nested-optional-argument",
+                        MirType::Optional(value.optional),
+                        value.span,
+                    );
+                    self.lower_nested_optional_initialize_at(MirPlace::base(storage), value);
+                    LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
+                }
                 HirCallArgument::OptionalPlace(place) => {
                     let place = match place {
                         crate::hir::HirOptionalAliasPlace::Primitive(place) => {
@@ -450,6 +470,9 @@ impl BodyLowerer<'_> {
                         }
                         crate::hir::HirOptionalAliasPlace::Class(place) => {
                             self.lower_class_optional_place(place)
+                        }
+                        crate::hir::HirOptionalAliasPlace::Nested(place) => {
+                            self.lower_nested_optional_place(place)
                         }
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))

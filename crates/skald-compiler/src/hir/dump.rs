@@ -724,6 +724,9 @@ impl<'types> HirDumper<'types> {
                         HirReturnValue::OptionalShared(value) => {
                             dumper.optional_shared_value(value)
                         }
+                        HirReturnValue::NestedOptional(value) => {
+                            dumper.nested_optional_value(value)
+                        }
                         HirReturnValue::Array(value) => dumper.array_initialize(value),
                     });
                 }
@@ -1203,6 +1206,16 @@ impl<'types> HirDumper<'types> {
                 self.typed_line("OptionalUnwrap", expression);
                 self.indented(|dumper| dumper.optional_operand(source));
             }
+            HirExpressionKind::NestedOptionalUnwrap(unwrap) => {
+                self.typed_line(
+                    &format!(
+                        "NestedOptionalUnwrap optional={} payload={}",
+                        unwrap.optional, unwrap.payload
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| dumper.optional_operand(&unwrap.source));
+            }
             HirExpressionKind::ArrayConstruction(construction) => {
                 self.typed_line("ArrayConstruction", expression);
                 self.indented(|dumper| dumper.array_construction(construction));
@@ -1609,6 +1622,10 @@ impl<'types> HirDumper<'types> {
                     place.span,
                 );
             }
+            crate::hir::HirOptionalOperand::NestedProduced(expression) => {
+                self.line("NestedOptionalProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
         }
     }
 
@@ -1625,6 +1642,10 @@ impl<'types> HirDumper<'types> {
             }
             crate::hir::HirOptionalValueSource::Copy(place) => {
                 dumper.line(&format!("Copy {}", place.optional), place.span);
+            }
+            crate::hir::HirOptionalValueSource::Produced(expression) => {
+                dumper.line("Produced", expression.span);
+                dumper.indented(|dumper| dumper.expression(expression));
             }
         });
     }
@@ -1765,6 +1786,13 @@ impl<'types> HirDumper<'types> {
                 );
                 self.indented(|dumper| dumper.optional_shared_source(&value.source));
             }
+            HirCallArgument::NestedOptional(value) => {
+                self.line(
+                    &format!("NestedOptionalArgument {}", value.optional),
+                    value.span,
+                );
+                self.indented(|dumper| dumper.nested_optional_value(value));
+            }
             HirCallArgument::OptionalPlace(place) => match place {
                 crate::hir::HirOptionalAliasPlace::Primitive(place) => {
                     self.line(
@@ -1779,6 +1807,12 @@ impl<'types> HirDumper<'types> {
                         place.span,
                     );
                     self.indented(|dumper| dumper.class_optional_place(place));
+                }
+                crate::hir::HirOptionalAliasPlace::Nested(place) => {
+                    self.line(
+                        &format!("OptionalPlaceArgument {}", place.optional),
+                        place.span,
+                    );
                 }
             },
             HirCallArgument::Place(place) => {

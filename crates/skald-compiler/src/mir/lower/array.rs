@@ -103,7 +103,8 @@ impl BodyLowerer<'_> {
                     crate::hir::HirOptionalValueSource::Copy(source) => {
                         MirNestedOptionalSource::Copy(self.lower_nested_optional_place(source))
                     }
-                    crate::hir::HirOptionalValueSource::Present(_) => {
+                    crate::hir::HirOptionalValueSource::Present(_)
+                    | crate::hir::HirOptionalValueSource::Produced(_) => {
                         let temporary = self.new_optional_storage(
                             MirStorageKind::Temporary,
                             "nested-optional-element-source",

@@ -78,7 +78,8 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::TypeTest(_)
         | HirExpressionKind::PresenceTest { .. }
-        | HirExpressionKind::Unwrap(_) => {}
+        | HirExpressionKind::Unwrap(_)
+        | HirExpressionKind::NestedOptionalUnwrap(_) => {}
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
@@ -122,6 +123,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
         crate::hir::HirCallArgument::Optional { .. } => {}
         crate::hir::HirCallArgument::ClassOptional(_) => {}
         crate::hir::HirCallArgument::OptionalShared(_) => {}
+        crate::hir::HirCallArgument::NestedOptional(_) => {}
         crate::hir::HirCallArgument::OptionalPlace(_) => {}
         crate::hir::HirCallArgument::Array(_) => {}
         crate::hir::HirCallArgument::ArrayAlias(_) => {}

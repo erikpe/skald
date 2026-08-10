@@ -265,6 +265,38 @@ fn none_keeps_distinct_optional_initializer_candidates_ambiguous() {
 }
 
 #[test]
+fn nested_optional_overloads_rank_exact_layers_and_contextual_construction() {
+    let output = check_text(
+        "class Pick {\n\
+           chosen: i64;\n\
+           init(value: i64?) { self.chosen = 1; }\n\
+           init(value: i64??) { self.chosen = 2; }\n\
+         }\n\
+         fn main() -> i64 {\n\
+           var inner: i64? = some(7);\n\
+           var outer: i64?? = some(inner);\n\
+           var from_inner: Pick = Pick(inner);\n\
+           var from_outer: Pick = Pick(outer);\n\
+           var contextual: Pick = Pick(some(none));\n\
+           return from_inner.chosen + from_outer.chosen + contextual.chosen;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("nested overloads must select into HIR"));
+    assert_eq!(
+        dump.matches("Construct c0 via c0:init0").count(),
+        1,
+        "{dump}"
+    );
+    assert_eq!(
+        dump.matches("Construct c0 via c0:init1").count(),
+        2,
+        "{dump}"
+    );
+}
+
+#[test]
 fn optional_shared_overloads_rank_compatible_targets_by_specificity() {
     let output = check_text(
         "class Base { init() {} }\n\

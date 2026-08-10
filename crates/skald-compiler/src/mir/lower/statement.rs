@@ -300,6 +300,13 @@ impl BodyLowerer<'_> {
                 });
                 return;
             }
+            Some(crate::hir::HirReturnValue::NestedOptional(value)) => {
+                let destination = self
+                    .return_storage
+                    .expect("nested-optional-returning body must have return storage");
+                self.lower_nested_optional_initialize_at(MirPlace::base(destination), value);
+                None
+            }
             Some(crate::hir::HirReturnValue::Array(initialization)) => {
                 let destination = MirPlace::base(
                     self.return_storage
@@ -312,7 +319,7 @@ impl BodyLowerer<'_> {
         };
         let scope_exit = self.cleanup.for_all_scopes(statement.span);
         let preserve_scalar =
-            scope_exit.requires_optional_check() || self.full_expression.has_conditions();
+            scope_exit.requires_optional_check() || self.full_expression.cleanup_may_change_block();
         let spilled_value = value.filter(|_| preserve_scalar).map(|value| {
             self.spill_scalar(
                 value,

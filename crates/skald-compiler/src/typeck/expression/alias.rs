@@ -466,6 +466,9 @@ impl CallableChecker<'_, '_> {
             crate::hir::HirOptionalAliasPlace::Class(place) => {
                 self.optional_storage_access(&place.storage, place.span)?
             }
+            crate::hir::HirOptionalAliasPlace::Nested(place) => {
+                self.optional_storage_access(&place.storage, place.span)?
+            }
         };
         if !access.permits(required) {
             self.diagnostics.push(

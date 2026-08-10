@@ -99,7 +99,10 @@ impl Verifier<'_> {
         let destination_valid = function.storage(unwrap.destination).is_some_and(|storage| {
             matches!(
                 storage.kind,
-                MirStorageKind::Temporary | MirStorageKind::SharedAnchor
+                MirStorageKind::Temporary
+                    | MirStorageKind::SharedAnchor
+                    | MirStorageKind::Argument
+                    | MirStorageKind::Return
             ) && storage.ty == MirType::Shared(unwrap.target)
                 && storage.source.is_none()
         });

@@ -57,13 +57,21 @@ pub(super) fn analyze(program: &MirProgram, function: MirDefinitionRef<'_>) -> A
                 ..
             }) = &block.terminator
             {
+                let presence = optional_presence_refinement(program, function, block, *condition);
                 if let Some(path_condition) = condition_reads.get(condition).copied() {
                     for (target, active) in [(*true_target, true), (*false_target, false)] {
-                        let (selected, _) = states.select(path_condition, active);
+                        let (mut selected, _) = states.select(path_condition, active);
+                        apply_presence_refinement(&mut selected, presence.as_ref(), active);
                         merge_states(function, block.id, target, &selected, &mut flow);
                     }
                     continue;
                 }
+                for (target, active) in [(*true_target, true), (*false_target, false)] {
+                    let mut selected = states.clone();
+                    apply_presence_refinement(&mut selected, presence.as_ref(), active);
+                    merge_states(function, block.id, target, &selected, &mut flow);
+                }
+                continue;
             }
             for successor in block.terminator.iter().flat_map(MirTerminator::successors) {
                 merge_states(function, block.id, successor, &states, &mut flow);
@@ -81,6 +89,91 @@ pub(super) fn analyze(program: &MirProgram, function: MirDefinitionRef<'_>) -> A
     Analysis {
         activation_conditions,
         flow,
+    }
+}
+
+fn apply_presence_refinement(
+    states: &mut PathStates<InitializationState>,
+    refinement: Option<&(crate::mir::MirPlace, bool)>,
+    active: bool,
+) {
+    let Some((payload, present_when)) = refinement else {
+        return;
+    };
+    if active == *present_when {
+        states.update_states(|state| {
+            state.refine(payload.clone());
+        });
+    }
+}
+
+fn optional_presence_refinement(
+    program: &MirProgram,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    condition: crate::mir::ValueId,
+) -> Option<(crate::mir::MirPlace, bool)> {
+    let assignment = block.instructions.iter().rev().find_map(|instruction| {
+        let MirInstruction::Assign(assignment) = instruction else {
+            return None;
+        };
+        (assignment.result == condition).then_some(assignment)
+    })?;
+    let crate::mir::MirRvalueKind::OptionalPresence { source, kind } = &assignment.rvalue.kind
+    else {
+        return None;
+    };
+    let optional = optional_at_place(program, function, source)?;
+    matches!(
+        program.optional_type(optional)?.storage,
+        crate::mir::MirOptionalStorage::Nested(_)
+    )
+    .then(|| {
+        (
+            source.clone().project_nested_optional_payload(optional),
+            *kind == crate::mir::MirPresenceTestKind::Some,
+        )
+    })
+}
+
+fn optional_at_place(
+    program: &MirProgram,
+    function: MirDefinitionRef<'_>,
+    place: &crate::mir::MirPlace,
+) -> Option<crate::identity::OptionalTypeId> {
+    use crate::mir::{MirPlaceBase, MirPlaceProjection, MirType};
+    let mut ty = match place.base {
+        MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
+            program.static_field(field)?.ty
+        }
+        _ => function.storage(place.base.local_storage()?)?.ty,
+    };
+    for projection in &place.projections {
+        ty = match *projection {
+            MirPlaceProjection::Base(base) => (program.direct_base(match ty {
+                MirType::Class(class) => class,
+                _ => return None,
+            }) == Some(base))
+            .then_some(MirType::Class(base))?,
+            MirPlaceProjection::Field(field) => program.field(field)?.ty,
+            MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
+            MirPlaceProjection::NestedOptionalPayload(optional) => {
+                if ty != MirType::Optional(optional) {
+                    return None;
+                }
+                program.optional_type(optional)?.payload
+            }
+            MirPlaceProjection::ArrayElement { array, .. } => {
+                if ty != MirType::Array(array) {
+                    return None;
+                }
+                program.array_type(array)?.element
+            }
+        };
+    }
+    match ty {
+        MirType::Optional(optional) => Some(optional),
+        _ => None,
     }
 }
 

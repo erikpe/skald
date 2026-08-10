@@ -13,6 +13,10 @@ use crate::{
 pub(super) struct InitializationState {
     places: HashSet<MirPlace>,
     unpublished: HashSet<MirPlace>,
+    /// Path-local proof that payload bytes are readable after a successful
+    /// presence test. Unlike `places`, this is knowledge rather than owned
+    /// initialization state and may disappear when control-flow reconverges.
+    refined: HashSet<MirPlace>,
 }
 
 impl InitializationState {
@@ -51,6 +55,7 @@ impl InitializationState {
                 .chain(static_optionals)
                 .collect(),
             unpublished: HashSet::new(),
+            refined: HashSet::new(),
         };
 
         if matches!(
@@ -63,7 +68,8 @@ impl InitializationState {
     }
 
     pub(super) fn contains(&self, place: &MirPlace) -> bool {
-        self.places.contains(place) && !self.unpublished.contains(place)
+        (self.places.contains(place) || self.refined.contains(place))
+            && !self.unpublished.contains(place)
     }
 
     pub(super) fn insert(&mut self, place: MirPlace) -> bool {
@@ -77,19 +83,29 @@ impl InitializationState {
         inserted
     }
 
+    pub(super) fn refine(&mut self, place: MirPlace) {
+        self.refined.insert(place);
+    }
+
     pub(super) fn publish(&mut self, place: &MirPlace) -> bool {
         self.unpublished.remove(place)
     }
 
     pub(super) fn remove(&mut self, place: &MirPlace) {
-        self.places.remove(place);
-        self.unpublished.remove(place);
+        self.places
+            .retain(|candidate| !place_contains(place, candidate));
+        self.unpublished
+            .retain(|candidate| !place_contains(place, candidate));
+        self.refined
+            .retain(|candidate| !place_contains(place, candidate));
     }
 
     pub(super) fn reset_storage(&mut self, storage: StorageId) {
         self.places
             .retain(|place| place.base.local_storage() != Some(storage));
         self.unpublished
+            .retain(|place| place.base.local_storage() != Some(storage));
+        self.refined
             .retain(|place| place.base.local_storage() != Some(storage));
     }
 
@@ -120,6 +136,12 @@ impl InitializationState {
         self.places.retain(|place| incoming.places.contains(place));
         self.unpublished
             .retain(|place| incoming.unpublished.contains(place));
+        self.refined
+            .retain(|place| incoming.refined.contains(place));
+    }
+
+    pub(super) fn has_same_owned_state(&self, other: &Self) -> bool {
+        self.places == other.places && self.unpublished == other.unpublished
     }
 
     pub(super) fn apply_block(
@@ -429,6 +451,12 @@ impl InitializationState {
         }
         visiting.remove(&class);
     }
+}
+
+fn place_contains(root: &MirPlace, candidate: &MirPlace) -> bool {
+    root.base == candidate.base
+        && candidate.projections.len() >= root.projections.len()
+        && candidate.projections[..root.projections.len()] == root.projections
 }
 
 pub(super) fn is_optional(ty: MirType) -> bool {

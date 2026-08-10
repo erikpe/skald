@@ -177,8 +177,10 @@ impl<'hir> BodyLowerer<'hir> {
                             )
                         }
                         crate::hir::HirOptionalStorageCategory::Scalar => {}
-                        crate::hir::HirOptionalStorageCategory::InlineArray(_)
-                        | crate::hir::HirOptionalStorageCategory::Nested(_) => {
+                        crate::hir::HirOptionalStorageCategory::Nested(_) => {
+                            lowerer.cleanup.register_nested_optional(*storage, optional)
+                        }
+                        crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
                             unreachable!("gated optional payload reached executable MIR lowering")
                         }
                     },

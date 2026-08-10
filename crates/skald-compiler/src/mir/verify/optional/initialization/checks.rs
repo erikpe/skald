@@ -409,7 +409,7 @@ fn end_condition_at_storage_death(
     };
     let mut incompatible = false;
     let missing = states.end_condition(condition, |existing, incoming| {
-        incompatible = true;
+        incompatible |= !existing.has_same_owned_state(incoming);
         existing.merge(incoming);
     });
     if incompatible {

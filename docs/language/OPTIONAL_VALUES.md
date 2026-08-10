@@ -3,10 +3,10 @@
 Status: implemented language contract for primitive, exact inline-class, and
 optional shared-owner values across owning locals, fields, internal callable
 boundaries, and aliases to supported inline optional containers. This document
-also defines the implemented compositional type syntax and freezes the
-remaining semantic extension for nested access, callable integration, and
-optional inline arrays. Recursive owning lifecycle is executable; the
-remaining deferred positions still stop at focused semantic gates. The
+also defines the implemented compositional type syntax, nested access and
+callable behavior, and the frozen extension for optional inline arrays.
+Recursive owning lifecycle and access are executable; optional arrays still
+stop at a focused semantic gate. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -100,7 +100,8 @@ by the `?` punctuation token. Ordinary trivia may separate those tokens.
 Source-shaped syntax inspection retains the shorthand, while semantic dumps
 use canonical `(shared T)?` independently of the source spelling.
 
-Inline `T?` is valid when `T` is a primitive or exact inline class type.
+Inline `T?` is valid when `T` is a primitive, exact inline class, ordinary
+shared owner, or another supported optional type.
 `(shared T)?` and its `shared? T` shorthand accept the same class, interface,
 `Obj`, and array targets as ordinary `shared T`.
 
@@ -115,9 +116,8 @@ The current profile rejects:
 
 The recursive syntax tree preserves these complete type shapes. Optional
 arrays and shared boxes therefore fail at focused semantic gates rather than
-being discarded during parsing. Nested optionals execute in owning locals,
-fields, statics, and array elements; their checked access and callable
-integration remain gated until CO6.
+being discarded during parsing. Nested optionals execute in owning storage,
+aliases, checked access, and every supported internal callable boundary.
 
 These exclusions are deliberate. In particular, `shared T?` requires a
 generalized non-null shared box whose allocation, payload metadata, mutation,
@@ -128,10 +128,10 @@ the spelling without defining or implementing that box.
 
 The type construction and grouping rules in this section are implemented
 syntax. Canonical optional shared owners execute through the existing owner
-semantics. Recursive optional identities, nested owning lifecycle, and
-`some(expression)` are implemented. Nested access, callable integration, and
-optional inline arrays remain a **frozen semantic design** until their later
-implementation tasks land.
+semantics. Recursive optional identities, nested owning lifecycle,
+`some(expression)`, checked access, aliases, and internal callable integration
+are implemented. Optional inline arrays remain a **frozen semantic design**
+until their later implementation tasks land.
 
 ### Type construction, grouping, and precedence
 
@@ -184,7 +184,7 @@ The exact spelling and identity matrix is:
 | `(T[])?` | `Optional<Array<T>>` | Grouped spelling equivalent to `T[]?` | Parsed; semantically rejected until optional arrays execute |
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
-| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle executes; access and callable integration remain gated |
+| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
 | `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Reserved box form; rejected |
 | `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Reserved box form; rejected |
 
@@ -661,9 +661,9 @@ The frozen compositional extension does not include:
 
 These exclusions are not implied language behavior. Each requires a separate
 focused design before implementation. Nested optionals are not on this
-exclusion list and their owning lifecycle executes; nested access and callable
-integration remain staged. Inline optional arrays are likewise specified
-above but remain rejected until their roadmap task lands.
+exclusion list: their owning lifecycle, checked access, aliases, and internal
+callable boundaries execute. Inline optional arrays are specified above but
+remain rejected until their roadmap task lands.
 
 The implemented [array design](ARRAYS.md) permits existing optional
 non-array element types to default to `none` inside arrays and extends

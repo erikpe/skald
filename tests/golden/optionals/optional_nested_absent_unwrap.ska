@@ -1,0 +1,4 @@
+fn main() -> i64 {
+    var value: i64?? = some(none);
+    return value!!;
+}

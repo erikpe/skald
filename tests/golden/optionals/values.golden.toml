@@ -12,6 +12,17 @@ stacktrace:
 """ } }
 
 [[test]]
+name = "nested_absent_unwrap"
+mode = "run"
+source = "optional_nested_absent_unwrap.ska"
+[[test.run]]
+name = "absent_inner_layer"
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at optional_nested_absent_unwrap::main (tests/golden/optionals/optional_nested_absent_unwrap.ska:3:12)
+""" } }
+
+[[test]]
 name = "primitive_operations"
 mode = "run"
 source = "optional_primitive_operations.ska"

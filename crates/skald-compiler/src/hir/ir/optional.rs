@@ -62,6 +62,7 @@ pub enum HirOptionalValueSource {
     Absent,
     Present(Box<super::HirStoredValueInitialization>),
     Copy(HirOptionalValuePlace),
+    Produced(Box<HirExpression>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -80,6 +81,7 @@ pub struct HirNestedOptionalAssignment {
 pub enum HirOptionalAliasPlace {
     Primitive(HirOptionalPlace),
     Class(HirClassOptionalPlace),
+    Nested(HirOptionalValuePlace),
 }
 
 impl HirOptionalAliasPlace {
@@ -87,6 +89,7 @@ impl HirOptionalAliasPlace {
         match self {
             Self::Primitive(place) => place.span,
             Self::Class(place) => place.span,
+            Self::Nested(place) => place.span,
         }
     }
 }
@@ -186,6 +189,7 @@ pub enum HirOptionalOperand {
     SharedPlace(HirOptionalSharedPlace),
     SharedProduced(Box<HirExpression>),
     NestedPlace(HirOptionalValuePlace),
+    NestedProduced(Box<HirExpression>),
 }
 
 impl HirOptionalOperand {
@@ -198,6 +202,7 @@ impl HirOptionalOperand {
             Self::SharedPlace(place) => place.span,
             Self::SharedProduced(expression) => expression.span,
             Self::NestedPlace(place) => place.span,
+            Self::NestedProduced(expression) => expression.span,
         }
     }
 
@@ -230,7 +235,8 @@ impl HirOptionalOperand {
             | Self::ClassProduced(_)
             | Self::SharedPlace(_)
             | Self::SharedProduced(_)
-            | Self::NestedPlace(_) => {
+            | Self::NestedPlace(_)
+            | Self::NestedProduced(_) => {
                 panic!("class optional payload access is implemented by checked views")
             }
         }
@@ -254,7 +260,8 @@ impl HirOptionalOperand {
             | Self::Produced(_)
             | Self::SharedPlace(_)
             | Self::SharedProduced(_)
-            | Self::NestedPlace(_) => {
+            | Self::NestedPlace(_)
+            | Self::NestedProduced(_) => {
                 panic!("primitive optional operands have no class payload")
             }
         }
@@ -278,11 +285,24 @@ impl HirOptionalOperand {
             | Self::Produced(_)
             | Self::ClassPlace(_)
             | Self::ClassProduced(_)
-            | Self::NestedPlace(_) => {
+            | Self::NestedPlace(_)
+            | Self::NestedProduced(_) => {
                 panic!("inline optional operands have no shared target")
             }
         }
     }
+}
+
+/// An owning checked extraction of one nested optional payload.
+///
+/// The outer layer is checked once. Its immediate optional payload is then
+/// copied into fresh destination storage selected by the consumer.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirNestedOptionalUnwrap {
+    pub source: HirOptionalOperand,
+    pub optional: OptionalTypeId,
+    pub payload: OptionalTypeId,
+    pub span: Span,
 }
 
 /// One checked, non-owning view of an exact inline-class optional payload.

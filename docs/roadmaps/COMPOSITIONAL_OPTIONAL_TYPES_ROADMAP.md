@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO5 is next.
+Status: in progress; CO6 is complete and CO7 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -102,7 +102,7 @@ pointee is an optional value.
 - [x] CO3 — Generalize typed optional lifecycle planning
 - [x] CO4 — Generalize executable optional MIR and target realization
 - [x] CO5 — Execute arbitrarily nested optional lifecycle
-- [ ] CO6 — Complete nested-optional access and callable integration
+- [x] CO6 — Complete nested-optional access and callable integration
 - [ ] CO7 — Execute optional inline arrays
 - [ ] CO8 — Integrate optional arrays across stored and aggregate boundaries
 - [ ] CO9 — Harden and publish compositional optionals
@@ -311,20 +311,20 @@ constructible; and absent payload bytes are never used as live values.
 **Purpose:** Carry nested storage through checked access, aliases, overloads,
 and every supported internal callable boundary.
 
-- [ ] Make each postfix `!` check and remove one layer, with chained unwraps
+- [x] Make each postfix `!` check and remove one layer, with chained unwraps
       preserving evaluation once, source-order failures, and exact result type.
-- [ ] Generalize scalar extraction, owning wrapper copying, class payload
+- [x] Generalize scalar extraction, owning wrapper copying, class payload
       places, shared-owner securing, nested guards, and shared-root anchors
       according to each immediate payload category.
-- [ ] Permit `ref value: P?` and `mut ref value: P?` for supported nested inline
+- [x] Permit `ref value: P?` and `mut ref value: P?` for supported nested inline
       containers while continuing to reject optional references and aliases to
       unsupported designated categories.
-- [ ] Carry nested optionals through functions, methods, interfaces, virtual
+- [x] Carry nested optionals through functions, methods, interfaces, virtual
       overrides, initializer overloads, value parameters/results, temporaries,
       recursion, register/stack pressure, and hidden aggregate destinations.
-- [ ] Complete exact-match, one-layer injection, `none`, and `some` overload
+- [x] Complete exact-match, one-layer injection, `none`, and `some` overload
       ranking without introducing recursive conversion chains.
-- [ ] Preserve guard invalidation failures, re-entrant mutation protection,
+- [x] Preserve guard invalidation failures, re-entrant mutation protection,
       selected-path cleanup, and full-expression order across every consumer.
 
 **Tests:** Chained unwrap success and failure; presence tests at every layer;

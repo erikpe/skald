@@ -73,7 +73,7 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::F64Bits(_)
         | HirExpressionKind::Boolean(_)
         | HirExpressionKind::PresenceTest { .. } => false,
-        HirExpressionKind::Unwrap(_) => true,
+        HirExpressionKind::Unwrap(_) | HirExpressionKind::NestedOptionalUnwrap(_) => true,
         HirExpressionKind::ArrayConstruction(construction) => {
             array_construction_contains_control_effect(construction)
         }
@@ -92,6 +92,7 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
         HirCallArgument::Optional { .. } => true,
         HirCallArgument::ClassOptional(_) => true,
         HirCallArgument::OptionalShared(_) => true,
+        HirCallArgument::NestedOptional(_) => true,
         HirCallArgument::CheckedView(view) => checked_view_contains_control_effect(view),
         HirCallArgument::View(view) => view_source_contains_control_effect(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_control_effect(&copy.source),

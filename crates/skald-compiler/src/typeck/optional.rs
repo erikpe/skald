@@ -49,24 +49,29 @@ impl CallableChecker<'_, '_> {
 
         let actual = self.static_expression_type(source);
         if actual == Type::Optional(optional) {
-            let place = self.optional_value_place(source).or_else(|| {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        TYPE_MISMATCH,
-                        "produced nested optional values are not supported in this context yet",
-                    )
+            if let Some(place) = self.optional_value_place(source) {
+                return Some(crate::hir::HirOptionalValue {
+                    optional,
+                    source: crate::hir::HirOptionalValueSource::Copy(place),
+                    span,
+                });
+            }
+            if is_optional_producer(source) {
+                let expression = self.check_expression(source)?;
+                return Some(crate::hir::HirOptionalValue {
+                    optional,
+                    source: crate::hir::HirOptionalValueSource::Produced(Box::new(expression)),
+                    span,
+                });
+            }
+            self.diagnostics.push(
+                Diagnostic::error(TYPE_MISMATCH, "nested optional source must be a value")
                     .with_primary_label(
                         span,
-                        "store this value before using it as a recursive optional source",
+                        "this expression cannot produce stored optional data",
                     ),
-                );
-                None
-            })?;
-            return Some(crate::hir::HirOptionalValue {
-                optional,
-                source: crate::hir::HirOptionalValueSource::Copy(place),
-                span,
-            });
+            );
+            return None;
         }
 
         if actual != payload {
@@ -173,6 +178,10 @@ impl CallableChecker<'_, '_> {
             .or_else(|| {
                 self.class_optional_place(expression)
                     .map(crate::hir::HirOptionalAliasPlace::Class)
+            })
+            .or_else(|| {
+                self.optional_value_place(expression)
+                    .map(crate::hir::HirOptionalAliasPlace::Nested)
             })
     }
 
@@ -628,6 +637,47 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirExpression> {
         let source =
             self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
+        if let HirOptionalOperand::NestedPlace(place) = &source {
+            let optional = place.optional;
+            let Type::Optional(payload) =
+                super::optional_types::payload_type(self.program, optional)
+            else {
+                unreachable!("nested optional metadata must have an optional payload")
+            };
+            return Some(HirExpression {
+                kind: HirExpressionKind::NestedOptionalUnwrap(Box::new(
+                    crate::hir::HirNestedOptionalUnwrap {
+                        source,
+                        optional,
+                        payload,
+                        span: unwrap.span,
+                    },
+                )),
+                ty: Type::Optional(payload),
+                span: unwrap.span,
+            });
+        }
+        if let HirOptionalOperand::NestedProduced(expression) = &source {
+            let Type::Optional(outer) = expression.ty else {
+                unreachable!("nested optional producer must retain its optional type")
+            };
+            let Type::Optional(payload) = super::optional_types::payload_type(self.program, outer)
+            else {
+                unreachable!("nested optional metadata must have an optional payload")
+            };
+            return Some(HirExpression {
+                kind: HirExpressionKind::NestedOptionalUnwrap(Box::new(
+                    crate::hir::HirNestedOptionalUnwrap {
+                        source,
+                        optional: outer,
+                        payload,
+                        span: unwrap.span,
+                    },
+                )),
+                ty: Type::Optional(payload),
+                span: unwrap.span,
+            });
+        }
         if matches!(
             source,
             HirOptionalOperand::ClassPlace(_)
@@ -635,6 +685,7 @@ impl CallableChecker<'_, '_> {
                 | HirOptionalOperand::SharedPlace(_)
                 | HirOptionalOperand::SharedProduced(_)
                 | HirOptionalOperand::NestedPlace(_)
+                | HirOptionalOperand::NestedProduced(_)
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -687,7 +738,8 @@ impl CallableChecker<'_, '_> {
             | HirOptionalOperand::Produced(_)
             | HirOptionalOperand::SharedPlace(_)
             | HirOptionalOperand::SharedProduced(_)
-            | HirOptionalOperand::NestedPlace(_) => {
+            | HirOptionalOperand::NestedPlace(_)
+            | HirOptionalOperand::NestedProduced(_) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         crate::typeck::program::INVALID_OBJECT_CONTEXT,
@@ -728,7 +780,7 @@ impl CallableChecker<'_, '_> {
                 return Some(HirOptionalOperand::NestedPlace(place));
             }
         }
-        if is_call_through_groups(expression) {
+        if is_optional_producer(expression) {
             if let Some(value) = self.check_expression(expression) {
                 if let Some(kind) = self.optional_kind(value.ty) {
                     return Some(match kind {
@@ -742,8 +794,7 @@ impl CallableChecker<'_, '_> {
                             HirOptionalOperand::SharedProduced(Box::new(value))
                         }
                         LegacyOptionalKind::Nested(_) => {
-                            self.report_non_optional_operand(value.ty, span, context);
-                            return None;
+                            HirOptionalOperand::NestedProduced(Box::new(value))
                         }
                     });
                 }
@@ -877,5 +928,17 @@ impl CallableChecker<'_, '_> {
             )
             .with_primary_label(span, format!("source has type `{}?`", actual.name())),
         );
+    }
+}
+
+fn is_optional_producer(expression: &ResolvedExpression) -> bool {
+    match expression {
+        ResolvedExpression::DirectCall(_)
+        | ResolvedExpression::StaticCall(_)
+        | ResolvedExpression::MethodCall(_)
+        | ResolvedExpression::InterfaceCall(_)
+        | ResolvedExpression::Unwrap(_) => true,
+        ResolvedExpression::Grouped(grouped) => is_optional_producer(&grouped.expression),
+        _ => false,
     }
 }

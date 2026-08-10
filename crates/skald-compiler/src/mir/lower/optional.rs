@@ -125,6 +125,9 @@ impl BodyLowerer<'_> {
                     },
                 ));
             }
+            HirOptionalValueSource::Produced(expression) => {
+                self.lower_optional_call(expression, destination);
+            }
             HirOptionalValueSource::Present(payload) => {
                 self.emit(MirInstruction::NestedOptionalInitialize(
                     MirNestedOptionalInitialize {
@@ -173,7 +176,8 @@ impl BodyLowerer<'_> {
             crate::hir::HirOptionalValueSource::Copy(source) => {
                 MirNestedOptionalSource::Copy(self.lower_nested_optional_place(source))
             }
-            crate::hir::HirOptionalValueSource::Present(_) => {
+            crate::hir::HirOptionalValueSource::Present(_)
+            | crate::hir::HirOptionalValueSource::Produced(_) => {
                 let temporary = self.new_optional_storage(
                     MirStorageKind::Temporary,
                     "nested-optional-source",
@@ -214,6 +218,158 @@ impl BodyLowerer<'_> {
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
             HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }
+    }
+
+    pub(super) fn lower_nested_optional_unwrap_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        unwrap: &crate::hir::HirNestedOptionalUnwrap,
+    ) {
+        let source = self.lower_optional_operand(&unwrap.source);
+        let present = self.assign(
+            MirRvalueKind::OptionalPresence {
+                source: source.clone(),
+                kind: MirPresenceTestKind::Some,
+            },
+            MirType::Bool,
+            unwrap.span,
+        );
+        let success_target = self.body.allocate_block(unwrap.span);
+        let failure_target = self.body.allocate_block(unwrap.span);
+        self.terminate(MirTerminator::Branch {
+            condition: present,
+            true_target: success_target,
+            false_target: failure_target,
+            span: unwrap.span,
+        });
+        self.body
+            .select_block(failure_target)
+            .expect("allocated nested-optional failure block must be selectable");
+        self.terminate(MirTerminator::Terminate {
+            reason: MirTerminationReason::OptionalAccessFailure,
+            span: unwrap.span,
+        });
+        self.body
+            .select_block(success_target)
+            .expect("allocated nested-optional success block must be selectable");
+        self.lower_optional_copy_initialize_at(
+            destination,
+            unwrap.payload,
+            source.project_nested_optional_payload(unwrap.optional),
+            unwrap.span,
+        );
+    }
+
+    fn lower_optional_copy_initialize_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        optional: crate::identity::OptionalTypeId,
+        source: crate::mir::MirPlace,
+        span: crate::source::Span,
+    ) {
+        let metadata = self
+            .input
+            .optional_types
+            .get(optional)
+            .expect("typed optional copy must have metadata");
+        match metadata.storage {
+            crate::hir::HirOptionalStorageCategory::Scalar => {
+                self.emit(MirInstruction::OptionalInitialize(MirOptionalInitialize {
+                    destination,
+                    source: MirOptionalSource::Copy(source),
+                    span,
+                }));
+            }
+            crate::hir::HirOptionalStorageCategory::InlineClass(class) => {
+                let Some(crate::hir::HirOptionalCopyPlan::Class { operation, .. }) =
+                    metadata.lifecycle.copy
+                else {
+                    unreachable!("copyable class optional must select a copy operation")
+                };
+                self.emit(MirInstruction::ClassOptionalInitialize(
+                    MirClassOptionalInitialize {
+                        optional,
+                        destination,
+                        source: MirClassOptionalSource::Copy(source),
+                        class,
+                        copy_constructor: Some(super::lower_selected_copy_operation(operation)),
+                        span,
+                    },
+                ));
+            }
+            crate::hir::HirOptionalStorageCategory::SharedOwner(target) => {
+                self.emit(MirInstruction::OptionalSharedInitialize(
+                    crate::mir::MirOptionalSharedInitialize {
+                        optional,
+                        destination,
+                        source: crate::mir::MirOptionalSharedSource::Copy(source),
+                        target: super::lower_shared_target(target),
+                        span,
+                    },
+                ));
+            }
+            crate::hir::HirOptionalStorageCategory::Nested(_) => {
+                self.emit(MirInstruction::NestedOptionalInitialize(
+                    MirNestedOptionalInitialize {
+                        optional,
+                        destination,
+                        source: MirNestedOptionalSource::Copy(source),
+                        span,
+                    },
+                ));
+            }
+            crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
+                unreachable!("optional arrays belong to a later roadmap task")
+            }
+        }
+    }
+
+    fn register_optional_temporary(
+        &mut self,
+        storage: StorageId,
+        optional: crate::identity::OptionalTypeId,
+        span: crate::source::Span,
+    ) {
+        let metadata = self
+            .input
+            .optional_types
+            .get(optional)
+            .expect("typed optional temporary must have metadata");
+        let destination = crate::mir::MirPlace::base(storage);
+        let temporary = match metadata.storage {
+            crate::hir::HirOptionalStorageCategory::Scalar => return,
+            crate::hir::HirOptionalStorageCategory::InlineClass(class) => {
+                super::FullExpressionTemporary::ClassOptional(crate::mir::MirClassOptionalCleanup {
+                    optional,
+                    destination,
+                    class,
+                    span,
+                })
+            }
+            crate::hir::HirOptionalStorageCategory::SharedOwner(target) => {
+                super::FullExpressionTemporary::OptionalShared(
+                    crate::mir::MirOptionalSharedCleanup {
+                        optional,
+                        destination,
+                        target: super::lower_shared_target(target),
+                        span,
+                    },
+                )
+            }
+            crate::hir::HirOptionalStorageCategory::Nested(_) => {
+                super::FullExpressionTemporary::NestedOptional(
+                    crate::mir::MirNestedOptionalCleanup {
+                        optional,
+                        destination,
+                        span,
+                    },
+                )
+            }
+            crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
+                unreachable!("optional arrays belong to a later roadmap task")
+            }
+        };
+        self.full_expression.register_temporary(temporary);
     }
 
     pub(super) fn lower_class_optional_initialize(
@@ -810,6 +966,10 @@ impl BodyLowerer<'_> {
                     expression.span,
                 );
                 self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
+                let Type::Optional(optional) = expression.ty else {
+                    unreachable!()
+                };
+                self.register_optional_temporary(destination, optional, expression.span);
                 crate::mir::MirPlace::base(destination)
             }
             HirOptionalOperand::ClassPlace(place) => self.lower_class_optional_place(place),
@@ -821,27 +981,14 @@ impl BodyLowerer<'_> {
                     expression.span,
                 );
                 self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
-                self.full_expression.register_temporary(
-                    super::FullExpressionTemporary::ClassOptional(
-                        crate::mir::MirClassOptionalCleanup {
-                            optional: optional_types::class_id(
-                                self.input.optional_types,
-                                optional_types::class_payload(self.input.optional_types, operand),
-                            ),
-                            destination: crate::mir::MirPlace::base(destination),
-                            class: optional_types::class_payload(
-                                self.input.optional_types,
-                                operand,
-                            ),
-                            span: expression.span,
-                        },
-                    ),
-                );
+                let Type::Optional(optional) = expression.ty else {
+                    unreachable!()
+                };
+                self.register_optional_temporary(destination, optional, expression.span);
                 crate::mir::MirPlace::base(destination)
             }
             HirOptionalOperand::SharedPlace(place) => self.lower_optional_shared_place(place),
             HirOptionalOperand::SharedProduced(expression) => {
-                let target = optional_types::shared_payload(self.input.optional_types, operand);
                 let destination = self.new_optional_storage(
                     MirStorageKind::Temporary,
                     "optional-shared-result",
@@ -849,19 +996,27 @@ impl BodyLowerer<'_> {
                     expression.span,
                 );
                 self.lower_optional_shared_call(expression, destination);
-                self.full_expression.register_temporary(
-                    super::FullExpressionTemporary::OptionalShared(
-                        crate::mir::MirOptionalSharedCleanup {
-                            optional: optional_types::shared_id(self.input.optional_types, target),
-                            destination: crate::mir::MirPlace::base(destination),
-                            target: super::lower_shared_target(target),
-                            span: expression.span,
-                        },
-                    ),
-                );
+                let Type::Optional(optional) = expression.ty else {
+                    unreachable!()
+                };
+                self.register_optional_temporary(destination, optional, expression.span);
                 crate::mir::MirPlace::base(destination)
             }
             HirOptionalOperand::NestedPlace(place) => self.lower_nested_optional_place(place),
+            HirOptionalOperand::NestedProduced(expression) => {
+                let Type::Optional(optional) = expression.ty else {
+                    unreachable!()
+                };
+                let destination = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "nested-optional-result",
+                    MirType::Optional(optional),
+                    expression.span,
+                );
+                self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
+                self.register_optional_temporary(destination, optional, expression.span);
+                crate::mir::MirPlace::base(destination)
+            }
         }
     }
 

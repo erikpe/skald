@@ -674,6 +674,7 @@ impl<'mir> Verifier<'mir> {
                                     MirStorageKind::Local
                                         | MirStorageKind::Temporary
                                         | MirStorageKind::Argument
+                                        | MirStorageKind::Return
                                 )
                             }))
                 });

@@ -333,7 +333,8 @@ fn replace_first_false_expression(
         HirExpressionKind::PresenceTest { source, .. } => match source {
             HirOptionalOperand::Produced(expression)
             | HirOptionalOperand::ClassProduced(expression)
-            | HirOptionalOperand::SharedProduced(expression) => {
+            | HirOptionalOperand::SharedProduced(expression)
+            | HirOptionalOperand::NestedProduced(expression) => {
                 replace_first_false_expression(expression, replacement)
             }
             HirOptionalOperand::Place(_)

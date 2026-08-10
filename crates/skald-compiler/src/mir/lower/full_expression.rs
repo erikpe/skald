@@ -86,6 +86,13 @@ impl FullExpressionTracker {
         !self.temporaries.is_empty()
     }
 
+    pub(super) fn cleanup_may_change_block(&self) -> bool {
+        self.has_conditions()
+            || self.temporaries.iter().any(|temporary| {
+                matches!(temporary.value, FullExpressionTemporary::ClassOptional(_))
+            })
+    }
+
     /// Establish the condition inherited by subsequent registrations.
     ///
     /// Logical-expression lowering selects this boundary for its right
