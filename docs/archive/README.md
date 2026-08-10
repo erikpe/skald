@@ -129,3 +129,4 @@ Resolved shared-ownership follow-ups:
 Resolved optional-values follow-ups:
 
 - [optional-values maintainability discoveries](OPTIONAL_VALUES_DISCOVERIES.md)
+- [compositional optional type discoveries](COMPOSITIONAL_OPTIONAL_TYPES_DISCOVERIES.md)

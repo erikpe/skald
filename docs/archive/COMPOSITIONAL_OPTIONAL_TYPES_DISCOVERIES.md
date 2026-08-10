@@ -1,10 +1,10 @@
 # Compositional Optional Types Discoveries
 
-Status: pending; one lower-priority maintainability follow-up remains.
+Status: resolved.
 
 These findings were recorded while closing the compositional optional type
-work. Neither changes the implemented language contract or fixes a known
-correctness defect, so they remain separate from the completed feature
+work. Neither changed the implemented language contract or fixed a known
+correctness defect, so they remained separate from the completed feature
 roadmap.
 
 ## Use payload-neutral names for aggregate optional operations
@@ -47,6 +47,8 @@ tests plus the complete repository and MSRV gates pass.
 
 **Priority:** Low.
 
+**Status:** Resolved.
+
 **Problem:** Target lowering remains correctly encapsulated, but the optional
 instruction selector and generated array-helper implementation each combine
 several independently understandable lowering responsibilities in one large
@@ -65,3 +67,14 @@ private responsibility-named submodules behind the existing `lower` and
 `array` facades. Preserve helper symbols, emission order, diagnostics,
 instruction sequences, runtime-trace locations, and public module paths. Do
 not combine the split with ABI or lifecycle changes.
+
+**Resolution:** Optional lowering now has private `access`, `aggregate`,
+`inline_class`, `scalar`, and `shared_owner` modules behind its existing
+facade. Generated array-helper lowering now has private `initialization`,
+`copy`, `destruction`, and shared address-materialization modules behind its
+existing facade. Cross-responsibility methods and helper functions use narrow
+module visibility, and implementation-only imports remain with their owners.
+Helper emission order, symbols, diagnostics, instruction sequences,
+runtime-trace attribution, public module paths, and lifecycle behavior remain
+unchanged. Focused optional, array, and array-element-list backend suites plus
+the complete repository and MSRV gates pass.

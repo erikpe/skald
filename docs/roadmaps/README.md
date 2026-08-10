@@ -21,9 +21,7 @@ roadmap.
 
 ## Pending discoveries
 
-- [Compositional optional type discoveries](COMPOSITIONAL_OPTIONAL_TYPES_DISCOVERIES.md)
-  records the completed payload-neutral aggregate-operation rename and a
-  remaining behavior-preserving split of the private target-lowering modules.
+No pending implementation discoveries are currently recorded.
 
 ## Implementation baseline
 
