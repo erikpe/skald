@@ -45,7 +45,7 @@ pub(in crate::typeck) fn validate_array_types(
     for interface in program.interfaces.iter() {
         for requirement in &interface.requirements {
             for parameter in &requirement.parameters {
-                if resolved_type_contains_array(program, parameter.type_syntax.kind) {
+                if is_direct_interface_array(parameter.type_syntax.kind) {
                     diagnostics.push(
                         Diagnostic::error(
                             super::super::program::INVALID_INTERFACE_REQUIREMENT,
@@ -58,7 +58,7 @@ pub(in crate::typeck) fn validate_array_types(
                     );
                 }
             }
-            if resolved_type_contains_array(program, requirement.return_type.kind) {
+            if is_direct_interface_array(requirement.return_type.kind) {
                 diagnostics.push(
                     Diagnostic::error(
                         super::super::program::INVALID_INTERFACE_REQUIREMENT,
@@ -72,6 +72,14 @@ pub(in crate::typeck) fn validate_array_types(
             }
         }
     }
+}
+
+fn is_direct_interface_array(kind: ResolvedTypeKind) -> bool {
+    matches!(
+        kind,
+        ResolvedTypeKind::Array(_)
+            | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Array(_))
+    )
 }
 
 fn reject_external_array(

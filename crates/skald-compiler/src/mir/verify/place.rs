@@ -270,12 +270,13 @@ impl Verifier<'_> {
                     }
                     ty = MirType::Class(class);
                 }
-                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                MirPlaceProjection::NestedOptionalPayload(optional)
+                | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     if ty != MirType::Optional(optional) {
                         self.block_error(
                             function.callable(),
                             block.id,
-                            format!("nested optional payload projection {optional} has incompatible base type {ty}"),
+                            format!("optional payload projection {optional} has incompatible base type {ty}"),
                         );
                         return None;
                     }

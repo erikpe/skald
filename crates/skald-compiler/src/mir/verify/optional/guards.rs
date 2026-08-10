@@ -32,6 +32,8 @@ impl Verifier<'_> {
                             instruction,
                             MirInstruction::ClassOptionalAssign(_)
                                 | MirInstruction::ClassOptionalCleanup(_)
+                                | MirInstruction::NestedOptionalAssign(_)
+                                | MirInstruction::NestedOptionalCleanup(_)
                         )
                     {
                         self.block_error(
@@ -56,7 +58,7 @@ impl Verifier<'_> {
                             state.reset_storage(operation.storage);
                         }
                         MirInstruction::EndOptionalView(end) => {
-                            let expected = (end.source.clone(), end.class);
+                            let expected = (end.source.clone(), end.payload);
                             let ordered = state.order.last() == Some(&end.guard);
                             if !ordered || state.active.remove(&end.guard) != Some(expected) {
                                 self.block_error(
@@ -102,6 +104,30 @@ impl Verifier<'_> {
                                 );
                             }
                         }
+                        MirInstruction::NestedOptionalAssign(assignment) => {
+                            let self_copy = matches!(
+                                &assignment.source,
+                                crate::mir::MirNestedOptionalSource::Copy(source)
+                                    if source == &assignment.destination
+                            );
+                            if !self_copy && !state.mutation_permits.remove(&assignment.destination)
+                            {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "aggregate optional assignment lacks a matching mutation check",
+                                );
+                            }
+                        }
+                        MirInstruction::NestedOptionalCleanup(cleanup) => {
+                            if !state.mutation_permits.remove(&cleanup.destination) {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "aggregate optional cleanup lacks a matching mutation check",
+                                );
+                            }
+                        }
                         MirInstruction::SharedRelease(release)
                             if state.active.values().any(|(source, _)| {
                                 matches!(
@@ -141,7 +167,7 @@ impl Verifier<'_> {
                         let mut success = state.clone();
                         if success
                             .active
-                            .insert(begin.guard, (begin.source.clone(), begin.class))
+                            .insert(begin.guard, (begin.source.clone(), begin.payload))
                             .is_some()
                         {
                             self.block_error(
@@ -321,6 +347,7 @@ impl Verifier<'_> {
                 matches!(
                     projection,
                     crate::mir::MirPlaceProjection::OptionalPayload(_)
+                        | crate::mir::MirPlaceProjection::CheckedOptionalPayload(_)
                 ) && index + 1 < place.projections.len()
             })
         {
@@ -340,11 +367,21 @@ impl Verifier<'_> {
             projections: Vec::new(),
         };
         for projection in &place.projections {
-            if let crate::mir::MirPlaceProjection::OptionalPayload(class) = projection {
+            let guarded_payload = match projection {
+                crate::mir::MirPlaceProjection::OptionalPayload(class) => {
+                    Some(crate::mir::MirType::Class(*class))
+                }
+                crate::mir::MirPlaceProjection::CheckedOptionalPayload(optional) => self
+                    .program
+                    .optional_type(*optional)
+                    .map(|metadata| metadata.payload),
+                _ => None,
+            };
+            if let Some(payload) = guarded_payload {
                 if !state
                     .active
                     .values()
-                    .any(|(source, guarded_class)| source == &root && guarded_class == class)
+                    .any(|(source, guarded_payload)| source == &root && *guarded_payload == payload)
                 {
                     self.block_error(
                         function.callable(),
@@ -360,7 +397,7 @@ impl Verifier<'_> {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct OptionalGuardState {
-    active: BTreeMap<OptionalGuardId, (MirPlace, crate::identity::ClassId)>,
+    active: BTreeMap<OptionalGuardId, (MirPlace, crate::mir::MirType)>,
     order: Vec<OptionalGuardId>,
     mutation_permits: HashSet<MirPlace>,
 }

@@ -1868,6 +1868,19 @@ impl<'types> HirDumper<'types> {
                         dumper.array_receiver(receiver)
                     }
                     crate::hir::HirArrayAliasSource::Element(place) => dumper.array_element(place),
+                    crate::hir::HirArrayAliasSource::OptionalPayload {
+                        source,
+                        optional,
+                        array,
+                    } => {
+                        dumper.line(
+                            &format!(
+                                "CheckedOptionalArrayPayload optional={optional} array={array}"
+                            ),
+                            value.span,
+                        );
+                        dumper.indented(|dumper| dumper.optional_operand(source));
+                    }
                 });
             }
             HirCallArgument::PrimitivePlace(place) => {

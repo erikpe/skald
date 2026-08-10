@@ -146,7 +146,7 @@ impl BodyLowerer<'_> {
                 self.emit(MirInstruction::OptionalSharedCleanup(cleanup));
             }
             super::FullExpressionTemporary::NestedOptional(cleanup) => {
-                self.emit(MirInstruction::NestedOptionalCleanup(cleanup));
+                self.emit_nested_optional_cleanup(cleanup);
             }
             super::FullExpressionTemporary::Array { storage, array } => {
                 self.emit(MirInstruction::Array(MirArrayInstruction::Release {
@@ -260,7 +260,7 @@ impl PlannedScopeExit {
 
 impl PlannedCleanup {
     pub(super) const fn requires_optional_check(&self) -> bool {
-        matches!(self, Self::ClassOptional(_))
+        matches!(self, Self::ClassOptional(_) | Self::NestedOptional(_))
     }
 }
 

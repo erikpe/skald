@@ -528,12 +528,13 @@ impl<'mir> Verifier<'mir> {
                         Some(crate::mir::MirOptionalStorage::InlineClass(_)) => {
                             Some(MirDestructionStep::OptionalClassField(field.id))
                         }
-                        Some(crate::mir::MirOptionalStorage::Nested(_)) => {
-                            Some(MirDestructionStep::OptionalField {
-                                field: field.id,
-                                optional,
-                            })
-                        }
+                        Some(
+                            crate::mir::MirOptionalStorage::Nested(_)
+                            | crate::mir::MirOptionalStorage::InlineArray(_),
+                        ) => Some(MirDestructionStep::OptionalField {
+                            field: field.id,
+                            optional,
+                        }),
                         _ => None,
                     },
                     MirType::Array(_) => Some(MirDestructionStep::ArrayField(field.id)),
@@ -809,6 +810,7 @@ impl<'mir> Verifier<'mir> {
                                 matches!(
                                     metadata.storage,
                                     crate::mir::MirOptionalStorage::Nested(_)
+                                        | crate::mir::MirOptionalStorage::InlineArray(_)
                                 )
                             })
                 }
@@ -929,6 +931,7 @@ impl<'mir> Verifier<'mir> {
                                 matches!(
                                     metadata.storage,
                                     crate::mir::MirOptionalStorage::Nested(_)
+                                        | crate::mir::MirOptionalStorage::InlineArray(_)
                                 )
                             })
                 }

@@ -383,8 +383,9 @@ runtime symbol.
 The frozen
 [compositional optional direction](OPTIONAL_VALUES.md#array-composition-and-runtime-boundary)
 preserves that boundary for recursive tagged wrappers and optional inline
-arrays. It reuses ordinary array backing allocation and cleanup and adds no C
-symbol or ABI-version change. Shared boxes containing optional pointees remain
+arrays across aggregate storage, internal dispatch, array elements, and
+checked payload aliases. It reuses ordinary array backing allocation, anchors,
+and cleanup and adds no C symbol or ABI-version change. Shared boxes containing optional pointees remain
 outside that design; no allocation metadata or finalizer contract for them is
 reserved here.
 

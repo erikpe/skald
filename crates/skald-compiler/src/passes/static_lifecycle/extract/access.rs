@@ -239,7 +239,8 @@ impl Extractor<'_> {
                     MirType::Class(class)
                 }
                 MirPlaceProjection::Field(field) => self.program.field(field)?.ty,
-                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                MirPlaceProjection::NestedOptionalPayload(optional)
+                | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     self.program.optional_type(optional)?.payload
                 }
                 MirPlaceProjection::ArrayElement { array, .. } => {

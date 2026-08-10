@@ -123,6 +123,10 @@ impl BodyLowerer<'_> {
                         MirNestedOptionalSource::Copy(place)
                     }
                 };
+                let self_copy = matches!(&source, MirNestedOptionalSource::Copy(source) if source == &destination);
+                if !self_copy {
+                    self.check_optional_mutation(destination.clone(), assignment.span);
+                }
                 self.emit(MirInstruction::NestedOptionalAssign(
                     MirNestedOptionalAssign {
                         optional: value.optional,
@@ -340,6 +344,36 @@ impl BodyLowerer<'_> {
             crate::hir::HirArrayReceiverOwnership::Inline => owner,
             crate::hir::HirArrayReceiverOwnership::ExplicitSharedPointee => MirPlace::base(anchor),
         }
+    }
+
+    pub(super) fn lower_optional_array_alias_place_with_anchor(
+        &mut self,
+        source: &crate::hir::HirOptionalOperand,
+        optional: crate::identity::OptionalTypeId,
+        array: crate::identity::ArrayTypeId,
+        span: crate::source::Span,
+    ) -> (MirPlace, StorageId) {
+        let optional_place = self.lower_optional_operand(source);
+        let owner = self
+            .begin_optional_payload_view(optional_place, optional, MirType::Array(array), span)
+            .project_checked_optional_payload(optional);
+        let kind = MirArrayAnchorKind::InlineBacking;
+        let anchor = self.new_array_storage(
+            array,
+            MirStorageKind::ArrayAnchor(kind),
+            "optional-payload-anchor",
+            span,
+        );
+        self.emit(MirInstruction::Array(MirArrayInstruction::AnchorBegin {
+            anchor,
+            owner: owner.clone(),
+            array,
+            kind,
+            span,
+        }));
+        self.full_expression
+            .register_temporary(FullExpressionTemporary::ArrayAnchor(anchor));
+        (owner, anchor)
     }
 
     pub(super) fn lower_array_receiver_with_anchor(

@@ -155,12 +155,16 @@ impl Verifier<'_> {
             .verify_place(function, block, &begin.source)
             .map(|place| place.ty)
             != Some(MirType::Optional(begin.optional))
-            || self.optional_class(MirType::Optional(begin.optional)) != Some(begin.class)
+            || self
+                .program
+                .optional_type(begin.optional)
+                .map(|optional| optional.payload)
+                != Some(begin.payload)
         {
             self.block_error(
                 function.callable(),
                 block.id,
-                "optional-view source has the wrong exact class type",
+                "optional-view source has the wrong exact payload type",
             );
         }
         for target in [success_target, absent_target, overflow_target] {
@@ -202,12 +206,12 @@ impl Verifier<'_> {
     ) {
         if !self
             .verify_place(function, block, source)
-            .is_some_and(|place| self.optional_class(place.ty).is_some())
+            .is_some_and(|place| matches!(place.ty, MirType::Optional(_)))
         {
             self.block_error(
                 function.callable(),
                 block.id,
-                "optional mutation check requires exact-class optional storage",
+                "optional mutation check requires inline optional storage",
             );
         }
         self.verify_block_target(function, block, success_target);
@@ -239,7 +243,11 @@ impl Verifier<'_> {
                 .verify_place(function, block, &end.source)
                 .map(|place| place.ty)
                 != Some(MirType::Optional(end.optional))
-            || self.optional_class(MirType::Optional(end.optional)) != Some(end.class)
+            || self
+                .program
+                .optional_type(end.optional)
+                .map(|optional| optional.payload)
+                != Some(end.payload)
         {
             self.block_error(
                 function.callable(),

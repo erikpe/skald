@@ -123,7 +123,11 @@ impl Verifier<'_> {
                     .program
                     .optional_type(optional)
                     .is_some_and(|metadata| {
-                        matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                        matches!(
+                            metadata.storage,
+                            crate::mir::MirOptionalStorage::Nested(_)
+                                | crate::mir::MirOptionalStorage::InlineArray(_)
+                        )
                     })
                 {
                     self.program_error("array copy names an invalid nested optional");
@@ -177,7 +181,11 @@ impl Verifier<'_> {
                     .program
                     .optional_type(optional)
                     .is_some_and(|metadata| {
-                        matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                        matches!(
+                            metadata.storage,
+                            crate::mir::MirOptionalStorage::Nested(_)
+                                | crate::mir::MirOptionalStorage::InlineArray(_)
+                        )
                     })
                 {
                     self.program_error("array assignment names an invalid nested optional");
@@ -208,7 +216,11 @@ impl Verifier<'_> {
                     .program
                     .optional_type(optional)
                     .is_some_and(|metadata| {
-                        matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_))
+                        matches!(
+                            metadata.storage,
+                            crate::mir::MirOptionalStorage::Nested(_)
+                                | crate::mir::MirOptionalStorage::InlineArray(_)
+                        )
                     })
                 {
                     self.program_error("array destruction names an invalid nested optional");

@@ -98,6 +98,16 @@ impl BodyLowerer<'_> {
             HirArrayAliasSource::Element(element) => {
                 self.lower_array_alias_element_place_with_anchor(element, argument.access)
             }
+            HirArrayAliasSource::OptionalPayload {
+                source,
+                optional,
+                array,
+            } => self.lower_optional_array_alias_place_with_anchor(
+                source,
+                *optional,
+                *array,
+                argument.span,
+            ),
         };
         MirIoBuffer {
             place,

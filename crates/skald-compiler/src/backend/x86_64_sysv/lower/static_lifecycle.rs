@@ -303,8 +303,38 @@ fn lower_nested_optional_cleanup(
             output.push(Instruction::Label(complete));
             Ok(())
         }
-        crate::mir::MirOptionalStorage::InlineArray(_) => {
-            unreachable!("optional arrays belong to a later roadmap task")
+        crate::mir::MirOptionalStorage::InlineArray(array) => {
+            let complete = Label::new(format!(
+                ".Lska.static.s{}_{}_optional_array_complete_{}",
+                field.class().index(),
+                field.index(),
+                output.len()
+            ));
+            load_static_address(program, field, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, base_offset),
+                destination: Register::Rax.into(),
+            });
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfEqual(complete.clone()));
+            let payload = displacement(
+                data_layout.optional_type(optional)?.payload_offset(),
+                "optional array payload",
+            )?;
+            let payload_offset = base_offset
+                .checked_add(payload)
+                .ok_or_else(|| static_error("optional array offset exceeds target limits"))?;
+            load_static_address(program, field, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, payload_offset),
+                destination: Register::Rdi.into(),
+            });
+            output.push(call::direct_instruction(
+                symbol::array_release(array),
+                call::TraceAttribution::ProcessBoundary,
+            ));
+            output.push(Instruction::Label(complete));
+            Ok(())
         }
     }
 }

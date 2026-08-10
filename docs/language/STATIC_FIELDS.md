@@ -210,8 +210,9 @@ implicit initializer.
 ## Explicit initializer types and typed semantics
 
 An explicit initializer permits the ordinary stored field types: all five
-primitives, exact inline classes, supported inline optionals, non-optional and
-optional shared owners, and inline arrays. Strings use their ordinary exact
+primitives, exact inline classes, supported inline optionals including
+optional arrays, non-optional and optional shared owners, and inline arrays.
+Strings use their ordinary exact
 class and language-item behavior. `unit`, a bare interface, a bare `Obj` view,
 aliases, and otherwise unsupported stored forms remain invalid.
 

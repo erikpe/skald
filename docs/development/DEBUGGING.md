@@ -405,8 +405,8 @@ Inspect optional frontend behavior at the narrowest owner defined by the
 
 - token and AST dumps currently expose `?`, `!`, reserved `none`, contextual
   `some`, type-marker spans, presence tests, and unwrap nodes;
-- resolved dumps currently expose canonical flat inline-optional and
-  optional-shared targets plus absence, presence-test, and unwrap nodes;
+- resolved dumps expose canonical recursive optional identities, including
+  optional and array payloads, plus absence, presence-test, and unwrap nodes;
 - inline-optional HIR dumps expose absent/present initialization, field places,
   arguments/results, produced calls, copy, assignment, presence tests, and
   checked primitive extraction or bounded class payload views;
@@ -418,8 +418,9 @@ Inspect optional frontend behavior at the narrowest owner defined by the
   hidden destination ABI, inline guard counts, static failure reporting, and
   defensive traps for impossible verified state; and
 - optional-container alias dumps use indirect optional places without object
-  origin metadata; reserved boxed/nested optional forms and aliases to
-  optional shared owners remain frontend diagnostics; and
+  origin metadata; checked optional-array payload aliases additionally show a
+  guarded payload projection and array anchor. Reserved shared boxes remain
+  frontend diagnostics; and
 - static-field HIR/MIR dumps expose optional shared owners through canonical
   identity-based static places, with no function-local storage carrier; final
   MIR also exposes planned activation, publication, and reverse-destruction

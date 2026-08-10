@@ -130,6 +130,30 @@ fn interns_recursive_optional_and_array_identities_bottom_up() {
 }
 
 #[test]
+fn optional_array_and_shared_array_spellings_keep_exact_compositional_identities() {
+    let output = resolve_text(
+        "fn shapes(elements: i64?[], maybe: i64[]?, nested: i64[][]?, owners: (shared i64[])[], canonical_owner: (shared i64[])?, shorthand_owner: shared? i64[]) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let shapes = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    let kinds = shapes
+        .parameters
+        .iter()
+        .map(|parameter| parameter.type_syntax.kind)
+        .collect::<Vec<_>>();
+
+    assert_ne!(kinds[0], kinds[1]);
+    assert_ne!(kinds[1], kinds[2]);
+    assert_ne!(kinds[2], kinds[3]);
+    assert_ne!(kinds[3], kinds[4]);
+    assert_eq!(kinds[4], kinds[5]);
+
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+}
+
+#[test]
 fn repeated_optional_spellings_share_identities_across_modules() {
     let (_workspace, graph) = load_module_sources(
         "app",

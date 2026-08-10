@@ -184,7 +184,8 @@ impl CallableChecker<'_, '_> {
                         .map(HirStatement::ClassOptionalAssignment)
                     }
                 }
-                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                super::super::optional_types::LegacyOptionalKind::Nested(_)
+                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                     let Type::Optional(optional) = target.ty else {
                         unreachable!()
                     };
@@ -217,9 +218,6 @@ impl CallableChecker<'_, '_> {
                             },
                         )
                     })
-                }
-                super::super::optional_types::LegacyOptionalKind::Array(_) => {
-                    unreachable!("optional-array fields are rejected by the position gate")
                 }
             },
             (

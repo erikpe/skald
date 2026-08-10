@@ -307,8 +307,20 @@ fn emit_optional_value_copy(
                 output,
             )?;
         }
-        crate::mir::MirOptionalStorage::SharedOwner(_)
-        | crate::mir::MirOptionalStorage::InlineArray(_) => unreachable!(),
+        crate::mir::MirOptionalStorage::InlineArray(array) => {
+            load_home_address(SOURCE_HOME, payload_offset, Register::R11, output);
+            output.push(Instruction::Move {
+                source: memory(Register::R11, 0),
+                destination: Register::Rdi.into(),
+            });
+            output.push(call::direct_instruction(
+                symbol::array_clone(array),
+                call::TraceAttribution::InheritedSourceOperation,
+            ));
+            load_home_address(DESTINATION_HOME, payload_offset, Register::R11, output);
+            value::store_rax(memory(Register::R11, 0), output);
+        }
+        crate::mir::MirOptionalStorage::SharedOwner(_) => unreachable!(),
     }
     load_home_address(DESTINATION_HOME, offset, Register::R11, output);
     output.push(Instruction::MoveImmediate64 {

@@ -4,10 +4,9 @@ Status: implemented language contract for primitive, exact inline-class, and
 optional shared-owner values across owning locals, fields, internal callable
 boundaries, and aliases to supported inline optional containers. This document
 also defines the implemented compositional type syntax, nested access and
-callable behavior, and the staged implementation of optional inline arrays.
-Recursive owning lifecycle and access are executable. Optional arrays execute
-as local and top-level internal function values while their aggregate and
-alias positions remain behind focused semantic gates. The
+callable behavior, and optional inline arrays. Recursive owning lifecycle and
+access are executable. Optional arrays execute in every supported owning,
+aggregate, internal callable, array-element, and call-scoped alias position. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -93,7 +92,7 @@ the canonical `(shared T)?` form:
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
 | `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
-| `T[]?` | Tagged optional containing zero or one inline array | Locals and top-level internal value parameters/results execute |
+| `T[]?` | Tagged optional containing zero or one inline array | Supported owning, internal callable, aggregate, array-element, and checked-alias positions execute |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
 | `shared? T?` | Optional owner of a non-null shared box containing `T?` | Reserved and rejected |
 
@@ -112,8 +111,6 @@ The current profile rejects:
 - `unit?`;
 - standalone optional interface or `Obj` views;
 - optional function types;
-- optional arrays in fields, statics, methods, interfaces, initializer
-  parameters, aliases, and array elements;
 - `shared T?` and `shared? T?`;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
@@ -260,7 +257,7 @@ therefore hold nested guards; clearing, replacing, or destroying any guarded
 container terminates before changing that layer. A shared-root anchor keeps
 the containing allocation alive independently of every optional guard.
 
-The completed extension will permit supported optionals in internal locals,
+Supported optionals are permitted in internal locals,
 fields, class-owned statics, value parameters/results, methods, interfaces,
 overrides, initializer overloads, temporaries, array elements, and explicit
 element-list destinations. `ref` and `mut ref` parameters may designate any
@@ -284,9 +281,13 @@ reusing the valid empty descriptor representation.
 Present optional arrays retain ordinary array invariance, backing ownership,
 copy construction, produced-backing transfer, assignment, element lifecycle,
 and reverse cleanup. Checked unwrap copies one complete array value out after
-testing the outer tag. Optional arrays as fields, statics, aliases, method or
-interface boundaries, initializer parameters, and array elements remain
-staged for aggregate integration. `shared? T[]`, normalized as
+testing the outer tag. When `array_optional!` is consumed by a `ref T[]` or
+`mut ref T[]` parameter, the compiler instead exposes a checked call-scoped
+payload place: the wrapper remains presence-guarded and the backing remains
+anchored through the complete immediate call. Mutable writes affect the
+original array, while replacement of the guarded optional terminates.
+Optional arrays also execute in fields, statics, methods, interfaces,
+overrides, initializer overloads, and array elements. `shared? T[]`, normalized as
 `(shared T[])?`, remains an optional owner of a shared array allocation and is
 not an inline optional array.
 
@@ -668,15 +669,15 @@ The frozen compositional extension does not include:
 These exclusions are not implied language behavior. Each requires a separate
 focused design before implementation. Nested optionals are not on this
 exclusion list: their owning lifecycle, checked access, aliases, and internal
-callable boundaries execute. Inline optional arrays are also implemented for
-core owning locals and top-level internal functions; aggregate and alias
-positions remain staged.
+callable boundaries execute. Inline optional arrays are implemented across
+every supported owning, aggregate, internal callable, array-element, and
+call-scoped alias position.
 
 The implemented [array design](ARRAYS.md) permits existing optional
 non-array element types to default to `none` inside arrays and extends
-`shared?` shorthand for exact shared array targets. It continues to exclude
-inline optional arrays as array elements;
-`shared? T[]` is optional shared ownership, not an inline optional array.
+`shared?` shorthand for exact shared array targets. Inline optional arrays may
+themselves be array elements; `shared? T[]` is optional shared ownership, not
+an inline optional array.
 
 Its implemented
 [explicit element-list form](ARRAYS.md#explicit-element-list-construction)

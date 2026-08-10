@@ -6,7 +6,7 @@ use crate::{
         HirBlock, HirExpression, HirLocal, HirParameter, HirParameterMode, HirProgram,
         HirSelectedCopyOperation, Type,
     },
-    identity::{BindingId, CallableId, ClassId},
+    identity::{BindingId, CallableId, ClassId, OptionalTypeId},
 };
 
 mod array;
@@ -138,7 +138,8 @@ struct BodyLowerer<'hir> {
 struct ActiveOptionalGuard {
     guard: OptionalGuardId,
     source: MirPlace,
-    class: ClassId,
+    optional: OptionalTypeId,
+    payload: MirType,
 }
 
 impl<'hir> BodyLowerer<'hir> {
@@ -351,7 +352,7 @@ impl<'hir> BodyLowerer<'hir> {
                     self.emit(MirInstruction::OptionalSharedCleanup(cleanup))
                 }
                 cleanup::PlannedCleanup::NestedOptional(cleanup) => {
-                    self.emit(MirInstruction::NestedOptionalCleanup(cleanup))
+                    self.emit_nested_optional_cleanup(cleanup)
                 }
                 cleanup::PlannedCleanup::Array {
                     storage,

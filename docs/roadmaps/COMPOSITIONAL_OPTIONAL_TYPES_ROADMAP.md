@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO7 is complete and CO8 is next.
+Status: in progress; CO8 is complete and CO9 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -104,7 +104,7 @@ pointee is an optional value.
 - [x] CO5 — Execute arbitrarily nested optional lifecycle
 - [x] CO6 — Complete nested-optional access and callable integration
 - [x] CO7 — Execute optional inline arrays
-- [ ] CO8 — Integrate optional arrays across stored and aggregate boundaries
+- [x] CO8 — Integrate optional arrays across stored and aggregate boundaries
 - [ ] CO9 — Harden and publish compositional optionals
 
 ## PR-sized implementation sequence
@@ -378,22 +378,22 @@ unchanged.
 **Purpose:** Complete optional arrays in every supported declaration, alias,
 callable, and recursive aggregate position after core ownership is proven.
 
-- [ ] Support optional arrays in class fields, static fields, internal
+- [x] Support optional arrays in class fields, static fields, internal
       parameters/results, methods, interfaces, overrides, initializer
       overloads, temporaries, and synthesized enclosing lifecycle.
-- [ ] Permit read-only and mutable call-scoped aliases to optional-array
+- [x] Permit read-only and mutable call-scoped aliases to optional-array
       containers with backing anchors and presence guards covering the complete
       immediate consumer.
-- [ ] Permit optional arrays as array elements, including default outer
+- [x] Permit optional arrays as array elements, including default outer
       absence, explicit element lists, indexing, slices, nested optional arrays,
       and reverse cleanup.
-- [ ] Extend compatibility, overload, containment, capability, lifecycle,
+- [x] Extend compatibility, overload, containment, capability, lifecycle,
       diagnostic, dump, and cross-process determinism coverage across every
       optional-array boundary.
-- [ ] Prove that `T?[]`, `T[]?`, `T[][]?`, `(shared T[])[]`,
+- [x] Prove that `T?[]`, `T[]?`, `T[][]?`, `(shared T[])[]`,
       `(shared T[])?`, and `shared? T[]` retain their intended canonical
       identities and operations.
-- [ ] Update array, optional, lifecycle, alias, static, phase, backend, runtime
+- [x] Update array, optional, lifecycle, alias, static, phase, backend, runtime
       ABI, debugging, and testing documentation as each boundary becomes
       executable.
 

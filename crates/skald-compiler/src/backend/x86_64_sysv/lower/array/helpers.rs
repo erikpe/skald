@@ -462,7 +462,11 @@ fn lower_copier(
                     Instruction::Label(complete),
                 ]);
                 instructions
-            } else if matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_)) {
+            } else if matches!(
+                metadata.storage,
+                crate::mir::MirOptionalStorage::Nested(_)
+                    | crate::mir::MirOptionalStorage::InlineArray(_)
+            ) {
                 lower_nested_optional_copier(
                     program,
                     array,
@@ -473,7 +477,7 @@ fn lower_copier(
                 )?
             } else {
                 return Err(helper_error(format!(
-                    "array {array} has a gated optional copy element {element}"
+                    "array {array} has an unsupported optional copy element {element}"
                 )));
             }
         }
@@ -801,6 +805,15 @@ fn lower_nested_optional_copier(
                 },
                 Instruction::Jump(complete.clone()),
                 Instruction::Label(present),
+                Instruction::ReserveStack(16),
+                Instruction::LoadEffectiveAddress {
+                    source: destination,
+                    destination: Register::R11,
+                },
+                Instruction::Move {
+                    source: Register::R11.into(),
+                    destination: value::memory(Register::Rsp, 0),
+                },
             ];
             output.extend(lower_nested_optional_copier(
                 program,
@@ -811,19 +824,84 @@ fn lower_nested_optional_copier(
                 data_layout,
             )?);
             output.extend([
+                Instruction::Move {
+                    source: value::memory(Register::Rsp, 0),
+                    destination: Register::R11.into(),
+                },
+                Instruction::ReleaseStack(16),
                 Instruction::MoveImmediate64 {
                     bits: 1,
                     destination: Register::Rax,
                 },
                 Instruction::Move {
                     source: Register::Rax.into(),
-                    destination,
+                    destination: value::memory(Register::R11, 0),
                 },
                 Instruction::Label(complete),
             ]);
             Ok(output)
         }
-        crate::mir::MirOptionalStorage::InlineArray(_) => unreachable!("optional arrays are gated"),
+        crate::mir::MirOptionalStorage::InlineArray(inner) => {
+            let payload_offset =
+                i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                    .map_err(|_| helper_error("optional array payload offset exceeds x86-64"))?;
+            let present = Label::new(format!(
+                ".Lska_array_{}_copy_o{}_present",
+                array.index(),
+                optional.index()
+            ));
+            let complete = Label::new(format!(
+                ".Lska_array_{}_copy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            let mut output = vec![
+                Instruction::Move {
+                    source,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfNotZero(present.clone()),
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Jump(complete.clone()),
+                Instruction::Label(present),
+                Instruction::ReserveStack(16),
+                Instruction::LoadEffectiveAddress {
+                    source: destination,
+                    destination: Register::R11,
+                },
+                Instruction::Move {
+                    source: Register::R11.into(),
+                    destination: value::memory(Register::Rsp, 0),
+                },
+            ];
+            output.extend(lower_nested_array_copier(
+                array,
+                inner,
+                offset_operand(source, payload_offset)?,
+                offset_operand(destination, payload_offset)?,
+            ));
+            output.extend([
+                Instruction::Move {
+                    source: value::memory(Register::Rsp, 0),
+                    destination: Register::R11.into(),
+                },
+                Instruction::ReleaseStack(16),
+                Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rax,
+                },
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: value::memory(Register::R11, 0),
+                },
+                Instruction::Label(complete),
+            ]);
+            Ok(output)
+        }
     }
 }
 
@@ -913,7 +991,33 @@ fn lower_nested_optional_destroyer(
             output.push(Instruction::Label(complete));
             Ok(output)
         }
-        crate::mir::MirOptionalStorage::InlineArray(_) => unreachable!("optional arrays are gated"),
+        crate::mir::MirOptionalStorage::InlineArray(inner) => {
+            let payload_offset =
+                i32::try_from(data_layout.optional_type(optional)?.payload_offset())
+                    .map_err(|_| helper_error("optional array payload offset exceeds x86-64"))?;
+            let complete = Label::new(format!(
+                ".Lska_array_{}_destroy_o{}_complete",
+                array.index(),
+                optional.index()
+            ));
+            Ok(vec![
+                Instruction::Move {
+                    source: address,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfEqual(complete.clone()),
+                Instruction::Move {
+                    source: offset_operand(address, payload_offset)?,
+                    destination: Register::Rdi.into(),
+                },
+                call::direct_instruction(
+                    symbol::array_release(inner),
+                    call::TraceAttribution::InheritedSourceOperation,
+                ),
+                Instruction::Label(complete),
+            ])
+        }
     }
 }
 
@@ -1012,7 +1116,11 @@ fn lower_destroyer(
                     ),
                     Instruction::Label(complete),
                 ]
-            } else if matches!(metadata.storage, crate::mir::MirOptionalStorage::Nested(_)) {
+            } else if matches!(
+                metadata.storage,
+                crate::mir::MirOptionalStorage::Nested(_)
+                    | crate::mir::MirOptionalStorage::InlineArray(_)
+            ) {
                 lower_nested_optional_destroyer(
                     program,
                     array,
@@ -1022,7 +1130,7 @@ fn lower_destroyer(
                 )?
             } else {
                 return Err(helper_error(format!(
-                    "array {array} has a gated optional destruction element {element}"
+                    "array {array} has an unsupported optional destruction element {element}"
                 )));
             }
         }

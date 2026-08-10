@@ -367,7 +367,8 @@ fn projected_type(program: &MirProgram, mut ty: MirType, place: &MirPlace) -> Op
             MirPlaceProjection::Base(base) => MirType::Class(base),
             MirPlaceProjection::Field(field) => program.field(field)?.ty,
             MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
-            MirPlaceProjection::NestedOptionalPayload(optional) => {
+            MirPlaceProjection::NestedOptionalPayload(optional)
+            | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                 program.optional_type(optional)?.payload
             }
             MirPlaceProjection::ArrayElement { array, .. } => program.array_type(array)?.element,

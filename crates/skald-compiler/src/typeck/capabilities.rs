@@ -28,7 +28,7 @@ impl CopyCapabilities {
                 array_types: crate::hir::HirArrayTypeTable::default(),
             };
             let arrays = crate::typeck::arrays::lower_array_types(program, &provisional);
-            if !constructors.invalidate_array_dependencies(&arrays, ArrayOperation::Copy) {
+            if !constructors.invalidate_array_dependencies(program, &arrays, ArrayOperation::Copy) {
                 break;
             }
         }
@@ -42,7 +42,11 @@ impl CopyCapabilities {
                 array_types: crate::hir::HirArrayTypeTable::default(),
             };
             let arrays = crate::typeck::arrays::lower_array_types(program, &provisional);
-            if !assignments.invalidate_array_dependencies(&arrays, ArrayOperation::Assignment) {
+            if !assignments.invalidate_array_dependencies(
+                program,
+                &arrays,
+                ArrayOperation::Assignment,
+            ) {
                 break;
             }
         }
@@ -145,6 +149,7 @@ impl<I: Copy> CapabilitySet<I> {
 
     fn invalidate_array_dependencies(
         &mut self,
+        program: &ResolvedProgram,
         arrays: &crate::hir::HirArrayTypeTable,
         operation: ArrayOperation,
     ) -> bool {
@@ -154,18 +159,22 @@ impl<I: Copy> CapabilitySet<I> {
                 continue;
             };
             let unavailable = copy.fields.iter().find_map(|field| {
-                let HirSynthesizedFieldCopy::Array { field, array } = field else {
-                    return None;
+                let (field, array) = match field {
+                    HirSynthesizedFieldCopy::Array { field, array } => (*field, *array),
+                    HirSynthesizedFieldCopy::Optional { field, optional } => {
+                        (*field, optional_array_payload(program, *optional)?)
+                    }
+                    _ => return None,
                 };
                 let lifecycle = &arrays
-                    .get(*array)
+                    .get(array)
                     .expect("array dependency must have lifecycle metadata")
                     .lifecycle;
                 let available = match operation {
                     ArrayOperation::Copy => lifecycle.copy.is_some(),
                     ArrayOperation::Assignment => lifecycle.assignment.is_some(),
                 };
-                (!available).then_some(*field)
+                (!available).then_some(field)
             });
             if let Some(field) = unavailable {
                 *capability = HirCopyCapability::Unavailable;
@@ -387,8 +396,14 @@ fn compute_class<I: Copy>(
                                 });
                                 continue;
                             }
-                            ResolvedTypeKind::Array(_)
-                            | ResolvedTypeKind::Unit
+                            ResolvedTypeKind::Array(_) => {
+                                fields.push(HirSynthesizedFieldCopy::Optional {
+                                    field: field.id,
+                                    optional,
+                                });
+                                continue;
+                            }
+                            ResolvedTypeKind::Unit
                             | ResolvedTypeKind::Obj
                             | ResolvedTypeKind::Interface(_) => unreachable!(
                                 "deferred optional payloads must be rejected before capability lowering"
@@ -426,4 +441,17 @@ fn compute_class<I: Copy>(
     failure_paths[class_id.index()] = failure;
     states[class_id.index()] = VisitState::Complete;
     capability
+}
+
+fn optional_array_payload(
+    program: &ResolvedProgram,
+    mut optional: crate::identity::OptionalTypeId,
+) -> Option<crate::identity::ArrayTypeId> {
+    loop {
+        match program.optional_types.get(optional)?.payload.kind {
+            ResolvedTypeKind::Optional(nested) => optional = nested,
+            ResolvedTypeKind::Array(array) => return Some(array),
+            _ => return None,
+        }
+    }
 }

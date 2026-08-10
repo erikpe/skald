@@ -549,7 +549,7 @@ fn optional_arrays_type_as_core_local_and_function_values() {
 }
 
 #[test]
-fn optional_arrays_remain_gated_in_later_aggregate_positions() {
+fn optional_arrays_type_across_aggregate_and_alias_positions() {
     let output = check_text(
         "class Holder {\n\
            values: i64[]?;\n\
@@ -559,29 +559,13 @@ fn optional_arrays_remain_gated_in_later_aggregate_positions() {
          fn inspect(ref values: i64[]?) -> unit {}\n\
          fn main() -> i64 { var nested: i64[]?[] = i64[]?[](); return 0; }\n",
     );
-    assert!(output.hir.is_none());
-    let messages = output
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.code == crate::typeck::INVALID_OPTIONAL_TYPE)
-        .map(|diagnostic| diagnostic.message.as_str())
-        .collect::<Vec<_>>();
-    assert!(messages
-        .iter()
-        .any(|message| message.contains("class fields")));
-    assert!(messages
-        .iter()
-        .any(|message| message.contains("initializer parameters")));
-    assert!(messages
-        .iter()
-        .any(|message| message.contains("method parameters")));
-    assert!(messages
-        .iter()
-        .any(|message| message.contains("method results")));
-    assert!(messages
-        .iter()
-        .any(|message| message.contains("array elements")));
-    assert!(messages
-        .iter()
-        .any(|message| message.contains("alias parameters")));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(
+        &output
+            .hir
+            .expect("aggregate optional arrays must produce HIR"),
+    );
+    assert!(dump.contains("OptionalField"));
+    assert!(dump.contains("NestedOptionalInitialization"));
+    assert!(dump.contains("array"));
 }

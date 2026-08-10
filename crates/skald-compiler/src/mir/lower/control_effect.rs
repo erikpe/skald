@@ -123,7 +123,8 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
             crate::hir::HirArrayAliasSource::Whole(receiver) => {
                 array_receiver_contains_control_effect(receiver)
             }
-            crate::hir::HirArrayAliasSource::Element(_) => true,
+            crate::hir::HirArrayAliasSource::Element(_)
+            | crate::hir::HirArrayAliasSource::OptionalPayload { .. } => true,
         },
     }
 }

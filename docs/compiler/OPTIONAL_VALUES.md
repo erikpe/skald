@@ -6,10 +6,9 @@ optional-container aliases through HIR, MIR verification, x86-64 lowering,
 and native execution. Recursive source type syntax, canonical `(shared T)?`
 owners, recursive identities, nested owning lifecycle, checked access, aliases,
 and internal callable boundaries are implemented. Tagged optional inline
-arrays execute in core local and top-level internal function value positions.
-MIR uses canonical optional identities and recursive lifecycle metadata;
-source eligibility gates retain aggregate and alias optional-array positions
-for their staged integration.
+arrays execute through every supported owning, aggregate, internal callable,
+array-element, and checked-alias position. MIR uses canonical optional
+identities and recursive lifecycle metadata.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -745,9 +744,8 @@ observable behavior:
 | Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
-Compile-failure suites for staged optional-array positions, `shared T?`, and
-`shared? T?` remain required until the feature responsible for a form changes
-its expected outcome. Nested `T??` requires positive lifecycle, access, alias, and callable
+Compile-failure suites for `shared T?` and `shared? T?` remain required.
+Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage. Box forms remain compile failures after
 this roadmap completes.

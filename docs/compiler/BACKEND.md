@@ -712,8 +712,8 @@ eligible traced callable adds exactly one 16-byte trace record before that
 rounding; generated helpers add none, and omitted tracing leaves frame layout
 unchanged.
 
-Primitive, inline-optional, optional shared-owner, and inline-array static
-roots do not
+Primitive, inline-optional (including optional-array), optional shared-owner,
+and inline-array static roots do not
 receive frame homes. A private target-data plan maps each declaration identity
 to one aligned, writable, zero-filled local object using the ordinary target
 type layout. Instruction selection materializes its address with RIP-relative
@@ -723,7 +723,7 @@ aggregate, ownership, backing-anchor, projection, and alias-address machinery
 used by other places applies. Generated backing and element helpers remain
 ordinary array-type helpers; only the descriptor root uses static addressing.
 
-Return destinations and owned class, primitive-optional, or primitive-array
+Return destinations and owned class, inline-optional, or inline-array
 parameters store an incoming pointer in a frame home. Receivers and aliases
 additionally store complete-object and metadata homes for forwarding.
 Definitions without receiver storage allocate and spill no receiver or

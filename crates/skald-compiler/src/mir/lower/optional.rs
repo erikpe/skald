@@ -198,6 +198,11 @@ impl BodyLowerer<'_> {
                 MirNestedOptionalSource::Copy(place)
             }
         };
+        let self_copy =
+            matches!(&source, MirNestedOptionalSource::Copy(source) if source == &destination);
+        if !self_copy {
+            self.check_optional_mutation(destination.clone(), assignment.span);
+        }
         self.emit(MirInstruction::NestedOptionalAssign(
             MirNestedOptionalAssign {
                 optional: assignment.value.optional,
@@ -646,6 +651,14 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::ClassOptionalCleanup(cleanup));
     }
 
+    pub(super) fn emit_nested_optional_cleanup(
+        &mut self,
+        cleanup: crate::mir::MirNestedOptionalCleanup,
+    ) {
+        self.check_optional_mutation(cleanup.destination.clone(), cleanup.span);
+        self.emit(MirInstruction::NestedOptionalCleanup(cleanup));
+    }
+
     pub(super) fn lower_class_optional_source(
         &mut self,
         source: &HirClassOptionalSource,
@@ -1081,37 +1094,49 @@ impl BodyLowerer<'_> {
     ) -> crate::mir::MirPlace {
         let source = self.lower_optional_operand(&view.source);
         let class = optional_types::class_payload(self.input.optional_types, &view.source);
+        let optional = optional_types::class_id(self.input.optional_types, class);
+        self.begin_optional_payload_view(source, optional, MirType::Class(class), view.span)
+            .project_optional_payload(class)
+    }
+
+    pub(super) fn begin_optional_payload_view(
+        &mut self,
+        source: crate::mir::MirPlace,
+        optional: crate::identity::OptionalTypeId,
+        payload: MirType,
+        span: crate::source::Span,
+    ) -> crate::mir::MirPlace {
         let guard = crate::mir::OptionalGuardId::new(self.input.callable, self.next_optional_guard);
         self.next_optional_guard += 1;
-        let success_target = self.body.allocate_block(view.span);
-        let absent_target = self.body.allocate_block(view.span);
-        let overflow_target = self.body.allocate_block(view.span);
+        let success_target = self.body.allocate_block(span);
+        let absent_target = self.body.allocate_block(span);
+        let overflow_target = self.body.allocate_block(span);
         self.terminate(MirTerminator::BeginOptionalView {
             begin: crate::mir::MirOptionalViewBegin {
-                optional: optional_types::class_id(self.input.optional_types, class),
+                optional,
                 guard,
                 source: source.clone(),
-                class,
-                span: view.span,
+                payload,
+                span,
             },
             success_target,
             absent_target,
             overflow_target,
-            span: view.span,
+            span,
         });
         self.body
             .select_block(absent_target)
             .expect("allocated optional-view absence block must be selectable");
         self.terminate(MirTerminator::Terminate {
             reason: MirTerminationReason::OptionalAccessFailure,
-            span: view.span,
+            span,
         });
         self.body
             .select_block(overflow_target)
             .expect("allocated optional-view overflow block must be selectable");
         self.terminate(MirTerminator::Terminate {
             reason: MirTerminationReason::OptionalGuardOverflow,
-            span: view.span,
+            span,
         });
         self.body
             .select_block(success_target)
@@ -1120,9 +1145,10 @@ impl BodyLowerer<'_> {
             .push(super::ActiveOptionalGuard {
                 guard,
                 source: source.clone(),
-                class,
+                optional,
+                payload,
             });
-        source.project_optional_payload(class)
+        source
     }
 
     pub(super) fn end_optional_views_from(&mut self, mark: usize, span: crate::source::Span) {
@@ -1130,10 +1156,10 @@ impl BodyLowerer<'_> {
         for guard in guards {
             self.emit(MirInstruction::EndOptionalView(
                 crate::mir::MirOptionalViewEnd {
-                    optional: optional_types::class_id(self.input.optional_types, guard.class),
+                    optional: guard.optional,
                     guard: guard.guard,
                     source: guard.source,
-                    class: guard.class,
+                    payload: guard.payload,
                     span,
                 },
             ));

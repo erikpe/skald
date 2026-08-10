@@ -705,7 +705,7 @@ this contract and the versioned runtime boundary before relying on it.
 ## Diagnostics, dumps, and tests
 
 Diagnostics must distinguish at least malformed syntax, illegal element type,
-an optional array in a staged aggregate position, ownership grouping mistakes,
+ownership grouping mistakes,
 non-default-initializable elements, unavailable copy or assignment capability,
 wrong length/index/bound type, raw shared indexing, optional owner use before
 unwrap, invalid alias rebinding, and unsupported whole shared-pointee

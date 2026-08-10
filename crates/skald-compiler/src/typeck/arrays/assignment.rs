@@ -260,7 +260,8 @@ impl CallableChecker<'_, '_> {
                         "optional shared array element assignment",
                     )
                     .map(HirArrayElementValue::OptionalShared),
-                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                super::super::optional_types::LegacyOptionalKind::Nested(_)
+                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                     let Type::Optional(optional) = element else {
                         unreachable!()
                     };
@@ -270,9 +271,6 @@ impl CallableChecker<'_, '_> {
                         "nested optional array element assignment",
                     )
                     .map(|value| HirArrayElementValue::NestedOptional(Box::new(value)))
-                }
-                super::super::optional_types::LegacyOptionalKind::Array(_) => {
-                    unreachable!("optional-array elements are rejected by the position gate")
                 }
             },
             Type::Class(class) => {

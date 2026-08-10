@@ -221,7 +221,8 @@ impl CallableChecker<'_, '_> {
                         "optional shared static assignment",
                     )
                     .map(HirStatement::OptionalSharedAssignment),
-                super::super::optional_types::LegacyOptionalKind::Nested(_) => {
+                super::super::optional_types::LegacyOptionalKind::Nested(_)
+                | super::super::optional_types::LegacyOptionalKind::Array(_) => {
                     let Type::Optional(optional) = ty else {
                         unreachable!()
                     };
@@ -244,9 +245,6 @@ impl CallableChecker<'_, '_> {
                             },
                         )
                     })
-                }
-                super::super::optional_types::LegacyOptionalKind::Array(_) => {
-                    unreachable!("optional-array static fields are rejected by the position gate")
                 }
             },
             Type::Array(array) => self

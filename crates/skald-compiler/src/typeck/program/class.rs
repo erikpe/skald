@@ -168,12 +168,13 @@ fn lower_class_declaration(
                     Some(super::super::optional_types::LegacyOptionalKind::Class(_)) => {
                         Some(HirDestructionStep::OptionalClassField(field.id))
                     }
-                    Some(super::super::optional_types::LegacyOptionalKind::Nested(_)) => {
-                        Some(HirDestructionStep::OptionalField {
-                            field: field.id,
-                            optional,
-                        })
-                    }
+                    Some(
+                        super::super::optional_types::LegacyOptionalKind::Nested(_)
+                        | super::super::optional_types::LegacyOptionalKind::Array(_),
+                    ) => Some(HirDestructionStep::OptionalField {
+                        field: field.id,
+                        optional,
+                    }),
                     _ => None,
                 }
             }

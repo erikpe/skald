@@ -150,8 +150,8 @@ lifecycle plans through generalized executable MIR and x86-64 realization.
 Distinct scalar, aggregate, and shared-owner operations remain only where the
 runtime work differs. Nested payload access, aliases, and internal callable
 boundaries use those recursive plans. Tagged optional arrays reuse ordinary
-array lifecycle for core locals and top-level internal function values, while
-aggregate and alias positions remain gated. The frozen
+array lifecycle across all supported aggregate, internal callable,
+array-element, and checked-alias positions. The frozen
 work adds no shared box target for `shared T?` and no C runtime ABI surface.
 
 The compiler implements the recursive array source surface, canonical

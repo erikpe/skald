@@ -196,9 +196,16 @@ impl InstructionSelector<'_, '_> {
                                 )?;
                             }
                             crate::mir::MirOptionalStorage::InlineArray(_)
-                            | crate::mir::MirOptionalStorage::Nested(_) => unreachable!(
-                                "gated optional element reached executable array lowering"
-                            ),
+                            | crate::mir::MirOptionalStorage::Nested(_) => {
+                                self.select_nested_optional_initialize(
+                                    &crate::mir::MirNestedOptionalInitialize {
+                                        optional,
+                                        destination,
+                                        source: crate::mir::MirNestedOptionalSource::Absent,
+                                        span: *span,
+                                    },
+                                )?;
+                            }
                         }
                     }
                     MirArrayDefaultElement::Class {
@@ -843,7 +850,8 @@ impl InstructionSelector<'_, '_> {
                         checked_array_displacement(displacement, offset, self.function.callable())?;
                     ty = MirType::Class(base);
                 }
-                MirPlaceProjection::NestedOptionalPayload(optional) => {
+                MirPlaceProjection::NestedOptionalPayload(optional)
+                | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     let offset = self.data_layout.optional_type(optional)?.payload_offset();
                     displacement =
                         checked_array_displacement(displacement, offset, self.function.callable())?;
@@ -1157,7 +1165,8 @@ fn array_for_place(
             MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
                 MirType::Class(class)
             }
-            MirPlaceProjection::NestedOptionalPayload(optional) => {
+            MirPlaceProjection::NestedOptionalPayload(optional)
+            | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                 program
                     .optional_type(optional)
                     .expect("verified optional")

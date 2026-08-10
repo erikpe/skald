@@ -128,7 +128,7 @@ pub struct MirOptionalViewBegin {
     pub optional: OptionalTypeId,
     pub guard: OptionalGuardId,
     pub source: MirPlace,
-    pub class: ClassId,
+    pub payload: super::MirType,
     pub span: Span,
 }
 
@@ -137,7 +137,7 @@ pub struct MirOptionalViewEnd {
     pub optional: OptionalTypeId,
     pub guard: OptionalGuardId,
     pub source: MirPlace,
-    pub class: ClassId,
+    pub payload: super::MirType,
     pub span: Span,
 }
 

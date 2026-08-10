@@ -4,7 +4,7 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor, HirArrayReceiverSource,
-        HirCallArgument, HirExpressionKind, Type,
+        HirCallArgument, HirExpressionKind, HirOptionalOperand, HirOptionalStorage, Type,
     },
     resolve::ResolvedExpression,
     typeck::{
@@ -30,41 +30,66 @@ impl CallableChecker<'_, '_> {
             .required_access()
             .expect("array alias parameters require place access");
 
-        let (source, actual, access, span) =
-            if matches!(expected, Type::Array(_)) && is_whole_array_alias_syntax(expression) {
-                let mut receiver =
-                    self.check_array_receiver(expression, ArrayReceiverSyntax::Ordinary)?;
-                if !is_aliasable_receiver(&receiver.source) {
-                    self.report_invalid_array_alias(expression, parameter);
-                    return None;
-                }
-                receiver.anchor = match receiver.source {
-                    HirArrayReceiverSource::Inline(_) => HirArrayAnchor::InlineBacking,
-                    HirArrayReceiverSource::Shared(_) => receiver.anchor,
-                };
-                let actual = Type::Array(receiver.array);
-                let access = receiver.access;
-                let span = receiver.span;
-                (
-                    HirArrayAliasSource::Whole(Box::new(receiver)),
-                    actual,
-                    access,
-                    span,
-                )
-            } else {
-                let checked = self.check_expression(expression)?;
-                let actual = checked.ty;
-                let span = checked.span;
-                let Some(mut place) = array_element_through_groups(checked.kind) else {
-                    self.report_invalid_array_alias(expression, parameter);
-                    return None;
-                };
-                if place.receiver.ownership == crate::hir::HirArrayReceiverOwnership::Inline {
-                    place.receiver.anchor = HirArrayAnchor::InlineBacking;
-                }
-                let access = place.receiver.access;
-                (HirArrayAliasSource::Element(place), actual, access, span)
+        let (source, actual, access, span) = if let (Type::Array(_), Some(unwrap)) =
+            (expected, optional_array_alias_unwrap(expression))
+        {
+            let operand =
+                self.require_optional_operand(&unwrap.source, unwrap.span, "checked array alias")?;
+            let HirOptionalOperand::NestedPlace(place) = &operand else {
+                self.report_invalid_array_alias(expression, parameter);
+                return None;
             };
+            let actual = super::super::optional_types::payload_type(self.program, place.optional);
+            let Type::Array(array) = actual else {
+                self.report_invalid_array_alias(expression, parameter);
+                return None;
+            };
+            let optional = place.optional;
+            let access = self.optional_array_place_access(&place.storage, unwrap.span)?;
+            (
+                HirArrayAliasSource::OptionalPayload {
+                    source: Box::new(operand),
+                    optional,
+                    array,
+                },
+                Type::Array(array),
+                access,
+                unwrap.span,
+            )
+        } else if matches!(expected, Type::Array(_)) && is_whole_array_alias_syntax(expression) {
+            let mut receiver =
+                self.check_array_receiver(expression, ArrayReceiverSyntax::Ordinary)?;
+            if !is_aliasable_receiver(&receiver.source) {
+                self.report_invalid_array_alias(expression, parameter);
+                return None;
+            }
+            receiver.anchor = match receiver.source {
+                HirArrayReceiverSource::Inline(_) => HirArrayAnchor::InlineBacking,
+                HirArrayReceiverSource::Shared(_) => receiver.anchor,
+            };
+            let actual = Type::Array(receiver.array);
+            let access = receiver.access;
+            let span = receiver.span;
+            (
+                HirArrayAliasSource::Whole(Box::new(receiver)),
+                actual,
+                access,
+                span,
+            )
+        } else {
+            let checked = self.check_expression(expression)?;
+            let actual = checked.ty;
+            let span = checked.span;
+            let Some(mut place) = array_element_through_groups(checked.kind) else {
+                self.report_invalid_array_alias(expression, parameter);
+                return None;
+            };
+            if place.receiver.ownership == crate::hir::HirArrayReceiverOwnership::Inline {
+                place.receiver.anchor = HirArrayAnchor::InlineBacking;
+            }
+            let access = place.receiver.access;
+            (HirArrayAliasSource::Element(place), actual, access, span)
+        };
 
         if actual != expected {
             self.diagnostics.push(
@@ -98,6 +123,19 @@ impl CallableChecker<'_, '_> {
             access: required,
             span,
         }))
+    }
+
+    fn optional_array_place_access(
+        &mut self,
+        storage: &HirOptionalStorage,
+        span: crate::source::Span,
+    ) -> Option<crate::hir::HirAccess> {
+        match storage {
+            HirOptionalStorage::Binding(binding) => self.binding_access(*binding, false, span),
+            HirOptionalStorage::Static(_) => Some(crate::hir::HirAccess::Mutable),
+            HirOptionalStorage::Field(field) => Some(field.receiver.access),
+            HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
+        }
     }
 
     fn report_invalid_array_alias(
@@ -154,5 +192,15 @@ fn is_aliasable_receiver(source: &HirArrayReceiverSource) -> bool {
             }
             _ => false,
         },
+    }
+}
+
+fn optional_array_alias_unwrap(
+    expression: &ResolvedExpression,
+) -> Option<&crate::resolve::ResolvedUnwrapExpr> {
+    match expression {
+        ResolvedExpression::Unwrap(unwrap) => Some(unwrap),
+        ResolvedExpression::Grouped(grouped) => optional_array_alias_unwrap(&grouped.expression),
+        _ => None,
     }
 }

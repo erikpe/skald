@@ -157,7 +157,8 @@ fn optional_at_place(
             .then_some(MirType::Class(base))?,
             MirPlaceProjection::Field(field) => program.field(field)?.ty,
             MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
-            MirPlaceProjection::NestedOptionalPayload(optional) => {
+            MirPlaceProjection::NestedOptionalPayload(optional)
+            | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                 if ty != MirType::Optional(optional) {
                     return None;
                 }

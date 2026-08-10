@@ -119,13 +119,16 @@ fn copy_element(
                 lower_shared_target(target),
             )),
             ResolvedTypeKind::Optional(_) => {
-                optional_copy_available(program, capabilities, optional)
+                optional_copy_available(program, capabilities, arrays, optional)
                     .then_some(HirArrayCopyElement::Optional(optional))
             }
-            ResolvedTypeKind::Array(_)
-            | ResolvedTypeKind::Unit
-            | ResolvedTypeKind::Obj
-            | ResolvedTypeKind::Interface(_) => {
+            ResolvedTypeKind::Array(array) => arrays
+                .get(array.index())
+                .expect("optional array payload must precede its containing array")
+                .lifecycle
+                .copy
+                .map(|_| HirArrayCopyElement::Optional(optional)),
+            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
                 unreachable!("deferred optional payloads must not reach array lowering")
             }
         },
@@ -179,13 +182,16 @@ fn assignment_element(
                 lower_shared_target(target),
             )),
             ResolvedTypeKind::Optional(_) => {
-                optional_assignment_available(program, capabilities, optional)
+                optional_assignment_available(program, capabilities, arrays, optional)
                     .then_some(HirArrayAssignElement::Optional(optional))
             }
-            ResolvedTypeKind::Array(_)
-            | ResolvedTypeKind::Unit
-            | ResolvedTypeKind::Obj
-            | ResolvedTypeKind::Interface(_) => {
+            ResolvedTypeKind::Array(array) => arrays
+                .get(array.index())
+                .expect("optional array payload must precede its containing array")
+                .lifecycle
+                .assignment
+                .map(|_| HirArrayAssignElement::Optional(optional)),
+            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
                 unreachable!("deferred optional payloads must not reach array lowering")
             }
         },
@@ -196,6 +202,7 @@ fn assignment_element(
 fn optional_copy_available(
     program: &ResolvedProgram,
     capabilities: &CopyCapabilities,
+    arrays: &[HirArrayType],
     optional: crate::identity::OptionalTypeId,
 ) -> bool {
     match optional_payload(program, optional) {
@@ -207,18 +214,19 @@ fn optional_copy_available(
         | ResolvedTypeKind::Shared(_) => true,
         ResolvedTypeKind::Class(class) => capabilities.constructor(class).selected().is_some(),
         ResolvedTypeKind::Optional(nested) => {
-            optional_copy_available(program, capabilities, nested)
+            optional_copy_available(program, capabilities, arrays, nested)
         }
-        ResolvedTypeKind::Array(_)
-        | ResolvedTypeKind::Unit
-        | ResolvedTypeKind::Obj
-        | ResolvedTypeKind::Interface(_) => false,
+        ResolvedTypeKind::Array(array) => arrays
+            .get(array.index())
+            .is_some_and(|array| array.lifecycle.copy.is_some()),
+        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => false,
     }
 }
 
 fn optional_assignment_available(
     program: &ResolvedProgram,
     capabilities: &CopyCapabilities,
+    arrays: &[HirArrayType],
     optional: crate::identity::OptionalTypeId,
 ) -> bool {
     match optional_payload(program, optional) {
@@ -233,12 +241,12 @@ fn optional_assignment_available(
                 && capabilities.assignment(class).selected().is_some()
         }
         ResolvedTypeKind::Optional(nested) => {
-            optional_assignment_available(program, capabilities, nested)
+            optional_assignment_available(program, capabilities, arrays, nested)
         }
-        ResolvedTypeKind::Array(_)
-        | ResolvedTypeKind::Unit
-        | ResolvedTypeKind::Obj
-        | ResolvedTypeKind::Interface(_) => false,
+        ResolvedTypeKind::Array(array) => arrays
+            .get(array.index())
+            .is_some_and(|array| array.lifecycle.assignment.is_some()),
+        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => false,
     }
 }
 
@@ -257,7 +265,9 @@ fn destruction_element(
             ResolvedTypeKind::Shared(target) => {
                 HirArrayDestroyElement::OptionalShared(lower_shared_target(target))
             }
-            ResolvedTypeKind::Optional(_) => HirArrayDestroyElement::Optional(optional),
+            ResolvedTypeKind::Optional(_) | ResolvedTypeKind::Array(_) => {
+                HirArrayDestroyElement::Optional(optional)
+            }
             _ => HirArrayDestroyElement::Trivial,
         },
         _ => HirArrayDestroyElement::Trivial,

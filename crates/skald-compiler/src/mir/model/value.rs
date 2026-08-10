@@ -158,6 +158,12 @@ impl MirPlace {
         self
     }
 
+    pub fn project_checked_optional_payload(mut self, optional: OptionalTypeId) -> Self {
+        self.projections
+            .push(MirPlaceProjection::CheckedOptionalPayload(optional));
+        self
+    }
+
     pub fn project_array_element(
         mut self,
         array: ArrayTypeId,
@@ -233,6 +239,8 @@ pub enum MirPlaceProjection {
     OptionalPayload(ClassId),
     /// Selects the immediate payload storage of an exact recursive optional.
     NestedOptionalPayload(OptionalTypeId),
+    /// Selects a non-owning payload while its presence guard is active.
+    CheckedOptionalPayload(OptionalTypeId),
     ArrayElement {
         array: ArrayTypeId,
         normalized_index: StorageId,

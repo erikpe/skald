@@ -34,7 +34,7 @@ Use the authority closest to the behavior:
   [arrays](language/ARRAYS.md);
 - the implemented explicit `T?` and canonical `(shared T)?` contract,
   `shared? T` shorthand, compositional source syntax, nested optionals, and
-  staged optional inline arrays belong in
+  optional inline arrays belong in
   [optional values](language/OPTIONAL_VALUES.md);
 - callable, binding, statement, return, and evaluation-order semantics belong
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);

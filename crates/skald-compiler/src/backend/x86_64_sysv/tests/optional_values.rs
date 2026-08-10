@@ -122,6 +122,132 @@ fn optional_nested_arrays_copy_and_unwrap_independently() {
 }
 
 #[test]
+fn optional_arrays_execute_in_fields_initializers_dispatch_and_abi_pressure() {
+    let source = concat!(
+        "interface Forward { fn forward(value: i64[]?) -> i64[]?; }\n",
+        "class Base {\n",
+        "  values: i64[]?;\n",
+        "  init(values: i64[]?) { self.values = values; }\n",
+        "  virtual fn forward(value: i64[]?) -> i64[]? { return value; }\n",
+        "}\n",
+        "class Derived extends Base implements Forward {\n",
+        "  init(values: i64[]?) { super(values); }\n",
+        "  override fn forward(value: i64[]?) -> i64[]? { return value; }\n",
+        "}\n",
+        "fn via_interface(ref source: Forward, value: i64[]?) -> i64[]? { return source.forward(value); }\n",
+        "fn via_virtual(ref source: Base, value: i64[]?) -> i64[]? { return source.forward(value); }\n",
+        "fn pressure(a: i64[]?, b: i64[]?, c: i64[]?, d: i64[]?, e: i64[]?, f: i64[]?, g: i64[]?) -> i64[]? { return g; }\n",
+        "fn main() -> i64 {\n",
+        "  var item: Derived = Derived(i64[]{1});\n",
+        "  var first: i64[]? = via_interface(item, i64[]{20});\n",
+        "  var second: i64[]? = via_virtual(item, i64[]{22});\n",
+        "  item.values = pressure(none, none, none, none, none, none, i64[]{42});\n",
+        "  var copied: Derived = item;\n",
+        "  copied = item;\n",
+        "  return first![0] + second![0] + copied.values![0] - 42;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    assert!(output.contains("mov qword ptr [rsp]"));
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn optional_array_initializer_overloads_select_exact_payload_shape() {
+    let source = concat!(
+        "class Choice {\n",
+        "  selected: i64;\n",
+        "  init(value: i64[]?) { self.selected = 20; }\n",
+        "  init(value: i64[][]?) { self.selected = 22; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var flat: Choice = Choice(i64[]{1});\n",
+        "  var nested: Choice = Choice(i64[][]{i64[]{2}});\n",
+        "  return flat.selected + nested.selected;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn optional_array_payload_aliases_mutate_original_storage_and_pin_presence() {
+    let source = concat!(
+        "class Holder { values: i64[]?; init(values: i64[]?) { self.values = values; } }\n",
+        "class State { static values: i64[]?; init() {} }\n",
+        "fn mutate(mut ref values: i64[]) -> unit { values[0] = values[0] + 1; }\n",
+        "fn consume(ref values: i64[], ignored: i64) -> i64 { return values[0] + ignored; }\n",
+        "fn clear(mut ref value: i64[]?) -> i64 { value = none; return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  var value: i64[]? = i64[]{9};\n",
+        "  var holder: Holder = Holder(i64[]{10});\n",
+        "  var nested: i64[]?[] = i64[]?[]{i64[]{11}};\n",
+        "  State.values = i64[]{8};\n",
+        "  mutate(value!);\n",
+        "  mutate(holder.values!);\n",
+        "  mutate(nested[0]!);\n",
+        "  mutate(State.values!);\n",
+        "  return value![0] + holder.values![0] + nested[0]![0] + State.values![0];\n",
+        "}\n",
+    );
+    let mir = lower_text(source);
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("checked-optional-payload"), "{dump}");
+    assert!(dump.contains("begin-optional-view"), "{dump}");
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+
+    let invalidating = concat!(
+        "fn consume(ref values: i64[], ignored: i64) -> i64 { return values[0] + ignored; }\n",
+        "fn clear(mut ref value: i64[]?) -> i64 { value = none; return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  var value: i64[]? = i64[]{42};\n",
+        "  return consume(value!, clear(value));\n",
+        "}\n",
+    );
+    let mut output = assembly(invalidating);
+    output.push_str(native_allocator());
+    assert!(!run_native_assembly(&output).success(), "{output}");
+
+    let invalidating_element = concat!(
+        "fn consume(ref values: i64[], ignored: i64) -> i64 { return values[0] + ignored; }\n",
+        "fn clear(mut ref value: i64[]?) -> i64 { value = none; return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[]?[] = i64[]?[]{i64[]{42}};\n",
+        "  return consume(values[0]!, clear(values[0]));\n",
+        "}\n",
+    );
+    let mut output = assembly(invalidating_element);
+    output.push_str(native_allocator());
+    assert!(!run_native_assembly(&output).success(), "{output}");
+}
+
+#[test]
+fn arrays_of_optional_arrays_execute_defaults_lists_indexing_slices_and_assignment() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var defaults: i64[]?[] = i64[]?[](2u);\n",
+        "  if (defaults[0] is some || defaults[1] is some) { return 1; }\n",
+        "  var values: i64[]?[] = i64[]?[]{none, i64[]{20, 22}};\n",
+        "  defaults[0] = values[1];\n",
+        "  values[0] = i64[]{42};\n",
+        "  var sliced: i64[]?[] = values[0:2];\n",
+        "  values[1] = none;\n",
+        "  return defaults[0]![0] + sliced[0]![0] - 20;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
 fn optional_arrays_reuse_owning_element_lifecycle_helpers() {
     let source = concat!(
         "extern fn test_record_i64(value: i64) -> unit;\n",

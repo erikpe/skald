@@ -885,9 +885,19 @@ fn optional_phase_dump() -> String {
             "../../../tests/golden/optionals/optional_shared_profile.ska"
         )),
         complete_phase_dump(concat!(
-            "class Item { init() {} }\n",
-            "fn inspect(deep: Item?????, values: Item?[]?) -> unit {}\n",
-            "fn main() -> i64 { return 0; }\n",
+            "interface Forward { fn forward(values: i64[]?) -> i64[]?; }\n",
+            "class Holder implements Forward {\n",
+            "  static current: i64[]?; values: i64[]?;\n",
+            "  init(values: i64[]?) { self.values = values; }\n",
+            "  fn forward(values: i64[]?) -> i64[]? { return values; }\n",
+            "}\n",
+            "fn mutate(mut ref values: i64[]) -> unit { values[0] = 42; }\n",
+            "fn inspect(deep: i64?????, values: i64[]?[]) -> unit {}\n",
+            "fn main() -> i64 {\n",
+            "  var holder: Holder = Holder(i64[]{1});\n",
+            "  var nested: i64[]?[] = i64[]?[]{none, holder.values};\n",
+            "  mutate(holder.values!); Holder.current = nested[1]; return holder.values![0];\n",
+            "}\n",
         ))
     )
 }

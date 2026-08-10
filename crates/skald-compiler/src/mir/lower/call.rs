@@ -548,6 +548,16 @@ impl BodyLowerer<'_> {
                         crate::hir::HirArrayAliasSource::Element(element) => {
                             self.lower_array_alias_element_place(element, alias.access)
                         }
+                        crate::hir::HirArrayAliasSource::OptionalPayload {
+                            source,
+                            optional,
+                            array,
+                        } => {
+                            self.lower_optional_array_alias_place_with_anchor(
+                                source, *optional, *array, alias.span,
+                            )
+                            .0
+                        }
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))
                 }

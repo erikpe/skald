@@ -399,6 +399,12 @@ pub struct HirArraySliceAssignment {
 pub enum HirArrayAliasSource {
     Whole(Box<HirArrayReceiver>),
     Element(Box<HirArrayElementPlace>),
+    /// A checked, call-scoped view into an inline optional array payload.
+    OptionalPayload {
+        source: Box<super::HirOptionalOperand>,
+        optional: crate::identity::OptionalTypeId,
+        array: ArrayTypeId,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

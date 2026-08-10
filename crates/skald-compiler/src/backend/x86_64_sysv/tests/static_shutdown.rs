@@ -110,6 +110,32 @@ fn nested_optional_static_payload_is_destroyed_at_shutdown() {
 }
 
 #[test]
+fn optional_array_statics_replace_and_release_in_reverse_root_order() {
+    let source = concat!(
+        "class State { static first: i64[]?; static second: i64[]?; init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  State.first = i64[]{1};\n",
+        "  State.second = i64[]{22};\n",
+        "  State.first = i64[]{20};\n",
+        "  return State.first![0] + State.second![0];\n",
+        "}\n",
+    );
+    let mut assembly = compile(source);
+    let finalizer = function_assembly(&assembly, ".Lska.static.finalize");
+    let second = finalizer.find(".static.s1").unwrap();
+    let first = finalizer.find(".static.s0").unwrap();
+
+    assert!(second < first, "{finalizer}");
+    assert_eq!(finalizer.matches("call .Lska_array_0_release").count(), 2);
+    assembly.push_str(native_allocator());
+    assert_eq!(
+        run_native_assembly(&assembly).code(),
+        Some(42),
+        "{assembly}"
+    );
+}
+
+#[test]
 fn static_arrays_destroy_elements_in_reverse_index_order() {
     let source = concat!(
         "extern fn test_next() -> i64; extern fn test_destroy(value: i64) -> unit;\n",

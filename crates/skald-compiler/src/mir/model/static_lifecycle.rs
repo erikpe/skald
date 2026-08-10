@@ -338,14 +338,14 @@ impl MirStaticValueCleanup {
                             span,
                         })
                     }
-                    super::MirOptionalStorage::Nested(_) => {
+                    super::MirOptionalStorage::Nested(_)
+                    | super::MirOptionalStorage::InlineArray(_) => {
                         Self::NestedOptional(super::MirNestedOptionalCleanup {
                             optional,
                             destination,
                             span,
                         })
                     }
-                    super::MirOptionalStorage::InlineArray(_) => return None,
                 }
             }
             MirType::Array(array) => Self::Array(MirArrayInstruction::Release {

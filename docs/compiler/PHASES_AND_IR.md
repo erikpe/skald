@@ -268,10 +268,12 @@ operations, and guarded-mutation checks. Verification proves compatible
 operations, definite wrapper initialization, balanced compatible guards,
 anchor ordering, isolation of the zero niche from ordinary owners, and
 identical initialized optional state across CFG joins. Inline optional
-container aliases use ordinary indirect MIR places plus exact optional types;
-reserved boxes remain resolution exclusions; nested and optional-array
-identities stop at the type-checking eligibility gate and cannot reach
-executable MIR bodies; optional-reference shapes remain syntax diagnostics.
+container aliases use ordinary indirect MIR places plus exact optional types.
+Checked optional-array payload aliases additionally use a guarded payload
+projection and an ordinary array-backing anchor for the complete immediate
+call. Reserved boxes remain resolution exclusions; nested and optional-array
+identities execute through recursive MIR lifecycle plans; optional-reference
+shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes

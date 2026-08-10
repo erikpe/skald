@@ -297,7 +297,7 @@ fn verifier_rejects_mismatched_leaked_and_misrouted_optional_guards() {
             _ => None,
         })
         .unwrap();
-    end.class = ClassId::new(1);
+    end.payload = MirType::Class(ClassId::new(1));
     assert!(verify_mir(&mismatched)
         .unwrap_err()
         .to_string()

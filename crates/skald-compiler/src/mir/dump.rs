@@ -1022,7 +1022,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     end.guard, end.optional
                 );
                 dump_place(output, &end.source);
-                let _ = write!(output, " : class {}", end.class);
+                let _ = write!(output, " : payload {:?}", end.payload);
                 write_span(output, end.span);
             }
             MirInstruction::Array(instruction) => dump_array_instruction(output, instruction),
@@ -1186,8 +1186,8 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             dump_place(output, &begin.source);
             let _ = write!(
                 output,
-                " : class {}, success {success_target}, absent {absent_target}, overflow {overflow_target}",
-                begin.class
+                " : payload {}, success {success_target}, absent {absent_target}, overflow {overflow_target}",
+                format_args!("{:?}", begin.payload)
             );
             write_span(output, *span);
         }
@@ -1552,6 +1552,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
             }
             MirPlaceProjection::NestedOptionalPayload(optional) => {
                 let _ = write!(output, ".optional-payload({optional})");
+            }
+            MirPlaceProjection::CheckedOptionalPayload(optional) => {
+                let _ = write!(output, ".checked-optional-payload({optional})");
             }
             MirPlaceProjection::ArrayElement {
                 array,
