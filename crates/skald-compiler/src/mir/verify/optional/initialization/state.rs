@@ -25,13 +25,7 @@ impl InitializationState {
                 .static_fields
                 .iter()
                 .filter(|field| {
-                    Some(field.id) != initializing_field
-                        && matches!(
-                            field.ty,
-                            MirType::OptionalPrimitive(_)
-                                | MirType::OptionalClass(_)
-                                | MirType::OptionalShared(_)
-                        )
+                    Some(field.id) != initializing_field && matches!(field.ty, MirType::Optional(_))
                 })
                 .map(|field| MirPlace::static_field(field.id))
         });
@@ -139,12 +133,12 @@ impl InitializationState {
                     ..
                 }) => self.complete_array_element(*backing, *prefix),
                 MirInstruction::Call(call) => {
-                    self.transfer_class_optional_arguments(function, &call.arguments);
-                    self.transfer_optional_shared_arguments(function, &call.arguments);
+                    self.transfer_class_optional_arguments(program, function, &call.arguments);
+                    self.transfer_optional_shared_arguments(program, function, &call.arguments);
                     if let Some(result) = call.shared_result {
                         if function
                             .storage(result)
-                            .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
+                            .is_some_and(|storage| optional_shared(program, storage.ty))
                         {
                             self.insert(MirPlace::base(result));
                         }
@@ -170,8 +164,16 @@ impl InitializationState {
                     }
                 }
                 MirInstruction::Initialize(initialize) => {
-                    self.transfer_class_optional_arguments(function, &initialize.arguments);
-                    self.transfer_optional_shared_arguments(function, &initialize.arguments);
+                    self.transfer_class_optional_arguments(
+                        program,
+                        function,
+                        &initialize.arguments,
+                    );
+                    self.transfer_optional_shared_arguments(
+                        program,
+                        function,
+                        &initialize.arguments,
+                    );
                     self.initialize_optional_fields(
                         program,
                         initialize.target.class(),
@@ -179,8 +181,16 @@ impl InitializationState {
                     );
                 }
                 MirInstruction::SharedInitialize(initialize) => {
-                    self.transfer_class_optional_arguments(function, &initialize.arguments);
-                    self.transfer_optional_shared_arguments(function, &initialize.arguments);
+                    self.transfer_class_optional_arguments(
+                        program,
+                        function,
+                        &initialize.arguments,
+                    );
+                    self.transfer_optional_shared_arguments(
+                        program,
+                        function,
+                        &initialize.arguments,
+                    );
                 }
                 MirInstruction::CopyConstruct(copy) => {
                     self.initialize_optional_fields(program, copy.class, &copy.destination);
@@ -287,6 +297,7 @@ impl InitializationState {
 
     fn transfer_class_optional_arguments(
         &mut self,
+        program: &MirProgram,
         function: MirDefinitionRef<'_>,
         arguments: &[MirArgument],
     ) {
@@ -296,7 +307,7 @@ impl InitializationState {
             };
             if function
                 .storage(place.base.expect_local_storage())
-                .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
+                .is_some_and(|storage| optional_class(program, storage.ty))
             {
                 self.remove(place);
             }
@@ -305,6 +316,7 @@ impl InitializationState {
 
     fn transfer_optional_shared_arguments(
         &mut self,
+        program: &MirProgram,
         function: MirDefinitionRef<'_>,
         arguments: &[MirArgument],
     ) {
@@ -314,7 +326,7 @@ impl InitializationState {
             };
             if function
                 .storage(*storage)
-                .is_some_and(|entry| matches!(entry.ty, MirType::OptionalShared(_)))
+                .is_some_and(|entry| optional_shared(program, entry.ty))
             {
                 self.remove(&MirPlace::base(*storage));
             }
@@ -346,9 +358,7 @@ impl InitializationState {
         for field in &declaration.fields {
             let place = root.clone().project_field(field.id);
             match field.ty {
-                MirType::OptionalPrimitive(_)
-                | MirType::OptionalClass(_)
-                | MirType::OptionalShared(_) => {
+                MirType::Optional(_) => {
                     self.insert(place);
                 }
                 MirType::Class(nested) => {
@@ -362,10 +372,27 @@ impl InitializationState {
 }
 
 pub(super) fn is_optional(ty: MirType) -> bool {
-    matches!(
-        ty,
-        MirType::OptionalPrimitive(_) | MirType::OptionalClass(_) | MirType::OptionalShared(_)
-    )
+    matches!(ty, MirType::Optional(_))
+}
+
+fn optional_class(program: &MirProgram, ty: MirType) -> bool {
+    let MirType::Optional(optional) = ty else {
+        return false;
+    };
+    program
+        .optional_type(optional)
+        .and_then(crate::mir::MirOptionalType::inline_class)
+        .is_some()
+}
+
+fn optional_shared(program: &MirProgram, ty: MirType) -> bool {
+    let MirType::Optional(optional) = ty else {
+        return false;
+    };
+    program
+        .optional_type(optional)
+        .and_then(crate::mir::MirOptionalType::shared_owner)
+        .is_some()
 }
 
 fn complete_class_storage(

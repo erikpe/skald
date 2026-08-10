@@ -56,6 +56,10 @@ impl BodyLowerer<'_> {
                 let source = self.lower_optional_shared_source(&value.source);
                 self.emit(MirInstruction::OptionalSharedAssign(
                     MirOptionalSharedAssign {
+                        optional: optional_types::shared_id(
+                            self.input.optional_types,
+                            value.target,
+                        ),
                         destination,
                         source,
                         target: lower_shared_target(value.target),
@@ -63,7 +67,7 @@ impl BodyLowerer<'_> {
                     },
                 ));
             }
-            crate::hir::HirArrayElementValue::Optional { source, .. } => {
+            crate::hir::HirArrayElementValue::Optional { source, payload: _ } => {
                 let source = self.lower_optional_source(source);
                 self.emit(MirInstruction::OptionalAssign(MirOptionalAssign {
                     destination,
@@ -83,6 +87,7 @@ impl BodyLowerer<'_> {
                 };
                 self.emit(MirInstruction::ClassOptionalAssign(
                     MirClassOptionalAssign {
+                        optional: optional_types::class_id(self.input.optional_types, class),
                         destination,
                         source,
                         class,

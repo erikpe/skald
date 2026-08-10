@@ -299,7 +299,12 @@ pub enum MirStaticValueCleanup {
 }
 
 impl MirStaticValueCleanup {
-    pub(crate) fn for_field(ty: MirType, field: StaticFieldId, span: Span) -> Option<Self> {
+    pub(crate) fn for_field(
+        optional_types: &super::MirOptionalTypeTable,
+        ty: MirType,
+        field: StaticFieldId,
+        span: Span,
+    ) -> Option<Self> {
         let destination = MirPlace::static_field(field);
         Some(match ty {
             MirType::Class(target) => Self::CompleteObject(MirCleanup {
@@ -307,32 +312,41 @@ impl MirStaticValueCleanup {
                 target,
                 span,
             }),
-            MirType::OptionalClass(class) => Self::OptionalClass(MirClassOptionalCleanup {
-                destination,
-                class,
-                span,
-            }),
             MirType::Shared(target) => Self::Shared(MirStaticSharedCleanup {
                 destination,
                 target,
                 span,
             }),
-            MirType::OptionalShared(target) => Self::OptionalShared(MirOptionalSharedCleanup {
-                destination,
-                target,
-                span,
-            }),
+            MirType::Optional(optional) => {
+                let metadata = optional_types.get(optional)?;
+                match metadata.storage {
+                    super::MirOptionalStorage::Scalar => Self::None,
+                    super::MirOptionalStorage::InlineClass(class) => {
+                        Self::OptionalClass(MirClassOptionalCleanup {
+                            optional,
+                            destination,
+                            class,
+                            span,
+                        })
+                    }
+                    super::MirOptionalStorage::SharedOwner(target) => {
+                        Self::OptionalShared(MirOptionalSharedCleanup {
+                            optional,
+                            destination,
+                            target,
+                            span,
+                        })
+                    }
+                    super::MirOptionalStorage::InlineArray(_)
+                    | super::MirOptionalStorage::Nested(_) => return None,
+                }
+            }
             MirType::Array(array) => Self::Array(MirArrayInstruction::Release {
                 owner: destination,
                 array,
                 span,
             }),
-            MirType::I64
-            | MirType::U64
-            | MirType::U8
-            | MirType::F64
-            | MirType::Bool
-            | MirType::OptionalPrimitive(_) => Self::None,
+            MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool => Self::None,
             MirType::Interface(_) | MirType::Obj | MirType::Unit => return None,
         })
     }

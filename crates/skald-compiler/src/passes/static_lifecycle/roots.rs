@@ -20,23 +20,38 @@ pub(crate) fn is_lifecycle_destination_or_published_self(
 
 pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<StaticEffectNode> {
     match ty {
-        MirType::Class(class) | MirType::OptionalClass(class) => vec![StaticEffectNode::class(
+        MirType::Class(class) => vec![StaticEffectNode::class(
             class,
             StaticClassLifecycleOperation::CompleteFinalizer,
         )],
-        MirType::Shared(target) | MirType::OptionalShared(target) => {
-            shared_destruction_roots(program, target)
-        }
+        MirType::Shared(target) => shared_destruction_roots(program, target),
         MirType::Array(array) => vec![StaticEffectNode::array(
             array,
             StaticArrayLifecycleOperation::Destruction,
         )],
-        MirType::I64
-        | MirType::U64
-        | MirType::U8
-        | MirType::F64
-        | MirType::Bool
-        | MirType::OptionalPrimitive(_) => Vec::new(),
+        MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool => Vec::new(),
+        MirType::Optional(optional) => match program.optional_type(optional) {
+            Some(metadata) => match metadata.storage {
+                crate::mir::MirOptionalStorage::InlineClass(class) => {
+                    vec![StaticEffectNode::class(
+                        class,
+                        StaticClassLifecycleOperation::CompleteFinalizer,
+                    )]
+                }
+                crate::mir::MirOptionalStorage::SharedOwner(target) => {
+                    shared_destruction_roots(program, target)
+                }
+                crate::mir::MirOptionalStorage::InlineArray(array) => {
+                    vec![StaticEffectNode::array(
+                        array,
+                        StaticArrayLifecycleOperation::Destruction,
+                    )]
+                }
+                crate::mir::MirOptionalStorage::Scalar
+                | crate::mir::MirOptionalStorage::Nested(_) => Vec::new(),
+            },
+            None => Vec::new(),
+        },
         MirType::Interface(_) | MirType::Obj | MirType::Unit => Vec::new(),
     }
 }

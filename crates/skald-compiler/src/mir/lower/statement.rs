@@ -181,13 +181,20 @@ impl BodyLowerer<'_> {
             }
             crate::hir::HirLocalInitializer::ClassOptional(value) => {
                 self.lower_class_optional_initialize(storage, value);
-                self.cleanup.register_class_optional(storage, value.class);
+                self.cleanup.register_class_optional(
+                    storage,
+                    optional_types::class_id(self.input.optional_types, value.class),
+                    value.class,
+                );
                 self.finish_full_expression(local.span);
             }
             crate::hir::HirLocalInitializer::OptionalShared(value) => {
                 self.lower_optional_shared_initialize(storage, value);
-                self.cleanup
-                    .register_optional_shared(storage, super::lower_shared_target(value.target));
+                self.cleanup.register_optional_shared(
+                    storage,
+                    optional_types::shared_id(self.input.optional_types, value.target),
+                    super::lower_shared_target(value.target),
+                );
                 self.finish_full_expression(local.span);
             }
             crate::hir::HirLocalInitializer::Array(initialization) => {

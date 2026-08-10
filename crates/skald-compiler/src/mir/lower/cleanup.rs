@@ -222,8 +222,8 @@ struct InitializedStorage {
 enum OwnedStorageKind {
     Inline(ClassId),
     Shared,
-    ClassOptional(ClassId),
-    OptionalShared(crate::mir::MirSharedTarget),
+    ClassOptional(crate::identity::OptionalTypeId, ClassId),
+    OptionalShared(crate::identity::OptionalTypeId, crate::mir::MirSharedTarget),
     Array(crate::identity::ArrayTypeId),
 }
 
@@ -322,20 +322,26 @@ impl CleanupPlanner {
             });
     }
 
-    pub(super) fn register_class_optional(&mut self, storage: StorageId, class: ClassId) {
+    pub(super) fn register_class_optional(
+        &mut self,
+        storage: StorageId,
+        optional: crate::identity::OptionalTypeId,
+        class: ClassId,
+    ) {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
             .initialized
             .push(InitializedStorage {
                 storage,
-                kind: OwnedStorageKind::ClassOptional(class),
+                kind: OwnedStorageKind::ClassOptional(optional, class),
             });
     }
 
     pub(super) fn register_optional_shared(
         &mut self,
         storage: StorageId,
+        optional: crate::identity::OptionalTypeId,
         target: crate::mir::MirSharedTarget,
     ) {
         self.scopes
@@ -344,7 +350,7 @@ impl CleanupPlanner {
             .initialized
             .push(InitializedStorage {
                 storage,
-                kind: OwnedStorageKind::OptionalShared(target),
+                kind: OwnedStorageKind::OptionalShared(optional, target),
             });
     }
 
@@ -429,15 +435,17 @@ impl InitializedStorage {
                 owner: self.storage,
                 span,
             }),
-            OwnedStorageKind::ClassOptional(class) => {
+            OwnedStorageKind::ClassOptional(optional, class) => {
                 PlannedCleanup::ClassOptional(crate::mir::MirClassOptionalCleanup {
+                    optional,
                     destination: MirPlace::base(self.storage),
                     class,
                     span,
                 })
             }
-            OwnedStorageKind::OptionalShared(target) => {
+            OwnedStorageKind::OptionalShared(optional, target) => {
                 PlannedCleanup::OptionalShared(crate::mir::MirOptionalSharedCleanup {
+                    optional,
                     destination: MirPlace::base(self.storage),
                     target,
                     span,

@@ -93,9 +93,17 @@ fn optional_static_layout_reuses_inline_layout_without_changing_instances() {
     let program = lower_source_to_mir(source);
     let layout = DataLayout::compute(&program).unwrap();
     let primitive = layout
-        .ty(MirType::OptionalPrimitive(MirPrimitiveType::I64))
+        .ty(MirType::Optional(
+            program.optional_for_payload(MirType::I64).unwrap(),
+        ))
         .unwrap();
-    let class_optional = layout.optional_class(ClassId::new(0)).unwrap();
+    let class_optional = layout
+        .optional_type(
+            program
+                .optional_for_payload(MirType::Class(ClassId::new(0)))
+                .unwrap(),
+        )
+        .unwrap();
 
     assert_eq!(layout.class(ClassId::new(1)).unwrap().ty().size(), 1);
     assert_eq!(class_optional.payload_offset(), 8);

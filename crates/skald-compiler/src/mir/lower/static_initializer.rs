@@ -21,14 +21,13 @@ pub(super) fn lower_static_initializers(
     Vec<PreliminaryMirStaticField>,
     Vec<PreliminaryMirStaticInitializer>,
 ) {
-    let optional_adapter = legacy_optional_adapter::LegacyOptionalAdapter::new(&hir.optional_types);
     let static_fields = hir
         .classes
         .iter()
         .flat_map(|class| &class.static_fields)
         .map(|field| PreliminaryMirStaticField {
             field: field.id,
-            ty: optional_adapter.lower_type(field.ty),
+            ty: optional_types::lower_type(field.ty),
             initializer: field.initializer.as_ref().map(|initializer| initializer.id),
             span: field.span,
         })
@@ -67,7 +66,7 @@ fn lower_static_initializer(
         receiver_class: None,
         string_language_item,
         literal_data: &hir.literal_data,
-        optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter::new(&hir.optional_types),
+        optional_types: &hir.optional_types,
     });
 
     let destination = MirPlace::static_lifecycle_destination(field);

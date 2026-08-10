@@ -10,8 +10,8 @@ progress. Completed roadmaps and resolved discovery records move to
   **in progress**. Makes `(shared T)?` canonical with `shared? T` as an exact
   shorthand, replaces flat optional families with recursive identities and
   lifecycle IR, and implements arbitrary nesting plus optional inline arrays.
-  Shared boxes containing optionals remain a separate future roadmap. CO4,
-  generalizing executable optional MIR and target realization, is next. The work builds on
+  Shared boxes containing optionals remain a separate future roadmap. CO5,
+  executing arbitrarily nested optional lifecycle, is next. The work builds on
   the implemented optional, array, shared-ownership, static-field, and verified
   cleanup contracts and has no active-roadmap dependency.
 

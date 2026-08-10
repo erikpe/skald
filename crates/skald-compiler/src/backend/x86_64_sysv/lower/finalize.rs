@@ -192,7 +192,16 @@ fn select_plan(
                 let field_declaration = program
                     .field(field)
                     .ok_or_else(|| finalizer_error(format!("unknown finalizer field {field}")))?;
-                if !matches!(field_declaration.ty, MirType::OptionalShared(_)) {
+                let MirType::Optional(optional) = field_declaration.ty else {
+                    return Err(finalizer_error(format!(
+                        "finalizer for {class} contains non-optional-shared field {field}"
+                    )));
+                };
+                if program
+                    .optional_type(optional)
+                    .and_then(crate::mir::MirOptionalType::shared_owner)
+                    .is_none()
+                {
                     return Err(finalizer_error(format!(
                         "finalizer for {class} contains non-optional-shared field {field}"
                     )));
@@ -239,11 +248,19 @@ fn select_plan(
                 let field_declaration = program
                     .field(field)
                     .ok_or_else(|| finalizer_error(format!("unknown finalizer field {field}")))?;
-                let MirType::OptionalClass(field_class) = field_declaration.ty else {
+                let MirType::Optional(optional) = field_declaration.ty else {
                     return Err(finalizer_error(format!(
                         "finalizer for {class} contains non-optional-class field {field}"
                     )));
                 };
+                let field_class = program
+                    .optional_type(optional)
+                    .and_then(crate::mir::MirOptionalType::inline_class)
+                    .ok_or_else(|| {
+                        finalizer_error(format!(
+                            "finalizer for {class} contains non-optional-class field {field}"
+                        ))
+                    })?;
                 let field_offset = i32::try_from(
                     data_layout
                         .field(field)
@@ -270,11 +287,10 @@ fn select_plan(
                 });
                 output.push(Instruction::Test(Register::Rax));
                 output.push(Instruction::JumpIfEqual(finished.clone()));
-                let payload_offset =
-                    i32::try_from(data_layout.optional_class(field_class)?.payload_offset())
-                        .map_err(|_| {
-                            finalizer_error("optional payload offset exceeds target limits")
-                        })?;
+                let payload_offset = i32::try_from(
+                    data_layout.optional_type(optional)?.payload_offset(),
+                )
+                .map_err(|_| finalizer_error("optional payload offset exceeds target limits"))?;
                 select_plan(
                     program,
                     data_layout,

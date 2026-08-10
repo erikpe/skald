@@ -1,7 +1,7 @@
 //! Primitive optional storage operations.
 
 use crate::{
-    identity::{ClassId, CopyAssignmentId, CopyConstructorId},
+    identity::{ClassId, CopyAssignmentId, CopyConstructorId, OptionalTypeId},
     source::Span,
 };
 
@@ -45,6 +45,7 @@ pub enum MirClassOptionalSource {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirClassOptionalInitialize {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub source: MirClassOptionalSource,
     pub class: ClassId,
@@ -54,6 +55,7 @@ pub struct MirClassOptionalInitialize {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirClassOptionalAssign {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub source: MirClassOptionalSource,
     pub class: ClassId,
@@ -64,6 +66,7 @@ pub struct MirClassOptionalAssign {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirClassOptionalPublish {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub class: ClassId,
     pub span: Span,
@@ -71,6 +74,7 @@ pub struct MirClassOptionalPublish {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirClassOptionalCleanup {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub class: ClassId,
     pub span: Span,
@@ -78,6 +82,7 @@ pub struct MirClassOptionalCleanup {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalViewBegin {
+    pub optional: OptionalTypeId,
     pub guard: OptionalGuardId,
     pub source: MirPlace,
     pub class: ClassId,
@@ -86,6 +91,7 @@ pub struct MirOptionalViewBegin {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalViewEnd {
+    pub optional: OptionalTypeId,
     pub guard: OptionalGuardId,
     pub source: MirPlace,
     pub class: ClassId,
@@ -102,6 +108,7 @@ pub enum MirOptionalSharedSource {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalSharedInitialize {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub source: MirOptionalSharedSource,
     pub target: MirSharedTarget,
@@ -110,6 +117,7 @@ pub struct MirOptionalSharedInitialize {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalSharedAssign {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub source: MirOptionalSharedSource,
     pub target: MirSharedTarget,
@@ -118,6 +126,7 @@ pub struct MirOptionalSharedAssign {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalSharedCleanup {
+    pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub target: MirSharedTarget,
     pub span: Span,
@@ -125,6 +134,7 @@ pub struct MirOptionalSharedCleanup {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalSharedUnwrap {
+    pub optional: OptionalTypeId,
     pub source: MirPlace,
     pub destination: StorageId,
     pub target: MirSharedTarget,

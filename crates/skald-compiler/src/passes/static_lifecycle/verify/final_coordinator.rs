@@ -282,9 +282,12 @@ fn verify_shutdown(
                 format!("destruction transitions for {expected_field} are malformed"),
             );
         }
-        let Some(expected_cleanup) =
-            MirStaticValueCleanup::for_field(definition.ty, *expected_field, definition.span)
-        else {
+        let Some(expected_cleanup) = MirStaticValueCleanup::for_field(
+            &view.program.optional_types,
+            definition.ty,
+            *expected_field,
+            definition.span,
+        ) else {
             program_error(
                 errors,
                 format!("destruction cleanup for {expected_field} has an unstorable type"),

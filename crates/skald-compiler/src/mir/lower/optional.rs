@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use super::BodyLowerer;
+use super::{optional_types, BodyLowerer};
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_class_optional_initialize(
@@ -38,6 +38,7 @@ impl BodyLowerer<'_> {
             HirClassOptionalSource::Present(HirObjectSource::Produced(producer)) => {
                 self.emit(MirInstruction::ClassOptionalInitialize(
                     MirClassOptionalInitialize {
+                        optional: optional_types::class_id(self.input.optional_types, value.class),
                         destination: destination.clone(),
                         source: MirClassOptionalSource::Absent,
                         class: value.class,
@@ -51,6 +52,7 @@ impl BodyLowerer<'_> {
                 );
                 self.emit(MirInstruction::ClassOptionalPublish(
                     MirClassOptionalPublish {
+                        optional: optional_types::class_id(self.input.optional_types, value.class),
                         destination,
                         class: value.class,
                         span: value.span,
@@ -61,6 +63,7 @@ impl BodyLowerer<'_> {
                 let source = self.lower_class_optional_source(source);
                 self.emit(MirInstruction::ClassOptionalInitialize(
                     MirClassOptionalInitialize {
+                        optional: optional_types::class_id(self.input.optional_types, value.class),
                         destination,
                         source,
                         class: value.class,
@@ -117,6 +120,7 @@ impl BodyLowerer<'_> {
                 let source = self.lower_class_optional_copy_source(source, *class);
                 self.emit(MirInstruction::ClassOptionalInitialize(
                     MirClassOptionalInitialize {
+                        optional: optional_types::class_id(self.input.optional_types, *class),
                         destination,
                         source,
                         class: *class,
@@ -155,6 +159,10 @@ impl BodyLowerer<'_> {
         }
         self.emit(MirInstruction::ClassOptionalAssign(
             MirClassOptionalAssign {
+                optional: optional_types::class_id(
+                    self.input.optional_types,
+                    assignment.destination.class,
+                ),
                 destination,
                 source,
                 class: assignment.destination.class,
@@ -186,6 +194,7 @@ impl BodyLowerer<'_> {
                 self.full_expression.register_temporary(
                     super::FullExpressionTemporary::ClassOptional(
                         crate::mir::MirClassOptionalCleanup {
+                            optional: optional_types::class_id(self.input.optional_types, class),
                             destination: crate::mir::MirPlace::base(storage),
                             class,
                             span: expression.span,
@@ -335,9 +344,10 @@ impl BodyLowerer<'_> {
         source: &HirOptionalOperand,
     ) -> crate::mir::ValueId {
         let source_storage = self.lower_optional_operand(source);
-        let payload = super::primitive::lower_primitive_type(
-            self.input.optional_adapter.operand_primitive(source),
-        );
+        let payload = super::primitive::lower_primitive_type(optional_types::primitive_payload(
+            self.input.optional_types,
+            source,
+        ));
         let destination = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
             id: destination,
@@ -431,6 +441,7 @@ impl BodyLowerer<'_> {
         let source = self.lower_optional_shared_source(&value.source);
         self.emit(MirInstruction::OptionalSharedInitialize(
             crate::mir::MirOptionalSharedInitialize {
+                optional: optional_types::shared_id(self.input.optional_types, value.target),
                 destination,
                 source,
                 target: super::lower_shared_target(value.target),
@@ -446,6 +457,10 @@ impl BodyLowerer<'_> {
         let source = self.lower_optional_shared_source(&assignment.source);
         let destination = self.lower_optional_shared_place(&assignment.destination);
         let operation = crate::mir::MirOptionalSharedAssign {
+            optional: optional_types::shared_id(
+                self.input.optional_types,
+                assignment.destination.target,
+            ),
             destination,
             source,
             target: super::lower_shared_target(assignment.destination.target),
@@ -455,6 +470,10 @@ impl BodyLowerer<'_> {
             crate::hir::HirOptionalWriteKind::Initialize => {
                 self.emit(MirInstruction::OptionalSharedInitialize(
                     crate::mir::MirOptionalSharedInitialize {
+                        optional: optional_types::shared_id(
+                            self.input.optional_types,
+                            assignment.destination.target,
+                        ),
                         destination: operation.destination,
                         source: operation.source,
                         target: operation.target,
@@ -488,15 +507,19 @@ impl BodyLowerer<'_> {
                 let Type::Optional(optional) = expression.ty else {
                     unreachable!("optional shared producer must have optional type")
                 };
-                let super::legacy_optional_adapter::LegacyOptionalKind::Shared(target) =
-                    self.input.optional_adapter.kind(optional)
+                let crate::hir::HirOptionalStorageCategory::SharedOwner(_) = self
+                    .input
+                    .optional_types
+                    .get(optional)
+                    .expect("typed optional identity must have metadata")
+                    .storage
                 else {
                     unreachable!("optional shared producer must have shared metadata")
                 };
                 let storage = self.new_optional_storage(
                     MirStorageKind::Temporary,
                     "optional-shared-result",
-                    MirType::OptionalShared(super::lower_shared_target(target)),
+                    MirType::Optional(optional),
                     expression.span,
                 );
                 self.lower_optional_shared_call(expression, storage);
@@ -541,12 +564,18 @@ impl BodyLowerer<'_> {
         destination: StorageId,
     ) {
         let source = self.lower_optional_operand(operand);
-        let target =
-            super::lower_shared_target(self.input.optional_adapter.operand_shared(operand));
+        let target = super::lower_shared_target(optional_types::shared_payload(
+            self.input.optional_types,
+            operand,
+        ));
         let success_target = self.body.allocate_block(operand.span());
         let failure_target = self.body.allocate_block(operand.span());
         self.terminate(MirTerminator::OptionalSharedUnwrap {
             unwrap: crate::mir::MirOptionalSharedUnwrap {
+                optional: optional_types::shared_id(
+                    self.input.optional_types,
+                    optional_types::shared_payload(self.input.optional_types, operand),
+                ),
                 source,
                 destination,
                 target,
@@ -596,8 +625,15 @@ impl BodyLowerer<'_> {
                 self.full_expression.register_temporary(
                     super::FullExpressionTemporary::ClassOptional(
                         crate::mir::MirClassOptionalCleanup {
+                            optional: optional_types::class_id(
+                                self.input.optional_types,
+                                optional_types::class_payload(self.input.optional_types, operand),
+                            ),
                             destination: crate::mir::MirPlace::base(destination),
-                            class: self.input.optional_adapter.operand_class(operand),
+                            class: optional_types::class_payload(
+                                self.input.optional_types,
+                                operand,
+                            ),
                             span: expression.span,
                         },
                     ),
@@ -606,7 +642,7 @@ impl BodyLowerer<'_> {
             }
             HirOptionalOperand::SharedPlace(place) => self.lower_optional_shared_place(place),
             HirOptionalOperand::SharedProduced(expression) => {
-                let target = self.input.optional_adapter.operand_shared(operand);
+                let target = optional_types::shared_payload(self.input.optional_types, operand);
                 let destination = self.new_optional_storage(
                     MirStorageKind::Temporary,
                     "optional-shared-result",
@@ -617,6 +653,7 @@ impl BodyLowerer<'_> {
                 self.full_expression.register_temporary(
                     super::FullExpressionTemporary::OptionalShared(
                         crate::mir::MirOptionalSharedCleanup {
+                            optional: optional_types::shared_id(self.input.optional_types, target),
                             destination: crate::mir::MirPlace::base(destination),
                             target: super::lower_shared_target(target),
                             span: expression.span,
@@ -637,7 +674,7 @@ impl BodyLowerer<'_> {
         view: &crate::hir::HirCheckedOptionalView,
     ) -> crate::mir::MirPlace {
         let source = self.lower_optional_operand(&view.source);
-        let class = self.input.optional_adapter.operand_class(&view.source);
+        let class = optional_types::class_payload(self.input.optional_types, &view.source);
         let guard = crate::mir::OptionalGuardId::new(self.input.callable, self.next_optional_guard);
         self.next_optional_guard += 1;
         let success_target = self.body.allocate_block(view.span);
@@ -645,6 +682,7 @@ impl BodyLowerer<'_> {
         let overflow_target = self.body.allocate_block(view.span);
         self.terminate(MirTerminator::BeginOptionalView {
             begin: crate::mir::MirOptionalViewBegin {
+                optional: optional_types::class_id(self.input.optional_types, class),
                 guard,
                 source: source.clone(),
                 class,
@@ -686,6 +724,7 @@ impl BodyLowerer<'_> {
         for guard in guards {
             self.emit(MirInstruction::EndOptionalView(
                 crate::mir::MirOptionalViewEnd {
+                    optional: optional_types::class_id(self.input.optional_types, guard.class),
                     guard: guard.guard,
                     source: guard.source,
                     class: guard.class,
@@ -701,10 +740,7 @@ impl BodyLowerer<'_> {
         mir_ty: MirType,
         span: crate::source::Span,
     ) -> StorageId {
-        debug_assert!(matches!(
-            mir_ty,
-            MirType::OptionalPrimitive(_) | MirType::OptionalClass(_) | MirType::OptionalShared(_)
-        ));
+        debug_assert!(matches!(mir_ty, MirType::Optional(_)));
         let id = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
             id,

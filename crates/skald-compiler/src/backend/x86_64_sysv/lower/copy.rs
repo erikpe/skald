@@ -131,6 +131,10 @@ impl InstructionSelector<'_, '_> {
                         } => {
                             self.select_class_optional_initialize(
                                 &crate::mir::MirClassOptionalInitialize {
+                                    optional: self
+                                        .program
+                                        .optional_for_payload(MirType::Class(class))
+                                        .expect("verified optional-class field metadata exists"),
                                     destination: destination.clone().project_field(field),
                                     source: crate::mir::MirClassOptionalSource::Copy(
                                         source.clone().project_field(field),
@@ -150,6 +154,10 @@ impl InstructionSelector<'_, '_> {
                         MirSynthesizedFieldCopy::OptionalShared { field, target } => {
                             self.select_optional_shared_initialize(
                                 &crate::mir::MirOptionalSharedInitialize {
+                                    optional: self
+                                        .program
+                                        .optional_for_payload(MirType::Shared(target))
+                                        .expect("verified optional-owner field metadata exists"),
                                     destination: destination.clone().project_field(field),
                                     source: crate::mir::MirOptionalSharedSource::Copy(
                                         source.clone().project_field(field),
@@ -273,6 +281,10 @@ impl InstructionSelector<'_, '_> {
                             };
                             self.select_class_optional_assign(
                                 &crate::mir::MirClassOptionalAssign {
+                                    optional: self
+                                        .program
+                                        .optional_for_payload(MirType::Class(class))
+                                        .expect("verified optional-class field metadata exists"),
                                     destination: destination.clone().project_field(field),
                                     source: crate::mir::MirClassOptionalSource::Copy(
                                         source.clone().project_field(field),
@@ -293,6 +305,10 @@ impl InstructionSelector<'_, '_> {
                         MirSynthesizedFieldCopy::OptionalShared { field, target } => {
                             self.select_optional_shared_assign(
                                 &crate::mir::MirOptionalSharedAssign {
+                                    optional: self
+                                        .program
+                                        .optional_for_payload(MirType::Shared(target))
+                                        .expect("verified optional-owner field metadata exists"),
                                     destination: destination.clone().project_field(field),
                                     source: crate::mir::MirOptionalSharedSource::Copy(
                                         source.clone().project_field(field),
@@ -377,9 +393,7 @@ impl InstructionSelector<'_, '_> {
             | MirType::Interface(_)
             | MirType::Obj
             | MirType::Shared(_)
-            | MirType::OptionalShared(_)
-            | MirType::OptionalPrimitive(_)
-            | MirType::OptionalClass(_)
+            | MirType::Optional(_)
             | MirType::Unit => {
                 unreachable!("verified primitive copy step must have a payload primitive type")
             }

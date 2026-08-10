@@ -9,7 +9,10 @@ fn class_optional_layout_reserves_an_aligned_exact_payload() {
     );
     let layouts = layout::DataLayout::compute(&program).unwrap();
     let payload = layouts.class(ClassId::new(0)).unwrap().ty();
-    let optional = layouts.optional_class(ClassId::new(0)).unwrap();
+    let optional_id = program
+        .optional_for_payload(MirType::Class(ClassId::new(0)))
+        .unwrap();
+    let optional = layouts.optional_type(optional_id).unwrap();
 
     assert_eq!(optional.payload_offset() % payload.alignment(), 0);
     assert!(optional.ty().size() >= optional.payload_offset() + payload.size());
@@ -26,9 +29,11 @@ fn optional_shared_owner_uses_the_zero_niche_one_word_layout() {
     let layouts = layout::DataLayout::compute(&program).unwrap();
     let field = layouts.field(FieldId::new(ClassId::new(1), 0)).unwrap();
     let optional = layouts
-        .ty(MirType::OptionalShared(MirSharedTarget::Class(
-            ClassId::new(0),
-        )))
+        .ty(MirType::Optional(
+            program
+                .optional_for_payload(MirType::Shared(MirSharedTarget::Class(ClassId::new(0))))
+                .unwrap(),
+        ))
         .unwrap();
 
     assert_eq!(field.offset, 0);
@@ -591,8 +596,8 @@ fn optional_container_aliases_execute_forward_mutate_and_stack_pressure() {
         }\n";
     let mir = lower_text(source);
     let dump = crate::mir::dump_mir(&mir);
-    assert!(dump.contains("ref i64?"));
-    assert!(dump.contains("mut ref class"));
+    assert!(dump.contains("ref optional o0"));
+    assert!(dump.contains("mut ref optional o1"));
     assert!(dump.contains("indirect("));
 
     let output = assembly(source);

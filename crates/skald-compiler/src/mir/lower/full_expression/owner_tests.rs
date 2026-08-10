@@ -33,9 +33,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         receiver_class: None,
         string_language_item: None,
         literal_data: &literal_data,
-        optional_adapter: super::super::legacy_optional_adapter::LegacyOptionalAdapter::new(
-            &optional_types,
-        ),
+        optional_types: &optional_types,
     };
     let mut lowerer = BodyLowerer::new(input);
     let activation = StorageId::new(callable, 0);

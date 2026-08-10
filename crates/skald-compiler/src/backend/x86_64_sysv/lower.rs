@@ -119,7 +119,13 @@ fn lower_definition(
         instructions.push(Instruction::ReserveStack(frame.size()));
     }
 
-    call::spill_parameters(signature, function, &frame, &mut instructions)?;
+    call::spill_parameters(
+        context.program,
+        signature,
+        function,
+        &frame,
+        &mut instructions,
+    )?;
     if let (Some(trace_frame), Some(initial_location)) = (frame.runtime_trace(), initial_location) {
         runtime_trace::emit_push(trace_frame, initial_location, &mut instructions);
     }

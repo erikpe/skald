@@ -2,4 +2,5 @@
 
 mod guards;
 mod initialization;
+mod metadata;
 mod structural;

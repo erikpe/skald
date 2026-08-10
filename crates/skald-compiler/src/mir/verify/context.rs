@@ -20,6 +20,28 @@ pub(super) struct Verifier<'mir> {
 }
 
 impl<'mir> Verifier<'mir> {
+    pub(super) fn optional_type(&self, ty: MirType) -> Option<&'mir crate::mir::MirOptionalType> {
+        let MirType::Optional(optional) = ty else {
+            return None;
+        };
+        self.program.optional_type(optional)
+    }
+
+    pub(super) fn optional_class(&self, ty: MirType) -> Option<crate::identity::ClassId> {
+        self.optional_type(ty)
+            .and_then(crate::mir::MirOptionalType::inline_class)
+    }
+
+    pub(super) fn optional_shared(&self, ty: MirType) -> Option<crate::mir::MirSharedTarget> {
+        self.optional_type(ty)
+            .and_then(crate::mir::MirOptionalType::shared_owner)
+    }
+
+    pub(super) fn optional_primitive(&self, ty: MirType) -> Option<crate::mir::MirPrimitiveType> {
+        self.optional_type(ty)
+            .and_then(crate::mir::MirOptionalType::primitive)
+    }
+
     pub(super) fn new(program: &'mir MirProgram) -> Self {
         Self {
             program,
@@ -44,14 +66,8 @@ impl<'mir> Verifier<'mir> {
         field: crate::identity::StaticFieldId,
         ty: MirType,
     ) -> bool {
-        let zero_default = ty.is_scalar_value()
-            || matches!(
-                ty,
-                MirType::OptionalPrimitive(_)
-                    | MirType::OptionalClass(_)
-                    | MirType::OptionalShared(_)
-                    | MirType::Array(_)
-            );
+        let zero_default =
+            ty.is_scalar_value() || matches!(ty, MirType::Optional(_) | MirType::Array(_));
         if let Some(fields) = self.preliminary_static_fields {
             return fields
                 .iter()

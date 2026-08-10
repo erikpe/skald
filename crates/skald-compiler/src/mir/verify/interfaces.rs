@@ -110,8 +110,7 @@ impl Verifier<'_> {
                             | MirType::Class(_)
                             | MirType::Interface(_)
                             | MirType::Obj
-                            | MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
+                            | MirType::Optional(_)
                     ) =>
                 {
                     self.program_error(format!(

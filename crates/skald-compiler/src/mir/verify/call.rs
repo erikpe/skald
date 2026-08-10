@@ -524,7 +524,7 @@ impl<'mir> Verifier<'mir> {
             }
             return;
         }
-        if let MirType::OptionalShared(target) = return_type {
+        if let Some(target) = self.optional_shared(return_type) {
             if call.result.is_some() || call.destination.is_some() {
                 self.block_error(
                     function.callable(),
@@ -540,11 +540,9 @@ impl<'mir> Verifier<'mir> {
                             | MirStorageKind::Temporary
                             | MirStorageKind::Argument
                             | MirStorageKind::Return
-                    ) && matches!(
-                        storage.ty,
-                        MirType::OptionalShared(destination)
-                            if self.shared_target_accepts(destination, target)
-                    )
+                    ) && self
+                        .optional_shared(storage.ty)
+                        .is_some_and(|destination| self.shared_target_accepts(destination, target))
                 })
             });
             if !valid {
@@ -655,17 +653,17 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
-            (MirType::OptionalPrimitive(_), Some(_), _) => self.block_error(
+            (MirType::Optional(_), Some(_), _) => self.block_error(
                 function.callable(),
                 block.id,
                 "optional-returning call must not have a scalar result",
             ),
-            (MirType::OptionalPrimitive(payload), None, destination) => {
+            (MirType::Optional(optional), None, destination) => {
                 let complete_destination = call.destination.as_ref().is_some_and(|place| {
                     self.is_static_initializer_destination(
                         function,
                         place,
-                        MirType::OptionalPrimitive(payload),
+                        MirType::Optional(optional),
                     ) || (place.projections.is_empty()
                         && matches!(place.base, MirPlaceBase::Storage(_))
                         && function
@@ -679,27 +677,13 @@ impl<'mir> Verifier<'mir> {
                                 )
                             }))
                 });
-                if destination.map(|place| place.ty) != Some(MirType::OptionalPrimitive(payload))
+                if destination.map(|place| place.ty) != Some(MirType::Optional(optional))
                     || !complete_destination
                 {
                     self.block_error(
                         function.callable(),
                         block.id,
                         "optional-returning call requires complete matching caller-owned destination storage",
-                    );
-                }
-            }
-            (MirType::OptionalClass(_), Some(_), _) => self.block_error(
-                function.callable(),
-                block.id,
-                "class-optional-returning call must not have a scalar result",
-            ),
-            (MirType::OptionalClass(class), None, destination) => {
-                if destination.map(|place| place.ty) != Some(MirType::OptionalClass(class)) {
-                    self.block_error(
-                        function.callable(),
-                        block.id,
-                        "class-optional-returning call requires matching caller-owned destination storage",
                     );
                 }
             }

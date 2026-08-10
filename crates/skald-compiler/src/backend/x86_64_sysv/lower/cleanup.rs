@@ -95,7 +95,7 @@ impl InstructionSelector<'_, '_> {
                     )?;
                 }
                 MirDestructionStep::OptionalClassField(field) => {
-                    let field_class = match self
+                    let field_type = self
                         .program
                         .field(field)
                         .ok_or_else(|| {
@@ -103,16 +103,23 @@ impl InstructionSelector<'_, '_> {
                                 "destruction plan for {class} names unknown field {field}"
                             ))
                         })?
-                        .ty
-                    {
-                        MirType::OptionalClass(field_class) => field_class,
-                        _ => {
-                            return Err(self.cleanup_error(format!(
-                                "destruction plan for {class} contains non-optional-class field {field}"
-                            )))
-                        }
+                        .ty;
+                    let MirType::Optional(optional) = field_type else {
+                        return Err(self.cleanup_error(format!(
+                            "destruction plan for {class} contains non-optional-class field {field}"
+                        )));
                     };
+                    let field_class = self
+                        .program
+                        .optional_type(optional)
+                        .and_then(crate::mir::MirOptionalType::inline_class)
+                        .ok_or_else(|| {
+                            self.cleanup_error(format!(
+                            "destruction plan for {class} contains non-optional-class field {field}"
+                        ))
+                        })?;
                     self.select_class_optional_cleanup(&crate::mir::MirClassOptionalCleanup {
+                        optional,
                         destination: destination.clone().project_field(field),
                         class: field_class,
                         span: self.function.span(),

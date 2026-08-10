@@ -21,6 +21,7 @@ impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
         self.verify_module_ownership();
         self.verify_external_links();
+        self.verify_optional_declarations();
         self.verify_array_declarations();
         self.verify_classes();
         self.verify_string_declarations();
@@ -111,8 +112,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
-                                | MirType::OptionalPrimitive(_)
-                                | MirType::OptionalClass(_)
+                                | MirType::Optional(_)
                         )
                 }) {
                     self.function_error(
@@ -127,8 +127,7 @@ impl<'mir> Verifier<'mir> {
                         | MirType::Interface(_)
                         | MirType::Obj
                         | MirType::Shared(_)
-                        | MirType::OptionalPrimitive(_)
-                        | MirType::OptionalClass(_)
+                        | MirType::Optional(_)
                 ) {
                     self.function_error(
                         declaration.id,
@@ -514,24 +513,27 @@ impl<'mir> Verifier<'mir> {
             if let Some(destructor) = &class.destruction.destructor {
                 expected_steps.push(MirDestructionStep::UserBody(destructor.id));
             }
-            expected_steps.extend(
-                class
-                    .fields
-                    .iter()
-                    .rev()
-                    .filter_map(|field| match field.ty {
-                        MirType::Class(_) => Some(MirDestructionStep::Field(field.id)),
-                        MirType::Shared(_) => Some(MirDestructionStep::SharedField(field.id)),
-                        MirType::OptionalShared(_) => {
+            expected_steps.extend(class.fields.iter().rev().filter_map(|field| {
+                match field.ty {
+                    MirType::Class(_) => Some(MirDestructionStep::Field(field.id)),
+                    MirType::Shared(_) => Some(MirDestructionStep::SharedField(field.id)),
+                    MirType::Optional(optional) => match self
+                        .program
+                        .optional_type(optional)
+                        .map(|metadata| metadata.storage)
+                    {
+                        Some(crate::mir::MirOptionalStorage::SharedOwner(_)) => {
                             Some(MirDestructionStep::OptionalSharedField(field.id))
                         }
-                        MirType::OptionalClass(_) => {
+                        Some(crate::mir::MirOptionalStorage::InlineClass(_)) => {
                             Some(MirDestructionStep::OptionalClassField(field.id))
                         }
-                        MirType::Array(_) => Some(MirDestructionStep::ArrayField(field.id)),
                         _ => None,
-                    }),
-            );
+                    },
+                    MirType::Array(_) => Some(MirDestructionStep::ArrayField(field.id)),
+                    _ => None,
+                }
+            }));
             if let Some(base) = class.direct_base {
                 expected_steps.push(MirDestructionStep::Base(base.class));
             }
@@ -728,14 +730,21 @@ impl<'mir> Verifier<'mir> {
                     *id == field.id
                 }
                 (
-                    MirType::OptionalPrimitive(payload),
+                    MirType::Optional(optional),
                     MirSynthesizedFieldCopy::OptionalPrimitive {
                         field: id,
                         payload: step_payload,
                     },
-                ) => *id == field.id && payload == *step_payload,
+                ) => {
+                    *id == field.id
+                        && self
+                            .program
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::primitive)
+                            == Some(*step_payload)
+                }
                 (
-                    MirType::OptionalClass(target),
+                    MirType::Optional(optional),
                     MirSynthesizedFieldCopy::OptionalClass {
                         field: id,
                         class: step_class,
@@ -743,10 +752,14 @@ impl<'mir> Verifier<'mir> {
                     },
                 ) => {
                     *id == field.id
-                        && target == *step_class
                         && self
                             .program
-                            .class(target)
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::inline_class)
+                            == Some(*step_class)
+                        && self
+                            .program
+                            .class(*step_class)
                             .and_then(|class| class.copy_constructor.selected())
                             == Some(*operation)
                 }
@@ -754,12 +767,19 @@ impl<'mir> Verifier<'mir> {
                     *id == field.id
                 }
                 (
-                    MirType::OptionalShared(target),
+                    MirType::Optional(optional),
                     MirSynthesizedFieldCopy::OptionalShared {
                         field: id,
                         target: step_target,
                     },
-                ) => *id == field.id && target == *step_target,
+                ) => {
+                    *id == field.id
+                        && self
+                            .program
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::shared_owner)
+                            == Some(*step_target)
+                }
                 (
                     MirType::Array(array),
                     MirSynthesizedFieldCopy::Array {
@@ -811,14 +831,21 @@ impl<'mir> Verifier<'mir> {
                     *id == field.id
                 }
                 (
-                    MirType::OptionalPrimitive(payload),
+                    MirType::Optional(optional),
                     MirSynthesizedFieldCopy::OptionalPrimitive {
                         field: id,
                         payload: step_payload,
                     },
-                ) => *id == field.id && payload == *step_payload,
+                ) => {
+                    *id == field.id
+                        && self
+                            .program
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::primitive)
+                            == Some(*step_payload)
+                }
                 (
-                    MirType::OptionalClass(target),
+                    MirType::Optional(optional),
                     MirSynthesizedFieldCopy::OptionalClass {
                         field: id,
                         class: step_class,
@@ -826,10 +853,14 @@ impl<'mir> Verifier<'mir> {
                     },
                 ) => {
                     *id == field.id
-                        && target == *step_class
                         && self
                             .program
-                            .class(target)
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::inline_class)
+                            == Some(*step_class)
+                        && self
+                            .program
+                            .class(*step_class)
                             .and_then(|class| class.copy_assignment.selected())
                             == Some(*operation)
                 }
@@ -837,12 +868,19 @@ impl<'mir> Verifier<'mir> {
                     *id == field.id
                 }
                 (
-                    MirType::OptionalShared(target),
+                    MirType::Optional(optional),
                     MirSynthesizedFieldCopy::OptionalShared {
                         field: id,
                         target: step_target,
                     },
-                ) => *id == field.id && target == *step_target,
+                ) => {
+                    *id == field.id
+                        && self
+                            .program
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::shared_owner)
+                            == Some(*step_target)
+                }
                 (
                     MirType::Array(array),
                     MirSynthesizedFieldCopy::Array {
@@ -886,8 +924,7 @@ impl<'mir> Verifier<'mir> {
                             | MirType::Array(_)
                             | MirType::Interface(_)
                             | MirType::Obj
-                            | MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
+                            | MirType::Optional(_)
                     ) =>
                 {
                     self.program_error(format!(

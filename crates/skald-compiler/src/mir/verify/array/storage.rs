@@ -58,11 +58,9 @@ impl Verifier<'_> {
                             | MirType::F64
                             | MirType::Bool
                             | MirType::Class(_)
-                            | MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
+                            | MirType::Optional(_)
                             | MirType::Array(_)
                             | MirType::Shared(_)
-                            | MirType::OptionalShared(_)
                     )
                 });
                 if !storage_matches || !executable_element {
@@ -116,11 +114,9 @@ impl Verifier<'_> {
                                     matches!(
                                         array.element,
                                         MirType::Class(_)
-                                            | MirType::OptionalPrimitive(_)
-                                            | MirType::OptionalClass(_)
+                                            | MirType::Optional(_)
                                             | MirType::Array(_)
                                             | MirType::Shared(_)
-                                            | MirType::OptionalShared(_)
                                     )
                                 })
                             }

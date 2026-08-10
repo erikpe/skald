@@ -17,10 +17,9 @@ pub(super) fn lower_all(
     dispatch: &DispatchMetadata,
 ) -> Vec<AssemblyFunction> {
     let array_lifecycle_needs_helpers = program.array_types.iter().any(|array| {
-        matches!(
-            array.element,
-            MirType::Shared(_) | MirType::OptionalShared(_)
-        )
+        matches!(array.element, MirType::Shared(_))
+            || matches!(array.element, MirType::Optional(optional)
+                if program.optional_type(optional).and_then(crate::mir::MirOptionalType::shared_owner).is_some())
     });
     let static_lifecycle_needs_helpers =
         program.static_lifecycle.as_ref().is_some_and(|lifecycle| {

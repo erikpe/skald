@@ -152,21 +152,30 @@ impl InstructionSelector<'_, '_> {
                         self.clear_place(&destination)?;
                     }
                     MirArrayDefaultElement::OptionalAbsent => {
-                        match self
+                        let element = self
                             .program
                             .array_type(array)
                             .expect("verified array declaration exists")
-                            .element
+                            .element;
+                        let MirType::Optional(optional) = element else {
+                            unreachable!("verified absent default requires an optional element")
+                        };
+                        match self
+                            .program
+                            .optional_type(optional)
+                            .expect("verified optional metadata exists")
+                            .storage
                         {
-                            MirType::OptionalPrimitive(_) => {
+                            crate::mir::MirOptionalStorage::Scalar => {
                                 self.select_optional_write(
                                     &destination,
                                     &MirOptionalSource::Absent,
                                 )?;
                             }
-                            MirType::OptionalClass(class) => {
+                            crate::mir::MirOptionalStorage::InlineClass(class) => {
                                 self.select_class_optional_initialize(
                                     &MirClassOptionalInitialize {
+                                        optional,
                                         destination,
                                         source: MirClassOptionalSource::Absent,
                                         class,
@@ -175,9 +184,10 @@ impl InstructionSelector<'_, '_> {
                                     },
                                 )?;
                             }
-                            MirType::OptionalShared(target) => {
+                            crate::mir::MirOptionalStorage::SharedOwner(target) => {
                                 self.select_optional_shared_initialize(
                                     &MirOptionalSharedInitialize {
+                                        optional,
                                         destination,
                                         source: MirOptionalSharedSource::Absent,
                                         target,
@@ -185,9 +195,10 @@ impl InstructionSelector<'_, '_> {
                                     },
                                 )?;
                             }
-                            _ => {
-                                unreachable!("verified absent default requires an optional element")
-                            }
+                            crate::mir::MirOptionalStorage::InlineArray(_)
+                            | crate::mir::MirOptionalStorage::Nested(_) => unreachable!(
+                                "gated optional element reached executable array lowering"
+                            ),
                         }
                     }
                     MirArrayDefaultElement::Class {
@@ -239,6 +250,10 @@ impl InstructionSelector<'_, '_> {
                     }
                     MirArrayCopyElement::OptionalClass { class, operation } => {
                         self.select_class_optional_initialize(&MirClassOptionalInitialize {
+                            optional: self
+                                .program
+                                .optional_for_payload(MirType::Class(class))
+                                .expect("verified optional-class array metadata exists"),
                             destination,
                             source: MirClassOptionalSource::Copy(source),
                             class,
@@ -254,6 +269,10 @@ impl InstructionSelector<'_, '_> {
                     }
                     MirArrayCopyElement::OptionalShared(target) => {
                         self.select_optional_shared_initialize(&MirOptionalSharedInitialize {
+                            optional: self
+                                .program
+                                .optional_for_payload(MirType::Shared(target))
+                                .expect("verified optional-owner array metadata exists"),
                             destination,
                             source: MirOptionalSharedSource::Copy(source),
                             target,
@@ -368,6 +387,10 @@ impl InstructionSelector<'_, '_> {
                     }
                     MirArrayDestroyElement::OptionalClass(class) => {
                         self.select_class_optional_cleanup(&MirClassOptionalCleanup {
+                            optional: self
+                                .program
+                                .optional_for_payload(MirType::Class(class))
+                                .expect("verified optional-class array metadata exists"),
                             destination: element,
                             class,
                             span: *span,
@@ -381,6 +404,10 @@ impl InstructionSelector<'_, '_> {
                     }
                     MirArrayDestroyElement::OptionalShared(target) => {
                         self.select_optional_shared_cleanup(&MirOptionalSharedCleanup {
+                            optional: self
+                                .program
+                                .optional_for_payload(MirType::Shared(target))
+                                .expect("verified optional-owner array metadata exists"),
                             destination: element,
                             target,
                             span: *span,
@@ -808,7 +835,10 @@ impl InstructionSelector<'_, '_> {
                     ty = self.program.field(field).expect("verified field exists").ty;
                 }
                 MirPlaceProjection::OptionalPayload(class) => {
-                    let offset = self.data_layout.optional_class(class)?.payload_offset();
+                    let MirType::Optional(optional) = ty else {
+                        unreachable!("verified optional payload projection has optional storage")
+                    };
+                    let offset = self.data_layout.optional_type(optional)?.payload_offset();
                     displacement =
                         checked_array_displacement(displacement, offset, self.function.callable())?;
                     ty = MirType::Class(class);

@@ -119,7 +119,7 @@ fn lower_cleanup(
             ));
         }
         MirStaticValueCleanup::OptionalClass(cleanup) => {
-            let layout = data_layout.optional_class(cleanup.class)?;
+            let layout = data_layout.optional_type(cleanup.optional)?;
             let state_offset = displacement(layout.state_offset(), "optional state")?;
             let payload_offset = displacement(layout.payload_offset(), "optional payload")?;
             let complete = Label::new(format!(

@@ -57,7 +57,7 @@ fn produced_optional_shared_array_results_unwrap_into_fresh_local_owners() {
             .storage(unwrap.source.base.expect_local_storage())
             .unwrap();
         assert_eq!(source.kind, MirStorageKind::Temporary);
-        assert_eq!(source.ty, MirType::OptionalShared(unwrap.target));
+        assert_eq!(source.ty, MirType::Optional(unwrap.optional));
 
         let destination = main.storage(unwrap.destination).unwrap();
         assert_eq!(destination.kind, MirStorageKind::Temporary);

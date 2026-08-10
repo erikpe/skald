@@ -23,12 +23,10 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
                 | MirType::U8
                 | MirType::F64
                 | MirType::Bool
-                | MirType::OptionalPrimitive(_)
                 | MirType::Class(_)
-                | MirType::OptionalClass(_)
                 | MirType::Array(_)
                 | MirType::Shared(_)
-                | MirType::OptionalShared(_)
+                | MirType::Optional(_)
         ) {
             return Err(error(
                 None,

@@ -339,10 +339,10 @@ impl InstructionSelector<'_, '_> {
 
     fn class_optional_state(&mut self, place: &MirPlace) -> Result<Operand, BackendError> {
         let (frame, operand) = self.frame_place(place)?;
-        let MirType::OptionalClass(class) = frame.ty() else {
+        let MirType::Optional(optional) = frame.ty() else {
             unreachable!("verified class optional operation has optional storage");
         };
-        let offset = i32::try_from(self.data_layout.optional_class(class)?.state_offset())
+        let offset = i32::try_from(self.data_layout.optional_type(optional)?.state_offset())
             .expect("optional state offset fits target displacement");
         offset_operand(operand, offset, self.function.callable())
     }
@@ -627,12 +627,19 @@ impl InstructionSelector<'_, '_> {
     fn load_state(&mut self, place: &MirPlace) -> Result<(), BackendError> {
         let (frame, _) = self.frame_place(place)?;
         let state = match frame.ty() {
-            MirType::OptionalPrimitive(_) => self.optional_state(place)?,
-            MirType::OptionalClass(_) => self.class_optional_state(place)?,
-            MirType::OptionalShared(_) => {
+            MirType::Optional(optional)
+                if self
+                    .program
+                    .optional_type(optional)
+                    .is_some_and(|metadata| {
+                        metadata.representation
+                            == crate::mir::MirOptionalRepresentation::NullableSharedOwner
+                    }) =>
+            {
                 let (_, operand) = self.frame_place(place)?;
                 operand
             }
+            MirType::Optional(_) => self.optional_state(place)?,
             _ => unreachable!("verified presence test has optional storage"),
         };
         value::load_rax(state, self.output);
@@ -650,16 +657,21 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn optional_state(&mut self, place: &MirPlace) -> Result<Operand, BackendError> {
-        let (payload, operand) = self.optional_base(place)?;
-        let layout = self.data_layout.optional(payload)?;
+        let (optional, operand) = self.optional_base(place)?;
+        let layout = self.data_layout.optional_type(optional)?;
         let offset = i32::try_from(layout.state_offset())
             .expect("optional state offset fits the target displacement");
         offset_operand(operand, offset, self.function.callable())
     }
 
     fn optional_payload(&mut self, place: &MirPlace) -> Result<OptionalPayload, BackendError> {
-        let (payload, operand) = self.optional_base(place)?;
-        let layout = self.data_layout.optional(payload)?;
+        let (optional, operand) = self.optional_base(place)?;
+        let payload = self
+            .program
+            .optional_type(optional)
+            .and_then(crate::mir::MirOptionalType::primitive)
+            .expect("verified scalar optional must have primitive metadata");
+        let layout = self.data_layout.optional_type(optional)?;
         let offset = i32::try_from(layout.payload_offset())
             .expect("optional payload offset fits the target displacement");
         Ok((
@@ -671,13 +683,13 @@ impl InstructionSelector<'_, '_> {
     fn optional_base(
         &mut self,
         place: &MirPlace,
-    ) -> Result<(MirPrimitiveType, Operand), BackendError> {
+    ) -> Result<(crate::identity::OptionalTypeId, Operand), BackendError> {
         let (layout, operand) = self.frame_place(place)?;
         let ty = layout.ty();
-        let MirType::OptionalPrimitive(payload) = ty else {
+        let MirType::Optional(optional) = ty else {
             unreachable!("verified optional operation has optional storage");
         };
-        Ok((payload, operand))
+        Ok((optional, operand))
     }
 
     fn copy_value_to_payload(

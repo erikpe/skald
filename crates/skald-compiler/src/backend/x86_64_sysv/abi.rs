@@ -140,9 +140,7 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
             | MirType::Bool
             | MirType::Class(_)
             | MirType::Shared(_)
-            | MirType::OptionalShared(_)
-            | MirType::OptionalPrimitive(_)
-            | MirType::OptionalClass(_)
+            | MirType::Optional(_)
             | MirType::Array(_) => Some(ScalarClass::Integer),
             MirType::F64 => Some(ScalarClass::Sse),
             MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
@@ -380,8 +378,8 @@ mod tests {
     fn classifies_optional_aggregate_addresses_as_integer_arguments() {
         let layout = CallLayout::classify_internal_call(
             &MirParameter::values([
-                MirType::OptionalPrimitive(crate::mir::MirPrimitiveType::I64),
-                MirType::OptionalPrimitive(crate::mir::MirPrimitiveType::F64),
+                MirType::Optional(crate::identity::OptionalTypeId::new(0)),
+                MirType::Optional(crate::identity::OptionalTypeId::new(1)),
             ]),
             false,
             true,
@@ -505,10 +503,10 @@ mod tests {
     #[test]
     fn optional_container_aliases_carry_only_the_container_address() {
         let layout = CallLayout::classify(&[
-            MirParameter::read_only_alias(MirType::OptionalPrimitive(
-                crate::mir::MirPrimitiveType::I64,
-            )),
-            MirParameter::mutable_alias(MirType::OptionalClass(crate::identity::ClassId::new(0))),
+            MirParameter::read_only_alias(MirType::Optional(crate::identity::OptionalTypeId::new(
+                0,
+            ))),
+            MirParameter::mutable_alias(MirType::Optional(crate::identity::OptionalTypeId::new(1))),
         ])
         .unwrap();
 

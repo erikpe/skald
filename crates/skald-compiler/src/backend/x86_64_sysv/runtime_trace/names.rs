@@ -179,12 +179,25 @@ fn type_name(
             "shared {}",
             shared_target_name(program, target, callable, active_arrays)?
         )),
-        MirType::OptionalShared(target) => Ok(format!(
-            "shared? {}",
-            shared_target_name(program, target, callable, active_arrays)?
-        )),
-        MirType::OptionalPrimitive(primitive) => Ok(format!("{primitive}?")),
-        MirType::OptionalClass(class) => Ok(format!("{}?", class_name(program, class, callable)?)),
+        MirType::Optional(optional) => {
+            let metadata = program.optional_type(optional).ok_or_else(|| {
+                error(
+                    Some(callable),
+                    "runtime trace signature has an unknown optional type",
+                )
+            })?;
+            if let Some(target) = metadata.shared_owner() {
+                Ok(format!(
+                    "shared? {}",
+                    shared_target_name(program, target, callable, active_arrays)?
+                ))
+            } else {
+                Ok(format!(
+                    "{}?",
+                    type_name(program, metadata.payload, callable, active_arrays)?
+                ))
+            }
+        }
     }
 }
 

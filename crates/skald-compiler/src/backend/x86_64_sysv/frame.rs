@@ -20,6 +20,49 @@ const TRACE_RECORD_SIZE: usize = 16;
 const TRACE_RECORD_ALIGNMENT: usize = 16;
 const TRACE_WORD_SIZE: i32 = 8;
 
+fn storage_layout(
+    kind: MirStorageKind,
+    ty: MirType,
+    data_layout: &DataLayout,
+) -> Result<(usize, usize), BackendError> {
+    if kind == MirStorageKind::SharedAllocation || is_direct_owner(ty, data_layout)? {
+        return Ok((SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT));
+    }
+    if matches!(
+        kind,
+        MirStorageKind::Return
+            | MirStorageKind::Receiver
+            | MirStorageKind::AliasParameter(_)
+            | MirStorageKind::CheckedView(_)
+    ) || kind == MirStorageKind::Parameter && is_indirect_value(ty, data_layout)?
+    {
+        return Ok((SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT));
+    }
+    if matches!(ty, MirType::Class(_) | MirType::Optional(_) | MirType::Unit) {
+        let layout = data_layout.ty(ty)?;
+        return Ok((layout.size(), layout.alignment()));
+    }
+    Ok((SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT))
+}
+
+fn is_direct_owner(ty: MirType, data_layout: &DataLayout) -> Result<bool, BackendError> {
+    match ty {
+        MirType::Shared(_) => Ok(true),
+        MirType::Optional(optional) => Ok(data_layout.optional_type(optional)?.is_nullable_niche()),
+        _ => Ok(false),
+    }
+}
+
+fn is_indirect_value(ty: MirType, data_layout: &DataLayout) -> Result<bool, BackendError> {
+    match ty {
+        MirType::Class(_) | MirType::Array(_) => Ok(true),
+        MirType::Optional(optional) => {
+            Ok(!data_layout.optional_type(optional)?.is_nullable_niche())
+        }
+        _ => Ok(false),
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct FramePlace {
     base: FramePlaceBase,
@@ -155,39 +198,7 @@ impl FrameLayout {
         let mut storage_offsets = Vec::with_capacity(function.storage_entries().len());
         let mut object_origins = Vec::with_capacity(function.storage_entries().len());
         for storage in function.storage_entries() {
-            let (size, alignment) = match (storage.kind, storage.ty) {
-                (MirStorageKind::SharedAllocation, _)
-                | (_, MirType::Shared(_) | MirType::OptionalShared(_)) => {
-                    (SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)
-                }
-                (
-                    MirStorageKind::Return
-                    | MirStorageKind::Receiver
-                    | MirStorageKind::AliasParameter(_)
-                    | MirStorageKind::CheckedView(_),
-                    _,
-                )
-                | (
-                    MirStorageKind::Parameter,
-                    MirType::Class(_)
-                    | MirType::OptionalPrimitive(_)
-                    | MirType::OptionalClass(_)
-                    | MirType::Array(_),
-                ) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
-                (_, MirType::Class(_) | MirType::Unit) => {
-                    let ty = data_layout.ty(storage.ty)?;
-                    (ty.size(), ty.alignment())
-                }
-                (_, MirType::OptionalPrimitive(payload)) => {
-                    let ty = data_layout.optional(payload)?.ty();
-                    (ty.size(), ty.alignment())
-                }
-                (_, MirType::OptionalClass(class)) => {
-                    let ty = data_layout.optional_class(class)?.ty();
-                    (ty.size(), ty.alignment())
-                }
-                (_, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
-            };
+            let (size, alignment) = storage_layout(storage.kind, storage.ty, data_layout)?;
             storage_offsets.push(allocator.allocate(size, alignment)?);
             let carries_origin = matches!(
                 storage.kind,
@@ -283,7 +294,7 @@ impl FrameLayout {
         let (base, displacement) = match place.base {
             MirPlaceBase::Storage(_)
                 if storage.kind == MirStorageKind::Return
-                    && !matches!(storage.ty, MirType::OptionalShared(_)) =>
+                    && !is_direct_owner(storage.ty, data_layout)? =>
             {
                 (
                     FramePlaceBase::Return {
@@ -300,13 +311,7 @@ impl FrameLayout {
             ),
             MirPlaceBase::Storage(_)
                 if storage.kind == MirStorageKind::Parameter
-                    && matches!(
-                        storage.ty,
-                        MirType::Class(_)
-                            | MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
-                            | MirType::Array(_)
-                    ) =>
+                    && is_indirect_value(storage.ty, data_layout)? =>
             {
                 (
                     FramePlaceBase::OwnedParameter {
@@ -399,11 +404,18 @@ fn projected_place(
                 (layout.offset, ty)
             }
             MirPlaceProjection::OptionalPayload(class) => {
-                if ty != MirType::OptionalClass(class) {
+                let MirType::Optional(optional) = ty else {
+                    return Err(place_metadata_error(function.callable()));
+                };
+                if program
+                    .optional_type(optional)
+                    .and_then(crate::mir::MirOptionalType::inline_class)
+                    != Some(class)
+                {
                     return Err(place_metadata_error(function.callable()));
                 }
                 (
-                    data_layout.optional_class(class)?.payload_offset(),
+                    data_layout.optional_type(optional)?.payload_offset(),
                     MirType::Class(class),
                 )
             }

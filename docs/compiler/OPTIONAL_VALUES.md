@@ -7,6 +7,9 @@ and native execution. Recursive source type syntax, canonical `(shared T)?`
 owners, and recursive resolved optional identities are implemented; this
 document also freezes the remaining compiler direction for typed lifecycle,
 arbitrary nesting, and optional inline arrays, which are not yet executable.
+MIR now uses the same canonical optional identities and recursive lifecycle
+metadata for the currently supported payloads; source eligibility gates still
+exclude nested and optional-array execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -32,8 +35,8 @@ Each phase owns one stable responsibility:
 |---|---|
 | Lexing and parsing | Preserve recursive `?`/`[]` type composition, grouping, postfix `!`, reserved `none`, contextual `some`, `shared?` shorthand provenance, presence tests, precedence, trivia, and recovery spans. |
 | Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and keep shared boxes outside the resolved type graph. |
-| Type checking and HIR | Reject payload identities not yet executable, then adapt supported primitive, class, and shared-owner identities to the current HIR while deciding compatibility, lifecycle, checked-view, and anchor requirements. |
-| MIR lowering | Make optional storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
+| Type checking and HIR | Reject payload identities not yet executable, then select compatibility, lifecycle, checked-view, anchor, and boundary requirements by canonical optional identity. |
+| MIR lowering | Lower the canonical optional table deterministically and make storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
 | MIR verification | Prove storage, payload, owner, guard, anchor, transition, failure, and CFG invariants independently of source shape. |
 | Backend | Realize only verified layouts, state transitions, calls, traps, and ownership operations for the selected target. |
 | C runtime | Remain unaware of optional tags, guards, payload layout, unwrap, and conditional ownership. |
@@ -44,16 +47,16 @@ x86-64 byte offsets, tag values, registers, or runtime symbols.
 
 ## Type identities
 
-HIR and MIR currently retain two non-recursive executable optional families:
+The supported operations still have two distinct runtime categories:
 
 - inline optional over a primitive or exact class payload; and
 - optional shared owner over a class, interface, or `Obj` shared target.
 
-Resolution instead uses `OptionalTypeId` and a dense canonical payload table.
-All resolved optional uses, including optional shared owners, carry that one
-identity shape. Type checking is the temporary compatibility boundary that
-maps only the already executable payload identities into the flat HIR
-families; repeated phase-local boolean flags are not used.
+Resolution, HIR, and MIR use `OptionalTypeId` and dense canonical payload
+tables. All optional uses, including optional shared owners, carry that one
+identity shape. Type checking remains the eligibility boundary for payloads
+that are not executable yet; repeated phase-local boolean flags and parallel
+MIR type families are not used.
 
 The type model must preserve these distinctions:
 
@@ -65,8 +68,8 @@ shared T    ordinary non-null shared owner
 ```
 
 `shared? T` is an exact source shorthand for `(shared T)?`; both intern to the
-same resolved identity and lower to the existing HIR and MIR optional-owner
-family. `shared T?`,
+same resolved identity and lower to the existing optional-owner operations.
+`shared T?`,
 `shared? T?`, nested optionality, aliases to optional shared
 owners, and invalid payload families reach focused diagnostic boundaries and
 never become executable HIR types. Alias binding mode may designate an
@@ -77,12 +80,12 @@ reference or optional-reference type identity.
 
 The recursive syntax and resolved-identity portions of this direction are
 implemented, including grouping, postfix chains, shorthand provenance, and
-bottom-up interning. The remainder of this section is a **frozen design** for
-the planned typed and executable extension. The flat HIR/MIR operations
-described elsewhere remain the implemented compiler contract until the
-responsible roadmap tasks replace them. The migration must keep every current program's
-diagnostics, evaluation order, lifecycle, layout, ABI, dumps, and native
-behavior stable before it enables a new payload category.
+bottom-up interning. Canonical HIR and MIR identity tables and lifecycle plans
+are also implemented for the current payload profile. The remaining nesting
+and optional-array parts of this section are a **frozen design** for the
+planned executable extension. The migration keeps every current program's
+diagnostics, evaluation order, lifecycle, layout, ABI, and native behavior
+stable before enabling a new payload category.
 
 ### Source shape and canonical identity
 
@@ -161,14 +164,14 @@ views, aliases, arguments/results, statics, and array elements. HIR selects
 the immediate payload operation; MIR and the backend never rediscover it from
 the source type.
 
-Typed HIR now uses one `OptionalTypeId` vocabulary and an ID-indexed semantic
-description with payload, storage, representation, lifecycle, checked-access,
-and boundary plans. The executable boundary uses an exhaustive adapter to the
-current primitive, class, and optional-shared MIR operations; nested and
-optional-array cases are deliberately rejected by that adapter and remain
-behind the source eligibility gate. MIR is next generalized around
-the canonical optional identity and explicit payload lifecycle before nested
-optionals or optional arrays are enabled.
+Typed HIR and MIR use one `OptionalTypeId` vocabulary and ID-indexed semantic
+descriptions with payload, storage, representation, lifecycle, checked-access,
+and boundary plans. HIR-to-MIR lowering copies those plans deterministically;
+there is no compatibility adapter or parallel primitive/class/shared MIR type
+family. Distinct scalar, owning-aggregate, and shared-owner instructions remain
+where they express genuinely different runtime work. Nested and optional-array
+cases remain behind the source eligibility gate until their executable
+lifecycle tasks are implemented.
 
 MIR represents the outer wrapper state independently from the immediate
 payload state. An outer operation branches on or changes only its own state,

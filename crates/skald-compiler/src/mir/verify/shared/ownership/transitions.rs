@@ -314,11 +314,9 @@ impl SharedOwnershipAnalysis<'_, '_> {
                     let transferred =
                         self.transfer_call_arguments(block.id, state, &call.arguments);
                     if let Some(result) = call.shared_result {
-                        if self
-                            .function
-                            .storage(result)
-                            .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
-                        {
+                        if self.function.storage(result).is_some_and(|storage| {
+                            self.verifier.optional_shared(storage.ty).is_some()
+                        }) {
                             // Optional-owner initialization is verified by the
                             // optional definite-initialization analysis.
                         } else if state.live_owners.contains(&result)
@@ -459,7 +457,7 @@ impl SharedOwnershipAnalysis<'_, '_> {
             if self
                 .function
                 .storage(*owner)
-                .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
+                .is_some_and(|storage| self.verifier.optional_shared(storage.ty).is_some())
             {
                 continue;
             }
@@ -562,10 +560,8 @@ impl SharedOwnershipAnalysis<'_, '_> {
                                 .fields
                                 .iter()
                                 .filter(|field| {
-                                    matches!(
-                                        field.ty,
-                                        MirType::Shared(_) | MirType::OptionalShared(_)
-                                    )
+                                    matches!(field.ty, MirType::Shared(_))
+                                        || self.verifier.optional_shared(field.ty).is_some()
                                 })
                                 .map(|field| MirPlace::base(receiver).project_field(field.id)),
                         );

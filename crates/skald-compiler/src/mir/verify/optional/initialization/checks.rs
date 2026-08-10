@@ -1,7 +1,7 @@
 use crate::mir::{
     MirArgument, MirBasicBlock, MirClassOptionalSource, MirDefinitionRef, MirInstruction,
     MirOptionalSharedSource, MirOptionalSource, MirPlace, MirPlaceBase, MirPlaceProjection,
-    MirRvalueKind, MirTerminator, MirType, StorageId,
+    MirRvalueKind, MirTerminator, StorageId,
 };
 
 use super::{
@@ -179,7 +179,7 @@ fn verify_instruction(
             if let Some(result) = call.shared_result {
                 if function
                     .storage(result)
-                    .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
+                    .is_some_and(|storage| verifier.optional_shared(storage.ty).is_some())
                 {
                     state.insert(MirPlace::base(result));
                 }
@@ -375,14 +375,13 @@ fn require_finished_owned_optional_storage(
     if !state.contains(&MirPlace::base(storage)) {
         return;
     }
-    let message = match function.storage(storage).map(|storage| storage.ty) {
-        Some(MirType::OptionalClass(_)) => {
-            "initialized class optional reaches storage-dead without cleanup or ownership transfer"
-        }
-        Some(MirType::OptionalShared(_)) => {
-            "initialized optional shared reaches storage-dead without cleanup or ownership transfer"
-        }
-        _ => return,
+    let ty = function.storage(storage).map(|storage| storage.ty);
+    let message = if ty.is_some_and(|ty| verifier.optional_class(ty).is_some()) {
+        "initialized class optional reaches storage-dead without cleanup or ownership transfer"
+    } else if ty.is_some_and(|ty| verifier.optional_shared(ty).is_some()) {
+        "initialized optional shared reaches storage-dead without cleanup or ownership transfer"
+    } else {
+        return;
     };
     verifier.block_error(function.callable(), block.id, message);
 }
@@ -400,7 +399,7 @@ fn consume_class_optional_arguments(
         };
         if !function
             .storage(place.base.expect_local_storage())
-            .is_some_and(|storage| matches!(storage.ty, MirType::OptionalClass(_)))
+            .is_some_and(|storage| verifier.optional_class(storage.ty).is_some())
         {
             continue;
         }
@@ -429,7 +428,7 @@ fn consume_optional_shared_arguments(
         };
         if !function
             .storage(*storage)
-            .is_some_and(|entry| matches!(entry.ty, MirType::OptionalShared(_)))
+            .is_some_and(|entry| verifier.optional_shared(entry.ty).is_some())
         {
             continue;
         }

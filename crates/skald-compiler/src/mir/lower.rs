@@ -18,13 +18,13 @@ mod expression;
 mod full_expression;
 mod integer_division;
 mod io;
-mod legacy_optional_adapter;
 mod logical;
 #[allow(dead_code)]
 mod loop_context;
 mod loop_flow;
 mod object_values;
 mod optional;
+mod optional_types;
 mod places;
 mod primitive;
 mod program;
@@ -91,7 +91,7 @@ struct BodyLoweringInput<'hir> {
     receiver_class: Option<ClassId>,
     string_language_item: Option<MirStringLanguageItem>,
     literal_data: &'hir crate::hir::HirLiteralDataTable,
-    optional_adapter: legacy_optional_adapter::LegacyOptionalAdapter<'hir>,
+    optional_types: &'hir crate::hir::HirOptionalTypeTable,
 }
 
 struct LoweredBody {
@@ -141,7 +141,7 @@ struct ActiveOptionalGuard {
 
 impl<'hir> BodyLowerer<'hir> {
     fn lower_type(&self, ty: Type) -> MirType {
-        self.input.optional_adapter.lower_type(ty)
+        optional_types::lower_type(ty)
     }
 
     fn lower(input: BodyLoweringInput<'hir>) -> LoweredBody {
@@ -158,15 +158,28 @@ impl<'hir> BodyLowerer<'hir> {
                 match parameter.ty {
                     Type::Class(class) => lowerer.cleanup.register_owned(*storage, class),
                     Type::Shared(_) => lowerer.cleanup.register_shared(*storage),
-                    Type::Optional(optional) => match lowerer.input.optional_adapter.kind(optional)
+                    Type::Optional(optional) => match lowerer
+                        .input
+                        .optional_types
+                        .get(optional)
+                        .expect("typed optional identity must have metadata")
+                        .storage
                     {
-                        legacy_optional_adapter::LegacyOptionalKind::Class(class) => {
-                            lowerer.cleanup.register_class_optional(*storage, class)
-                        }
-                        legacy_optional_adapter::LegacyOptionalKind::Shared(target) => lowerer
+                        crate::hir::HirOptionalStorageCategory::InlineClass(class) => lowerer
                             .cleanup
-                            .register_optional_shared(*storage, lower_shared_target(target)),
-                        legacy_optional_adapter::LegacyOptionalKind::Primitive(_) => {}
+                            .register_class_optional(*storage, optional, class),
+                        crate::hir::HirOptionalStorageCategory::SharedOwner(target) => {
+                            lowerer.cleanup.register_optional_shared(
+                                *storage,
+                                optional,
+                                lower_shared_target(target),
+                            )
+                        }
+                        crate::hir::HirOptionalStorageCategory::Scalar => {}
+                        crate::hir::HirOptionalStorageCategory::InlineArray(_)
+                        | crate::hir::HirOptionalStorageCategory::Nested(_) => {
+                            unreachable!("gated optional payload reached executable MIR lowering")
+                        }
                     },
                     Type::Array(array) => lowerer.cleanup.register_array(*storage, array),
                     _ => {}
@@ -411,32 +424,6 @@ impl<'hir> BodyLowerer<'hir> {
             span,
         });
         result
-    }
-}
-
-fn lower_non_optional_type(ty: Type) -> MirType {
-    match ty {
-        Type::I64 => MirType::I64,
-        Type::U64 => MirType::U64,
-        Type::U8 => MirType::U8,
-        Type::F64 => MirType::F64,
-        Type::Bool => MirType::Bool,
-        Type::Unit => MirType::Unit,
-        Type::Obj => MirType::Obj,
-        Type::Class(class) => MirType::Class(class),
-        Type::Interface(interface) => MirType::Interface(interface),
-        Type::Shared(target) => MirType::Shared(match target {
-            crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
-            crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
-            crate::hir::HirSharedTarget::Interface(interface) => {
-                MirSharedTarget::Interface(interface)
-            }
-            crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
-        }),
-        Type::Optional(_) => {
-            unreachable!("optional types require the legacy compatibility adapter")
-        }
-        Type::Array(array) => MirType::Array(array),
     }
 }
 

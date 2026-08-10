@@ -92,6 +92,31 @@ fn dump_program(program: &MirProgram, heading: &str) -> String {
             );
         }
     }
+    if !program.optional_types.is_empty() {
+        output.push_str("  OptionalTypes\n");
+        for optional in program.optional_types.iter() {
+            let _ = writeln!(
+                output,
+                "    Optional {} payload {} storage {:?} representation {:?} initialize {:?} inject {:?} copy {:?} assign {:?} cleanup {:?} presence {:?} unwrap {:?} access {:?} argument {:?} result {:?} static {:?} array-element {:?}",
+                optional.id,
+                optional.payload,
+                optional.storage,
+                optional.representation,
+                optional.lifecycle.initialization,
+                optional.lifecycle.injection,
+                optional.lifecycle.copy,
+                optional.lifecycle.assignment,
+                optional.lifecycle.cleanup,
+                optional.lifecycle.presence,
+                optional.lifecycle.unwrap,
+                optional.checked_access,
+                optional.boundaries.argument,
+                optional.boundaries.result,
+                optional.boundaries.static_storage,
+                optional.boundaries.array_element,
+            );
+        }
+    }
     if let Some(item) = program.string_language_item {
         let _ = writeln!(
             output,
@@ -902,48 +927,56 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 write_span(output, assignment.span);
             }
             MirInstruction::OptionalSharedInitialize(initialize) => {
-                output.push_str("optional-shared-initialize ");
+                let _ = write!(
+                    output,
+                    "optional-shared-initialize {} ",
+                    initialize.optional
+                );
                 dump_place(output, &initialize.destination);
                 output.push_str(" from ");
                 dump_optional_shared_source(output, &initialize.source);
                 write_span(output, initialize.span);
             }
             MirInstruction::OptionalSharedAssign(assignment) => {
-                output.push_str("optional-shared-assign ");
+                let _ = write!(output, "optional-shared-assign {} ", assignment.optional);
                 dump_place(output, &assignment.destination);
                 output.push_str(" from ");
                 dump_optional_shared_source(output, &assignment.source);
                 write_span(output, assignment.span);
             }
             MirInstruction::OptionalSharedCleanup(cleanup) => {
-                output.push_str("optional-shared-cleanup ");
+                let _ = write!(output, "optional-shared-cleanup {} ", cleanup.optional);
                 dump_place(output, &cleanup.destination);
                 write_span(output, cleanup.span);
             }
             MirInstruction::ClassOptionalInitialize(initialize) => {
-                output.push_str("class-optional-initialize ");
+                let _ = write!(output, "class-optional-initialize {} ", initialize.optional);
                 dump_place(output, &initialize.destination);
                 let _ = write!(output, " : class {}?", initialize.class);
                 write_span(output, initialize.span);
             }
             MirInstruction::ClassOptionalAssign(assignment) => {
-                output.push_str("class-optional-assign ");
+                let _ = write!(output, "class-optional-assign {} ", assignment.optional);
                 dump_place(output, &assignment.destination);
                 let _ = write!(output, " : class {}?", assignment.class);
                 write_span(output, assignment.span);
             }
             MirInstruction::ClassOptionalPublish(publish) => {
-                output.push_str("class-optional-publish ");
+                let _ = write!(output, "class-optional-publish {} ", publish.optional);
                 dump_place(output, &publish.destination);
                 write_span(output, publish.span);
             }
             MirInstruction::ClassOptionalCleanup(cleanup) => {
-                output.push_str("class-optional-cleanup ");
+                let _ = write!(output, "class-optional-cleanup {} ", cleanup.optional);
                 dump_place(output, &cleanup.destination);
                 write_span(output, cleanup.span);
             }
             MirInstruction::EndOptionalView(end) => {
-                let _ = write!(output, "end-optional-view {} ", end.guard);
+                let _ = write!(
+                    output,
+                    "end-optional-view {} optional {} ",
+                    end.guard, end.optional
+                );
                 dump_place(output, &end.source);
                 let _ = write!(output, " : class {}", end.class);
                 write_span(output, end.span);
@@ -1085,7 +1118,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             failure_target,
             span,
         }) => {
-            output.push_str("optional-shared-unwrap ");
+            let _ = write!(output, "optional-shared-unwrap {} ", unwrap.optional);
             dump_place(output, &unwrap.source);
             let _ = write!(
                 output,
@@ -1101,7 +1134,11 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             overflow_target,
             span,
         }) => {
-            let _ = write!(output, "begin-optional-view {} ", begin.guard);
+            let _ = write!(
+                output,
+                "begin-optional-view {} optional {} ",
+                begin.guard, begin.optional
+            );
             dump_place(output, &begin.source);
             let _ = write!(
                 output,

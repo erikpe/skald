@@ -6,8 +6,8 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::{ArrayTypeId, ClassId, FieldId},
-    mir::{MirProgram, MirType},
+    identity::{ArrayTypeId, ClassId, FieldId, OptionalTypeId},
+    mir::{MirOptionalRepresentation, MirOptionalStorage, MirProgram, MirType},
 };
 
 use super::abi;
@@ -38,6 +38,7 @@ pub(super) struct TypeLayout {
 pub(super) struct OptionalLayout {
     ty: TypeLayout,
     payload_offset: usize,
+    nullable_niche: bool,
 }
 
 impl OptionalLayout {
@@ -51,6 +52,10 @@ impl OptionalLayout {
 
     pub(super) const fn payload_offset(self) -> usize {
         self.payload_offset
+    }
+
+    pub(super) const fn is_nullable_niche(self) -> bool {
+        self.nullable_niche
     }
 }
 
@@ -155,6 +160,7 @@ impl ArrayLayout {
 pub(super) struct DataLayout {
     classes: Vec<ClassLayout>,
     arrays: Vec<ArrayLayout>,
+    optionals: Vec<OptionalLayout>,
 }
 
 impl DataLayout {
@@ -172,21 +178,12 @@ impl DataLayout {
             MirType::Interface(_) => Err(layout_error(
                 "interface views have no owning storage layout",
             )),
-            MirType::Shared(_) | MirType::OptionalShared(_) => {
-                Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
-            }
+            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
             MirType::Array(array) => self
                 .array(array)
                 .map(ArrayLayout::descriptor)
                 .ok_or_else(|| layout_error(format!("array {array} has no target layout"))),
-            MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
-            MirType::OptionalClass(class) => {
-                let payload = self
-                    .class(class)
-                    .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
-                    .ty();
-                optional_layout_for(payload).map(OptionalLayout::ty)
-            }
+            MirType::Optional(optional) => self.optional_type(optional).map(OptionalLayout::ty),
             MirType::Unit => Err(layout_error(
                 "payload-free type `unit` has no storage layout",
             )),
@@ -197,19 +194,14 @@ impl DataLayout {
         }
     }
 
-    pub(super) fn optional(
+    pub(super) fn optional_type(
         &self,
-        payload: crate::mir::MirPrimitiveType,
+        optional: OptionalTypeId,
     ) -> Result<OptionalLayout, BackendError> {
-        optional_layout(payload)
-    }
-
-    pub(super) fn optional_class(&self, class: ClassId) -> Result<OptionalLayout, BackendError> {
-        let payload = self
-            .class(class)
-            .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
-            .ty();
-        optional_layout_for(payload)
+        self.optionals
+            .get(optional.index())
+            .copied()
+            .ok_or_else(|| layout_error(format!("optional {optional} has no target layout")))
     }
 
     pub(super) fn class(&self, class: ClassId) -> Option<&ClassLayout> {
@@ -259,6 +251,7 @@ struct LayoutBuilder<'mir> {
     program: &'mir MirProgram,
     states: Vec<VisitState>,
     layouts: Vec<Option<ClassLayout>>,
+    optional_layouts: Vec<Option<OptionalLayout>>,
 }
 
 impl<'mir> LayoutBuilder<'mir> {
@@ -268,12 +261,16 @@ impl<'mir> LayoutBuilder<'mir> {
             program,
             states: vec![VisitState::Unvisited; class_count],
             layouts: vec![None; class_count],
+            optional_layouts: vec![None; program.optional_types.iter().len()],
         }
     }
 
     fn compute(mut self) -> Result<DataLayout, BackendError> {
         for class in self.program.classes.iter() {
             self.compute_class(class.id)?;
+        }
+        for optional in self.program.optional_types.iter() {
+            self.compute_optional(optional.id)?;
         }
         let arrays = self
             .program
@@ -302,7 +299,58 @@ impl<'mir> LayoutBuilder<'mir> {
                 .map(|layout| layout.expect("every declared class was laid out"))
                 .collect(),
             arrays,
+            optionals: self
+                .optional_layouts
+                .into_iter()
+                .map(|layout| layout.expect("every optional identity was laid out"))
+                .collect(),
         })
+    }
+
+    fn compute_optional(
+        &mut self,
+        optional: OptionalTypeId,
+    ) -> Result<OptionalLayout, BackendError> {
+        if let Some(layout) = self
+            .optional_layouts
+            .get(optional.index())
+            .copied()
+            .flatten()
+        {
+            return Ok(layout);
+        }
+        let metadata = self
+            .program
+            .optional_type(optional)
+            .ok_or_else(|| layout_error(format!("optional {optional} is not declared")))?;
+        let layout = match metadata.representation {
+            MirOptionalRepresentation::NullableSharedOwner => OptionalLayout {
+                ty: TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT),
+                payload_offset: 0,
+                nullable_niche: true,
+            },
+            MirOptionalRepresentation::TaggedPayload => {
+                let payload = match metadata.storage {
+                    MirOptionalStorage::Scalar => primitive_layout(metadata.payload)
+                        .expect("scalar optional metadata must carry a primitive payload"),
+                    MirOptionalStorage::InlineClass(class) => self.compute_class(class)?,
+                    MirOptionalStorage::InlineArray(_) => {
+                        TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT)
+                    }
+                    MirOptionalStorage::Nested(nested) => self.compute_optional(nested)?.ty(),
+                    MirOptionalStorage::SharedOwner(_) => unreachable!(
+                        "shared-owner optional metadata must select the nullable representation"
+                    ),
+                };
+                optional_layout_for(payload)?
+            }
+        };
+        let slot = self
+            .optional_layouts
+            .get_mut(optional.index())
+            .expect("declared optional identity must have a layout slot");
+        *slot = Some(layout);
+        Ok(layout)
     }
 
     fn compute_class(&mut self, class: ClassId) -> Result<TypeLayout, BackendError> {
@@ -338,9 +386,7 @@ impl<'mir> LayoutBuilder<'mir> {
         for ty in fields {
             let ty = match ty {
                 MirType::Class(dependency) => self.compute_class(dependency)?,
-                MirType::OptionalClass(dependency) => {
-                    optional_layout_for(self.compute_class(dependency)?)?.ty()
-                }
+                MirType::Optional(optional) => self.compute_optional(optional)?.ty(),
                 field => self.field(field)?,
             };
             laid_out_fields.push(ty);
@@ -356,15 +402,10 @@ impl<'mir> LayoutBuilder<'mir> {
         Ok(ty)
     }
 
-    fn field(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
+    fn field(&mut self, ty: MirType) -> Result<TypeLayout, BackendError> {
         match ty {
-            MirType::Shared(_) | MirType::OptionalShared(_) => {
-                Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
-            }
-            MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
-            MirType::OptionalClass(_) => {
-                unreachable!("optional class dependencies are handled recursively")
-            }
+            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
+            MirType::Optional(optional) => self.compute_optional(optional).map(OptionalLayout::ty),
             MirType::Array(array) => self
                 .program
                 .array_type(array)
@@ -378,7 +419,7 @@ impl<'mir> LayoutBuilder<'mir> {
         }
     }
 
-    fn element(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
+    fn element(&mut self, ty: MirType) -> Result<TypeLayout, BackendError> {
         match ty {
             MirType::Class(class) => self
                 .layouts
@@ -386,18 +427,13 @@ impl<'mir> LayoutBuilder<'mir> {
                 .and_then(Option::as_ref)
                 .map(ClassLayout::ty)
                 .ok_or_else(|| layout_error(format!("class {class} has no target layout"))),
-            MirType::OptionalClass(class) => {
-                optional_layout_for(self.element(MirType::Class(class))?).map(OptionalLayout::ty)
-            }
+            MirType::Optional(optional) => self.compute_optional(optional).map(OptionalLayout::ty),
             MirType::Array(array) => self
                 .program
                 .array_type(array)
                 .map(|_| TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT))
                 .ok_or_else(|| layout_error(format!("array {array} is not declared"))),
-            MirType::OptionalPrimitive(payload) => optional_layout(payload).map(OptionalLayout::ty),
-            MirType::Shared(_) | MirType::OptionalShared(_) => {
-                Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
-            }
+            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
             primitive => primitive_layout(primitive)
                 .ok_or_else(|| layout_error(format!("type {primitive:?} has no array layout"))),
         }
@@ -432,13 +468,12 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
         | MirType::Interface(_)
         | MirType::Obj
         | MirType::Shared(_)
-        | MirType::OptionalShared(_)
-        | MirType::OptionalPrimitive(_)
-        | MirType::OptionalClass(_)
+        | MirType::Optional(_)
         | MirType::Unit => None,
     }
 }
 
+#[cfg(test)]
 fn optional_layout(payload: crate::mir::MirPrimitiveType) -> Result<OptionalLayout, BackendError> {
     let payload = primitive_layout(payload.payload_type())
         .expect("every primitive optional payload has a target layout");
@@ -457,6 +492,7 @@ fn optional_layout_for(payload: TypeLayout) -> Result<OptionalLayout, BackendErr
     Ok(OptionalLayout {
         ty: TypeLayout::new(size, alignment),
         payload_offset,
+        nullable_niche: false,
     })
 }
 
@@ -564,6 +600,7 @@ mod tests {
         let data = DataLayout {
             classes: vec![],
             arrays: vec![],
+            optionals: vec![],
         };
         for ty in [MirType::I64, MirType::U64, MirType::F64] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(8, 8));

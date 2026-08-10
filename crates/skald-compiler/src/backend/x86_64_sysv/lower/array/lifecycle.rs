@@ -39,8 +39,17 @@ fn required_class_copy_helpers(program: &MirProgram) -> Vec<bool> {
     let mut required = vec![false; program.classes.len()];
     let mut pending = Vec::new();
     for array in program.array_types.iter() {
-        if let MirType::Class(class) | MirType::OptionalClass(class) = array.element {
-            pending.push(class);
+        match array.element {
+            MirType::Class(class) => pending.push(class),
+            MirType::Optional(optional) => {
+                if let Some(class) = program
+                    .optional_type(optional)
+                    .and_then(crate::mir::MirOptionalType::inline_class)
+                {
+                    pending.push(class);
+                }
+            }
+            _ => {}
         }
     }
 
@@ -67,8 +76,14 @@ fn required_class_copy_helpers(program: &MirProgram) -> Vec<bool> {
                         .expect("verified synthesized field is declared")
                         .ty
                     {
-                        MirType::Class(class) | MirType::OptionalClass(class) => {
-                            pending.push(class);
+                        MirType::Class(class) => pending.push(class),
+                        MirType::Optional(optional) => {
+                            if let Some(class) = program
+                                .optional_type(optional)
+                                .and_then(crate::mir::MirOptionalType::inline_class)
+                            {
+                                pending.push(class);
+                            }
                         }
                         _ => {}
                     }
@@ -168,7 +183,10 @@ fn emit_field_copy<I: Copy>(
             emit_scalar_copy(ty, offset, output);
         }
         MirSynthesizedFieldCopy::OptionalPrimitive { payload, .. } => {
-            let layout = data_layout.optional(payload)?;
+            let MirType::Optional(optional) = ty else {
+                unreachable!("verified optional field must have optional type")
+            };
+            let layout = data_layout.optional_type(optional)?;
             emit_optional_copy(
                 program,
                 owner,
@@ -187,7 +205,10 @@ fn emit_field_copy<I: Copy>(
             emit_helper_call_at(program, class, offset, offset, output);
         }
         MirSynthesizedFieldCopy::OptionalClass { class, .. } => {
-            let payload = i32::try_from(data_layout.optional_class(class)?.payload_offset())
+            let MirType::Optional(optional) = ty else {
+                unreachable!("verified optional class field must have optional type")
+            };
+            let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
                 .map_err(|_| lifecycle_error("optional class payload offset exceeds x86-64"))?;
             emit_optional_class_copy(program, owner, field_id, class, offset, payload, output);
         }

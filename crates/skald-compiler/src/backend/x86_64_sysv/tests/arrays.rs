@@ -26,11 +26,18 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
             .expect("source declares the requested array")
             .id
     };
+    let optional = |payload| {
+        MirType::Optional(
+            program
+                .optional_for_payload(payload)
+                .expect("source declares the requested optional"),
+        )
+    };
     let item = layouts
         .array(array(MirType::Class(ClassId::new(0))))
         .unwrap();
-    let optional = layouts
-        .array(array(MirType::OptionalClass(ClassId::new(0))))
+    let optional_layout = layouts
+        .array(array(optional(MirType::Class(ClassId::new(0)))))
         .unwrap();
     let primitive = array(MirType::I64);
     let nested = layouts.array(array(MirType::Array(primitive))).unwrap();
@@ -40,17 +47,17 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
         ))))
         .unwrap();
     let optional_shared = layouts
-        .array(array(MirType::OptionalShared(MirSharedTarget::Class(
+        .array(array(optional(MirType::Shared(MirSharedTarget::Class(
             ClassId::new(0),
-        ))))
+        )))))
         .unwrap();
     let shared_array = layouts
         .array(array(MirType::Shared(MirSharedTarget::Array(primitive))))
         .unwrap();
     let optional_shared_array = layouts
-        .array(array(MirType::OptionalShared(MirSharedTarget::Array(
+        .array(array(optional(MirType::Shared(MirSharedTarget::Array(
             primitive,
-        ))))
+        )))))
         .unwrap();
     let node = layouts.class(ClassId::new(1)).unwrap();
 
@@ -58,7 +65,7 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
         item.stride(),
         layouts.class(ClassId::new(0)).unwrap().ty().size()
     );
-    assert!(optional.stride() > item.stride());
+    assert!(optional_layout.stride() > item.stride());
     assert_eq!(nested.stride(), 8);
     assert_eq!(shared.stride(), 8);
     assert_eq!(optional_shared.stride(), 8);

@@ -58,10 +58,7 @@ impl Verifier<'_> {
                 (MirArgument::OwnedPlace(place), MirParameterMode::Value)
                     if matches!(
                         parameter.ty,
-                        MirType::Class(_)
-                            | MirType::Array(_)
-                            | MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
+                        MirType::Class(_) | MirType::Array(_) | MirType::Optional(_)
                     ) =>
                 {
                     self.verify_owned_place_argument(
@@ -73,10 +70,8 @@ impl Verifier<'_> {
                     );
                 }
                 (MirArgument::SharedOwner(owner), MirParameterMode::Value)
-                    if matches!(
-                        parameter.ty,
-                        MirType::Shared(_) | MirType::OptionalShared(_)
-                    ) =>
+                    if matches!(parameter.ty, MirType::Shared(_))
+                        || self.optional_shared(parameter.ty).is_some() =>
                 {
                     self.verify_shared_owner_argument(
                         site,

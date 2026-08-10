@@ -144,6 +144,7 @@ pub(super) fn primitive_cast_program(
             declarations: vec![validate_id],
         }]),
         array_types: Default::default(),
+        optional_types: Default::default(),
         string_language_item: None,
         literal_data: Default::default(),
         classes: MirClassDeclarationTable::default(),

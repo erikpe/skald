@@ -193,12 +193,7 @@ impl<'mir> Verifier<'mir> {
                     | MirStorageKind::SharedAnchor
             ) && !matches!(
                 storage.ty,
-                MirType::Class(_)
-                    | MirType::Array(_)
-                    | MirType::Shared(_)
-                    | MirType::OptionalShared(_)
-                    | MirType::OptionalPrimitive(_)
-                    | MirType::OptionalClass(_)
+                MirType::Class(_) | MirType::Array(_) | MirType::Shared(_) | MirType::Optional(_)
             ) {
                 self.function_error(
                     function.callable(),
@@ -244,7 +239,8 @@ impl<'mir> Verifier<'mir> {
                     format!("path-condition storage {} must be `bool`", storage.id),
                 );
             }
-            if matches!(storage.ty, MirType::Shared(_) | MirType::OptionalShared(_))
+            if (matches!(storage.ty, MirType::Shared(_))
+                || self.optional_shared(storage.ty).is_some())
                 && !matches!(
                     storage.kind,
                     MirStorageKind::Local
@@ -290,8 +286,22 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
-            if let MirType::Shared(target) | MirType::OptionalShared(target) = storage.ty {
+            if let MirType::Shared(target) = storage.ty {
                 self.verify_shared_target_declared(function.callable(), target);
+            }
+            if let Some(target) = self.optional_shared(storage.ty) {
+                self.verify_shared_target_declared(function.callable(), target);
+            }
+            if let MirType::Optional(optional) = storage.ty {
+                if self.program.optional_type(optional).is_none() {
+                    self.function_error(
+                        function.callable(),
+                        format!(
+                            "storage {} has undeclared optional type {optional}",
+                            storage.id
+                        ),
+                    );
+                }
             }
         }
     }
@@ -334,7 +344,7 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
-            MirType::OptionalPrimitive(payload) => {
+            MirType::Optional(optional) => {
                 let Some(return_storage) = function.return_storage() else {
                     self.function_error(
                         function.callable(),
@@ -344,29 +354,11 @@ impl<'mir> Verifier<'mir> {
                 };
                 let valid = slots.len() == 1
                     && slots[0].id == return_storage
-                    && slots[0].ty == MirType::OptionalPrimitive(payload);
+                    && slots[0].ty == MirType::Optional(optional);
                 if !valid {
                     self.function_error(
                         function.callable(),
                         "optional-returning definition must identify exactly one matching return storage slot",
-                    );
-                }
-            }
-            MirType::OptionalClass(class) => {
-                let Some(return_storage) = function.return_storage() else {
-                    self.function_error(
-                        function.callable(),
-                        "class-optional-returning definition has no return storage",
-                    );
-                    return;
-                };
-                let valid = slots.len() == 1
-                    && slots[0].id == return_storage
-                    && slots[0].ty == MirType::OptionalClass(class);
-                if !valid {
-                    self.function_error(
-                        function.callable(),
-                        "class-optional-returning definition must identify exactly one matching return storage slot",
                     );
                 }
             }
@@ -385,24 +377,6 @@ impl<'mir> Verifier<'mir> {
                     self.function_error(
                         function.callable(),
                         "shared-returning definition must identify exactly one matching return owner slot",
-                    );
-                }
-            }
-            MirType::OptionalShared(target) => {
-                let Some(return_storage) = function.return_storage() else {
-                    self.function_error(
-                        function.callable(),
-                        "optional-shared-returning definition has no return storage",
-                    );
-                    return;
-                };
-                let valid = slots.len() == 1
-                    && slots[0].id == return_storage
-                    && slots[0].ty == MirType::OptionalShared(target);
-                if !valid {
-                    self.function_error(
-                        function.callable(),
-                        "optional-shared-returning definition must identify exactly one matching return owner slot",
                     );
                 }
             }
@@ -619,9 +593,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
-                                | MirType::OptionalShared(_)
-                                | MirType::OptionalPrimitive(_)
-                                | MirType::OptionalClass(_)
+                                | MirType::Optional(_)
                         ) {
                             self.block_error(
                                 function.callable(),
@@ -644,9 +616,7 @@ impl<'mir> Verifier<'mir> {
                             | MirType::Interface(_)
                             | MirType::Obj
                             | MirType::Shared(_)
-                            | MirType::OptionalShared(_)
-                            | MirType::OptionalPrimitive(_)
-                            | MirType::OptionalClass(_)
+                            | MirType::Optional(_)
                     )
                 {
                     self.block_error(
@@ -671,7 +641,7 @@ impl<'mir> Verifier<'mir> {
                 }
             }
             Some(MirTerminator::ReturnOptionalShared { owner, .. }) => {
-                let valid = matches!(return_type, MirType::OptionalShared(_))
+                let valid = self.optional_shared(return_type).is_some()
                     && function.return_storage() == Some(*owner)
                     && function.storage(*owner).is_some_and(|storage| {
                         storage.kind == MirStorageKind::Return && storage.ty == return_type

@@ -80,8 +80,13 @@ pub fn synthesize_static_lifecycle(
             MirStaticDestructionRegion {
                 field: *field,
                 begin: shutdown_transitions[index * 2],
-                cleanup: MirStaticValueCleanup::for_field(definition.ty, *field, definition.span)
-                    .expect("verified static lifecycle definitions have storable types"),
+                cleanup: MirStaticValueCleanup::for_field(
+                    &program.optional_types,
+                    definition.ty,
+                    *field,
+                    definition.span,
+                )
+                .expect("verified static lifecycle definitions have storable types"),
                 finish: shutdown_transitions[index * 2 + 1],
             }
         })

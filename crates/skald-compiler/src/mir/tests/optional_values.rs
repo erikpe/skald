@@ -1,4 +1,5 @@
 use super::*;
+use crate::identity::OptionalTypeId;
 
 const OPTIONAL_SOURCE: &str = "fn main() -> i64 {\n\
     var value: i64? = none;\n\
@@ -14,12 +15,44 @@ fn lowers_primitive_optional_state_and_checked_access_explicitly() {
     let dump = dump_mir(&program);
     assert_eq!(dump, dump_mir(&lower_text(OPTIONAL_SOURCE)));
 
-    assert!(dump.contains("local f0:l0 \"value\" : i64?"));
+    let optional = program.optional_for_payload(MirType::I64).unwrap();
+    assert!(dump.contains(&format!("Optional {optional} payload i64")));
+    assert!(dump.contains(&format!("local f0:l0 \"value\" : optional {optional}")));
     assert!(dump.contains("optional-initialize"));
     assert!(dump.contains("optional-assign"));
     assert!(dump.contains("optional-presence none"));
     assert!(dump.contains("optional-unwrap"));
     assert!(dump.contains("terminate optional-access-failure"));
+}
+
+#[test]
+fn verifier_rejects_malformed_optional_identity_lifecycle_and_boundary_metadata() {
+    let error_after = |mutate: fn(&mut MirOptionalType)| {
+        let mut program = lower_text(OPTIONAL_SOURCE);
+        mutate(&mut program.optional_types.entries_mut_for_test()[0]);
+        verify_mir(&program)
+            .expect_err("malformed optional metadata must be rejected")
+            .to_string()
+    };
+
+    let errors = error_after(|optional| optional.id = OptionalTypeId::new(7));
+    assert!(errors.contains("optional type table index"), "{errors}");
+
+    let errors = error_after(|optional| {
+        optional.lifecycle.cleanup = MirOptionalCleanupPlan::Shared(MirSharedTarget::Obj);
+    });
+    assert!(
+        errors.contains("inconsistent executable lifecycle metadata"),
+        "{errors}"
+    );
+
+    let errors = error_after(|optional| {
+        optional.boundaries.argument = MirOptionalBoundaryPlan::MoveOnly;
+    });
+    assert!(
+        errors.contains("inconsistent boundary lifecycle metadata"),
+        "{errors}"
+    );
 }
 
 #[test]

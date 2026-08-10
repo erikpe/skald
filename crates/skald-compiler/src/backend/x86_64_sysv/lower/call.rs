@@ -27,12 +27,13 @@ pub(super) use emission::{
 use target::CallTarget;
 
 pub(super) fn spill_parameters(
+    program: &crate::mir::MirProgram,
     signature: MirCallableSignature<'_>,
     function: MirDefinitionRef<'_>,
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
-    marshal::spill_parameters(signature, function, frame, output)
+    marshal::spill_parameters(program, signature, function, frame, output)
 }
 
 impl InstructionSelector<'_, '_> {

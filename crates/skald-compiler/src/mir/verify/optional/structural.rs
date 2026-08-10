@@ -18,13 +18,19 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         destination: &MirPlace,
         source: &MirOptionalSharedSource,
+        optional: crate::identity::OptionalTypeId,
         target: MirSharedTarget,
     ) {
         self.verify_shared_target_declared(function.callable(), target);
         if self
             .verify_place(function, block, destination)
             .map(|place| place.ty)
-            != Some(MirType::OptionalShared(target))
+            != Some(MirType::Optional(optional))
+            || self
+                .program
+                .optional_type(optional)
+                .and_then(crate::mir::MirOptionalType::shared_owner)
+                != Some(target)
         {
             self.block_error(
                 function.callable(),
@@ -42,20 +48,12 @@ impl Verifier<'_> {
                         _ => None,
                     })
             }
-            MirOptionalSharedSource::Move(owner) => {
-                function
-                    .storage(*owner)
-                    .and_then(|storage| match storage.ty {
-                        MirType::OptionalShared(target) => Some(target),
-                        _ => None,
-                    })
-            }
+            MirOptionalSharedSource::Move(owner) => function
+                .storage(*owner)
+                .and_then(|storage| self.optional_shared(storage.ty)),
             MirOptionalSharedSource::Copy(place) => self
                 .verify_place(function, block, place)
-                .and_then(|place| match place.ty {
-                    MirType::OptionalShared(target) => Some(target),
-                    _ => None,
-                }),
+                .and_then(|place| self.optional_shared(place.ty)),
         };
         if !actual.is_some_and(|actual| self.shared_target_accepts(target, actual)) {
             self.block_error(
@@ -75,7 +73,8 @@ impl Verifier<'_> {
         if self
             .verify_place(function, block, &cleanup.destination)
             .map(|place| place.ty)
-            != Some(MirType::OptionalShared(cleanup.target))
+            != Some(MirType::Optional(cleanup.optional))
+            || self.optional_shared(MirType::Optional(cleanup.optional)) != Some(cleanup.target)
         {
             self.block_error(
                 function.callable(),
@@ -95,7 +94,8 @@ impl Verifier<'_> {
     ) {
         let source_valid = self
             .verify_place(function, block, &unwrap.source)
-            .is_some_and(|place| place.ty == MirType::OptionalShared(unwrap.target));
+            .is_some_and(|place| place.ty == MirType::Optional(unwrap.optional))
+            && self.optional_shared(MirType::Optional(unwrap.optional)) == Some(unwrap.target);
         let destination_valid = function.storage(unwrap.destination).is_some_and(|storage| {
             matches!(
                 storage.kind,
@@ -151,7 +151,8 @@ impl Verifier<'_> {
         if self
             .verify_place(function, block, &begin.source)
             .map(|place| place.ty)
-            != Some(MirType::OptionalClass(begin.class))
+            != Some(MirType::Optional(begin.optional))
+            || self.optional_class(MirType::Optional(begin.optional)) != Some(begin.class)
         {
             self.block_error(
                 function.callable(),
@@ -196,11 +197,10 @@ impl Verifier<'_> {
         success_target: crate::mir::BlockId,
         failure_target: crate::mir::BlockId,
     ) {
-        if !matches!(
-            self.verify_place(function, block, source)
-                .map(|place| place.ty),
-            Some(MirType::OptionalClass(_))
-        ) {
+        if !self
+            .verify_place(function, block, source)
+            .is_some_and(|place| self.optional_class(place.ty).is_some())
+        {
             self.block_error(
                 function.callable(),
                 block.id,
@@ -235,7 +235,8 @@ impl Verifier<'_> {
             || self
                 .verify_place(function, block, &end.source)
                 .map(|place| place.ty)
-                != Some(MirType::OptionalClass(end.class))
+                != Some(MirType::Optional(end.optional))
+            || self.optional_class(MirType::Optional(end.optional)) != Some(end.class)
         {
             self.block_error(
                 function.callable(),
@@ -306,11 +307,7 @@ impl Verifier<'_> {
         if !matches!(
             self.verify_place(function, block, source)
                 .map(|place| place.ty),
-            Some(
-                MirType::OptionalPrimitive(_)
-                    | MirType::OptionalClass(_)
-                    | MirType::OptionalShared(_)
-            )
+            Some(MirType::Optional(_))
         ) {
             self.block_error(
                 function.callable(),
@@ -392,7 +389,7 @@ impl Verifier<'_> {
         place: &MirPlace,
     ) -> Option<MirPrimitiveType> {
         let verified = self.verify_place(function, block, place);
-        let Some(MirType::OptionalPrimitive(payload)) = verified.map(|place| place.ty) else {
+        let Some(payload) = verified.and_then(|place| self.optional_primitive(place.ty)) else {
             self.block_error(
                 function.callable(),
                 block.id,

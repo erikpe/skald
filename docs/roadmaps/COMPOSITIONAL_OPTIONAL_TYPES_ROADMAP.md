@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO4 is next.
+Status: in progress; CO5 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -100,7 +100,7 @@ pointee is an optional value.
 - [x] CO1 — Introduce compositional type syntax and canonical shared optionals
 - [x] CO2 — Canonicalize recursive optional identities
 - [x] CO3 — Generalize typed optional lifecycle planning
-- [ ] CO4 — Generalize executable optional MIR and target realization
+- [x] CO4 — Generalize executable optional MIR and target realization
 - [ ] CO5 — Execute arbitrarily nested optional lifecycle
 - [ ] CO6 — Complete nested-optional access and callable integration
 - [ ] CO7 — Execute optional inline arrays
@@ -245,22 +245,22 @@ compatibility adapter unchanged, and no new source behavior reaches MIR.
 **Purpose:** Replace the closed executable optional families while preserving
 the full current runtime profile before enabling recursive payloads.
 
-- [ ] Add MIR optional identities and lifecycle metadata lowered deterministically
+- [x] Add MIR optional identities and lifecycle metadata lowered deterministically
       from HIR, including payload storage, ownership, guarded-view, cleanup,
       argument, result, static, and array-element requirements.
-- [ ] Generalize optional initialization, assignment, publication, cleanup,
+- [x] Generalize optional initialization, assignment, publication, cleanup,
       presence tests, unwraps, views, and source categories over those
       identities without erasing real primitive, owning aggregate, or shared
       owner operations.
-- [ ] Generalize structural, initialization, ownership, lifetime, place, call,
+- [x] Generalize structural, initialization, ownership, lifetime, place, call,
       cleanup, guard, static-lifecycle, and array verification over recursive
       optional metadata.
-- [ ] Generalize x86-64 layout, frames, calling convention classification,
+- [x] Generalize x86-64 layout, frames, calling convention classification,
       target legality, cleanup, instruction lowering, and dumps while retaining
       current tagged layouts and the one-word optional-shared niche exactly.
-- [ ] Remove the temporary HIR-to-legacy-MIR adapter only after every current
+- [x] Remove the temporary HIR-to-legacy-MIR adapter only after every current
       optional program and malformed-MIR test uses the generalized path.
-- [ ] Keep nested optional and optional-array source gates closed throughout
+- [x] Keep nested optional and optional-array source gates closed throughout
       this behavior-preserving migration.
 
 **Tests:** Complete optional, shared-owner, array-element, static, callable,

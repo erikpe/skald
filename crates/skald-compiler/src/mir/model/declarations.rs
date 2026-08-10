@@ -30,6 +30,7 @@ pub struct MirProgram {
     pub modules: ProgramModuleTable,
     pub external_links: ExternalLinkTable,
     pub array_types: MirArrayTypeTable,
+    pub optional_types: super::MirOptionalTypeTable,
     pub string_language_item: Option<super::MirStringLanguageItem>,
     pub literal_data: super::MirLiteralDataTable,
     pub classes: MirClassDeclarationTable,
@@ -48,6 +49,23 @@ pub struct MirProgram {
 impl MirProgram {
     pub fn array_type(&self, id: crate::identity::ArrayTypeId) -> Option<&MirArrayType> {
         self.array_types.get(id)
+    }
+
+    pub fn optional_type(
+        &self,
+        id: crate::identity::OptionalTypeId,
+    ) -> Option<&super::MirOptionalType> {
+        self.optional_types.get(id)
+    }
+
+    pub fn optional_for_payload(
+        &self,
+        payload: MirType,
+    ) -> Option<crate::identity::OptionalTypeId> {
+        self.optional_types
+            .iter()
+            .find(|optional| optional.payload == payload)
+            .map(|optional| optional.id)
     }
 
     pub fn class(&self, id: ClassId) -> Option<&MirClassDeclaration> {

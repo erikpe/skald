@@ -258,7 +258,7 @@ impl Verifier<'_> {
                     ty = field.ty;
                 }
                 MirPlaceProjection::OptionalPayload(class) => {
-                    if ty != MirType::OptionalClass(class) {
+                    if self.optional_class(ty) != Some(class) {
                         self.block_error(
                             function.callable(),
                             block.id,

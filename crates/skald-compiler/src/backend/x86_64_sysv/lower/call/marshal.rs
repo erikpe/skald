@@ -19,6 +19,7 @@ use super::super::{
 };
 
 pub(super) fn spill_parameters(
+    program: &crate::mir::MirProgram,
     signature: MirCallableSignature<'_>,
     function: MirDefinitionRef<'_>,
     frame: &FrameLayout,
@@ -26,13 +27,12 @@ pub(super) fn spill_parameters(
 ) -> Result<(), BackendError> {
     let has_return_destination = function.return_storage().is_some_and(|storage| {
         function.storage(storage).is_some_and(|storage| {
-            matches!(
-                storage.ty,
-                MirType::Class(_)
-                    | MirType::OptionalPrimitive(_)
-                    | MirType::OptionalClass(_)
-                    | MirType::Array(_)
-            )
+            matches!(storage.ty, MirType::Class(_) | MirType::Array(_))
+                || matches!(storage.ty, MirType::Optional(optional)
+                if program.optional_type(optional).is_some_and(|metadata| {
+                    metadata.representation
+                        != crate::mir::MirOptionalRepresentation::NullableSharedOwner
+                }))
         })
     });
     let layout = classify_call(
@@ -354,19 +354,15 @@ impl InstructionSelector<'_, '_> {
             (MirArgument::OwnedPlace(place), MirParameterMode::Value)
                 if matches!(
                     parameter.ty,
-                    MirType::Class(_)
-                        | MirType::OptionalPrimitive(_)
-                        | MirType::OptionalClass(_)
-                        | MirType::Array(_)
+                    MirType::Class(_) | MirType::Optional(_) | MirType::Array(_)
                 ) =>
             {
                 self.select_place_address(place, locations.value())?;
             }
             (MirArgument::SharedOwner(owner), MirParameterMode::Value)
-                if matches!(
-                    parameter.ty,
-                    MirType::Shared(_) | MirType::OptionalShared(_)
-                ) =>
+                if matches!(parameter.ty, MirType::Shared(_))
+                    || matches!(parameter.ty, MirType::Optional(optional)
+                        if self.program.optional_type(optional).and_then(crate::mir::MirOptionalType::shared_owner).is_some()) =>
             {
                 self.marshal_shared_owner(*owner, locations.value());
             }

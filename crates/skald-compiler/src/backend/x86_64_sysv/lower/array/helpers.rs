@@ -396,57 +396,77 @@ fn lower_copier(
             value::store_rax(destination, &mut instructions);
             instructions
         }
-        MirType::OptionalPrimitive(payload) => {
-            let optional = data_layout.optional(payload)?;
-            let payload_offset = i32::try_from(optional.payload_offset())
-                .map_err(|_| helper_error("optional payload offset exceeds x86-64"))?;
-            let stem = format!(".Lska_array_{}_copy_optional", array.index());
-            let present = Label::new(format!("{stem}_present"));
-            let complete = Label::new(format!("{stem}_complete"));
-            let mut instructions = vec![
-                Instruction::Move {
+        MirType::Optional(optional) => {
+            let metadata = program
+                .optional_type(optional)
+                .expect("verified optional array element metadata exists");
+            if let Some(class) = metadata.inline_class() {
+                lower_optional_class_copier(
+                    program,
+                    array,
+                    class,
                     source,
-                    destination: Register::Rax.into(),
-                },
-                Instruction::Test(Register::Rax),
-                Instruction::JumpIfNotZero(present.clone()),
-                Instruction::Move {
-                    source: Register::Rax.into(),
                     destination,
-                },
-                Instruction::Jump(complete.clone()),
-                Instruction::Label(present),
-            ];
-            let source_payload = offset_operand(source, payload_offset)?;
-            let destination_payload = offset_operand(destination, payload_offset)?;
-            if matches!(
-                payload,
-                crate::mir::MirPrimitiveType::U8 | crate::mir::MirPrimitiveType::Bool
-            ) {
-                instructions.push(Instruction::LoadZeroExtendByte {
-                    source: source_payload,
-                    destination: Register::Rax,
-                });
-                instructions.push(Instruction::MoveByte {
-                    source: ByteRegister::Al,
-                    destination: destination_payload,
-                });
+                    data_layout,
+                )?
+            } else if metadata.shared_owner().is_some() {
+                lower_shared_copier(array, source, destination, true)
+            } else if let Some(payload) = metadata.primitive() {
+                let optional_layout = data_layout.optional_type(optional)?;
+                let payload_offset = i32::try_from(optional_layout.payload_offset())
+                    .map_err(|_| helper_error("optional payload offset exceeds x86-64"))?;
+                let stem = format!(".Lska_array_{}_copy_optional", array.index());
+                let present = Label::new(format!("{stem}_present"));
+                let complete = Label::new(format!("{stem}_complete"));
+                let mut instructions = vec![
+                    Instruction::Move {
+                        source,
+                        destination: Register::Rax.into(),
+                    },
+                    Instruction::Test(Register::Rax),
+                    Instruction::JumpIfNotZero(present.clone()),
+                    Instruction::Move {
+                        source: Register::Rax.into(),
+                        destination,
+                    },
+                    Instruction::Jump(complete.clone()),
+                    Instruction::Label(present),
+                ];
+                let source_payload = offset_operand(source, payload_offset)?;
+                let destination_payload = offset_operand(destination, payload_offset)?;
+                if matches!(
+                    payload,
+                    crate::mir::MirPrimitiveType::U8 | crate::mir::MirPrimitiveType::Bool
+                ) {
+                    instructions.push(Instruction::LoadZeroExtendByte {
+                        source: source_payload,
+                        destination: Register::Rax,
+                    });
+                    instructions.push(Instruction::MoveByte {
+                        source: ByteRegister::Al,
+                        destination: destination_payload,
+                    });
+                } else {
+                    value::load_rax(source_payload, &mut instructions);
+                    value::store_rax(destination_payload, &mut instructions);
+                }
+                instructions.extend([
+                    Instruction::MoveImmediate64 {
+                        bits: 1,
+                        destination: Register::Rax,
+                    },
+                    Instruction::Move {
+                        source: Register::Rax.into(),
+                        destination,
+                    },
+                    Instruction::Label(complete),
+                ]);
+                instructions
             } else {
-                value::load_rax(source_payload, &mut instructions);
-                value::store_rax(destination_payload, &mut instructions);
+                return Err(helper_error(format!(
+                    "array {array} has a gated optional copy element {element}"
+                )));
             }
-            instructions.extend([
-                Instruction::MoveImmediate64 {
-                    bits: 1,
-                    destination: Register::Rax,
-                },
-                Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination,
-                },
-                Instruction::Label(complete),
-            ]);
-            instructions
         }
         MirType::Class(class) => vec![
             Instruction::LoadEffectiveAddress {
@@ -462,12 +482,8 @@ fn lower_copier(
                 call::TraceAttribution::InheritedSourceOperation,
             ),
         ],
-        MirType::OptionalClass(class) => {
-            lower_optional_class_copier(program, array, class, source, destination, data_layout)?
-        }
         MirType::Array(inner) => lower_nested_array_copier(array, inner, source, destination),
         MirType::Shared(_) => lower_shared_copier(array, source, destination, false),
-        MirType::OptionalShared(_) => lower_shared_copier(array, source, destination, true),
         MirType::Interface(_) | MirType::Obj | MirType::Unit => {
             return Err(helper_error(format!(
                 "array {array} has an unsupported copy element {element}"
@@ -504,7 +520,10 @@ fn lower_optional_class_copier(
     destination: Operand,
     data_layout: &DataLayout,
 ) -> Result<Vec<Instruction>, BackendError> {
-    let payload_offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
+    let optional = program
+        .optional_for_payload(MirType::Class(class))
+        .expect("verified optional-class array metadata exists");
+    let payload_offset = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
         .map_err(|_| helper_error("optional class payload offset exceeds x86-64"))?;
     let source_payload = offset_operand(source, payload_offset)?;
     let destination_payload = offset_operand(destination, payload_offset)?;
@@ -696,12 +715,7 @@ fn lower_destroyer(
         )
     };
     let mut instructions = match element {
-        MirType::I64
-        | MirType::U64
-        | MirType::U8
-        | MirType::F64
-        | MirType::Bool
-        | MirType::OptionalPrimitive(_) => Vec::new(),
+        MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool => Vec::new(),
         MirType::Class(class) => vec![
             Instruction::LoadEffectiveAddress {
                 source: element_address,
@@ -712,36 +726,67 @@ fn lower_destroyer(
                 call::TraceAttribution::InheritedSourceOperation,
             ),
         ],
-        MirType::OptionalClass(class) => {
-            let payload_offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
+        MirType::Optional(optional) => {
+            let metadata = program
+                .optional_type(optional)
+                .expect("verified optional array element metadata exists");
+            if metadata.primitive().is_some() {
+                Vec::new()
+            } else if let Some(class) = metadata.inline_class() {
+                let payload_offset = i32::try_from(
+                    data_layout.optional_type(optional)?.payload_offset(),
+                )
                 .map_err(|_| helper_error("optional class payload offset exceeds x86-64"))?;
-            let present = Label::new(format!(
-                ".Lska_array_{}_destroy_optional_present",
-                array.index()
-            ));
-            let complete = Label::new(format!(
-                ".Lska_array_{}_destroy_optional_complete",
-                array.index()
-            ));
-            vec![
-                Instruction::Move {
-                    source: element_address,
-                    destination: Register::Rax.into(),
-                },
-                Instruction::Test(Register::Rax),
-                Instruction::JumpIfNotZero(present.clone()),
-                Instruction::Jump(complete.clone()),
-                Instruction::Label(present),
-                Instruction::LoadEffectiveAddress {
-                    source: offset_operand(element_address, payload_offset)?,
-                    destination: Register::Rdi,
-                },
-                call::direct_instruction(
-                    symbol::complete_finalizer(program, class),
-                    call::TraceAttribution::InheritedSourceOperation,
-                ),
-                Instruction::Label(complete),
-            ]
+                let present = Label::new(format!(
+                    ".Lska_array_{}_destroy_optional_present",
+                    array.index()
+                ));
+                let complete = Label::new(format!(
+                    ".Lska_array_{}_destroy_optional_complete",
+                    array.index()
+                ));
+                vec![
+                    Instruction::Move {
+                        source: element_address,
+                        destination: Register::Rax.into(),
+                    },
+                    Instruction::Test(Register::Rax),
+                    Instruction::JumpIfNotZero(present.clone()),
+                    Instruction::Jump(complete.clone()),
+                    Instruction::Label(present),
+                    Instruction::LoadEffectiveAddress {
+                        source: offset_operand(element_address, payload_offset)?,
+                        destination: Register::Rdi,
+                    },
+                    call::direct_instruction(
+                        symbol::complete_finalizer(program, class),
+                        call::TraceAttribution::InheritedSourceOperation,
+                    ),
+                    Instruction::Label(complete),
+                ]
+            } else if metadata.shared_owner().is_some() {
+                let complete = Label::new(format!(
+                    ".Lska_array_{}_destroy_optional_shared_complete",
+                    array.index()
+                ));
+                vec![
+                    Instruction::Move {
+                        source: element_address,
+                        destination: Register::Rdi.into(),
+                    },
+                    Instruction::Test(Register::Rdi),
+                    Instruction::JumpIfEqual(complete.clone()),
+                    call::direct_instruction(
+                        symbol::shared_handle_release(),
+                        call::TraceAttribution::InheritedSourceOperation,
+                    ),
+                    Instruction::Label(complete),
+                ]
+            } else {
+                return Err(helper_error(format!(
+                    "array {array} has a gated optional destruction element {element}"
+                )));
+            }
         }
         MirType::Array(inner) => vec![
             Instruction::Move {
@@ -763,25 +808,6 @@ fn lower_destroyer(
                 call::TraceAttribution::InheritedSourceOperation,
             ),
         ],
-        MirType::OptionalShared(_) => {
-            let complete = Label::new(format!(
-                ".Lska_array_{}_destroy_optional_shared_complete",
-                array.index()
-            ));
-            vec![
-                Instruction::Move {
-                    source: element_address,
-                    destination: Register::Rdi.into(),
-                },
-                Instruction::Test(Register::Rdi),
-                Instruction::JumpIfEqual(complete.clone()),
-                call::direct_instruction(
-                    symbol::shared_handle_release(),
-                    call::TraceAttribution::InheritedSourceOperation,
-                ),
-                Instruction::Label(complete),
-            ]
-        }
         MirType::Interface(_) | MirType::Obj | MirType::Unit => {
             return Err(helper_error(format!(
                 "array {array} has unsupported destruction element {element}"

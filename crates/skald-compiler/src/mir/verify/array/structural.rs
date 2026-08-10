@@ -55,11 +55,10 @@ impl Verifier<'_> {
 
     fn verify_array_referenced_type(&mut self, ty: MirType, role: &str) {
         let declared = match ty {
-            MirType::Class(class) | MirType::OptionalClass(class) => {
-                self.program.class(class).is_some()
-            }
+            MirType::Class(class) => self.program.class(class).is_some(),
+            MirType::Optional(optional) => self.program.optional_type(optional).is_some(),
             MirType::Array(array) => self.program.array_type(array).is_some(),
-            MirType::Shared(target) | MirType::OptionalShared(target) => match target {
+            MirType::Shared(target) => match target {
                 crate::mir::MirSharedTarget::Class(class) => self.program.class(class).is_some(),
                 crate::mir::MirSharedTarget::Interface(interface) => {
                     self.program.interface(interface).is_some()

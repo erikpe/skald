@@ -412,13 +412,16 @@ fn verifier_rejects_lost_duplicate_and_incompatible_conditional_optional_state()
     assert!(errors.contains("class optional cleanup destination is not definitely initialized"));
 
     let mut incompatible = valid;
+    let optional_class = incompatible
+        .optional_for_payload(MirType::Class(ClassId::new(0)))
+        .unwrap();
     let definition = incompatible.definitions.get_mut_for_test(evaluate).unwrap();
     let right_storage = definition
         .storage
         .iter()
         .filter(|storage| {
             storage.kind == MirStorageKind::Temporary
-                && matches!(storage.ty, MirType::OptionalClass(_))
+                && storage.ty == MirType::Optional(optional_class)
         })
         .map(|storage| storage.id)
         .max_by_key(|storage| storage.index())

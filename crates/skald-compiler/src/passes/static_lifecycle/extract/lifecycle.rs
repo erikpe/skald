@@ -27,7 +27,12 @@ impl Extractor<'_> {
                             .field(field)
                             .expect("verified destruction field must exist");
                         let target = match declaration.ty {
-                            MirType::Class(class) | MirType::OptionalClass(class) => class,
+                            MirType::Class(class) => class,
+                            MirType::Optional(optional) => self
+                                .program
+                                .optional_type(optional)
+                                .and_then(crate::mir::MirOptionalType::inline_class)
+                                .expect("verified optional-class destruction step must be typed"),
                             _ => unreachable!("verified class destruction step must be typed"),
                         };
                         self.add_edge(
@@ -48,7 +53,12 @@ impl Extractor<'_> {
                             .field(field)
                             .expect("verified shared destruction field must exist");
                         let target = match declaration.ty {
-                            MirType::Shared(target) | MirType::OptionalShared(target) => target,
+                            MirType::Shared(target) => target,
+                            MirType::Optional(optional) => self
+                                .program
+                                .optional_type(optional)
+                                .and_then(crate::mir::MirOptionalType::shared_owner)
+                                .expect("verified optional-owner destruction step must be typed"),
                             _ => unreachable!("verified shared destruction step must be typed"),
                         };
                         self.add_shared_finalizers(

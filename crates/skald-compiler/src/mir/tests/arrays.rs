@@ -3,6 +3,7 @@ use super::*;
 fn array_program() -> MirProgram {
     lower_text(concat!(
         "fn exercise() -> i64 {\n",
+        "  var maybe: i64? = none;\n",
         "  var values: i64[] = i64[](2u);\n",
         "  values[0] = 7;\n",
         "  return values[0];\n",
@@ -130,8 +131,8 @@ fn verifier_rejects_array_table_type_storage_prefix_and_publication_mutations() 
     assert!(errors.contains("array type table index"));
 
     let errors = error_after(|program| {
-        program.array_types.entries_mut_for_test()[0].element =
-            MirType::OptionalPrimitive(MirPrimitiveType::I64);
+        let optional = program.optional_for_payload(MirType::I64).unwrap();
+        program.array_types.entries_mut_for_test()[0].element = MirType::Optional(optional);
     });
     assert!(errors.contains("lifecycle is incompatible"));
 

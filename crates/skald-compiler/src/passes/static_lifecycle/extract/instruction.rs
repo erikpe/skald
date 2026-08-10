@@ -209,7 +209,7 @@ impl Extractor<'_> {
             }
             MirInstruction::SharedRelease(release) => {
                 if let Some(storage) = definition.storage(release.owner) {
-                    if let MirType::Shared(target) | MirType::OptionalShared(target) = storage.ty {
+                    if let MirType::Shared(target) = storage.ty {
                         self.add_shared_finalizers(
                             source,
                             target,
@@ -217,6 +217,21 @@ impl Extractor<'_> {
                             phase,
                             span,
                         );
+                    }
+                    if let MirType::Optional(optional) = storage.ty {
+                        if let Some(target) = self
+                            .program
+                            .optional_type(optional)
+                            .and_then(crate::mir::MirOptionalType::shared_owner)
+                        {
+                            self.add_shared_finalizers(
+                                source,
+                                target,
+                                StaticEffectEdgeKind::SharedFinalizer,
+                                phase,
+                                span,
+                            );
+                        }
                     }
                 }
             }
@@ -237,7 +252,7 @@ impl Extractor<'_> {
                     StaticAccessKind::Replace,
                     span,
                 );
-                if let Some(MirType::Shared(target) | MirType::OptionalShared(target)) =
+                if let Some(MirType::Shared(target)) =
                     self.place_type(definition, &replace.destination)
                 {
                     self.add_shared_finalizers(

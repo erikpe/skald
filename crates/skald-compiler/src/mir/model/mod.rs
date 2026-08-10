@@ -11,6 +11,7 @@ mod interface;
 mod io;
 mod logical;
 mod optional;
+mod optional_type;
 mod path_condition;
 mod preliminary;
 mod primitive;
@@ -64,6 +65,13 @@ pub use optional::{
     MirOptionalSharedAssign, MirOptionalSharedCleanup, MirOptionalSharedInitialize,
     MirOptionalSharedSource, MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin,
     MirOptionalViewEnd, MirPresenceTestKind,
+};
+pub use optional_type::{
+    MirOptionalAssignmentPlan, MirOptionalBoundaryPlan, MirOptionalBoundaryPlans,
+    MirOptionalCheckedAccess, MirOptionalCleanupPlan, MirOptionalCopyPlan,
+    MirOptionalInitializationPlan, MirOptionalInjectionPlan, MirOptionalLifecycle,
+    MirOptionalPresencePlan, MirOptionalRepresentation, MirOptionalStorage, MirOptionalType,
+    MirOptionalTypeTable, MirOptionalUnwrapPlan,
 };
 pub use path_condition::MirPathCondition;
 pub use preliminary::{

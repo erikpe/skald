@@ -137,11 +137,15 @@ fn inline_optional_statics_are_always_live_typed_roots() {
     let state = program.class(ClassId::new(1)).unwrap();
     assert_eq!(
         state.static_fields[0].ty,
-        MirType::OptionalPrimitive(MirPrimitiveType::I64)
+        MirType::Optional(program.optional_for_payload(MirType::I64).unwrap())
     );
     assert_eq!(
         state.static_fields[1].ty,
-        MirType::OptionalClass(ClassId::new(0))
+        MirType::Optional(
+            program
+                .optional_for_payload(MirType::Class(ClassId::new(0)))
+                .unwrap()
+        )
     );
 
     let dump = dump_mir(&program);
@@ -217,12 +221,16 @@ fn optional_shared_statics_are_initialized_program_owned_containers() {
     let field = &program.class(ClassId::new(1)).unwrap().static_fields[0];
     assert_eq!(
         field.ty,
-        MirType::OptionalShared(MirSharedTarget::Class(ClassId::new(0)))
+        MirType::Optional(
+            program
+                .optional_for_payload(MirType::Shared(MirSharedTarget::Class(ClassId::new(0))))
+                .unwrap()
+        )
     );
     let dump = dump_mir(&program);
     assert!(dump.contains("static(c1:static0)"), "{dump}");
     assert!(
-        dump.contains("optional-shared-assign static(c1:static0)"),
+        dump.contains("optional-shared-assign o0 static(c1:static0)"),
         "{dump}"
     );
     assert!(
@@ -249,8 +257,13 @@ fn verifier_rejects_nonoptional_and_mistyped_shared_static_roots() {
         .contains("unsupported MIR type"));
 
     let mut mistyped = lower_text(source);
-    mistyped.classes.entries_mut_for_test()[1].static_fields[0].ty =
-        MirType::OptionalShared(MirSharedTarget::Obj);
+    let optional = mistyped
+        .optional_for_payload(MirType::Shared(MirSharedTarget::Class(ClassId::new(0))))
+        .unwrap();
+    mistyped.optional_types.entries_mut_for_test()[optional.index()].payload =
+        MirType::Shared(MirSharedTarget::Obj);
+    mistyped.optional_types.entries_mut_for_test()[optional.index()].storage =
+        crate::mir::MirOptionalStorage::SharedOwner(MirSharedTarget::Obj);
     assert!(verify_mir(&mistyped)
         .unwrap_err()
         .to_string()

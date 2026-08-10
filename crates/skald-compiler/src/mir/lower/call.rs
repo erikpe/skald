@@ -399,7 +399,8 @@ impl BodyLowerer<'_> {
                     }
                 }
                 HirCallArgument::Optional { source, payload } => {
-                    let ty = MirType::OptionalPrimitive(super::primitive::lower_primitive_type(
+                    let ty = MirType::Optional(optional_types::scalar_id(
+                        self.input.optional_types,
                         *payload,
                     ));
                     let storage = self.new_optional_storage(
@@ -420,7 +421,10 @@ impl BodyLowerer<'_> {
                     let storage = self.new_optional_storage(
                         MirStorageKind::Argument,
                         "class-optional-argument",
-                        MirType::OptionalClass(value.class),
+                        MirType::Optional(optional_types::class_id(
+                            self.input.optional_types,
+                            value.class,
+                        )),
                         value.span,
                     );
                     self.lower_class_optional_initialize(storage, value);
@@ -430,7 +434,10 @@ impl BodyLowerer<'_> {
                     let storage = self.new_optional_storage(
                         MirStorageKind::Argument,
                         "optional-shared-argument",
-                        MirType::OptionalShared(super::lower_shared_target(value.target)),
+                        MirType::Optional(optional_types::shared_id(
+                            self.input.optional_types,
+                            value.target,
+                        )),
                         value.span,
                     );
                     self.lower_optional_shared_initialize(storage, value);
@@ -538,9 +545,10 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
         let produced_class = match &view.source {
             HirViewSource::Produced { producer, .. } => Some(producer.class()),
-            HirViewSource::OptionalPayload { view, .. } => {
-                Some(self.input.optional_adapter.operand_class(&view.source))
-            }
+            HirViewSource::OptionalPayload { view, .. } => Some(optional_types::class_payload(
+                self.input.optional_types,
+                &view.source,
+            )),
             _ => None,
         };
         let source = match &view.source {

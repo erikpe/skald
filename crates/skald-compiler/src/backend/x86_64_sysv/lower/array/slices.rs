@@ -413,6 +413,10 @@ impl InstructionSelector<'_, '_> {
                 copy_constructor,
                 copy_assignment,
             } => self.select_class_optional_assign(&MirClassOptionalAssign {
+                optional: self
+                    .program
+                    .optional_for_payload(MirType::Class(class))
+                    .expect("verified optional-class array metadata exists"),
                 destination,
                 source: MirClassOptionalSource::Copy(source),
                 class,
@@ -428,6 +432,10 @@ impl InstructionSelector<'_, '_> {
             }
             MirArrayAssignElement::OptionalShared(target) => {
                 self.select_optional_shared_assign(&MirOptionalSharedAssign {
+                    optional: self
+                        .program
+                        .optional_for_payload(MirType::Shared(target))
+                        .expect("verified optional-owner array metadata exists"),
                     destination,
                     source: MirOptionalSharedSource::Copy(source),
                     target,

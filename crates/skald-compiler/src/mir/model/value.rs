@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    identity::{ArrayTypeId, ClassId, FieldId, InterfaceId, StaticFieldId},
+    identity::{ArrayTypeId, ClassId, FieldId, InterfaceId, OptionalTypeId, StaticFieldId},
     source::Span,
 };
 
@@ -26,9 +26,7 @@ pub enum MirType {
     Obj,
     /// A non-null strong owner carrying one object view of a live allocation.
     Shared(super::shared::MirSharedTarget),
-    OptionalShared(super::shared::MirSharedTarget),
-    OptionalPrimitive(super::MirPrimitiveType),
-    OptionalClass(ClassId),
+    Optional(OptionalTypeId),
     Unit,
 }
 
@@ -41,10 +39,8 @@ impl MirType {
                 | Self::Interface(_)
                 | Self::Obj
                 | Self::Shared(_)
-                | Self::OptionalShared(_)
                 | Self::Unit
-                | Self::OptionalPrimitive(_)
-                | Self::OptionalClass(_)
+                | Self::Optional(_)
         )
     }
 }
@@ -62,9 +58,7 @@ impl fmt::Display for MirType {
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Obj => formatter.write_str("Obj"),
             Self::Shared(target) => write!(formatter, "shared {target}"),
-            Self::OptionalShared(target) => write!(formatter, "shared? {target}"),
-            Self::OptionalPrimitive(payload) => write!(formatter, "{payload}?"),
-            Self::OptionalClass(class) => write!(formatter, "class {class}?"),
+            Self::Optional(optional) => write!(formatter, "optional {optional}"),
             Self::Unit => formatter.write_str("unit"),
         }
     }

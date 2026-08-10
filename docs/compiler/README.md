@@ -145,13 +145,13 @@ optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
 zero-niche optional owners, and exact virtual/interface signatures.
 
-That same contract freezes the remaining migration from canonical typed-HIR
-optional identities and recursive lifecycle plans to generalized executable
-MIR, followed by arbitrary nesting and optional inline arrays. Deferred
-recursive payloads receive resolved identities and typed lifecycle plans but
-currently stop at the type-checking eligibility gate; existing programs cross
-an exhaustive HIR-to-legacy-MIR adapter unchanged. The frozen
-work adds no shared box target for `shared T?` and no C runtime ABI surface.
+That same contract now carries canonical optional identities and recursive
+lifecycle plans through generalized executable MIR and x86-64 realization.
+Distinct scalar, aggregate, and shared-owner operations remain only where the
+runtime work differs. Deferred recursive payloads receive identities and typed
+lifecycle plans but still stop at the type-checking eligibility gate before
+executable bodies; optional arrays are gated there as well. The frozen work
+adds no shared box target for `shared T?` and no C runtime ABI surface.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
