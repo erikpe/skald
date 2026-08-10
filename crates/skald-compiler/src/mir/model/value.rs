@@ -152,9 +152,9 @@ impl MirPlace {
         self
     }
 
-    pub fn project_nested_optional_payload(mut self, optional: OptionalTypeId) -> Self {
+    pub fn project_aggregate_optional_payload(mut self, optional: OptionalTypeId) -> Self {
         self.projections
-            .push(MirPlaceProjection::NestedOptionalPayload(optional));
+            .push(MirPlaceProjection::AggregateOptionalPayload(optional));
         self
     }
 
@@ -238,7 +238,7 @@ pub enum MirPlaceProjection {
     /// Selects the reserved payload bytes of an inline-class optional.
     OptionalPayload(ClassId),
     /// Selects the immediate payload storage of an exact recursive optional.
-    NestedOptionalPayload(OptionalTypeId),
+    AggregateOptionalPayload(OptionalTypeId),
     /// Selects a non-owning payload while its presence guard is active.
     CheckedOptionalPayload(OptionalTypeId),
     ArrayElement {

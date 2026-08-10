@@ -161,20 +161,20 @@ impl InitializationState {
                 MirInstruction::OptionalInitialize(initialize) => {
                     self.insert(initialize.destination.clone());
                 }
-                MirInstruction::NestedOptionalInitialize(initialize) => {
+                MirInstruction::AggregateOptionalInitialize(initialize) => {
                     if matches!(
                         initialize.source,
-                        crate::mir::MirNestedOptionalSource::Unpublished
+                        crate::mir::MirAggregateOptionalSource::Unpublished
                     ) {
                         self.reserve(initialize.destination.clone());
                     } else {
                         self.insert(initialize.destination.clone());
                     }
                 }
-                MirInstruction::NestedOptionalPublish(publish) => {
+                MirInstruction::AggregateOptionalPublish(publish) => {
                     self.publish(&publish.destination);
                 }
-                MirInstruction::NestedOptionalCleanup(cleanup) => {
+                MirInstruction::AggregateOptionalCleanup(cleanup) => {
                     self.remove(&cleanup.destination);
                 }
                 MirInstruction::ClassOptionalInitialize(initialize) => {
@@ -312,17 +312,17 @@ impl InitializationState {
                             self.seed_projected(source);
                         }
                     }
-                    MirInstruction::NestedOptionalInitialize(initialize) => {
+                    MirInstruction::AggregateOptionalInitialize(initialize) => {
                         self.seed_projected(&initialize.destination);
-                        if let crate::mir::MirNestedOptionalSource::Copy(source) =
+                        if let crate::mir::MirAggregateOptionalSource::Copy(source) =
                             &initialize.source
                         {
                             self.seed_projected(source);
                         }
                     }
-                    MirInstruction::NestedOptionalAssign(assignment) => {
+                    MirInstruction::AggregateOptionalAssign(assignment) => {
                         self.seed_projected(&assignment.destination);
-                        if let crate::mir::MirNestedOptionalSource::Copy(source) =
+                        if let crate::mir::MirAggregateOptionalSource::Copy(source) =
                             &assignment.source
                         {
                             self.seed_projected(source);

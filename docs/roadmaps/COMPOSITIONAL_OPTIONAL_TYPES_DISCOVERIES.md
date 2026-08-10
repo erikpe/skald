@@ -1,6 +1,6 @@
 # Compositional Optional Types Discoveries
 
-Status: pending; two lower-priority maintainability follow-ups remain.
+Status: pending; one lower-priority maintainability follow-up remains.
 
 These findings were recorded while closing the compositional optional type
 work. Neither changes the implemented language contract or fixes a known
@@ -10,6 +10,8 @@ roadmap.
 ## Use payload-neutral names for aggregate optional operations
 
 **Priority:** Medium.
+
+**Status:** Resolved.
 
 **Problem:** HIR and MIR operations named `NestedOptional*` now implement both
 nested-optional and optional-array lifecycle. Deterministic dumps consequently
@@ -30,6 +32,16 @@ to `AggregateOptional*` in one behavior-preserving change. Preserve optional
 identities, operation order, diagnostics, verification, assembly, and native
 behavior; update deterministic dump expectations atomically. Keep genuinely
 nested source tests named for nested optionals.
+
+**Resolution:** HIR operands, initialization and assignment operations, MIR
+sources, instructions and payload projections, cleanup planning, verification,
+static lifecycle, generated array-helper selection, and backend lowering now
+use `AggregateOptional*` and `aggregate_optional_*`. HIR and MIR dumps use
+`AggregateOptional*` and `aggregate-optional-*`. The genuinely nested
+`HirNestedOptionalUnwrap` operation, source diagnostics, generated helper
+symbols, instruction order, and native behavior remain unchanged. Focused
+dump, verifier, backend, static-lifecycle, and independent-process determinism
+tests plus the complete repository and MSRV gates pass.
 
 ## Split large optional and array-helper lowering owners
 

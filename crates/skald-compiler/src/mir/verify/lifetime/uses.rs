@@ -101,16 +101,20 @@ pub(super) fn visit_instruction_storage(
             visit_place(&assignment.destination, visit);
             visit_optional_source(&assignment.source, visit);
         }
-        MirInstruction::NestedOptionalInitialize(initialize) => {
+        MirInstruction::AggregateOptionalInitialize(initialize) => {
             visit_place(&initialize.destination, visit);
-            visit_nested_optional_source(&initialize.source, visit);
+            visit_aggregate_optional_source(&initialize.source, visit);
         }
-        MirInstruction::NestedOptionalAssign(assignment) => {
+        MirInstruction::AggregateOptionalAssign(assignment) => {
             visit_place(&assignment.destination, visit);
-            visit_nested_optional_source(&assignment.source, visit);
+            visit_aggregate_optional_source(&assignment.source, visit);
         }
-        MirInstruction::NestedOptionalPublish(publish) => visit_place(&publish.destination, visit),
-        MirInstruction::NestedOptionalCleanup(cleanup) => visit_place(&cleanup.destination, visit),
+        MirInstruction::AggregateOptionalPublish(publish) => {
+            visit_place(&publish.destination, visit)
+        }
+        MirInstruction::AggregateOptionalCleanup(cleanup) => {
+            visit_place(&cleanup.destination, visit)
+        }
         MirInstruction::ClassOptionalInitialize(initialize) => {
             visit_place(&initialize.destination, visit);
             visit_class_optional_source(&initialize.source, visit);
@@ -293,11 +297,11 @@ fn visit_optional_source(source: &MirOptionalSource, visit: &mut impl FnMut(Stor
     }
 }
 
-fn visit_nested_optional_source(
-    source: &MirNestedOptionalSource,
+fn visit_aggregate_optional_source(
+    source: &MirAggregateOptionalSource,
     visit: &mut impl FnMut(StorageId),
 ) {
-    if let MirNestedOptionalSource::Copy(place) = source {
+    if let MirAggregateOptionalSource::Copy(place) = source {
         visit_place(place, visit);
     }
 }

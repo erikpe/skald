@@ -409,7 +409,7 @@ impl CallableChecker<'_, '_> {
                                 source,
                                 "aggregate optional argument",
                             )
-                            .map(HirCallArgument::NestedOptional)
+                            .map(HirCallArgument::AggregateOptional)
                         }
                     };
                 }

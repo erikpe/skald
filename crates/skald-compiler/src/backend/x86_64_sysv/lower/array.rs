@@ -197,11 +197,11 @@ impl InstructionSelector<'_, '_> {
                             }
                             crate::mir::MirOptionalStorage::InlineArray(_)
                             | crate::mir::MirOptionalStorage::Nested(_) => {
-                                self.select_nested_optional_initialize(
-                                    &crate::mir::MirNestedOptionalInitialize {
+                                self.select_aggregate_optional_initialize(
+                                    &crate::mir::MirAggregateOptionalInitialize {
                                         optional,
                                         destination,
-                                        source: crate::mir::MirNestedOptionalSource::Absent,
+                                        source: crate::mir::MirAggregateOptionalSource::Absent,
                                         span: *span,
                                     },
                                 )?;
@@ -287,11 +287,11 @@ impl InstructionSelector<'_, '_> {
                         })?;
                     }
                     MirArrayCopyElement::Optional(optional) => {
-                        self.select_nested_optional_initialize(
-                            &crate::mir::MirNestedOptionalInitialize {
+                        self.select_aggregate_optional_initialize(
+                            &crate::mir::MirAggregateOptionalInitialize {
                                 optional,
                                 destination,
-                                source: crate::mir::MirNestedOptionalSource::Copy(source),
+                                source: crate::mir::MirAggregateOptionalSource::Copy(source),
                                 span: *span,
                             },
                         )?;
@@ -431,8 +431,8 @@ impl InstructionSelector<'_, '_> {
                         })?;
                     }
                     MirArrayDestroyElement::Optional(optional) => {
-                        self.select_nested_optional_cleanup(
-                            &crate::mir::MirNestedOptionalCleanup {
+                        self.select_aggregate_optional_cleanup(
+                            &crate::mir::MirAggregateOptionalCleanup {
                                 optional,
                                 destination: element,
                                 span: *span,
@@ -850,7 +850,7 @@ impl InstructionSelector<'_, '_> {
                         checked_array_displacement(displacement, offset, self.function.callable())?;
                     ty = MirType::Class(base);
                 }
-                MirPlaceProjection::NestedOptionalPayload(optional)
+                MirPlaceProjection::AggregateOptionalPayload(optional)
                 | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     let offset = self.data_layout.optional_type(optional)?.payload_offset();
                     displacement =
@@ -1165,7 +1165,7 @@ fn array_for_place(
             MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
                 MirType::Class(class)
             }
-            MirPlaceProjection::NestedOptionalPayload(optional)
+            MirPlaceProjection::AggregateOptionalPayload(optional)
             | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                 program
                     .optional_type(optional)

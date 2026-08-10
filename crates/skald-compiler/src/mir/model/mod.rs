@@ -60,10 +60,10 @@ pub use interface::{
 pub use io::{MirIoBuffer, MirIoInstruction, MirIoOperation};
 pub use logical::{MirLogicalExpression, MirLogicalOperation};
 pub use optional::{
-    MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
-    MirClassOptionalPublish, MirClassOptionalSource, MirNestedOptionalAssign,
-    MirNestedOptionalCleanup, MirNestedOptionalInitialize, MirNestedOptionalPublish,
-    MirNestedOptionalSource, MirOptionalAssign, MirOptionalInitialize, MirOptionalSharedAssign,
+    MirAggregateOptionalAssign, MirAggregateOptionalCleanup, MirAggregateOptionalInitialize,
+    MirAggregateOptionalPublish, MirAggregateOptionalSource, MirClassOptionalAssign,
+    MirClassOptionalCleanup, MirClassOptionalInitialize, MirClassOptionalPublish,
+    MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize, MirOptionalSharedAssign,
     MirOptionalSharedCleanup, MirOptionalSharedInitialize, MirOptionalSharedSource,
     MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin, MirOptionalViewEnd,
     MirPresenceTestKind,

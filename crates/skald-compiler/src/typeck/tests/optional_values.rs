@@ -509,10 +509,10 @@ fn nested_optional_construction_adds_exactly_one_present_layer() {
     );
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_hir(&output.hir.expect("nested optionals must produce HIR"));
-    assert!(dump.contains("NestedOptionalInitialization"));
+    assert!(dump.contains("AggregateOptionalInitialization"));
     assert!(dump.contains("Present"));
     assert!(dump.contains("Absent"));
-    assert!(dump.contains("NestedOptionalAssignment"));
+    assert!(dump.contains("AggregateOptionalAssignment"));
 }
 
 #[test]
@@ -544,8 +544,22 @@ fn optional_arrays_type_as_core_local_and_function_values() {
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_hir(&output.hir.expect("optional arrays must produce HIR"));
     assert!(dump.contains("OptionalArrayUnwrap"));
-    assert!(dump.contains("NestedOptionalAssignment"));
+    assert!(dump.contains("AggregateOptionalAssignment"));
+    assert!(!dump.contains("NestedOptionalInitialization"));
     assert!(dump.contains("ArrayConstruction"));
+}
+
+#[test]
+fn aggregate_operation_names_preserve_nested_optional_unwrap_semantics() {
+    let output = check_text(
+        "fn unwrap(value: i64??) -> i64? { return value!; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("nested unwrap must produce HIR"));
+
+    assert!(dump.contains("NestedOptionalUnwrap"), "{dump}");
+    assert!(dump.contains("AggregateOptionalPlace"), "{dump}");
 }
 
 #[test]
@@ -566,6 +580,6 @@ fn optional_arrays_type_across_aggregate_and_alias_positions() {
             .expect("aggregate optional arrays must produce HIR"),
     );
     assert!(dump.contains("OptionalField"));
-    assert!(dump.contains("NestedOptionalInitialization"));
+    assert!(dump.contains("AggregateOptionalInitialization"));
     assert!(dump.contains("array"));
 }

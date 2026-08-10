@@ -130,7 +130,7 @@ fn optional_presence_refinement(
     )
     .then(|| {
         (
-            source.clone().project_nested_optional_payload(optional),
+            source.clone().project_aggregate_optional_payload(optional),
             *kind == crate::mir::MirPresenceTestKind::Some,
         )
     })
@@ -157,7 +157,7 @@ fn optional_at_place(
             .then_some(MirType::Class(base))?,
             MirPlaceProjection::Field(field) => program.field(field)?.ty,
             MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
-            MirPlaceProjection::NestedOptionalPayload(optional)
+            MirPlaceProjection::AggregateOptionalPayload(optional)
             | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                 if ty != MirType::Optional(optional) {
                     return None;

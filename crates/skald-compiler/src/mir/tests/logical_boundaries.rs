@@ -334,13 +334,13 @@ fn replace_first_false_expression(
             HirOptionalOperand::Produced(expression)
             | HirOptionalOperand::ClassProduced(expression)
             | HirOptionalOperand::SharedProduced(expression)
-            | HirOptionalOperand::NestedProduced(expression) => {
+            | HirOptionalOperand::AggregateProduced(expression) => {
                 replace_first_false_expression(expression, replacement)
             }
             HirOptionalOperand::Place(_)
             | HirOptionalOperand::ClassPlace(_)
             | HirOptionalOperand::SharedPlace(_)
-            | HirOptionalOperand::NestedPlace(_) => false,
+            | HirOptionalOperand::AggregatePlace(_) => false,
         },
         HirExpressionKind::ArrayElement(element) => {
             replace_first_false_expression(&mut element.index.value, replacement)

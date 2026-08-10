@@ -201,7 +201,7 @@ pub enum HirStatement {
     OptionalAssignment(HirOptionalAssignment),
     ClassOptionalAssignment(HirClassOptionalAssignment),
     OptionalSharedAssignment(HirOptionalSharedAssignment),
-    NestedOptionalAssignment(super::HirNestedOptionalAssignment),
+    AggregateOptionalAssignment(super::HirAggregateOptionalAssignment),
     ArrayFieldInitialize(super::HirArrayFieldInitialize),
     ArrayAssignment(super::HirArrayAssignment),
     ArrayElementAssignment(Box<super::HirArrayElementAssignment>),
@@ -232,7 +232,7 @@ impl HirStatement {
             Self::OptionalAssignment(statement) => statement.span,
             Self::ClassOptionalAssignment(statement) => statement.span,
             Self::OptionalSharedAssignment(statement) => statement.span,
-            Self::NestedOptionalAssignment(statement) => statement.span,
+            Self::AggregateOptionalAssignment(statement) => statement.span,
             Self::ArrayFieldInitialize(statement) => statement.span,
             Self::ArrayAssignment(statement) => statement.span,
             Self::ArrayElementAssignment(statement) => statement.span,
@@ -282,7 +282,7 @@ pub enum HirLocalInitializer {
     Optional(HirOptionalSource),
     ClassOptional(HirClassOptionalInitialize),
     OptionalShared(HirOptionalSharedInitialize),
-    NestedOptional(Box<super::HirOptionalValue>),
+    AggregateOptional(Box<super::HirOptionalValue>),
     Array(HirArrayInitialize),
 }
 
@@ -312,7 +312,7 @@ pub enum HirReturnValue {
     Object(HirObjectReturn),
     Shared(HirSharedTransfer),
     OptionalShared(HirOptionalSharedInitialize),
-    NestedOptional(Box<super::HirOptionalValue>),
+    AggregateOptional(Box<super::HirOptionalValue>),
     Array(HirArrayInitialize),
 }
 

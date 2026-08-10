@@ -181,7 +181,7 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_initialize_at(destination, initialization);
             }
             HirStoredValueInitialization::Optional(value) => {
-                self.lower_nested_optional_initialize_at(destination, value);
+                self.lower_aggregate_optional_initialize_at(destination, value);
             }
         }
     }

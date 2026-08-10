@@ -86,9 +86,10 @@ fn lowers_optional_array_lifecycle_and_checked_copy_out() {
     let dump = dump_mir(&program);
 
     assert!(dump.contains("storage InlineArray"));
-    assert!(dump.contains("nested-optional-initialize"));
-    assert!(dump.contains("nested-optional-assign"));
-    assert!(dump.contains("nested-optional-cleanup"));
+    assert!(dump.contains("aggregate-optional-initialize"));
+    assert!(dump.contains("aggregate-optional-assign"));
+    assert!(dump.contains("aggregate-optional-cleanup"));
+    assert!(!dump.contains("nested-optional-"));
     assert!(dump.contains("array-copy"));
     assert!(dump.contains("terminate optional-access-failure"));
 }
@@ -123,7 +124,7 @@ fn verifier_rejects_optional_array_metadata_and_operation_mismatches() {
         .iter_mut()
         .flat_map(|block| &mut block.instructions)
         .find_map(|instruction| match instruction {
-            MirInstruction::NestedOptionalInitialize(initialize) => Some(initialize),
+            MirInstruction::AggregateOptionalInitialize(initialize) => Some(initialize),
             _ => None,
         })
         .expect("optional array local must use aggregate optional initialization");
@@ -394,9 +395,9 @@ fn verifier_requires_nested_optional_publication_after_payload_construction() {
         .get_mut_for_test(program.entry_function)
         .unwrap();
     for block in &mut main.body.blocks {
-        block
-            .instructions
-            .retain(|instruction| !matches!(instruction, MirInstruction::NestedOptionalPublish(_)));
+        block.instructions.retain(|instruction| {
+            !matches!(instruction, MirInstruction::AggregateOptionalPublish(_))
+        });
     }
     let errors = verify_mir(&program).unwrap_err().to_string();
     assert!(

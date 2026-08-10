@@ -369,7 +369,7 @@ pub enum HirArrayElementValue {
         payload: super::HirPrimitiveType,
     },
     ClassOptional(super::HirClassOptionalInitialize),
-    NestedOptional(Box<super::HirOptionalValue>),
+    AggregateOptional(Box<super::HirOptionalValue>),
     Object {
         source: super::HirObjectSource,
         operation: HirSelectedCopyOperation<CopyAssignmentId>,

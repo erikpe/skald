@@ -111,7 +111,7 @@ impl InstructionSelector<'_, '_> {
                         .ty
                 }
                 MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
-                MirPlaceProjection::NestedOptionalPayload(optional)
+                MirPlaceProjection::AggregateOptionalPayload(optional)
                 | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     self.program
                         .optional_type(optional)

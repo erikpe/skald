@@ -419,7 +419,7 @@ fn projected_place(
                     MirType::Class(class),
                 )
             }
-            MirPlaceProjection::NestedOptionalPayload(optional)
+            MirPlaceProjection::AggregateOptionalPayload(optional)
             | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                 if ty != MirType::Optional(optional) {
                     return Err(place_metadata_error(function.callable()));

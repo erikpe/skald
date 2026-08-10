@@ -78,8 +78,8 @@ fn verify_instruction(
             );
             require_initialized_source(verifier, function, block, &assignment.source, state);
         }
-        MirInstruction::NestedOptionalInitialize(initialize) => {
-            if let crate::mir::MirNestedOptionalSource::Copy(source) = &initialize.source {
+        MirInstruction::AggregateOptionalInitialize(initialize) => {
+            if let crate::mir::MirAggregateOptionalSource::Copy(source) = &initialize.source {
                 require_initialized(
                     verifier,
                     function,
@@ -91,7 +91,7 @@ fn verify_instruction(
             }
             let inserted = if matches!(
                 initialize.source,
-                crate::mir::MirNestedOptionalSource::Unpublished
+                crate::mir::MirAggregateOptionalSource::Unpublished
             ) {
                 state.reserve(initialize.destination.clone())
             } else {
@@ -105,7 +105,7 @@ fn verify_instruction(
                 );
             }
         }
-        MirInstruction::NestedOptionalAssign(assignment) => {
+        MirInstruction::AggregateOptionalAssign(assignment) => {
             require_initialized(
                 verifier,
                 function,
@@ -114,7 +114,7 @@ fn verify_instruction(
                 state,
                 "nested optional assignment destination",
             );
-            if let crate::mir::MirNestedOptionalSource::Copy(source) = &assignment.source {
+            if let crate::mir::MirAggregateOptionalSource::Copy(source) = &assignment.source {
                 require_initialized(
                     verifier,
                     function,
@@ -125,7 +125,7 @@ fn verify_instruction(
                 );
             }
         }
-        MirInstruction::NestedOptionalPublish(publish) => {
+        MirInstruction::AggregateOptionalPublish(publish) => {
             if !state.publish(&publish.destination) {
                 verifier.block_error(
                     function.callable(),
@@ -134,7 +134,7 @@ fn verify_instruction(
                 );
             }
         }
-        MirInstruction::NestedOptionalCleanup(cleanup) => {
+        MirInstruction::AggregateOptionalCleanup(cleanup) => {
             require_initialized(
                 verifier,
                 function,

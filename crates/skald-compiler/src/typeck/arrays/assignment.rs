@@ -270,7 +270,7 @@ impl CallableChecker<'_, '_> {
                         source,
                         "nested optional array element assignment",
                     )
-                    .map(|value| HirArrayElementValue::NestedOptional(Box::new(value)))
+                    .map(|value| HirArrayElementValue::AggregateOptional(Box::new(value)))
                 }
             },
             Type::Class(class) => {

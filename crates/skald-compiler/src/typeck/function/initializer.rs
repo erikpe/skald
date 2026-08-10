@@ -199,8 +199,8 @@ impl CallableChecker<'_, '_> {
                         },
                     )
                     .map(|value| {
-                        HirStatement::NestedOptionalAssignment(
-                            crate::hir::HirNestedOptionalAssignment {
+                        HirStatement::AggregateOptionalAssignment(
+                            crate::hir::HirAggregateOptionalAssignment {
                                 destination: crate::hir::HirOptionalValuePlace {
                                     storage: crate::hir::HirOptionalStorage::Field(
                                         target.place.clone(),

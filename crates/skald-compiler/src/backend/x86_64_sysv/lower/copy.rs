@@ -168,11 +168,11 @@ impl InstructionSelector<'_, '_> {
                             )?;
                         }
                         MirSynthesizedFieldCopy::Optional { field, optional } => {
-                            self.select_nested_optional_initialize(
-                                &crate::mir::MirNestedOptionalInitialize {
+                            self.select_aggregate_optional_initialize(
+                                &crate::mir::MirAggregateOptionalInitialize {
                                     optional,
                                     destination: destination.clone().project_field(field),
-                                    source: crate::mir::MirNestedOptionalSource::Copy(
+                                    source: crate::mir::MirAggregateOptionalSource::Copy(
                                         source.clone().project_field(field),
                                     ),
                                     span: self.function.span(),
@@ -331,11 +331,11 @@ impl InstructionSelector<'_, '_> {
                             )?;
                         }
                         MirSynthesizedFieldCopy::Optional { field, optional } => {
-                            self.select_nested_optional_assign(
-                                &crate::mir::MirNestedOptionalAssign {
+                            self.select_aggregate_optional_assign(
+                                &crate::mir::MirAggregateOptionalAssign {
                                     optional,
                                     destination: destination.clone().project_field(field),
-                                    source: crate::mir::MirNestedOptionalSource::Copy(
+                                    source: crate::mir::MirAggregateOptionalSource::Copy(
                                         source.clone().project_field(field),
                                     ),
                                     span: self.function.span(),

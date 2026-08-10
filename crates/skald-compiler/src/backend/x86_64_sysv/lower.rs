@@ -318,17 +318,17 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::OptionalAssign(assignment) => {
                 self.select_optional_assign(assignment)?
             }
-            MirInstruction::NestedOptionalInitialize(initialize) => {
-                self.select_nested_optional_initialize(initialize)?
+            MirInstruction::AggregateOptionalInitialize(initialize) => {
+                self.select_aggregate_optional_initialize(initialize)?
             }
-            MirInstruction::NestedOptionalAssign(assignment) => {
-                self.select_nested_optional_assign(assignment)?
+            MirInstruction::AggregateOptionalAssign(assignment) => {
+                self.select_aggregate_optional_assign(assignment)?
             }
-            MirInstruction::NestedOptionalPublish(publish) => {
-                self.select_nested_optional_publish(publish)?
+            MirInstruction::AggregateOptionalPublish(publish) => {
+                self.select_aggregate_optional_publish(publish)?
             }
-            MirInstruction::NestedOptionalCleanup(cleanup) => {
-                self.select_nested_optional_cleanup(cleanup)?
+            MirInstruction::AggregateOptionalCleanup(cleanup) => {
+                self.select_aggregate_optional_cleanup(cleanup)?
             }
             MirInstruction::OptionalSharedInitialize(initialize) => {
                 self.select_optional_shared_initialize(initialize)?

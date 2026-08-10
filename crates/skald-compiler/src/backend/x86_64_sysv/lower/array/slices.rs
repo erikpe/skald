@@ -443,10 +443,10 @@ impl InstructionSelector<'_, '_> {
                 })
             }
             MirArrayAssignElement::Optional(optional) => {
-                self.select_nested_optional_assign(&crate::mir::MirNestedOptionalAssign {
+                self.select_aggregate_optional_assign(&crate::mir::MirAggregateOptionalAssign {
                     optional,
                     destination,
-                    source: crate::mir::MirNestedOptionalSource::Copy(source),
+                    source: crate::mir::MirAggregateOptionalSource::Copy(source),
                     span,
                 })
             }
@@ -476,7 +476,7 @@ impl InstructionSelector<'_, '_> {
                 MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
                     MirType::Class(class)
                 }
-                MirPlaceProjection::NestedOptionalPayload(optional)
+                MirPlaceProjection::AggregateOptionalPayload(optional)
                 | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     self.program
                         .optional_type(optional)

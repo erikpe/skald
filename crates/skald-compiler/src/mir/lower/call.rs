@@ -453,14 +453,14 @@ impl BodyLowerer<'_> {
                     self.lower_optional_shared_initialize(storage, value);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
-                HirCallArgument::NestedOptional(value) => {
+                HirCallArgument::AggregateOptional(value) => {
                     let storage = self.new_optional_storage(
                         MirStorageKind::Argument,
-                        "nested-optional-argument",
+                        "aggregate-optional-argument",
                         MirType::Optional(value.optional),
                         value.span,
                     );
-                    self.lower_nested_optional_initialize_at(MirPlace::base(storage), value);
+                    self.lower_aggregate_optional_initialize_at(MirPlace::base(storage), value);
                     LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
                 }
                 HirCallArgument::OptionalPlace(place) => {
@@ -472,7 +472,7 @@ impl BodyLowerer<'_> {
                             self.lower_class_optional_place(place)
                         }
                         crate::hir::HirOptionalAliasPlace::Nested(place) => {
-                            self.lower_nested_optional_place(place)
+                            self.lower_aggregate_optional_place(place)
                         }
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))

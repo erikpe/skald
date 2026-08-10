@@ -177,8 +177,8 @@ fn lower_cleanup(
             ));
             output.push(Instruction::Label(complete));
         }
-        MirStaticValueCleanup::NestedOptional(cleanup) => {
-            lower_nested_optional_cleanup(
+        MirStaticValueCleanup::AggregateOptional(cleanup) => {
+            lower_aggregate_optional_cleanup(
                 program,
                 data_layout,
                 field,
@@ -203,7 +203,7 @@ fn lower_cleanup(
     Ok(())
 }
 
-fn lower_nested_optional_cleanup(
+fn lower_aggregate_optional_cleanup(
     program: &MirProgram,
     data_layout: &DataLayout,
     field: crate::identity::StaticFieldId,
@@ -290,7 +290,7 @@ fn lower_nested_optional_cleanup(
                 data_layout.optional_type(optional)?.payload_offset(),
                 "optional payload",
             )?;
-            lower_nested_optional_cleanup(
+            lower_aggregate_optional_cleanup(
                 program,
                 data_layout,
                 field,

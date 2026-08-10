@@ -7,12 +7,11 @@ use crate::{
         HirOptionalSource, HirOptionalStorage, HirPresenceTestKind, Type,
     },
     mir::{
-        MirClassOptionalAssign, MirClassOptionalInitialize, MirClassOptionalPublish,
-        MirClassOptionalSource, MirInstruction, MirNestedOptionalAssign,
-        MirNestedOptionalInitialize, MirNestedOptionalPublish, MirNestedOptionalSource,
-        MirOptionalAssign, MirOptionalInitialize, MirOptionalSource, MirPresenceTestKind,
-        MirRvalueKind, MirStorage, MirStorageKind, MirTerminationReason, MirTerminator, MirType,
-        StorageId,
+        MirAggregateOptionalAssign, MirAggregateOptionalInitialize, MirAggregateOptionalPublish,
+        MirAggregateOptionalSource, MirClassOptionalAssign, MirClassOptionalInitialize,
+        MirClassOptionalPublish, MirClassOptionalSource, MirInstruction, MirOptionalAssign,
+        MirOptionalInitialize, MirOptionalSource, MirPresenceTestKind, MirRvalueKind, MirStorage,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, StorageId,
     },
 };
 
@@ -92,12 +91,12 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_initialize_at(destination, initialization);
             }
             HirStoredValueInitialization::Optional(value) => {
-                self.lower_nested_optional_initialize_at(destination, value);
+                self.lower_aggregate_optional_initialize_at(destination, value);
             }
         }
     }
 
-    pub(super) fn lower_nested_optional_initialize_at(
+    pub(super) fn lower_aggregate_optional_initialize_at(
         &mut self,
         destination: crate::mir::MirPlace,
         value: &crate::hir::HirOptionalValue,
@@ -105,22 +104,22 @@ impl BodyLowerer<'_> {
         use crate::hir::HirOptionalValueSource;
         match &value.source {
             HirOptionalValueSource::Absent => {
-                self.emit(MirInstruction::NestedOptionalInitialize(
-                    MirNestedOptionalInitialize {
+                self.emit(MirInstruction::AggregateOptionalInitialize(
+                    MirAggregateOptionalInitialize {
                         optional: value.optional,
                         destination,
-                        source: MirNestedOptionalSource::Absent,
+                        source: MirAggregateOptionalSource::Absent,
                         span: value.span,
                     },
                 ));
             }
             HirOptionalValueSource::Copy(source) => {
-                let source = self.lower_nested_optional_place(source);
-                self.emit(MirInstruction::NestedOptionalInitialize(
-                    MirNestedOptionalInitialize {
+                let source = self.lower_aggregate_optional_place(source);
+                self.emit(MirInstruction::AggregateOptionalInitialize(
+                    MirAggregateOptionalInitialize {
                         optional: value.optional,
                         destination,
-                        source: MirNestedOptionalSource::Copy(source),
+                        source: MirAggregateOptionalSource::Copy(source),
                         span: value.span,
                     },
                 ));
@@ -129,11 +128,11 @@ impl BodyLowerer<'_> {
                 self.lower_optional_call(expression, destination);
             }
             HirOptionalValueSource::Present(payload) => {
-                self.emit(MirInstruction::NestedOptionalInitialize(
-                    MirNestedOptionalInitialize {
+                self.emit(MirInstruction::AggregateOptionalInitialize(
+                    MirAggregateOptionalInitialize {
                         optional: value.optional,
                         destination: destination.clone(),
-                        source: MirNestedOptionalSource::Unpublished,
+                        source: MirAggregateOptionalSource::Unpublished,
                         span: value.span,
                     },
                 ));
@@ -146,13 +145,13 @@ impl BodyLowerer<'_> {
                 self.lower_stored_value_initialize_at(
                     destination
                         .clone()
-                        .project_nested_optional_payload(value.optional),
+                        .project_aggregate_optional_payload(value.optional),
                     payload_type,
                     payload,
                     value.span,
                 );
-                self.emit(MirInstruction::NestedOptionalPublish(
-                    MirNestedOptionalPublish {
+                self.emit(MirInstruction::AggregateOptionalPublish(
+                    MirAggregateOptionalPublish {
                         optional: value.optional,
                         destination,
                         span: value.span,
@@ -162,49 +161,49 @@ impl BodyLowerer<'_> {
         }
     }
 
-    pub(super) fn lower_nested_optional_assignment(
+    pub(super) fn lower_aggregate_optional_assignment(
         &mut self,
-        assignment: &crate::hir::HirNestedOptionalAssignment,
+        assignment: &crate::hir::HirAggregateOptionalAssignment,
     ) {
-        let destination = self.lower_nested_optional_place(&assignment.destination);
+        let destination = self.lower_aggregate_optional_place(&assignment.destination);
         if assignment.kind == crate::hir::HirOptionalWriteKind::Initialize {
-            self.lower_nested_optional_initialize_at(destination, &assignment.value);
+            self.lower_aggregate_optional_initialize_at(destination, &assignment.value);
             return;
         }
         let source = match &assignment.value.source {
-            crate::hir::HirOptionalValueSource::Absent => MirNestedOptionalSource::Absent,
+            crate::hir::HirOptionalValueSource::Absent => MirAggregateOptionalSource::Absent,
             crate::hir::HirOptionalValueSource::Copy(source) => {
-                MirNestedOptionalSource::Copy(self.lower_nested_optional_place(source))
+                MirAggregateOptionalSource::Copy(self.lower_aggregate_optional_place(source))
             }
             crate::hir::HirOptionalValueSource::Present(_)
             | crate::hir::HirOptionalValueSource::Produced(_) => {
                 let temporary = self.new_optional_storage(
                     MirStorageKind::Temporary,
-                    "nested-optional-source",
+                    "aggregate-optional-source",
                     MirType::Optional(assignment.value.optional),
                     assignment.value.span,
                 );
                 let place = crate::mir::MirPlace::base(temporary);
-                self.lower_nested_optional_initialize_at(place.clone(), &assignment.value);
+                self.lower_aggregate_optional_initialize_at(place.clone(), &assignment.value);
                 self.full_expression.register_temporary(
-                    super::FullExpressionTemporary::NestedOptional(
-                        crate::mir::MirNestedOptionalCleanup {
+                    super::FullExpressionTemporary::AggregateOptional(
+                        crate::mir::MirAggregateOptionalCleanup {
                             optional: assignment.value.optional,
                             destination: place.clone(),
                             span: assignment.value.span,
                         },
                     ),
                 );
-                MirNestedOptionalSource::Copy(place)
+                MirAggregateOptionalSource::Copy(place)
             }
         };
         let self_copy =
-            matches!(&source, MirNestedOptionalSource::Copy(source) if source == &destination);
+            matches!(&source, MirAggregateOptionalSource::Copy(source) if source == &destination);
         if !self_copy {
             self.check_optional_mutation(destination.clone(), assignment.span);
         }
-        self.emit(MirInstruction::NestedOptionalAssign(
-            MirNestedOptionalAssign {
+        self.emit(MirInstruction::AggregateOptionalAssign(
+            MirAggregateOptionalAssign {
                 optional: assignment.value.optional,
                 destination,
                 source,
@@ -213,7 +212,7 @@ impl BodyLowerer<'_> {
         ));
     }
 
-    pub(super) fn lower_nested_optional_place(
+    pub(super) fn lower_aggregate_optional_place(
         &mut self,
         place: &crate::hir::HirOptionalValuePlace,
     ) -> crate::mir::MirPlace {
@@ -260,7 +259,7 @@ impl BodyLowerer<'_> {
         self.lower_optional_copy_initialize_at(
             destination,
             unwrap.payload,
-            source.project_nested_optional_payload(unwrap.optional),
+            source.project_aggregate_optional_payload(unwrap.optional),
             unwrap.span,
         );
     }
@@ -305,7 +304,7 @@ impl BodyLowerer<'_> {
             .expect("typed optional-array unwrap must select array copying");
         let produced = self.lower_array_copy_from_place(
             unwrap.array,
-            source.project_nested_optional_payload(unwrap.optional),
+            source.project_aggregate_optional_payload(unwrap.optional),
             super::lower_array_copy_element(operation),
             unwrap.span,
         );
@@ -370,11 +369,11 @@ impl BodyLowerer<'_> {
             }
             crate::hir::HirOptionalStorageCategory::Nested(_)
             | crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
-                self.emit(MirInstruction::NestedOptionalInitialize(
-                    MirNestedOptionalInitialize {
+                self.emit(MirInstruction::AggregateOptionalInitialize(
+                    MirAggregateOptionalInitialize {
                         optional,
                         destination,
-                        source: MirNestedOptionalSource::Copy(source),
+                        source: MirAggregateOptionalSource::Copy(source),
                         span,
                     },
                 ));
@@ -416,8 +415,8 @@ impl BodyLowerer<'_> {
             }
             crate::hir::HirOptionalStorageCategory::Nested(_)
             | crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
-                super::FullExpressionTemporary::NestedOptional(
-                    crate::mir::MirNestedOptionalCleanup {
+                super::FullExpressionTemporary::AggregateOptional(
+                    crate::mir::MirAggregateOptionalCleanup {
                         optional,
                         destination,
                         span,
@@ -651,12 +650,12 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::ClassOptionalCleanup(cleanup));
     }
 
-    pub(super) fn emit_nested_optional_cleanup(
+    pub(super) fn emit_aggregate_optional_cleanup(
         &mut self,
-        cleanup: crate::mir::MirNestedOptionalCleanup,
+        cleanup: crate::mir::MirAggregateOptionalCleanup,
     ) {
         self.check_optional_mutation(cleanup.destination.clone(), cleanup.span);
-        self.emit(MirInstruction::NestedOptionalCleanup(cleanup));
+        self.emit(MirInstruction::AggregateOptionalCleanup(cleanup));
     }
 
     pub(super) fn lower_class_optional_source(
@@ -1066,14 +1065,14 @@ impl BodyLowerer<'_> {
                 self.register_optional_temporary(destination, optional, expression.span);
                 crate::mir::MirPlace::base(destination)
             }
-            HirOptionalOperand::NestedPlace(place) => self.lower_nested_optional_place(place),
-            HirOptionalOperand::NestedProduced(expression) => {
+            HirOptionalOperand::AggregatePlace(place) => self.lower_aggregate_optional_place(place),
+            HirOptionalOperand::AggregateProduced(expression) => {
                 let Type::Optional(optional) = expression.ty else {
                     unreachable!()
                 };
                 let destination = self.new_optional_storage(
                     MirStorageKind::Temporary,
-                    "nested-optional-result",
+                    "aggregate-optional-result",
                     MirType::Optional(optional),
                     expression.span,
                 );

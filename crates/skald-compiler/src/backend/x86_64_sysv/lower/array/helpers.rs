@@ -467,7 +467,7 @@ fn lower_copier(
                 crate::mir::MirOptionalStorage::Nested(_)
                     | crate::mir::MirOptionalStorage::InlineArray(_)
             ) {
-                lower_nested_optional_copier(
+                lower_aggregate_optional_copier(
                     program,
                     array,
                     optional,
@@ -700,7 +700,7 @@ fn lower_shared_copier(
     instructions
 }
 
-fn lower_nested_optional_copier(
+fn lower_aggregate_optional_copier(
     program: &MirProgram,
     array: crate::identity::ArrayTypeId,
     optional: crate::identity::OptionalTypeId,
@@ -815,7 +815,7 @@ fn lower_nested_optional_copier(
                     destination: value::memory(Register::Rsp, 0),
                 },
             ];
-            output.extend(lower_nested_optional_copier(
+            output.extend(lower_aggregate_optional_copier(
                 program,
                 array,
                 nested,
@@ -905,7 +905,7 @@ fn lower_nested_optional_copier(
     }
 }
 
-fn lower_nested_optional_destroyer(
+fn lower_aggregate_optional_destroyer(
     program: &MirProgram,
     array: crate::identity::ArrayTypeId,
     optional: crate::identity::OptionalTypeId,
@@ -981,7 +981,7 @@ fn lower_nested_optional_destroyer(
                 Instruction::Test(Register::Rax),
                 Instruction::JumpIfEqual(complete.clone()),
             ];
-            output.extend(lower_nested_optional_destroyer(
+            output.extend(lower_aggregate_optional_destroyer(
                 program,
                 array,
                 nested,
@@ -1121,7 +1121,7 @@ fn lower_destroyer(
                 crate::mir::MirOptionalStorage::Nested(_)
                     | crate::mir::MirOptionalStorage::InlineArray(_)
             ) {
-                lower_nested_optional_destroyer(
+                lower_aggregate_optional_destroyer(
                     program,
                     array,
                     optional,

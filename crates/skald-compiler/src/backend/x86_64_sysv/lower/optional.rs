@@ -3,9 +3,9 @@
 use crate::{
     backend::BackendError,
     mir::{
-        MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
-        MirClassOptionalPublish, MirClassOptionalSource, MirNestedOptionalAssign,
-        MirNestedOptionalCleanup, MirNestedOptionalInitialize, MirNestedOptionalSource,
+        MirAggregateOptionalAssign, MirAggregateOptionalCleanup, MirAggregateOptionalInitialize,
+        MirAggregateOptionalSource, MirClassOptionalAssign, MirClassOptionalCleanup,
+        MirClassOptionalInitialize, MirClassOptionalPublish, MirClassOptionalSource,
         MirOptionalAssign, MirOptionalInitialize, MirOptionalSharedAssign,
         MirOptionalSharedCleanup, MirOptionalSharedInitialize, MirOptionalSharedSource,
         MirOptionalSource, MirOptionalViewEnd, MirPlace, MirPresenceTestKind, MirPrimitiveType,
@@ -363,15 +363,15 @@ impl InstructionSelector<'_, '_> {
         self.select_optional_write(&assignment.destination, &assignment.source)
     }
 
-    pub(super) fn select_nested_optional_initialize(
+    pub(super) fn select_aggregate_optional_initialize(
         &mut self,
-        initialize: &MirNestedOptionalInitialize,
+        initialize: &MirAggregateOptionalInitialize,
     ) -> Result<(), BackendError> {
         match &initialize.source {
-            MirNestedOptionalSource::Absent | MirNestedOptionalSource::Unpublished => {
+            MirAggregateOptionalSource::Absent | MirAggregateOptionalSource::Unpublished => {
                 self.store_state(&initialize.destination, false)
             }
-            MirNestedOptionalSource::Copy(source) => self.copy_initialize_nested_optional(
+            MirAggregateOptionalSource::Copy(source) => self.copy_initialize_aggregate_optional(
                 initialize.optional,
                 &initialize.destination,
                 source,
@@ -379,33 +379,34 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    pub(super) fn select_nested_optional_publish(
+    pub(super) fn select_aggregate_optional_publish(
         &mut self,
-        publish: &crate::mir::MirNestedOptionalPublish,
+        publish: &crate::mir::MirAggregateOptionalPublish,
     ) -> Result<(), BackendError> {
         self.store_state(&publish.destination, true)
     }
 
-    pub(super) fn select_nested_optional_cleanup(
+    pub(super) fn select_aggregate_optional_cleanup(
         &mut self,
-        cleanup: &MirNestedOptionalCleanup,
+        cleanup: &MirAggregateOptionalCleanup,
     ) -> Result<(), BackendError> {
-        self.cleanup_nested_optional(cleanup.optional, &cleanup.destination)
+        self.cleanup_aggregate_optional(cleanup.optional, &cleanup.destination)
     }
 
-    pub(super) fn select_nested_optional_assign(
+    pub(super) fn select_aggregate_optional_assign(
         &mut self,
-        assignment: &MirNestedOptionalAssign,
+        assignment: &MirAggregateOptionalAssign,
     ) -> Result<(), BackendError> {
-        if matches!(&assignment.source, MirNestedOptionalSource::Copy(source) if source == &assignment.destination)
+        if matches!(&assignment.source, MirAggregateOptionalSource::Copy(source) if source == &assignment.destination)
         {
             return Ok(());
         }
         let source = match &assignment.source {
-            MirNestedOptionalSource::Absent | MirNestedOptionalSource::Unpublished => {
-                return self.cleanup_nested_optional(assignment.optional, &assignment.destination);
+            MirAggregateOptionalSource::Absent | MirAggregateOptionalSource::Unpublished => {
+                return self
+                    .cleanup_aggregate_optional(assignment.optional, &assignment.destination);
             }
-            MirNestedOptionalSource::Copy(source) => source,
+            MirAggregateOptionalSource::Copy(source) => source,
         };
         let source_present = self.next_optional_label("nested_source_present");
         let destination_present = self.next_optional_label("nested_destination_present");
@@ -414,7 +415,7 @@ impl InstructionSelector<'_, '_> {
         self.output.push(Instruction::Test(Register::Rax));
         self.output
             .push(Instruction::JumpIfNotZero(source_present.clone()));
-        self.cleanup_nested_optional(assignment.optional, &assignment.destination)?;
+        self.cleanup_aggregate_optional(assignment.optional, &assignment.destination)?;
         self.output.push(Instruction::Jump(finished.clone()));
         self.output.push(Instruction::Label(source_present));
         self.load_state(&assignment.destination)?;
@@ -426,10 +427,10 @@ impl InstructionSelector<'_, '_> {
             assignment
                 .destination
                 .clone()
-                .project_nested_optional_payload(assignment.optional),
+                .project_aggregate_optional_payload(assignment.optional),
             source
                 .clone()
-                .project_nested_optional_payload(assignment.optional),
+                .project_aggregate_optional_payload(assignment.optional),
         )?;
         self.store_state(&assignment.destination, true)?;
         self.output.push(Instruction::Jump(finished.clone()));
@@ -439,16 +440,16 @@ impl InstructionSelector<'_, '_> {
             assignment
                 .destination
                 .clone()
-                .project_nested_optional_payload(assignment.optional),
+                .project_aggregate_optional_payload(assignment.optional),
             source
                 .clone()
-                .project_nested_optional_payload(assignment.optional),
+                .project_aggregate_optional_payload(assignment.optional),
         )?;
         self.output.push(Instruction::Label(finished));
         Ok(())
     }
 
-    fn copy_initialize_nested_optional(
+    fn copy_initialize_aggregate_optional(
         &mut self,
         optional: crate::identity::OptionalTypeId,
         destination: &MirPlace,
@@ -467,15 +468,15 @@ impl InstructionSelector<'_, '_> {
             optional,
             destination
                 .clone()
-                .project_nested_optional_payload(optional),
-            source.clone().project_nested_optional_payload(optional),
+                .project_aggregate_optional_payload(optional),
+            source.clone().project_aggregate_optional_payload(optional),
         )?;
         self.store_state(destination, true)?;
         self.output.push(Instruction::Label(finished));
         Ok(())
     }
 
-    fn cleanup_nested_optional(
+    fn cleanup_aggregate_optional(
         &mut self,
         optional: crate::identity::OptionalTypeId,
         destination: &MirPlace,
@@ -488,7 +489,7 @@ impl InstructionSelector<'_, '_> {
             optional,
             destination
                 .clone()
-                .project_nested_optional_payload(optional),
+                .project_aggregate_optional_payload(optional),
         )?;
         self.store_state(destination, false)?;
         self.output.push(Instruction::Label(finished));
@@ -604,7 +605,7 @@ impl InstructionSelector<'_, '_> {
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_) => {
-                self.copy_initialize_nested_optional(optional, &destination, &source)
+                self.copy_initialize_aggregate_optional(optional, &destination, &source)
             }
             crate::mir::MirOptionalStorage::InlineArray(array) => {
                 self.select_array_copy_construction(&destination, &source, array)
@@ -661,10 +662,10 @@ impl InstructionSelector<'_, '_> {
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_) => {
-                self.select_nested_optional_assign(&MirNestedOptionalAssign {
+                self.select_aggregate_optional_assign(&MirAggregateOptionalAssign {
                     optional,
                     destination,
-                    source: MirNestedOptionalSource::Copy(source),
+                    source: MirAggregateOptionalSource::Copy(source),
                     span: self.active_instruction_span.expect("active instruction"),
                 })
             }
@@ -700,7 +701,7 @@ impl InstructionSelector<'_, '_> {
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_) => {
-                self.cleanup_nested_optional(optional, &destination)
+                self.cleanup_aggregate_optional(optional, &destination)
             }
             crate::mir::MirOptionalStorage::InlineArray(array) => {
                 self.select_array_field_cleanup(&destination, array)

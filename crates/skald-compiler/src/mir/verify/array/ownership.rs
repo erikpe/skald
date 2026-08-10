@@ -850,7 +850,7 @@ impl ArrayOwnerState {
         if destination
             .projections
             .iter()
-            .any(|projection| matches!(projection, MirPlaceProjection::NestedOptionalPayload(_)))
+            .any(|projection| matches!(projection, MirPlaceProjection::AggregateOptionalPayload(_)))
         {
             return;
         }
@@ -926,7 +926,7 @@ impl ArrayOwnerState {
         if destination
             .projections
             .iter()
-            .any(|projection| matches!(projection, MirPlaceProjection::NestedOptionalPayload(_)))
+            .any(|projection| matches!(projection, MirPlaceProjection::AggregateOptionalPayload(_)))
         {
             return;
         }
@@ -977,7 +977,7 @@ impl ArrayOwnerState {
         if destination
             .projections
             .iter()
-            .any(|projection| matches!(projection, MirPlaceProjection::NestedOptionalPayload(_)))
+            .any(|projection| matches!(projection, MirPlaceProjection::AggregateOptionalPayload(_)))
         {
             return;
         }
@@ -1028,7 +1028,7 @@ impl ArrayOwnerState {
         if destination
             .projections
             .iter()
-            .any(|projection| matches!(projection, MirPlaceProjection::NestedOptionalPayload(_)))
+            .any(|projection| matches!(projection, MirPlaceProjection::AggregateOptionalPayload(_)))
         {
             return;
         }
@@ -1145,15 +1145,15 @@ fn completed_optional_destination(instruction: &MirInstruction) -> Option<&MirPl
         MirInstruction::OptionalInitialize(initialize) => Some(&initialize.destination),
         MirInstruction::ClassOptionalInitialize(initialize) => Some(&initialize.destination),
         MirInstruction::OptionalSharedInitialize(initialize) => Some(&initialize.destination),
-        MirInstruction::NestedOptionalInitialize(initialize)
+        MirInstruction::AggregateOptionalInitialize(initialize)
             if !matches!(
                 initialize.source,
-                crate::mir::MirNestedOptionalSource::Unpublished
+                crate::mir::MirAggregateOptionalSource::Unpublished
             ) =>
         {
             Some(&initialize.destination)
         }
-        MirInstruction::NestedOptionalPublish(publish) => Some(&publish.destination),
+        MirInstruction::AggregateOptionalPublish(publish) => Some(&publish.destination),
         _ => None,
     }
 }

@@ -124,7 +124,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
         crate::hir::HirCallArgument::Optional { .. } => {}
         crate::hir::HirCallArgument::ClassOptional(_) => {}
         crate::hir::HirCallArgument::OptionalShared(_) => {}
-        crate::hir::HirCallArgument::NestedOptional(_) => {}
+        crate::hir::HirCallArgument::AggregateOptional(_) => {}
         crate::hir::HirCallArgument::OptionalPlace(_) => {}
         crate::hir::HirCallArgument::Array(_) => {}
         crate::hir::HirCallArgument::ArrayAlias(_) => {}

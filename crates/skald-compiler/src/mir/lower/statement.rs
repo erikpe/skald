@@ -83,8 +83,8 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
-            HirStatement::NestedOptionalAssignment(assignment) => {
-                self.lower_nested_optional_assignment(assignment);
+            HirStatement::AggregateOptionalAssignment(assignment) => {
+                self.lower_aggregate_optional_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
             HirStatement::ArrayFieldInitialize(initialize) => {
@@ -201,10 +201,10 @@ impl BodyLowerer<'_> {
                 );
                 self.finish_full_expression(local.span);
             }
-            crate::hir::HirLocalInitializer::NestedOptional(value) => {
-                self.lower_nested_optional_initialize_at(MirPlace::base(storage), value);
+            crate::hir::HirLocalInitializer::AggregateOptional(value) => {
+                self.lower_aggregate_optional_initialize_at(MirPlace::base(storage), value);
                 self.cleanup
-                    .register_nested_optional(storage, value.optional);
+                    .register_aggregate_optional(storage, value.optional);
                 self.finish_full_expression(local.span);
             }
             crate::hir::HirLocalInitializer::Array(initialization) => {
@@ -300,11 +300,11 @@ impl BodyLowerer<'_> {
                 });
                 return;
             }
-            Some(crate::hir::HirReturnValue::NestedOptional(value)) => {
+            Some(crate::hir::HirReturnValue::AggregateOptional(value)) => {
                 let destination = self
                     .return_storage
-                    .expect("nested-optional-returning body must have return storage");
-                self.lower_nested_optional_initialize_at(MirPlace::base(destination), value);
+                    .expect("aggregate-optional-returning body must have return storage");
+                self.lower_aggregate_optional_initialize_at(MirPlace::base(destination), value);
                 None
             }
             Some(crate::hir::HirReturnValue::Array(initialization)) => {

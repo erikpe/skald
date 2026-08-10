@@ -133,8 +133,8 @@ impl Verifier<'_> {
                 &assignment.source,
                 defined_in_block,
             ),
-            MirInstruction::NestedOptionalInitialize(initialize) => {
-                self.verify_nested_optional_operation(
+            MirInstruction::AggregateOptionalInitialize(initialize) => {
+                self.verify_aggregate_optional_operation(
                     function,
                     block,
                     initialize.optional,
@@ -143,10 +143,10 @@ impl Verifier<'_> {
                     false,
                 );
             }
-            MirInstruction::NestedOptionalAssign(assignment) => {
+            MirInstruction::AggregateOptionalAssign(assignment) => {
                 if matches!(
                     assignment.source,
-                    crate::mir::MirNestedOptionalSource::Unpublished
+                    crate::mir::MirAggregateOptionalSource::Unpublished
                 ) {
                     self.block_error(
                         function.callable(),
@@ -154,7 +154,7 @@ impl Verifier<'_> {
                         "nested optional assignment cannot use an unpublished source",
                     );
                 }
-                self.verify_nested_optional_operation(
+                self.verify_aggregate_optional_operation(
                     function,
                     block,
                     assignment.optional,
@@ -163,8 +163,8 @@ impl Verifier<'_> {
                     true,
                 );
             }
-            MirInstruction::NestedOptionalPublish(publish) => {
-                self.verify_nested_optional_operation(
+            MirInstruction::AggregateOptionalPublish(publish) => {
+                self.verify_aggregate_optional_operation(
                     function,
                     block,
                     publish.optional,
@@ -173,8 +173,8 @@ impl Verifier<'_> {
                     false,
                 );
             }
-            MirInstruction::NestedOptionalCleanup(cleanup) => {
-                self.verify_nested_optional_operation(
+            MirInstruction::AggregateOptionalCleanup(cleanup) => {
+                self.verify_aggregate_optional_operation(
                     function,
                     block,
                     cleanup.optional,
@@ -935,13 +935,13 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_nested_optional_operation(
+    fn verify_aggregate_optional_operation(
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         optional: crate::identity::OptionalTypeId,
         destination: &MirPlace,
-        source: Option<&crate::mir::MirNestedOptionalSource>,
+        source: Option<&crate::mir::MirAggregateOptionalSource>,
         mutable: bool,
     ) {
         let valid_metadata = self
@@ -975,7 +975,7 @@ impl Verifier<'_> {
                 "nested optional mutation requires mutable access",
             );
         }
-        if let Some(crate::mir::MirNestedOptionalSource::Copy(source)) = source {
+        if let Some(crate::mir::MirAggregateOptionalSource::Copy(source)) = source {
             if self
                 .verify_place(function, block, source)
                 .map(|place| place.ty)

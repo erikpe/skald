@@ -270,7 +270,7 @@ impl Verifier<'_> {
                     }
                     ty = MirType::Class(class);
                 }
-                MirPlaceProjection::NestedOptionalPayload(optional)
+                MirPlaceProjection::AggregateOptionalPayload(optional)
                 | MirPlaceProjection::CheckedOptionalPayload(optional) => {
                     if ty != MirType::Optional(optional) {
                         self.block_error(

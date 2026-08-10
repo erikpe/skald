@@ -1,4 +1,4 @@
-//! Primitive optional storage operations.
+//! Optional storage operations.
 
 use crate::{
     identity::{ClassId, CopyAssignmentId, CopyConstructorId, OptionalTypeId},
@@ -30,9 +30,9 @@ pub struct MirOptionalAssign {
     pub span: Span,
 }
 
-/// A source for copying one exact recursive optional value.
+/// A source for constructing one tagged owning aggregate optional value.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MirNestedOptionalSource {
+pub enum MirAggregateOptionalSource {
     Absent,
     /// Reserves an absent outer layer whose payload is about to be initialized
     /// directly; a matching publish completes the value.
@@ -40,34 +40,34 @@ pub enum MirNestedOptionalSource {
     Copy(MirPlace),
 }
 
-/// Initializes an exact recursive optional destination. Explicitly-present
+/// Initializes an exact owning aggregate optional destination. Explicitly-present
 /// construction is represented as absent initialization, destination-directed
 /// payload initialization, and publication.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirNestedOptionalInitialize {
+pub struct MirAggregateOptionalInitialize {
     pub optional: OptionalTypeId,
     pub destination: MirPlace,
-    pub source: MirNestedOptionalSource,
+    pub source: MirAggregateOptionalSource,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirNestedOptionalAssign {
+pub struct MirAggregateOptionalAssign {
     pub optional: OptionalTypeId,
     pub destination: MirPlace,
-    pub source: MirNestedOptionalSource,
+    pub source: MirAggregateOptionalSource,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirNestedOptionalPublish {
+pub struct MirAggregateOptionalPublish {
     pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirNestedOptionalCleanup {
+pub struct MirAggregateOptionalCleanup {
     pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub span: Span,

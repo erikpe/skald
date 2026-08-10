@@ -35,7 +35,7 @@ impl CallableChecker<'_, '_> {
         {
             let operand =
                 self.require_optional_operand(&unwrap.source, unwrap.span, "checked array alias")?;
-            let HirOptionalOperand::NestedPlace(place) = &operand else {
+            let HirOptionalOperand::AggregatePlace(place) = &operand else {
                 self.report_invalid_array_alias(expression, parameter);
                 return None;
             };

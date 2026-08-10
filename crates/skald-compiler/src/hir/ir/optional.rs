@@ -66,7 +66,7 @@ pub enum HirOptionalValueSource {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirNestedOptionalAssignment {
+pub struct HirAggregateOptionalAssignment {
     pub destination: HirOptionalValuePlace,
     pub value: HirOptionalValue,
     pub kind: HirOptionalWriteKind,
@@ -200,8 +200,8 @@ pub enum HirOptionalOperand {
     ClassProduced(Box<HirExpression>),
     SharedPlace(HirOptionalSharedPlace),
     SharedProduced(Box<HirExpression>),
-    NestedPlace(HirOptionalValuePlace),
-    NestedProduced(Box<HirExpression>),
+    AggregatePlace(HirOptionalValuePlace),
+    AggregateProduced(Box<HirExpression>),
 }
 
 impl HirOptionalOperand {
@@ -213,8 +213,8 @@ impl HirOptionalOperand {
             Self::ClassProduced(expression) => expression.span,
             Self::SharedPlace(place) => place.span,
             Self::SharedProduced(expression) => expression.span,
-            Self::NestedPlace(place) => place.span,
-            Self::NestedProduced(expression) => expression.span,
+            Self::AggregatePlace(place) => place.span,
+            Self::AggregateProduced(expression) => expression.span,
         }
     }
 
@@ -247,8 +247,8 @@ impl HirOptionalOperand {
             | Self::ClassProduced(_)
             | Self::SharedPlace(_)
             | Self::SharedProduced(_)
-            | Self::NestedPlace(_)
-            | Self::NestedProduced(_) => {
+            | Self::AggregatePlace(_)
+            | Self::AggregateProduced(_) => {
                 panic!("class optional payload access is implemented by checked views")
             }
         }
@@ -272,8 +272,8 @@ impl HirOptionalOperand {
             | Self::Produced(_)
             | Self::SharedPlace(_)
             | Self::SharedProduced(_)
-            | Self::NestedPlace(_)
-            | Self::NestedProduced(_) => {
+            | Self::AggregatePlace(_)
+            | Self::AggregateProduced(_) => {
                 panic!("primitive optional operands have no class payload")
             }
         }
@@ -297,8 +297,8 @@ impl HirOptionalOperand {
             | Self::Produced(_)
             | Self::ClassPlace(_)
             | Self::ClassProduced(_)
-            | Self::NestedPlace(_)
-            | Self::NestedProduced(_) => {
+            | Self::AggregatePlace(_)
+            | Self::AggregateProduced(_) => {
                 panic!("inline optional operands have no shared target")
             }
         }

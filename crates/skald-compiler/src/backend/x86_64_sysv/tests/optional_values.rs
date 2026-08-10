@@ -953,9 +953,9 @@ fn nested_optional_outer_presence_copy_assignment_fields_and_arrays_execute() {
         }\n";
     let mir = lower_text(source);
     let dump = crate::mir::dump_mir(&mir);
-    assert!(dump.contains("nested-optional-initialize"));
-    assert!(dump.contains("nested-optional-assign"));
-    assert!(dump.contains("nested-optional-cleanup"));
+    assert!(dump.contains("aggregate-optional-initialize"));
+    assert!(dump.contains("aggregate-optional-assign"));
+    assert!(dump.contains("aggregate-optional-cleanup"));
     let mut output = assembly(source);
     output.push_str(native_allocator());
     assert_eq!(run_native_assembly(&output).code(), Some(42));

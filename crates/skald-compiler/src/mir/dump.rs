@@ -266,10 +266,10 @@ fn dump_static_cleanup(output: &mut String, cleanup: &MirStaticValueCleanup) {
             write_span(output, cleanup.span);
             output.push('\n');
         }
-        MirStaticValueCleanup::NestedOptional(cleanup) => {
+        MirStaticValueCleanup::AggregateOptional(cleanup) => {
             let _ = write!(
                 output,
-                "        Cleanup nested-optional {} ",
+                "        Cleanup aggregate-optional {} ",
                 cleanup.optional
             );
             dump_place(output, &cleanup.destination);
@@ -942,31 +942,31 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_optional_source(output, &assignment.source);
                 write_span(output, assignment.span);
             }
-            MirInstruction::NestedOptionalInitialize(initialize) => {
+            MirInstruction::AggregateOptionalInitialize(initialize) => {
                 let _ = write!(
                     output,
-                    "nested-optional-initialize {} ",
+                    "aggregate-optional-initialize {} ",
                     initialize.optional
                 );
                 dump_place(output, &initialize.destination);
                 output.push_str(" from ");
-                dump_nested_optional_source(output, &initialize.source);
+                dump_aggregate_optional_source(output, &initialize.source);
                 write_span(output, initialize.span);
             }
-            MirInstruction::NestedOptionalAssign(assignment) => {
-                let _ = write!(output, "nested-optional-assign {} ", assignment.optional);
+            MirInstruction::AggregateOptionalAssign(assignment) => {
+                let _ = write!(output, "aggregate-optional-assign {} ", assignment.optional);
                 dump_place(output, &assignment.destination);
                 output.push_str(" from ");
-                dump_nested_optional_source(output, &assignment.source);
+                dump_aggregate_optional_source(output, &assignment.source);
                 write_span(output, assignment.span);
             }
-            MirInstruction::NestedOptionalPublish(publish) => {
-                let _ = write!(output, "nested-optional-publish {} ", publish.optional);
+            MirInstruction::AggregateOptionalPublish(publish) => {
+                let _ = write!(output, "aggregate-optional-publish {} ", publish.optional);
                 dump_place(output, &publish.destination);
                 write_span(output, publish.span);
             }
-            MirInstruction::NestedOptionalCleanup(cleanup) => {
-                let _ = write!(output, "nested-optional-cleanup {} ", cleanup.optional);
+            MirInstruction::AggregateOptionalCleanup(cleanup) => {
+                let _ = write!(output, "aggregate-optional-cleanup {} ", cleanup.optional);
                 dump_place(output, &cleanup.destination);
                 write_span(output, cleanup.span);
             }
@@ -1485,11 +1485,11 @@ fn dump_optional_source(output: &mut String, source: &MirOptionalSource) {
     }
 }
 
-fn dump_nested_optional_source(output: &mut String, source: &MirNestedOptionalSource) {
+fn dump_aggregate_optional_source(output: &mut String, source: &MirAggregateOptionalSource) {
     match source {
-        MirNestedOptionalSource::Absent => output.push_str("absent"),
-        MirNestedOptionalSource::Unpublished => output.push_str("unpublished"),
-        MirNestedOptionalSource::Copy(place) => {
+        MirAggregateOptionalSource::Absent => output.push_str("absent"),
+        MirAggregateOptionalSource::Unpublished => output.push_str("unpublished"),
+        MirAggregateOptionalSource::Copy(place) => {
             output.push_str("copy ");
             dump_place(output, place);
         }
@@ -1550,7 +1550,7 @@ fn dump_place(output: &mut String, place: &MirPlace) {
             MirPlaceProjection::OptionalPayload(class) => {
                 let _ = write!(output, ".optional-payload({class})");
             }
-            MirPlaceProjection::NestedOptionalPayload(optional) => {
+            MirPlaceProjection::AggregateOptionalPayload(optional) => {
                 let _ = write!(output, ".optional-payload({optional})");
             }
             MirPlaceProjection::CheckedOptionalPayload(optional) => {

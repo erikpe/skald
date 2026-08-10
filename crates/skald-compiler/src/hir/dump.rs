@@ -675,8 +675,8 @@ impl<'types> HirDumper<'types> {
                     HirLocalInitializer::OptionalShared(value) => {
                         dumper.optional_shared_value(value)
                     }
-                    HirLocalInitializer::NestedOptional(value) => {
-                        dumper.nested_optional_value(value)
+                    HirLocalInitializer::AggregateOptional(value) => {
+                        dumper.aggregate_optional_value(value)
                     }
                     HirLocalInitializer::Array(value) => dumper.array_initialize(value),
                 });
@@ -724,8 +724,8 @@ impl<'types> HirDumper<'types> {
                         HirReturnValue::OptionalShared(value) => {
                             dumper.optional_shared_value(value)
                         }
-                        HirReturnValue::NestedOptional(value) => {
-                            dumper.nested_optional_value(value)
+                        HirReturnValue::AggregateOptional(value) => {
+                            dumper.aggregate_optional_value(value)
                         }
                         HirReturnValue::Array(value) => dumper.array_initialize(value),
                     });
@@ -866,12 +866,12 @@ impl<'types> HirDumper<'types> {
                     dumper.optional_shared_source(&assignment.source);
                 });
             }
-            HirStatement::NestedOptionalAssignment(assignment) => {
+            HirStatement::AggregateOptionalAssignment(assignment) => {
                 self.line(
-                    &format!("NestedOptionalAssignment {}", assignment.value.optional),
+                    &format!("AggregateOptionalAssignment {}", assignment.value.optional),
                     assignment.span,
                 );
-                self.indented(|dumper| dumper.nested_optional_value(&assignment.value));
+                self.indented(|dumper| dumper.aggregate_optional_value(&assignment.value));
             }
             HirStatement::ArrayFieldInitialize(statement) => {
                 self.line("ArrayFieldInitialization", statement.span);
@@ -1394,8 +1394,8 @@ impl<'types> HirDumper<'types> {
             crate::hir::HirArrayElementValue::ClassOptional(value) => {
                 self.class_optional_value(value)
             }
-            crate::hir::HirArrayElementValue::NestedOptional(value) => {
-                self.nested_optional_value(value)
+            crate::hir::HirArrayElementValue::AggregateOptional(value) => {
+                self.aggregate_optional_value(value)
             }
             crate::hir::HirArrayElementValue::Object { source, operation } => {
                 self.object_source(source);
@@ -1468,7 +1468,7 @@ impl<'types> HirDumper<'types> {
                 self.optional_shared_value(value)
             }
             crate::hir::HirStoredValueInitialization::Optional(value) => {
-                self.nested_optional_value(value)
+                self.aggregate_optional_value(value)
             }
         }
     }
@@ -1626,22 +1626,22 @@ impl<'types> HirDumper<'types> {
                 self.line("OptionalSharedProduced", expression.span);
                 self.indented(|dumper| dumper.expression(expression));
             }
-            crate::hir::HirOptionalOperand::NestedPlace(place) => {
+            crate::hir::HirOptionalOperand::AggregatePlace(place) => {
                 self.line(
-                    &format!("NestedOptionalPlace {}", place.optional),
+                    &format!("AggregateOptionalPlace {}", place.optional),
                     place.span,
                 );
             }
-            crate::hir::HirOptionalOperand::NestedProduced(expression) => {
-                self.line("NestedOptionalProduced", expression.span);
+            crate::hir::HirOptionalOperand::AggregateProduced(expression) => {
+                self.line("AggregateOptionalProduced", expression.span);
                 self.indented(|dumper| dumper.expression(expression));
             }
         }
     }
 
-    fn nested_optional_value(&mut self, value: &crate::hir::HirOptionalValue) {
+    fn aggregate_optional_value(&mut self, value: &crate::hir::HirOptionalValue) {
         self.line(
-            &format!("NestedOptionalInitialization {}", value.optional),
+            &format!("AggregateOptionalInitialization {}", value.optional),
             value.span,
         );
         self.indented(|dumper| match &value.source {
@@ -1796,12 +1796,12 @@ impl<'types> HirDumper<'types> {
                 );
                 self.indented(|dumper| dumper.optional_shared_source(&value.source));
             }
-            HirCallArgument::NestedOptional(value) => {
+            HirCallArgument::AggregateOptional(value) => {
                 self.line(
-                    &format!("NestedOptionalArgument {}", value.optional),
+                    &format!("AggregateOptionalArgument {}", value.optional),
                     value.span,
                 );
-                self.indented(|dumper| dumper.nested_optional_value(value));
+                self.indented(|dumper| dumper.aggregate_optional_value(value));
             }
             HirCallArgument::OptionalPlace(place) => match place {
                 crate::hir::HirOptionalAliasPlace::Primitive(place) => {

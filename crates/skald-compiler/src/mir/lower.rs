@@ -110,7 +110,7 @@ enum FullExpressionTemporary {
     Shared(StorageId),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
     OptionalShared(crate::mir::MirOptionalSharedCleanup),
-    NestedOptional(crate::mir::MirNestedOptionalCleanup),
+    AggregateOptional(crate::mir::MirAggregateOptionalCleanup),
     Array {
         storage: StorageId,
         array: crate::identity::ArrayTypeId,
@@ -180,9 +180,9 @@ impl<'hir> BodyLowerer<'hir> {
                         }
                         crate::hir::HirOptionalStorageCategory::Scalar => {}
                         crate::hir::HirOptionalStorageCategory::Nested(_)
-                        | crate::hir::HirOptionalStorageCategory::InlineArray(_) => {
-                            lowerer.cleanup.register_nested_optional(*storage, optional)
-                        }
+                        | crate::hir::HirOptionalStorageCategory::InlineArray(_) => lowerer
+                            .cleanup
+                            .register_aggregate_optional(*storage, optional),
                     },
                     Type::Array(array) => lowerer.cleanup.register_array(*storage, array),
                     _ => {}
@@ -351,8 +351,8 @@ impl<'hir> BodyLowerer<'hir> {
                 cleanup::PlannedCleanup::OptionalShared(cleanup) => {
                     self.emit(MirInstruction::OptionalSharedCleanup(cleanup))
                 }
-                cleanup::PlannedCleanup::NestedOptional(cleanup) => {
-                    self.emit_nested_optional_cleanup(cleanup)
+                cleanup::PlannedCleanup::AggregateOptional(cleanup) => {
+                    self.emit_aggregate_optional_cleanup(cleanup)
                 }
                 cleanup::PlannedCleanup::Array {
                     storage,

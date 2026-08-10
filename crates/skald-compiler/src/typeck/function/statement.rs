@@ -232,8 +232,8 @@ impl CallableChecker<'_, '_> {
                         "nested optional static assignment",
                     )
                     .map(|value| {
-                        HirStatement::NestedOptionalAssignment(
-                            crate::hir::HirNestedOptionalAssignment {
+                        HirStatement::AggregateOptionalAssignment(
+                            crate::hir::HirAggregateOptionalAssignment {
                                 destination: crate::hir::HirOptionalValuePlace {
                                     storage: HirOptionalStorage::Static(place),
                                     optional,
@@ -364,8 +364,8 @@ impl CallableChecker<'_, '_> {
                     "aggregate optional local assignment",
                 );
                 CheckedStatement::falls_through(value.map(|value| {
-                    HirStatement::NestedOptionalAssignment(
-                        crate::hir::HirNestedOptionalAssignment {
+                    HirStatement::AggregateOptionalAssignment(
+                        crate::hir::HirAggregateOptionalAssignment {
                             destination: crate::hir::HirOptionalValuePlace {
                                 storage: HirOptionalStorage::Binding(assignment.destination),
                                 optional,
@@ -479,7 +479,7 @@ impl CallableChecker<'_, '_> {
                         &local.initializer,
                         "aggregate optional local initializer",
                     )
-                    .map(|value| HirLocalInitializer::NestedOptional(Box::new(value)))
+                    .map(|value| HirLocalInitializer::AggregateOptional(Box::new(value)))
                 }
             },
             _ => self
@@ -713,7 +713,7 @@ impl CallableChecker<'_, '_> {
                 };
                 self.check_optional_value(optional, value, "aggregate optional return")
                     .map(Box::new)
-                    .map(HirReturnValue::NestedOptional)
+                    .map(HirReturnValue::AggregateOptional)
             }
         }?;
         Some(HirStatement::Return(HirReturn {

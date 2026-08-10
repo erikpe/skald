@@ -32,8 +32,8 @@ impl Verifier<'_> {
                             instruction,
                             MirInstruction::ClassOptionalAssign(_)
                                 | MirInstruction::ClassOptionalCleanup(_)
-                                | MirInstruction::NestedOptionalAssign(_)
-                                | MirInstruction::NestedOptionalCleanup(_)
+                                | MirInstruction::AggregateOptionalAssign(_)
+                                | MirInstruction::AggregateOptionalCleanup(_)
                         )
                     {
                         self.block_error(
@@ -104,10 +104,10 @@ impl Verifier<'_> {
                                 );
                             }
                         }
-                        MirInstruction::NestedOptionalAssign(assignment) => {
+                        MirInstruction::AggregateOptionalAssign(assignment) => {
                             let self_copy = matches!(
                                 &assignment.source,
-                                crate::mir::MirNestedOptionalSource::Copy(source)
+                                crate::mir::MirAggregateOptionalSource::Copy(source)
                                     if source == &assignment.destination
                             );
                             if !self_copy && !state.mutation_permits.remove(&assignment.destination)
@@ -119,7 +119,7 @@ impl Verifier<'_> {
                                 );
                             }
                         }
-                        MirInstruction::NestedOptionalCleanup(cleanup) => {
+                        MirInstruction::AggregateOptionalCleanup(cleanup) => {
                             if !state.mutation_permits.remove(&cleanup.destination) {
                                 self.block_error(
                                     function.callable(),

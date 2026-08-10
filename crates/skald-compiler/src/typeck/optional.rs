@@ -638,8 +638,8 @@ impl CallableChecker<'_, '_> {
         let source =
             self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
         let aggregate_optional = match &source {
-            HirOptionalOperand::NestedPlace(place) => Some(place.optional),
-            HirOptionalOperand::NestedProduced(expression) => {
+            HirOptionalOperand::AggregatePlace(place) => Some(place.optional),
+            HirOptionalOperand::AggregateProduced(expression) => {
                 let Type::Optional(optional) = expression.ty else {
                     unreachable!("aggregate optional producer must retain its optional type")
                 };
@@ -664,7 +664,7 @@ impl CallableChecker<'_, '_> {
                 });
             }
         }
-        if let HirOptionalOperand::NestedPlace(place) = &source {
+        if let HirOptionalOperand::AggregatePlace(place) = &source {
             let optional = place.optional;
             let Type::Optional(payload) =
                 super::optional_types::payload_type(self.program, optional)
@@ -684,7 +684,7 @@ impl CallableChecker<'_, '_> {
                 span: unwrap.span,
             });
         }
-        if let HirOptionalOperand::NestedProduced(expression) = &source {
+        if let HirOptionalOperand::AggregateProduced(expression) = &source {
             let Type::Optional(outer) = expression.ty else {
                 unreachable!("nested optional producer must retain its optional type")
             };
@@ -711,8 +711,8 @@ impl CallableChecker<'_, '_> {
                 | HirOptionalOperand::ClassProduced(_)
                 | HirOptionalOperand::SharedPlace(_)
                 | HirOptionalOperand::SharedProduced(_)
-                | HirOptionalOperand::NestedPlace(_)
-                | HirOptionalOperand::NestedProduced(_)
+                | HirOptionalOperand::AggregatePlace(_)
+                | HirOptionalOperand::AggregateProduced(_)
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -765,8 +765,8 @@ impl CallableChecker<'_, '_> {
             | HirOptionalOperand::Produced(_)
             | HirOptionalOperand::SharedPlace(_)
             | HirOptionalOperand::SharedProduced(_)
-            | HirOptionalOperand::NestedPlace(_)
-            | HirOptionalOperand::NestedProduced(_) => {
+            | HirOptionalOperand::AggregatePlace(_)
+            | HirOptionalOperand::AggregateProduced(_) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         crate::typeck::program::INVALID_OBJECT_CONTEXT,
@@ -804,7 +804,7 @@ impl CallableChecker<'_, '_> {
             Some(OptionalPayloadKind::Nested(_) | OptionalPayloadKind::Array(_))
         ) {
             if let Some(place) = self.optional_value_place(expression) {
-                return Some(HirOptionalOperand::NestedPlace(place));
+                return Some(HirOptionalOperand::AggregatePlace(place));
             }
         }
         if is_optional_producer(expression) {
@@ -821,10 +821,10 @@ impl CallableChecker<'_, '_> {
                             HirOptionalOperand::SharedProduced(Box::new(value))
                         }
                         OptionalPayloadKind::Nested(_) => {
-                            HirOptionalOperand::NestedProduced(Box::new(value))
+                            HirOptionalOperand::AggregateProduced(Box::new(value))
                         }
                         OptionalPayloadKind::Array(_) => {
-                            HirOptionalOperand::NestedProduced(Box::new(value))
+                            HirOptionalOperand::AggregateProduced(Box::new(value))
                         }
                     });
                 }

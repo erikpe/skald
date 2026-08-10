@@ -145,8 +145,8 @@ impl BodyLowerer<'_> {
             super::FullExpressionTemporary::OptionalShared(cleanup) => {
                 self.emit(MirInstruction::OptionalSharedCleanup(cleanup));
             }
-            super::FullExpressionTemporary::NestedOptional(cleanup) => {
-                self.emit_nested_optional_cleanup(cleanup);
+            super::FullExpressionTemporary::AggregateOptional(cleanup) => {
+                self.emit_aggregate_optional_cleanup(cleanup);
             }
             super::FullExpressionTemporary::Array { storage, array } => {
                 self.emit(MirInstruction::Array(MirArrayInstruction::Release {
@@ -227,7 +227,7 @@ enum OwnedStorageKind {
     Shared,
     ClassOptional(crate::identity::OptionalTypeId, ClassId),
     OptionalShared(crate::identity::OptionalTypeId, crate::mir::MirSharedTarget),
-    NestedOptional(crate::identity::OptionalTypeId),
+    AggregateOptional(crate::identity::OptionalTypeId),
     Array(crate::identity::ArrayTypeId),
 }
 
@@ -236,7 +236,7 @@ pub(super) enum PlannedCleanup {
     Shared(MirSharedRelease),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
     OptionalShared(crate::mir::MirOptionalSharedCleanup),
-    NestedOptional(crate::mir::MirNestedOptionalCleanup),
+    AggregateOptional(crate::mir::MirAggregateOptionalCleanup),
     Array {
         storage: StorageId,
         array: crate::identity::ArrayTypeId,
@@ -260,7 +260,7 @@ impl PlannedScopeExit {
 
 impl PlannedCleanup {
     pub(super) const fn requires_optional_check(&self) -> bool {
-        matches!(self, Self::ClassOptional(_) | Self::NestedOptional(_))
+        matches!(self, Self::ClassOptional(_) | Self::AggregateOptional(_))
     }
 }
 
@@ -359,7 +359,7 @@ impl CleanupPlanner {
             });
     }
 
-    pub(super) fn register_nested_optional(
+    pub(super) fn register_aggregate_optional(
         &mut self,
         storage: StorageId,
         optional: crate::identity::OptionalTypeId,
@@ -370,7 +370,7 @@ impl CleanupPlanner {
             .initialized
             .push(InitializedStorage {
                 storage,
-                kind: OwnedStorageKind::NestedOptional(optional),
+                kind: OwnedStorageKind::AggregateOptional(optional),
             });
     }
 
@@ -471,8 +471,8 @@ impl InitializedStorage {
                     span,
                 })
             }
-            OwnedStorageKind::NestedOptional(optional) => {
-                PlannedCleanup::NestedOptional(crate::mir::MirNestedOptionalCleanup {
+            OwnedStorageKind::AggregateOptional(optional) => {
+                PlannedCleanup::AggregateOptional(crate::mir::MirAggregateOptionalCleanup {
                     optional,
                     destination: MirPlace::base(self.storage),
                     span,
@@ -530,7 +530,7 @@ mod tests {
                     PlannedCleanup::OptionalShared(cleanup) => {
                         cleanup.destination.base.expect_local_storage()
                     }
-                    PlannedCleanup::NestedOptional(cleanup) => {
+                    PlannedCleanup::AggregateOptional(cleanup) => {
                         cleanup.destination.base.expect_local_storage()
                     }
                     PlannedCleanup::Array { storage, .. } => *storage,
@@ -555,7 +555,7 @@ mod tests {
                     cleanup.destination.base.expect_local_storage(),
                 PlannedCleanup::OptionalShared(cleanup) =>
                     cleanup.destination.base.expect_local_storage(),
-                PlannedCleanup::NestedOptional(cleanup) =>
+                PlannedCleanup::AggregateOptional(cleanup) =>
                     cleanup.destination.base.expect_local_storage(),
                 PlannedCleanup::Array { storage, .. } => *storage,
             },

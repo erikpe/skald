@@ -94,7 +94,7 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
         HirCallArgument::Optional { .. } => true,
         HirCallArgument::ClassOptional(_) => true,
         HirCallArgument::OptionalShared(_) => true,
-        HirCallArgument::NestedOptional(_) => true,
+        HirCallArgument::AggregateOptional(_) => true,
         HirCallArgument::CheckedView(view) => checked_view_contains_control_effect(view),
         HirCallArgument::View(view) => view_source_contains_control_effect(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_control_effect(&copy.source),
