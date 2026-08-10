@@ -13,8 +13,9 @@ pub const CANONICAL_F64_SOURCE: &str = include_str!("../../../std/std/f64.ska");
 pub const CANONICAL_IO_SOURCE: &str = include_str!("../../../std/std/io.ska");
 pub const CANONICAL_PROCESS_SOURCE: &str = include_str!("../../../std/std/process.ska");
 pub const CANONICAL_TEST_SOURCE: &str = include_str!("../../../std/std/test.ska");
+pub const CANONICAL_VEC_SOURCE: &str = include_str!("../../../std/std/vec.ska");
 
-const CANONICAL_SOURCES: [(&str, &str); 10] = [
+const CANONICAL_SOURCES: [(&str, &str); 11] = [
     ("std/str.ska", CANONICAL_STR_SOURCE),
     (
         "std/str/format_integer.ska",
@@ -31,6 +32,7 @@ const CANONICAL_SOURCES: [(&str, &str); 10] = [
     ("std/io.ska", CANONICAL_IO_SOURCE),
     ("std/process.ska", CANONICAL_PROCESS_SOURCE),
     ("std/test.ska", CANONICAL_TEST_SOURCE),
+    ("std/vec.ska", CANONICAL_VEC_SOURCE),
 ];
 
 /// Returns every canonical standard-library module in stable fixture order.

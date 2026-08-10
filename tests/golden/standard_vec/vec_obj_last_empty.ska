@@ -1,0 +1,7 @@
+from std::vec import VecObj;
+
+fn main() -> i64 {
+    var values: VecObj = VecObj();
+    var unused: shared Obj = values.last();
+    return 0;
+}

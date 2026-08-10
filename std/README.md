@@ -40,6 +40,13 @@ composes existing `std::io`, raw-byte strings, arrays, loops, and modules to
 read the Linux invocation vector. It introduces no compiler intrinsic,
 entry-function parameter, static cache, or runtime ABI addition.
 
+The `std::vec` module provides the implemented
+[`VecObj` shared-object vector](../docs/language/VECTORS.md). The inline class
+owns independent `(shared? Obj)[]` storage whose logical prefix contains
+non-null `shared Obj` elements. Its ordinary Skald methods provide capacity,
+geometric growth, checked positive and negative indexing, push, pop, last,
+replacement, and clear without adding compiler or runtime machinery.
+
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`
 explicitly. Call statements execute through the compiler's non-returning panic

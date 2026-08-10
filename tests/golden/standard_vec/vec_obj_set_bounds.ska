@@ -1,0 +1,11 @@
+from std::vec import VecObj;
+
+class Item {
+    init() {}
+}
+
+fn main() -> i64 {
+    var values: VecObj = VecObj.with_capacity(4u);
+    values.set(0, new Item());
+    return 0;
+}

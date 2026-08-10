@@ -153,6 +153,10 @@ makes a result source-observable.
   snapshot, including the host invocation name at index zero, decoded from
   Linux `/proc/self/cmdline` by ordinary standard-library code. It does not
   change the parameterless entry function or runtime ABI.
+- [Object vectors](VECTORS.md) defines the implemented `std::vec::VecObj`
+  collection of non-null shared object owners, including capacity, growth,
+  logical indexing, structural copy independence, prompt removal release, and
+  its deliberate non-generic boundary.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
   lifetime, failure, and typed explicit element-list contract. Primitive,

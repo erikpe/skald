@@ -1,0 +1,12 @@
+from std::vec import VecObj;
+
+class Item {
+    init() {}
+}
+
+fn main() -> i64 {
+    var values: VecObj = VecObj.with_capacity(4u);
+    values.push(new Item());
+    var unused: shared Obj = values.get(1);
+    return 0;
+}

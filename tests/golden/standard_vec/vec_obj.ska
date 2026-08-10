@@ -1,0 +1,101 @@
+from std::test import assert_eq_i64, assert_eq_u64, assert_false, assert_true;
+from std::vec import VecObj;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Tracked {
+    private static _destroyed: i64;
+
+    init() {}
+
+    destroy {
+        Tracked._destroyed = Tracked._destroyed + 1;
+    }
+
+    static fn destroyed() -> i64 {
+        return Tracked._destroyed;
+    }
+}
+
+fn item_value(value: shared Obj) -> i64 {
+    var item: shared Item = (shared Item) value;
+    return item->value;
+}
+
+fn check_prompt_release() -> unit {
+    var values: VecObj = VecObj.with_capacity(1u);
+    values.push(new Tracked());
+    assert_eq_i64(Tracked.destroyed(), 0);
+
+    values.clear();
+    assert_eq_i64(Tracked.destroyed(), 1);
+    assert_eq_u64(values.capacity(), 1u);
+
+    values.push(new Tracked());
+    var popped: shared Obj = values.pop();
+    assert_eq_i64(Tracked.destroyed(), 1);
+    popped = new Tracked();
+    assert_eq_i64(Tracked.destroyed(), 2);
+}
+
+fn main() -> i64 {
+    check_prompt_release();
+    assert_eq_i64(Tracked.destroyed(), 3);
+
+    var empty: VecObj = VecObj();
+    assert_true(empty.is_empty());
+    assert_eq_u64(empty.len(), 0u);
+    assert_eq_u64(empty.capacity(), 4u);
+
+    var zero_capacity: VecObj = VecObj.with_capacity(0u);
+    assert_eq_u64(zero_capacity.capacity(), 0u);
+    zero_capacity.push(new Item(9));
+    assert_eq_u64(zero_capacity.capacity(), 4u);
+
+    var values: VecObj = VecObj.with_capacity(1u);
+    values.push(new Item(1));
+    values.push(new Item(2));
+    values.push(new Item(3));
+    values.push(new Item(4));
+    values.push(new Item(5));
+    values.push(new Item(6));
+
+    assert_false(values.is_empty());
+    assert_eq_u64(values.len(), 6u);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(item_value(values.get(0)), 1);
+    assert_eq_i64(item_value(values.get(-1)), 6);
+    assert_eq_i64(item_value(values.last()), 6);
+
+    values.set(-2, new Item(50));
+    assert_eq_i64(item_value(values.get(4)), 50);
+
+    var popped: shared Obj = values.pop();
+    assert_eq_i64(item_value(popped), 6);
+    assert_eq_u64(values.len(), 5u);
+    assert_eq_i64(item_value(values.last()), 50);
+
+    var copy: VecObj = values;
+    var assigned: VecObj = VecObj();
+    assigned = values;
+    values.set(0, new Item(10));
+    values.set(1, new Item(20));
+    copy.push(new Item(7));
+    assert_eq_i64(item_value(values.get(0)), 10);
+    assert_eq_i64(item_value(copy.get(0)), 1);
+    assert_eq_i64(item_value(assigned.get(1)), 2);
+    assert_eq_u64(values.len(), 5u);
+    assert_eq_u64(copy.len(), 6u);
+
+    values.clear();
+    assert_true(values.is_empty());
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(item_value(copy.get(-1)), 7);
+    return 0;
+}
