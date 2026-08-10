@@ -63,7 +63,7 @@ Every live Skald value denotes a value. A `shared T` value is therefore always
 a valid owning handle to one live heap allocation; it is never null, empty,
 dangling, or moved from. The executable
 [optional-values contract](OPTIONAL_VALUES.md#shared-ownership) uses
-`shared? T` to represent absence around that ordinary owner. It never makes a
+`(shared T)?` to represent absence around that ordinary owner. It never makes a
 `shared T` null. A successful `owner!` first retains a nonzero canonical
 handle into an ordinary owner; only that secured owner may enter existing
 dereference, cast, anchor, metadata, and release operations.
@@ -162,8 +162,8 @@ aliases. There is no implicit conversion between an inline owning value and a
 shared owner. Shared values are permitted as locals, value parameters,
 results, class fields, and explicitly initialized static fields. They are not
 permitted in external signatures. The [static-field contract](STATIC_FIELDS.md)
-permits initializer-free `shared? T` storage, initially absent, and explicitly
-initialized `shared T` or `shared? T` storage through ordinary adoption or
+permits initializer-free `(shared T)?` storage, initially absent, and explicitly
+initialized `shared T` or `(shared T)?` storage through ordinary adoption or
 copy. It does not make zero a valid ordinary `shared T` handle. Static owners
 use ordinary replacement, cast, view, and anchoring rules while executing;
 their current final owner is released during reverse normal-return shutdown.
@@ -414,7 +414,7 @@ ownership design.
 
 ## Compositional optional boundary
 
-The frozen
+The implemented canonical-owner slice of the
 [compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
 makes `(shared T)?` the canonical form of an optional ordinary shared owner and
 retains `shared? T` as exact shorthand. Both normalize to
@@ -436,9 +436,8 @@ finalizer, pointee mutation, cast, or runtime rule.
 This profile does not include:
 
 - generalized `shared T?` or `shared? T?` boxes;
-- aliases whose designated container type is `shared? T` in the current
-  implementation; the frozen optional extension specifies such container
-  aliases without changing ordinary shared-pointee aliases;
+- aliases whose designated container type is `(shared T)?`; compositional
+  syntax does not change the existing alias eligibility boundary;
 - weak ownership;
 - explicit early release or user-visible reference counts;
 - raw pointers or unsafe handle construction;
@@ -449,13 +448,13 @@ This profile does not include:
 - atomic reference counts, concurrency, or thread-safety guarantees;
 - module-owned or top-level global shared storage; class-owned statics permit
   explicitly initialized `shared T` and zero-default or explicitly initialized
-  `shared? T`;
+  `(shared T)?`;
 - recoverable allocation failure; or
 - exceptional cleanup or failed-construction unwinding.
 
 These exclusions bound the current implementation. The implemented
 [array contract](ARRAYS.md) extends these rules with exact non-polymorphic
-`shared T[]` and `shared? T[]` ownership; it does not change the
+`shared T[]` and `(shared T[])?` ownership; it does not change the
 class/interface/`Obj` boundary above.
 The implemented
 [explicit array element-list form](ARRAYS.md#explicit-element-list-construction)

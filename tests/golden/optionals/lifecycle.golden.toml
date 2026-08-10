@@ -38,6 +38,13 @@ source = "optional_shared_profile.ska"
 name = "ownership_matrix"
 
 [[test]]
+name = "shared_canonical"
+mode = "run"
+source = "optional_shared_canonical.ska"
+[[test.run]]
+name = "canonical_and_shorthand_ownership_matrix"
+
+[[test]]
 name = "shared_array_result"
 mode = "run"
 source = "optional_shared_array_result.ska"

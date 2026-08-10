@@ -46,8 +46,9 @@ copy/adopt/move and conditional release, field and callable ownership,
 self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,
 ABI register/stack pressure, absent-access failure, and exactly-once
 last-owner finalization.
-The frozen compositional extension's staged syntax, identity, lifecycle, MIR,
-verification, layout, ABI, native, robustness, and determinism obligations are
+The compositional optional extension's implemented recursive-syntax and
+canonical-owner coverage, plus its staged identity, lifecycle, MIR,
+verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
 [optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#frozen-extension-test-matrix).
 Existing compile-failure expectations remain authoritative until the roadmap

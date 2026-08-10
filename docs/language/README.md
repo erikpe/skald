@@ -43,7 +43,7 @@ arguments have deterministic source order.
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
 | **shared owner** | A non-null owning `shared T` handle. It is a value distinct from the allocated object place it keeps alive. |
-| **optional value** | An explicit `T?` or `shared? T` wrapper containing either no payload or one complete valid payload. Primitive, exact-class, and shared-owner optionals execute across internal owning boundaries; class unwrap supplies a bounded checked payload view and shared unwrap secures an ordinary non-null owner. |
+| **optional value** | An explicit `T?` or `(shared T)?` wrapper containing either no payload or one complete valid payload. Primitive, exact-class, and shared-owner optionals execute across internal owning boundaries; class unwrap supplies a bounded checked payload view and shared unwrap secures an ordinary non-null owner. `shared? T` is shorthand for the latter. |
 | **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **array** | A built-in invariant fixed-size sequence. Inline `T[]` values deep-copy named sources and adopt produced backing; `shared T[]` owners share one allocation. Arrays support nested owning element categories, immutable length, checked indexing, copied slices, explicit shared projection, deterministic lifecycle, and call-scoped aliases on x86-64. |
 | **string** | An exact `std::str::Str` class value describing an immutable finite sequence of `u8` bytes. Literals use immortal backing; ordinary standard-library construction and concatenation use dynamically reclaimed shared backing. |
@@ -95,14 +95,14 @@ crosses one shared edge, and general object-place consumers require `*owner`.
 Primitive, exact-class inline, and shared-owner optional values execute across
 owning local, field, and internal callable boundaries, including dynamically
 guarded checked class payload views and secured ordinary owners from
-`shared? T` unwrap. The implemented source contract is described
-in [Optional Values](OPTIONAL_VALUES.md): `T?` and `shared? T` make
+`(shared T)?` unwrap. The implemented source contract is described
+in [Optional Values](OPTIONAL_VALUES.md): `T?` and `(shared T)?` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
-access. Its frozen compositional extension makes `(shared T)?` canonical with
-`shared? T` as shorthand, defines recursive optionals and `some(...)`, and
-defines optional inline arrays without making those new forms current compiler
-syntax. Shared boxes containing optionals remain outside that extension.
+access. `shared? T` is an exact source shorthand. Recursive type syntax now
+parses nested optionals and optional arrays through their semantic gates; their
+identities, lifecycle, and `some(...)` construction remain frozen future work.
+Shared boxes containing optionals remain outside that extension.
 Exceptional control flow remains unimplemented and exploratory.
 The separate uncatchable panic and common unrecoverable-failure reporting
 contract is implemented.
@@ -172,7 +172,7 @@ makes a result source-observable.
   exact-reverse normal-return shutdown, diagnostics, and the unchanged
   runtime-ABI contract.
 - [Optional values](OPTIONAL_VALUES.md) defines the explicit `T?` and
-  `shared? T` source contract, including presence, checked
+  canonical `(shared T)?` and shorthand `shared? T` source contract, including presence, checked
   access, lifecycle, failure, and the remaining aliasing exclusions.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, evaluation order,

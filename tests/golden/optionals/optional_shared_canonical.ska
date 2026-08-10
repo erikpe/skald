@@ -1,0 +1,41 @@
+from std::test import assert_eq_i64, assert_true;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Value implements Readable {
+    number: i64;
+
+    init(number: i64) {
+        self.number = number;
+    }
+
+    fn read() -> i64 {
+        return self.number;
+    }
+}
+
+class Holder {
+    value: (shared Readable)?;
+
+    init(value: (shared Readable)?) {
+        self.value = value;
+    }
+}
+
+fn forward(value: (shared Readable)?) -> (shared Readable)? {
+    return value;
+}
+
+fn main() -> i64 {
+    var canonical: (shared Value)? = new Value(42);
+    var shorthand: shared? Value = canonical;
+    var elements: ((shared Value)?)[] = ((shared Value)?)[]{shorthand};
+    var readable: (shared Readable)? = forward(elements[0]);
+    var holder: Holder = Holder(readable);
+    assert_true(canonical is some);
+    assert_true(shorthand is some);
+    assert_eq_i64(holder.value!->read(), 42);
+    return 0;
+}

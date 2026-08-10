@@ -169,7 +169,7 @@ reserved class bytes and conditional lifecycle calls. State zero is absent,
 one is present and unguarded, and greater values count active views. Begin,
 end, overflow, and pinned-mutation checks lower inline without runtime helpers.
 Fields use that layout recursively. Internal inline optional parameters/results
-use the documented pointer aggregate convention. `shared? T` is one
+use the documented pointer aggregate convention. `(shared T)?` is one
 integer-class word: zero is absent and a nonzero word is the existing canonical
 shared handle. Calls pass it in registers or stack slots and return it in
 `rax`; generated conditional retain/release paths branch around zero before
@@ -554,7 +554,7 @@ The x86-64 target layout is:
 | `bool` | 1 | 1 |
 | primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
-| `shared? T` | 8 | 8 |
+| `(shared T)?` | 8 | 8 |
 | inline `T[]` descriptor | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |

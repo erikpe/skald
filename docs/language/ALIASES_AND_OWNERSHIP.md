@@ -371,13 +371,13 @@ sources, lexical lifetime, initialization, control-flow joins, interaction
 with relocation, and any anchoring requirement are not frozen. The current
 parameter restrictions do not implicitly specify that larger feature.
 
-Optional owning values, including `shared? T`, and aliases to supported inline
+Optional owning values, including `(shared T)?`, and aliases to supported inline
 optional containers execute. Their
 [contract](OPTIONAL_VALUES.md#aliases)
 bounds a checked `value!` payload view to one complete immediate consumer
 under a dynamic presence guard. Read-only aliases may inspect and unwrap;
 mutable aliases may additionally set, clear, or replace an unguarded
-container. This does not introduce `ref?`, aliases to `shared? T`, stored
+container. This does not introduce `ref?`, aliases to `(shared T)?`, stored
 payload aliases, or optional reference values. The implemented
 [array contract](ARRAYS.md#aliases-mutation-and-backing-anchors) admits whole
 array places and exact-class or nested-array elements as call-scoped alias

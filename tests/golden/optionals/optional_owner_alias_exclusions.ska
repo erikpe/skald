@@ -1,0 +1,10 @@
+class Value {
+    init() {}
+}
+
+fn shorthand(ref value: shared? Value) -> unit {}
+fn canonical(ref value: (shared Value)?) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

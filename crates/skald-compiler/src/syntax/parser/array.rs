@@ -72,12 +72,6 @@ impl Parser<'_> {
 
     pub(super) fn starts_array_construction(&self, after_new: bool) -> bool {
         let start = usize::from(after_new);
-        if !after_new
-            && self.peek_ahead(start).kind == TokenKind::LeftParen
-            && !token_type_starts_array_element(self.peek_ahead(start + 1).kind)
-        {
-            return false;
-        }
         self.scan_type_shape(start, 0)
             .is_some_and(|(end, contains_array)| {
                 contains_array
@@ -117,19 +111,22 @@ impl Parser<'_> {
                         end += 2;
                     }
                 }
-                if self.peek_ahead(end).kind == TokenKind::Question {
-                    end += 1;
-                }
                 (end, false)
             } else {
                 return None;
             };
 
-        while self.peek_ahead(end).kind == TokenKind::LeftBracket
-            && self.peek_ahead(end + 1).kind == TokenKind::RightBracket
-        {
-            contains_array = true;
-            end += 2;
+        loop {
+            if self.peek_ahead(end).kind == TokenKind::Question {
+                end += 1;
+            } else if self.peek_ahead(end).kind == TokenKind::LeftBracket
+                && self.peek_ahead(end + 1).kind == TokenKind::RightBracket
+            {
+                contains_array = true;
+                end += 2;
+            } else {
+                break;
+            }
         }
         Some((end, contains_array))
     }

@@ -10,7 +10,7 @@ Object cast legality and consuming contexts are owned by
 [Object Casts](../language/OBJECT_CASTS.md).
 The implemented
 [optional-values compiler contract](OPTIONAL_VALUES.md) wraps ordinary shared
-ownership as `shared? T`; it does not weaken the non-null handle invariants
+ownership as `(shared T)?`; it does not weaken the non-null handle invariants
 defined here. Its zero niche is tested and branched around before existing
 retain, release, metadata, dereference, anchor, cast, or finalization paths.
 
@@ -262,7 +262,7 @@ The MIR verifier must reject a program unless all of the following hold:
   ordinary access.
 
 The implemented [static-field profile](../language/STATIC_FIELDS.md) admits
-initializer-free optional `shared? T` statics, whose zero state owns nothing,
+initializer-free optional `(shared T)?` statics, whose zero state owns nothing,
 and explicitly initialized ordinary or optional shared statics. Initializers
 reuse ordinary adoption, copy, allocation, publication, and full-expression
 cleanup. Present values use ordinary ownership transitions during execution.
@@ -386,7 +386,7 @@ hard-trap through the
 
 ### Frozen immortal-allocation extension
 
-The frozen
+The implemented canonical-owner slice of the
 [string compiler contract](STRINGS.md#immortal-shared-storage) reserves
 `u64::MAX` for verified compiler-emitted program-lifetime allocations. Once
 that producer exists, retain and release of a proven immortal handle are
@@ -544,7 +544,7 @@ Strong cycles intentionally remain allocated, so leak detection must
 distinguish that specified behavior from an owner lost by incorrect lowering.
 
 Implemented optional-owner lowering proves that zero represents only absent
-`shared? T` storage and never reaches the non-null operations in this
+`(shared T)?` storage and never reaches the non-null operations in this
 contract. Present optional owners reuse the same copy, adopt, release,
 metadata, finalization, and anchor rules. The frozen canonical spelling
 `(shared T)?` preserves this exact obligation.

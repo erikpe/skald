@@ -184,7 +184,7 @@ The complete initializer-free profile is:
 | `bool` | `false` |
 | Primitive `T?` | `none`; no payload is live |
 | Exact-class `T?` | `none`; no payload object is live |
-| `shared? T` for any currently supported shared target | `none`; no strong owner exists |
+| `(shared T)?` for any currently supported shared target | `none`; no strong owner exists |
 | Inline `T[]` for any legal array element type | The allocation-free empty array value, equivalent to `T[]()` |
 
 An empty inline array constructs no elements. Its element type therefore need

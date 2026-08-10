@@ -27,12 +27,15 @@ fn array_type_grouping_preserves_outer_and_element_ownership() {
     ));
     assert!(matches!(
         values.parameters[2].type_syntax.kind,
-        TypeKind::OptionalShared { .. }
+        TypeKind::Optional {
+            spelling: OptionalTypeSpelling::SharedShorthand,
+            ..
+        }
     ));
 
     let dump = dump_ast(&output.ast);
     assert!(dump.contains("Type Grouped"));
-    assert!(dump.contains("Type OptionalShared"));
+    assert!(dump.contains("Type Optional SharedShorthand"));
     assert!(dump.matches("Type Array").count() >= 9);
 }
 
@@ -100,6 +103,24 @@ fn parses_every_array_construction_mode_without_call_ambiguity() {
         &local(main, 2).initializer,
         Expression::ArrayConstruction(construction)
             if matches!(construction.arguments, ArrayConstructionArguments::Copy { .. })
+    ));
+}
+
+#[test]
+fn grouped_canonical_optional_owner_array_construction_uses_type_lookahead() {
+    let (_, output) = parse_text(concat!(
+        "class T { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: ((shared T)?)[] = ((shared T)?)[]{none};\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let main = function(&output.ast, 1);
+    assert!(matches!(
+        local(main, 0).initializer,
+        Expression::ArrayConstruction(_)
     ));
 }
 
@@ -277,17 +298,16 @@ fn malformed_array_brackets_recover_at_later_statements_and_declarations() {
 }
 
 #[test]
-fn inline_optional_array_payloads_remain_syntax_errors() {
+fn inline_optional_array_payloads_cross_the_syntax_boundary() {
     let (_, output) =
         parse_text("fn broken(value: i64[]?) -> i64 { return 0; } fn main() -> i64 { return 0; }");
 
-    assert!(output.has_errors());
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OPTIONAL_TYPE
-            && diagnostic.message.contains("inline optional array")
-    }));
-    assert_eq!(output.ast.declarations.len(), 1);
-    assert_eq!(function(&output.ast, 0).name.text, "main");
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.ast.declarations.len(), 2);
+    assert!(matches!(
+        function(&output.ast, 0).parameters[0].type_syntax.kind,
+        TypeKind::Optional { .. }
+    ));
 }
 
 #[test]

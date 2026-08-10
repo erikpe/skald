@@ -1,0 +1,5 @@
+fn optional_reference(ref? value: i64) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

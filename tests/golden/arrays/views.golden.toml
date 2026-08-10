@@ -23,7 +23,7 @@ mode = "compile-fail"
 source = "array_optional_payload.ska"
 [test.expect.stderr]
 match = "starts-with"
-inline = """error[PAR010]: inline optional array payloads are not supported
+inline = """error[RES022]: inline optional array payloads are not supported yet
  --> tests/golden/arrays/array_optional_payload.ska:1:26"""
 
 [[test]]

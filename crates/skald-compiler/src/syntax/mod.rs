@@ -22,7 +22,7 @@ pub use ast::{
     LogicalOperator, MemberAccessExpr, MemberAccessOperator, MemberVisibility, MethodDecl,
     MethodModifier, ModuleImport, Name, NameComponent, NameComponentRef, NameComponents,
     NameQualification, NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
-    ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr,
+    ObjectCastTargetMode, OptionalTypeSpelling, Parameter, ParameterBindingMode, PresenceTestExpr,
     PresenceTestKind, PrimitiveCastExpr, PrimitiveType, ReturnStatement, SelectiveImport,
     SelectiveImportItem, SelfExpr, Statement, StaticFieldDecl, StaticFieldInitializer,
     StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr,

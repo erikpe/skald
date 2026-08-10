@@ -692,7 +692,7 @@ reinterprets bytes.
 
 Optional values have an [implemented contract](OPTIONAL_VALUES.md) for
 representing absence without making every value nullable. Primitive and
-exact-class `T?` and optional shared-owner `shared? T` values cross owning
+exact-class `T?` and optional shared-owner `(shared T)?` values cross owning
 locals, fields, and internal parameters/results with `none`, exact-value
 injection, optional copy and assignment, initializer ranking, presence tests,
 conditional lifecycle, and checked access. Alias parameters may designate

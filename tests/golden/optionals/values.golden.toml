@@ -59,10 +59,20 @@ mode = "compile-fail"
 source = "optional_declaration_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "shared-owner alias", match = "contains", inline = """error[PAR010]: aliases to shared owners are not supported
- --> tests/golden/optionals/optional_declaration_exclusions.ska:5:28""" },
   { name = "uninitialized optional", match = "contains", inline = """error[PAR002]: expected `=` before the local initializer
- --> tests/golden/optionals/optional_declaration_exclusions.ska:8:28""" },
+ --> tests/golden/optionals/optional_declaration_exclusions.ska:2:28""" },
+]
+
+[[test]]
+name = "optional_owner_alias_exclusions"
+mode = "compile-fail"
+source = "optional_owner_alias_exclusions.ska"
+[test.expect.stderr]
+matches = [
+  { name = "shorthand optional-owner alias", match = "contains", inline = """error[TYP019]: function alias parameter `value` must name a primitive, class, array, interface, `Obj`, or supported inline optional
+ --> tests/golden/optionals/optional_owner_alias_exclusions.ska:5:25""" },
+  { name = "canonical optional-owner alias", match = "contains", inline = """error[TYP019]: function alias parameter `value` must name a primitive, class, array, interface, `Obj`, or supported inline optional
+ --> tests/golden/optionals/optional_owner_alias_exclusions.ska:6:25""" },
 ]
 
 [[test]]
@@ -80,14 +90,12 @@ mode = "compile-fail"
 source = "optional_malformed_punctuation.ska"
 [test.expect.stderr]
 matches = [
-  { name = "nested primitive optional", match = "contains", inline = """error[PAR010]: nested optional types are not supported
+  { name = "repeated shared optional marker", match = "contains", inline = """error[PAR010]: repeated `?` after `shared` is not a type form
  --> tests/golden/optionals/optional_malformed_punctuation.ska:6:23""" },
-  { name = "repeated shared optional marker", match = "contains", inline = """error[PAR002]: expected a class, interface, or `Obj` after `shared?`
- --> tests/golden/optionals/optional_malformed_punctuation.ska:7:23""" },
   { name = "optional cast target", match = "contains", inline = """error[PAR002]: expected `)` after the expression
- --> tests/golden/optionals/optional_malformed_punctuation.ska:10:30""" },
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:9:30""" },
   { name = "punctuation after unwrap", match = "contains", inline = """error[PAR002]: expected `;` after the return statement
- --> tests/golden/optionals/optional_malformed_punctuation.ska:11:18""" },
+ --> tests/golden/optionals/optional_malformed_punctuation.ska:10:18""" },
 ]
 
 [[test]]
@@ -119,16 +127,25 @@ mode = "compile-fail"
 source = "optional_type_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "optional unit", match = "contains", inline = """error[PAR010]: `unit?` is not a valid optional type
+  { name = "optional unit", match = "contains", inline = """error[RES022]: `unit?` is not a valid optional type
  --> tests/golden/optionals/optional_type_exclusions.ska:10:18""" },
-  { name = "optional object view", match = "contains", inline = """error[PAR010]: `Obj?` is not a valid inline optional type
+  { name = "optional interface", match = "contains", inline = """error[RES022]: interface `Readable` cannot be an inline optional payload
+ --> tests/golden/optionals/optional_type_exclusions.ska:11:19""" },
+  { name = "optional object view", match = "contains", inline = """error[RES022]: `Obj?` is not a valid inline optional type
  --> tests/golden/optionals/optional_type_exclusions.ska:12:19""" },
-  { name = "nested optional", match = "contains", inline = """error[PAR010]: nested optional types are not supported
+  { name = "nested optional", match = "contains", inline = """error[RES022]: nested optional types are not supported yet
  --> tests/golden/optionals/optional_type_exclusions.ska:13:20""" },
-  { name = "shared optional payload", match = "contains", inline = """error[PAR010]: shared boxes containing optional payloads are not supported
+  { name = "shared optional payload", match = "contains", inline = """error[RES022]: shared boxes containing optional payloads are not supported
  --> tests/golden/optionals/optional_type_exclusions.ska:14:35""" },
-  { name = "optional shared optional payload", match = "contains", inline = """error[PAR010]: optional shared boxes are not supported
+  { name = "optional shared optional payload", match = "contains", inline = """error[RES022]: optional shared boxes are not supported
  --> tests/golden/optionals/optional_type_exclusions.ska:15:45""" },
-  { name = "optional reference", match = "contains", inline = """error[PAR010]: optional references are not supported
- --> tests/golden/optionals/optional_type_exclusions.ska:18:26""" },
 ]
+
+[[test]]
+name = "optional_reference_exclusion"
+mode = "compile-fail"
+source = "optional_reference_exclusion.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR010]: optional references are not supported
+ --> tests/golden/optionals/optional_reference_exclusion.ska:1:26"""

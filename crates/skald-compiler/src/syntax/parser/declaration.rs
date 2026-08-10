@@ -35,10 +35,6 @@ impl TypeContext {
         true
     }
 
-    const fn accepts_shared(self) -> bool {
-        !matches!(self, Self::AliasParameter)
-    }
-
     fn expected_label(self) -> String {
         match self {
             Self::Result => format!(
@@ -336,119 +332,69 @@ impl Parser<'_> {
 
     fn parse_type_inner(&mut self, context: TypeContext, message: String) -> Option<TypeSyntax> {
         let token = self.peek();
-        if context == TypeContext::AliasParameter
-            && self.at_contextual("shared")
-            && self.at_any_ahead(1, &[TokenKind::Identifier, TokenKind::Question])
+        let mut type_syntax = if self.at_contextual("shared")
+            && (self.peek_ahead(1).kind == TokenKind::Question
+                || token_starts_type(self.peek_ahead(1).kind))
         {
             let shared = self.advance();
-            self.consume(TokenKind::Question);
-            let target = self.parse_name_path("a class, interface, or `Obj` after `shared`")?;
-            let end = self
-                .consume(TokenKind::Question)
-                .map_or(target.span, |question| question.span);
-            self.report(
-                INVALID_OPTIONAL_TYPE,
-                "aliases to shared owners are not supported",
-                self.cover(shared.span, end),
-                "pass the shared owner by value; aliases may designate inline optional containers",
-            );
-            return None;
-        }
-
-        let mut type_syntax = if context.accepts_shared() && self.at_contextual("shared") {
-            let shared = self.advance();
-            if let Some(question) = self.consume(TokenKind::Question) {
-                if self.at(TokenKind::Question) {
-                    let _ = self.parse_name_path("a class, interface, or `Obj` after `shared?`")?;
-                }
-                let target = self.with_syntax_nesting(shared.span, |parser| {
+            let shorthand_question = self.consume(TokenKind::Question);
+            if shorthand_question.is_some() && self.at(TokenKind::Question) {
+                let repeated = self.advance();
+                self.consume_repeated_questions();
+                let _ = self.with_syntax_nesting(shared.span, |parser| {
                     parser.parse_type_inner(
                         TypeContext::ArrayElement,
                         "expected a type after `shared?`".to_owned(),
                     )
-                })?;
-                if let TypeKind::Optional { question_span, .. } = &target.kind {
-                    self.report(
-                        INVALID_OPTIONAL_TYPE,
-                        "optional shared boxes are not supported",
-                        *question_span,
-                        "`shared? T?` is reserved for a future boxed-optional design",
-                    );
-                    return None;
-                }
+                });
+                self.report(
+                    INVALID_OPTIONAL_TYPE,
+                    "repeated `?` after `shared` is not a type form",
+                    repeated.span,
+                    "use `shared? T` for the shorthand or `(shared T)??` for nesting",
+                );
+                return None;
+            }
+
+            let target = self.with_syntax_nesting(shared.span, |parser| {
+                parser.parse_type_inner(
+                    TypeContext::ArrayElement,
+                    if shorthand_question.is_some() {
+                        "expected a type after `shared?`".to_owned()
+                    } else {
+                        "expected a type after `shared`".to_owned()
+                    },
+                )
+            })?;
+            let shared_type = TypeSyntax {
+                span: self.cover(shared.span, target.span),
+                kind: TypeKind::Shared {
+                    shared_span: shared.span,
+                    target: Box::new(target),
+                },
+            };
+            if let Some(question) = shorthand_question {
                 TypeSyntax {
-                    span: self.cover(shared.span, target.span),
-                    kind: TypeKind::OptionalShared {
-                        shared_span: shared.span,
+                    span: shared_type.span,
+                    kind: TypeKind::Optional {
+                        payload: Box::new(shared_type),
                         question_span: question.span,
-                        target: Box::new(target),
+                        spelling: OptionalTypeSpelling::SharedShorthand,
                     },
                 }
             } else {
-                let target = self.with_syntax_nesting(shared.span, |parser| {
-                    parser.parse_type_inner(
-                        TypeContext::ArrayElement,
-                        "expected a type after `shared`".to_owned(),
-                    )
-                })?;
-                if let TypeKind::Optional { question_span, .. } = &target.kind {
-                    self.report(
-                        INVALID_OPTIONAL_TYPE,
-                        "shared boxes containing optional payloads are not supported",
-                        *question_span,
-                        "`shared T?` is reserved for a future boxed-optional design",
-                    );
-                    return None;
-                }
-                TypeSyntax {
-                    span: self.cover(shared.span, target.span),
-                    kind: TypeKind::Shared {
-                        shared_span: shared.span,
-                        target: Box::new(target),
-                    },
-                }
+                shared_type
             }
         } else if let Some(kind) = token_type_kind(token.kind) {
-            if kind == TypeKind::Unit && self.peek_ahead(1).kind == TokenKind::Question {
-                self.advance();
-                let question = self.advance();
-                self.report(
-                    INVALID_OPTIONAL_TYPE,
-                    "`unit?` is not a valid optional type",
-                    question.span,
-                    "`unit` has no value payload to make optional",
-                );
-                self.consume_repeated_questions();
-                return None;
-            }
             if context.accepts_primitive()
                 && (kind != TypeKind::Unit
                     || context.accepts_unit()
-                    || self.peek_ahead(1).kind == TokenKind::LeftBracket)
+                    || self.at_any_ahead(1, &[TokenKind::LeftBracket, TokenKind::Question]))
             {
                 self.advance();
-                if let Some(question) = self.consume(TokenKind::Question) {
-                    if self.at(TokenKind::Question) {
-                        self.reject_optional_suffix(
-                            "nested optional types are not supported",
-                            "use exactly one `?` marker",
-                        );
-                        return None;
-                    }
-                    TypeSyntax {
-                        kind: TypeKind::Optional {
-                            payload: optional_payload_kind(kind)
-                                .expect("validated primitive optional payload"),
-                            payload_span: token.span,
-                            question_span: question.span,
-                        },
-                        span: self.cover(token.span, question.span),
-                    }
-                } else {
-                    TypeSyntax {
-                        kind,
-                        span: token.span,
-                    }
+                TypeSyntax {
+                    kind,
+                    span: token.span,
                 }
             } else {
                 self.report(
@@ -463,37 +409,9 @@ impl Parser<'_> {
         } else if context.accepts_named() && token.kind == TokenKind::Identifier {
             let name = self.parse_name_path("expected a named type")?;
             let name_span = name.span;
-            if let Some(question) = self.consume(TokenKind::Question) {
-                if name.text == "Obj" {
-                    self.report(
-                        INVALID_OPTIONAL_TYPE,
-                        "`Obj?` is not a valid inline optional type",
-                        question.span,
-                        "use `shared? Obj` for an optional owning object view",
-                    );
-                    self.consume_repeated_questions();
-                    return None;
-                }
-                if self.at(TokenKind::Question) {
-                    self.reject_optional_suffix(
-                        "nested optional types are not supported",
-                        "use exactly one `?` marker",
-                    );
-                    return None;
-                }
-                TypeSyntax {
-                    kind: TypeKind::Optional {
-                        payload: OptionalPayloadKind::Named(name),
-                        payload_span: name_span,
-                        question_span: question.span,
-                    },
-                    span: self.cover(name_span, question.span),
-                }
-            } else {
-                TypeSyntax {
-                    kind: TypeKind::Named(name),
-                    span: name_span,
-                }
+            TypeSyntax {
+                kind: TypeKind::Named(name),
+                span: name_span,
             }
         } else if let Some(left_paren) = self.consume(TokenKind::LeftParen) {
             let inner = self.with_syntax_nesting(left_paren.span, |parser| {
@@ -524,8 +442,27 @@ impl Parser<'_> {
             return None;
         };
 
-        let mut array_depth = 0usize;
-        while self.at(TokenKind::LeftBracket) {
+        let mut postfix_depth = 0usize;
+        while self.at_any(&[TokenKind::Question, TokenKind::LeftBracket]) {
+            if self.nesting_depth + postfix_depth + 1 >= MAX_SYNTAX_NESTING {
+                self.report_excessive_nesting(self.peek().span);
+                self.recover_from_excessive_nesting();
+                return None;
+            }
+            postfix_depth += 1;
+            if let Some(question) = self.consume(TokenKind::Question) {
+                let span = self.cover(type_syntax.span, question.span);
+                type_syntax = TypeSyntax {
+                    span,
+                    kind: TypeKind::Optional {
+                        payload: Box::new(type_syntax),
+                        question_span: question.span,
+                        spelling: OptionalTypeSpelling::Postfix,
+                    },
+                };
+                continue;
+            }
+
             if self.peek_ahead(1).kind != TokenKind::RightBracket {
                 self.report(
                     EXPECTED_TOKEN,
@@ -536,12 +473,6 @@ impl Parser<'_> {
                 self.advance();
                 return None;
             }
-            if self.nesting_depth + array_depth + 1 >= MAX_SYNTAX_NESTING {
-                self.report_excessive_nesting(self.peek().span);
-                self.recover_from_excessive_nesting();
-                return None;
-            }
-            array_depth += 1;
             let left_bracket = self.advance();
             let right_bracket = self.advance();
             type_syntax = TypeSyntax {
@@ -553,23 +484,6 @@ impl Parser<'_> {
                 },
             };
         }
-
-        if matches!(type_syntax.kind, TypeKind::Grouped { .. }) {
-            self.report(
-                EXPECTED_TOKEN,
-                "grouped types are supported only as array element types",
-                type_syntax.span,
-                "follow the grouping with `[]`",
-            );
-            return None;
-        }
-        if self.at(TokenKind::Question) && matches!(type_syntax.kind, TypeKind::Array { .. }) {
-            self.reject_optional_suffix(
-                "inline optional array payloads are not supported",
-                "use `shared? T[]` for an optional shared array owner",
-            );
-            return None;
-        }
         Some(type_syntax)
     }
 
@@ -579,31 +493,8 @@ impl Parser<'_> {
             .any(|kind| self.peek_ahead(distance).kind == *kind)
     }
 
-    fn reject_optional_suffix(&mut self, message: &'static str, label: &'static str) {
-        let question = self.advance();
-        self.consume_repeated_questions();
-        self.report(INVALID_OPTIONAL_TYPE, message, question.span, label);
-    }
-
     fn consume_repeated_questions(&mut self) {
         while self.consume(TokenKind::Question).is_some() {}
-    }
-}
-
-fn optional_payload_kind(kind: TypeKind) -> Option<OptionalPayloadKind> {
-    match kind {
-        TypeKind::I64 => Some(OptionalPayloadKind::I64),
-        TypeKind::U64 => Some(OptionalPayloadKind::U64),
-        TypeKind::U8 => Some(OptionalPayloadKind::U8),
-        TypeKind::F64 => Some(OptionalPayloadKind::F64),
-        TypeKind::Bool => Some(OptionalPayloadKind::Bool),
-        TypeKind::Unit
-        | TypeKind::Named(_)
-        | TypeKind::Shared { .. }
-        | TypeKind::Optional { .. }
-        | TypeKind::OptionalShared { .. }
-        | TypeKind::Grouped { .. }
-        | TypeKind::Array { .. } => None,
     }
 }
 
@@ -617,4 +508,18 @@ fn token_type_kind(kind: TokenKind) -> Option<TypeKind> {
         TokenKind::Unit => Some(TypeKind::Unit),
         _ => None,
     }
+}
+
+const fn token_starts_type(kind: TokenKind) -> bool {
+    matches!(
+        kind,
+        TokenKind::Identifier
+            | TokenKind::LeftParen
+            | TokenKind::I64
+            | TokenKind::U64
+            | TokenKind::U8
+            | TokenKind::F64
+            | TokenKind::Bool
+            | TokenKind::Unit
+    )
 }

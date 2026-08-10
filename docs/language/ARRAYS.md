@@ -57,8 +57,9 @@ creating an infinitely sized inline class.
 
 ## Type and ownership forms
 
-Postfix `[]` constructs an array type. Leading `shared` or `shared?` before an
-unparenthesized array spelling applies to the complete following array type.
+Postfix `[]` constructs an array type. Leading `shared` applies to the complete
+following array type; `shared?` is shorthand for an optional owner of that
+complete type.
 Parentheses place ownership inside the element type:
 
 | Type | Meaning |
@@ -67,8 +68,8 @@ Parentheses place ownership inside the element type:
 | `shared T[]` | Shared owner of one array allocation containing inline `T` elements |
 | `(shared T)[]` | Inline array whose elements are non-null shared owners of `T` objects |
 | `shared (shared T)[]` | Shared array whose elements are shared owners of `T` objects |
-| `shared? T[]` | Optional shared owner of a `T[]` array allocation |
-| `(shared? T)[]` | Inline array whose elements are optional shared owners of `T` objects |
+| `(shared T[])?` | Optional shared owner of a `T[]` array allocation (`shared? T[]` shorthand) |
+| `((shared T)?)[]` | Inline array whose elements are optional shared owners of `T` objects (`(shared? T)[]` also accepted) |
 
 The same rule composes recursively. `shared T[][]` is a shared outer array
 whose elements are inline `T[]` values. `(shared T[])[]` is an inline array
@@ -83,13 +84,14 @@ Legal element types are:
 - inline array types recursively.
 
 `unit`, bare interface and `Obj` views, aliases, and function types are not
-array element types. Inline optional arrays are not part of the implemented
-contract: no currently accepted source form makes an array type itself an
-inline optional payload. The frozen
+array element types. Inline optional arrays are not part of the executable
+contract. The parser preserves an array type used as an optional payload, and
+resolution rejects it at the deferred optional-array boundary. The frozen
 [compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
 defines `T[]?` and `(T[])?` as equivalent spellings for that future value. This
-does not change current compiler availability or `shared? T[]`, whose absence
-belongs to the shared owner rather than to an inline optional array payload.
+does not change executable availability or `(shared T[])?` and its
+`shared? T[]` shorthand, whose absence belongs to the shared owner rather than
+to an inline optional array payload.
 
 ## Construction and default initialization
 
@@ -123,7 +125,7 @@ initializer-free locals or fields become legal:
 | `f64` | Positive binary64 zero, spelled `0.0` |
 | `bool` | `false` |
 | Supported inline `T?` | `none` |
-| Supported `shared? T` | `none` |
+| Supported `(shared T)?` | `none` |
 | Exact class `T` | One ordinary zero-argument `T()` construction |
 | Inline array `T[]` | A valid empty `T[]` value |
 | `shared T`, where `T` is a concrete exact class with an applicable zero-argument initializer | One distinct `new T()` allocation |
@@ -262,9 +264,10 @@ var owners: (shared Item)[] = (shared Item)[]{
 var maybe: i64?[] = i64?[]{none, 10, none};
 ```
 
-Nested arrays remain jagged. `shared? T[]` remains an optional shared owner of
-one complete array, while `(shared? T)[]` remains an array of optional shared
-owners. Element-list construction adds no optional inline-array payload and no
+Nested arrays remain jagged. `(shared T[])?` is an optional shared owner of one
+complete array, while `((shared T)?)[]` is an array of optional shared owners.
+The corresponding `shared?` forms remain accepted shorthand. Element-list
+construction adds no optional inline-array payload and no
 array covariance, common-supertype search, or implicit numeric conversion.
 
 ### Allocation, evaluation, and initialization
@@ -444,11 +447,11 @@ explicit:
 var copy: shared T[] = new T[](copy *first);
 ```
 
-`shared? T[]` is an optional shared owner, not an optional inline array. It is
+`(shared T[])?` is an optional shared owner, not an optional inline array. It is
 either `none` or contains one ordinary non-null `shared T[]` owner:
 
 ```ska
-var maybe: shared? T[] = none;
+var maybe: (shared T[])? = none;
 maybe = new T[](10u);
 ```
 
@@ -519,7 +522,7 @@ owner expression once.
 An optional shared array must be unwrapped before dereference:
 
 ```ska
-var maybe: shared? T[] = new T[](10u);
+var maybe: (shared T[])? = new T[](10u);
 var value: T = maybe!->[3];
 maybe!->[3] = replacement;
 ```
@@ -660,7 +663,7 @@ rows[1] = i64[](20u);
 
 Inner arrays are never implicitly optional. Absence is available through an
 optional shared owner, for example an array whose element type is
-`shared? T[]`. Inline optional array payloads remain deferred.
+`(shared T[])?`. Inline optional array payloads remain deferred.
 
 ## Aliases, mutation, and backing anchors
 
@@ -763,8 +766,8 @@ array ownership combinations are compile-time errors.
 The frozen
 [compositional optional extension](OPTIONAL_VALUES.md#frozen-compositional-extension)
 specifies inline optional arrays as `T[]?`, distinct from both `T?[]` and
-`shared? T[]`. The current compiler continues to reject that form until its
-implementation roadmap completes.
+`(shared T[])?` (`shared? T[]` shorthand). The parser accepts that type shape,
+but resolution continues to reject it until its implementation task completes.
 
 The following are intentionally outside the implemented array profile:
 

@@ -3,8 +3,9 @@
 Status: implemented language contract for primitive, exact inline-class, and
 optional shared-owner values across owning locals, fields, internal callable
 boundaries, and aliases to supported inline optional containers. This document
-also freezes the compositional extension for recursive optionals and optional
-inline arrays; that extension is not yet accepted by the compiler. The
+also defines the implemented compositional type syntax and freezes the
+remaining semantic extension for recursive optionals and optional inline
+arrays. Those deferred payloads are parsed but are not yet executable. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -14,9 +15,9 @@ This document defines Skald's source-level optional-value contract. Primitive
 values now execute end to end in
 owning locals, fields, internal value parameters/results, methods, interfaces,
 virtual overrides, and initializer overloads. Inline class payload access
-through postfix `!` executes as a bounded checked view. Optional shared owners
-execute through the same internal owning positions and secure a normal
-non-null owner on unwrap. Read-only and mutable aliases may designate
+through postfix `!` executes as a bounded checked view. Optional shared owners,
+written canonically as `(shared T)?`, execute through the same internal owning
+positions and secure a normal non-null owner on unwrap. Read-only and mutable aliases may designate
 supported inline optional containers without creating optional reference
 values.
 Compiler representation, verification, and ABI direction are defined in the
@@ -67,7 +68,7 @@ An inline `T?` has exactly two source-visible states:
 - **absent**, with no live `T`; or
 - **present**, with exactly one complete live and valid `T`.
 
-An optional shared owner `shared? T` likewise has exactly two states:
+An optional shared owner `(shared T)?` likewise has exactly two states:
 
 - **absent**, accounting for no strong owner; or
 - **present**, containing one ordinary non-null `shared T` owner.
@@ -78,8 +79,9 @@ partially destroyed value of type `T`. When an optional is absent, there is no
 
 ## Type forms
 
-The implemented profile separates optional inline payloads from optional shared
-ownership:
+The implemented profile separates optional inline payloads from optional
+shared ownership. `shared? T` remains accepted as exact source shorthand for
+the canonical `(shared T)?` form:
 
 | Type | Meaning | Implemented profile |
 |---|---|---|
@@ -87,28 +89,33 @@ ownership:
 | primitive `T?` | Inline optional containing zero or one primitive `T` | Owning locals, fields, and internal callable boundaries execute |
 | class `T?` | Inline optional containing zero or one exact class `T` | Owning lifecycle, internal boundaries, and bounded checked payload access execute |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
-| `shared? T` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
+| `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
+| `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
 | `shared? T?` | Optional owner of a non-null shared box containing `T?` | Reserved and rejected |
 
 In the implemented grammar, `shared?` is the contextual word `shared` followed
-by the `?` punctuation token. Ordinary trivia may separate those tokens, and
-current dumps use `shared? T`. The frozen compositional extension below makes
-`(shared T)?` canonical while retaining `shared? T` as exact shorthand.
+by the `?` punctuation token. Ordinary trivia may separate those tokens.
+Source-shaped syntax inspection retains the shorthand, while semantic dumps
+use canonical `(shared T)?` independently of the source spelling.
 
 Inline `T?` is valid when `T` is a primitive or exact inline class type.
-`shared? T` accepts the same class, interface, and `Obj` targets as ordinary
-`shared T`.
+`(shared T)?` and its `shared? T` shorthand accept the same class, interface,
+`Obj`, and array targets as ordinary `shared T`.
 
 The first profile rejects:
 
 - `unit?`;
 - standalone optional interface or `Obj` views;
-- nested `T??`;
-- optional array and function types;
+- execution of nested `T??`;
+- execution of optional array and function types;
 - `shared T?` and `shared? T?`;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
+
+The recursive syntax tree preserves these complete type shapes. Nested
+optionals, optional arrays, and shared boxes therefore fail at focused semantic
+gates rather than being discarded during parsing.
 
 These exclusions are deliberate. In particular, `shared T?` requires a
 generalized non-null shared box whose allocation, payload metadata, mutation,
@@ -117,10 +124,11 @@ the spelling without defining or implementing that box.
 
 ## Frozen compositional extension
 
-The compositional extension is a **frozen design**, not current compiler
-behavior. Until its implementation tasks land, the
-[implemented grammar](GRAMMAR.md) and the implemented profile above remain
-authoritative for accepted source.
+The type construction and grouping rules in this section are implemented
+syntax. Canonical optional shared owners execute through the existing flat
+optional-owner semantics. Recursive optional identities, nested lifecycle,
+`some(expression)`, and optional inline arrays remain a **frozen semantic
+design** until their later implementation tasks land.
 
 ### Type construction, grouping, and precedence
 
@@ -169,19 +177,18 @@ The exact spelling and identity matrix is:
 | Source spelling | Normalized type | Meaning | Current availability |
 |---|---|---|---|
 | `T?[]` | `Array<Optional<T>>` | Array whose elements are optional `T` values | Implemented for currently eligible `T` |
-| `T[]?` | `Optional<Array<T>>` | Optional inline array value | Frozen; rejected |
-| `(T[])?` | `Optional<Array<T>>` | Grouped spelling equivalent to `T[]?` | Frozen; rejected |
-| `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Frozen canonical spelling; rejected |
-| `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented shorthand |
-| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Frozen; rejected |
+| `T[]?` | `Optional<Array<T>>` | Optional inline array value | Parsed; semantically rejected until optional arrays execute |
+| `(T[])?` | `Optional<Array<T>>` | Grouped spelling equivalent to `T[]?` | Parsed; semantically rejected until optional arrays execute |
+| `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
+| `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
+| `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Parsed; semantically rejected until nested optionals execute |
 | `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Reserved box form; rejected |
 | `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Reserved box form; rejected |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
-and `(shared T)?` for an optional shared owner once those forms become
-executable. Source-shaped syntax inspection may retain the user's grouping or
-`shared?` shorthand for diagnostics. Alias spelling never creates a distinct
-type identity or conversion.
+and `(shared T)?` for an optional shared owner. Source-shaped syntax inspection
+retains the user's grouping or `shared?` shorthand for diagnostics. Alias
+spelling never creates a distinct type identity or conversion.
 
 ### Recursive states and explicit presence
 
@@ -296,7 +303,7 @@ from one unambiguous expected optional boundary:
 
 ```ska
 var inline_value: Item? = none;
-var shared_owner: shared? Item = none;
+var shared_owner: (shared Item)? = none;
 ```
 
 The expected type may come from a local or field initialization, assignment,
@@ -309,7 +316,7 @@ An ordinary value may be injected into its corresponding optional:
 
 ```ska
 var inline_value: Item? = Item();
-var shared_owner: shared? Item = new Item();
+var shared_owner: (shared Item)? = new Item();
 ```
 
 The source remains an ordinary valid `Item` or `shared Item`. Injection creates
@@ -471,7 +478,7 @@ requires a continuing presence guard after that copy completes.
 When an unwrap participates in an implemented short-circuit logical expression, an
 inline payload view and its presence guard still end after their complete
 immediate consumer; they do not extend across a later logical operand. An
-ordinary owner secured from `shared? T` is distinct: if it is a temporary, it
+ordinary owner secured from `(shared T)?` is distinct: if it is a temporary, it
 follows the selected path's full-expression lifetime. A skipped logical operand
 performs no unwrap and establishes no view, guard, or owner.
 
@@ -529,7 +536,7 @@ design.
 
 ## Shared ownership
 
-`shared? T` is an optional value around ordinary shared ownership, not a
+`(shared T)?` is an optional value around ordinary shared ownership, not a
 nullable form of `shared T`. When present, all existing shared invariants
 apply: the handle is non-null, accounts for one strong owner, retains complete
 dynamic metadata, and keeps one allocation alive.
@@ -547,7 +554,7 @@ A compatible shared up-view may be lifted through optionality only when the
 underlying `shared T` conversion is already valid. Optionality does not create
 a new class, interface, or `Obj` relation.
 
-The implementation may represent absent `shared? T` with a zero machine word.
+The implementation may represent absent `(shared T)?` with a zero machine word.
 That zero belongs only to the optional representation. It is never a
 source-level null and is never passed to an operation requiring `shared T`.
 
@@ -568,7 +575,7 @@ edge does:
 
 ```ska
 class Node {
-    next: shared? Node;
+    next: (shared Node)?;
 }
 ```
 
@@ -621,7 +628,7 @@ overrides, and initializer overloads. Alias parameters may designate supported
 inline optional containers as described above.
 
 The implemented [static-field contract](STATIC_FIELDS.md) separately permits
-primitive and exact-class `T?` and every currently supported `shared? T`
+primitive and exact-class `T?` and every currently supported `(shared T)?`
 target as class-owned static storage. An initializer-free container begins as
 `none`; an explicit initializer uses the ordinary absent/present construction,
 copy, adoption, publication, and cleanup rules before entry. Static optionals
@@ -658,7 +665,7 @@ the current compiler still rejects them.
 
 The implemented [array design](ARRAYS.md) permits existing optional
 non-array element types to default to `none` inside arrays and extends
-`shared?` to exact shared array targets. It continues to exclude inline
+`shared?` shorthand for exact shared array targets. It continues to exclude inline
 optional array payloads until the compositional roadmap is implemented;
 `shared? T[]` is optional shared ownership, not an inline optional array.
 

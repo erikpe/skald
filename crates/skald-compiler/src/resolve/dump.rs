@@ -1288,7 +1288,7 @@ fn render_type_kind(kind: ResolvedTypeKind) -> String {
             format!("{}?", render_optional_payload(payload))
         }
         ResolvedTypeKind::OptionalShared { target, .. } => {
-            format!("shared? {}", render_shared_target(target))
+            format!("(shared {})?", render_shared_target(target))
         }
     }
 }

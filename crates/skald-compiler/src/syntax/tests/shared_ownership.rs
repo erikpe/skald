@@ -146,21 +146,47 @@ fn malformed_shared_and_allocation_forms_recover_to_later_statements() {
 }
 
 #[test]
-fn shared_types_do_not_change_alias_parameter_grammar() {
+fn shared_alias_targets_cross_syntax_for_semantic_validation() {
     let (_, output) = parse_text(concat!(
         "fn broken(ref value: shared Widget) -> i64 { return 1; }\n",
         "fn optional(ref value: shared? Widget) -> i64 { return 2; }\n",
+        "fn canonical(ref value: (shared Widget)?) -> i64 { return 3; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert!(output.has_errors());
-    assert_eq!(output.ast.declarations.len(), 1);
-    assert_eq!(function(&output.ast, 0).name.text, "main");
-    assert_eq!(output.diagnostics.len(), 2);
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| { diagnostic.message == "aliases to shared owners are not supported" }));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.ast.declarations.len(), 4);
+    assert!(matches!(
+        function(&output.ast, 0).parameters[0].type_syntax.kind,
+        TypeKind::Shared { .. }
+    ));
+    assert!(matches!(
+        function(&output.ast, 1).parameters[0].type_syntax.kind,
+        TypeKind::Optional {
+            spelling: OptionalTypeSpelling::SharedShorthand,
+            ..
+        }
+    ));
+    assert!(matches!(
+        function(&output.ast, 2).parameters[0].type_syntax.kind,
+        TypeKind::Optional {
+            spelling: OptionalTypeSpelling::Postfix,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn shared_remains_a_named_type_when_no_ownership_target_follows() {
+    let (_, output) = parse_text("fn identity(value: shared) -> shared { return value; }\n");
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let identity = function(&output.ast, 0);
+    assert!(matches!(
+        identity.parameters[0].type_syntax.kind,
+        TypeKind::Named(_)
+    ));
+    assert!(matches!(identity.return_type.kind, TypeKind::Named(_)));
 }
 
 #[test]

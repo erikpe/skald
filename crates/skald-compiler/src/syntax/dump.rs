@@ -334,47 +334,18 @@ impl AstDumper {
             }
             TypeKind::Optional {
                 payload,
-                payload_span,
                 question_span,
+                spelling,
             } => {
-                self.line(
-                    &format!("Type Optional {}?", render_optional_payload(payload)),
-                    type_syntax.span,
-                );
-                self.indented(|dumper| {
-                    match payload {
-                        OptionalPayloadKind::I64 => dumper.line("Payload I64", *payload_span),
-                        OptionalPayloadKind::U64 => dumper.line("Payload U64", *payload_span),
-                        OptionalPayloadKind::U8 => dumper.line("Payload U8", *payload_span),
-                        OptionalPayloadKind::F64 => dumper.line("Payload F64", *payload_span),
-                        OptionalPayloadKind::Bool => dumper.line("Payload Bool", *payload_span),
-                        OptionalPayloadKind::Named(name) => dumper.name_path("Payload Named", name),
-                    }
-                    dumper.line("Question", *question_span);
-                });
-                return;
-            }
-            TypeKind::OptionalShared {
-                shared_span,
-                question_span,
-                target,
-            } => {
-                let heading = match &target.kind {
-                    TypeKind::Named(target) => {
-                        format!("Type OptionalShared shared? {}", target.text)
-                    }
-                    _ => "Type OptionalShared".to_owned(),
+                let spelling = match spelling {
+                    OptionalTypeSpelling::Postfix => "Postfix",
+                    OptionalTypeSpelling::SharedShorthand => "SharedShorthand",
                 };
-                self.line(&heading, type_syntax.span);
+                self.line(&format!("Type Optional {spelling}"), type_syntax.span);
                 self.indented(|dumper| {
-                    dumper.line("Shared", *shared_span);
+                    dumper.heading("Payload");
+                    dumper.indented(|dumper| dumper.type_syntax(payload));
                     dumper.line("Question", *question_span);
-                    if let TypeKind::Named(target) = &target.kind {
-                        dumper.name_path("Target", target);
-                    } else {
-                        dumper.heading("Target");
-                        dumper.indented(|dumper| dumper.type_syntax(target));
-                    }
                 });
                 return;
             }
@@ -852,16 +823,5 @@ impl AstDumper {
         self.indentation += 1;
         write_contents(self);
         self.indentation -= 1;
-    }
-}
-
-fn render_optional_payload(payload: &OptionalPayloadKind) -> &str {
-    match payload {
-        OptionalPayloadKind::I64 => "i64",
-        OptionalPayloadKind::U64 => "u64",
-        OptionalPayloadKind::U8 => "u8",
-        OptionalPayloadKind::F64 => "f64",
-        OptionalPayloadKind::Bool => "bool",
-        OptionalPayloadKind::Named(name) => &name.text,
     }
 }

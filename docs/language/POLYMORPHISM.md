@@ -212,7 +212,7 @@ selection and `*owner is T` for a type test; `(*owner).member` is equivalent
 to the arrow form. A raw shared handle is not an object place: `.` stays
 within inline storage and never crosses a shared edge.
 
-`shared? T` lifts the same compatible class/interface/`Obj` target relation
+`(shared T)?` lifts the same compatible class/interface/`Obj` target relation
 without making the optional itself an object view. Presence testing observes
 only the optional state. Postfix `!` secures an ordinary `shared T`; up-views,
 dispatch, type tests, and shared casts then use the unchanged plain-owner

@@ -951,8 +951,9 @@ owners. The detailed representation boundary is in
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,
 or an optional shared class/interface/`Obj` target. Resolved expressions retain
-explicit absence, presence-test, and unwrap nodes. Canonical dumps use `T?` and
-`shared? T` independently of source trivia.
+explicit absence, presence-test, and unwrap nodes. Canonical semantic dumps use
+`T?` and `(shared T)?` independently of source trivia; syntax dumps retain
+`shared? T` shorthand provenance.
 
 Resolved programs contain one canonical class hierarchy keyed by `ClassId`.
 It validates cycles, traverses direct-to-root chains, answers subtype and

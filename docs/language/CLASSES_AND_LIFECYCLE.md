@@ -739,7 +739,7 @@ optional fields in ordinary initialization and synthesized copy
 construction/assignment. They must be initialized exactly once and may hold
 `none`; a present exact-class payload is destroyed conditionally in reverse
 field order. Checked optional-class payload access uses bounded presence
-guards. Optional `shared? T` fields also execute: absence owns nothing,
+guards. Optional `(shared T)?` fields also execute: absence owns nothing,
 presence owns one strong handle, synthesized copy retains conditionally, and
 assignment/destruction conditionally release in the ordinary reverse field
 order. The model executes dependency-ordered eager static initialization for
@@ -757,7 +757,7 @@ rather than nullable plain class values. Primitive optional fields use inline
 state plus payload storage and participate in the class lifecycle described
 above. Exact-class `T?` reserves inline payload storage and applies the existing
 payload copy/assignment/destruction operations conditionally, so it does not
-make recursive inline containment finite; executable `shared? T` is the finite
+make recursive inline containment finite; executable `(shared T)?` is the finite
 optional-owner form.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,
 class/interface/`Obj` alias views, slicing, virtual dispatch, interface

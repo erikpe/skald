@@ -1,9 +1,3 @@
-class Value {
-    init() {}
-}
-
-fn alias_shared(ref value: shared? Value) -> unit {}
-
 fn main() -> i64 {
     var uninitialized: i64?;
     return 0;

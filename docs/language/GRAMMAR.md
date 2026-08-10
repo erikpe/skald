@@ -210,22 +210,15 @@ intrinsic-function-declaration = "intrinsic" "fn" identifier parameter-list
 parameter-list                = "(" [parameter {"," parameter}] ")"
 parameter                     = value-parameter | alias-parameter
 value-parameter               = identifier ":" storage-type
-alias-parameter               = ["mut"] "ref" identifier ":" alias-target
-alias-target                  = declaration-path | declaration-path "?" | "Obj"
+alias-parameter               = ["mut"] "ref" identifier ":" storage-type
 
 primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
 named-type                    = declaration-path
-shared-target                 = declaration-path | "Obj"
-shared-type                   = "shared" shared-target
-inline-optional-type          = (primitive-type | named-type) "?"
-optional-shared-type          = "shared" "?" shared-target
 type-primary                  = primitive-type | named-type | "unit"
                               | "(" storage-type ")"
-postfix-array-type            = type-primary ["?"] "[" "]" {"[" "]"}
-array-storage-type            = ["shared" ["?"]] postfix-array-type
-storage-type                  = primitive-type | named-type | shared-type
-                              | inline-optional-type | optional-shared-type
-                              | array-storage-type
+postfix-type                  = type-primary {"?" | "[" "]"}
+shared-type                   = "shared" ["?"] storage-type
+storage-type                  = postfix-type | shared-type
 result-type                   = storage-type | "unit"
 ```
 
@@ -242,24 +235,25 @@ grammar forms. A `declaration-path` with more than one component is later
 resolved through a direct module binding; an unqualified path uses the
 module's ordinary namespace.
 
-Alias parameter
-syntax is parsed uniformly for functions, external declarations,
-initializers, and methods; later semantic rules decide which declarations and
-named types are legal. Alias targets retain their separate grammar and do not
-accept `shared T`; primitive and named inline `T?` forms may designate
-supported optional containers. Resolution rejects interface payloads for
-inline optionals. `Obj` is
-legal as the target of `shared Obj` and `shared? Obj`, but not as `Obj?`.
-`unit` is syntactically restricted to result positions and `unit?` is rejected.
-Nested optionals, optional references, `shared T?`, and `shared? T?` are
-diagnosed with recovery rather than entering the AST.
-Postfix `[]` binds inside a leading `shared` or `shared?`, so `shared T[]`
-means a shared array owner. Grouping moves ownership into the element:
-`(shared T)[]` is an inline array of shared owners. The rule composes
-recursively. Type grouping is accepted only when followed by at least one
-`[]`; it exists to preserve ownership grouping rather than as a general
-redundant-parenthesis form. `?` may precede an array suffix to form optional
-elements, but it may not follow an array suffix. `unit[]` is parsed so later
+Alias parameter syntax is parsed uniformly for functions, external
+declarations, initializers, and methods. Later semantic rules decide which
+storage types may be designated; shared-owner and `unit` aliases remain
+unavailable.
+
+Postfix `?` and `[]` associate from left to right, and general type grouping
+selects the complete operand to wrap. A leading `shared` consumes the complete
+following storage type, including its postfix suffixes. Consequently `T?[]`
+is an array of optional elements, `T[]?` is an optional inline array,
+`shared T?` is a shared box whose target is optional, and `(shared T)?` is an
+optional ordinary shared owner. `shared? T` is source shorthand for
+`(shared T)?`; syntax retains which spelling was written while resolution
+normalizes both through the same existing optional-owner semantics.
+
+The parser admits nested optionals, optional arrays, and shared boxes so their
+complete source shapes reach semantic analysis. Resolution still rejects
+`unit?`, standalone optional interface or `Obj` views, nested optionals,
+optional inline arrays, `shared T?`, and `shared? T?`. Optional references
+such as `ref?` remain syntax errors. `unit[]` is likewise parsed so later
 semantic analysis can report element ineligibility; bare `unit` remains
 restricted to result positions.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
@@ -765,8 +759,11 @@ exact-class producers only for read-only `ref` parameters, while `mut ref`
 remains place-based. Verified MIR lifetime lowering and native execution
 require no grammar change.
 
-Optional type and expression shapes cross lexing, parsing, and name resolution
-with explicit nodes and flat resolved target identities. Primitive and
+Optional type syntax crosses parsing as a recursive source-shaped node that
+retains grouping, punctuation, and `shared?` shorthand provenance. Resolution
+normalizes executable primitive, exact-class, and shared-owner optionals to the
+existing flat target identities and rejects deferred recursive payloads before
+HIR. Primitive and
 exact-class inline optionals cross explicit HIR, MIR, verification, x86-64
 layout, and execution, including bounded checked class payload views. Optional
 shared owners and aliases to supported inline optional containers cross the

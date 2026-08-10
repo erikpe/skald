@@ -1,6 +1,6 @@
 # Compositional Optional Types Roadmap
 
-Status: in progress; CO1 is next.
+Status: in progress; CO2 is next.
 
 This roadmap makes optionality a compositional operation over existing
 storable values. It establishes `(shared T)?` as the canonical form of an
@@ -97,7 +97,7 @@ pointee is an optional value.
 ## Progress
 
 - [x] CO0 — Freeze compositional optional contracts
-- [ ] CO1 — Introduce compositional type syntax and canonical shared optionals
+- [x] CO1 — Introduce compositional type syntax and canonical shared optionals
 - [ ] CO2 — Canonicalize recursive optional identities
 - [ ] CO3 — Generalize typed optional lifecycle planning
 - [ ] CO4 — Generalize executable optional MIR and target realization
@@ -151,21 +151,21 @@ are already executable.
 **Purpose:** Establish one recursive source grammar and make the canonical
 optional-owner spelling executable using only behavior already implemented.
 
-- [ ] Replace the closed syntax `OptionalPayloadKind` representation with a
+- [x] Replace the closed syntax `OptionalPayloadKind` representation with a
       recursive optional type node retaining payload, grouping, and punctuation
       spans.
-- [ ] Parse a bounded postfix type chain containing `?` and `[]`, accept general
+- [x] Parse a bounded postfix type chain containing `?` and `[]`, accept general
       parenthesized type grouping, and preserve focused recovery for missing
       targets, delimiters, repeated punctuation, and excessive nesting.
-- [ ] Accept `(shared T)?` everywhere `shared? T` is currently valid, and lower
+- [x] Accept `(shared T)?` everywhere `shared? T` is currently valid, and lower
       both spellings through the existing optional-shared semantics and
       zero-handle representation.
-- [ ] Treat `shared? T` as exact syntax shorthand while retaining enough source
+- [x] Treat `shared? T` as exact syntax shorthand while retaining enough source
       provenance for useful diagnostics and syntax inspection.
-- [ ] Parse nested optional, optional-array, and shared-box shapes
+- [x] Parse nested optional, optional-array, and shared-box shapes
       compositionally, but keep their current semantic diagnostics until their
       responsible task completes; box forms remain rejected after this roadmap.
-- [ ] Make language documentation use `(shared T)?` canonically and describe
+- [x] Make language documentation use `(shared T)?` canonically and describe
       `shared? T` as a supported alias. Keep representative existing shorthand
       fixtures rather than mechanically rewriting all source code.
 

@@ -18,7 +18,7 @@ entry points; the trace records and hidden TLS declaration in the same header
 form a compiler/runtime-private data contract.
 
 Optional values add no runtime entry point or ABI-version change. The
-`shared? T` zero niche is handled entirely by generated branches; zero is
+`(shared T)?` zero niche is handled entirely by generated branches; zero is
 never passed to allocation, deallocation, finalization, or ordinary
 shared-owner machinery.
 
@@ -374,7 +374,7 @@ The implemented
 [optional-values compiler contract](OPTIONAL_VALUES.md#c-runtime-abi)
 adds no public C symbol and requires no runtime ABI version change. Optional
 state, presence guards, conditional lifecycle, and failure traps are
-compiler-owned; an absent `shared? T` zero word never crosses into ordinary
+compiler-owned; an absent `(shared T)?` zero word never crosses into ordinary
 shared-owner or allocator operations. Primitive and exact-class inline
 optionals, including checked payload guard counts and failure traps, implement
 this compiler-owned boundary without changing the runtime marker or adding a

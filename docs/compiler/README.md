@@ -137,8 +137,9 @@ flow.
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
-[optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
-resolved identities, primitive and exact-class optional locals, fields,
+[optional-values compiler contract](OPTIONAL_VALUES.md). Recursive source type
+syntax normalizes canonical `(shared T)?` and `shared? T` shorthand through
+the existing flat resolved identities. Primitive and exact-class optional locals, fields,
 lifecycle, internal callable boundaries, optional shared owners, and inline
 optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
@@ -146,8 +147,9 @@ zero-niche optional owners, and exact virtual/interface signatures.
 
 That same contract freezes the migration from flat optional families to
 deterministic recursive optional identities and lifecycle plans, followed by
-arbitrary nesting and optional inline arrays. The implemented grammar and
-phase products remain authoritative until each roadmap task lands. The frozen
+arbitrary nesting and optional inline arrays. Deferred recursive payloads
+currently stop at resolution, and the implemented phase products remain
+authoritative until each roadmap task lands. The frozen
 work adds no shared box target for `shared T?` and no C runtime ABI surface.
 
 The compiler implements the recursive array source surface, canonical

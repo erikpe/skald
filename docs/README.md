@@ -32,9 +32,9 @@ Use the authority closest to the behavior:
 - the implemented source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
   [arrays](language/ARRAYS.md);
-- the implemented explicit `T?` and `shared? T` contract plus the frozen
-  compositional direction for `(shared T)?`, nested optionals, and optional
-  inline arrays belong in
+- the implemented explicit `T?` and canonical `(shared T)?` contract,
+  `shared? T` shorthand, compositional source syntax, and frozen semantic
+  direction for nested optionals and optional inline arrays belong in
   [optional values](language/OPTIONAL_VALUES.md);
 - callable, binding, statement, return, and evaluation-order semantics belong
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);

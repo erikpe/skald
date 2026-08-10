@@ -3,9 +3,10 @@
 Status: authoritative implemented compiler contract for primitive and exact
 inline-class optionals, optional shared owners, and supported inline
 optional-container aliases through HIR, MIR verification, x86-64 lowering,
-and native execution. This document also freezes the compiler direction for
-recursive optional identities, arbitrary nesting, and optional inline arrays;
-that extension is not yet executable.
+and native execution. Recursive source type syntax and canonical `(shared T)?`
+owners are implemented; this document also freezes the remaining compiler
+direction for recursive optional identities, arbitrary nesting, and optional
+inline arrays, which are not yet executable.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -13,8 +14,9 @@ authoritative for source currently accepted by the compiler.
 
 This document defines phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
-and test obligations for explicit optionals. AST and resolved IR contain all
-supported source-shaped forms and flat identities. Primitive and exact-class
+and test obligations for explicit optionals. The AST contains recursive
+source-shaped type nodes, while resolved IR retains the current flat executable
+identities. Primitive and exact-class
 optionals continue through explicit typed HIR and MIR places, calls, and
 lifecycle and checked-view operations; optional shared owners likewise
 continue through explicit owner operations; the verifier proves their storage,
@@ -28,8 +30,8 @@ Each phase owns one stable responsibility:
 
 | Phase | Optional-value responsibility |
 |---|---|
-| Lexing and parsing | Preserve `?`, postfix `!`, reserved `none`, contextual `some`, `shared?`, presence tests, precedence, trivia, and recovery spans. |
-| Resolution | Resolve inline optional payloads and optional shared targets without deciding layout or ownership operations. |
+| Lexing and parsing | Preserve recursive `?`/`[]` type composition, grouping, postfix `!`, reserved `none`, contextual `some`, `shared?` shorthand provenance, presence tests, precedence, trivia, and recovery spans. |
+| Resolution | Normalize `(shared T)?` and `shared? T`, resolve currently executable inline optional payloads and optional shared targets, and reject deferred recursive payloads without deciding layout or ownership operations. |
 | Type checking and HIR | Decide optional compatibility, injection, overload selection, lifecycle operation, payload value/place category, checked-view extent, access, and shared-anchor requirement. |
 | MIR lowering | Make optional storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
 | MIR verification | Prove storage, payload, owner, guard, anchor, transition, failure, and CFG invariants independently of source shape. |
@@ -59,10 +61,12 @@ The type model must preserve these distinctions:
 T           ordinary inline payload
 T?          inline optional payload
 shared T    ordinary non-null shared owner
-shared? T   optional shared owner
+(shared T)? optional shared owner
 ```
 
-`shared T?`, `shared? T?`, nested optionality, aliases to optional shared
+`shared? T` is an exact source shorthand for `(shared T)?`; both lower to the
+same existing resolved, HIR, and MIR optional-owner family. `shared T?`,
+`shared? T?`, nested optionality, aliases to optional shared
 owners, and invalid payload families reach focused diagnostic boundaries and
 never become executable HIR types. Alias binding mode may designate an
 existing primitive or exact-class inline optional place; it does not add a
@@ -70,8 +74,10 @@ reference or optional-reference type identity.
 
 ## Frozen compositional implementation direction
 
-This section is a **frozen design** for the planned compositional extension.
-The flat identities and executable operations described elsewhere in this
+The recursive syntax-node portion of this direction is implemented, including
+grouping, postfix chains, and shorthand provenance. The remainder of this
+section is a **frozen design** for the planned semantic extension. The flat
+resolved identities and executable operations described elsewhere in this
 document remain the implemented compiler contract until the responsible
 roadmap tasks replace them. The migration must keep every current program's
 diagnostics, evaluation order, lifecycle, layout, ABI, dumps, and native
@@ -79,10 +85,9 @@ behavior stable before it enables a new payload category.
 
 ### Source shape and canonical identity
 
-Syntax changes from a closed optional-payload enum to a recursive type node.
-It preserves every `?`, `[]`, `shared`, and grouping span and records whether
-the user wrote the `shared?` shorthand. Syntax identity remains source-shaped;
-semantic identity does not.
+Syntax uses a recursive type node. It preserves every `?`, `[]`, `shared`, and
+grouping span and records whether the user wrote the `shared?` shorthand.
+Syntax identity remains source-shaped; semantic identity does not.
 
 Resolution interns optionals bottom-up into a deterministic table:
 
@@ -274,7 +279,9 @@ all allocation and shared-target changes separately.
 
 ## Source-shaped IR
 
-AST and resolved IR preserve:
+The AST preserves every optional payload as a recursive type node, including
+grouping, punctuation spans, and `shared?` shorthand provenance. The current
+flat resolved IR preserves:
 
 - the `?` span on an inline type;
 - the `shared` and owner-optional `?` spans separately;
@@ -283,7 +290,9 @@ AST and resolved IR preserve:
 - postfix unwrap as a distinct postfix operation; and
 - enough operator and operand spans for deterministic recovery and diagnostics.
 
-Canonical dumps use `T?` and `shared? T`, independent of source trivia.
+Canonical semantic dumps use `T?` and `(shared T)?`, independent of source
+trivia. Syntax dumps retain whether the source used postfix notation or the
+`shared?` shorthand.
 Reserved box spellings remain visible to diagnostics but do not acquire an
 executable type identity.
 
@@ -578,7 +587,7 @@ when its runtime state may be absent.
 
 ## Initial x86-64 optional shared-owner layout
 
-`shared? T` is one eight-byte, eight-aligned integer-class word:
+`(shared T)?` is one eight-byte, eight-aligned integer-class word:
 
 - zero represents absence of the optional owner; and
 - non-zero is the canonical header handle of an ordinary `shared T`.
@@ -607,7 +616,7 @@ prioritizes one lifecycle-correct boundary over special scalar cases; a future
 optimization may specialize an ABI only with coordinated caller/callee and
 documentation changes.
 
-`shared? T` follows the existing direct shared-owner convention: one
+`(shared T)?` follows the existing direct shared-owner convention: one
 integer-class argument word and one direct result word in `rax`. A present
 owner is copied or transferred under the existing shared call rules; absence
 transfers zero without retain or release.
@@ -727,16 +736,17 @@ observable behavior:
 | Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
-The current compile-failure suites for `T??`, `T[]?`, `(shared T)?`,
-`shared T?`, and `shared? T?` remain required until the task responsible for a
-form changes its expected phase and outcome. Box forms remain compile failures
-after this roadmap completes.
+The current compile-failure suites for `T??`, `T[]?`, `shared T?`, and
+`shared? T?` remain required until the task responsible for a form changes its
+expected outcome. Both `(shared T)?` and `shared? T` require positive
+source-to-native equivalence coverage. Box forms remain compile failures after
+this roadmap completes.
 
 ## Exclusions
 
-The implemented compiler continues to reject nested optionals, optional inline
-arrays, `(shared T)?`, and `some(expression)` until their roadmap tasks land;
-their compiler direction is frozen above. This contract does not design
+The implemented compiler parses nested optionals and optional inline arrays but
+continues to reject them during resolution; `some(expression)` remains
+unimplemented syntax. Their compiler direction is frozen above. This contract does not design
 generalized shared boxes, optional function values, first-class references,
 optional casts, equality or operator lifting, chaining/coalescing/propagation,
 recoverable failures, concurrency or atomic guards, external optional ABI, or

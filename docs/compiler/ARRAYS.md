@@ -94,13 +94,14 @@ compiler's ordinary nesting budget.
 
 `shared T[]` and `(shared T)[]` must resolve differently. The former is a
 shared owner whose target is an exact array identity; the latter is an inline
-array identity whose element is a shared owner. `shared? T[]` wraps shared
-array ownership in absence. No implemented phase may represent it as an inline
-optional array payload. The frozen
+array identity whose element is a shared owner. `(shared T[])?` wraps shared
+array ownership in absence, with `shared? T[]` as exact source shorthand. No
+implemented phase may represent it as an inline optional array payload. The frozen
 [compositional optional compiler direction](OPTIONAL_VALUES.md#frozen-compositional-implementation-direction)
-later represents `T[]?` as an optional identity whose immediate payload is this
-canonical inline array identity; it remains distinct from optional shared
-array ownership and reuses this table's lifecycle plans.
+direction represents parsed `T[]?` as an optional syntax node whose payload is
+an array. Resolution currently rejects it before HIR; the later optional-array
+identity uses this canonical inline array identity and reuses this table's
+lifecycle plans.
 
 Array types do not enter class hierarchy, interface conformance, `Obj`,
 dynamic metadata relation, cast, or type-test tables. Compatibility is exact
@@ -589,7 +590,7 @@ live handles hard-trap.
 
 ### Initial x86-64 shared-outer layout
 
-A `shared T[]` or present `shared? T[]` owner is one non-null handle word.
+A `shared T[]` or present `(shared T[])?` owner is one non-null handle word.
 Every construction allocates one contiguous exact array block, including a
 zero-length construction:
 

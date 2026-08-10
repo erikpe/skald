@@ -463,14 +463,9 @@ pub enum TypeKind {
         target: Box<TypeSyntax>,
     },
     Optional {
-        payload: OptionalPayloadKind,
-        payload_span: Span,
+        payload: Box<TypeSyntax>,
         question_span: Span,
-    },
-    OptionalShared {
-        shared_span: Span,
-        question_span: Span,
-        target: Box<TypeSyntax>,
+        spelling: OptionalTypeSpelling,
     },
     Grouped {
         left_paren_span: Span,
@@ -484,14 +479,15 @@ pub enum TypeKind {
     },
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum OptionalPayloadKind {
-    I64,
-    U64,
-    U8,
-    F64,
-    Bool,
-    Named(Name),
+/// Source notation used to introduce one optional layer.
+///
+/// Both variants have the same semantic meaning. Keeping the spelling on the
+/// syntax node lets diagnostics and syntax dumps describe the user's source
+/// without creating a second optional type identity downstream.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OptionalTypeSpelling {
+    Postfix,
+    SharedShorthand,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
