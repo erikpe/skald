@@ -6,7 +6,7 @@ GOLDEN_COMPILER := target/debug/skac
 	compiler-test cli-test docs-test golden-runner-test golden-tools \
 	golden-expectations-test golden-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test \
-	msrv-check robustness-long check
+	msrv-check robustness-long check check-long
 
 help:
 	@echo "Skald repository commands:"
@@ -40,8 +40,9 @@ help:
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
 	@echo ""
-	@echo "Complete ordinary validation:"
+	@echo "Complete validation:"
 	@echo "  make check            Run the complete repository validation suite"
+	@echo "  make check-long       Run ordinary and extended validation"
 
 # Developer commands and shared build prerequisites.
 fmt:
@@ -117,3 +118,6 @@ robustness-long:
 
 # Complete ordinary validation gate.
 check: static-check test
+
+# Complete ordinary and extended validation gate.
+check-long: check golden-determinism-test runtime-trace-benchmark msrv-check robustness-long
