@@ -34,11 +34,11 @@ The frozen design should provide:
 - explicit absent and value-initialized box construction;
 - ordinary shared-owner copy, transfer, assignment, fields, calls, statics,
   array elements, anchors, and last-owner release;
-- explicit dereference to observe, borrow, unwrap, or mutate the boxed
-  optional wrapper;
+- explicit dereference to observe, borrow, or unwrap the boxed optional
+  wrapper while keeping its absent/present state immutable after publication;
 - one allocation descriptor and finalizer per canonical optional target;
-- exact target identity with no box covariance, object up-view, or dynamic
-  cast;
+- ordinary class/interface/`Obj` polymorphism for optional object boxes while
+  retaining exact targets for non-object optional boxes;
 - reuse of the existing recursive optional lifecycle and checked-view guard
   machinery inside the allocation; and
 - no public C runtime ABI extension.
@@ -99,19 +99,22 @@ therefore evidence for the use case, not for Skald's type identity or syntax.
    aliases or converts to the other.
 2. **The handle remains non-null.** Inner absence belongs to allocation
    payload state, never to a plain `shared P?` handle.
-3. **The box target is exact.** A mutable box cannot safely gain covariance
-   merely because its present payload names related classes.
-4. **Dereference crosses the ownership edge.** Presence tests, unwrap, aliases,
-   and replacement operate on `*box`, not implicitly on the owner handle.
+3. **Object polymorphism remains first-class.** Optional object boxes preserve
+   the up-views expected from ordinary shared objects because their complete
+   allocation payload cannot be replaced after publication.
+4. **Dereference crosses the ownership edge.** Presence tests, unwrap, and
+   eligible aliases operate on `*box`, not implicitly on the owner handle.
 5. **One optional implementation remains authoritative.** Box construction,
-   mutation, and finalization invoke the existing plan for the canonical
-   optional identity rather than adding primitive/class/array box families.
-6. **Sharing is observable through mutation.** Copying a box owner shares one
-   optional wrapper; allocating a new box creates independent wrapper state.
+   access, and finalization invoke the existing plan for the canonical optional
+   identity rather than adding primitive/class/array box families.
+6. **Sharing preserves one published value.** Copying a box owner shares one
+   immutable optional wrapper and, when present, one mutable contained object;
+   allocating a new box creates independent wrapper and payload storage.
 7. **Publication follows complete initialization.** No owner can observe an
    absent-by-accident or partially initialized allocation payload.
-8. **Object metadata is not forged.** A box allocation never enters object
-   dispatch, object casts, class tests, or interface witness lookup.
+8. **Object metadata remains truthful.** A polymorphic box distinguishes its
+   static object view from the exact dynamic class that selected payload
+   layout, lifecycle, dispatch, and casts.
 9. **The runtime remains minimal.** Allocation, finalization selection,
    optional state, guards, and ownership stay compiler-generated.
 10. **The first box feature stays narrow.** General scalar/class boxes,
@@ -125,16 +128,16 @@ or implementation contracts.
 
 | ID | Decision | Recommended direction | State |
 |---|---|---|---|
-| [SB1](#sb1--eligible-box-targets) | Eligible target | Accept exactly an already-executable canonical optional type | **Open** |
+| [SB1](#sb1--eligible-box-targets) | Eligible target | Accept exact value-optionals plus class/interface/`Obj` optional-box views | **Open** |
 | [SB2](#sb2--type-identity-spelling-and-precedence) | Type composition | Preserve literal composition; canonicalize `shared? P?` to `(shared P?)?` | **Open** |
 | [SB3](#sb3--construction-syntax-and-default-state) | Construction | Add `new P?()` for an absent box and `new P?(value)` for ordinary optional initialization | **Open** |
 | [SB4](#sb4--owner-copying-and-box-value-semantics) | Copy meaning | Owner copies share a box; `new P?(source)` creates an independent box payload | **Open** |
 | [SB5](#sb5--explicit-access-and-inner-unwrap) | Access | Require `*box`; do not forward `is`, `!`, `.`, or `->` through the handle | **Open** |
-| [SB6](#sb6--boxed-optional-replacement) | Mutation | Permit whole-pointee assignment only when the shared target is optional | **Open** |
+| [SB6](#sb6--immutable-boxed-optional-state) | Wrapper mutation | Forbid whole-pointee assignment; replace owner handles instead | **Open** |
 | [SB7](#sb7--aliases-anchors-and-guards) | Borrow safety | Reuse shared anchors plus the optional wrapper's existing guards | **Open** |
-| [SB8](#sb8--compatibility-casts-and-polymorphism) | Compatibility | Require exact optional target identity and exclude box casts/up-views | **Open** |
+| [SB8](#sb8--compatibility-casts-and-polymorphism) | Compatibility | Allow object-box up-views over one immutable fixed-target allocation | **Open** |
 | [SB9](#sb9--stored-positions-and-default-array-elements) | Stored positions | Support ordinary shared-owner positions and distinct absent boxes for requested default array elements | **Open** |
-| [SB10](#sb10--canonical-compiler-representation) | Type and IR representation | Extend shared targets with `Optional(OptionalTypeId)`; do not add a redundant box type ID | **Open** |
+| [SB10](#sb10--canonical-compiler-representation) | Type and IR representation | Separate the static box view from its exact optional allocation target | **Open** |
 | [SB11](#sb11--allocation-layout-metadata-and-finalization) | Target realization | Reuse the non-null header with exact box metadata and an optional finalizer | **Open** |
 | [SB12](#sb12--calling-convention-runtime-and-failure-boundary) | ABI and failure | Keep the one-word internal owner ABI, runtime ABI version 9, and current non-unwinding failures | **Open** |
 | [SB13](#sb13--diagnostics-dumps-tests-and-promotion) | Quality and freeze | Freeze all rows, promote living contracts, then create an implementation roadmap | **Open** |
@@ -220,17 +223,13 @@ var array_box: shared i64[]? = new i64[]?(i64[]{1, 2});
 The first allocation contains an optional shared owner. The second contains
 an optional inline array. Neither is an object allocation.
 
-### Observation, unwrap, and mutation
+### Observation, unwrap, and owner replacement
 
 The shared edge must be crossed explicitly:
 
 ```ska
-if ((*box) is none) {
-    *box = Item();
-}
-
 (*box)!.use_item();
-*box = none;
+box = new Item?();
 ```
 
 `*box` denotes the existing `P?` container place in the allocation. Ordinary
@@ -239,9 +238,32 @@ consumers then reuse current optional behavior:
 - `*box is some` and `*box is none` inspect the wrapper without copying it;
 - `var copy: P? = *box` copies the wrapper when its payload capabilities allow;
 - `(*box)!` checks and removes exactly one optional layer;
-- `inspect(*box)` may bind a `ref value: P?` or `mut ref value: P?` parameter;
-  and
-- `*box = source` replaces the wrapper through its existing assignment plan.
+- for an exact value box, `inspect(*box)` may bind a `ref value: P?` or
+  parameter; and
+- `box = new P?(source)` replaces an owner variable with a distinct box while
+  leaving the old allocation unchanged for its other owners.
+
+Whole-pointee assignment is invalid for every box target:
+
+```ska
+var empty: shared Item? = new Item?(none);
+*empty = Item(); // invalid: published box state is immutable
+```
+
+An object-box up-view retains dynamic dispatch after explicit dereference and
+unwrap:
+
+```ska
+var box: shared Base? = new Derived?(Derived());
+(*box)!.foo();
+```
+
+If `Base.foo` is virtual and `Derived` overrides it, this invokes
+`Derived.foo`. The box owner anchors the allocation, `!` checks presence and
+guards the payload, and the resulting `Base` view carries the box descriptor's
+dynamic `Derived` metadata into ordinary virtual dispatch. If the box is
+absent, unwrap terminates before dispatch. `box->foo()` remains invalid because
+neither dereference nor optional unwrap is implicit.
 
 The owner itself is not optional, so `box!` is invalid. Member forwarding is
 also absent: `box.member`, `box->member`, and direct presence tests on `box`
@@ -261,19 +283,32 @@ selects the boxed `Item?`, and the second `!` checks its inner presence.
 **Question:** Which pointee types should ordinary `shared` gain through this
 feature?
 
-**Recommended direction:** Accept `shared O` exactly when `O` is an existing
-executable `OptionalTypeId`. This includes primitive, exact-class, array,
-shared-owner, and recursively nested optional payloads already accepted by the
-optional contract.
+**Recommended direction:** Retain exact canonical `OptionalTypeId` targets for
+primitive, array, shared-owner, and recursively nested value boxes. Treat an
+optional object box separately as an exact class allocation with a compatible
+static class, interface, or `Obj` box view, mirroring the target families of
+ordinary shared objects.
 
 This deliberately permits `shared P??`, `shared P[]?`, and
 `shared (shared P)?` without separate box families. Eligibility is inherited
-from the complete optional identity; the box layer does not repair an invalid
-optional payload. Consequently `shared Obj?`, `shared Interface?`, and
-`shared unit?` remain invalid because those inline optional types are invalid.
-An optional shared object view can instead appear as the eligible payload
-`(shared Obj)?`, giving `shared (shared Obj)?` when a box around that value is
-actually wanted.
+from the complete optional identity for these value targets; the box layer
+does not repair an otherwise invalid primitive, array, or nested optional.
+
+For object boxes, only a concrete class may be named by `new`, but owners may
+up-view that allocation through a base class, conformed interface, or `Obj`:
+
+```ska
+var base_box: shared Base? = new Derived?();
+var interface_box: shared Drawable? = new Derived?();
+var object_box: shared Obj? = new Derived?();
+```
+
+Bare `Drawable?` and `Obj?` remain invalid owning inline values. Their use as
+shared box targets denotes a presence-bearing object *view* into an allocation
+whose descriptor retains one exact dynamic class and one concrete optional
+payload layout. As with ordinary `shared Drawable` and `shared Obj`, the
+shared form need not imply that the corresponding bare target is an owning
+inline storage type.
 
 General `shared i64`, `shared InlineClass`, and other non-optional boxes remain
 outside this proposal. They would require a broader source rationale and
@@ -365,6 +400,23 @@ available; the form must not impose an extra source-visible class copy merely
 because the destination is boxed. Abrupt failure remains non-unwinding under
 the current language contract.
 
+For an optional object box, the class named after `new` is the exact dynamic
+box target. Its initializer is checked against that exact target before any
+later up-view of the produced owner:
+
+```ska
+new Derived?(Derived()) // valid exact payload construction
+new Derived?(none)      // valid absent Derived box
+new Derived?(Base())    // compile-time error: exact Base cannot supply Derived
+```
+
+A source object view whose dynamic class could be `Derived` may use the
+existing target-directed checked-copy discipline: perform the dynamic check
+before allocating the box, reject a statically impossible relation, and then
+construct exact `Derived` payload storage. The allocation target is known
+exactly from source syntax, and the completed wrapper is never mutated after
+publication.
+
 The zero-expression form is recommended because every eligible optional has
 an unambiguous absent default and because it supplies the default plan needed
 for nonempty arrays of non-null box owners. Requiring `new P?(none)` instead is
@@ -381,14 +433,14 @@ owner copy retains the allocation, a produced owner transfers, assignment
 secures before release, and the last owner finalizes the one boxed wrapper.
 
 ```ska
-var first: shared Item? = new Item?();
+var first: shared Item? = new Item?(Item());
 var alias: shared Item? = first;
-*alias = Item();
-// (*first) is some: both owners reach the same wrapper.
+(*alias)!.mutate();
+// Both owners reach the same present Item object.
 
 var independent: shared Item? = new Item?(*first);
-*independent = none;
-// first remains present: this allocation has a copied, independent wrapper.
+(*independent)!.mutate();
+// This allocation contains a copied, independent Item payload.
 ```
 
 This distinction is the purpose of the feature. No implicit operation combines
@@ -399,9 +451,10 @@ introduced.
 
 **Question:** Should optional operations be forwarded through a box owner?
 
-**Recommended direction:** No. Prefix `*` produces the exact optional pointee
-place. Presence, unwrap, copying, aliases, and mutation then apply to that
-place through existing rules.
+**Recommended direction:** No. Prefix `*` produces the optional pointee place
+or polymorphic optional-object view selected by the box target. Presence,
+unwrap, copying, aliases, and contained-object access then apply explicitly at
+that boundary.
 
 This keeps `shared? P?` unambiguous: postfix `!` always removes the outer
 optional-owner layer, while `(*owner)!` removes the inner boxed optional layer.
@@ -409,52 +462,65 @@ It also preserves the established separation between handle consumers and
 pointee consumers. `->` remains an object/array operation and does not acquire
 optional forwarding behavior.
 
-Reading `*box` as an owning value requires the optional target's ordinary copy
-capability. Presence tests and eligible alias or checked-view consumers do not
-needlessly copy the complete wrapper.
+Reading an exact `*box` as an owning value requires the optional target's
+ordinary copy capability. Reading a polymorphic object box into an exact class
+optional uses the target-directed slicing rule proposed in SB8. Presence tests
+and eligible checked-view consumers do not needlessly copy the complete
+wrapper.
 
-## SB6 — Boxed optional replacement
+## SB6 — Immutable boxed optional state
 
 **Question:** Should `*box = source` be supported even though whole-pointee
 assignment is rejected for current object and array owners?
 
-**Recommended direction:** Yes, but only for `Shared<Optional<P>>`. Without
-presence-changing replacement, an absent box cannot become useful shared
-state, and the feature degenerates into an immutable allocation wrapper.
+**Revised recommended direction:** No. Construction fixes the complete
+absent-or-present optional state for the allocation's lifetime. Prefix `*`
+exposes that wrapper for observation and checked payload access, not as a
+whole-value assignment destination.
 
-The assignment is optional-container assignment, not owner replacement. It
-must:
+```ska
+var box: shared Base? = new Derived?(none);
+*box = Derived();                 // compile-time error
+box = new Derived?(Derived());    // valid owner replacement
+```
 
-1. evaluate the owner destination once and retain or anchor that exact
-   allocation before later effects can invalidate a replaceable owner place;
-2. evaluate and secure the source under the existing optional assignment
-   rules;
-3. reject or terminate before mutation if an active checked payload view
-   guards the wrapper;
-4. perform the selected secure-before-destroy optional transition; and
-5. release source temporaries and any hidden owner anchor in ordinary reverse
-   order.
+The final statement evaluates and secures a distinct produced owner, releases
+the variable's old owner, and installs the new handle through ordinary shared
+assignment. It does not alter the old allocation. Any other owners of the old
+absent box continue to observe absence until they are released.
 
-Direct and indirect self-assignment must remain safe even when two different
-handles name the same allocation. Assigning `none` requires only the existing
-clear/destruction behavior; assigning a present value requires exactly the
-copy-construction and copy-assignment capabilities selected by the current
-optional contract.
+Immutability is shallow in the same sense as ordinary shared ownership. A
+present wrapper never changes presence or replaces its complete contained
+object, but mutable fields and methods of that contained object remain usable:
 
-Whole-pointee assignment for `shared Class`, `shared Interface`, `shared Obj`,
-and shared arrays remains rejected. Supporting it for those targets has
-different slicing, dynamic-class, length, and lifecycle questions.
+```ska
+var box: shared Base? = new Derived?(Derived());
+(*box)!.mutate(); // valid mutation within the fixed Derived object
+*box = none;      // invalid replacement of the complete optional wrapper
+```
+
+This rule applies equally to primitive, object, array, shared-owner, and nested
+optional box targets. For a nested optional target, every wrapper layer and
+the deepest stored value are fixed at publication; only mutation within an
+already-present contained object or other mutable aggregate remains available.
+
+The rule exactly matches current ordinary shared-object and shared-array
+ownership: owners may be copied, transferred, cast, or repointed to another
+allocation, while `*owner = replacement` remains invalid. It also removes the
+covariant mutable-container conflict from SB8, so object-box up-views need no
+checked store, exact-type update capability, dynamic assignment thunk, or new
+runtime failure.
 
 ## SB7 — Aliases, anchors, and guards
 
 **Question:** How are non-owning uses protected when boxes have multiple
-owners and mutable wrapper state?
+owners and immutable wrapper state?
 
 **Recommended direction:** Compose the two mechanisms already implemented:
 
 - the shared owner or a hidden copied/adopted anchor keeps the allocation live;
 - the optional state word's existing guard keeps a checked present payload
-  from being cleared, replaced, or destroyed; and
+  valid through its immediate consumer; and
 - both lifetimes end only after the complete immediate consumer secures its
   result.
 
@@ -464,43 +530,151 @@ box owner remains an owning full-expression temporary. Unwrapping an outer
 `(shared P?)?` first creates an ordinary secured box owner, which then serves
 as the inner allocation anchor.
 
-`inspect(*box)` may bind an existing `ref value: P?` or
-`mut ref value: P?` parameter. This borrows the always-present wrapper, not an
-optional reference. A mutable alias may replace its state through existing
-optional assignment. By contrast, `inspect((*box)!)` borrows or consumes the
-present `P` payload under both the owner anchor and a checked optional guard.
+For an exact value box, `inspect(*box)` may bind a read-only
+`ref value: P?` parameter. A `mut ref value: P?` consumer is rejected because
+it could replace the published wrapper. Whole-wrapper aliases from a
+polymorphic object-box view remain excluded because the current alias ABI
+carries only an exact raw optional address. By contrast,
+`inspect((*box)!)` can borrow the present object payload with the ordinary
+access supported by that object view, under both the owner anchor and a
+checked optional guard.
 
-Because the guard lives in the shared allocation payload, mutation through
-any other owner observes it and follows the existing guarded-mutation failure
-rule. The owner anchor also ensures last-owner finalization cannot run while a
-checked view remains live. Atomic guards, thread safety, and data-race
-prevention remain excluded.
+The owner anchor ensures last-owner finalization cannot run while a checked
+view remains live. Since no source operation can replace the wrapper, a guard
+has no competing box-mutation path; retaining the existing guard protocol is
+still a simple way to reuse optional checked access and may later be optimized
+only when lifetime and failure behavior remain unchanged. Atomic guards,
+thread safety, and data-race prevention remain excluded.
 
 Aliases whose designated type is itself a shared owner remain unsupported;
-users pass `shared P?` by value and explicitly dereference it when a `ref P?`
-or `mut ref P?` consumer is intended.
+users pass `shared P?` by value and explicitly dereference it when a read-only
+`ref P?` consumer is intended.
 
 ## SB8 — Compatibility, casts, and polymorphism
 
 **Question:** Can boxes participate in the existing class/interface/`Obj`
 shared compatibility relation?
 
-**Recommended direction:** No. Box compatibility is exact
-`OptionalTypeId` equality. A `shared Derived?` box cannot become
-`shared Base?`, even though an unboxed `Derived` payload may have a Base view.
-Mutation would otherwise allow a Base value to be written into storage whose
-layout and lifecycle were allocated for Derived.
+**Revised recommended direction:** Yes for optional object boxes. Preserve one
+fixed exact dynamic box class in allocation metadata, allow the same
+class/base/interface/`Obj` static up-views as ordinary shared objects. The
+complete optional wrapper is immutable after publication, so these views
+cannot replace it. Non-object optional box targets remain exact and invariant.
 
-Box owners do not up-view to `shared Obj`, satisfy interfaces, enter virtual
-dispatch, support object type tests, or use owner-preserving object casts. An
-explicit box-owner cast, including a redundant same-target spelling, is not
-part of the initial feature; ordinary exact assignment and argument passing
-already copy or transfer the owner.
+The motivating behavior is therefore valid:
 
-Polymorphism may still exist *inside* an eligible optional shared-owner
-payload. For example, `shared (shared Base)?` is an exact box target whose
-present value is an ordinary `shared Base`; initialization of that inner owner
-may use the already-supported compatible shared up-view.
+```ska
+var foo1: shared Base = new Derived();
+var foo2: shared Base? = new Derived?();
+```
+
+Both allocations retain dynamic `Derived` identity. For `foo2`, the descriptor
+also fixes `Optional<Derived>` as the physical payload and lifecycle target
+even while absent. Unwrapping through the `shared Base?` view yields a guarded
+`Base` object view into the complete `Derived`, so base fields, virtual calls,
+interface dispatch, `Obj` use, type tests, and checked box downcasts can follow
+the ordinary shared-object model without slicing the allocation.
+
+Accordingly, a present construction and virtual call behave as follows:
+
+```ska
+var box: shared Base? = new Derived?(Derived());
+(*box)!.foo(); // dispatches to Derived.foo when it overrides virtual Base.foo
+```
+
+The static method family comes from the `Base` view. The retained dynamic box
+class selects the `Derived` override exactly as an ordinary
+`shared Base = new Derived()` owner would.
+
+Interface views work the same way:
+
+```ska
+// Implementation implements Interface.
+var box: shared Interface? =
+    new Implementation?(Implementation());
+(*box)!.foo();
+```
+
+The static call is accepted through `Interface.foo`, while the allocation
+descriptor retains exact dynamic class `Implementation` and selects its
+implementation at dispatch. An absent `Implementation?` box may use the same
+`shared Interface?` view, but `!` then fails before method dispatch.
+
+Covariance is sound because no view can replace the complete optional payload:
+
+```ska
+var derived_box: shared Derived? = new Derived?(Derived());
+var base_box: shared Base? = derived_box;
+*base_box = Base();       // compile-time error
+*derived_box = Derived(); // also a compile-time error
+```
+
+These are not dynamically checked stores. Whole-pointee assignment is absent
+from the box capability set even through an exact view. Owner replacement is
+different and remains ordinary shared assignment:
+
+```ska
+var box: shared Base? = new Derived?();
+box = new Base?(Base()); // valid: replace the owner, not the old box payload
+```
+
+The right side produces a distinct exact Base box compatible with the
+variable's static view. Assignment secures that new owner and releases the
+variable's old Derived-box owner. Other owners of the old box, if any, still
+observe the unchanged old allocation.
+
+Construction also differs because its dynamic target is statically known:
+
+```ska
+var invalid: shared Base? = new Derived?(Base()); // compile-time error
+```
+
+The outer `shared Base?` expectation permits the produced Derived box up-view,
+but it does not change the exact `Derived?` payload demanded by
+`new Derived?(...)`.
+
+The allocation descriptor retains exact dynamic box class `D` for the
+allocation's complete lifetime, including while its wrapper is absent. An
+absent `Derived?` box therefore remains absent forever; a variable, field, or
+array element that must become present receives a newly allocated box owner.
+A present box retains the same complete `Derived` object, though ordinary
+mutable fields and methods may still change that object's internal state.
+
+This deliberately does not provide a shared mutable optional cell. If that
+abstraction is later needed, it should be a separate mutable-cell feature with
+an explicit synchronization, variance, aliasing, and failure design rather
+than an exceptional write capability attached to `shared P?`.
+
+Checked unwrap of the object payload is much cleaner: it already has the
+owner anchor, presence guard, complete-object address, static view, and dynamic
+metadata needed by existing object consumers. Copying the complete wrapper
+into an inline `Base?` destination deliberately slices a present dynamic
+payload to exact Base under the ordinary target-directed copy rules. An
+interface or `Obj` box view cannot be copied to a bare inline optional because
+those owning types remain invalid.
+
+Owner-preserving box casts should mirror object-owner casts: up-views are
+static; possible downcasts check the descriptor's exact box class; impossible
+relations are rejected; and no cast allocates, copies the optional payload, or
+changes presence. Immutability means every compatible object-box owner has the
+same non-replacing capability, so an exact view does not expose a surprising
+extra update operation that disappears after an up-view.
+
+Polymorphism may also exist *inside* an exact optional shared-owner payload.
+This remains useful but is not a substitute for direct optional-box
+polymorphism:
+
+```ska
+var maybe_owner: (shared Base)? = new Derived();
+var owner_box: shared (shared Base)? =
+    new (shared Base)?(new Derived());
+```
+
+The first value is an optional owner with no box. The second is an exact box
+whose immutable optional payload contains an ordinary polymorphic owner. Both
+preserve the dynamic `Derived` allocation behind the inner `shared Base` view,
+but neither spelling is required merely to obtain `shared Base?` from
+`new Derived?()` under the revised direction.
 
 ## SB9 — Stored positions and default array elements
 
@@ -528,33 +702,47 @@ allocation.
 
 **Question:** Does a shared optional box need a new canonical identity family?
 
-**Recommended direction:** No. Extend `ResolvedSharedTarget`,
-`HirSharedTarget`, and `MirSharedTarget` with an
-`Optional(OptionalTypeId)` variant. The complete shared type is then the
-existing `Shared(target)` around the already-canonical optional identity.
+**Revised recommended direction:** Distinguish a box's static view identity
+from its exact allocation target. Exact non-object boxes may continue to name
+one canonical `OptionalTypeId` directly. Polymorphic object boxes need a
+canonical static box-view identity whose optional depth and class/interface/
+`Obj` leaf can differ from the allocation descriptor's exact class optional
+identity.
 
-A separate `SharedBoxTypeId` would duplicate a one-to-one mapping, introduce a
-second interner and dump order, and provide no additional semantic choice in
-this scoped feature. If generalized boxes later need target-specific policy,
-that design can introduce a broader allocation-target identity with actual
-new information.
+Conceptually, the shared target families become:
+
+```text
+Object(class | interface | Obj)
+Array(ArrayTypeId)
+ExactOptional(OptionalTypeId)
+OptionalObjectView(optional depth, class | interface | Obj)
+```
+
+The exact Rust shape remains open. A `SharedBoxViewId` or equivalent becomes
+justified if it interns information not present in `OptionalTypeId`, especially
+interface/`Obj` leaves and deterministic compatibility across nested optional
+layers. It must not duplicate exact primitive, array, shared-owner, or other
+invariant optional targets merely for naming symmetry.
 
 Object-only conversions must stop accepting a generic shared target and then
 assuming a view target exists. Instead, shared-target capabilities should be
 queried explicitly:
 
 ```text
-owner operations       class | interface | Obj | array | optional
-object views/dispatch  class | interface | Obj
+owner operations       class | interface | Obj | array | exact optional | optional object view
+object views/dispatch  class | interface | Obj | present optional object view
 array operations       array
-optional-place access  optional
+optional-place access  exact optional | optional object view
 ```
 
 HIR should add a typed optional-box allocation producer and a checked shared
-optional-pointee place carrying owner provenance, access, exact optional ID,
-span, and anchor strategy. It should reuse the current typed optional
-initialization and assignment plans rather than lowering a generic expression
-and rediscovering its lifecycle later.
+optional-pointee place carrying owner provenance, access, static box view,
+known exact allocation target when available, span, and anchor strategy.
+Exact boxes should reuse the current typed optional initialization and
+copy plans. Polymorphic object boxes additionally need explicit static-view
+projection, descriptor checks for casts and dispatch, and checked present
+access rather than asking MIR or the backend to infer them from a generic
+expression. No published optional-box pointee has an assignment plan.
 
 MIR should keep the allocation state transition explicit:
 
@@ -568,9 +756,11 @@ allocated optional storage
 The allocation must carry a distinct optional-box source origin, as required
 by the existing auditable allocation-origin policy. Generic owner copy,
 adopt/move, release, call, field, static, and temporary instructions can then
-accept the extended target. Existing optional MIR operations should act on
-`SharedAllocationPayload` during construction and `SharedPointee(owner)` after
-publication.
+accept the extended target. Existing exact optional MIR operations should act
+on `SharedAllocationPayload` during construction and
+`SharedPointee(owner)` after publication. Object-box view, cast, unwrap, copy,
+and dispatch operations must retain both the static view and exact dynamic
+descriptor dependency through verification.
 
 ## SB11 — Allocation layout, metadata, and finalization
 
@@ -592,7 +782,7 @@ calculation must nevertheless use the target data-layout owner and reject
 size, alignment, or addressability overflow rather than assuming every future
 optional remains eight-aligned.
 
-Each referenced optional box target receives one deterministic metadata
+Each referenced exact optional box target receives one deterministic metadata
 record and one compatible finalizer entry. The finalizer accepts the complete
 optional payload address and invokes the existing destruction plan for that
 `OptionalTypeId`: it does nothing for absence, conditionally destroys an
@@ -600,7 +790,15 @@ inline payload, recursively cleans nested/array payloads, or releases a
 present inner shared owner. The generic last-release path then frees the exact
 header once.
 
-Box metadata is never treated as a class descriptor or interface witness.
+An optional object-box descriptor additionally retains the exact dynamic
+class descriptor and static-view membership evidence selected by SB8.
+Presence state and the complete exact-class payload remain inline after the
+box header; polymorphism does not require a second source-visible owner or a
+second payload allocation. Object dispatch and type tests consume the retained
+class metadata only after a successful present check and guard. Construction
+uses the exact optional target known at the allocation site; no dynamic
+assignment thunk is needed because the published wrapper is immutable.
+
 Primitive-only boxes may share a generated no-op finalizer implementation as
 an optimization only if metadata identity, deterministic output, and the
 generic release contract remain correct.
@@ -621,15 +819,15 @@ itself crosses a callable boundary only through its existing value or alias
 convention after explicit dereference.
 
 Checked byte allocation and exact-base deallocation already suffice. Strong
-counting, metadata publication, optional initialization, guarded mutation,
-finalizer generation, and target checking remain compiler-owned, so the
-public runtime ABI remains version 9.
+counting, metadata publication, optional initialization, guarded access,
+finalizer generation, and target checking remain compiler-owned, so the public
+runtime ABI remains version 9.
 
 Allocation failure, size overflow where handled at runtime, optional unwrap
-failure, guard overflow, and guarded mutation retain the current unrecoverable,
-non-unwinding behavior. Statically knowable layout overflow remains a backend
-error. Invalid metadata, zero ordinary handles, double finalization, and
-ownership underflow remain compiler/runtime defects.
+failure, and guard overflow retain unrecoverable, non-unwinding behavior. This
+feature adds no store-related runtime failure. Statically knowable layout
+overflow remains a backend error. Invalid metadata, zero ordinary handles,
+double finalization, and ownership underflow remain compiler/runtime defects.
 
 ## SB13 — Diagnostics, dumps, tests, and promotion
 
@@ -641,30 +839,39 @@ then implemented?
 source-shaped phases. Semantic dumps use canonical type spelling and
 deterministic optional identity order. Diagnostics should distinguish invalid
 optional payloads, unavailable wrapper lifecycle operations, box construction
-arity, object-only operations on boxes, exact-target mismatches, and remaining
-unsupported whole-pointee assignment targets without freezing prose wording.
+arity, incompatible invariant targets, impossible object-box relations,
+and attempted whole-pointee assignment without freezing prose wording.
 
 The eventual implementation needs focused evidence for:
 
 - parsing, grouping, precedence, shorthand provenance, recovery, and canonical
   resolved/HIR/MIR dumps;
-- exact target identities across modules and arbitrarily nested optional
-  targets, including arbitrary layers outside grouped ordinary and box owners;
+- exact target and polymorphic box-view identities across modules and
+  arbitrarily nested optional targets, including arbitrary layers outside
+  grouped ordinary and box owners;
 - absent, injected, `some`, copied, produced, nested, optional-array, and
   optional-shared-owner box construction;
 - owner copy versus independent box allocation and deterministic last-owner
   finalization;
+- class/base/interface/`Obj` box up-views, checked downcasts, virtual and
+  interface dispatch, and fixed dynamic class identity while absent or
+  present;
+- owner replacement across compatible static box views, other owners retaining
+  the old allocation, compile-time rejection of statically impossible exact
+  box construction, and rejection of whole-pointee assignment through both
+  exact and polymorphic views;
 - presence tests, primitive extraction, inline checked views, optional-array
-  access, aliases, and box replacement;
-- direct and indirect self-assignment and mutation through distinct owners of
-  one allocation;
+  access, read-only aliases, and contained-object mutation;
+- direct and indirect owner self-assignment and mutation of a contained object
+  through distinct owners of one allocation;
 - owner anchors plus guard conflicts through locals, fields, produced owners,
   and optional box owners;
 - fields, internal arguments/results, statics, arrays, element lists, and
   distinct default-created box elements;
-- rejected `Obj?`/interface/unit targets, box upcasts/casts/type tests,
-  implicit forwarding, invalid construction arity, unavailable lifecycle,
-  external signatures, and non-box whole-pointee assignment;
+- rejected bare owning `Obj?`/interface optionals, unit targets, impossible box
+  casts, invariant non-object target conversions, implicit forwarding, invalid
+  construction arity, unavailable construction/copy lifecycle, external
+  signatures, mutable whole-wrapper aliases, and whole-pointee assignment;
 - malformed MIR for target confusion, pre-publication access, owner loss,
   guard/anchor imbalance, wrong metadata/finalizer identity, and duplicate
   cleanup;
@@ -686,14 +893,17 @@ This proposal does not include:
 
 - generalized boxes for non-optional primitive, class, array, function, or
   other inline values;
-- optional `Obj` or interface values that lack an inline storage model;
+- bare owning optional `Obj` or interface values; their use as polymorphic
+  shared box views does not create an inline value type;
 - implicit owner-to-pointee dereference, presence forwarding, optional
   chaining, coalescing, or propagation;
-- box covariance, object/interface/`Obj` views, dynamic casts, type tests, or
-  virtual dispatch;
-- whole-pointee assignment for existing object or array shared targets;
+- covariance for primitive, array, nested value, or other non-object box
+  targets;
+- whole-pointee assignment for optional boxes or existing object and array
+  shared targets;
 - aliases whose designated type is a shared owner, first-class references,
-  optional references, or escaping pointers into a box;
+  optional references, mutable whole-wrapper aliases, or escaping pointers
+  into a box;
 - external shared-box signatures or a stable public box ABI;
 - weak owners, cycle collection, explicit early release, uniqueness, or
   copy-on-write;
@@ -723,13 +933,24 @@ This would erase the distinction between no box and a present box whose
 payload is absent, weaken every plain shared-owner invariant, and send zero
 into operations that currently require non-null handles.
 
-### Add immutable boxes only
+### Add mutable whole-wrapper assignment
 
-Immutable boxes could share a captured optional value, but an absent box could
-never become present and owner copies would add little beyond copying the
-optional value itself. Box-only whole-pointee assignment supplies the intended
-shared mutable container while keeping existing object replacement questions
-out of scope.
+Allowing `*box = source` would turn the feature into a shared mutable optional
+cell. Polymorphic object-box views would then require invariant targets, a
+distinct replace-capable owner/view qualifier, or runtime-checked covariant
+stores. Each choice adds a capability discontinuity, new failure behavior, or
+both. Immutable wrapper state instead matches ordinary shared-object semantics
+and leaves a mutable cell as a separate future abstraction.
+
+### Keep every box target invariant
+
+Exact `OptionalTypeId` equality would simplify representation, but it prevents
+`new Derived?()` from satisfying `shared Base?` and removes a central property
+users expect from shared objects. Requiring an inner optional shared owner
+restores polymorphism only by changing the value model and adding
+source-visible indirection. Because the published wrapper is immutable, the
+revised SB8 direction can provide direct object-box up-views without a checked
+replacement path.
 
 ### Forward optional operations through the owner
 
@@ -742,4 +963,4 @@ outer optional layer of `shared? P?` and hide allocation anchoring. Explicit
 Primitive, class, array, shared-owner, and nested box variants would duplicate
 the canonical optional table and grow combinatorially. The existing
 `OptionalTypeId` already owns exactly the information a box finalizer and
-mutation operation need.
+checked-access operation need.

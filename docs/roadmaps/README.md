@@ -17,9 +17,10 @@ No implementation roadmap is currently only planned.
 The [shared optional boxes design proposal](SHARED_OPTIONAL_BOXES_DESIGN_PROPOSAL.md)
 is under review. It proposes non-null `shared P?` boxes containing canonical
 optional values and derives `shared? P?` as an optional owner of such a box.
-Its construction, dereference, mutation, exact-target, metadata, finalization,
-and ABI decisions remain open; no implementation roadmap should be created
-until the design is confirmed and promoted into living contracts.
+Its construction, dereference, immutable wrapper state, polymorphic object
+views, target identity, metadata, finalization, and ABI decisions remain open;
+no implementation roadmap should be created until the design is confirmed
+and promoted into living contracts.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).
