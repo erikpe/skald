@@ -35,6 +35,15 @@ impl Verifier<'_> {
         self.verify_place_with_allocation_payload(function, block, place, true)
     }
 
+    pub(super) fn verify_unpublished_initialization_destination(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+    ) -> Option<VerifiedPlace> {
+        self.verify_place_with_allocation_payload(function, block, place, true)
+    }
+
     fn verify_place_with_allocation_payload(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -101,7 +110,7 @@ impl Verifier<'_> {
                 block.id,
                 if matches!(place.base, MirPlaceBase::SharedAllocationPayload(_)) {
                     format!(
-                        "shared allocation payload {storage_id} is only valid as a copy-allocation destination"
+                        "shared allocation payload {storage_id} is only valid as an unpublished initialization destination"
                     )
                 } else {
                     format!(
@@ -173,7 +182,7 @@ impl Verifier<'_> {
                 return None;
             }
             (MirPlaceBase::SharedAllocationPayload(_), MirStorageKind::SharedAllocation)
-                if matches!(storage.ty, MirType::Class(_)) =>
+                if matches!(storage.ty, MirType::Class(_) | MirType::Optional(_)) =>
             {
                 MirAliasAccess::Mutable
             }
@@ -193,7 +202,17 @@ impl Verifier<'_> {
             }
         };
         let ty = match (place.base, storage.ty) {
-            (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),
+            (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => {
+                let Some(ty) = self.program.shared_target_type(target) else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "shared-pointee target has no exact addressable MIR type",
+                    );
+                    return None;
+                };
+                ty
+            }
             _ => storage.ty,
         };
         let ty = self.verify_place_projections(function, block, ty, &place.projections)?;

@@ -24,6 +24,8 @@ mod loop_context;
 mod loop_flow;
 mod object_values;
 mod optional;
+mod optional_box;
+mod optional_box_types;
 mod optional_types;
 mod places;
 mod primitive;
@@ -55,10 +57,6 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
 /// Lowers complete typed HIR into the closed-world product consumed by static
 /// lifecycle analysis. This product cannot be passed directly to a backend.
 pub fn lower_preliminary_hir(hir: &HirProgram) -> PreliminaryMirProgram {
-    assert!(
-        hir.optional_box_types.is_empty(),
-        "optional-box HIR must stop at the structured BX2 lowering gate"
-    );
     let program = program::lower_program(hir);
     let (static_fields, static_initializers) =
         static_initializer::lower_static_initializers(hir, program.string_language_item);
@@ -97,6 +95,7 @@ struct BodyLoweringInput<'hir> {
     literal_data: &'hir crate::hir::HirLiteralDataTable,
     array_types: &'hir crate::hir::HirArrayTypeTable,
     optional_types: &'hir crate::hir::HirOptionalTypeTable,
+    optional_box_types: &'hir crate::hir::HirOptionalBoxTypeTable,
 }
 
 struct LoweredBody {
@@ -443,9 +442,7 @@ fn lower_shared_target(target: crate::hir::HirSharedTarget) -> MirSharedTarget {
         crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         crate::hir::HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
         crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
-        crate::hir::HirSharedTarget::OptionalBox(_) => {
-            unreachable!("optional-box MIR lowering is gated until BX2")
-        }
+        crate::hir::HirSharedTarget::OptionalBox(target) => MirSharedTarget::OptionalBox(target),
     }
 }
 

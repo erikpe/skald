@@ -68,6 +68,7 @@ fn lower_static_initializer(
         literal_data: &hir.literal_data,
         array_types: &hir.array_types,
         optional_types: &hir.optional_types,
+        optional_box_types: &hir.optional_box_types,
     });
 
     let destination = MirPlace::static_lifecycle_destination(field);

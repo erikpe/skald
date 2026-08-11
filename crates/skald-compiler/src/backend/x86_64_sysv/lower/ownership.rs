@@ -44,7 +44,12 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         allocation: &MirSharedAllocate,
     ) -> Result<(), BackendError> {
-        let byte_count = self.data_layout.shared_allocation_size(allocation.class)?;
+        let crate::mir::MirSharedAllocationTarget::Class(class) = allocation.target else {
+            return Err(self.ownership_error(
+                "optional-box allocation reached instruction selection past target legality",
+            ));
+        };
+        let byte_count = self.data_layout.shared_allocation_size(class)?;
         self.output.push(Instruction::MoveImmediate64 {
             bits: byte_count,
             destination: Register::Rdi,

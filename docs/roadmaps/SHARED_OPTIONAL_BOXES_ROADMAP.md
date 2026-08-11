@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX1 are complete and BX2 is next.
+Status: in progress; BX0-BX2 are complete and BX3 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -104,7 +104,7 @@ outcome; it does not reopen those decisions.
 
 - [x] BX0 — Retain box allocation syntax and canonical resolved targets
 - [x] BX1 — Select typed box ownership and construction plans
-- [ ] BX2 — Verify optional-box allocation and owner lifetimes in MIR
+- [x] BX2 — Verify optional-box allocation and owner lifetimes in MIR
 - [ ] BX3 — Execute primitive optional boxes on x86-64
 - [ ] BX4 — Execute exact lifecycle-bearing box targets
 - [ ] BX5 — Add explicit immutable box-pointee access
@@ -200,28 +200,28 @@ fail at their semantic owner, and executable phases remain deliberately gated.
 **Purpose:** Establish explicit allocation, initialization, publication, and
 owner accounting before a backend can realize any optional box.
 
-- [ ] Extend MIR shared targets and metadata lowering deterministically from
+- [x] Extend MIR shared targets and metadata lowering deterministically from
       HIR, preserving exact optional targets and static optional-object views.
-- [ ] Add a distinct optional-box allocation origin and exact unpublished
+- [x] Add a distinct optional-box allocation origin and exact unpublished
       allocation storage whose `SharedAllocationPayload` place has the
       canonical `OptionalTypeId`.
-- [ ] Lower box construction in source order as source evaluation/checks,
+- [x] Lower box construction in source order as source evaluation/checks,
       allocate, exact optional initialization, publication, produced-owner
       adoption, and full-expression cleanup.
-- [ ] Reuse existing optional initialization/publication instructions and
+- [x] Reuse existing optional initialization/publication instructions and
       recursive lifecycle plans at the unpublished payload instead of adding
       payload-category-specific box instruction families.
-- [ ] Execute target-compatible local owner copy, move, secure-before-release
+- [x] Execute target-compatible local owner copy, move, secure-before-release
       assignment, temporary cleanup, and last-owner obligation in MIR while
       keeping pointee access gated.
-- [ ] Extend shared structural/ownership/lifetime/place/cleanup and optional
+- [x] Extend shared structural/ownership/lifetime/place/cleanup and optional
       initialization verification for exact target, allocation origin,
       pre-publication access, single publication/adoption, owner balance,
       wrapper completion, and CFG agreement.
-- [ ] Extend deterministic MIR dumps, use accounting, static-lifecycle
+- [x] Extend deterministic MIR dumps, use accounting, static-lifecycle
       discovery hooks, and backend legality with a deliberate unsupported-box
       target gate.
-- [ ] Add mutation helpers and malformed-MIR cases without exposing private
+- [x] Add mutation helpers and malformed-MIR cases without exposing private
       verifier state through public compiler APIs.
 
 **Tests:** Exact MIR dumps and ordering assertions; named copy and produced

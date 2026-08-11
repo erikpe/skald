@@ -52,7 +52,8 @@ verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
 [optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#compositional-test-matrix).
 Focused compile failures remain for excluded optional payload categories and
-the frozen but not-yet-implemented shared optional boxes.
+the shared optional-box access and stored-position boundaries. Valid local box
+programs instead reach a deliberate backend capability error.
 Shared-verifier tests exercise its private propagation, transition,
 use-validation, and state owners through the unchanged MIR verification
 facade. Focused structural refactors should run the complete `mir::tests::shared`
@@ -713,9 +714,11 @@ the extended robustness suite mutates optional punctuation deterministically.
 
 ### Staged shared optional box coverage
 
-BX1 provides positive type-check/HIR coverage for local owners and
-construction while the active roadmap retains negative gates for every
-not-yet-enabled stored or lower phase.
+Positive syntax, resolution, type-check/HIR, and MIR coverage now exercises
+local owners, construction, exact metadata, unpublished initialization,
+publication/adoption, secure replacement, cleanup, malformed protocol states,
+and the deliberate backend gate. The active roadmap retains negative gates
+for not-yet-enabled access, stored positions, and native realization.
 Complete implementation evidence includes:
 
 - source type grouping, arbitrary outer optional depth, `shared? P?`

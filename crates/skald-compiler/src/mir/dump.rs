@@ -117,6 +117,27 @@ fn dump_program(program: &MirProgram, heading: &str) -> String {
             );
         }
     }
+    if !program.optional_box_types.is_empty() {
+        output.push_str("  OptionalBoxTypes\n");
+        for target in program.optional_box_types.iter() {
+            let _ = write!(
+                output,
+                "    OptionalBox {} exact {} depth {} view ",
+                target.id,
+                target
+                    .exact_optional
+                    .map(|optional| optional.to_string())
+                    .unwrap_or_else(|| "view-only".to_owned()),
+                target.optional_depth,
+            );
+            match target.object_view {
+                Some(view) => dump_view_target(&mut output, view),
+                None => output.push_str("none"),
+            }
+            write_span(&mut output, target.span);
+            output.push('\n');
+        }
+    }
     if let Some(item) = program.string_language_item {
         let _ = writeln!(
             output,
@@ -815,18 +836,22 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             MirInstruction::SharedAllocate(allocation) => {
                 let origin = match allocation.origin {
                     MirSharedAllocationOrigin::New => "new",
+                    MirSharedAllocationOrigin::OptionalBox => "optional-box",
                     MirSharedAllocationOrigin::Unspecified => "unspecified",
                 };
                 let _ = write!(
                     output,
                     "shared-allocate {} exact {} from {origin}",
-                    allocation.allocation, allocation.class,
+                    allocation.allocation, allocation.target,
                 );
                 match &allocation.mode {
                     MirSharedAllocationMode::Initialize => output.push_str(" initialize"),
                     MirSharedAllocationMode::Copy { source } => {
                         output.push_str(" copy ");
                         dump_place(output, source);
+                    }
+                    MirSharedAllocationMode::OptionalBox { completion } => {
+                        let _ = write!(output, " complete-with {completion:?}");
                     }
                 }
                 write_span(output, allocation.span);

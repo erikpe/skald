@@ -67,6 +67,9 @@ impl Verifier<'_> {
                     self.program.array_type(array).is_some()
                 }
                 crate::mir::MirSharedTarget::Obj => true,
+                crate::mir::MirSharedTarget::OptionalBox(target) => {
+                    self.program.optional_box_type(target).is_some()
+                }
             },
             MirType::Interface(_) | MirType::Obj | MirType::Unit => false,
             _ => true,

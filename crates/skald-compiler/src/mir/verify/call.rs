@@ -59,7 +59,18 @@ impl<'mir> Verifier<'mir> {
         initialize: &MirInitialize,
         defined_in_block: &HashSet<ValueId>,
     ) {
-        let destination = self.verify_place(function, block, &initialize.destination);
+        let destination = if matches!(
+            initialize.destination.base,
+            MirPlaceBase::SharedAllocationPayload(_)
+        ) {
+            self.verify_unpublished_initialization_destination(
+                function,
+                block,
+                &initialize.destination,
+            )
+        } else {
+            self.verify_place(function, block, &initialize.destination)
+        };
         if matches!(
             initialize.destination.base,
             MirPlaceBase::AliasParameter(_) | MirPlaceBase::CheckedView(_)
@@ -561,10 +572,13 @@ impl<'mir> Verifier<'mir> {
                 "non-shared call must not declare a shared result",
             );
         }
-        let destination = call
-            .destination
-            .as_ref()
-            .and_then(|place| self.verify_place(function, block, place));
+        let destination = call.destination.as_ref().and_then(|place| {
+            if matches!(place.base, MirPlaceBase::SharedAllocationPayload(_)) {
+                self.verify_unpublished_initialization_destination(function, block, place)
+            } else {
+                self.verify_place(function, block, place)
+            }
+        });
 
         match (return_type, result_ty, destination) {
             (MirType::Array(_), Some(_), _) => self.block_error(
@@ -642,6 +656,12 @@ impl<'mir> Verifier<'mir> {
                                 ] => storage.kind == MirStorageKind::ArrayBacking,
                                 _ => false,
                             }))
+                        || (matches!(place.base, MirPlaceBase::SharedAllocationPayload(_))
+                            && matches!(
+                                place.projections.as_slice(),
+                                [crate::mir::MirPlaceProjection::OptionalPayload(payload)]
+                                    if *payload == class
+                            ))
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Class(class))
                     || !complete_destination
@@ -677,6 +697,8 @@ impl<'mir> Verifier<'mir> {
                                         | MirStorageKind::Return
                                 )
                             }))
+                        || (place.projections.is_empty()
+                            && matches!(place.base, MirPlaceBase::SharedAllocationPayload(_)))
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Optional(optional))
                     || !complete_destination

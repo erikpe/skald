@@ -792,9 +792,10 @@ of that non-null box, and `shared? P?` is exact shorthand for the latter. The
 allocation grammar accepts `new P?()` and `new P?(expression)` with one
 complete optional type target. The AST keeps this form distinct from class and
 array construction and retains its type grouping and punctuation. Resolution
-assigns its exact optional target and static box-view identity. Type checking
-currently stops all shared optional boxes at one availability diagnostic, so
-grammar acceptance does not yet make box construction executable.
+assigns its exact optional target and static box-view identity. Local box
+construction and owner lifetimes reach verified target-independent MIR. The
+x86-64 backend still rejects the allocation deliberately, so grammar
+acceptance does not yet imply native execution.
 
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with

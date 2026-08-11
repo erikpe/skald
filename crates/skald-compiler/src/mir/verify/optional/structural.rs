@@ -18,14 +18,17 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         destination: &MirPlace,
         source: &MirOptionalSharedSource,
-        optional: crate::identity::OptionalTypeId,
-        target: MirSharedTarget,
+        expected: (crate::identity::OptionalTypeId, MirSharedTarget),
+        initialization: bool,
     ) {
+        let (optional, target) = expected;
         self.verify_shared_target_declared(function.callable(), target);
-        if self
-            .verify_place(function, block, destination)
-            .map(|place| place.ty)
-            != Some(MirType::Optional(optional))
+        let destination = if initialization {
+            self.verify_unpublished_initialization_destination(function, block, destination)
+        } else {
+            self.verify_place(function, block, destination)
+        };
+        if destination.map(|place| place.ty) != Some(MirType::Optional(optional))
             || self
                 .program
                 .optional_type(optional)
@@ -284,7 +287,7 @@ impl Verifier<'_> {
         source: &MirOptionalSource,
         defined: &HashSet<ValueId>,
     ) {
-        let payload = self.verify_optional_place(function, block, destination);
+        let payload = self.verify_optional_initialization_storage(function, block, destination);
         self.verify_optional_source(function, block, source, payload, defined);
     }
 
@@ -405,6 +408,24 @@ impl Verifier<'_> {
                 function.callable(),
                 block.id,
                 "optional operation place is not primitive optional storage",
+            );
+            return None;
+        };
+        Some(payload)
+    }
+
+    fn verify_optional_initialization_storage(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+    ) -> Option<MirPrimitiveType> {
+        let verified = self.verify_unpublished_initialization_destination(function, block, place);
+        let Some(payload) = verified.and_then(|place| self.optional_primitive(place.ty)) else {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional initialization destination is not primitive optional storage",
             );
             return None;
         };

@@ -4,9 +4,9 @@ use crate::{
     identity::CallableId,
     mir::{
         BlockId, MirArgument, MirArrayInstruction, MirBasicBlock, MirCheckedViewBinding,
-        MirInstruction, MirPlace, MirPlaceBase, MirPlaceProjection, MirSharedAllocationMode,
-        MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirStorageKind, MirType,
-        StorageId,
+        MirInstruction, MirOptionalBoxCompletion, MirPlace, MirPlaceBase, MirPlaceProjection,
+        MirSharedAllocationMode, MirSharedCast, MirSharedCastSource, MirSharedCastTransfer,
+        MirStorageKind, MirType, StorageId,
     },
 };
 
@@ -266,6 +266,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
                             "optional shared field is initialized more than once",
                         );
                     }
+                    self.complete_optional_box_payload(
+                        state,
+                        &initialize.destination,
+                        MirOptionalBoxCompletion::OptionalSharedInitialize,
+                    );
                 }
                 MirInstruction::OptionalSharedAssign(assignment) => {
                     if let crate::mir::MirOptionalSharedSource::Present(owner) = assignment.source {
@@ -333,20 +338,57 @@ impl SharedOwnershipAnalysis<'_, '_> {
                     }
                     state.pending_full_expression_boundary |=
                         transferred || call.shared_result.is_some();
+                    if let Some(destination) = &call.destination {
+                        self.complete_optional_box_payload(
+                            state,
+                            destination,
+                            MirOptionalBoxCompletion::DestinationCall,
+                        );
+                    }
+                }
+                MirInstruction::OptionalInitialize(initialize) => {
+                    self.complete_optional_box_payload(
+                        state,
+                        &initialize.destination,
+                        MirOptionalBoxCompletion::OptionalInitialize,
+                    );
+                }
+                MirInstruction::AggregateOptionalInitialize(initialize) => {
+                    self.complete_optional_box_payload(
+                        state,
+                        &initialize.destination,
+                        MirOptionalBoxCompletion::AggregateInitialize,
+                    );
+                }
+                MirInstruction::AggregateOptionalPublish(publish) => {
+                    self.complete_optional_box_payload(
+                        state,
+                        &publish.destination,
+                        MirOptionalBoxCompletion::AggregatePublish,
+                    );
+                }
+                MirInstruction::ClassOptionalInitialize(initialize) => {
+                    self.complete_optional_box_payload(
+                        state,
+                        &initialize.destination,
+                        MirOptionalBoxCompletion::ClassInitialize,
+                    );
+                }
+                MirInstruction::ClassOptionalPublish(publish) => {
+                    self.complete_optional_box_payload(
+                        state,
+                        &publish.destination,
+                        MirOptionalBoxCompletion::ClassPublish,
+                    );
                 }
                 MirInstruction::Assign(_)
                 | MirInstruction::Cleanup(_)
                 | MirInstruction::Store(_)
                 | MirInstruction::CopyAssign(_)
-                | MirInstruction::OptionalInitialize(_)
                 | MirInstruction::OptionalAssign(_)
-                | MirInstruction::AggregateOptionalInitialize(_)
                 | MirInstruction::AggregateOptionalAssign(_)
-                | MirInstruction::AggregateOptionalPublish(_)
                 | MirInstruction::AggregateOptionalCleanup(_)
-                | MirInstruction::ClassOptionalInitialize(_)
                 | MirInstruction::ClassOptionalAssign(_)
-                | MirInstruction::ClassOptionalPublish(_)
                 | MirInstruction::ClassOptionalCleanup(_)
                 | MirInstruction::EndOptionalView(_)
                 | MirInstruction::Io(_) => {}
@@ -373,6 +415,27 @@ impl SharedOwnershipAnalysis<'_, '_> {
                     state.pending_full_expression_boundary |= transferred;
                 }
             }
+        }
+    }
+
+    fn complete_optional_box_payload(
+        &mut self,
+        state: &mut SharedState,
+        destination: &MirPlace,
+        completion: MirOptionalBoxCompletion,
+    ) {
+        let MirPlaceBase::SharedAllocationPayload(allocation) = destination.base else {
+            return;
+        };
+        if !destination.projections.is_empty() {
+            return;
+        }
+        let expected =
+            AllocationState::Allocated(MirSharedAllocationMode::OptionalBox { completion });
+        if state.allocations.get(&allocation) == Some(&expected) {
+            state
+                .allocations
+                .insert(allocation, AllocationState::Initialized);
         }
     }
 

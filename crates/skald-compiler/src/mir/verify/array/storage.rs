@@ -230,9 +230,16 @@ impl Verifier<'_> {
                         MirStorageKind::ArrayProduced | MirStorageKind::ArraySlice
                     ) && source.ty == MirType::Array(*array)
                 });
-                let destination_matches = self
-                    .verify_place(function, block, destination)
-                    .is_some_and(|destination| destination.ty == MirType::Array(*array));
+                let destination = if matches!(
+                    destination.base,
+                    crate::mir::MirPlaceBase::SharedAllocationPayload(_)
+                ) {
+                    self.verify_unpublished_initialization_destination(function, block, destination)
+                } else {
+                    self.verify_place(function, block, destination)
+                };
+                let destination_matches =
+                    destination.is_some_and(|destination| destination.ty == MirType::Array(*array));
                 if !source_matches || !destination_matches {
                     self.block_error(
                         function.callable(),

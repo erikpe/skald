@@ -54,6 +54,7 @@ mod primitive_casts;
 mod produced_aliases;
 mod robustness;
 mod shared;
+mod shared_optional_boxes;
 mod shifts;
 mod static_fields;
 mod static_inheritance;

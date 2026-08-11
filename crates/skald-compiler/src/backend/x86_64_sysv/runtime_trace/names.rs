@@ -214,6 +214,7 @@ fn shared_target_name(
         MirSharedTarget::Array(array) => {
             type_name(program, MirType::Array(array), callable, active_arrays)
         }
+        MirSharedTarget::OptionalBox(target) => Ok(format!("optional-box {target}")),
     }
 }
 

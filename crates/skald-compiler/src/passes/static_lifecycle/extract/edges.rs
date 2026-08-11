@@ -87,6 +87,7 @@ impl Extractor<'_> {
                 PreliminaryMirSharedLifecycleTarget::Array(array) => {
                     StaticEffectNode::array(array, StaticArrayLifecycleOperation::Destruction)
                 }
+                PreliminaryMirSharedLifecycleTarget::OptionalBox(_) => continue,
             };
             self.add_edge(source, node, kind, phase, span);
         }

@@ -93,9 +93,9 @@ impl BodyLowerer<'_> {
             HirStoredValueInitialization::Optional(value) => {
                 self.lower_aggregate_optional_initialize_at(destination, value);
             }
-            HirStoredValueInitialization::OptionalBoxPointeeCopy { .. } => {
-                unreachable!("optional-box pointee copies are gated until BX2")
-            }
+            HirStoredValueInitialization::OptionalBoxPointeeCopy { .. } => unreachable!(
+                "optional-box pointee copies require an optional-box allocation destination"
+            ),
         }
     }
 
@@ -322,7 +322,7 @@ impl BodyLowerer<'_> {
         ));
     }
 
-    fn lower_optional_copy_initialize_at(
+    pub(super) fn lower_optional_copy_initialize_at(
         &mut self,
         destination: crate::mir::MirPlace,
         optional: crate::identity::OptionalTypeId,
@@ -590,7 +590,7 @@ impl BodyLowerer<'_> {
         ));
     }
 
-    fn lower_class_optional_copy_source(
+    pub(super) fn lower_class_optional_copy_source(
         &mut self,
         source: &HirClassOptionalSource,
         class: crate::identity::ClassId,

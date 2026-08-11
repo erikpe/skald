@@ -22,6 +22,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_module_ownership();
         self.verify_external_links();
         self.verify_optional_declarations();
+        self.verify_optional_box_declarations();
         self.verify_array_declarations();
         self.verify_classes();
         self.verify_string_declarations();

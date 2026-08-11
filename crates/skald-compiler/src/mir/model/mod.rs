@@ -11,6 +11,7 @@ mod interface;
 mod io;
 mod logical;
 mod optional;
+mod optional_box_type;
 mod optional_type;
 mod path_condition;
 mod preliminary;
@@ -68,6 +69,7 @@ pub use optional::{
     MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin, MirOptionalViewEnd,
     MirPresenceTestKind,
 };
+pub use optional_box_type::{MirOptionalBoxType, MirOptionalBoxTypeTable};
 pub use optional_type::{
     MirOptionalAssignmentPlan, MirOptionalBoundaryPlan, MirOptionalBoundaryPlans,
     MirOptionalCheckedAccess, MirOptionalCleanupPlan, MirOptionalCopyPlan,
@@ -86,10 +88,11 @@ pub use primitive::{
     MirPrimitiveCastRangeCheck, MirPrimitiveType,
 };
 pub use shared::{
-    MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
-    MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,
-    MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize, MirSharedMove,
-    MirSharedPublish, MirSharedRelease, MirSharedStatic, MirSharedTarget,
+    MirOptionalBoxCompletion, MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode,
+    MirSharedAllocationOrigin, MirSharedAllocationTarget, MirSharedCast, MirSharedCastSource,
+    MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize,
+    MirSharedFieldReplace, MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease,
+    MirSharedStatic, MirSharedTarget,
 };
 pub use shift::{MirRightShiftFlavor, MirShiftCountCheck, MirShiftDirection, MirShiftOperation};
 pub use static_lifecycle::{

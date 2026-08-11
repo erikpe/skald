@@ -190,14 +190,27 @@ impl Verifier<'_> {
                 "string initialization has invalid start or length metadata",
             );
         }
-        let destination = self.verify_place(function, block, &initialize.destination);
+        let optional_box_payload = matches!(
+            initialize.destination.base,
+            MirPlaceBase::SharedAllocationPayload(_)
+        );
+        let destination = if optional_box_payload {
+            self.verify_unpublished_initialization_destination(
+                function,
+                block,
+                &initialize.destination,
+            )
+        } else {
+            self.verify_place(function, block, &initialize.destination)
+        };
         if destination.is_none_or(|place| {
             place.ty != MirType::Class(item.class)
                 || place.access != MirAliasAccess::Mutable
-                || matches!(
-                    initialize.destination.base,
-                    MirPlaceBase::SharedPointee(_) | MirPlaceBase::SharedAllocationPayload(_)
-                )
+                || (!optional_box_payload
+                    && matches!(
+                        initialize.destination.base,
+                        MirPlaceBase::SharedPointee(_) | MirPlaceBase::SharedAllocationPayload(_)
+                    ))
         }) {
             self.block_error(
                 function.callable(),

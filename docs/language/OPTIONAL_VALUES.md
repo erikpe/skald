@@ -9,7 +9,7 @@ access are executable. Optional arrays execute in every supported owning,
 aggregate, internal callable, array-element, and call-scoped alias position. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
-accepted by the compiler. This document also freezes the not-yet-implemented
+accepted by the compiler. This document also freezes the staged
 [shared optional box](#shared-optional-boxes) contract.
 
 This document defines Skald's source-level optional-value contract. Primitive
@@ -175,8 +175,9 @@ shared? T[] = (shared T[])?
 shared? T?  = (shared T?)?
 ```
 
-The last form contains the not-yet-implemented inner
-`Shared<Optional<T>>` box.
+The last form contains an inner `Shared<Optional<T>>` box. Local ownership and
+construction reach verified MIR, while native realization and access remain
+staged.
 
 The exact spelling and identity matrix is:
 
@@ -188,8 +189,8 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Syntax and resolution implemented; type checking gated |
-| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Syntax and resolution implemented; type checking gated |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Local construction and ownership verified in target-independent MIR; native backend gated |
+| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Local box ownership composes with the implemented optional-owner form; native backend gated |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
 and `(shared T)?` for an optional shared owner. Source-shaped syntax inspection
@@ -300,11 +301,12 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; typed local HIR implemented**. The compiler parses
-box forms, interns exact optional and static object-view targets, and selects
-local construction and owner-transfer plans in HIR. Broader storage, pointee
-access, MIR, and native execution remain staged. Later roadmap tasks must not
-reopen the source semantics in this section.
+Status: **frozen design; verified local MIR implemented**. The compiler parses
+box forms, interns exact optional and static object-view targets, selects local
+construction and owner-transfer plans, and verifies allocation, publication,
+adoption, replacement, and cleanup in target-independent MIR. Broader storage,
+pointee access, and native execution remain staged. Later roadmap tasks must
+not reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
 optional `P?` wrapper. It is `Shared<Optional<P>>`, not an optional ordinary

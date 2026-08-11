@@ -13,7 +13,7 @@ The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
 authoritative for source currently accepted by the compiler. This document
-also freezes the not-yet-implemented compiler representation for
+also records the frozen compiler representation for
 [shared optional boxes](#frozen-shared-optional-box-representation).
 
 This document defines phase ownership, target-independent invariants, the
@@ -70,12 +70,13 @@ shared T    ordinary non-null shared owner
 
 `shared? T` is an exact source shorthand for `(shared T)?`; both intern to the
 same resolved identity and lower to the existing optional-owner operations.
-`shared T?` and `shared? T?` receive deterministic resolved and HIR box
-identities. BX1 type-checks direct local box owners, outer optional-owner
-layers, construction, compatible owner copy/replacement, and independent
-exact-wrapper copying. Stored/callable positions, pointee access, and MIR stay
-behind focused later-task gates; invalid standalone payload families retain
-their ordinary diagnostics. Nested optionals
+`shared T?` and `shared? T?` receive deterministic resolved, HIR, and MIR box
+identities. Direct local box owners, outer optional-owner layers,
+construction, compatible owner copy/replacement, and independent exact-wrapper
+copying lower through verified target-independent MIR. Stored/callable
+positions and pointee access remain behind focused later-task gates, and the
+x86-64 backend rejects box allocation with an explicit capability error;
+invalid standalone payload families retain their ordinary diagnostics. Nested optionals
 are executable in owning positions, checked access, aliases, and internal
 callable boundaries. Alias binding mode may designate any supported inline
 optional container; it does not add a reference or optional-reference type
@@ -283,10 +284,12 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; typed local HIR implemented**. BX1 selects local owner
-compatibility and exact wrapper construction in HIR. MIR, native execution,
-pointee access, and broader stored positions remain deliberately gated at
-their responsible roadmap boundaries.
+Status: **frozen design; verified local MIR implemented**. Local owner
+compatibility and exact wrapper construction lower through target-independent
+MIR with explicit allocation, wrapper completion, publication, adoption, and
+owner lifetime verification. Native execution, pointee access, and broader
+stored positions remain deliberately gated at their responsible roadmap
+boundaries.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -328,8 +331,11 @@ allocated exact optional storage
     -> adopted ordinary owner
 ```
 
-`SharedAllocationPayload` denotes the unpublished exact wrapper destination;
-`SharedPointee(owner)` denotes the immutable published wrapper. Existing exact
+`SharedAllocationPayload` denotes the unpublished exact wrapper destination.
+It is accepted only by the selected initialization operation until one
+publication and adoption complete the produced owner. `SharedPointee(owner)`
+denotes the immutable published wrapper identity reserved for the later access
+phase. Existing exact
 optional lifecycle instructions operate on those places rather than gaining a
 parallel primitive/class/array box family. Object-box view, cast, unwrap,
 copy, and dispatch operations retain both the static view and exact dynamic
@@ -808,7 +814,7 @@ observable behavior:
 | Concern | Required focused evidence |
 |---|---|
 | Source syntax | Tokens and AST for general grouping, left-to-right `?`/`[]` suffixes, `(shared T)?`, `shared? T`, nested depth, `some(expression)`, malformed punctuation, recovery spans, and the syntax budget |
-| Canonical identity | Resolution and HIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused stored-position and MIR gates |
+| Canonical identity | Resolution, HIR, and MIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused stored-position and backend gates |
 | Type and lifecycle selection | Exact payload eligibility, one-layer injection, overload ranking, `none`/`some` expectations, recursive containment, copy/assignment/destruction capabilities, aliases, statics, and array-element plans |
 | HIR and MIR shape | Explicit outer-layer operations, recursive payload plans, publication order, one-layer unwrap, guards and anchors, arguments/results, optional arrays, selected-path cleanup, and deterministic dumps |
 | Verification | Mutations for missing or mismatched identities, absent payload use, wrong lifecycle capability, premature publication, duplicate/missing cleanup, bad transfers, unbalanced or wrong-layer guards, invalid anchors, malformed CFG joins, and leaked box targets |

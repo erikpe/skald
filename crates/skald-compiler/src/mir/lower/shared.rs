@@ -111,7 +111,12 @@ impl BodyLowerer<'_> {
                 self.lower_shared_array_construction(destination, construction)
             }
             HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => {
-                unreachable!("optional-box MIR lowering is gated until BX2")
+                let HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(allocation)) =
+                    source
+                else {
+                    unreachable!()
+                };
+                self.lower_optional_box_allocation(destination, allocation)
             }
             HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
                 let source = self.lower_field_place(place);
@@ -264,7 +269,7 @@ impl BodyLowerer<'_> {
         self.track_full_expression_storage(allocation_storage, allocation.span);
         self.emit(MirInstruction::SharedAllocate(MirSharedAllocate {
             allocation: allocation_storage,
-            class: allocation.class,
+            target: MirSharedAllocationTarget::Class(allocation.class),
             origin: MirSharedAllocationOrigin::New,
             mode: match &initialization {
                 Initialization::Initialize { .. } => MirSharedAllocationMode::Initialize,
@@ -363,8 +368,6 @@ fn lower_shared_target(target: HirSharedTarget) -> MirSharedTarget {
         HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
         HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
-        HirSharedTarget::OptionalBox(_) => {
-            unreachable!("optional-box MIR targets are gated until BX2")
-        }
+        HirSharedTarget::OptionalBox(target) => MirSharedTarget::OptionalBox(target),
     }
 }

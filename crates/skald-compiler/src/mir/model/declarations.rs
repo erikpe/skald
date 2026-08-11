@@ -31,6 +31,7 @@ pub struct MirProgram {
     pub external_links: ExternalLinkTable,
     pub array_types: MirArrayTypeTable,
     pub optional_types: super::MirOptionalTypeTable,
+    pub optional_box_types: super::MirOptionalBoxTypeTable,
     pub string_language_item: Option<super::MirStringLanguageItem>,
     pub literal_data: super::MirLiteralDataTable,
     pub classes: MirClassDeclarationTable,
@@ -56,6 +57,23 @@ impl MirProgram {
         id: crate::identity::OptionalTypeId,
     ) -> Option<&super::MirOptionalType> {
         self.optional_types.get(id)
+    }
+
+    pub fn optional_box_type(
+        &self,
+        id: crate::identity::OptionalBoxTypeId,
+    ) -> Option<&super::MirOptionalBoxType> {
+        self.optional_box_types.get(id)
+    }
+
+    pub fn shared_target_type(&self, target: MirSharedTarget) -> Option<MirType> {
+        match target {
+            MirSharedTarget::OptionalBox(box_type) => self
+                .optional_box_type(box_type)?
+                .exact_optional
+                .map(MirType::Optional),
+            target => Some(target.ty()),
+        }
     }
 
     pub fn optional_for_payload(
@@ -197,6 +215,11 @@ impl MirProgram {
                 .filter(|class| self.conformance(class.id, interface).is_some())
                 .map(|class| super::PreliminaryMirSharedLifecycleTarget::Class(class.id))
                 .collect(),
+            MirSharedTarget::OptionalBox(target) => {
+                vec![super::PreliminaryMirSharedLifecycleTarget::OptionalBox(
+                    target,
+                )]
+            }
         }
     }
 

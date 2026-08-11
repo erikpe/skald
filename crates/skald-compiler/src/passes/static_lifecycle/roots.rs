@@ -63,13 +63,16 @@ fn shared_destruction_roots(
     program
         .shared_lifecycle_targets(target)
         .into_iter()
-        .map(|target| match target {
-            PreliminaryMirSharedLifecycleTarget::Class(class) => {
-                StaticEffectNode::class(class, StaticClassLifecycleOperation::CompleteFinalizer)
-            }
-            PreliminaryMirSharedLifecycleTarget::Array(array) => {
-                StaticEffectNode::array(array, StaticArrayLifecycleOperation::Destruction)
-            }
+        .filter_map(|target| match target {
+            PreliminaryMirSharedLifecycleTarget::Class(class) => Some(StaticEffectNode::class(
+                class,
+                StaticClassLifecycleOperation::CompleteFinalizer,
+            )),
+            PreliminaryMirSharedLifecycleTarget::Array(array) => Some(StaticEffectNode::array(
+                array,
+                StaticArrayLifecycleOperation::Destruction,
+            )),
+            PreliminaryMirSharedLifecycleTarget::OptionalBox(_) => None,
         })
         .collect()
 }

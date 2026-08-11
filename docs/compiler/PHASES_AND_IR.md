@@ -271,9 +271,10 @@ identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types.
 Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
-call. Frozen shared optional boxes now have canonical resolved and HIR target
-identities, typed local construction/ownership, and deliberate stored-position
-and MIR gates; nested and
+call. Frozen shared optional boxes now have canonical resolved, HIR, and MIR
+target identities, typed local construction/ownership, verified
+unpublished-payload and owner lifetimes, and deliberate stored-position,
+access, and backend gates; nested and
 optional-array identities execute through recursive MIR
 lifecycle plans; optional-reference shapes remain syntax diagnostics.
 
@@ -302,17 +303,19 @@ initialization/copy/transfer plan, source-before-allocation order, owner
 provenance, publication boundary, and diagnostic spans. Published box wrappers
 are immutable, so HIR never represents a whole-pointee assignment or mutable
 whole-wrapper alias. Checked pointee access and anchor strategy remain gated
-until BX5. Object-box views retain a static
+until the immutable-access phase. Object-box views retain a static
 class/interface/`Obj` view separately from the exact dynamic allocation class.
 
-MIR adds a distinct optional-box allocation origin and makes allocate,
+MIR implements a distinct optional-box allocation origin and makes allocate,
 initialize the exact `SharedAllocationPayload`, publish, and adopt separate
-verified transitions. After publication, `SharedPointee(owner)` permits
-optional presence, copy, checked unwrap, read-only alias, and object-view
-operations but no wrapper assignment. Existing owner/anchor and optional-guard
-state machines compose; neither is replaced by box-specific lifetime rules.
-View, cast, unwrap, copy, type-test, and dispatch operations retain static view
-and exact descriptor dependencies through verification.
+verified transitions. After publication, `SharedPointee(owner)` permits no
+pre-publication observation and is reserved for the later immutable-access
+phase. Local owner copy, secure replacement, temporary cleanup, and final
+release already reuse the ordinary shared-owner state machine. Existing
+optional initialization instructions complete the canonical wrapper without a
+parallel box-payload instruction family. Static-lifecycle discovery recognizes
+the target, while the x86-64 legality pass deliberately rejects it until a
+descriptor and finalizer exist.
 
 The initial x86-64 realization keeps one-word owners and the 16-byte shared
 header, uses deterministic exact optional-box descriptors/finalizers, and

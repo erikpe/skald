@@ -25,6 +25,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
     let literal_data = HirLiteralDataTable::default();
     let array_types = crate::hir::HirArrayTypeTable::default();
     let optional_types = crate::hir::HirOptionalTypeTable::default();
+    let optional_box_types = crate::hir::HirOptionalBoxTypeTable::default();
     let input = BodyLoweringInput {
         callable,
         parameters: &[],
@@ -36,6 +37,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         literal_data: &literal_data,
         array_types: &array_types,
         optional_types: &optional_types,
+        optional_box_types: &optional_box_types,
     };
     let mut lowerer = BodyLowerer::new(input);
     let activation = StorageId::new(callable, 0);

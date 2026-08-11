@@ -589,11 +589,22 @@ fn require_initialized(
                 | MirPlaceBase::AliasParameter(_)
                 | MirPlaceBase::CheckedView(_)
         );
+    let published_optional_box = place.projections.is_empty()
+        && matches!(place.base, MirPlaceBase::SharedPointee(owner)
+        if function.storage(owner).is_some_and(|storage| {
+            matches!(storage.ty, crate::mir::MirType::Shared(
+                crate::mir::MirSharedTarget::OptionalBox(_)
+            ))
+        }));
     let array_element = place
         .projections
         .iter()
         .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }));
-    if !state.contains(place) && !complete_external_object && !array_element {
+    if !state.contains(place)
+        && !complete_external_object
+        && !published_optional_box
+        && !array_element
+    {
         verifier.block_error(
             function.callable(),
             block.id,

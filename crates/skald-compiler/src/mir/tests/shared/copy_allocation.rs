@@ -65,7 +65,10 @@ fn lowers_copy_allocation_as_source_allocate_copy_publish_adopt() {
     let MirInstruction::CopyConstruct(copy) = &instructions[allocation + 1] else {
         unreachable!();
     };
-    assert_eq!(allocation_instruction.class, copy.class);
+    assert_eq!(
+        allocation_instruction.target,
+        crate::mir::MirSharedAllocationTarget::Class(copy.class)
+    );
     assert_eq!(
         allocation_instruction.mode,
         MirSharedAllocationMode::Copy {

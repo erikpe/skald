@@ -189,8 +189,8 @@ impl Verifier<'_> {
                     block,
                     &initialize.destination,
                     &initialize.source,
-                    initialize.optional,
-                    initialize.target,
+                    (initialize.optional, initialize.target),
+                    true,
                 ),
             MirInstruction::OptionalSharedAssign(assignment) => self
                 .verify_optional_shared_operation(
@@ -198,8 +198,8 @@ impl Verifier<'_> {
                     block,
                     &assignment.destination,
                     &assignment.source,
-                    assignment.optional,
-                    assignment.target,
+                    (assignment.optional, assignment.target),
+                    false,
                 ),
             MirInstruction::OptionalSharedCleanup(cleanup) => {
                 self.verify_optional_shared_cleanup(function, block, cleanup)
@@ -210,8 +210,8 @@ impl Verifier<'_> {
                     block,
                     &initialize.destination,
                     &initialize.source,
-                    initialize.optional,
-                    initialize.class,
+                    (initialize.optional, initialize.class),
+                    true,
                 );
                 let expected = self
                     .program
@@ -237,8 +237,8 @@ impl Verifier<'_> {
                     block,
                     &assignment.destination,
                     &assignment.source,
-                    assignment.optional,
-                    assignment.class,
+                    (assignment.optional, assignment.class),
+                    false,
                 );
                 if self
                     .verify_place(function, block, &assignment.destination)
@@ -277,7 +277,11 @@ impl Verifier<'_> {
             }
             MirInstruction::ClassOptionalPublish(publish) => {
                 if self
-                    .verify_place(function, block, &publish.destination)
+                    .verify_unpublished_initialization_destination(
+                        function,
+                        block,
+                        &publish.destination,
+                    )
                     .map(|p| p.ty)
                     != Some(MirType::Optional(publish.optional))
                     || self.optional_class(MirType::Optional(publish.optional))
@@ -327,13 +331,16 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         destination: &MirPlace,
         source: &crate::mir::MirClassOptionalSource,
-        optional: crate::identity::OptionalTypeId,
-        class: crate::identity::ClassId,
+        expected: (crate::identity::OptionalTypeId, crate::identity::ClassId),
+        initialization: bool,
     ) {
-        if self
-            .verify_place(function, block, destination)
-            .map(|p| p.ty)
-            != Some(MirType::Optional(optional))
+        let (optional, class) = expected;
+        let destination = if initialization {
+            self.verify_unpublished_initialization_destination(function, block, destination)
+        } else {
+            self.verify_place(function, block, destination)
+        };
+        if destination.map(|p| p.ty) != Some(MirType::Optional(optional))
             || self.optional_class(MirType::Optional(optional)) != Some(class)
         {
             self.block_error(
@@ -954,7 +961,11 @@ impl Verifier<'_> {
                         | crate::mir::MirOptionalStorage::InlineArray(_)
                 )
             });
-        let destination = self.verify_place(function, block, destination);
+        let destination = if mutable {
+            self.verify_place(function, block, destination)
+        } else {
+            self.verify_unpublished_initialization_destination(function, block, destination)
+        };
         if !valid_metadata
             || destination.as_ref().map(|place| place.ty) != Some(MirType::Optional(optional))
         {

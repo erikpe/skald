@@ -204,12 +204,12 @@ impl<'mir> Verifier<'mir> {
                 );
             }
             if storage.kind == MirStorageKind::SharedAllocation
-                && !matches!(storage.ty, MirType::Class(_))
+                && !matches!(storage.ty, MirType::Class(_) | MirType::Optional(_))
             {
                 self.function_error(
                     function.callable(),
                     format!(
-                        "shared allocation storage {} must have exact class type",
+                        "shared allocation storage {} must have an exact payload type",
                         storage.id
                     ),
                 );
@@ -249,6 +249,7 @@ impl<'mir> Verifier<'mir> {
                         | MirStorageKind::SharedAnchor
                         | MirStorageKind::Argument
                         | MirStorageKind::Return
+                        | MirStorageKind::SharedAllocation
                 )
             {
                 self.function_error(

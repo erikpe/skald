@@ -7,7 +7,7 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md) is in progress; BX0
-and BX1 are complete and BX2 is next. It implements the frozen non-null `shared P?` box
+through BX2 are complete and BX3 is next. It implements the frozen non-null `shared P?` box
 and derived `shared? P?` optional owner through canonical targets, verified
 immutable wrapper access, polymorphic class/interface/`Obj` views, exact
 metadata and finalization, stored positions, and arrays while retaining

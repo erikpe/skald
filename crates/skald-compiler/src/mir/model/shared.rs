@@ -3,7 +3,9 @@
 use std::fmt;
 
 use crate::{
-    identity::{ClassId, InitializerId, InterfaceId, LiteralDataId},
+    identity::{
+        ClassId, InitializerId, InterfaceId, LiteralDataId, OptionalBoxTypeId, OptionalTypeId,
+    },
     source::Span,
 };
 
@@ -16,6 +18,7 @@ pub enum MirSharedTarget {
     Class(ClassId),
     Interface(InterfaceId),
     Array(crate::identity::ArrayTypeId),
+    OptionalBox(OptionalBoxTypeId),
 }
 
 impl MirSharedTarget {
@@ -25,6 +28,9 @@ impl MirSharedTarget {
             Self::Class(class) => super::value::MirType::Class(class),
             Self::Interface(interface) => super::value::MirType::Interface(interface),
             Self::Array(array) => super::value::MirType::Array(array),
+            Self::OptionalBox(_) => {
+                panic!("optional-box pointee types require program metadata")
+            }
         }
     }
 }
@@ -36,6 +42,7 @@ impl fmt::Display for MirSharedTarget {
             Self::Class(class) => write!(formatter, "class {class}"),
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Array(array) => write!(formatter, "array {array}"),
+            Self::OptionalBox(target) => write!(formatter, "optional-box {target}"),
         }
     }
 }
@@ -45,8 +52,39 @@ impl fmt::Display for MirSharedTarget {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirSharedAllocationOrigin {
     New,
+    OptionalBox,
     /// Reserved malformed/foreign MIR provenance. The verifier rejects it.
     Unspecified,
+}
+
+/// Exact physical target allocated behind one unpublished shared handle.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirSharedAllocationTarget {
+    Class(ClassId),
+    OptionalBox {
+        target: OptionalBoxTypeId,
+        optional: OptionalTypeId,
+    },
+}
+
+impl MirSharedAllocationTarget {
+    pub const fn payload_type(self) -> super::MirType {
+        match self {
+            Self::Class(class) => super::MirType::Class(class),
+            Self::OptionalBox { optional, .. } => super::MirType::Optional(optional),
+        }
+    }
+}
+
+impl fmt::Display for MirSharedAllocationTarget {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Class(class) => write!(formatter, "class {class}"),
+            Self::OptionalBox { target, optional } => {
+                write!(formatter, "optional-box {target} payload={optional}")
+            }
+        }
+    }
 }
 
 /// The operation that must establish the unpublished payload before
@@ -56,13 +94,31 @@ pub enum MirSharedAllocationOrigin {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirSharedAllocationMode {
     Initialize,
-    Copy { source: MirPlace },
+    Copy {
+        source: MirPlace,
+    },
+    OptionalBox {
+        completion: MirOptionalBoxCompletion,
+    },
+}
+
+/// The existing optional instruction that must complete an unpublished box
+/// payload before shared publication is legal.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirOptionalBoxCompletion {
+    OptionalInitialize,
+    ClassInitialize,
+    ClassPublish,
+    OptionalSharedInitialize,
+    AggregateInitialize,
+    AggregatePublish,
+    DestinationCall,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedAllocate {
     pub allocation: StorageId,
-    pub class: ClassId,
+    pub target: MirSharedAllocationTarget,
     pub origin: MirSharedAllocationOrigin,
     pub mode: MirSharedAllocationMode,
     pub span: Span,

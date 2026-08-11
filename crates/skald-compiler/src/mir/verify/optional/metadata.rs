@@ -42,6 +42,9 @@ impl Verifier<'_> {
                             crate::mir::MirSharedTarget::Array(array) => {
                                 self.program.array_type(array).is_some()
                             }
+                            crate::mir::MirSharedTarget::OptionalBox(target) => {
+                                self.program.optional_box_type(target).is_some()
+                            }
                         }
                 }
                 Storage::Nested(nested) => {

@@ -145,6 +145,7 @@ pub(super) fn primitive_cast_program(
         }]),
         array_types: Default::default(),
         optional_types: Default::default(),
+        optional_box_types: Default::default(),
         string_language_item: None,
         literal_data: Default::default(),
         classes: MirClassDeclarationTable::default(),

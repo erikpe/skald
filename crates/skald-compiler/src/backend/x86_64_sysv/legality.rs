@@ -40,9 +40,18 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                             initialize.target.into(),
                         )?;
                     }
-                    MirInstruction::SharedAllocate(allocation) => {
-                        data_layout.shared_allocation_size(allocation.class)?;
-                    }
+                    MirInstruction::SharedAllocate(allocation) => match allocation.target {
+                        crate::mir::MirSharedAllocationTarget::Class(class) => {
+                            data_layout.shared_allocation_size(class)?;
+                        }
+                        crate::mir::MirSharedAllocationTarget::OptionalBox { .. } => {
+                            return Err(BackendError::new(
+                                Target::X86_64SysV,
+                                Some(function.callable()),
+                                "shared optional boxes are not yet supported by this target",
+                            ));
+                        }
+                    },
                     MirInstruction::SharedInitialize(initialize) => {
                         check_member_target(
                             program,

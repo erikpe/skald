@@ -977,20 +977,17 @@ fn static_lifetime_cycles_are_reported_as_source_diagnostics_before_synthesis() 
 }
 
 #[test]
-fn typed_optional_boxes_stop_at_the_structured_bx2_mir_gate() {
-    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+fn verified_optional_boxes_stop_at_the_backend_capability_gate() {
+    let CompilationError::Backend(error) = compile_source_to_assembly(
         "optional-box.ska",
         "fn main() -> i64 { var box: shared i64? = new i64?(1); return 0; }",
         Target::X86_64SysV,
     )
     .unwrap_err() else {
-        panic!("BX1 box HIR must stop before MIR lowering");
+        panic!("verified optional-box MIR must stop at backend legality");
     };
 
-    let diagnostic = report.diagnostics.iter().next().unwrap();
-    assert_eq!(
-        diagnostic.code,
-        crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE
-    );
-    assert!(diagnostic.message.contains("executable MIR"));
+    assert!(error
+        .message()
+        .contains("shared optional boxes are not yet supported by this target"));
 }

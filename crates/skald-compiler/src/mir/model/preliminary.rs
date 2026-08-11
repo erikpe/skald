@@ -1,7 +1,7 @@
 //! Unplanned MIR produced before whole-program static lifecycle analysis.
 
 use crate::{
-    identity::{ArrayTypeId, ClassId, StaticFieldId, StaticInitializerId},
+    identity::{ArrayTypeId, ClassId, OptionalBoxTypeId, StaticFieldId, StaticInitializerId},
     source::Span,
 };
 
@@ -54,6 +54,7 @@ pub struct PreliminaryMirStaticField {
 pub enum PreliminaryMirSharedLifecycleTarget {
     Class(ClassId),
     Array(ArrayTypeId),
+    OptionalBox(OptionalBoxTypeId),
 }
 
 impl MirStaticInitializerBody {

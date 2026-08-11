@@ -48,6 +48,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         external_links: hir.external_links.clone(),
         array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
         optional_types: optional_types::lower_optional_types(&hir.optional_types),
+        optional_box_types: optional_box_types::lower(&hir.optional_box_types),
         string_language_item,
         literal_data: MirLiteralDataTable::new(
             hir.literal_data
@@ -503,6 +504,7 @@ fn lower_function_definition(
         literal_data,
         array_types: &hir.array_types,
         optional_types: &hir.optional_types,
+        optional_box_types: &hir.optional_box_types,
     });
     MirFunctionDefinition {
         function: declaration.id,
@@ -535,6 +537,7 @@ fn lower_member_definition(
         literal_data: &hir.literal_data,
         array_types: &hir.array_types,
         optional_types: &hir.optional_types,
+        optional_box_types: &hir.optional_box_types,
     });
     MirMemberDefinition {
         callable: definition.callable,

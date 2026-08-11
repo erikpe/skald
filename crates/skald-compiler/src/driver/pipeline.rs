@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target},
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::Diagnostics,
     lexer::lex,
     mir::{lower_preliminary_hir, verify_preliminary_mir},
     module::{
@@ -142,19 +142,6 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    if let Some(target) = hir.optional_box_types.iter().next() {
-        diagnostics.push(
-            Diagnostic::error(
-                crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                "shared optional boxes have not reached executable MIR yet",
-            )
-            .with_primary_label(
-                target.span,
-                "typed HIR support is complete; MIR ownership starts in roadmap task BX2",
-            ),
-        );
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
     let preliminary = lower_preliminary_hir(&hir);
     verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
     let planned = match plan_static_lifetimes(preliminary) {

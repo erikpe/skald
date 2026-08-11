@@ -35,7 +35,8 @@ are owned by [Object Casts](OBJECT_CASTS.md).
 Ordinary overload and explicit-copy semantics are owned by
 [Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md) and are an implementation
 prerequisite rather than redefined by shared allocation.
-The not-yet-implemented `shared P?` allocation kind is frozen in
+The `shared P?` allocation kind is frozen and implemented through verified
+local target-independent MIR in
 [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes) and in the
 [shared optional box contract](#shared-optional-box-allocation-contract) below.
 
@@ -98,7 +99,7 @@ new Widget(arguments)
 new Widget(copy source)
 ```
 
-The frozen, not-yet-implemented optional-box extension additionally defines:
+The frozen optional-box extension additionally defines:
 
 ```ska
 shared P?
@@ -480,9 +481,10 @@ authoritative in
 
 ## Exclusions
 
-The implemented frontend parses, resolves, and type-checks the BX1 local-owner
-subset of the frozen shared optional box contract. A structured MIR gate
-prevents it from executing until BX2.
+The compiler parses, resolves, type-checks, lowers, and verifies the local-owner
+subset of the frozen shared optional box contract. A deliberate backend
+capability gate prevents native execution until exact box layout and
+finalization are implemented.
 Neither that contract nor this profile includes:
 
 - generalized boxes for non-optional primitive, class, array, function, or

@@ -8,10 +8,11 @@ use super::super::{
     super::model::{
         BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceProjection,
         MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
-        MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy,
-        MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize,
-        MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
-        MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId, ValueId,
+        MirSharedAllocationTarget, MirSharedCast, MirSharedCastSource, MirSharedCastTransfer,
+        MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace,
+        MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId,
+        ValueId,
     },
     context::Verifier,
     type_operations::TypeRelation,
@@ -23,6 +24,9 @@ impl<'mir> Verifier<'mir> {
         expected: MirSharedTarget,
         actual: MirSharedTarget,
     ) -> bool {
+        if expected == actual {
+            return true;
+        }
         match expected {
             MirSharedTarget::Obj => true,
             MirSharedTarget::Class(expected) => matches!(
@@ -35,11 +39,53 @@ impl<'mir> Verifier<'mir> {
                     self.program.conformance(actual, expected).is_some()
                 }
                 MirSharedTarget::Interface(actual) => actual == expected,
-                MirSharedTarget::Obj | MirSharedTarget::Array(_) => false,
+                MirSharedTarget::Obj
+                | MirSharedTarget::Array(_)
+                | MirSharedTarget::OptionalBox(_) => false,
             },
             MirSharedTarget::Array(expected) => {
                 matches!(actual, MirSharedTarget::Array(actual) if actual == expected)
             }
+            MirSharedTarget::OptionalBox(expected) => {
+                self.optional_box_target_accepts(expected, actual)
+            }
+        }
+    }
+
+    fn optional_box_target_accepts(
+        &self,
+        expected: crate::identity::OptionalBoxTypeId,
+        actual: MirSharedTarget,
+    ) -> bool {
+        let MirSharedTarget::OptionalBox(actual) = actual else {
+            return false;
+        };
+        let (Some(expected), Some(actual)) = (
+            self.program.optional_box_type(expected),
+            self.program.optional_box_type(actual),
+        ) else {
+            return false;
+        };
+        if expected.optional_depth != actual.optional_depth {
+            return false;
+        }
+        let (Some(expected), Some(actual)) = (expected.object_view, actual.object_view) else {
+            return false;
+        };
+        match expected {
+            MirViewTarget::Obj => true,
+            MirViewTarget::Class(expected) => matches!(
+                actual,
+                MirViewTarget::Class(actual)
+                    if actual == expected || self.program.is_ancestor(expected, actual)
+            ),
+            MirViewTarget::Interface(expected) => match actual {
+                MirViewTarget::Class(actual) => {
+                    self.program.conformance(actual, expected).is_some()
+                }
+                MirViewTarget::Interface(actual) => actual == expected,
+                MirViewTarget::Obj => false,
+            },
         }
     }
 
@@ -53,6 +99,9 @@ impl<'mir> Verifier<'mir> {
             MirSharedTarget::Class(class) => self.program.class(class).is_some(),
             MirSharedTarget::Interface(interface) => self.program.interface(interface).is_some(),
             MirSharedTarget::Array(array) => self.program.array_type(array).is_some(),
+            MirSharedTarget::OptionalBox(target) => {
+                self.program.optional_box_type(target).is_some()
+            }
         };
         if !declared {
             self.function_error(callable, format!("shared target {target} is not declared"));
@@ -65,32 +114,70 @@ impl<'mir> Verifier<'mir> {
         block: &MirBasicBlock,
         allocation: &MirSharedAllocate,
     ) {
-        if allocation.origin != MirSharedAllocationOrigin::New {
-            self.block_error(
-                function.callable(),
-                block.id,
-                "shared allocation does not originate from `new`",
-            );
+        let expected_origin = match allocation.target {
+            MirSharedAllocationTarget::Class(_) => MirSharedAllocationOrigin::New,
+            MirSharedAllocationTarget::OptionalBox { .. } => MirSharedAllocationOrigin::OptionalBox,
+        };
+        if allocation.origin != expected_origin {
+            let message = match allocation.target {
+                MirSharedAllocationTarget::Class(_) => {
+                    "shared allocation does not originate from `new`"
+                }
+                MirSharedAllocationTarget::OptionalBox { .. } => {
+                    "optional-box allocation does not have optional-box origin"
+                }
+            };
+            self.block_error(function.callable(), block.id, message);
         }
-        if self.program.class(allocation.class).is_none() {
-            self.block_error(
-                function.callable(),
-                block.id,
-                format!(
-                    "shared allocation class {} is not declared",
-                    allocation.class
-                ),
-            );
-        }
-        self.verify_allocation_storage(
-            function,
-            block,
-            allocation.allocation,
-            Some(allocation.class),
-        );
+        let expected_type = match allocation.target {
+            MirSharedAllocationTarget::Class(class) => {
+                if matches!(allocation.mode, MirSharedAllocationMode::OptionalBox { .. }) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "ordinary shared allocation cannot use optional-box completion metadata",
+                    );
+                }
+                if self.program.class(class).is_none() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("shared allocation class {class} is not declared"),
+                    );
+                }
+                MirType::Class(class)
+            }
+            MirSharedAllocationTarget::OptionalBox { target, optional } => {
+                if !matches!(allocation.mode, MirSharedAllocationMode::OptionalBox { .. }) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional-box allocation requires an explicit wrapper completion mode",
+                    );
+                }
+                let valid = self
+                    .program
+                    .optional_box_type(target)
+                    .is_some_and(|metadata| {
+                        metadata.exact_optional == Some(optional)
+                            && self.program.optional_type(optional).is_some()
+                    });
+                if !valid {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional-box allocation target does not name matching exact optional metadata",
+                    );
+                }
+                MirType::Optional(optional)
+            }
+        };
+        self.verify_allocation_storage(function, block, allocation.allocation, Some(expected_type));
         if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
             let source = self.verify_place(function, block, source);
-            if source.map(|source| source.ty) != Some(MirType::Class(allocation.class)) {
+            if source.map(|source| source.ty) != Some(expected_type)
+                || !matches!(allocation.target, MirSharedAllocationTarget::Class(_))
+            {
                 self.block_error(
                     function.callable(),
                     block.id,
@@ -107,7 +194,8 @@ impl<'mir> Verifier<'mir> {
         initialize: &MirSharedInitialize,
         defined: &HashSet<ValueId>,
     ) {
-        let class = self.verify_allocation_storage(function, block, initialize.allocation, None);
+        let allocation_type =
+            self.verify_allocation_storage(function, block, initialize.allocation, None);
         let Some(target) = self.program.initializer(initialize.target) else {
             self.block_error(
                 function.callable(),
@@ -119,7 +207,7 @@ impl<'mir> Verifier<'mir> {
             );
             return;
         };
-        if class.is_some_and(|class| class != initialize.target.class()) {
+        if allocation_type != Some(MirType::Class(initialize.target.class())) {
             self.block_error(
                 function.callable(),
                 block.id,
@@ -151,7 +239,7 @@ impl<'mir> Verifier<'mir> {
         block: &MirBasicBlock,
         adopt: &MirSharedAdopt,
     ) {
-        let allocation_class =
+        let allocation_type =
             self.verify_allocation_storage(function, block, adopt.allocation, None);
         let destination = function.storage(adopt.destination);
         if destination.is_none() {
@@ -172,13 +260,14 @@ impl<'mir> Verifier<'mir> {
                     | MirStorageKind::SharedAnchor
                     | MirStorageKind::Argument
                     | MirStorageKind::Return
-            ) && allocation_class.is_some_and(|class| {
-                matches!(
-                    storage.ty,
-                    MirType::Shared(target)
-                        if self.shared_target_accepts(target, MirSharedTarget::Class(class))
-                )
-            })
+            ) && allocation_type
+                .and_then(|ty| self.shared_target_for_allocation_payload(ty))
+                .is_some_and(|actual| {
+                    matches!(
+                        storage.ty,
+                        MirType::Shared(expected) if self.shared_target_accepts(expected, actual)
+                    )
+                })
         }) {
             self.block_error(
                 function.callable(),
@@ -572,8 +661,8 @@ impl<'mir> Verifier<'mir> {
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         allocation: StorageId,
-        expected_class: Option<crate::identity::ClassId>,
-    ) -> Option<crate::identity::ClassId> {
+        expected_type: Option<MirType>,
+    ) -> Option<MirType> {
         let Some(storage) = function.storage(allocation) else {
             self.block_error(
                 function.callable(),
@@ -582,14 +671,14 @@ impl<'mir> Verifier<'mir> {
             );
             return None;
         };
-        let MirType::Class(class) = storage.ty else {
+        if !matches!(storage.ty, MirType::Class(_) | MirType::Optional(_)) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared allocation storage must have exact class type",
+                "shared allocation storage must have an exact payload type",
             );
             return None;
-        };
+        }
         if storage.kind != MirStorageKind::SharedAllocation {
             self.block_error(
                 function.callable(),
@@ -597,14 +686,27 @@ impl<'mir> Verifier<'mir> {
                 "shared construction operation requires allocation storage",
             );
         }
-        if expected_class.is_some_and(|expected| expected != class) {
+        if expected_type.is_some_and(|expected| expected != storage.ty) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared allocation instruction has the wrong exact class",
+                "shared allocation instruction has the wrong exact payload type",
             );
         }
-        Some(class)
+        Some(storage.ty)
+    }
+
+    fn shared_target_for_allocation_payload(&self, ty: MirType) -> Option<MirSharedTarget> {
+        match ty {
+            MirType::Class(class) => Some(MirSharedTarget::Class(class)),
+            MirType::Optional(optional) => self
+                .program
+                .optional_box_types
+                .iter()
+                .find(|metadata| metadata.exact_optional == Some(optional))
+                .map(|metadata| MirSharedTarget::OptionalBox(metadata.id)),
+            _ => None,
+        }
     }
 }
 
@@ -613,6 +715,6 @@ const fn shared_view_target(target: MirSharedTarget) -> MirViewTarget {
         MirSharedTarget::Obj => MirViewTarget::Obj,
         MirSharedTarget::Class(class) => MirViewTarget::Class(class),
         MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
-        MirSharedTarget::Array(_) => panic!(),
+        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_) => panic!(),
     }
 }
