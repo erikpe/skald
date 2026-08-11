@@ -6,7 +6,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::ClassId,
+    identity::{ClassId, OptionalBoxTypeId, OptionalTypeId},
     mir::{MirDestructionStep, MirProgram, MirType},
 };
 
@@ -18,8 +18,16 @@ use super::super::{
 };
 use super::{call, ownership::emit_release_loaded_handle};
 
+mod optional;
+
 const COMPLETE_HOME: i32 = -8;
 const FINALIZER_FRAME_SIZE: u32 = 16;
+
+#[derive(Clone, Copy)]
+enum FinalizerIdentity {
+    Class(ClassId),
+    OptionalBox(OptionalBoxTypeId),
+}
 
 pub(super) fn lower_all(
     program: &MirProgram,
@@ -55,7 +63,7 @@ fn lower_class(
         program,
         data_layout,
         dispatch,
-        class,
+        FinalizerIdentity::Class(class),
         class,
         0,
         &mut instructions,
@@ -68,11 +76,21 @@ fn lower_class(
     })
 }
 
+pub(super) fn lower_optional_box(
+    program: &MirProgram,
+    data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
+    target: OptionalBoxTypeId,
+    optional: OptionalTypeId,
+) -> Result<AssemblyFunction, BackendError> {
+    optional::lower_box(program, data_layout, dispatch, target, optional)
+}
+
 fn select_plan(
     program: &MirProgram,
     data_layout: &DataLayout,
     dispatch: &DispatchMetadata,
-    complete_class: ClassId,
+    identity: FinalizerIdentity,
     class: ClassId,
     complete_offset: i32,
     output: &mut Vec<Instruction>,
@@ -146,7 +164,7 @@ fn select_plan(
                     program,
                     data_layout,
                     dispatch,
-                    complete_class,
+                    identity,
                     field_class,
                     field_offset,
                     output,
@@ -176,7 +194,7 @@ fn select_plan(
                     source: memory(Register::R11, 0),
                     destination: Register::Rax.into(),
                 });
-                let labels = release_labels(program, complete_class, field, output.len());
+                let labels = release_labels(program, identity, Some(field), output.len());
                 emit_release_loaded_handle(
                     labels.failure,
                     labels.last,
@@ -220,7 +238,7 @@ fn select_plan(
                     })?;
                 let finished = Label::new(format!(
                     ".Lska.{}.finalize_optional_shared.field_{}_{}",
-                    symbol::class_label_stem(program, complete_class),
+                    finalizer_label_stem(program, identity),
                     field.index(),
                     output.len()
                 ));
@@ -231,7 +249,7 @@ fn select_plan(
                 });
                 output.push(Instruction::Test(Register::Rax));
                 output.push(Instruction::JumpIfEqual(finished.clone()));
-                let labels = release_labels(program, complete_class, field, output.len());
+                let labels = release_labels(program, identity, Some(field), output.len());
                 emit_release_loaded_handle(
                     labels.failure,
                     labels.last,
@@ -276,7 +294,7 @@ fn select_plan(
                 })?;
                 let finished = Label::new(format!(
                     ".Lska.{}.finalize_optional.field_{}_{}",
-                    symbol::class_label_stem(program, complete_class),
+                    finalizer_label_stem(program, identity),
                     field.index(),
                     output.len()
                 ));
@@ -295,7 +313,7 @@ fn select_plan(
                     program,
                     data_layout,
                     dispatch,
-                    complete_class,
+                    identity,
                     field_class,
                     field_offset.checked_add(payload_offset).ok_or_else(|| {
                         finalizer_error("finalizer optional payload exceeds target limits")
@@ -318,16 +336,13 @@ fn select_plan(
                 .ok_or_else(|| {
                     finalizer_error("finalizer optional-field address exceeds target limits")
                 })?;
-                select_optional_cleanup_at(
+                optional::emit_cleanup_at(
                     program,
                     data_layout,
                     dispatch,
-                    complete_class,
-                    OptionalCleanupAt {
-                        field,
-                        optional,
-                        offset: field_offset,
-                    },
+                    identity,
+                    optional,
+                    field_offset,
                     output,
                 )?;
             }
@@ -350,7 +365,7 @@ fn select_plan(
                     program,
                     data_layout,
                     dispatch,
-                    complete_class,
+                    identity,
                     base,
                     base_offset,
                     output,
@@ -361,155 +376,6 @@ fn select_plan(
     Ok(())
 }
 
-#[derive(Clone, Copy)]
-struct OptionalCleanupAt {
-    field: crate::identity::FieldId,
-    optional: crate::identity::OptionalTypeId,
-    offset: i32,
-}
-
-fn select_optional_cleanup_at(
-    program: &MirProgram,
-    data_layout: &DataLayout,
-    dispatch: &DispatchMetadata,
-    complete_class: ClassId,
-    target: OptionalCleanupAt,
-    output: &mut Vec<Instruction>,
-) -> Result<(), BackendError> {
-    let OptionalCleanupAt {
-        field,
-        optional,
-        offset,
-    } = target;
-    let metadata = program
-        .optional_type(optional)
-        .ok_or_else(|| finalizer_error(format!("unknown optional {optional}")))?;
-    match metadata.storage {
-        crate::mir::MirOptionalStorage::Scalar => Ok(()),
-        crate::mir::MirOptionalStorage::SharedOwner(_) => {
-            let finished = Label::new(format!(
-                ".Lska.{}.finalize_nested_shared_{}",
-                symbol::class_label_stem(program, complete_class),
-                output.len()
-            ));
-            load_complete_address(offset, Register::R11, output);
-            output.push(Instruction::Move {
-                source: memory(Register::R11, 0),
-                destination: Register::Rax.into(),
-            });
-            output.push(Instruction::Test(Register::Rax));
-            output.push(Instruction::JumpIfEqual(finished.clone()));
-            let labels = release_labels(program, complete_class, field, output.len());
-            emit_release_loaded_handle(
-                labels.failure,
-                labels.last,
-                labels.complete.clone(),
-                dispatch.finalizer_displacement(),
-                None,
-                super::call::TraceAttribution::InheritedSourceOperation,
-                output,
-            );
-            output.push(Instruction::Label(labels.complete));
-            output.push(Instruction::Label(finished));
-            Ok(())
-        }
-        crate::mir::MirOptionalStorage::InlineClass(class) => {
-            let finished = Label::new(format!(
-                ".Lska.{}.finalize_nested_class_{}",
-                symbol::class_label_stem(program, complete_class),
-                output.len()
-            ));
-            load_complete_address(offset, Register::R11, output);
-            output.push(Instruction::Move {
-                source: memory(Register::R11, 0),
-                destination: Register::Rax.into(),
-            });
-            output.push(Instruction::Test(Register::Rax));
-            output.push(Instruction::JumpIfEqual(finished.clone()));
-            let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
-                .map_err(|_| finalizer_error("optional payload offset exceeds target limits"))?;
-            select_plan(
-                program,
-                data_layout,
-                dispatch,
-                complete_class,
-                class,
-                offset
-                    .checked_add(payload)
-                    .ok_or_else(|| finalizer_error("optional payload exceeds target limits"))?,
-                output,
-            )?;
-            output.push(Instruction::Label(finished));
-            Ok(())
-        }
-        crate::mir::MirOptionalStorage::Nested(nested) => {
-            let finished = Label::new(format!(
-                ".Lska.{}.finalize_nested_optional_{}",
-                symbol::class_label_stem(program, complete_class),
-                output.len()
-            ));
-            load_complete_address(offset, Register::R11, output);
-            output.push(Instruction::Move {
-                source: memory(Register::R11, 0),
-                destination: Register::Rax.into(),
-            });
-            output.push(Instruction::Test(Register::Rax));
-            output.push(Instruction::JumpIfEqual(finished.clone()));
-            let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
-                .map_err(|_| finalizer_error("optional payload offset exceeds target limits"))?;
-            select_optional_cleanup_at(
-                program,
-                data_layout,
-                dispatch,
-                complete_class,
-                OptionalCleanupAt {
-                    field,
-                    optional: nested,
-                    offset: offset
-                        .checked_add(payload)
-                        .ok_or_else(|| finalizer_error("optional payload exceeds target limits"))?,
-                },
-                output,
-            )?;
-            output.push(Instruction::Label(finished));
-            Ok(())
-        }
-        crate::mir::MirOptionalStorage::InlineArray(array) => {
-            let finished = Label::new(format!(
-                ".Lska.{}.finalize_optional_array_{}",
-                symbol::class_label_stem(program, complete_class),
-                output.len()
-            ));
-            load_complete_address(offset, Register::R11, output);
-            output.push(Instruction::Move {
-                source: memory(Register::R11, 0),
-                destination: Register::Rax.into(),
-            });
-            output.push(Instruction::Test(Register::Rax));
-            output.push(Instruction::JumpIfEqual(finished.clone()));
-            let payload = i32::try_from(data_layout.optional_type(optional)?.payload_offset())
-                .map_err(|_| finalizer_error("optional payload offset exceeds target limits"))?;
-            load_complete_address(
-                offset.checked_add(payload).ok_or_else(|| {
-                    finalizer_error("optional array payload exceeds target limits")
-                })?,
-                Register::R11,
-                output,
-            );
-            output.push(Instruction::Move {
-                source: memory(Register::R11, 0),
-                destination: Register::Rdi.into(),
-            });
-            output.push(call::direct_instruction(
-                symbol::array_release(array),
-                call::TraceAttribution::InheritedSourceOperation,
-            ));
-            output.push(Instruction::Label(finished));
-            Ok(())
-        }
-    }
-}
-
 struct ReleaseLabels {
     failure: Label,
     last: Label,
@@ -518,20 +384,33 @@ struct ReleaseLabels {
 
 fn release_labels(
     program: &MirProgram,
-    complete_class: ClassId,
-    field: crate::identity::FieldId,
+    identity: FinalizerIdentity,
+    field: Option<crate::identity::FieldId>,
     index: usize,
 ) -> ReleaseLabels {
-    let stem = format!(
-        ".Lska.{}.field_{}_{}_release",
-        symbol::class_label_stem(program, complete_class),
-        field.class().index(),
-        field.index(),
-    );
+    let stem = match field {
+        Some(field) => format!(
+            ".Lska.{}.field_{}_{}_release",
+            finalizer_label_stem(program, identity),
+            field.class().index(),
+            field.index(),
+        ),
+        None => format!(
+            ".Lska.{}.nested_owner_release",
+            finalizer_label_stem(program, identity),
+        ),
+    };
     ReleaseLabels {
         failure: Label::new(format!("{stem}_invalid_{index}")),
         last: Label::new(format!("{stem}_last_{index}")),
         complete: Label::new(format!("{stem}_complete_{index}")),
+    }
+}
+
+fn finalizer_label_stem(program: &MirProgram, identity: FinalizerIdentity) -> String {
+    match identity {
+        FinalizerIdentity::Class(class) => symbol::class_label_stem(program, class),
+        FinalizerIdentity::OptionalBox(target) => format!("optional_box_{}", target.index()),
     }
 }
 

@@ -156,9 +156,9 @@ shared T?   = Shared<Optional<T>>
 shared T[]  = Shared<Array<T>>
 ```
 
-The first form now reaches the dedicated shared-box allocation syntax and
-canonical resolved identities, but remains gated before typed HIR. To place
-optionality around an existing shared owner,
+The first form reaches the dedicated shared-box allocation syntax, canonical
+identities, typed construction plans, verified MIR, and exact local native
+ownership. To place optionality around an existing shared owner,
 group the shared type first:
 
 ```text
@@ -175,9 +175,9 @@ shared? T[] = (shared T[])?
 shared? T?  = (shared T?)?
 ```
 
-The last form contains an inner `Shared<Optional<T>>` box. Local ownership and
-construction reach verified MIR, while native realization and access remain
-staged.
+The last form contains an inner `Shared<Optional<T>>` box. Exact local box
+ownership executes natively; immutable pointee access and polymorphic object
+views remain staged.
 
 The exact spelling and identity matrix is:
 
@@ -189,8 +189,8 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Primitive local boxes execute natively; lifecycle-bearing payloads, access, and broader positions remain staged |
-| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Local box ownership composes with the implemented optional-owner form; native backend gated |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Exact primitive, class, array, shared-owner, and nested targets execute for local owners; access and broader positions remain staged |
+| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Exact local box ownership composes with the implemented optional-owner form |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
 and `(shared T)?` for an optional shared owner. Source-shaped syntax inspection
@@ -301,13 +301,14 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; primitive local native profile implemented**. The compiler parses
+Status: **frozen design; exact local native lifecycle implemented**. The compiler parses
 box forms, interns exact optional and static object-view targets, selects local
 construction and owner-transfer plans, and verifies allocation, publication,
 adoption, replacement, and cleanup in target-independent MIR. On x86-64,
-primitive `P?` wrappers now allocate, initialize, publish, share, replace, and
-deallocate through deterministic exact box descriptors. Lifecycle-bearing
-payloads, broader storage, polymorphic views, and pointee access remain staged.
+every eligible exact `P?` wrapper now allocates, initializes, publishes,
+shares, replaces, copies into independent boxes when capable, and deallocates
+through deterministic exact box descriptors and recursive finalizers. Broader
+storage, polymorphic object views, and pointee access remain staged.
 Later roadmap tasks must not reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
@@ -760,8 +761,8 @@ lifetime contract is defined.
 
 ## Explicit exclusions
 
-The implemented compositional profile does not yet execute the frozen shared
-optional boxes above. Neither the implemented profile nor the frozen box
+The implemented exact local profile executes the owning lifecycle of the
+frozen shared optional boxes above. Neither that profile nor the frozen box
 design includes:
 
 - generalized boxes for non-optional primitive, class, array, function, or

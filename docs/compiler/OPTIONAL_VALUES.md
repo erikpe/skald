@@ -73,9 +73,10 @@ same resolved identity and lower to the existing optional-owner operations.
 `shared T?` and `shared? T?` receive deterministic resolved, HIR, and MIR box
 identities. Direct local box owners, outer optional-owner layers,
 construction, compatible owner copy/replacement, and independent exact-wrapper
-copying lower through verified target-independent MIR. Stored/callable
-positions and pointee access remain behind focused later-task gates, and the
-x86-64 backend rejects box allocation with an explicit capability error;
+copying lower through verified target-independent MIR. The x86-64 backend
+executes local exact boxes for primitive, class, inline-array, shared-owner,
+optional-array, and recursively nested targets. Stored/callable positions,
+pointee access, and polymorphic object-box views remain behind focused gates;
 invalid standalone payload families retain their ordinary diagnostics. Nested optionals
 are executable in owning positions, checked access, aliases, and internal
 callable boundaries. Alias binding mode may designate any supported inline
@@ -284,14 +285,13 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; primitive local native profile implemented**. Local owner
+Status: **frozen design; exact local native lifecycle implemented**. Local owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
-owner lifetime verification. The x86-64 backend executes primitive wrappers
-with checked 32-byte header-plus-wrapper layouts, deterministic exact
-descriptors, and distinct no-op finalizers. Lifecycle-bearing payloads,
-pointee access, polymorphic views, and broader stored positions remain
-deliberately gated at their responsible roadmap boundaries.
+owner lifetime verification. The x86-64 backend executes every eligible exact
+wrapper with a checked header-plus-target layout, deterministic exact
+descriptor, and distinct recursive finalizer. Pointee access, polymorphic
+views, and broader stored positions remain deliberately gated.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -769,7 +769,7 @@ and failure reasons without exposing source-inaccessible machine offsets.
 Diagnostics should identify:
 
 - invalid payload and target families;
-- shared-box forms that have reached resolution but not typed HIR;
+- shared-box forms used in positions or views outside the implemented profile;
 - missing expected type for `none`;
 - implicit unwrap and direct member/dereference attempts;
 - incompatible injection, assignment, argument, and return types;

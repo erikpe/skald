@@ -67,7 +67,11 @@ pub(super) fn lower(
     functions.extend(array::lower_helpers(program, data_layout)?);
     functions.extend(ownership::lower_helpers(program, dispatch));
     functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
-    functions.extend(optional_box::lower_primitive_finalizers(program));
+    functions.extend(optional_box::lower_finalizers(
+        program,
+        data_layout,
+        dispatch,
+    )?);
     if let Some(initializer) = static_lifecycle::lower_program_initializer(program) {
         functions.push(initializer);
     }

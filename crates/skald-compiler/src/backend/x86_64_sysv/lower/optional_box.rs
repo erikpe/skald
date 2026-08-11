@@ -1,31 +1,29 @@
 //! Finalizers for allocations containing canonical optional wrappers.
 //!
-//! Primitive wrappers own no nested resources, but each exact box identity
-//! still receives its own function and descriptor. Later lifecycle-bearing
-//! targets can extend this module without changing the shared release path.
+//! Each exact box identity receives its own function and descriptor. Cleanup
+//! follows the canonical optional metadata recursively, so nested owners,
+//! inline classes, and arrays retain their ordinary lifecycle semantics.
 
-use crate::mir::MirProgram;
+use crate::{backend::BackendError, mir::MirProgram};
 
-use super::super::{
-    machine::{AssemblyFunction, Instruction},
-    symbol,
-};
+use super::super::{dispatch::DispatchMetadata, layout::DataLayout, machine::AssemblyFunction};
+use super::finalize;
 
-pub(super) fn lower_primitive_finalizers(program: &MirProgram) -> Vec<AssemblyFunction> {
+pub(super) fn lower_finalizers(
+    program: &MirProgram,
+    data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
+) -> Result<Vec<AssemblyFunction>, BackendError> {
     program
         .optional_box_types
         .iter()
-        .filter(|box_type| {
+        .filter_map(|box_type| {
             box_type
                 .exact_optional
-                .and_then(|optional| program.optional_type(optional))
-                .and_then(crate::mir::MirOptionalType::primitive)
-                .is_some()
+                .map(|optional| (box_type.id, optional))
         })
-        .map(|box_type| AssemblyFunction {
-            symbol: symbol::optional_box_finalizer(box_type.id),
-            exported: false,
-            instructions: vec![Instruction::Return],
+        .map(|(target, optional)| {
+            finalize::lower_optional_box(program, data_layout, dispatch, target, optional)
         })
         .collect()
 }

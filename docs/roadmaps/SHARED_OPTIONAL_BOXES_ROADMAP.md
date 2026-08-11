@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX3 are complete and BX4 is next.
+Status: in progress; BX0-BX4 are complete and BX5 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -106,7 +106,7 @@ outcome; it does not reopen those decisions.
 - [x] BX1 — Select typed box ownership and construction plans
 - [x] BX2 — Verify optional-box allocation and owner lifetimes in MIR
 - [x] BX3 — Execute primitive optional boxes on x86-64
-- [ ] BX4 — Execute exact lifecycle-bearing box targets
+- [x] BX4 — Execute exact lifecycle-bearing box targets
 - [ ] BX5 — Add explicit immutable box-pointee access
 - [ ] BX6 — Execute polymorphic object-box views and dispatch
 - [ ] BX7 — Integrate box owners with stored and callable positions
@@ -273,23 +273,23 @@ every unsupported payload or access form still fails structurally.
 **Purpose:** Reuse recursive optional lifecycle for every invariant exact box
 target before polymorphic object views add a second identity dimension.
 
-- [ ] Generalize box layout, descriptor, construction, copy, and finalization
+- [x] Generalize box layout, descriptor, construction, copy, and finalization
       over exact class, inline-array, shared-owner, nested optional, and
       optional-array targets using canonical optional metadata.
-- [ ] Generate one deterministic finalizer per referenced exact optional box
+- [x] Generate one deterministic finalizer per referenced exact optional box
       target that conditionally destroys inline objects/arrays, releases inner
       owners, and recursively handles nested wrappers before freeing the box.
-- [ ] Preserve allocation-before-initialization, publication-after-completion,
+- [x] Preserve allocation-before-initialization, publication-after-completion,
       direct exact-class payload construction, named optional copy, produced
       transfer, and source checks before destination allocation.
-- [ ] Make `new P?(*source)` create independent wrapper/payload storage and
+- [x] Make `new P?(*source)` create independent wrapper/payload storage and
       require only the selected optional copy capability.
-- [ ] Integrate box lifecycle dependencies with closed-world finalizer and
+- [x] Integrate box lifecycle dependencies with closed-world finalizer and
       static-lifecycle planning without confusing object, array, and exact
       optional allocation descriptors.
-- [ ] Reject layout/alignment/addressability overflow and unavailable recursive
+- [x] Reject layout/alignment/addressability overflow and unavailable recursive
       lifecycle operations deterministically before invalid native emission.
-- [ ] Retain exact-only object box compatibility and the explicit pointee-access
+- [x] Retain exact-only object box compatibility and the explicit pointee-access
       gate until the responsible tasks complete.
 
 **Tests:** Side-effect-visible exact-class destruction; optional arrays and

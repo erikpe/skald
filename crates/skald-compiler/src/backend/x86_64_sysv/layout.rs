@@ -179,7 +179,7 @@ pub(super) struct DataLayout {
     classes: Vec<ClassLayout>,
     arrays: Vec<ArrayLayout>,
     optionals: Vec<OptionalLayout>,
-    primitive_optional_boxes: Vec<Option<SharedAllocationLayout>>,
+    exact_optional_boxes: Vec<Option<SharedAllocationLayout>>,
 }
 
 impl DataLayout {
@@ -244,18 +244,16 @@ impl DataLayout {
             .map(|layout| layout.byte_count())
     }
 
-    pub(super) fn primitive_optional_box(
+    pub(super) fn exact_optional_box(
         &self,
         target: OptionalBoxTypeId,
     ) -> Result<SharedAllocationLayout, BackendError> {
-        self.primitive_optional_boxes
+        self.exact_optional_boxes
             .get(target.index())
             .copied()
             .flatten()
             .ok_or_else(|| {
-                layout_error(format!(
-                    "optional-box {target} has no primitive target layout"
-                ))
+                layout_error(format!("optional-box {target} has no exact target layout"))
             })
     }
 }
@@ -292,7 +290,7 @@ impl<'mir> LayoutBuilder<'mir> {
         for optional in self.program.optional_types.iter() {
             self.compute_optional(optional.id)?;
         }
-        let primitive_optional_boxes = self
+        let exact_optional_boxes = self
             .program
             .optional_box_types
             .iter()
@@ -300,12 +298,6 @@ impl<'mir> LayoutBuilder<'mir> {
                 let Some(optional) = box_type.exact_optional else {
                     return Ok(None);
                 };
-                let Some(metadata) = self.program.optional_type(optional) else {
-                    return Ok(None);
-                };
-                if metadata.primitive().is_none() {
-                    return Ok(None);
-                }
                 let payload = self
                     .optional_layouts
                     .get(optional.index())
@@ -349,7 +341,7 @@ impl<'mir> LayoutBuilder<'mir> {
                 .into_iter()
                 .map(|layout| layout.expect("every optional identity was laid out"))
                 .collect(),
-            primitive_optional_boxes,
+            exact_optional_boxes,
         })
     }
 
@@ -680,7 +672,7 @@ mod tests {
             classes: vec![],
             arrays: vec![],
             optionals: vec![],
-            primitive_optional_boxes: vec![],
+            exact_optional_boxes: vec![],
         };
         for ty in [MirType::I64, MirType::U64, MirType::F64] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(8, 8));

@@ -130,16 +130,10 @@ impl DispatchMetadata {
                     ))))
                     .collect(),
             });
-        let primitive_optional_box_tables = program
+        let exact_optional_box_tables = program
             .optional_box_types
             .iter()
-            .filter(|box_type| {
-                box_type
-                    .exact_optional
-                    .and_then(|optional| program.optional_type(optional))
-                    .and_then(crate::mir::MirOptionalType::primitive)
-                    .is_some()
-            })
+            .filter(|box_type| box_type.exact_optional.is_some())
             .map(|box_type| AssemblyDispatchTable {
                 symbol: symbol::optional_box_metadata(box_type.id),
                 entries: std::iter::repeat_n(None, self.finalizer_displacement as usize / 8)
@@ -150,7 +144,7 @@ impl DispatchMetadata {
             });
         class_tables
             .chain(array_tables)
-            .chain(primitive_optional_box_tables)
+            .chain(exact_optional_box_tables)
             .collect()
     }
 }

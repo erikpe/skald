@@ -120,30 +120,116 @@ fn allocation_failure_uses_the_common_runtime_trace_boundary() {
 }
 
 #[test]
-fn later_payload_and_access_profiles_remain_structured_backend_errors() {
+fn lifecycle_payloads_and_independent_copy_are_native_while_views_remain_gated() {
     let aggregate = lower_source_to_final_mir(concat!(
-        "class Value { init() {} }\n",
+        "class Value { init() {} copy(ref source: Value) {} }\n",
         "fn main() -> i64 {\n",
         "  var value: shared Value? = new Value?(Value());\n",
+        "  var copied: shared Value? = new Value?(*value);\n",
         "  return 0;\n",
         "}\n",
     ));
-    let error = emit_assembly(Target::X86_64SysV, &aggregate).unwrap_err();
-    assert!(error
-        .message()
-        .contains("non-primitive payload that is not yet supported"));
+    let output = emit_assembly(Target::X86_64SysV, &aggregate).unwrap();
+    assert_eq!(output.matches("call ska_rt_alloc").count(), 2, "{output}");
+    assert!(
+        output.contains(".Lska_optional_box_0_finalize:"),
+        "{output}"
+    );
 
-    let access = lower_source_to_final_mir(concat!(
+    let polymorphic = lower_source_to_final_mir(concat!(
+        "class Base { init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
         "fn main() -> i64 {\n",
-        "  var source: shared i64? = new i64?(1);\n",
-        "  var copied: shared i64? = new i64?(*source);\n",
+        "  var exact: shared Derived? = new Derived?();\n",
+        "  var view: shared Base? = exact;\n",
         "  return 0;\n",
         "}\n",
     ));
-    let error = emit_assembly(Target::X86_64SysV, &access).unwrap_err();
+    let error = emit_assembly(Target::X86_64SysV, &polymorphic).unwrap_err();
     assert!(error
         .message()
-        .contains("optional-box pointee access is not yet supported"));
+        .contains("polymorphic shared optional-box views are not yet supported"));
+}
+
+#[test]
+fn exact_class_box_copy_uses_independent_storage_and_finalizes_each_payload() {
+    let source = concat!(
+        "class Tracked {\n",
+        "  private static destroyed_count: i64;\n",
+        "  init() {}\n",
+        "  copy(ref source: Tracked) {}\n",
+        "  destroy { Tracked.destroyed_count = Tracked.destroyed_count + 1; }\n",
+        "  static fn destroyed() -> i64 { return Tracked.destroyed_count; }\n",
+        "}\n",
+        "fn build() -> unit {\n",
+        "  var source: shared Tracked? = new Tracked?(Tracked());\n",
+        "  var copied: shared Tracked? = new Tracked?(*source);\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return Tracked.destroyed(); }\n",
+    );
+    let mut output = assembly(source);
+    assert_eq!(output.matches("call ska_rt_alloc").count(), 2, "{output}");
+    let finalizer = function_assembly(&output, ".Lska_optional_box_0_finalize");
+    assert!(finalizer.contains(".destroy."), "{finalizer}");
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(2), "{output}");
+}
+
+#[test]
+fn nested_box_finalizers_cover_every_presence_shape_at_depth_five() {
+    let source = concat!(
+        "class Tracked {\n",
+        "  private static destroyed_count: i64;\n",
+        "  init() {}\n",
+        "  destroy { Tracked.destroyed_count = Tracked.destroyed_count + 1; }\n",
+        "  static fn destroyed() -> i64 { return Tracked.destroyed_count; }\n",
+        "}\n",
+        "fn build() -> unit {\n",
+        "  var absent0: shared Tracked????? = new Tracked?????();\n",
+        "  var absent1: shared Tracked????? = new Tracked?????(some(none));\n",
+        "  var absent2: shared Tracked????? = new Tracked?????(some(some(none)));\n",
+        "  var absent3: shared Tracked????? = new Tracked?????(some(some(some(none))));\n",
+        "  var absent4: shared Tracked????? = new Tracked?????(some(some(some(some(none)))));\n",
+        "  var present: shared Tracked????? = new Tracked?????(some(some(some(some(some(Tracked()))))));\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return Tracked.destroyed(); }\n",
+    );
+    let mut output = assembly(source);
+    let finalizer = function_assembly(&output, ".Lska_optional_box_0_finalize");
+    assert!(finalizer.matches("finalize_nested_optional").count() >= 4);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(1), "{output}");
+}
+
+#[test]
+fn optional_array_and_inner_owner_boxes_release_their_nested_resources() {
+    let source = concat!(
+        "class Tracked {\n",
+        "  private static destroyed_count: i64;\n",
+        "  init() {}\n",
+        "  destroy { Tracked.destroyed_count = Tracked.destroyed_count + 1; }\n",
+        "  static fn destroyed() -> i64 { return Tracked.destroyed_count; }\n",
+        "}\n",
+        "fn build() -> unit {\n",
+        "  var absent_array: shared i64[]? = new i64[]?();\n",
+        "  var empty_array: shared i64[]? = new i64[]?(i64[]{});\n",
+        "  var values: shared i64[]? = new i64[]?(i64[]{1, 2});\n",
+        "  var inner: shared Tracked = new Tracked();\n",
+        "  var owner_box: shared (shared Tracked)? = new (shared Tracked)?(inner);\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return Tracked.destroyed(); }\n",
+    );
+    let mut output = assembly(source);
+    assert!(
+        output.contains("call .Lska_array_0_release"),
+        "optional-array finalizer must use the canonical array release helper: {output}"
+    );
+    assert!(output.contains("nested_owner_release"), "{output}");
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(1), "{output}");
 }
 
 fn exact_base_allocator_probe() -> &'static str {

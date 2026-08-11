@@ -352,7 +352,9 @@ impl FrameLayout {
             }
         };
         let ty = match (place.base, storage.ty) {
-            (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),
+            (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => program
+                .shared_target_type(target)
+                .ok_or_else(|| place_address_error(function.callable()))?,
             _ => storage.ty,
         };
         let (displacement, ty) = projected_place(

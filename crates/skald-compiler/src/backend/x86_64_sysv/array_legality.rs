@@ -339,7 +339,10 @@ fn require_executable_array_place(
             ) && matches!(storage.ty, MirType::Array(_))
         });
     let projected_owner = (!place.projections.is_empty()
-        || matches!(place.base, MirPlaceBase::SharedPointee(_)))
+        || matches!(
+            place.base,
+            MirPlaceBase::SharedPointee(_) | MirPlaceBase::SharedAllocationPayload(_)
+        ))
         && projected_type(program, root_ty, place) // verified projections
             .is_some_and(|ty| matches!(ty, MirType::Array(_)));
     if direct_static || direct_local || projected_owner {
@@ -353,14 +356,11 @@ fn require_executable_array_place(
 }
 
 fn projected_type(program: &MirProgram, mut ty: MirType, place: &MirPlace) -> Option<MirType> {
-    if matches!(
-        place.base,
-        MirPlaceBase::SharedPointee(_) | MirPlaceBase::SharedAllocationPayload(_)
-    ) {
+    if matches!(place.base, MirPlaceBase::SharedPointee(_)) {
         let MirType::Shared(target) = ty else {
             return None;
         };
-        ty = target.ty();
+        ty = program.shared_target_type(target)?;
     }
     for projection in &place.projections {
         ty = match *projection {

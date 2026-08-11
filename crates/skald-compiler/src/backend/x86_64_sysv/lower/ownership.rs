@@ -49,7 +49,7 @@ impl InstructionSelector<'_, '_> {
                 self.data_layout.shared_allocation_size(class)?
             }
             crate::mir::MirSharedAllocationTarget::OptionalBox { target, .. } => {
-                let layout = self.data_layout.primitive_optional_box(target)?;
+                let layout = self.data_layout.exact_optional_box(target)?;
                 debug_assert_eq!(layout.payload_offset(), SHARED_HEADER_SIZE);
                 layout.byte_count()
             }
@@ -86,7 +86,7 @@ impl InstructionSelector<'_, '_> {
                             "shared publication optional {optional} has no exact box identity"
                         ))
                     })?;
-                self.data_layout.primitive_optional_box(box_type.id)?;
+                self.data_layout.exact_optional_box(box_type.id)?;
                 symbol::optional_box_metadata(box_type.id)
             }
             _ => {

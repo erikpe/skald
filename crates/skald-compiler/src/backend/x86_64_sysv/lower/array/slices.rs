@@ -462,14 +462,14 @@ impl InstructionSelector<'_, '_> {
             .storage(place.base.expect_local_storage())
             .expect("verified slice owner has storage")
             .ty;
-        if matches!(
-            place.base,
-            MirPlaceBase::SharedPointee(_) | MirPlaceBase::SharedAllocationPayload(_)
-        ) {
+        if matches!(place.base, MirPlaceBase::SharedPointee(_)) {
             let MirType::Shared(target) = ty else {
                 return Err(self.array_error("shared slice owner has no shared target"));
             };
-            ty = target.ty();
+            ty = self
+                .program
+                .shared_target_type(target)
+                .ok_or_else(|| self.array_error("shared slice owner has no payload type"))?;
         }
         for projection in &place.projections {
             ty = match *projection {
