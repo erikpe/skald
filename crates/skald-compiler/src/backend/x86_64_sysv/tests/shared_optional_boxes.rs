@@ -120,7 +120,7 @@ fn allocation_failure_uses_the_common_runtime_trace_boundary() {
 }
 
 #[test]
-fn lifecycle_payloads_and_independent_copy_are_native_while_views_remain_gated() {
+fn lifecycle_payloads_and_independent_copy_are_native_while_polymorphic_views_remain_gated() {
     let aggregate = lower_source_to_final_mir(concat!(
         "class Value { init() {} copy(ref source: Value) {} }\n",
         "fn main() -> i64 {\n",
@@ -149,6 +149,57 @@ fn lifecycle_payloads_and_independent_copy_are_native_while_views_remain_gated()
     assert!(error
         .message()
         .contains("polymorphic shared optional-box views are not yet supported"));
+}
+
+#[test]
+fn exact_box_observers_and_contained_mutation_execute_natively() {
+    let source = concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  mut fn set(value: i64) -> unit { self.value = value; }\n",
+        "}\n",
+        "fn inspect(ref value: i64?) -> bool { return value is some; }\n",
+        "fn main() -> i64 {\n",
+        "  var number: shared i64? = new i64?(20);\n",
+        "  if ((*number) is none) { return 1; }\n",
+        "  if (!inspect(*number)) { return 2; }\n",
+        "  var copied: i64? = *number;\n",
+        "  var produced: i64 = (*(new i64?(4)))!;\n",
+        "  var maybe: shared? i64? = new i64?(5);\n",
+        "  var outer: i64 = (*(maybe!))!;\n",
+        "  var nested: shared i64?? = new i64??(some(some(3)));\n",
+        "  var inner: i64? = (*nested)!;\n",
+        "  var values: shared i64[]? = new i64[]?(i64[]{2});\n",
+        "  var array: i64[] = (*values)!;\n",
+        "  var object: shared Value? = new Value?(Value(1));\n",
+        "  (*object)!.set(5);\n",
+        "  var shared_value: shared Value = new Value(6);\n",
+        "  var owner_box: shared (shared Value)? = new (shared Value)?(shared_value);\n",
+        "  var extracted: shared Value = (*owner_box)!;\n",
+        "  return copied! + produced + outer + inner! + array[0] + (*object)!.value + extracted->value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    assert!(output.contains("lea rdi, [rdi + 16]"), "{output}");
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(45), "{output}");
+}
+
+#[test]
+fn absent_exact_box_unwrap_reports_the_canonical_native_failure() {
+    let mut output = assembly(concat!(
+        "fn main() -> i64 {\n",
+        "  var box: shared i64? = new i64?();\n",
+        "  return (*box)!;\n",
+        "}\n",
+    ));
+    output.push_str(native_allocator());
+    output.push_str(native_panic_reporter());
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.status.code(), Some(1));
+    assert!(result.stdout.is_empty());
+    assert_eq!(result.stderr, b"panic: optional value is absent\n");
 }
 
 #[test]

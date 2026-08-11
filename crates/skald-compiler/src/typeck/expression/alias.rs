@@ -431,28 +431,20 @@ impl CallableChecker<'_, '_> {
                     parameter.binding_mode(),
                     crate::resolve::ResolvedParameterBindingMode::MutableAlias { .. }
                 );
-                let diagnostic = if mutable {
-                    Diagnostic::error(
-                        INVALID_ALIAS_ARGUMENT,
-                        "a published optional-box wrapper cannot be mutably aliased",
-                    )
-                    .with_primary_label(
-                        dereference.operator_span,
-                        "the complete boxed optional is immutable after publication",
-                    )
-                } else {
-                    Diagnostic::error(
-                        crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                        "read-only optional-box aliases are enabled in roadmap task BX5",
-                    )
-                    .with_primary_label(
-                        dereference.operator_span,
-                        "pointee anchoring and guards are not lowered during BX1",
-                    )
+                if mutable {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_ALIAS_ARGUMENT,
+                            "a published optional-box wrapper cannot be mutably aliased",
+                        )
+                        .with_primary_label(
+                            dereference.operator_span,
+                            "the complete boxed optional is immutable after publication",
+                        )
+                        .with_secondary_label(parameter.span(), "optional alias declared here"),
+                    );
+                    return None;
                 }
-                .with_secondary_label(parameter.span(), "optional alias declared here");
-                self.diagnostics.push(diagnostic);
-                return None;
             }
         }
         let place = self.inline_optional_alias_place(expression);
@@ -529,6 +521,7 @@ impl CallableChecker<'_, '_> {
             crate::hir::HirOptionalStorage::Static(_) => Some(HirAccess::Mutable),
             crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access),
             crate::hir::HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
+            crate::hir::HirOptionalStorage::SharedPointee(_) => Some(HirAccess::ReadOnly),
         }
     }
 

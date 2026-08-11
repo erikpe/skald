@@ -65,14 +65,16 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         HirExpressionKind::TypeTest(test) => {
             view_source_contains_control_effect(&test.source.source)
         }
+        HirExpressionKind::PresenceTest { source, .. } => {
+            optional_operand_contains_control_effect(source)
+        }
         HirExpressionKind::Binding(_)
         | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
         | HirExpressionKind::U8(_)
         | HirExpressionKind::F64Bits(_)
-        | HirExpressionKind::Boolean(_)
-        | HirExpressionKind::PresenceTest { .. } => false,
+        | HirExpressionKind::Boolean(_) => false,
         HirExpressionKind::Unwrap(_)
         | HirExpressionKind::NestedOptionalUnwrap(_)
         | HirExpressionKind::OptionalArrayUnwrap(_) => true,
@@ -98,9 +100,8 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
         HirCallArgument::CheckedView(view) => checked_view_contains_control_effect(view),
         HirCallArgument::View(view) => view_source_contains_control_effect(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_control_effect(&copy.source),
-        HirCallArgument::Place(_)
-        | HirCallArgument::PrimitivePlace(_)
-        | HirCallArgument::OptionalPlace(_) => false,
+        HirCallArgument::OptionalPlace(place) => optional_alias_contains_control_effect(place),
+        HirCallArgument::Place(_) | HirCallArgument::PrimitivePlace(_) => false,
         HirCallArgument::Shared(transfer) => match &transfer.source {
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
                 shared_allocation_contains_control_effect(allocation)
@@ -127,6 +128,55 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
             crate::hir::HirArrayAliasSource::Element(_)
             | crate::hir::HirArrayAliasSource::OptionalPayload { .. } => true,
         },
+    }
+}
+
+fn optional_alias_contains_control_effect(place: &crate::hir::HirOptionalAliasPlace) -> bool {
+    match place {
+        crate::hir::HirOptionalAliasPlace::Primitive(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+        crate::hir::HirOptionalAliasPlace::Class(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+        crate::hir::HirOptionalAliasPlace::Nested(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+    }
+}
+
+fn optional_operand_contains_control_effect(operand: &crate::hir::HirOptionalOperand) -> bool {
+    match operand {
+        crate::hir::HirOptionalOperand::Place(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+        crate::hir::HirOptionalOperand::ClassPlace(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+        crate::hir::HirOptionalOperand::SharedPlace(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+        crate::hir::HirOptionalOperand::AggregatePlace(place) => {
+            optional_storage_contains_control_effect(&place.storage)
+        }
+        crate::hir::HirOptionalOperand::Produced(expression)
+        | crate::hir::HirOptionalOperand::ClassProduced(expression)
+        | crate::hir::HirOptionalOperand::SharedProduced(expression)
+        | crate::hir::HirOptionalOperand::AggregateProduced(expression) => {
+            expression_contains_control_effect(expression)
+        }
+    }
+}
+
+fn optional_storage_contains_control_effect(storage: &crate::hir::HirOptionalStorage) -> bool {
+    match storage {
+        crate::hir::HirOptionalStorage::SharedPointee(pointee) => {
+            shared_source_contains_control_effect(&pointee.source)
+        }
+        crate::hir::HirOptionalStorage::Binding(_)
+        | crate::hir::HirOptionalStorage::Static(_)
+        | crate::hir::HirOptionalStorage::Field(_)
+        | crate::hir::HirOptionalStorage::ArrayElement(_) => false,
     }
 }
 

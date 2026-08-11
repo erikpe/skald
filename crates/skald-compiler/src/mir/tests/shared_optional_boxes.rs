@@ -56,6 +56,184 @@ fn primitive_box_program() -> MirProgram {
     ))
 }
 
+fn primitive_box_observer_program() -> MirProgram {
+    lower_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var box: shared i64? = new i64?(41);\n",
+        "  var copied: i64? = *box;\n",
+        "  return copied!;\n",
+        "}\n",
+    ))
+}
+
+#[test]
+fn lowers_and_verifies_exact_optional_box_observers() {
+    let program = lower_text(concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  mut fn set(value: i64) -> unit { self.value = value; }\n",
+        "}\n",
+        "fn inspect(ref value: i64?) -> bool { return value is some; }\n",
+        "fn main() -> i64 {\n",
+        "  var number: shared i64? = new i64?(41);\n",
+        "  var copied: i64? = *number;\n",
+        "  var present: bool = (*number) is some;\n",
+        "  var aliased: bool = inspect(*number);\n",
+        "  var scalar: i64 = (*number)!;\n",
+        "  var produced: i64 = (*(new i64?(3)))!;\n",
+        "  var maybe: shared? i64? = new i64?(5);\n",
+        "  var outer: i64 = (*(maybe!))!;\n",
+        "  var nested: shared i64?? = new i64??(some(some(7)));\n",
+        "  var inner: i64? = (*nested)!;\n",
+        "  var values: shared i64[]? = new i64[]?(i64[]{1, 2});\n",
+        "  var array: i64[] = (*values)!;\n",
+        "  var object: shared Value? = new Value?(Value(1));\n",
+        "  (*object)!.set(9);\n",
+        "  return scalar + produced + outer + inner! + array[0] + (*object)!.value;\n",
+        "}\n",
+    ));
+
+    verify_mir(&program).expect("exact optional-box observer MIR must verify");
+    let dump = dump_mir(&program);
+    assert_eq!(dump, dump_mir(&program));
+    assert!(dump.contains("shared-pointee("), "{dump}");
+    assert!(dump.contains("shared-anchor"), "{dump}");
+    assert!(dump.contains("begin-optional-view"), "{dump}");
+    run_mir_pipeline(program).expect("boxed optional observers must survive MIR passes");
+}
+
+#[test]
+fn rejects_published_wrapper_mutation_and_observation_after_owner_release() {
+    let mut mutation = primitive_box_observer_program();
+    let operation = mutation
+        .definitions
+        .get_mut_for_test(mutation.entry_function)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::OptionalInitialize(operation)
+                if matches!(operation.source, MirOptionalSource::Copy(_)) =>
+            {
+                Some(operation)
+            }
+            _ => None,
+        })
+        .expect("wrapper copy must lower as optional initialization");
+    let MirOptionalSource::Copy(source) = &operation.source else {
+        unreachable!()
+    };
+    operation.destination = source.clone();
+    assert!(has_error(
+        &mutation,
+        "published optional-box wrapper cannot be mutated"
+    ));
+
+    let mut released = primitive_box_observer_program();
+    let instructions = main_instructions_mut(&mut released);
+    let copy = instructions
+        .iter()
+        .position(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::OptionalInitialize(MirOptionalInitialize {
+                    source: MirOptionalSource::Copy(MirPlace {
+                        base: MirPlaceBase::SharedPointee(_),
+                        ..
+                    }),
+                    ..
+                })
+            )
+        })
+        .unwrap();
+    let owner = match &instructions[copy] {
+        MirInstruction::OptionalInitialize(MirOptionalInitialize {
+            source:
+                MirOptionalSource::Copy(MirPlace {
+                    base: MirPlaceBase::SharedPointee(owner),
+                    ..
+                }),
+            ..
+        }) => *owner,
+        _ => unreachable!(),
+    };
+    instructions.insert(
+        copy,
+        MirInstruction::SharedRelease(MirSharedRelease {
+            owner,
+            span: instructions[copy].span(),
+        }),
+    );
+    assert!(has_error(
+        &released,
+        "shared pointee is used without a live owner"
+    ));
+}
+
+#[test]
+fn rejects_releasing_a_produced_box_anchor_before_its_optional_guard_ends() {
+    let mut program = lower_text(concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  mut fn set(value: i64) -> unit { self.value = value; }\n",
+        "}\n",
+        "fn main() -> i64 { (*(new Value?(Value(1))))!.set(2); return 0; }\n",
+    ));
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let anchor_kinds = definition
+        .storage
+        .iter()
+        .map(|storage| storage.kind)
+        .collect::<Vec<_>>();
+    let block = definition
+        .body
+        .blocks
+        .iter_mut()
+        .find(|block| {
+            block
+                .instructions
+                .iter()
+                .any(|instruction| matches!(instruction, MirInstruction::EndOptionalView(_)))
+                && block.instructions.iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        MirInstruction::SharedRelease(release)
+                            if anchor_kinds[release.owner.index()] == MirStorageKind::SharedAnchor
+                    )
+                })
+        })
+        .expect("produced boxed object consumer must end its guard and anchor together");
+    let end = block
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::EndOptionalView(_)))
+        .unwrap();
+    let release = block
+        .instructions
+        .iter()
+        .position(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::SharedRelease(release)
+                    if anchor_kinds[release.owner.index()] == MirStorageKind::SharedAnchor
+            )
+        })
+        .unwrap();
+    block.instructions.swap(end, release);
+
+    assert!(has_error(
+        &program,
+        "shared owner is released before its optional payload guard ends"
+    ));
+}
+
 #[test]
 fn rejects_duplicate_exact_optional_box_descriptor_owners() {
     let mut program = lower_text(concat!(

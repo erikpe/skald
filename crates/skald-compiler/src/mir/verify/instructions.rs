@@ -50,6 +50,7 @@ impl Verifier<'_> {
         defined_values: &mut HashSet<ValueId>,
         defined_in_block: &mut HashSet<ValueId>,
     ) {
+        self.reject_published_optional_box_mutation(function, block, instruction);
         match instruction {
             MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
             MirInstruction::Assign(assignment) => self.verify_assignment(
@@ -322,6 +323,62 @@ impl Verifier<'_> {
                 defined_values,
                 defined_in_block,
             ),
+        }
+    }
+
+    fn reject_published_optional_box_mutation(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        instruction: &MirInstruction,
+    ) {
+        let destination = match instruction {
+            MirInstruction::Cleanup(operation) => Some(&operation.destination),
+            MirInstruction::Initialize(operation) => Some(&operation.destination),
+            MirInstruction::Store(operation) => Some(&operation.destination),
+            MirInstruction::CopyConstruct(operation) => Some(&operation.destination),
+            MirInstruction::CopyAssign(operation) => Some(&operation.destination),
+            MirInstruction::OptionalInitialize(operation) => Some(&operation.destination),
+            MirInstruction::OptionalAssign(operation) => Some(&operation.destination),
+            MirInstruction::AggregateOptionalInitialize(operation) => Some(&operation.destination),
+            MirInstruction::AggregateOptionalAssign(operation) => Some(&operation.destination),
+            MirInstruction::AggregateOptionalPublish(operation) => Some(&operation.destination),
+            MirInstruction::AggregateOptionalCleanup(operation) => Some(&operation.destination),
+            MirInstruction::ClassOptionalInitialize(operation) => Some(&operation.destination),
+            MirInstruction::ClassOptionalAssign(operation) => Some(&operation.destination),
+            MirInstruction::ClassOptionalPublish(operation) => Some(&operation.destination),
+            MirInstruction::ClassOptionalCleanup(operation) => Some(&operation.destination),
+            MirInstruction::OptionalSharedInitialize(operation) => Some(&operation.destination),
+            MirInstruction::OptionalSharedAssign(operation) => Some(&operation.destination),
+            MirInstruction::OptionalSharedCleanup(operation) => Some(&operation.destination),
+            MirInstruction::Call(call) => call.destination.as_ref(),
+            _ => None,
+        };
+        let Some(destination) = destination else {
+            return;
+        };
+        let MirPlaceBase::SharedPointee(owner) = destination.base else {
+            return;
+        };
+        let is_optional_box = function.storage(owner).is_some_and(|storage| {
+            matches!(
+                storage.ty,
+                MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(_))
+            )
+        });
+        let reaches_mutable_interior = destination.projections.iter().any(|projection| {
+            matches!(
+                projection,
+                crate::mir::MirPlaceProjection::Field(_)
+                    | crate::mir::MirPlaceProjection::ArrayElement { .. }
+            )
+        });
+        if is_optional_box && !reaches_mutable_interior {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "published optional-box wrapper cannot be mutated",
+            );
         }
     }
 

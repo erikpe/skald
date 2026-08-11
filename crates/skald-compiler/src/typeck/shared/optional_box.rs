@@ -92,11 +92,11 @@ impl CallableChecker<'_, '_> {
             self.diagnostics.push(
                 Diagnostic::error(
                     INVALID_SHARED_CONVERSION,
-                    "optional-box pointee copying requires the exact box target in BX1",
+                    "optional-box pointee copying requires an exact box target",
                 )
                 .with_primary_label(
                     dereference.span,
-                    "polymorphic wrapper slicing is enabled with box access in roadmap task BX5",
+                    "this static box view does not identify one exact wrapper layout",
                 ),
             );
             return None;

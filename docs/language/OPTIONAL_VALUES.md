@@ -94,8 +94,8 @@ the canonical `(shared T)?` form:
 | `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
 | `T[]?` | Tagged optional containing zero or one inline array | Supported owning, internal callable, aggregate, array-element, and checked-alias positions execute |
-| `shared T?` | Non-null shared box containing `T?` | Syntax and resolution implemented; type checking gated |
-| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Syntax and resolution implemented; type checking gated |
+| `shared T?` | Non-null shared box containing `T?` | Exact local ownership and explicit immutable pointee access execute |
+| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Exact local ownership and explicit access after owner unwrap execute |
 
 In the implemented grammar, `shared?` is the contextual word `shared` followed
 by the `?` punctuation token. Ordinary trivia may separate those tokens.
@@ -112,7 +112,8 @@ The current compiler rejects:
 - `unit?`;
 - standalone optional interface or `Obj` views;
 - optional function types;
-- typed or executable use of `shared T?` and `shared? T?`;
+- shared optional-box owners in broader stored or callable positions;
+- pointee access through polymorphic optional-object box views;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
 
@@ -176,8 +177,8 @@ shared? T?  = (shared T?)?
 ```
 
 The last form contains an inner `Shared<Optional<T>>` box. Exact local box
-ownership executes natively; immutable pointee access and polymorphic object
-views remain staged.
+ownership and explicit immutable pointee access execute natively; polymorphic
+object views remain staged.
 
 The exact spelling and identity matrix is:
 
@@ -189,7 +190,7 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Exact primitive, class, array, shared-owner, and nested targets execute for local owners; access and broader positions remain staged |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Exact local owners and explicit immutable pointee consumers execute; polymorphic access and broader positions remain staged |
 | `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Exact local box ownership composes with the implemented optional-owner form |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
@@ -301,14 +302,15 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; exact local native lifecycle implemented**. The compiler parses
+Status: **frozen design; exact local native access implemented**. The compiler parses
 box forms, interns exact optional and static object-view targets, selects local
 construction and owner-transfer plans, and verifies allocation, publication,
 adoption, replacement, and cleanup in target-independent MIR. On x86-64,
 every eligible exact `P?` wrapper now allocates, initializes, publishes,
 shares, replaces, copies into independent boxes when capable, and deallocates
-through deterministic exact box descriptors and recursive finalizers. Broader
-storage, polymorphic object views, and pointee access remain staged.
+through deterministic exact box descriptors and recursive finalizers. Exact
+`*box` presence, copying, read-only aliasing, one-layer unwrap, and contained
+value use execute. Broader storage and polymorphic object views remain staged.
 Later roadmap tasks must not reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete

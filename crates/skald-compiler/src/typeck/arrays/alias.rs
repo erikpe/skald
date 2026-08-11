@@ -135,6 +135,7 @@ impl CallableChecker<'_, '_> {
             HirOptionalStorage::Static(_) => Some(crate::hir::HirAccess::Mutable),
             HirOptionalStorage::Field(field) => Some(field.receiver.access),
             HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
+            HirOptionalStorage::SharedPointee(_) => Some(crate::hir::HirAccess::ReadOnly),
         }
     }
 

@@ -328,6 +328,17 @@ impl Verifier<'_> {
             MirInstruction::EndOptionalView(end) => {
                 self.require_active_payload_guards(function, block, &end.source, state);
             }
+            MirInstruction::SharedRelease(release)
+                if state.active.values().any(|(source, _)| {
+                    matches!(source.base, crate::mir::MirPlaceBase::SharedPointee(owner) if owner == release.owner)
+                }) =>
+            {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "shared owner is released before its optional payload guard ends",
+                );
+            }
             _ => {}
         }
     }

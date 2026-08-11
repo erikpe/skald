@@ -255,8 +255,9 @@ inline arrays execute in every supported owning, aggregate, internal callable,
 array-element, and checked-alias position. Semantic analysis still rejects
 `unit?` and standalone owning optional interface or `Obj` values. Shared
 optional box types and allocations receive canonical resolved identities.
-Direct local owners and construction reach typed HIR; broader storage,
-pointee access, and executable phases retain staged availability gates. Their
+Direct local owners, construction, and explicit exact pointee access execute;
+broader storage and polymorphic object-box access retain staged availability
+gates. Their
 source and compiler semantics are frozen in
 [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes). Optional
 references such as `ref?` remain syntax errors.

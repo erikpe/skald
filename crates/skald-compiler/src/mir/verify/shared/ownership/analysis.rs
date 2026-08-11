@@ -87,12 +87,17 @@ impl SharedOwnershipAnalysis<'_, '_> {
                         self.merge(block.id, *failure_target, &states, &mut flow);
                     }
                     Some(MirTerminator::OptionalUnwrap {
+                        source,
                         success_target,
                         failure_target,
                         ..
                     }) => {
-                        self.merge(block.id, *success_target, &states, &mut flow);
-                        self.merge(block.id, *failure_target, &states, &mut flow);
+                        let mut checked = states.clone();
+                        checked.update_states(|state| {
+                            self.require_live_pointee(block.id, state, source);
+                        });
+                        self.merge(block.id, *success_target, &checked, &mut flow);
+                        self.merge(block.id, *failure_target, &checked, &mut flow);
                     }
                     Some(MirTerminator::OptionalSharedUnwrap {
                         unwrap,
@@ -100,7 +105,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
                         failure_target,
                         ..
                     }) => {
-                        let mut success = states.clone();
+                        let mut checked = states.clone();
+                        checked.update_states(|state| {
+                            self.require_live_pointee(block.id, state, &unwrap.source);
+                        });
+                        let mut success = checked.clone();
                         success.update_states(|state| {
                             if state.live_owners.contains(&unwrap.destination)
                                 || state.released_owners.contains(&unwrap.destination)
@@ -118,17 +127,22 @@ impl SharedOwnershipAnalysis<'_, '_> {
                             }
                         });
                         self.merge(block.id, *success_target, &success, &mut flow);
-                        self.merge(block.id, *failure_target, &states, &mut flow);
+                        self.merge(block.id, *failure_target, &checked, &mut flow);
                     }
                     Some(MirTerminator::BeginOptionalView {
+                        begin,
                         success_target,
                         absent_target,
                         overflow_target,
                         ..
                     }) => {
-                        self.merge(block.id, *success_target, &states, &mut flow);
-                        self.merge(block.id, *absent_target, &states, &mut flow);
-                        self.merge(block.id, *overflow_target, &states, &mut flow);
+                        let mut checked = states.clone();
+                        checked.update_states(|state| {
+                            self.require_live_pointee(block.id, state, &begin.source);
+                        });
+                        self.merge(block.id, *success_target, &checked, &mut flow);
+                        self.merge(block.id, *absent_target, &checked, &mut flow);
+                        self.merge(block.id, *overflow_target, &checked, &mut flow);
                     }
                     Some(MirTerminator::CheckOptionalMutation {
                         success_target,

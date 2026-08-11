@@ -93,6 +93,9 @@ impl CallableResolver<'_, '_> {
             ResolvedExpression::Allocation(allocation) => {
                 return Some(ResolvedSharedTarget::Class(allocation.class))
             }
+            ResolvedExpression::OptionalBoxAllocation(allocation) => {
+                return Some(ResolvedSharedTarget::OptionalBox(allocation.target))
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.environment
                     .functions
@@ -152,53 +155,7 @@ impl CallableResolver<'_, '_> {
         &self,
         expression: &ResolvedExpression,
     ) -> Option<ResolvedSharedTarget> {
-        let kind = match expression {
-            ResolvedExpression::Binding(binding) => self.binding_type(binding.binding)?,
-            ResolvedExpression::FieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::StaticFieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .static_field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::DirectCall(call) => {
-                self.environment
-                    .functions
-                    .get(call.function)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::MethodCall(call) => {
-                self.environment
-                    .classes
-                    .get(call.method.class())?
-                    .method(call.method)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::InterfaceCall(call) => {
-                self.environment
-                    .interfaces
-                    .get(call.interface)?
-                    .requirements
-                    .get(call.requirement.index())?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                return self.resolved_optional_shared_target(&grouped.expression)
-            }
-            _ => return None,
-        };
+        let kind = self.resolved_expression_type(expression)?;
         match kind {
             ResolvedTypeKind::Optional(optional) => {
                 match self.type_interner.optional(optional)?.payload.kind {
@@ -214,53 +171,7 @@ impl CallableResolver<'_, '_> {
         &self,
         expression: &ResolvedExpression,
     ) -> Option<ClassId> {
-        let kind = match expression {
-            ResolvedExpression::Binding(binding) => self.binding_type(binding.binding)?,
-            ResolvedExpression::FieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::StaticFieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .static_field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::DirectCall(call) => {
-                self.environment
-                    .functions
-                    .get(call.function)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::MethodCall(call) => {
-                self.environment
-                    .classes
-                    .get(call.method.class())?
-                    .method(call.method)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::InterfaceCall(call) => {
-                self.environment
-                    .interfaces
-                    .get(call.interface)?
-                    .requirements
-                    .get(call.requirement.index())?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                return self.resolved_optional_class(&grouped.expression)
-            }
-            _ => return None,
-        };
+        let kind = self.resolved_expression_type(expression)?;
         match kind {
             ResolvedTypeKind::Optional(optional) => {
                 match self.type_interner.optional(optional)?.payload.kind {

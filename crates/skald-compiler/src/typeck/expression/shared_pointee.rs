@@ -149,12 +149,12 @@ impl CallableChecker<'_, '_> {
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                    "shared optional-box pointee access is enabled in roadmap task BX5",
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "an optional-box dereference yields an optional wrapper, not an object",
                 )
                 .with_primary_label(
                     dereference.operator_span,
-                    "BX1 permits this dereference only as an exact `new P?(*source)` copy source",
+                    "apply a presence test, copy the wrapper, or unwrap one optional layer",
                 ),
             );
             return None;
@@ -177,6 +177,53 @@ impl CallableChecker<'_, '_> {
             return None;
         }
         Some(pointee)
+    }
+
+    pub(in crate::typeck) fn check_optional_box_pointee(
+        &mut self,
+        dereference: &ResolvedDereferenceExpr,
+    ) -> Option<crate::hir::HirOptionalBoxPointee> {
+        let crate::resolve::ResolvedSharedTarget::OptionalBox(target) = dereference.target else {
+            return None;
+        };
+        let metadata = self
+            .program
+            .optional_box_types
+            .get(target)
+            .expect("resolved optional-box target must have typed metadata");
+        let Some(optional) = metadata.optional else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
+                    "polymorphic optional-box pointee access is not yet available",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "this static box view does not expose one exact optional wrapper",
+                ),
+            );
+            return None;
+        };
+        let source = self.check_shared_source(&dereference.source, false)?;
+        if source.target() != HirSharedTarget::OptionalBox(target) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "resolved optional-box dereference does not match its owner",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "dereference target is inconsistent with this owner",
+                ),
+            );
+            return None;
+        }
+        Some(crate::hir::HirOptionalBoxPointee {
+            source,
+            target,
+            optional,
+            span: dereference.span,
+        })
     }
 
     fn check_shared_pointee(
@@ -227,7 +274,7 @@ pub(super) const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget
             panic!("array pointees do not enter object-view conversion")
         }
         HirSharedTarget::OptionalBox(_) => {
-            panic!("optional-box pointees are gated until roadmap task BX5")
+            panic!("optional-box pointees do not enter object-view conversion")
         }
     }
 }

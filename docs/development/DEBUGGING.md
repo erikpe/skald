@@ -419,8 +419,10 @@ Inspect optional frontend behavior at the narrowest owner defined by the
   defensive traps for impossible verified state; and
 - optional-container alias dumps use indirect optional places without object
   origin metadata; checked optional-array payload aliases additionally show a
-  guarded payload projection and array anchor. Frozen shared optional boxes
-  remain frontend diagnostics until their active roadmap moves the gate; and
+  guarded payload projection and array anchor. Exact shared optional-box
+  consumers additionally expose `SharedPointee(owner)` roots, hidden
+  `SharedAnchor` storage for produced or replaceable owners, and optional
+  guards that must end before those anchors are released; and
 - static-field HIR/MIR dumps expose optional shared owners through canonical
   identity-based static places, with no function-local storage carrier; final
   MIR also exposes planned activation, publication, and reverse-destruction

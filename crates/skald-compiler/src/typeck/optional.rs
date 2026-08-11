@@ -162,6 +162,14 @@ impl CallableChecker<'_, '_> {
                     span: expression.span,
                 })
             }
+            ResolvedExpression::Dereference(dereference) => {
+                let pointee = self.check_optional_box_pointee(dereference)?;
+                Some(crate::hir::HirOptionalValuePlace {
+                    optional: pointee.optional,
+                    span: pointee.span,
+                    storage: HirOptionalStorage::SharedPointee(Box::new(pointee)),
+                })
+            }
             _ => None,
         }
     }
@@ -339,6 +347,19 @@ impl CallableChecker<'_, '_> {
                     storage: HirOptionalStorage::ArrayElement(place),
                     target,
                     span: expression.span,
+                })
+            }
+            ResolvedExpression::Dereference(dereference) => {
+                let pointee = self.check_optional_box_pointee(dereference)?;
+                let Some(OptionalPayloadKind::Shared(target)) =
+                    self.optional_kind(Type::Optional(pointee.optional))
+                else {
+                    return None;
+                };
+                Some(HirOptionalSharedPlace {
+                    storage: HirOptionalStorage::SharedPointee(Box::new(pointee)),
+                    target,
+                    span: dereference.span,
                 })
             }
             _ => None,
@@ -551,6 +572,19 @@ impl CallableChecker<'_, '_> {
                     span: expression.span,
                 })
             }
+            ResolvedExpression::Dereference(dereference) => {
+                let pointee = self.check_optional_box_pointee(dereference)?;
+                let Some(OptionalPayloadKind::Class(class)) =
+                    self.optional_kind(Type::Optional(pointee.optional))
+                else {
+                    return None;
+                };
+                Some(HirClassOptionalPlace {
+                    storage: HirOptionalStorage::SharedPointee(Box::new(pointee)),
+                    class,
+                    span: dereference.span,
+                })
+            }
             _ => None,
         }
     }
@@ -759,6 +793,7 @@ impl CallableChecker<'_, '_> {
                 HirOptionalStorage::Static(_) => crate::hir::HirAccess::Mutable,
                 HirOptionalStorage::Field(field) => field.receiver.access,
                 HirOptionalStorage::ArrayElement(place) => place.receiver.access,
+                HirOptionalStorage::SharedPointee(_) => crate::hir::HirAccess::Mutable,
             },
             HirOptionalOperand::ClassProduced(_) => crate::hir::HirAccess::Mutable,
             HirOptionalOperand::Place(_)
@@ -917,6 +952,19 @@ impl CallableChecker<'_, '_> {
                     storage: HirOptionalStorage::ArrayElement(place),
                     payload,
                     span: expression.span,
+                })
+            }
+            ResolvedExpression::Dereference(dereference) => {
+                let pointee = self.check_optional_box_pointee(dereference)?;
+                let Some(OptionalPayloadKind::Primitive(payload)) =
+                    self.optional_kind(Type::Optional(pointee.optional))
+                else {
+                    return None;
+                };
+                Some(HirOptionalPlace {
+                    storage: HirOptionalStorage::SharedPointee(Box::new(pointee)),
+                    payload,
+                    span: dereference.span,
                 })
             }
             _ => None,

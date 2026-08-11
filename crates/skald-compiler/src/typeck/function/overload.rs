@@ -323,7 +323,12 @@ impl CallableChecker<'_, '_> {
                     Type::Interface(interface)
                 }
                 crate::resolve::ResolvedSharedTarget::Array(array) => Type::Array(array),
-                crate::resolve::ResolvedSharedTarget::OptionalBox(_) => Type::Unit,
+                crate::resolve::ResolvedSharedTarget::OptionalBox(target) => self
+                    .program
+                    .optional_box_types
+                    .get(target)
+                    .and_then(|metadata| metadata.optional)
+                    .map_or(Type::Unit, Type::Optional),
             },
             ResolvedExpression::Binary(binary) => match binary.operator {
                 crate::resolve::ResolvedBinaryOperator::Equal

@@ -190,14 +190,12 @@ fn boxes_reject_invalid_exact_sources_and_invariant_conversions() {
 }
 
 #[test]
-fn box_positions_and_access_remain_focused_later_phase_gates() {
+fn stored_box_positions_remain_focused_later_phase_gates() {
     for source in [
         "fn consume(value: shared i64?) -> unit {} fn main() -> i64 { return 0; }",
         "extern fn consume(value: shared i64?) -> unit; fn main() -> i64 { return 0; }",
         "class Holder { value: shared i64?; init(value: shared i64?) { self.value = value; } } fn main() -> i64 { return 0; }",
         "fn main() -> i64 { var boxes: (shared i64?)[] = (shared i64?)[](); return 0; }",
-        "fn main() -> i64 { var box: shared i64? = new i64?(1); var value: i64? = *box; return 0; }",
-        "fn inspect(ref value: i64?) -> unit {} fn main() -> i64 { var box: shared i64? = new i64?(1); inspect(*box); return 0; }",
     ] {
         let output = check_text(source);
         assert!(output.hir.is_none(), "source unexpectedly produced HIR: {source}");
@@ -206,6 +204,40 @@ fn box_positions_and_access_remain_focused_later_phase_gates() {
             .iter()
             .any(|diagnostic| diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE), "source: {source}\n{:?}", output.diagnostics);
     }
+}
+
+#[test]
+fn exact_box_pointees_support_explicit_optional_consumers() {
+    let output = check_text(
+        "class Value {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           mut fn set(value: i64) -> unit { self.value = value; }\n\
+         }\n\
+         fn inspect(ref value: i64?) -> bool { return value is some; }\n\
+         fn main() -> i64 {\n\
+           var number: shared i64? = new i64?(41);\n\
+           var copied: i64? = *number;\n\
+           var present: bool = (*number) is some;\n\
+           var aliased: bool = inspect(*number);\n\
+           var scalar: i64 = (*number)!;\n\
+           var nested: shared i64?? = new i64??(some(some(7)));\n\
+           var inner: i64? = (*nested)!;\n\
+           var values: shared i64[]? = new i64[]?(i64[]{1, 2});\n\
+           var array: i64[] = (*values)!;\n\
+           var object: shared Value? = new Value?(Value(1));\n\
+           (*object)!.set(9);\n\
+           return scalar + inner! + array[0] + (*object)!.value;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output
+        .hir
+        .expect("exact boxed optional consumers must type check");
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("OptionalBoxPointee"), "{dump}");
+    assert!(dump.contains("ClassOptionalBoxPointee"), "{dump}");
 }
 
 #[test]
@@ -252,6 +284,20 @@ fn box_owners_do_not_implicitly_forward_optional_operations() {
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == crate::typeck::TYPE_MISMATCH));
+    }
+
+    for source in [
+        "class Value { value: i64; init() { self.value = 1; } } fn main() -> i64 { var box: shared Value? = new Value?(Value()); return box.value; }",
+        "class Value { value: i64; init() { self.value = 1; } } fn main() -> i64 { var box: shared Value? = new Value?(Value()); return box->value; }",
+    ] {
+        let output = crate::test_support::resolve_source(source);
+        assert!(output.diagnostics.iter().any(|diagnostic| {
+            matches!(
+                diagnostic.code,
+                crate::resolve::IMPLICIT_SHARED_DEREFERENCE
+                    | crate::resolve::INVALID_MEMBER_SELECTION
+            )
+        }));
     }
 }
 

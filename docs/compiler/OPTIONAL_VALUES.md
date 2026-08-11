@@ -35,7 +35,7 @@ Each phase owns one stable responsibility:
 | Phase | Optional-value responsibility |
 |---|---|
 | Lexing and parsing | Preserve recursive `?`/`[]` type composition, grouping, postfix `!`, reserved `none`, contextual `some`, `shared?` shorthand provenance, presence tests, precedence, trivia, and recovery spans. |
-| Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and currently keep frozen shared boxes outside the executable resolved type graph. |
+| Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and retain exact optional-box targets for explicit access. |
 | Type checking and HIR | Reject payload identities or positions not yet executable, then select compatibility, lifecycle, checked-view, anchor, and boundary requirements by canonical optional identity. |
 | MIR lowering | Lower the canonical optional table deterministically and make storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
 | MIR verification | Prove storage, payload, owner, guard, anchor, transition, failure, and CFG invariants independently of source shape. |
@@ -75,8 +75,9 @@ identities. Direct local box owners, outer optional-owner layers,
 construction, compatible owner copy/replacement, and independent exact-wrapper
 copying lower through verified target-independent MIR. The x86-64 backend
 executes local exact boxes for primitive, class, inline-array, shared-owner,
-optional-array, and recursively nested targets. Stored/callable positions,
-pointee access, and polymorphic object-box views remain behind focused gates;
+optional-array, and recursively nested targets. Explicit exact pointee
+presence, wrapper copies, read-only aliases, one-layer unwrap, and contained
+value consumers execute. Stored/callable positions and polymorphic object-box views remain behind focused gates;
 invalid standalone payload families retain their ordinary diagnostics. Nested optionals
 are executable in owning positions, checked access, aliases, and internal
 callable boundaries. Alias binding mode may designate any supported inline
@@ -285,13 +286,14 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; exact local native lifecycle implemented**. Local owner
+Status: **frozen design; exact local native access implemented**. Local owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
 owner lifetime verification. The x86-64 backend executes every eligible exact
 wrapper with a checked header-plus-target layout, deterministic exact
-descriptor, and distinct recursive finalizer. Pointee access, polymorphic
-views, and broader stored positions remain deliberately gated.
+descriptor, and distinct recursive finalizer. Explicit access through exact
+owners is implemented; polymorphic views and broader stored positions remain
+deliberately gated.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -312,14 +314,15 @@ The exact Rust enum and interner names are implementation-private. Identities,
 compatibility, canonical names, and dumps must remain deterministic, and
 interface/`Obj` box views must not manufacture bare owning optional types.
 
-HIR now owns a typed optional-box allocation producer. It records the exact
+HIR owns a typed optional-box allocation producer. It records the exact
 optional allocation target, optional initialization or copy plan, static owner
 view, source-before-allocation order, owner provenance, source spans, and
 publication boundary. Exact primitive, class, array, shared-owner, and nested
 optional plans reuse ordinary destination initialization. Interface and `Obj`
-box views carry no invalid standalone optional identity. A later checked
-shared optional-pointee operation will record its owner or anchor, access, static
-box view, known exact allocation target when available, and optional guard.
+box views carry no invalid standalone optional identity. Exact shared
+optional-pointee places record their owner source, exact box target, optional
+identity, and span. Stable owners borrow directly; replaceable or produced
+owners retain a full-expression anchor before the place is exposed.
 Published pointees have no assignment plan: whole-pointee assignment and
 mutable whole-wrapper aliases are rejected before HIR.
 
@@ -336,8 +339,8 @@ allocated exact optional storage
 `SharedAllocationPayload` denotes the unpublished exact wrapper destination.
 It is accepted only by the selected initialization operation until one
 publication and adoption complete the produced owner. `SharedPointee(owner)`
-denotes the immutable published wrapper identity reserved for the later access
-phase. Existing exact
+denotes the immutable published wrapper reached through a verified live owner.
+Existing exact
 optional lifecycle instructions operate on those places rather than gaining a
 parallel primitive/class/array box family. Object-box view, cast, unwrap,
 copy, and dispatch operations retain both the static view and exact dynamic
@@ -828,8 +831,8 @@ observable behavior:
 
 Parser, resolution, and type-check suites provide positive coverage for
 `shared T?`, `shared? T?`, local box allocation, construction plans, owner
-copy/adoption/replacement, and object-box up-views. Compile-failure coverage
-verifies the remaining stored-position, access, MIR, and backend gates.
+copy/adoption/replacement, and exact immutable pointee access. Compile-failure
+coverage verifies the remaining stored-position and polymorphic-view gates.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.

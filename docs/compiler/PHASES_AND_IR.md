@@ -273,11 +273,10 @@ Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
 call. Frozen shared optional boxes now have canonical resolved, HIR, and MIR
 target identities, typed local construction/ownership, verified
-unpublished-payload and owner lifetimes, and deliberate stored-position,
-access, and non-primitive backend gates. Primitive local boxes execute on the
-x86-64 target through exact descriptor and shared-owner lowering; nested and
-optional-array identities execute through recursive MIR
-lifecycle plans; optional-reference shapes remain syntax diagnostics.
+unpublished-payload and owner lifetimes, explicit exact optional-pointee
+access, and deliberate stored-position and polymorphic-view gates. Exact local
+boxes execute on x86-64 through descriptor, shared-owner, recursive optional,
+and guard lowering; optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes
@@ -303,20 +302,21 @@ exact allocation target, static owner view, destination-directed
 initialization/copy/transfer plan, source-before-allocation order, owner
 provenance, publication boundary, and diagnostic spans. Published box wrappers
 are immutable, so HIR never represents a whole-pointee assignment or mutable
-whole-wrapper alias. Checked pointee access and anchor strategy remain gated
-until the immutable-access phase. Object-box views retain a static
+whole-wrapper alias. Exact pointee places retain stable, copied-place, or
+adopted-producer owner provenance; non-stable owners receive a hidden
+full-expression anchor. Object-box views retain a static
 class/interface/`Obj` view separately from the exact dynamic allocation class.
 
 MIR implements a distinct optional-box allocation origin and makes allocate,
 initialize the exact `SharedAllocationPayload`, publish, and adopt separate
 verified transitions. After publication, `SharedPointee(owner)` permits no
-pre-publication observation and is reserved for the later immutable-access
-phase. Local owner copy, secure replacement, temporary cleanup, and final
-release already reuse the ordinary shared-owner state machine. Existing
+pre-publication observation and addresses exact optional operations only while
+its owner is verified live. Local owner copy, secure replacement, temporary
+cleanup, and final release already reuse the ordinary shared-owner state machine. Existing
 optional initialization instructions complete the canonical wrapper without a
-parallel box-payload instruction family. Static-lifecycle discovery recognizes
-the target, while the x86-64 legality pass deliberately rejects it until a
-descriptor and finalizer exist.
+parallel box-payload instruction family. The x86-64 legality pass accepts exact
+box targets with verified addressable metadata and continues to reject
+polymorphic box views.
 
 The initial x86-64 realization keeps one-word owners and the 16-byte shared
 header, uses deterministic exact optional-box descriptors/finalizers, and

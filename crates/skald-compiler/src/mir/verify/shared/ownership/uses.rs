@@ -48,7 +48,10 @@ impl SharedOwnershipAnalysis<'_, '_> {
     ) {
         match instruction {
             MirInstruction::Assign(assignment) => match &assignment.rvalue.kind {
-                MirRvalueKind::Load(place) => self.require_live_pointee(block, state, place),
+                MirRvalueKind::Load(place)
+                | MirRvalueKind::OptionalPresence { source: place, .. } => {
+                    self.require_live_pointee(block, state, place)
+                }
                 MirRvalueKind::TypeTest { source, .. } => {
                     self.require_live_pointee(block, state, &source.source);
                     self.require_live_shared_origin(block, state, &source.origin);
@@ -89,7 +92,104 @@ impl SharedOwnershipAnalysis<'_, '_> {
             MirInstruction::SharedFieldReplace(replace) => {
                 self.require_live_pointee(block, state, &replace.destination)
             }
+            MirInstruction::OptionalInitialize(operation) => {
+                self.require_live_pointee(block, state, &operation.destination);
+                if let crate::mir::MirOptionalSource::Copy(source) = &operation.source {
+                    self.require_live_pointee(block, state, source);
+                }
+            }
+            MirInstruction::OptionalAssign(operation) => {
+                self.require_live_pointee(block, state, &operation.destination);
+                if let crate::mir::MirOptionalSource::Copy(source) = &operation.source {
+                    self.require_live_pointee(block, state, source);
+                }
+            }
+            MirInstruction::AggregateOptionalInitialize(operation) => {
+                self.require_live_pointee(block, state, &operation.destination);
+                if let crate::mir::MirAggregateOptionalSource::Copy(source) = &operation.source {
+                    self.require_live_pointee(block, state, source);
+                }
+            }
+            MirInstruction::AggregateOptionalAssign(operation) => {
+                self.require_live_pointee(block, state, &operation.destination);
+                if let crate::mir::MirAggregateOptionalSource::Copy(source) = &operation.source {
+                    self.require_live_pointee(block, state, source);
+                }
+            }
+            MirInstruction::AggregateOptionalPublish(operation) => {
+                self.require_live_pointee(block, state, &operation.destination)
+            }
+            MirInstruction::AggregateOptionalCleanup(operation) => {
+                self.require_live_pointee(block, state, &operation.destination)
+            }
+            MirInstruction::ClassOptionalInitialize(operation) => self
+                .check_class_optional_pointee_uses(
+                    block,
+                    state,
+                    &operation.destination,
+                    &operation.source,
+                ),
+            MirInstruction::ClassOptionalAssign(operation) => self
+                .check_class_optional_pointee_uses(
+                    block,
+                    state,
+                    &operation.destination,
+                    &operation.source,
+                ),
+            MirInstruction::ClassOptionalPublish(operation) => {
+                self.require_live_pointee(block, state, &operation.destination)
+            }
+            MirInstruction::ClassOptionalCleanup(operation) => {
+                self.require_live_pointee(block, state, &operation.destination)
+            }
+            MirInstruction::OptionalSharedInitialize(operation) => self
+                .check_optional_shared_pointee_uses(
+                    block,
+                    state,
+                    &operation.destination,
+                    &operation.source,
+                ),
+            MirInstruction::OptionalSharedAssign(operation) => self
+                .check_optional_shared_pointee_uses(
+                    block,
+                    state,
+                    &operation.destination,
+                    &operation.source,
+                ),
+            MirInstruction::OptionalSharedCleanup(operation) => {
+                self.require_live_pointee(block, state, &operation.destination)
+            }
             _ => {}
+        }
+    }
+
+    fn check_class_optional_pointee_uses(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        destination: &MirPlace,
+        source: &crate::mir::MirClassOptionalSource,
+    ) {
+        self.require_live_pointee(block, state, destination);
+        match source {
+            crate::mir::MirClassOptionalSource::Present(source)
+            | crate::mir::MirClassOptionalSource::Copy(source) => {
+                self.require_live_pointee(block, state, source)
+            }
+            crate::mir::MirClassOptionalSource::Absent => {}
+        }
+    }
+
+    fn check_optional_shared_pointee_uses(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        destination: &MirPlace,
+        source: &crate::mir::MirOptionalSharedSource,
+    ) {
+        self.require_live_pointee(block, state, destination);
+        if let crate::mir::MirOptionalSharedSource::Copy(source) = source {
+            self.require_live_pointee(block, state, source);
         }
     }
 

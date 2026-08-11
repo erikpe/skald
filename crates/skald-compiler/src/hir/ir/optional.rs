@@ -10,6 +10,19 @@ use super::{
     HirSelectedCopyOperation, HirSharedSource, HirSharedTarget,
 };
 
+/// An immutable published optional wrapper addressed through one shared owner.
+///
+/// Stable local owners are borrowed directly. Replaceable places and produced
+/// owners retain this source so MIR can establish a hidden full-expression
+/// anchor before exposing the wrapper.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalBoxPointee {
+    pub source: HirSharedSource,
+    pub target: crate::identity::OptionalBoxTypeId,
+    pub optional: OptionalTypeId,
+    pub span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirOptionalPlace {
     pub storage: HirOptionalStorage,
@@ -23,6 +36,7 @@ pub enum HirOptionalStorage {
     Static(super::HirStaticPlace),
     Field(HirFieldPlace),
     ArrayElement(Box<super::HirArrayElementPlace>),
+    SharedPointee(Box<HirOptionalBoxPointee>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

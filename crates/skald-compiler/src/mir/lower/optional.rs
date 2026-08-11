@@ -219,12 +219,7 @@ impl BodyLowerer<'_> {
         &mut self,
         place: &crate::hir::HirOptionalValuePlace,
     ) -> crate::mir::MirPlace {
-        match &place.storage {
-            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
-            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
-            HirOptionalStorage::Field(field) => self.lower_field_place(field),
-            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
-        }
+        self.lower_optional_storage(&place.storage)
     }
 
     pub(super) fn lower_nested_optional_unwrap_at(
@@ -683,12 +678,7 @@ impl BodyLowerer<'_> {
         &mut self,
         place: &HirClassOptionalPlace,
     ) -> crate::mir::MirPlace {
-        match &place.storage {
-            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
-            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
-            HirOptionalStorage::Field(field) => self.lower_field_place(field),
-            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
-        }
+        self.lower_optional_storage(&place.storage)
     }
 
     pub(super) fn lower_optional_initialize(
@@ -838,12 +828,7 @@ impl BodyLowerer<'_> {
         &mut self,
         place: &HirOptionalPlace,
     ) -> crate::mir::MirPlace {
-        match &place.storage {
-            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
-            HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
-            HirOptionalStorage::Field(field) => self.lower_field_place(field),
-            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
-        }
+        self.lower_optional_storage(&place.storage)
     }
 
     pub(super) fn lower_optional_shared_initialize(
@@ -953,11 +938,25 @@ impl BodyLowerer<'_> {
         &mut self,
         place: &crate::hir::HirOptionalSharedPlace,
     ) -> crate::mir::MirPlace {
-        match &place.storage {
+        self.lower_optional_storage(&place.storage)
+    }
+
+    fn lower_optional_storage(&mut self, storage: &HirOptionalStorage) -> crate::mir::MirPlace {
+        match storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Static(place) => crate::mir::MirPlace::static_field(place.field),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
             HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
+            HirOptionalStorage::SharedPointee(pointee) => {
+                let owner = match &pointee.source {
+                    crate::hir::HirSharedSource::Place(crate::hir::HirSharedPlace::Binding {
+                        binding,
+                        ..
+                    }) => self.storage_for_binding(*binding),
+                    source => self.new_shared_anchor(source, pointee.span),
+                };
+                crate::mir::MirPlace::shared_pointee(owner)
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX4 are complete and BX5 is next.
+Status: in progress; BX0-BX5 are complete and BX6 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -107,7 +107,7 @@ outcome; it does not reopen those decisions.
 - [x] BX2 — Verify optional-box allocation and owner lifetimes in MIR
 - [x] BX3 — Execute primitive optional boxes on x86-64
 - [x] BX4 — Execute exact lifecycle-bearing box targets
-- [ ] BX5 — Add explicit immutable box-pointee access
+- [x] BX5 — Add explicit immutable box-pointee access
 - [ ] BX6 — Execute polymorphic object-box views and dispatch
 - [ ] BX7 — Integrate box owners with stored and callable positions
 - [ ] BX8 — Integrate box owners with arrays and default elements
@@ -308,25 +308,25 @@ x86-64 without payload-specific ownership systems or runtime ABI changes.
 **Purpose:** Expose the frozen observation and unwrap model while proving that
 published wrapper mutation cannot enter HIR, MIR, aliases, or target code.
 
-- [ ] Extend explicit shared dereference type checking so `*box` yields an
+- [x] Extend explicit shared dereference type checking so `*box` yields an
       exact optional pointee place with stable, copied-field, or
       adopted-producer owner provenance.
-- [ ] Enable presence tests, owning wrapper copies, one-layer checked unwrap,
+- [x] Enable presence tests, owning wrapper copies, one-layer checked unwrap,
       primitive extraction, optional-array access, and ordinary present-object
       or mutable-aggregate consumers after explicit dereference.
-- [ ] Permit call-scoped read-only `ref P?` aliases for exact box wrappers;
+- [x] Permit call-scoped read-only `ref P?` aliases for exact box wrappers;
       reject `mut ref P?`, whole-wrapper aliases from polymorphic views,
       aliases to shared owners, optional references, and escaping access.
-- [ ] Compose hidden owner anchors with existing optional guards through the
+- [x] Compose hidden owner anchors with existing optional guards through the
       complete immediate consumer, including replaceable fields, produced
       owners, and outer optional box owners once available.
-- [ ] Reject `*box = source`, `box!`, direct presence tests, `box.member`,
+- [x] Reject `*box = source`, `box!`, direct presence tests, `box.member`,
       `box->member`, and other implicit forwarding with focused operator and
       target spans.
-- [ ] Extend HIR/MIR places, guard and anchor verification, backend address
+- [x] Extend HIR/MIR places, guard and anchor verification, backend address
       lowering, termination paths, dumps, and cleanup without adding a
       published optional assignment instruction.
-- [ ] Preserve shallow mutability of an already-present contained object or
+- [x] Preserve shallow mutability of an already-present contained object or
       aggregate while keeping every wrapper layer fixed.
 
 **Tests:** Stable/field/produced owners; presence and primitive unwrap; exact

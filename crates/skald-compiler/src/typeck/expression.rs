@@ -127,12 +127,12 @@ impl CallableChecker<'_, '_> {
                 ) {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                            "shared optional-box pointee access is enabled in roadmap task BX5",
+                            INVALID_OBJECT_CONTEXT,
+                            "a boxed optional wrapper needs an explicit operation",
                         )
                         .with_primary_label(
                             dereference.operator_span,
-                            "BX1 permits this only as an exact `new P?(*source)` copy source",
+                            "test presence, copy it, unwrap it, or pass it by read-only alias",
                         ),
                     );
                     return None;

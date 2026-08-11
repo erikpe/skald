@@ -1677,6 +1677,11 @@ impl<'types> HirDumper<'types> {
                     &format!("ClassOptionalPlace class {}?", place.class),
                     place.span,
                 );
+                if let crate::hir::HirOptionalStorage::SharedPointee(pointee) = &place.storage {
+                    self.indented(|dumper| {
+                        dumper.optional_box_pointee("ClassOptionalBoxPointee", pointee)
+                    });
+                }
             }
             crate::hir::HirOptionalOperand::ClassProduced(expression) => {
                 self.line("ClassOptionalProduced", expression.span);
@@ -1692,6 +1697,11 @@ impl<'types> HirDumper<'types> {
                     &format!("AggregateOptionalPlace {}", place.optional),
                     place.span,
                 );
+                if let crate::hir::HirOptionalStorage::SharedPointee(pointee) = &place.storage {
+                    self.indented(|dumper| {
+                        dumper.optional_box_pointee("AggregateOptionalBoxPointee", pointee)
+                    });
+                }
             }
             crate::hir::HirOptionalOperand::AggregateProduced(expression) => {
                 self.line("AggregateOptionalProduced", expression.span);
@@ -1737,6 +1747,9 @@ impl<'types> HirDumper<'types> {
                 self.line("OptionalArrayElementPlace", place.span);
                 self.indented(|dumper| dumper.array_element(element));
             }
+            crate::hir::HirOptionalStorage::SharedPointee(pointee) => {
+                self.optional_box_pointee("OptionalBoxPointee", pointee);
+            }
         }
     }
 
@@ -1758,6 +1771,9 @@ impl<'types> HirDumper<'types> {
             crate::hir::HirOptionalStorage::ArrayElement(element) => {
                 self.line("ClassOptionalArrayElementPlace", place.span);
                 self.indented(|dumper| dumper.array_element(element));
+            }
+            crate::hir::HirOptionalStorage::SharedPointee(pointee) => {
+                self.optional_box_pointee("ClassOptionalBoxPointee", pointee);
             }
         }
     }
@@ -2161,7 +2177,18 @@ impl<'types> HirDumper<'types> {
                 );
                 self.indented(|dumper| dumper.array_element(element));
             }
+            crate::hir::HirOptionalStorage::SharedPointee(pointee) => {
+                self.optional_box_pointee("OptionalSharedBoxPointee", pointee);
+            }
         }
+    }
+
+    fn optional_box_pointee(&mut self, label: &str, pointee: &crate::hir::HirOptionalBoxPointee) {
+        self.line(
+            &format!("{label} {} -> {}", pointee.target, pointee.optional),
+            pointee.span,
+        );
+        self.indented(|dumper| dumper.shared_source(&pointee.source));
     }
 
     fn object_view(&mut self, label: &str, view: &HirObjectView) {
