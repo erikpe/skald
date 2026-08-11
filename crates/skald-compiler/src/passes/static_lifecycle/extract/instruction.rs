@@ -444,6 +444,7 @@ impl Extractor<'_> {
                 StaticAccessKind::Borrow,
                 span,
             ),
+            MirInstruction::EndOptionalBoxView(_) => {}
             MirInstruction::OptionalSharedInitialize(initialize) => {
                 self.add_place(
                     source,

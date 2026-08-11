@@ -33,6 +33,14 @@ impl Extractor<'_> {
                 StaticAccessKind::Read,
                 span,
             ),
+            MirRvalueKind::OptionalBoxPresence { owner, .. } => self.add_place(
+                source,
+                definition,
+                phase,
+                &MirPlace::base(*owner),
+                StaticAccessKind::Read,
+                span,
+            ),
             MirRvalueKind::TypeTest {
                 source: tested_view,
                 ..

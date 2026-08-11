@@ -77,7 +77,9 @@ copying lower through verified target-independent MIR. The x86-64 backend
 executes local exact boxes for primitive, class, inline-array, shared-owner,
 optional-array, and recursively nested targets. Explicit exact pointee
 presence, wrapper copies, read-only aliases, one-layer unwrap, and contained
-value consumers execute. Stored/callable positions and polymorphic object-box views remain behind focused gates;
+value consumers execute. Polymorphic class/base/interface/`Obj` owner views,
+presence tests, guarded unwrap, dispatch, type tests, and owner casts also
+execute for local boxes. Stored/callable positions remain behind focused gates;
 invalid standalone payload families retain their ordinary diagnostics. Nested optionals
 are executable in owning positions, checked access, aliases, and internal
 callable boundaries. Alias binding mode may designate any supported inline
@@ -286,14 +288,14 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; exact local native access implemented**. Local owner
+Status: **frozen design; polymorphic local native access implemented**. Local owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
 owner lifetime verification. The x86-64 backend executes every eligible exact
 wrapper with a checked header-plus-target layout, deterministic exact
 descriptor, and distinct recursive finalizer. Explicit access through exact
-owners is implemented; polymorphic views and broader stored positions remain
-deliberately gated.
+and polymorphic object-box owners is implemented; broader stored positions
+remain deliberately gated.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -323,6 +325,10 @@ box views carry no invalid standalone optional identity. Exact shared
 optional-pointee places record their owner source, exact box target, optional
 identity, and span. Stable owners borrow directly; replaceable or produced
 owners retain a full-expression anchor before the place is exposed.
+Polymorphic unwrap records an explicit optional-box object view with its
+static class/interface/`Obj` target, exact descriptor dependency, access, and
+owner provenance. Interface and `Obj` presence observations use a dedicated
+box operation because no invalid bare inline optional identity exists.
 Published pointees have no assignment plan: whole-pointee assignment and
 mutable whole-wrapper aliases are rejected before HIR.
 
@@ -339,12 +345,19 @@ allocated exact optional storage
 `SharedAllocationPayload` denotes the unpublished exact wrapper destination.
 It is accepted only by the selected initialization operation until one
 publication and adoption complete the produced owner. `SharedPointee(owner)`
-denotes the immutable published wrapper reached through a verified live owner.
-Existing exact
+denotes the immutable exact wrapper reached through a verified live owner.
+`OptionalBoxPayload { owner, target }` denotes a guarded static object view
+into the complete exact payload. `BeginOptionalBoxView` and
+`EndOptionalBoxView` identify and balance each traversed optional layer;
+optional-box presence queries read a declared layer without manufacturing an
+inline interface or `Obj` optional. Existing exact
 optional lifecycle instructions operate on those places rather than gaining a
 parallel primitive/class/array box family. Object-box view, cast, unwrap,
 copy, and dispatch operations retain both the static view and exact dynamic
-descriptor dependency through verification.
+descriptor dependency through verification. Owner casts preserve the
+allocation and select a canonical box-view target; target-directed copies into
+an exact class optional reuse ordinary inline copy construction and therefore
+slice deliberately.
 
 Verification rejects target-family confusion, wrong or missing allocation
 origins, pre-publication observation, optional initialization/publication
@@ -360,6 +373,10 @@ placement of the canonical `P?` wrapper. One deterministic descriptor records
 the exact optional target, compatible finalizer, and—only for object boxes—the
 exact dynamic class and view-membership evidence. The finalizer invokes the
 existing recursive optional destruction plan before exact-base deallocation.
+Object-box descriptor tables reuse the exact class's virtual and interface
+dispatch entries while retaining the box finalizer. Runtime membership checks
+recognize both ordinary class descriptors and optional-box descriptors for
+that exact class, including when the wrapper is absent.
 Layout uses the target data-layout authority and reports size, alignment, or
 addressability overflow instead of assuming an eight-byte payload alignment.
 
@@ -832,7 +849,7 @@ observable behavior:
 Parser, resolution, and type-check suites provide positive coverage for
 `shared T?`, `shared? T?`, local box allocation, construction plans, owner
 copy/adoption/replacement, and exact immutable pointee access. Compile-failure
-coverage verifies the remaining stored-position and polymorphic-view gates.
+coverage verifies the remaining stored-position gates.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.

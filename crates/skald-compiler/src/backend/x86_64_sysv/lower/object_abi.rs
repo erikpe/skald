@@ -178,7 +178,10 @@ impl InstructionSelector<'_, '_> {
                 self.select_forwarded_origin(*carrier, locations);
             }
             ObjectOriginOperand::Mir(MirObjectOrigin::Shared { owner, .. }) => {
-                self.select_place_address(&MirPlace::shared_pointee(*owner), locations.complete())?;
+                self.select_place_address(
+                    &self.shared_complete_place(*owner),
+                    locations.complete(),
+                )?;
                 self.select_shared_metadata(*owner, locations.metadata());
             }
         }
@@ -206,8 +209,23 @@ impl InstructionSelector<'_, '_> {
                 Ok(())
             }
             ObjectOriginOperand::Mir(MirObjectOrigin::Shared { owner, .. }) => {
-                self.select_place_address(&MirPlace::shared_pointee(*owner), location)
+                let place = self.shared_complete_place(*owner);
+                self.select_place_address(&place, location)
             }
+        }
+    }
+
+    fn shared_complete_place(&self, owner: StorageId) -> MirPlace {
+        match self
+            .function
+            .storage(owner)
+            .expect("verified shared origin owner must be declared")
+            .ty
+        {
+            crate::mir::MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(target)) => {
+                MirPlace::optional_box_payload(owner, target)
+            }
+            _ => MirPlace::shared_pointee(owner),
         }
     }
 

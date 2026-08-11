@@ -529,17 +529,48 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 let target = self.resolve_view_target(&cast.target);
                 match (source, target) {
                     (Some(source), Some(target)) => {
+                        let target_mode = match cast.target_mode {
+                            syntax::ObjectCastTargetMode::Plain => {
+                                ResolvedObjectCastTargetMode::Plain
+                            }
+                            syntax::ObjectCastTargetMode::Shared { shared_span } => {
+                                ResolvedObjectCastTargetMode::Shared { shared_span }
+                            }
+                        };
+                        let optional_box_target =
+                            if matches!(target_mode, ResolvedObjectCastTargetMode::Shared { .. }) {
+                                let optional_depth = match self.resolved_shared_target(&source) {
+                                    Some(ResolvedSharedTarget::OptionalBox(source_target)) => self
+                                        .type_interner
+                                        .optional_box(source_target)
+                                        .map(|metadata| metadata.optional_depth),
+                                    _ => None,
+                                };
+                                let object_leaf = match target.kind {
+                                    ResolvedTypeKind::Class(class) => {
+                                        Some(ResolvedObjectTarget::Class(class))
+                                    }
+                                    ResolvedTypeKind::Interface(interface) => {
+                                        Some(ResolvedObjectTarget::Interface(interface))
+                                    }
+                                    ResolvedTypeKind::Obj => Some(ResolvedObjectTarget::Obj),
+                                    _ => None,
+                                };
+                                optional_depth.zip(object_leaf).map(|(depth, leaf)| {
+                                    self.type_interner.intern_optional_object_box_cast_target(
+                                        depth,
+                                        leaf,
+                                        cast.target.span,
+                                    )
+                                })
+                            } else {
+                                None
+                            };
                         Some(ResolvedExpression::ObjectCast(ResolvedObjectCastExpr {
                             source: Box::new(source),
                             target,
-                            target_mode: match cast.target_mode {
-                                syntax::ObjectCastTargetMode::Plain => {
-                                    ResolvedObjectCastTargetMode::Plain
-                                }
-                                syntax::ObjectCastTargetMode::Shared { shared_span } => {
-                                    ResolvedObjectCastTargetMode::Shared { shared_span }
-                                }
-                            },
+                            target_mode,
+                            optional_box_target,
                             target_span: cast.target.span,
                             span: cast.span,
                         }))

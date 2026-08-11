@@ -70,6 +70,18 @@ impl CallableChecker<'_, '_> {
         Some(HirOptionalBoxAllocation {
             exact_optional: allocation.exact_optional,
             exact_target: allocation.target,
+            exact_dynamic_class: self
+                .program
+                .optional_box_types
+                .get(allocation.target)
+                .and_then(|target| match target.object_leaf {
+                    Some(crate::resolve::ResolvedObjectTarget::Class(class)) => Some(class),
+                    Some(
+                        crate::resolve::ResolvedObjectTarget::Interface(_)
+                        | crate::resolve::ResolvedObjectTarget::Obj,
+                    )
+                    | None => None,
+                }),
             static_target: allocation.target,
             initialization,
             evaluation: HirOptionalBoxEvaluationOrder::SourceThenAllocateThenInitializeThenPublish,

@@ -21,17 +21,26 @@ impl Verifier<'_> {
                 ));
             }
             let valid = match box_type.exact_optional {
-                Some(optional) => self.exact_optional_box_metadata_matches(
-                    optional,
-                    box_type.optional_depth,
-                    box_type.object_view,
-                ),
-                None => {
-                    matches!(
+                Some(optional) => {
+                    self.exact_optional_box_metadata_matches(
+                        optional,
+                        box_type.optional_depth,
                         box_type.object_view,
-                        Some(MirViewTarget::Interface(interface))
-                            if self.program.interface(interface).is_some()
-                    ) || box_type.object_view == Some(MirViewTarget::Obj)
+                    ) && match box_type.object_view {
+                        Some(MirViewTarget::Class(class)) => {
+                            box_type.exact_dynamic_class == Some(class)
+                        }
+                        Some(MirViewTarget::Interface(_) | MirViewTarget::Obj) => false,
+                        None => box_type.exact_dynamic_class.is_none(),
+                    }
+                }
+                None => {
+                    box_type.exact_dynamic_class.is_none()
+                        && (matches!(
+                            box_type.object_view,
+                            Some(MirViewTarget::Interface(interface))
+                                if self.program.interface(interface).is_some()
+                        ) || box_type.object_view == Some(MirViewTarget::Obj))
                 }
             };
             if !valid {

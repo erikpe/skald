@@ -4,8 +4,7 @@ use crate::{
     backend::{BackendError, Target},
     identity::CallableId,
     mir::{
-        MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind, MirParameter,
-        MirProgram, MirSharedTarget, MirType, StorageId,
+        MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind, MirParameter, MirProgram,
     },
 };
 
@@ -150,7 +149,8 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::ClassOptionalAssign(_)
                     | MirInstruction::ClassOptionalPublish(_)
                     | MirInstruction::ClassOptionalCleanup(_)
-                    | MirInstruction::EndOptionalView(_) => {}
+                    | MirInstruction::EndOptionalView(_)
+                    | MirInstruction::EndOptionalBoxView(_) => {}
                     MirInstruction::Array(_) | MirInstruction::Io(_) => {}
                 }
             }
@@ -160,58 +160,11 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
 }
 
 fn check_exact_optional_box_transition(
-    program: &MirProgram,
-    function: crate::mir::MirDefinitionRef<'_>,
-    instruction: &MirInstruction,
+    _program: &MirProgram,
+    _function: crate::mir::MirDefinitionRef<'_>,
+    _instruction: &MirInstruction,
 ) -> Result<(), BackendError> {
-    let transition = match instruction {
-        MirInstruction::SharedAdopt(adopt) => {
-            let destination = optional_box_target(function, adopt.destination);
-            let source = function
-                .storage(adopt.allocation)
-                .and_then(|storage| match storage.ty {
-                    MirType::Optional(optional) => program
-                        .exact_optional_box_type(optional)
-                        .map(|box_type| box_type.id),
-                    _ => None,
-                });
-            destination.zip(source)
-        }
-        MirInstruction::SharedCopy(copy) => optional_box_target(function, copy.destination)
-            .zip(optional_box_target(function, copy.source)),
-        MirInstruction::SharedMove(transfer) => optional_box_target(function, transfer.destination)
-            .zip(optional_box_target(function, transfer.source)),
-        MirInstruction::SharedCast(cast)
-            if matches!(cast.target, MirSharedTarget::OptionalBox(_)) =>
-        {
-            return Err(optional_box_view_error(function));
-        }
-        _ => None,
-    };
-    if transition.is_some_and(|(destination, source)| destination != source) {
-        return Err(optional_box_view_error(function));
-    }
     Ok(())
-}
-
-fn optional_box_target(
-    function: crate::mir::MirDefinitionRef<'_>,
-    storage: StorageId,
-) -> Option<crate::identity::OptionalBoxTypeId> {
-    function
-        .storage(storage)
-        .and_then(|storage| match storage.ty {
-            MirType::Shared(MirSharedTarget::OptionalBox(target)) => Some(target),
-            _ => None,
-        })
-}
-
-fn optional_box_view_error(function: crate::mir::MirDefinitionRef<'_>) -> BackendError {
-    BackendError::new(
-        Target::X86_64SysV,
-        Some(function.callable()),
-        "polymorphic shared optional-box views are not yet supported by this target",
-    )
 }
 
 fn primitive_cast_is_supported(operation: crate::mir::MirPrimitiveCast) -> bool {

@@ -52,6 +52,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
                 | MirRvalueKind::OptionalPresence { source: place, .. } => {
                     self.require_live_pointee(block, state, place)
                 }
+                MirRvalueKind::OptionalBoxPresence { owner, .. } => {
+                    if !state.live_owners.contains(owner) {
+                        self.error(block, "optional-box presence test requires a live owner");
+                    }
+                }
                 MirRvalueKind::TypeTest { source, .. } => {
                     self.require_live_pointee(block, state, &source.source);
                     self.require_live_shared_origin(block, state, &source.origin);
@@ -199,8 +204,11 @@ impl SharedOwnershipAnalysis<'_, '_> {
         state: &SharedState,
         place: &MirPlace,
     ) {
-        let MirPlaceBase::SharedPointee(owner) = place.base else {
-            return;
+        let owner = match place.base {
+            MirPlaceBase::SharedPointee(owner) | MirPlaceBase::OptionalBoxPayload { owner, .. } => {
+                owner
+            }
+            _ => return,
         };
         if !state.live_owners.contains(&owner) {
             self.error(block, "shared pointee is used without a live owner");
@@ -229,7 +237,15 @@ impl SharedOwnershipAnalysis<'_, '_> {
                 .owner_origins
                 .get(owner)
                 .and_then(|origin| self.function.storage(*origin))
-                .is_some_and(|origin| origin.ty == MirType::Class(*class));
+                .is_some_and(|origin| match origin.ty {
+                    MirType::Class(origin) => origin == *class,
+                    MirType::Optional(optional) => self
+                        .verifier
+                        .program
+                        .exact_optional_box_type(optional)
+                        .is_some_and(|box_type| box_type.exact_dynamic_class == Some(*class)),
+                    _ => false,
+                });
             if !exact_origin {
                 self.error(
                     block,

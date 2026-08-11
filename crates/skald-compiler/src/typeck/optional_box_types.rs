@@ -13,6 +13,12 @@ pub(super) fn lower_optional_box_types(program: &ResolvedProgram) -> HirOptional
             .map(|target| HirOptionalBoxType {
                 id: target.id,
                 exact_optional: target.optional,
+                exact_dynamic_class: target.optional.and(match target.object_leaf {
+                    Some(ResolvedObjectTarget::Class(class)) => Some(class),
+                    Some(ResolvedObjectTarget::Interface(_) | ResolvedObjectTarget::Obj) | None => {
+                        None
+                    }
+                }),
                 optional_depth: target.optional_depth,
                 object_view: target.object_leaf.map(lower_object_view),
                 span: target.span,

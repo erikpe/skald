@@ -163,13 +163,15 @@ impl HirSharedSource {
     pub const fn exact_dynamic_class(&self) -> Option<ClassId> {
         match self {
             Self::Produced(HirSharedProducer::Allocation(allocation)) => Some(allocation.class),
+            Self::Produced(HirSharedProducer::OptionalBoxAllocation(allocation)) => {
+                allocation.exact_dynamic_class
+            }
             Self::Produced(HirSharedProducer::Cast(cast)) => cast.exact_dynamic_class,
             Self::Place(_)
             | Self::Produced(
                 HirSharedProducer::Call(_)
                 | HirSharedProducer::OptionalUnwrap { .. }
-                | HirSharedProducer::ArrayAllocation(_)
-                | HirSharedProducer::OptionalBoxAllocation(_),
+                | HirSharedProducer::ArrayAllocation(_),
             ) => None,
         }
     }
@@ -245,6 +247,9 @@ pub struct HirOptionalBoxAllocation {
     pub exact_optional: OptionalTypeId,
     /// Exact constructible box target selected by `new`.
     pub exact_target: OptionalBoxTypeId,
+    /// Exact object class recorded by the allocation descriptor, including
+    /// when the immutable wrapper is absent.
+    pub exact_dynamic_class: Option<ClassId>,
     /// Static view produced by this expression before any consuming up-view.
     pub static_target: OptionalBoxTypeId,
     /// Destination-directed initialization, including direct construction,

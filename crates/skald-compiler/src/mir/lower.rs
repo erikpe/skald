@@ -138,11 +138,19 @@ struct BodyLowerer<'hir> {
 }
 
 #[derive(Clone)]
-struct ActiveOptionalGuard {
-    guard: OptionalGuardId,
-    source: MirPlace,
-    optional: OptionalTypeId,
-    payload: MirType,
+enum ActiveOptionalGuard {
+    Inline {
+        guard: OptionalGuardId,
+        source: MirPlace,
+        optional: OptionalTypeId,
+        payload: MirType,
+    },
+    Box {
+        guard: OptionalGuardId,
+        owner: StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+        layer: usize,
+    },
 }
 
 impl<'hir> BodyLowerer<'hir> {

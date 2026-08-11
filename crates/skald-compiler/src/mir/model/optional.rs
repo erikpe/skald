@@ -141,6 +141,25 @@ pub struct MirOptionalViewEnd {
     pub span: Span,
 }
 
+/// One guarded optional layer in a polymorphic object-box allocation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptionalBoxViewBegin {
+    pub box_target: crate::identity::OptionalBoxTypeId,
+    pub layer: usize,
+    pub guard: OptionalGuardId,
+    pub owner: StorageId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptionalBoxViewEnd {
+    pub box_target: crate::identity::OptionalBoxTypeId,
+    pub layer: usize,
+    pub guard: OptionalGuardId,
+    pub owner: StorageId,
+    pub span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirOptionalSharedSource {
     Absent,

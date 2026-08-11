@@ -77,10 +77,11 @@ pub use optional::{
     HirAggregateOptionalAssignment, HirCheckedOptionalView, HirClassOptionalAssignment,
     HirClassOptionalInitialize, HirClassOptionalPlace, HirClassOptionalSource,
     HirNestedOptionalUnwrap, HirOptionalAliasPlace, HirOptionalArrayUnwrap, HirOptionalAssignment,
-    HirOptionalBoxPointee, HirOptionalOperand, HirOptionalPlace, HirOptionalSharedAssignment,
-    HirOptionalSharedInitialize, HirOptionalSharedPlace, HirOptionalSharedSource,
-    HirOptionalSource, HirOptionalStorage, HirOptionalValue, HirOptionalValuePlace,
-    HirOptionalValueSource, HirOptionalWriteKind, HirPresenceTestKind,
+    HirOptionalBoxObjectView, HirOptionalBoxPointee, HirOptionalBoxPresence, HirOptionalOperand,
+    HirOptionalPlace, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
+    HirOptionalSharedPlace, HirOptionalSharedSource, HirOptionalSource, HirOptionalStorage,
+    HirOptionalValue, HirOptionalValuePlace, HirOptionalValueSource, HirOptionalWriteKind,
+    HirPresenceTestKind,
 };
 pub use optional_box_type::{HirOptionalBoxType, HirOptionalBoxTypeTable};
 pub use optional_type::{

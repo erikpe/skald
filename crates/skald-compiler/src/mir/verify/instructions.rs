@@ -313,6 +313,9 @@ impl Verifier<'_> {
             MirInstruction::EndOptionalView(end) => {
                 self.verify_optional_view_end(function, block, end)
             }
+            MirInstruction::EndOptionalBoxView(end) => {
+                self.verify_optional_box_view_end(function, block, end)
+            }
             MirInstruction::Array(instruction) => {
                 self.verify_array_instruction(function, block, instruction, defined_in_block)
             }
@@ -919,6 +922,42 @@ impl Verifier<'_> {
             }
             MirRvalueKind::OptionalPresence { source, .. } => {
                 self.verify_optional_presence(function, block, source, rvalue.ty)
+            }
+            MirRvalueKind::OptionalBoxPresence {
+                owner,
+                target,
+                layer,
+                ..
+            } => {
+                let owner_valid = function.storage(*owner).is_some_and(|storage| {
+                    matches!(
+                        storage.kind,
+                        MirStorageKind::Local
+                            | MirStorageKind::Parameter
+                            | MirStorageKind::SharedAnchor
+                    ) && storage.ty
+                        == MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(*target))
+                });
+                let metadata_valid =
+                    self.program
+                        .optional_box_type(*target)
+                        .is_some_and(|metadata| {
+                            metadata.object_view.is_some() && *layer < metadata.optional_depth
+                        });
+                if !owner_valid || !metadata_valid {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional-box presence test has incompatible owner, layer, or static view",
+                    );
+                }
+                if rvalue.ty != MirType::Bool {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional-box presence test result is not `bool`",
+                    );
+                }
             }
             MirRvalueKind::ArrayLength { source, array } => {
                 if rvalue.ty != MirType::U64 {

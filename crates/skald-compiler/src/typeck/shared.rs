@@ -17,7 +17,6 @@ use crate::{
 mod optional_box;
 
 use super::{
-    expression::{classify_object_view_relation, ObjectViewRelation, ObjectViewSource},
     function::CallableChecker,
     program::{
         lower_type, IMPLICIT_SHARED_DEREFERENCE, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION,
@@ -262,31 +261,67 @@ impl CallableChecker<'_, '_> {
 
     fn check_shared_cast(&mut self, cast: &ResolvedObjectCastExpr) -> Option<HirSharedCast> {
         let source = self.check_shared_source(&cast.source, true)?;
-        if matches!(source.target(), HirSharedTarget::OptionalBox(_)) {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                    "optional-box owner casts are enabled in roadmap task BX6",
-                )
-                .with_primary_label(
-                    cast.span,
-                    "BX1 records the relation but does not execute it",
-                ),
-            );
-            return None;
-        }
         let target_view =
             self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
-        let target = shared_target_from_view(target_view);
+        let target = match source.target() {
+            HirSharedTarget::OptionalBox(source_target) => {
+                let Some(target) = cast.optional_box_target else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CAST,
+                            "shared optional-box cast has no canonical target identity",
+                        )
+                        .with_primary_label(cast.target_span, "invalid optional-box cast target")
+                        .with_secondary_label(source.span(), "shared optional-box source"),
+                    );
+                    return None;
+                };
+                let metadata_matches =
+                    self.program
+                        .optional_box_types
+                        .get(target)
+                        .is_some_and(|metadata| {
+                            self.program
+                                .optional_box_types
+                                .get(source_target)
+                                .is_some_and(|source_metadata| {
+                                    metadata.optional_depth == source_metadata.optional_depth
+                                })
+                                && metadata.object_leaf.map(|target| match target {
+                                    crate::resolve::ResolvedObjectTarget::Class(class) => {
+                                        HirViewTarget::Class(class)
+                                    }
+                                    crate::resolve::ResolvedObjectTarget::Interface(interface) => {
+                                        HirViewTarget::Interface(interface)
+                                    }
+                                    crate::resolve::ResolvedObjectTarget::Obj => HirViewTarget::Obj,
+                                }) == Some(target_view)
+                        });
+                if !metadata_matches {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CAST,
+                            "shared optional-box cast target metadata is inconsistent",
+                        )
+                        .with_primary_label(cast.target_span, "invalid optional-box cast target"),
+                    );
+                    return None;
+                }
+                HirSharedTarget::OptionalBox(target)
+            }
+            _ => shared_target_from_view(target_view),
+        };
         let exact_dynamic_class = source.exact_dynamic_class();
-        let relation_source = exact_dynamic_class.map_or_else(
-            || ObjectViewSource::Dynamic(shared_target_view(source.target())),
-            ObjectViewSource::ExactClass,
-        );
-        let kind = match classify_object_view_relation(self.program, relation_source, target_view) {
-            ObjectViewRelation::StaticSuccess => HirSharedCastKind::Static,
-            ObjectViewRelation::Runtime => HirSharedCastKind::RuntimeTerminate,
-            ObjectViewRelation::StaticFailure => {
+        let relation = super::shared_compatibility::relation(self.program, source.target(), target);
+        let kind = match relation {
+            super::shared_compatibility::SharedTargetRelation::Identity
+            | super::shared_compatibility::SharedTargetRelation::UpView => {
+                HirSharedCastKind::Static
+            }
+            super::shared_compatibility::SharedTargetRelation::CheckedDowncast => {
+                HirSharedCastKind::RuntimeTerminate
+            }
+            super::shared_compatibility::SharedTargetRelation::Impossible => {
                 self.diagnostics.push(
                     Diagnostic::error(INVALID_OBJECT_CAST, "shared-owner cast can never succeed")
                         .with_primary_label(
@@ -542,6 +577,9 @@ impl CallableChecker<'_, '_> {
                     crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
                 ) =>
             {
+                if let Some(target) = cast.optional_box_target {
+                    return Some(HirSharedTarget::OptionalBox(target));
+                }
                 match cast.target.kind {
                     crate::resolve::ResolvedTypeKind::Class(class) => {
                         Some(HirSharedTarget::Class(class))
@@ -621,19 +659,5 @@ const fn shared_target_from_view(target: HirViewTarget) -> HirSharedTarget {
         HirViewTarget::Obj => HirSharedTarget::Obj,
         HirViewTarget::Class(class) => HirSharedTarget::Class(class),
         HirViewTarget::Interface(interface) => HirSharedTarget::Interface(interface),
-    }
-}
-
-const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget {
-    match target {
-        HirSharedTarget::Obj => HirViewTarget::Obj,
-        HirSharedTarget::Class(class) => HirViewTarget::Class(class),
-        HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
-        HirSharedTarget::Array(_) => {
-            panic!("array pointee views are typed by the array projection checker")
-        }
-        HirSharedTarget::OptionalBox(_) => {
-            panic!("optional-box views are typed by the optional-box access checker")
-        }
     }
 }

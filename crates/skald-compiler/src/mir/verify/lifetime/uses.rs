@@ -126,6 +126,7 @@ pub(super) fn visit_instruction_storage(
         MirInstruction::ClassOptionalPublish(publish) => visit_place(&publish.destination, visit),
         MirInstruction::ClassOptionalCleanup(cleanup) => visit_place(&cleanup.destination, visit),
         MirInstruction::EndOptionalView(end) => visit_place(&end.source, visit),
+        MirInstruction::EndOptionalBoxView(end) => visit(end.owner),
         MirInstruction::OptionalSharedInitialize(initialize) => {
             visit_place(&initialize.destination, visit);
             visit_optional_shared_source(&initialize.source, visit);
@@ -200,6 +201,7 @@ pub(super) fn visit_terminator_storage(
             visit(unwrap.destination);
         }
         MirTerminator::BeginOptionalView { begin, .. } => visit_place(&begin.source, visit),
+        MirTerminator::BeginOptionalBoxView { begin, .. } => visit(begin.owner),
         MirTerminator::CheckOptionalMutation { source, .. } => visit_place(source, visit),
         MirTerminator::ArrayPositionCheck { position, .. } => visit(*position),
         MirTerminator::ArrayLoop {
@@ -221,6 +223,7 @@ fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
         MirRvalueKind::Load(place)
         | MirRvalueKind::OptionalPresence { source: place, .. }
         | MirRvalueKind::ArrayLength { source: place, .. } => visit_place(place, visit),
+        MirRvalueKind::OptionalBoxPresence { owner, .. } => visit(*owner),
         MirRvalueKind::TypeTest { source, .. } => visit_view(source, visit),
         MirRvalueKind::ConstantI64(_)
         | MirRvalueKind::ConstantU64(_)

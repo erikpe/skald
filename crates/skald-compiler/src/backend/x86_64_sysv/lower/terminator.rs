@@ -310,6 +310,7 @@ pub(super) fn select(
         | MirTerminator::OptionalUnwrap { .. }
         | MirTerminator::OptionalSharedUnwrap { .. }
         | MirTerminator::BeginOptionalView { .. }
+        | MirTerminator::BeginOptionalBoxView { .. }
         | MirTerminator::CheckOptionalMutation { .. }
         | MirTerminator::ArrayPositionCheck { .. }
         | MirTerminator::ArrayOperationCheck { .. }

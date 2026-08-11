@@ -81,6 +81,7 @@ pub enum HirExpressionKind {
         source: HirOptionalOperand,
         kind: HirPresenceTestKind,
     },
+    OptionalBoxPresence(super::HirOptionalBoxPresence),
     Unwrap(HirOptionalOperand),
     NestedOptionalUnwrap(Box<super::HirNestedOptionalUnwrap>),
     OptionalArrayUnwrap(Box<super::HirOptionalArrayUnwrap>),

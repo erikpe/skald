@@ -136,7 +136,14 @@ impl DispatchMetadata {
             .filter(|box_type| box_type.exact_optional.is_some())
             .map(|box_type| AssemblyDispatchTable {
                 symbol: symbol::optional_box_metadata(box_type.id),
-                entries: std::iter::repeat_n(None, self.finalizer_displacement as usize / 8)
+                entries: box_type
+                    .exact_dynamic_class
+                    .map(|class| self.tables[class.index()].clone())
+                    .unwrap_or_else(|| {
+                        vec![None; self.finalizer_displacement as usize / DISPATCH_ENTRY_SIZE]
+                    })
+                    .into_iter()
+                    .map(|method| method.map(|method| callable(program, method.into())))
                     .chain(std::iter::once(Some(symbol::optional_box_finalizer(
                         box_type.id,
                     ))))

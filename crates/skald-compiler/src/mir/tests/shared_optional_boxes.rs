@@ -99,8 +99,34 @@ fn lowers_and_verifies_exact_optional_box_observers() {
     assert_eq!(dump, dump_mir(&program));
     assert!(dump.contains("shared-pointee("), "{dump}");
     assert!(dump.contains("shared-anchor"), "{dump}");
-    assert!(dump.contains("begin-optional-view"), "{dump}");
+    assert!(dump.contains("begin-optional-box-view"), "{dump}");
     run_mir_pipeline(program).expect("boxed optional observers must survive MIR passes");
+}
+
+#[test]
+fn lowers_polymorphic_optional_box_views_with_shared_origins_and_nested_guards() {
+    let program = lower_text(concat!(
+        "interface Marker { fn mark() -> i64; }\n",
+        "class Base { init() {} virtual fn mark() -> i64 { return 1; } }\n",
+        "class Derived extends Base implements Marker {\n",
+        "  init() { super(); }\n",
+        "  override fn mark() -> i64 { return 2; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var exact: shared Derived?? = new Derived??(some(Derived()));\n",
+        "  var base: shared Base?? = exact;\n",
+        "  var marker: shared Marker?? = exact;\n",
+        "  var object: shared Obj?? = exact;\n",
+        "  return ((*base)!)!.mark() + ((*marker)!)!.mark();\n",
+        "}\n",
+    ));
+
+    verify_mir(&program).expect("polymorphic optional-box view MIR must verify");
+    let dump = dump_mir(&program);
+    assert_eq!(dump.matches("begin-optional-box-view").count(), 4, "{dump}");
+    assert!(dump.contains("origin shared("), "{dump}");
+    assert!(dump.contains("optional-box-payload("), "{dump}");
+    run_mir_pipeline(program).expect("polymorphic box views must survive MIR passes");
 }
 
 #[test]
@@ -200,7 +226,7 @@ fn rejects_releasing_a_produced_box_anchor_before_its_optional_guard_ends() {
             block
                 .instructions
                 .iter()
-                .any(|instruction| matches!(instruction, MirInstruction::EndOptionalView(_)))
+                .any(|instruction| matches!(instruction, MirInstruction::EndOptionalBoxView(_)))
                 && block.instructions.iter().any(|instruction| {
                     matches!(
                         instruction,
@@ -213,7 +239,7 @@ fn rejects_releasing_a_produced_box_anchor_before_its_optional_guard_ends() {
     let end = block
         .instructions
         .iter()
-        .position(|instruction| matches!(instruction, MirInstruction::EndOptionalView(_)))
+        .position(|instruction| matches!(instruction, MirInstruction::EndOptionalBoxView(_)))
         .unwrap();
     let release = block
         .instructions
@@ -250,6 +276,23 @@ fn rejects_duplicate_exact_optional_box_descriptor_owners() {
 }
 
 #[test]
+fn rejects_inconsistent_optional_box_dynamic_descriptor_metadata() {
+    let mut program = lower_text(concat!(
+        "class Value { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var value: shared Value? = new Value?(Value());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    program.optional_box_types.entries_mut_for_test()[0].exact_dynamic_class = None;
+
+    assert!(has_error(
+        &program,
+        "inconsistent exact optional or object-view metadata"
+    ));
+}
+
+#[test]
 fn lowers_and_verifies_local_optional_box_owner_lifetimes() {
     let program = primitive_box_program();
     verify_mir(&program).expect("local optional-box owner MIR must verify");
@@ -274,7 +317,7 @@ fn lowers_and_verifies_local_optional_box_owner_lifetimes() {
     assert_eq!(
         protocol_dump,
         concat!(
-            "    OptionalBox box0 exact o0 depth 1 view none @39..43\n",
+            "    OptionalBox box0 exact o0 dynamic None depth 1 view none @39..43\n",
             "          shared-allocate f0:s2 exact optional-box box0 payload=o0 from optional-box complete-with OptionalInitialize @46..49\n",
             "          optional-initialize shared-allocation-payload(f0:s2) from present f0:v0 @55..57\n",
             "          shared-publish f0:s2 @46..58\n",
@@ -349,13 +392,18 @@ fn preserves_exact_and_polymorphic_optional_box_targets() {
 
     let targets = program.optional_box_types.iter().collect::<Vec<_>>();
     assert!(targets.iter().any(|target| target.exact_optional.is_some()
-        && matches!(target.object_view, Some(MirViewTarget::Class(_)))));
+        && matches!(target.object_view, Some(MirViewTarget::Class(_)))
+        && target.exact_dynamic_class.is_some()));
     assert!(targets.iter().any(|target| target.exact_optional.is_none()
         && matches!(target.object_view, Some(MirViewTarget::Interface(_)))));
     assert!(targets
         .iter()
         .any(|target| target.exact_optional.is_none()
             && target.object_view == Some(MirViewTarget::Obj)));
+    assert!(targets
+        .iter()
+        .filter(|target| target.exact_optional.is_none())
+        .all(|target| target.exact_dynamic_class.is_none()));
 
     let dump = dump_mir(&program);
     assert_eq!(dump, dump_mir(&program));

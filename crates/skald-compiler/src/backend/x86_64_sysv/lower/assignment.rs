@@ -44,6 +44,21 @@ impl InstructionSelector<'_, '_> {
         if let MirRvalueKind::OptionalPresence { source, kind } = &assignment.rvalue.kind {
             return self.select_optional_presence(source, *kind, assignment.result);
         }
+        if let MirRvalueKind::OptionalBoxPresence {
+            owner,
+            target,
+            layer,
+            kind,
+        } = &assignment.rvalue.kind
+        {
+            return self.select_optional_box_presence(
+                *owner,
+                *target,
+                *layer,
+                *kind,
+                assignment.result,
+            );
+        }
         if let MirRvalueKind::ArrayLength { source, .. } = &assignment.rvalue.kind {
             return self.select_array_length(source, assignment.result);
         }
@@ -111,6 +126,9 @@ impl InstructionSelector<'_, '_> {
             }
             MirRvalueKind::OptionalPresence { .. } => {
                 unreachable!("optional presence tests are selected before ordinary rvalues")
+            }
+            MirRvalueKind::OptionalBoxPresence { .. } => {
+                unreachable!("optional-box presence tests are selected before ordinary rvalues")
             }
             MirRvalueKind::ArrayLength { .. } => {
                 unreachable!("array length is selected before ordinary rvalues")

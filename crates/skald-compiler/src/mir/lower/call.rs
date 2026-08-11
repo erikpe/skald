@@ -3,8 +3,8 @@
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirExpression, HirInterfaceCallTarget, HirInterfaceReceiver,
-        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource,
-        HirViewTarget,
+        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirSharedPlace,
+        HirSharedSource, HirViewSource, HirViewTarget,
     },
     identity::{FunctionId, MethodId},
 };
@@ -623,6 +623,21 @@ impl BodyLowerer<'_> {
             } => projections
                 .iter()
                 .fold(self.begin_optional_view(optional), lower_projection),
+            HirViewSource::OptionalBoxPayload {
+                view: optional_box,
+                projections,
+            } => {
+                let owner = match &optional_box.source {
+                    HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
+                        self.storage_for_binding(*binding)
+                    }
+                    source => self.new_shared_anchor(source, optional_box.span),
+                };
+                projections.iter().fold(
+                    self.begin_optional_box_view(owner, optional_box.box_target, optional_box.span),
+                    lower_projection,
+                )
+            }
         };
         let produced_complete = matches!(view.source, HirViewSource::Produced { .. })
             .then(|| MirPlace::base(source.base.expect_local_storage()));
@@ -637,6 +652,15 @@ impl BodyLowerer<'_> {
                     static_target: type_operations::lower_view_target(*target),
                     access: MirAliasAccess::Mutable,
                     exact_dynamic_class: shared_source.exact_dynamic_class(),
+                    span: view.span,
+                },
+                HirViewSource::OptionalBoxPayload {
+                    view: optional_box, ..
+                } => MirObjectOrigin::Shared {
+                    owner: source.base.expect_local_storage(),
+                    static_target: type_operations::lower_view_target(optional_box.target),
+                    access: type_operations::lower_access(optional_box.access),
+                    exact_dynamic_class: optional_box.source.exact_dynamic_class(),
                     span: view.span,
                 },
                 _ => self.lower_object_origin(&view.origin),

@@ -64,10 +64,10 @@ pub use optional::{
     MirAggregateOptionalAssign, MirAggregateOptionalCleanup, MirAggregateOptionalInitialize,
     MirAggregateOptionalPublish, MirAggregateOptionalSource, MirClassOptionalAssign,
     MirClassOptionalCleanup, MirClassOptionalInitialize, MirClassOptionalPublish,
-    MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize, MirOptionalSharedAssign,
-    MirOptionalSharedCleanup, MirOptionalSharedInitialize, MirOptionalSharedSource,
-    MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin, MirOptionalViewEnd,
-    MirPresenceTestKind,
+    MirClassOptionalSource, MirOptionalAssign, MirOptionalBoxViewBegin, MirOptionalBoxViewEnd,
+    MirOptionalInitialize, MirOptionalSharedAssign, MirOptionalSharedCleanup,
+    MirOptionalSharedInitialize, MirOptionalSharedSource, MirOptionalSharedUnwrap,
+    MirOptionalSource, MirOptionalViewBegin, MirOptionalViewEnd, MirPresenceTestKind,
 };
 pub use optional_box_type::{MirOptionalBoxType, MirOptionalBoxTypeTable};
 pub use optional_type::{

@@ -346,6 +346,31 @@ impl FrameLayout {
                 i32::try_from(SHARED_HEADER_SIZE)
                     .map_err(|_| place_address_error(function.callable()))?,
             ),
+            MirPlaceBase::OptionalBoxPayload { target, .. } => (
+                FramePlaceBase::SharedPointee {
+                    home: self.storage(storage_id),
+                },
+                {
+                    let payload_offset = data_layout.optional_object_box_payload_offset(target)?;
+                    let offset =
+                        SHARED_HEADER_SIZE
+                            .checked_add(payload_offset)
+                            .ok_or_else(|| {
+                                BackendError::new(
+                                    crate::backend::Target::X86_64SysV,
+                                    Some(function.callable()),
+                                    format!("optional-box {target} payload address overflows"),
+                                )
+                            })?;
+                    i32::try_from(offset).map_err(|_| {
+                        BackendError::new(
+                            crate::backend::Target::X86_64SysV,
+                            Some(function.callable()),
+                            format!("optional-box {target} payload offset {offset} exceeds x86-64 displacement limits"),
+                        )
+                    })?
+                },
+            ),
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
             MirPlaceBase::StaticField(_) | MirPlaceBase::StaticLifecycleDestination(_) => {
                 unreachable!("static roots return before frame storage selection")
@@ -354,6 +379,11 @@ impl FrameLayout {
         let ty = match (place.base, storage.ty) {
             (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => program
                 .shared_target_type(target)
+                .ok_or_else(|| place_address_error(function.callable()))?,
+            (MirPlaceBase::OptionalBoxPayload { target, .. }, _) => program
+                .optional_box_type(target)
+                .and_then(|metadata| metadata.object_view)
+                .map(crate::mir::MirViewTarget::ty)
                 .ok_or_else(|| place_address_error(function.callable()))?,
             _ => storage.ty,
         };
@@ -438,10 +468,22 @@ fn projected_place(
                 unreachable!("array element addresses are selected by array lowering")
             }
         };
-        let offset = i32::try_from(offset).map_err(|_| place_address_error(function.callable()))?;
-        displacement = displacement
-            .checked_add(offset)
-            .ok_or_else(|| place_address_error(function.callable()))?;
+        let offset = i32::try_from(offset).map_err(|_| {
+            BackendError::new(
+                crate::backend::Target::X86_64SysV,
+                Some(function.callable()),
+                format!(
+                    "place projection {projection:?} offset exceeds x86-64 displacement limits"
+                ),
+            )
+        })?;
+        displacement = displacement.checked_add(offset).ok_or_else(|| {
+            BackendError::new(
+                crate::backend::Target::X86_64SysV,
+                Some(function.callable()),
+                format!("place projection {projection:?} address overflows x86-64 displacement"),
+            )
+        })?;
         ty = projected_ty;
     }
     Ok((displacement, ty))

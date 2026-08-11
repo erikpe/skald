@@ -249,6 +249,15 @@ impl CallableResolver<'_, '_> {
                 ),
             }),
             ResolvedExpression::Unwrap(unwrap) => {
+                if let Some(target) = self.resolved_optional_box_object_leaf(unwrap) {
+                    return Some(match target {
+                        ResolvedObjectTarget::Class(class) => ResolvedTypeKind::Class(class),
+                        ResolvedObjectTarget::Interface(interface) => {
+                            ResolvedTypeKind::Interface(interface)
+                        }
+                        ResolvedObjectTarget::Obj => ResolvedTypeKind::Obj,
+                    });
+                }
                 match self.resolved_expression_type(&unwrap.source)? {
                     ResolvedTypeKind::Optional(optional) => self
                         .type_interner
@@ -785,6 +794,23 @@ impl CallableResolver<'_, '_> {
                 }
                 Some((
                     ResolvedInterfaceReceiver::Cast(Box::new(cast)),
+                    interface,
+                    span,
+                ))
+            }
+            syntax::Expression::Unwrap(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let ResolvedExpression::Unwrap(unwrap) = resolved else {
+                    unreachable!("unwrap syntax must retain its resolved node")
+                };
+                let Some(ResolvedObjectTarget::Interface(interface)) =
+                    self.resolved_optional_box_object_leaf(&unwrap)
+                else {
+                    return None;
+                };
+                let span = unwrap.span;
+                Some((
+                    ResolvedInterfaceReceiver::OptionalBoxPayload(Box::new(unwrap)),
                     interface,
                     span,
                 ))

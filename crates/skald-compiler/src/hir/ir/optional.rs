@@ -23,6 +23,30 @@ pub struct HirOptionalBoxPointee {
     pub span: Span,
 }
 
+/// A checked non-owning object view through an immutable optional-box owner.
+///
+/// Unlike an exact optional place, this retains the static box view separately
+/// from the allocation's runtime descriptor. It therefore also represents
+/// interface and `Obj` views, which have no owning inline optional type.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalBoxObjectView {
+    pub source: HirSharedSource,
+    pub box_target: crate::identity::OptionalBoxTypeId,
+    pub target: super::HirViewTarget,
+    pub access: HirAccess,
+    pub span: Span,
+}
+
+/// An outer-layer presence observation that does not require an owning inline
+/// optional identity for interface or `Obj` box views.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalBoxPresence {
+    pub source: HirSharedSource,
+    pub box_target: crate::identity::OptionalBoxTypeId,
+    pub kind: HirPresenceTestKind,
+    pub span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirOptionalPlace {
     pub storage: HirOptionalStorage,

@@ -113,6 +113,13 @@ pub enum MirTerminator {
         overflow_target: BlockId,
         span: Span,
     },
+    BeginOptionalBoxView {
+        begin: super::optional::MirOptionalBoxViewBegin,
+        success_target: BlockId,
+        absent_target: BlockId,
+        overflow_target: BlockId,
+        span: Span,
+    },
     CheckOptionalMutation {
         source: super::value::MirPlace,
         success_target: BlockId,
@@ -219,6 +226,7 @@ impl MirTerminator {
             | Self::OptionalUnwrap { span, .. }
             | Self::OptionalSharedUnwrap { span, .. }
             | Self::BeginOptionalView { span, .. }
+            | Self::BeginOptionalBoxView { span, .. }
             | Self::CheckOptionalMutation { span, .. }
             | Self::ArrayPositionCheck { span, .. }
             | Self::ArrayOperationCheck { span, .. }
@@ -277,6 +285,16 @@ impl MirTerminator {
                 ..
             } => [Some(*success_target), Some(*failure_target), None],
             Self::BeginOptionalView {
+                success_target,
+                absent_target,
+                overflow_target,
+                ..
+            } => [
+                Some(*success_target),
+                Some(*absent_target),
+                Some(*overflow_target),
+            ],
+            Self::BeginOptionalBoxView {
                 success_target,
                 absent_target,
                 overflow_target,

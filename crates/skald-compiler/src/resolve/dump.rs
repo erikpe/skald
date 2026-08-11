@@ -1159,6 +1159,9 @@ impl<'types> ResolvedDumper<'types> {
                     }
                     ResolvedInterfaceReceiver::Cast(_) => "checked-cast".to_owned(),
                     ResolvedInterfaceReceiver::Dereference(_) => "dereference".to_owned(),
+                    ResolvedInterfaceReceiver::OptionalBoxPayload(_) => {
+                        "optional-box payload".to_owned()
+                    }
                 };
                 self.line(
                     &format!(

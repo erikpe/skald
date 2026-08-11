@@ -78,6 +78,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::TypeTest(_)
         | HirExpressionKind::PresenceTest { .. }
+        | HirExpressionKind::OptionalBoxPresence(_)
         | HirExpressionKind::Unwrap(_)
         | HirExpressionKind::NestedOptionalUnwrap(_) => {}
         HirExpressionKind::Binding(_)

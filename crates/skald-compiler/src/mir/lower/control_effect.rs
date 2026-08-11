@@ -68,6 +68,9 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         HirExpressionKind::PresenceTest { source, .. } => {
             optional_operand_contains_control_effect(source)
         }
+        HirExpressionKind::OptionalBoxPresence(presence) => {
+            matches!(presence.source, crate::hir::HirSharedSource::Produced(_))
+        }
         HirExpressionKind::Binding(_)
         | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::I64(_)
@@ -260,7 +263,7 @@ fn view_source_contains_control_effect(source: &HirViewSource) -> bool {
         HirViewSource::AnchoredShared { source, .. } => {
             shared_source_contains_control_effect(source)
         }
-        HirViewSource::OptionalPayload { .. } => true,
+        HirViewSource::OptionalPayload { .. } | HirViewSource::OptionalBoxPayload { .. } => true,
     }
 }
 

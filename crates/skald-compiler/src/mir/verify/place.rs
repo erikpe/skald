@@ -181,6 +181,25 @@ impl Verifier<'_> {
                 );
                 return None;
             }
+            (MirPlaceBase::OptionalBoxPayload { target, .. }, kind)
+                if matches!(
+                    kind,
+                    MirStorageKind::Local
+                        | MirStorageKind::Parameter
+                        | MirStorageKind::SharedAnchor
+                ) && storage.ty
+                    == MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(target)) =>
+            {
+                MirAliasAccess::Mutable
+            }
+            (MirPlaceBase::OptionalBoxPayload { .. }, _) => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "optional-box payload requires a stable or call-anchor owner with the matching static view",
+                );
+                return None;
+            }
             (MirPlaceBase::SharedAllocationPayload(_), MirStorageKind::SharedAllocation)
                 if matches!(storage.ty, MirType::Class(_) | MirType::Optional(_)) =>
             {
@@ -212,6 +231,21 @@ impl Verifier<'_> {
                     return None;
                 };
                 ty
+            }
+            (MirPlaceBase::OptionalBoxPayload { target, .. }, _) => {
+                let Some(view) = self
+                    .program
+                    .optional_box_type(target)
+                    .and_then(|metadata| metadata.object_view)
+                else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional-box payload base has no object-view metadata",
+                    );
+                    return None;
+                };
+                view.ty()
             }
             _ => storage.ty,
         };

@@ -72,12 +72,13 @@ pub fn dump_hir(program: &HirProgram) -> String {
             dumper.indented(|dumper| {
                 for target in program.optional_box_types.iter() {
                     dumper.raw_line(&format!(
-                        "OptionalBoxType {} exact={} depth={} view={:?}",
+                        "OptionalBoxType {} exact={} dynamic={:?} depth={} view={:?}",
                         target.id,
                         target
                             .exact_optional
                             .map(|optional| optional.to_string())
                             .unwrap_or_else(|| "view-only".to_owned()),
+                        target.exact_dynamic_class,
                         target.optional_depth,
                         target.object_view,
                     ));
@@ -1291,6 +1292,16 @@ impl<'types> HirDumper<'types> {
                 self.typed_line("CopiedArraySlice", expression);
                 self.indented(|dumper| dumper.array_slice(slice));
             }
+            HirExpressionKind::OptionalBoxPresence(presence) => {
+                self.typed_line(
+                    &format!(
+                        "OptionalBoxPresence {:?} target={}",
+                        presence.kind, presence.box_target
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| dumper.shared_source(&presence.source));
+            }
         }
     }
 
@@ -2298,6 +2309,30 @@ impl<'types> HirDumper<'types> {
                     );
                     dumper.indented(|dumper| {
                         dumper.optional_operand(&view.source);
+                        for projection in projections {
+                            match projection {
+                                crate::object_path::ObjectProjection::Base(base) => {
+                                    dumper.heading(&format!("BaseProjection {base}"));
+                                }
+                                crate::object_path::ObjectProjection::Field(field) => {
+                                    dumper.heading(&format!("FieldProjection {field}"));
+                                }
+                            }
+                        }
+                    });
+                }
+                HirViewSource::OptionalBoxPayload { view, projections } => {
+                    dumper.line(
+                        &format!(
+                            "CheckedOptionalBoxPayload {} -> {} {}",
+                            view.box_target,
+                            view_target_name(view.target),
+                            access_name(view.access)
+                        ),
+                        view.span,
+                    );
+                    dumper.indented(|dumper| {
+                        dumper.shared_source(&view.source);
                         for projection in projections {
                             match projection {
                                 crate::object_path::ObjectProjection::Base(base) => {

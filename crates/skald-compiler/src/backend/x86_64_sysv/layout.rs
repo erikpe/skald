@@ -180,6 +180,13 @@ pub(super) struct DataLayout {
     arrays: Vec<ArrayLayout>,
     optionals: Vec<OptionalLayout>,
     exact_optional_boxes: Vec<Option<SharedAllocationLayout>>,
+    optional_object_boxes: Vec<Option<OptionalObjectBoxLayout>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct OptionalObjectBoxLayout {
+    layer_offsets: Vec<usize>,
+    payload_offset: usize,
 }
 
 impl DataLayout {
@@ -256,6 +263,36 @@ impl DataLayout {
                 layout_error(format!("optional-box {target} has no exact target layout"))
             })
     }
+
+    pub(super) fn optional_object_box_layer_offset(
+        &self,
+        target: OptionalBoxTypeId,
+        layer: usize,
+    ) -> Result<usize, BackendError> {
+        self.optional_object_boxes
+            .get(target.index())
+            .and_then(Option::as_ref)
+            .and_then(|layout| layout.layer_offsets.get(layer))
+            .copied()
+            .ok_or_else(|| {
+                layout_error(format!("optional-box {target} has no object layer {layer}"))
+            })
+    }
+
+    pub(super) fn optional_object_box_payload_offset(
+        &self,
+        target: OptionalBoxTypeId,
+    ) -> Result<usize, BackendError> {
+        self.optional_object_boxes
+            .get(target.index())
+            .and_then(Option::as_ref)
+            .map(|layout| layout.payload_offset)
+            .ok_or_else(|| {
+                layout_error(format!(
+                    "optional-box {target} has no object payload layout"
+                ))
+            })
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -309,6 +346,7 @@ impl<'mir> LayoutBuilder<'mir> {
                     .map(Some)
             })
             .collect::<Result<Vec<_>, _>>()?;
+        let optional_object_boxes = self.compute_optional_object_box_layouts()?;
         let arrays = self
             .program
             .array_types
@@ -342,6 +380,108 @@ impl<'mir> LayoutBuilder<'mir> {
                 .map(|layout| layout.expect("every optional identity was laid out"))
                 .collect(),
             exact_optional_boxes,
+            optional_object_boxes,
+        })
+    }
+
+    fn compute_optional_object_box_layouts(
+        &self,
+    ) -> Result<Vec<Option<OptionalObjectBoxLayout>>, BackendError> {
+        let exact = self
+            .program
+            .optional_box_types
+            .iter()
+            .map(|box_type| {
+                let (Some(optional), Some(_class)) =
+                    (box_type.exact_optional, box_type.exact_dynamic_class)
+                else {
+                    return Ok(None);
+                };
+                self.object_box_layout(optional, box_type.optional_depth)
+                    .map(Some)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.program
+            .optional_box_types
+            .iter()
+            .map(|box_type| {
+                if let Some(layout) = exact[box_type.id.index()].clone() {
+                    return Ok(Some(layout));
+                }
+                let Some(target) = box_type.object_view else {
+                    return Ok(None);
+                };
+                let mut candidates = self
+                    .program
+                    .optional_box_types
+                    .iter()
+                    .filter(|candidate| {
+                        candidate.optional_depth == box_type.optional_depth
+                            && candidate
+                                .exact_dynamic_class
+                                .is_some_and(|class| match target {
+                                    crate::mir::MirViewTarget::Class(base) => {
+                                        class == base || self.program.is_ancestor(base, class)
+                                    }
+                                    crate::mir::MirViewTarget::Interface(interface) => {
+                                        self.program.conformance(class, interface).is_some()
+                                    }
+                                    crate::mir::MirViewTarget::Obj => true,
+                                })
+                    })
+                    .filter_map(|candidate| exact[candidate.id.index()].as_ref());
+                let Some(first) = candidates.next().cloned() else {
+                    return Err(layout_error(format!(
+                        "optional-box {} object view has no exact descriptor layout",
+                        box_type.id
+                    )));
+                };
+                if candidates.any(|candidate| candidate != &first) {
+                    return Err(layout_error(format!(
+                        "optional-box {} object view has incompatible exact layouts",
+                        box_type.id
+                    )));
+                }
+                Ok(Some(first))
+            })
+            .collect()
+    }
+
+    fn object_box_layout(
+        &self,
+        mut optional: OptionalTypeId,
+        depth: usize,
+    ) -> Result<OptionalObjectBoxLayout, BackendError> {
+        let mut layer_offsets = Vec::with_capacity(depth);
+        let mut offset = 0usize;
+        for layer in 0..depth {
+            layer_offsets.push(offset);
+            let layout = self
+                .optional_layouts
+                .get(optional.index())
+                .copied()
+                .flatten()
+                .ok_or_else(|| layout_error(format!("optional {optional} has no target layout")))?;
+            offset = offset
+                .checked_add(layout.payload_offset())
+                .ok_or_else(|| layout_error("optional object-box payload offset overflow"))?;
+            let metadata = self
+                .program
+                .optional_type(optional)
+                .ok_or_else(|| layout_error(format!("optional {optional} is not declared")))?;
+            if layer + 1 < depth {
+                let crate::mir::MirOptionalStorage::Nested(nested) = metadata.storage else {
+                    return Err(layout_error(format!(
+                        "optional object-box {optional} has inconsistent nesting depth"
+                    )));
+                };
+                optional = nested;
+            }
+        }
+        Ok(OptionalObjectBoxLayout {
+            layer_offsets,
+            payload_offset: offset,
         })
     }
 
@@ -673,6 +813,7 @@ mod tests {
             arrays: vec![],
             optionals: vec![],
             exact_optional_boxes: vec![],
+            optional_object_boxes: vec![],
         };
         for ty in [MirType::I64, MirType::U64, MirType::F64] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(8, 8));

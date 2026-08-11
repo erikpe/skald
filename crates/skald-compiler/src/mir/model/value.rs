@@ -120,6 +120,16 @@ impl MirPlace {
         }
     }
 
+    pub fn optional_box_payload(
+        owner: StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+    ) -> Self {
+        Self {
+            base: MirPlaceBase::OptionalBoxPayload { owner, target },
+            projections: Vec::new(),
+        }
+    }
+
     pub fn static_field(field: StaticFieldId) -> Self {
         Self {
             base: MirPlaceBase::StaticField(field),
@@ -190,6 +200,11 @@ pub enum MirPlaceBase {
     SharedPointee(StorageId),
     /// The unpublished payload under construction in allocation storage.
     SharedAllocationPayload(StorageId),
+    /// The guarded object leaf of an immutable optional-box allocation.
+    OptionalBoxPayload {
+        owner: StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+    },
 }
 
 impl MirPlaceBase {
@@ -212,6 +227,7 @@ impl MirPlaceBase {
             | Self::ArrayAlias(storage)
             | Self::SharedPointee(storage)
             | Self::SharedAllocationPayload(storage) => Some(storage),
+            Self::OptionalBoxPayload { owner, .. } => Some(owner),
             Self::StaticField(_) | Self::StaticLifecycleDestination(_) => None,
         }
     }
@@ -307,6 +323,12 @@ pub enum MirRvalueKind {
     },
     OptionalPresence {
         source: MirPlace,
+        kind: super::optional::MirPresenceTestKind,
+    },
+    OptionalBoxPresence {
+        owner: StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+        layer: usize,
         kind: super::optional::MirPresenceTestKind,
     },
     ArrayLength {

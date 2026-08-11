@@ -71,6 +71,32 @@ impl Verifier<'_> {
                                 state.order.pop();
                             }
                         }
+                        MirInstruction::EndOptionalBoxView(end) => {
+                            let metadata = self
+                                .program
+                                .optional_box_type(end.box_target)
+                                .and_then(|metadata| metadata.object_view);
+                            let expected = metadata.map(|target| {
+                                (
+                                    MirPlace::optional_box_payload(end.owner, end.box_target),
+                                    target.ty(),
+                                )
+                            });
+                            let ordered = state.order.last() == Some(&end.guard);
+                            if !ordered
+                                || expected.is_none()
+                                || state.active.remove(&end.guard) != expected
+                            {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "optional-box view must end its matching active guard in reverse begin order",
+                                );
+                            }
+                            if ordered {
+                                state.order.pop();
+                            }
+                        }
                         MirInstruction::ClassOptionalAssign(assignment) => {
                             let self_copy = matches!(
                                 &assignment.source,
@@ -134,6 +160,10 @@ impl Verifier<'_> {
                                     source.base,
                                     crate::mir::MirPlaceBase::SharedPointee(owner)
                                         if owner == release.owner
+                                ) || matches!(
+                                    source.base,
+                                    crate::mir::MirPlaceBase::OptionalBoxPayload { owner, .. }
+                                        if owner == release.owner
                                 )
                             }) =>
                         {
@@ -174,6 +204,68 @@ impl Verifier<'_> {
                                 function.callable(),
                                 block.id,
                                 "optional guard begins more than once",
+                            );
+                        } else {
+                            success.order.push(begin.guard);
+                        }
+                        merge_optional_guard_state(
+                            self,
+                            function,
+                            *success_target,
+                            &success,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                        for target in [*absent_target, *overflow_target] {
+                            merge_optional_guard_state(
+                                self,
+                                function,
+                                target,
+                                &state,
+                                &mut flow,
+                                &mut reported_joins,
+                            );
+                        }
+                    }
+                    Some(MirTerminator::BeginOptionalBoxView {
+                        begin,
+                        success_target,
+                        absent_target,
+                        overflow_target,
+                        ..
+                    }) => {
+                        let source = MirPlace::optional_box_payload(begin.owner, begin.box_target);
+                        let payload = self
+                            .program
+                            .optional_box_type(begin.box_target)
+                            .and_then(|metadata| metadata.object_view)
+                            .map(crate::mir::MirViewTarget::ty);
+                        let prior_layers = state
+                            .active
+                            .values()
+                            .filter(|(active, _)| active == &source)
+                            .count();
+                        if prior_layers != begin.layer {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional-box guards must begin in outer-to-inner layer order",
+                            );
+                        }
+                        let mut success = state.clone();
+                        if payload.is_none()
+                            || success
+                                .active
+                                .insert(
+                                    begin.guard,
+                                    (source, payload.unwrap_or(crate::mir::MirType::Obj)),
+                                )
+                                .is_some()
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional-box guard begins more than once",
                             );
                         } else {
                             success.order.push(begin.guard);
@@ -331,6 +423,11 @@ impl Verifier<'_> {
             MirInstruction::SharedRelease(release)
                 if state.active.values().any(|(source, _)| {
                     matches!(source.base, crate::mir::MirPlaceBase::SharedPointee(owner) if owner == release.owner)
+                        || matches!(
+                            source.base,
+                            crate::mir::MirPlaceBase::OptionalBoxPayload { owner, .. }
+                                if owner == release.owner
+                        )
                 }) =>
             {
                 self.block_error(
@@ -373,6 +470,25 @@ impl Verifier<'_> {
         place: &MirPlace,
         state: &OptionalGuardState,
     ) {
+        if let crate::mir::MirPlaceBase::OptionalBoxPayload { target, .. } = place.base {
+            let required = self
+                .program
+                .optional_box_type(target)
+                .map(|metadata| metadata.optional_depth)
+                .unwrap_or(usize::MAX);
+            let active = state
+                .active
+                .values()
+                .filter(|(source, _)| source.base == place.base)
+                .count();
+            if active != required {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "optional-box object payload is used without every matching active guard",
+                );
+            }
+        }
         let mut root = MirPlace {
             base: place.base,
             projections: Vec::new(),

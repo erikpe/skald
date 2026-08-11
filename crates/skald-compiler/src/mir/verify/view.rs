@@ -193,17 +193,26 @@ impl Verifier<'_> {
             );
             return None;
         };
-        let valid_owner = matches!(
+        let stable_owner = matches!(
             storage.kind,
             MirStorageKind::Local | MirStorageKind::Parameter | MirStorageKind::SharedAnchor
-        ) && storage.ty
-            == MirType::Shared(match static_target {
-                MirViewTarget::Class(class) => super::super::model::MirSharedTarget::Class(class),
-                MirViewTarget::Interface(interface) => {
-                    super::super::model::MirSharedTarget::Interface(interface)
-                }
-                MirViewTarget::Obj => super::super::model::MirSharedTarget::Obj,
-            });
+        );
+        let ordinary_target = match static_target {
+            MirViewTarget::Class(class) => super::super::model::MirSharedTarget::Class(class),
+            MirViewTarget::Interface(interface) => {
+                super::super::model::MirSharedTarget::Interface(interface)
+            }
+            MirViewTarget::Obj => super::super::model::MirSharedTarget::Obj,
+        };
+        let valid_owner = stable_owner
+            && match storage.ty {
+                MirType::Shared(actual) if actual == ordinary_target => true,
+                MirType::Shared(super::super::model::MirSharedTarget::OptionalBox(target)) => self
+                    .program
+                    .optional_box_type(target)
+                    .is_some_and(|metadata| metadata.object_view == Some(static_target)),
+                _ => false,
+            };
         if !valid_owner {
             self.block_error(
                 site.function.callable(),
@@ -214,7 +223,18 @@ impl Verifier<'_> {
                 ),
             );
         }
-        if site.subject.base != MirPlaceBase::SharedPointee(owner) {
+        let valid_subject = site.subject.base == MirPlaceBase::SharedPointee(owner)
+            || matches!(
+                site.subject.base,
+                MirPlaceBase::OptionalBoxPayload { owner: subject_owner, target }
+                    if subject_owner == owner
+                        && matches!(
+                            storage.ty,
+                            MirType::Shared(super::super::model::MirSharedTarget::OptionalBox(owner_target))
+                                if owner_target == target
+                        )
+            );
+        if !valid_subject {
             self.block_error(
                 site.function.callable(),
                 site.block.id,

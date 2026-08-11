@@ -12,6 +12,7 @@ pub(super) fn lower(types: &HirOptionalBoxTypeTable) -> MirOptionalBoxTypeTable 
             .map(|box_type| MirOptionalBoxType {
                 id: box_type.id,
                 exact_optional: box_type.exact_optional,
+                exact_dynamic_class: box_type.exact_dynamic_class,
                 optional_depth: box_type.optional_depth,
                 object_view: box_type.object_view.map(lower_view),
                 span: box_type.span,

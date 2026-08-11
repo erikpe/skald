@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{OptionalBoxTypeId, OptionalTypeId},
+    identity::{ClassId, OptionalBoxTypeId, OptionalTypeId},
     source::Span,
 };
 
@@ -15,6 +15,10 @@ pub struct MirOptionalBoxType {
     /// The physical wrapper type for constructible exact targets. Interface
     /// and `Obj` entries are owner views and deliberately have no inline type.
     pub exact_optional: Option<OptionalTypeId>,
+    /// Exact class whose dispatch entries are retained when this constructible
+    /// identity supplies an allocation descriptor. Interface and `Obj`
+    /// view-only identities have no descriptor of their own.
+    pub exact_dynamic_class: Option<ClassId>,
     pub optional_depth: usize,
     pub object_view: Option<MirViewTarget>,
     pub span: Span,

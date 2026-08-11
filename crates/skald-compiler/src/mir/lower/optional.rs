@@ -749,6 +749,33 @@ impl BodyLowerer<'_> {
         )
     }
 
+    pub(super) fn lower_optional_box_presence(
+        &mut self,
+        expression: &crate::hir::HirExpression,
+        presence: &crate::hir::HirOptionalBoxPresence,
+    ) -> crate::mir::ValueId {
+        let owner = match &presence.source {
+            crate::hir::HirSharedSource::Place(crate::hir::HirSharedPlace::Binding {
+                binding,
+                ..
+            }) => self.storage_for_binding(*binding),
+            source => self.new_shared_anchor(source, presence.span),
+        };
+        self.assign(
+            MirRvalueKind::OptionalBoxPresence {
+                owner,
+                target: presence.box_target,
+                layer: 0,
+                kind: match presence.kind {
+                    HirPresenceTestKind::Some => MirPresenceTestKind::Some,
+                    HirPresenceTestKind::None => MirPresenceTestKind::None,
+                },
+            },
+            MirType::Bool,
+            expression.span,
+        )
+    }
+
     pub(super) fn lower_optional_unwrap(
         &mut self,
         expression: &crate::hir::HirExpression,
@@ -1143,7 +1170,7 @@ impl BodyLowerer<'_> {
             .select_block(success_target)
             .expect("allocated optional-view success block must be selectable");
         self.active_optional_guards
-            .push(super::ActiveOptionalGuard {
+            .push(super::ActiveOptionalGuard::Inline {
                 guard,
                 source: source.clone(),
                 optional,
@@ -1152,18 +1179,94 @@ impl BodyLowerer<'_> {
         source
     }
 
+    pub(super) fn begin_optional_box_view(
+        &mut self,
+        owner: StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+        span: crate::source::Span,
+    ) -> crate::mir::MirPlace {
+        let metadata = self
+            .input
+            .optional_box_types
+            .get(target)
+            .expect("checked optional-box view must name metadata");
+        for layer in 0..metadata.optional_depth {
+            let guard =
+                crate::mir::OptionalGuardId::new(self.input.callable, self.next_optional_guard);
+            self.next_optional_guard += 1;
+            let success_target = self.body.allocate_block(span);
+            let absent_target = self.body.allocate_block(span);
+            let overflow_target = self.body.allocate_block(span);
+            self.terminate(MirTerminator::BeginOptionalBoxView {
+                begin: crate::mir::MirOptionalBoxViewBegin {
+                    box_target: target,
+                    layer,
+                    guard,
+                    owner,
+                    span,
+                },
+                success_target,
+                absent_target,
+                overflow_target,
+                span,
+            });
+            self.body
+                .select_block(absent_target)
+                .expect("allocated optional-box absence block must be selectable");
+            self.terminate(MirTerminator::Terminate {
+                reason: MirTerminationReason::OptionalAccessFailure,
+                span,
+            });
+            self.body
+                .select_block(overflow_target)
+                .expect("allocated optional-box overflow block must be selectable");
+            self.terminate(MirTerminator::Terminate {
+                reason: MirTerminationReason::OptionalGuardOverflow,
+                span,
+            });
+            self.body
+                .select_block(success_target)
+                .expect("allocated optional-box success block must be selectable");
+            self.active_optional_guards
+                .push(super::ActiveOptionalGuard::Box {
+                    guard,
+                    owner,
+                    target,
+                    layer,
+                });
+        }
+        crate::mir::MirPlace::optional_box_payload(owner, target)
+    }
+
     pub(super) fn end_optional_views_from(&mut self, mark: usize, span: crate::source::Span) {
         let guards: Vec<_> = self.active_optional_guards.drain(mark..).rev().collect();
         for guard in guards {
-            self.emit(MirInstruction::EndOptionalView(
-                crate::mir::MirOptionalViewEnd {
-                    optional: guard.optional,
-                    guard: guard.guard,
-                    source: guard.source,
-                    payload: guard.payload,
+            self.emit(match guard {
+                super::ActiveOptionalGuard::Inline {
+                    guard,
+                    source,
+                    optional,
+                    payload,
+                } => MirInstruction::EndOptionalView(crate::mir::MirOptionalViewEnd {
+                    optional,
+                    guard,
+                    source,
+                    payload,
                     span,
-                },
-            ));
+                }),
+                super::ActiveOptionalGuard::Box {
+                    guard,
+                    owner,
+                    target,
+                    layer,
+                } => MirInstruction::EndOptionalBoxView(crate::mir::MirOptionalBoxViewEnd {
+                    box_target: target,
+                    layer,
+                    guard,
+                    owner,
+                    span,
+                }),
+            });
         }
     }
     pub(super) fn new_optional_storage(

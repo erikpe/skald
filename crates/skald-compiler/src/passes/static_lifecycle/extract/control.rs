@@ -89,6 +89,7 @@ impl Extractor<'_> {
                 StaticAccessKind::Borrow,
                 span,
             ),
+            MirTerminator::BeginOptionalBoxView { .. } => {}
         }
     }
 

@@ -2,7 +2,10 @@
 
 use crate::{
     backend::BackendError,
-    mir::{MirOptionalViewEnd, MirPlace, MirPresenceTestKind, MirTerminator, MirType, ValueId},
+    mir::{
+        MirOptionalBoxViewBegin, MirOptionalBoxViewEnd, MirOptionalViewEnd, MirPlace,
+        MirPresenceTestKind, MirTerminator, MirType, ValueId,
+    },
 };
 
 use super::super::{
@@ -33,6 +36,40 @@ impl InstructionSelector<'_, '_> {
         self.output.push(Instruction::Test(Register::Rax));
         let matched = optional_label(self.program, result, "matched");
         let finished = optional_label(self.program, result, "finished");
+        self.output.push(match kind {
+            MirPresenceTestKind::Some => Instruction::JumpIfNotZero(matched.clone()),
+            MirPresenceTestKind::None => Instruction::JumpIfEqual(matched.clone()),
+        });
+        self.output.push(Instruction::Jump(finished.clone()));
+        self.output.push(Instruction::Label(matched));
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::Rax,
+        });
+        value::store_canonical_rax(MirType::Bool, destination, self.output);
+        self.output.push(Instruction::Label(finished));
+        Ok(())
+    }
+
+    pub(in crate::backend::x86_64_sysv::lower) fn select_optional_box_presence(
+        &mut self,
+        owner: crate::mir::StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+        layer: usize,
+        kind: MirPresenceTestKind,
+        result: ValueId,
+    ) -> Result<(), BackendError> {
+        let destination = value::frame_value(self.frame, result);
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 0,
+            destination: Register::Rax,
+        });
+        value::store_canonical_rax(MirType::Bool, destination, self.output);
+
+        self.load_optional_box_state_parts(owner, target, layer)?;
+        self.output.push(Instruction::Test(Register::Rax));
+        let matched = optional_label(self.program, result, "box_matched");
+        let finished = optional_label(self.program, result, "box_finished");
         self.output.push(match kind {
             MirPresenceTestKind::Some => Instruction::JumpIfNotZero(matched.clone()),
             MirPresenceTestKind::None => Instruction::JumpIfEqual(matched.clone()),
@@ -159,6 +196,46 @@ impl InstructionSelector<'_, '_> {
                 )));
                 Ok(true)
             }
+            MirTerminator::BeginOptionalBoxView {
+                begin,
+                success_target,
+                absent_target,
+                overflow_target,
+                ..
+            } => {
+                self.load_optional_box_state(begin)?;
+                self.output.push(Instruction::Test(Register::Rax));
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *absent_target,
+                )));
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: u64::MAX,
+                    destination: Register::Rcx,
+                });
+                self.output.push(Instruction::Compare {
+                    source: Register::Rcx,
+                    destination: Register::Rax,
+                });
+                self.output.push(Instruction::JumpIfEqual(block_label(
+                    self.program,
+                    *overflow_target,
+                )));
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rdx,
+                });
+                self.output.push(Instruction::Add {
+                    source: Register::Rdx,
+                    destination: Register::Rax,
+                });
+                self.store_optional_box_state(begin.owner, begin.box_target, begin.layer)?;
+                self.output.push(Instruction::Jump(block_label(
+                    self.program,
+                    *success_target,
+                )));
+                Ok(true)
+            }
             MirTerminator::CheckOptionalMutation {
                 source,
                 success_target,
@@ -216,6 +293,93 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax.into(),
         });
         value::store_rax(state, self.output);
+        Ok(())
+    }
+
+    pub(in crate::backend::x86_64_sysv::lower) fn select_optional_box_view_end(
+        &mut self,
+        end: &MirOptionalBoxViewEnd,
+    ) -> Result<(), BackendError> {
+        self.load_optional_box_state_parts(end.owner, end.box_target, end.layer)?;
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::Rdx,
+        });
+        self.output.push(Instruction::Subtract {
+            source: Register::Rdx,
+            destination: Register::Rax,
+        });
+        self.store_optional_box_state(end.owner, end.box_target, end.layer)
+    }
+
+    fn load_optional_box_state(
+        &mut self,
+        begin: &MirOptionalBoxViewBegin,
+    ) -> Result<(), BackendError> {
+        self.load_optional_box_state_parts(begin.owner, begin.box_target, begin.layer)
+    }
+
+    fn load_optional_box_state_parts(
+        &mut self,
+        owner: crate::mir::StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+        layer: usize,
+    ) -> Result<(), BackendError> {
+        value::load_rax(value::frame_storage(self.frame, owner), self.output);
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::R11.into(),
+        });
+        let offset = super::super::super::layout::SHARED_HEADER_SIZE
+            .checked_add(
+                self.data_layout
+                    .optional_object_box_layer_offset(target, layer)?,
+            )
+            .and_then(|offset| i32::try_from(offset).ok())
+            .ok_or_else(|| {
+                BackendError::new(
+                    crate::backend::Target::X86_64SysV,
+                    Some(self.function.callable()),
+                    "optional-box guard offset exceeds x86-64 displacement limits",
+                )
+            })?;
+        value::load_rax(value::memory(Register::R11, offset), self.output);
+        Ok(())
+    }
+
+    fn store_optional_box_state(
+        &mut self,
+        owner: crate::mir::StorageId,
+        target: crate::identity::OptionalBoxTypeId,
+        layer: usize,
+    ) -> Result<(), BackendError> {
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdx.into(),
+        });
+        value::load_rax(value::frame_storage(self.frame, owner), self.output);
+        let offset = super::super::super::layout::SHARED_HEADER_SIZE
+            .checked_add(
+                self.data_layout
+                    .optional_object_box_layer_offset(target, layer)?,
+            )
+            .and_then(|offset| i32::try_from(offset).ok())
+            .ok_or_else(|| {
+                BackendError::new(
+                    crate::backend::Target::X86_64SysV,
+                    Some(self.function.callable()),
+                    "optional-box guard offset exceeds x86-64 displacement limits",
+                )
+            })?;
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::R11.into(),
+        });
+        self.output.push(Instruction::Move {
+            source: Register::Rdx.into(),
+            destination: Register::Rax.into(),
+        });
+        value::store_rax(value::memory(Register::R11, offset), self.output);
         Ok(())
     }
 

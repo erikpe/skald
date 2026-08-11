@@ -125,6 +125,32 @@ impl CallableChecker<'_, '_> {
             span,
         } = receiver
         {
+            if let Some(view) = self.check_optional_box_object_view(unwrap) {
+                let access = view.access;
+                let optional_view = super::optional_box_view::into_object_view(
+                    view,
+                    crate::hir::HirViewTarget::Class(*class),
+                    access,
+                    projections.clone(),
+                );
+                let place = HirObjectPlace {
+                    path: crate::object_path::ObjectPath {
+                        root: BindingId::Receiver(self.callable),
+                        projections: Vec::new(),
+                        class: *class,
+                        span: *span,
+                    },
+                    access,
+                };
+                return Some(CheckedObjectReceiver {
+                    place,
+                    origin: (*optional_view.origin).clone(),
+                    checked_cast: None,
+                    shared_view: None,
+                    optional_view: Some(Box::new(optional_view)),
+                    array_element: None,
+                });
+            }
             let view = self.check_class_optional_view(unwrap)?;
             let access = view.access;
             let root_class = self.optional_operand_class(&view.source);

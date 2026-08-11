@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{OptionalBoxTypeId, OptionalTypeId},
+    identity::{ClassId, OptionalBoxTypeId, OptionalTypeId},
     source::Span,
 };
 
@@ -17,6 +17,10 @@ use super::HirViewTarget;
 pub struct HirOptionalBoxType {
     pub id: OptionalBoxTypeId,
     pub exact_optional: Option<OptionalTypeId>,
+    /// Exact dynamic class carried by this constructible object-box identity.
+    /// Interface and `Obj` view-only identities deliberately leave this empty;
+    /// a runtime owner viewed through any target keeps its allocation descriptor.
+    pub exact_dynamic_class: Option<ClassId>,
     pub optional_depth: usize,
     pub object_view: Option<HirViewTarget>,
     pub span: Span,

@@ -144,6 +144,28 @@ impl SharedOwnershipAnalysis<'_, '_> {
                         self.merge(block.id, *absent_target, &checked, &mut flow);
                         self.merge(block.id, *overflow_target, &checked, &mut flow);
                     }
+                    Some(MirTerminator::BeginOptionalBoxView {
+                        begin,
+                        success_target,
+                        absent_target,
+                        overflow_target,
+                        ..
+                    }) => {
+                        let mut checked = states.clone();
+                        checked.update_states(|state| {
+                            self.require_live_pointee(
+                                block.id,
+                                state,
+                                &crate::mir::MirPlace::optional_box_payload(
+                                    begin.owner,
+                                    begin.box_target,
+                                ),
+                            );
+                        });
+                        self.merge(block.id, *success_target, &checked, &mut flow);
+                        self.merge(block.id, *absent_target, &checked, &mut flow);
+                        self.merge(block.id, *overflow_target, &checked, &mut flow);
+                    }
                     Some(MirTerminator::CheckOptionalMutation {
                         success_target,
                         failure_target,

@@ -158,6 +158,14 @@ impl CallableChecker<'_, '_> {
                 let view = pointee.into_view(target, access);
                 (access, HirInterfaceReceiver::View(view))
             }
+            crate::resolve::ResolvedInterfaceReceiver::OptionalBoxPayload(unwrap) => {
+                let view = self.check_optional_box_object_view(unwrap)?;
+                let access = view.access;
+                let target = HirViewTarget::Interface(call.interface);
+                let view =
+                    super::optional_box_view::into_object_view(view, target, access, Vec::new());
+                (access, HirInterfaceReceiver::View(view))
+            }
         };
         if !access.permits(required_access) {
             self.diagnostics.push(

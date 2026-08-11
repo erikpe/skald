@@ -800,6 +800,20 @@ impl<'mir> Verifier<'mir> {
                 *absent_target,
                 *overflow_target,
             ),
+            Some(MirTerminator::BeginOptionalBoxView {
+                begin,
+                success_target,
+                absent_target,
+                overflow_target,
+                ..
+            }) => self.verify_optional_box_view_begin(
+                function,
+                block,
+                begin,
+                *success_target,
+                *absent_target,
+                *overflow_target,
+            ),
             Some(MirTerminator::CheckOptionalMutation {
                 source,
                 success_target,

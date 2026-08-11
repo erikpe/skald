@@ -493,6 +493,12 @@ pub enum HirViewSource {
         view: Box<super::HirCheckedOptionalView>,
         projections: Vec<crate::object_path::ObjectProjection>,
     },
+    /// A present object selected through an immutable polymorphic optional
+    /// box. MIR establishes the owner anchor before its presence guard.
+    OptionalBoxPayload {
+        view: Box<super::HirOptionalBoxObjectView>,
+        projections: Vec<crate::object_path::ObjectProjection>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

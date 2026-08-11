@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX5 are complete and BX6 is next.
+Status: in progress; BX0-BX6 are complete and BX7 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -108,7 +108,7 @@ outcome; it does not reopen those decisions.
 - [x] BX3 — Execute primitive optional boxes on x86-64
 - [x] BX4 — Execute exact lifecycle-bearing box targets
 - [x] BX5 — Add explicit immutable box-pointee access
-- [ ] BX6 — Execute polymorphic object-box views and dispatch
+- [x] BX6 — Execute polymorphic object-box views and dispatch
 - [ ] BX7 — Integrate box owners with stored and callable positions
 - [ ] BX8 — Integrate box owners with arrays and default elements
 - [ ] BX9 — Harden and publish shared optional boxes
@@ -345,27 +345,27 @@ published wrapper, and no implicit operation crosses the shared edge.
 **Purpose:** Restore the defining polymorphic behavior of shared objects while
 preserving one immutable exact optional allocation.
 
-- [ ] Enable class/base/interface/`Obj` optional-box owner up-views through the
+- [x] Enable class/base/interface/`Obj` optional-box owner up-views through the
       centralized compatibility relation for named and produced sources.
-- [ ] Retain exact dynamic class and optional target in allocation descriptors
+- [x] Retain exact dynamic class and optional target in allocation descriptors
       even while absent; validate deterministic class and interface membership
       evidence separately from the static owner view.
-- [ ] Make checked unwrap through a static box view produce the corresponding
+- [x] Make checked unwrap through a static box view produce the corresponding
       guarded object view with complete address, access, owner anchor, and
       dynamic metadata.
-- [ ] Execute base fields, virtual calls, interface calls, `Obj` consumers, type
+- [x] Execute base fields, virtual calls, interface calls, `Obj` consumers, type
       tests, static upcasts, possible checked downcasts, and impossible-relation
       diagnostics without allocation or wrapper copying.
-- [ ] Preserve `Implementation` dispatch through
+- [x] Preserve `Implementation` dispatch through
       `shared Interface? = new Implementation?(...)` and `Derived` dispatch
       through `shared Base? = new Derived?(...)`, both absent and present.
-- [ ] Support target-directed owning copy from a polymorphic object-box wrapper
+- [x] Support target-directed owning copy from a polymorphic object-box wrapper
       only into an eligible exact inline optional destination, with deliberate
       slicing; keep interface/`Obj` bare optional destinations invalid.
-- [ ] Verify static view, exact descriptor, complete-object origin, cast result
+- [x] Verify static view, exact descriptor, complete-object origin, cast result
       ownership, checked-view/guard/anchor order, and dispatch metadata through
       MIR and backend legality.
-- [ ] Prove whole-pointee assignment remains a compile-time error through both
+- [x] Prove whole-pointee assignment remains a compile-time error through both
       exact and up-viewed owners; add no dynamic checked store or failure.
 
 **Tests:** Class/base/interface/`Obj` owner transfers; absent and present

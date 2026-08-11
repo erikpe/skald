@@ -120,7 +120,7 @@ fn allocation_failure_uses_the_common_runtime_trace_boundary() {
 }
 
 #[test]
-fn lifecycle_payloads_and_independent_copy_are_native_while_polymorphic_views_remain_gated() {
+fn lifecycle_payloads_independent_copy_and_polymorphic_owner_views_are_native() {
     let aggregate = lower_source_to_final_mir(concat!(
         "class Value { init() {} copy(ref source: Value) {} }\n",
         "fn main() -> i64 {\n",
@@ -145,10 +145,145 @@ fn lifecycle_payloads_and_independent_copy_are_native_while_polymorphic_views_re
         "  return 0;\n",
         "}\n",
     ));
-    let error = emit_assembly(Target::X86_64SysV, &polymorphic).unwrap_err();
-    assert!(error
-        .message()
-        .contains("polymorphic shared optional-box views are not yet supported"));
+    let output = emit_assembly(Target::X86_64SysV, &polymorphic).unwrap();
+    assert!(
+        output.contains(".Lska_optional_box_0_metadata:"),
+        "{output}"
+    );
+}
+
+#[test]
+fn polymorphic_optional_boxes_dispatch_cast_and_unwrap_natively() {
+    let source = concat!(
+        "interface Marker { fn mark() -> i64; }\n",
+        "class Base {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn mark() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Derived extends Base implements Marker {\n",
+        "  init() { super(1); }\n",
+        "  override fn mark() -> i64 { return self.value + 6; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var exact: shared Derived?? = new Derived??(some(Derived()));\n",
+        "  var base: shared Base?? = exact;\n",
+        "  var marker: shared Marker?? = exact;\n",
+        "  var object: shared Obj?? = exact;\n",
+        "  var absent_exact: shared Derived?? = new Derived??();\n",
+        "  var absent_marker: shared Marker?? = absent_exact;\n",
+        "  if ((*marker) is none) { return 88; }\n",
+        "  if ((*object) is none) { return 89; }\n",
+        "  if ((*absent_marker) is some) { return 91; }\n",
+        "  if (!(((*object)!)! is Derived)) { return 90; }\n",
+        "  var down: shared Derived?? = (shared Derived) base;\n",
+        "  ((*base)!)!.value = 2;\n",
+        "  return ((*base)!)!.mark() + ((*marker)!)!.mark() + ((*down)!)!.mark();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    assert!(
+        output.contains(".Lska_optional_box_0_metadata:"),
+        "{output}"
+    );
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(24), "{output}");
+}
+
+#[test]
+fn absent_polymorphic_box_unwrap_reports_the_canonical_native_failure() {
+    let mut output = assembly(concat!(
+        "interface Marker { fn mark() -> i64; }\n",
+        "class Value implements Marker {\n",
+        "  init() {}\n",
+        "  fn mark() -> i64 { return 1; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var exact: shared Value? = new Value?();\n",
+        "  var marker: shared Marker? = exact;\n",
+        "  return (*marker)!.mark();\n",
+        "}\n",
+    ));
+    output.push_str(native_allocator());
+    output.push_str(native_panic_reporter());
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.status.code(), Some(1));
+    assert!(result.stdout.is_empty());
+    assert_eq!(result.stderr, b"panic: optional value is absent\n");
+}
+
+#[test]
+fn failed_polymorphic_optional_box_downcast_reports_the_canonical_failure() {
+    let mut output = assembly(concat!(
+        "class Base { init() {} }\n",
+        "class Left extends Base { init() { super(); } }\n",
+        "class Right extends Base { init() { super(); } }\n",
+        "fn main() -> i64 {\n",
+        "  var box: shared Base? = new Left?(Left());\n",
+        "  var down: shared Right? = (shared Right) box;\n",
+        "  if ((*down)! is Right) { return 1; }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    output.push_str(native_allocator());
+    output.push_str(native_panic_reporter());
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.status.code(), Some(1));
+    assert!(result.stdout.is_empty());
+    assert_eq!(result.stderr, b"panic: checked object cast failed\n");
+}
+
+#[test]
+fn polymorphic_optional_box_dispatch_survives_recursion_and_stack_pressure() {
+    let source = concat!(
+        "class Base {\n",
+        "  init() {}\n",
+        "  virtual fn total(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64, h: i64) -> i64 {\n",
+        "    return a + b + c + d + e + f + g + h;\n",
+        "  }\n",
+        "}\n",
+        "class Derived extends Base {\n",
+        "  init() { super(); }\n",
+        "  override fn total(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64, h: i64) -> i64 {\n",
+        "    return a + b + c + d + e + f + g + h + 2;\n",
+        "  }\n",
+        "}\n",
+        "fn recurse(depth: i64) -> i64 {\n",
+        "  var box: shared Base? = new Derived?(Derived());\n",
+        "  var value: i64 = (*box)!.total(1, 1, 1, 1, 1, 1, 1, 1);\n",
+        "  if (depth == 0) { return value; }\n",
+        "  return value + recurse(depth - 1);\n",
+        "}\n",
+        "fn main() -> i64 { return recurse(2); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(30), "{output}");
+}
+
+#[test]
+fn polymorphic_box_copy_to_exact_optional_slices_deliberately() {
+    let source = concat!(
+        "class Base {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn mark() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Derived extends Base {\n",
+        "  extra: i64;\n",
+        "  init(value: i64) { super(value); self.extra = 100; }\n",
+        "  override fn mark() -> i64 { return self.value + self.extra; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var exact: shared Derived? = new Derived?(Derived(2));\n",
+        "  var view: shared Base? = exact;\n",
+        "  var sliced: shared Base? = new Base?(*view);\n",
+        "  return (*view)!.mark() + (*sliced)!.mark();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(104), "{output}");
 }
 
 #[test]

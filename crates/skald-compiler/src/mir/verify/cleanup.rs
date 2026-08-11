@@ -315,6 +315,16 @@ impl CleanupLivenessAnalysis<'_, '_> {
                             self.merge_state(block.id, target, &states, &mut flow);
                         }
                     }
+                    Some(MirTerminator::BeginOptionalBoxView {
+                        success_target,
+                        absent_target,
+                        overflow_target,
+                        ..
+                    }) => {
+                        for target in [*success_target, *absent_target, *overflow_target] {
+                            self.merge_state(block.id, target, &states, &mut flow);
+                        }
+                    }
                     Some(MirTerminator::CheckOptionalMutation {
                         success_target,
                         failure_target,
@@ -917,7 +927,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
         {
             return;
         }
-        if matches!(place.base, MirPlaceBase::SharedPointee(_)) {
+        if matches!(
+            place.base,
+            MirPlaceBase::SharedPointee(_) | MirPlaceBase::OptionalBoxPayload { .. }
+        ) {
             // Shared-owner liveness is path-sensitive in the ownership
             // verifier; inline-object cleanup state deliberately does not
             // duplicate it.

@@ -199,6 +199,64 @@ impl Verifier<'_> {
         );
     }
 
+    pub(in crate::mir::verify) fn verify_optional_box_view_begin(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        begin: &crate::mir::MirOptionalBoxViewBegin,
+        success_target: crate::mir::BlockId,
+        absent_target: crate::mir::BlockId,
+        overflow_target: crate::mir::BlockId,
+    ) {
+        let metadata = self.program.optional_box_type(begin.box_target);
+        let owner_valid = function.storage(begin.owner).is_some_and(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::Local | MirStorageKind::Parameter | MirStorageKind::SharedAnchor
+            ) && storage.ty
+                == MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(begin.box_target))
+        });
+        if begin.guard.callable() != function.callable()
+            || !owner_valid
+            || !metadata.is_some_and(|metadata| {
+                metadata.object_view.is_some() && begin.layer < metadata.optional_depth
+            })
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional-box view begin has incompatible owner, layer, or static view",
+            );
+        }
+        for target in [success_target, absent_target, overflow_target] {
+            self.verify_block_target(function, block, target);
+        }
+        if success_target == absent_target
+            || success_target == overflow_target
+            || absent_target == overflow_target
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional-box view success, absence, and overflow edges must be distinct",
+            );
+        }
+        self.require_failure_edge(
+            function,
+            block,
+            absent_target,
+            MirTerminationReason::OptionalAccessFailure,
+            "optional-box view absence edge must terminate with optional-access failure",
+        );
+        self.require_failure_edge(
+            function,
+            block,
+            overflow_target,
+            MirTerminationReason::OptionalGuardOverflow,
+            "optional-box view overflow edge must terminate with optional-guard overflow",
+        );
+    }
+
     pub(in crate::mir::verify) fn verify_optional_mutation_check(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -256,6 +314,37 @@ impl Verifier<'_> {
                 function.callable(),
                 block.id,
                 "optional-view end has an incompatible guard root",
+            );
+        }
+    }
+
+    pub(in crate::mir::verify) fn verify_optional_box_view_end(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        end: &crate::mir::MirOptionalBoxViewEnd,
+    ) {
+        let valid = end.guard.callable() == function.callable()
+            && function.storage(end.owner).is_some_and(|storage| {
+                matches!(
+                    storage.kind,
+                    MirStorageKind::Local
+                        | MirStorageKind::Parameter
+                        | MirStorageKind::SharedAnchor
+                ) && storage.ty
+                    == MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(end.box_target))
+            })
+            && self
+                .program
+                .optional_box_type(end.box_target)
+                .is_some_and(|metadata| {
+                    metadata.object_view.is_some() && end.layer < metadata.optional_depth
+                });
+        if !valid {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional-box view end has an incompatible guard root",
             );
         }
     }

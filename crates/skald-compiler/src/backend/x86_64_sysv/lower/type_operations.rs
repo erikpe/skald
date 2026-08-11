@@ -98,7 +98,10 @@ impl InstructionSelector<'_, '_> {
             } => {
                 let matched = cast_match_label(self.program, self.function.callable(), block);
                 self.load_shared_cast_metadata(&cast.source)?;
-                self.emit_metadata_membership_branches(shared_target_view(cast.target), &matched);
+                self.emit_metadata_membership_branches(
+                    self.shared_target_view(cast.target),
+                    &matched,
+                );
                 self.output.push(Instruction::Jump(block_label(
                     self.program,
                     *failure_target,
@@ -129,26 +132,40 @@ impl InstructionSelector<'_, '_> {
         let classes = self.dispatch.classes_providing_view(self.program, target);
         debug_assert!(!classes.is_empty(), "verified runtime target can succeed");
         for class in classes {
-            self.output.push(Instruction::LoadSymbolAddress {
-                symbol: self.dispatch.table_symbol(self.program, class),
-                destination: Register::Rcx,
-            });
-            self.output.push(Instruction::Compare {
-                source: Register::Rcx,
-                destination: Register::R11,
-            });
-            self.output.push(Instruction::JumpIfEqual(matched.clone()));
+            let symbols = std::iter::once(self.dispatch.table_symbol(self.program, class)).chain(
+                self.program
+                    .optional_box_types
+                    .iter()
+                    .filter(move |box_type| box_type.exact_dynamic_class == Some(class))
+                    .map(|box_type| symbol::optional_box_metadata(box_type.id)),
+            );
+            for symbol in symbols {
+                self.output.push(Instruction::LoadSymbolAddress {
+                    symbol,
+                    destination: Register::Rcx,
+                });
+                self.output.push(Instruction::Compare {
+                    source: Register::Rcx,
+                    destination: Register::R11,
+                });
+                self.output.push(Instruction::JumpIfEqual(matched.clone()));
+            }
         }
     }
-}
 
-const fn shared_target_view(target: crate::mir::MirSharedTarget) -> MirViewTarget {
-    match target {
-        crate::mir::MirSharedTarget::Obj => MirViewTarget::Obj,
-        crate::mir::MirSharedTarget::Class(class) => MirViewTarget::Class(class),
-        crate::mir::MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
-        crate::mir::MirSharedTarget::Array(_) | crate::mir::MirSharedTarget::OptionalBox(_) => {
-            panic!()
+    fn shared_target_view(&self, target: crate::mir::MirSharedTarget) -> MirViewTarget {
+        match target {
+            crate::mir::MirSharedTarget::Obj => MirViewTarget::Obj,
+            crate::mir::MirSharedTarget::Class(class) => MirViewTarget::Class(class),
+            crate::mir::MirSharedTarget::Interface(interface) => {
+                MirViewTarget::Interface(interface)
+            }
+            crate::mir::MirSharedTarget::OptionalBox(target) => self
+                .program
+                .optional_box_type(target)
+                .and_then(|metadata| metadata.object_view)
+                .expect("verified optional-box casts require an object view"),
+            crate::mir::MirSharedTarget::Array(_) => panic!(),
         }
     }
 }

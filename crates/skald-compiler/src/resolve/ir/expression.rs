@@ -261,6 +261,9 @@ pub struct ResolvedObjectCastExpr {
     pub source: Box<ResolvedExpression>,
     pub target: super::ResolvedType,
     pub target_mode: ResolvedObjectCastTargetMode,
+    /// Canonical optional-box target when a shared cast preserves the source
+    /// box allocation and changes only its object view.
+    pub optional_box_target: Option<crate::identity::OptionalBoxTypeId>,
     pub target_span: Span,
     pub span: Span,
 }
@@ -324,6 +327,7 @@ pub enum ResolvedInterfaceReceiver {
     Binding { binding: BindingId, span: Span },
     Cast(Box<ResolvedObjectCastExpr>),
     Dereference(Box<ResolvedDereferenceExpr>),
+    OptionalBoxPayload(Box<ResolvedUnwrapExpr>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

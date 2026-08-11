@@ -102,6 +102,9 @@ impl BodyLowerer<'_> {
             HirExpressionKind::PresenceTest { source, kind } => {
                 Some(self.lower_presence_test(expression, source, *kind))
             }
+            HirExpressionKind::OptionalBoxPresence(presence) => {
+                Some(self.lower_optional_box_presence(expression, presence))
+            }
             HirExpressionKind::Unwrap(source) => {
                 Some(self.lower_optional_unwrap(expression, source))
             }

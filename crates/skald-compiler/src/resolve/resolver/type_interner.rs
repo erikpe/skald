@@ -99,6 +99,34 @@ impl ResolvedTypeInterner {
         )
     }
 
+    pub(super) fn intern_optional_object_box_cast_target(
+        &mut self,
+        optional_depth: usize,
+        object_leaf: ResolvedObjectTarget,
+        span: Span,
+    ) -> OptionalBoxTypeId {
+        if let ResolvedObjectTarget::Class(class) = object_leaf {
+            let mut payload = ResolvedType {
+                kind: ResolvedTypeKind::Class(class),
+                span,
+            };
+            let mut outer = None;
+            for _ in 0..optional_depth {
+                let optional = self.intern_optional(payload);
+                outer = Some(optional);
+                payload = ResolvedType {
+                    kind: ResolvedTypeKind::Optional(optional),
+                    span,
+                };
+            }
+            return self.intern_optional_box(
+                outer.expect("an optional-box cast target has at least one optional layer"),
+                span,
+            );
+        }
+        self.intern_optional_object_box_view(optional_depth, object_leaf, span)
+    }
+
     fn intern_optional_box_key(&mut self, key: OptionalBoxKey, span: Span) -> OptionalBoxTypeId {
         if let Some(id) = self.optional_box_ids.get(&key) {
             return *id;

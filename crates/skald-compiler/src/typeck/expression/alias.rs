@@ -100,6 +100,10 @@ pub(super) enum CheckedObjectViewSource {
         class: crate::identity::ClassId,
         projections: Vec<crate::object_path::ObjectProjection>,
     },
+    OptionalBox {
+        view: crate::hir::HirOptionalBoxObjectView,
+        projections: Vec<crate::object_path::ObjectProjection>,
+    },
 }
 
 impl CheckedObjectViewSource {
@@ -110,6 +114,7 @@ impl CheckedObjectViewSource {
             Self::Shared(source) => source.access(),
             Self::Produced { .. } => HirAccess::Mutable,
             Self::Optional { view, .. } => view.access,
+            Self::OptionalBox { view, .. } => view.access,
         }
     }
 
@@ -120,6 +125,7 @@ impl CheckedObjectViewSource {
             Self::Shared(source) => source.span(),
             Self::Produced { span, .. } => *span,
             Self::Optional { view, .. } => view.span,
+            Self::OptionalBox { view, .. } => view.span,
         }
     }
 
@@ -131,6 +137,7 @@ impl CheckedObjectViewSource {
             Self::Shared(source) => source.static_target(),
             Self::Produced { class, .. } => HirViewTarget::Class(*class),
             Self::Optional { class, .. } => HirViewTarget::Class(*class),
+            Self::OptionalBox { view, .. } => view.target,
         }
     }
 
@@ -153,6 +160,7 @@ impl CheckedObjectViewSource {
             Self::Shared(source) => source.exact_dynamic_class(),
             Self::Produced { class, .. } => Some(*class),
             Self::Optional { class, .. } => Some(*class),
+            Self::OptionalBox { view, .. } => view.source.exact_dynamic_class(),
         }
     }
 
@@ -243,6 +251,9 @@ impl CheckedObjectViewSource {
                     access,
                     span,
                 }
+            }
+            Self::OptionalBox { view, projections } => {
+                super::optional_box_view::into_object_view(view, target, access, projections)
             }
         }
     }
@@ -642,6 +653,12 @@ impl CallableChecker<'_, '_> {
                 .check_explicit_shared_pointee(dereference, Vec::new(), dereference.span)
                 .map(CheckedObjectViewSource::Shared),
             ResolvedExpression::Unwrap(unwrap) => {
+                if let Some(view) = self.check_optional_box_object_view(unwrap) {
+                    return Some(CheckedObjectViewSource::OptionalBox {
+                        view,
+                        projections: Vec::new(),
+                    });
+                }
                 let view = self.check_class_optional_view(unwrap)?;
                 let class = self.optional_operand_class(&view.source);
                 Some(CheckedObjectViewSource::Optional {
@@ -700,6 +717,7 @@ impl CallableChecker<'_, '_> {
                     | CheckedObjectViewSource::Produced { span, .. } => *span = grouped.span,
                     CheckedObjectViewSource::Shared(source) => source.set_span(grouped.span),
                     CheckedObjectViewSource::Optional { view, .. } => view.span = grouped.span,
+                    CheckedObjectViewSource::OptionalBox { view, .. } => view.span = grouped.span,
                 }
                 Some(source)
             }
@@ -1181,6 +1199,34 @@ impl CallableChecker<'_, '_> {
                         projections,
                     }
                     .into_view(expected_target, required),
+                ))
+            }
+            (
+                source @ CheckedObjectViewSource::OptionalBox { .. },
+                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
+            ) => {
+                let actual = source.static_target();
+                let expected_target = match expected {
+                    Type::Class(class) => HirViewTarget::Class(class),
+                    Type::Interface(interface) => HirViewTarget::Interface(interface),
+                    Type::Obj => HirViewTarget::Obj,
+                    _ => unreachable!(),
+                };
+                if !crate::typeck::shared::target_accepts(
+                    self.program,
+                    super::shared_pointee::view_shared_target(expected_target),
+                    super::shared_pointee::view_shared_target(actual),
+                ) {
+                    self.diagnostics.push(mismatch(
+                        &view_target_name(self.program, actual),
+                        &view_target_name(self.program, expected_target),
+                        source_span,
+                        "boxed optional payload converts implicitly only to compatible up-views",
+                    ));
+                    return None;
+                }
+                Some(HirCallArgument::View(
+                    source.into_view(expected_target, required),
                 ))
             }
             (

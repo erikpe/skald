@@ -651,15 +651,25 @@ impl CallableChecker<'_, '_> {
         &mut self,
         test: &ResolvedPresenceTestExpr,
     ) -> Option<HirExpression> {
+        let kind = match test.kind {
+            ResolvedPresenceTestKind::Some => HirPresenceTestKind::Some,
+            ResolvedPresenceTestKind::None => HirPresenceTestKind::None,
+        };
+        if let Some((source, box_target)) = self.check_optional_box_presence_source(&test.source) {
+            return Some(HirExpression {
+                kind: HirExpressionKind::OptionalBoxPresence(crate::hir::HirOptionalBoxPresence {
+                    source,
+                    box_target,
+                    kind,
+                    span: test.span,
+                }),
+                ty: Type::Bool,
+                span: test.span,
+            });
+        }
         let source = self.require_optional_operand(&test.source, test.span, "presence test")?;
         Some(HirExpression {
-            kind: HirExpressionKind::PresenceTest {
-                source,
-                kind: match test.kind {
-                    ResolvedPresenceTestKind::Some => HirPresenceTestKind::Some,
-                    ResolvedPresenceTestKind::None => HirPresenceTestKind::None,
-                },
-            },
+            kind: HirExpressionKind::PresenceTest { source, kind },
             ty: Type::Bool,
             span: test.span,
         })

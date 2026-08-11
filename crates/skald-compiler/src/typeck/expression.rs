@@ -24,6 +24,7 @@ mod division;
 mod io;
 mod logical;
 mod object_view_relation;
+mod optional_box_view;
 mod place;
 mod primitive;
 mod receiver;

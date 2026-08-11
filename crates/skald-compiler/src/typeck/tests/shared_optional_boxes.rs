@@ -237,7 +237,65 @@ fn exact_box_pointees_support_explicit_optional_consumers() {
         .expect("exact boxed optional consumers must type check");
     let dump = dump_hir(&hir);
     assert!(dump.contains("OptionalBoxPointee"), "{dump}");
-    assert!(dump.contains("ClassOptionalBoxPointee"), "{dump}");
+    assert!(dump.contains("CheckedOptionalBoxPayload"), "{dump}");
+}
+
+#[test]
+fn polymorphic_object_boxes_preserve_static_views_and_dynamic_consumers() {
+    let output = check_text(
+        "interface Marker { fn mark() -> i64; }\n\
+         class Base {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           virtual fn mark() -> i64 { return self.value; }\n\
+         }\n\
+         class Derived extends Base implements Marker {\n\
+           init(value: i64) { super(value); }\n\
+           override fn mark() -> i64 { return self.value + 10; }\n\
+         }\n\
+         fn consume(ref value: Obj) -> bool { return value is Derived; }\n\
+         fn main() -> i64 {\n\
+           var exact: shared Derived? = new Derived?(Derived(2));\n\
+           var base: shared Base? = exact;\n\
+           var marker: shared Marker? = exact;\n\
+           var object: shared Obj? = exact;\n\
+           var absent_exact: shared Derived? = new Derived?();\n\
+           var absent_marker: shared Marker? = absent_exact;\n\
+           var marker_present: bool = (*marker) is some;\n\
+           var marker_absent: bool = (*absent_marker) is none;\n\
+           var base_result: i64 = (*base)!.mark();\n\
+           var interface_result: i64 = (*marker)!.mark();\n\
+           var is_derived: bool = (*object)! is Derived;\n\
+           var consumed: bool = consume((*object)!);\n\
+           return base_result + interface_result + (*base)!.value;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("polymorphic box views must type check"));
+    assert!(dump.contains("CheckedOptionalBoxPayload"), "{dump}");
+    assert!(dump.contains("OptionalBoxPresence"), "{dump}");
+    assert!(dump.contains("-> interface i0"), "{dump}");
+    assert!(dump.contains("-> Obj"), "{dump}");
+}
+
+#[test]
+fn impossible_optional_box_cast_reports_a_diagnostic_without_prior_target_use() {
+    let output = check_text(
+        "class Left { init() {} }\n\
+         class Right { init() {} }\n\
+         fn main() -> i64 {\n\
+           var source: shared Left? = new Left?(Left());\n\
+           var target: shared Right? = (shared Right) source;\n\
+           return 0;\n\
+         }\n",
+    );
+
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == crate::typeck::program::INVALID_OBJECT_CAST
+            && diagnostic.message.contains("can never succeed")
+    }));
 }
 
 #[test]
@@ -270,6 +328,45 @@ fn published_box_wrappers_reject_whole_pointee_assignment() {
         .diagnostics
         .iter()
         .any(|diagnostic| { diagnostic.code == crate::resolve::INVALID_POINTEE_ASSIGNMENT }));
+}
+
+#[test]
+fn upviewed_box_wrappers_reject_whole_pointee_assignment() {
+    let output = crate::test_support::resolve_source(
+        "class Base { init() {} }\n\
+         class Derived extends Base { init() { super(); } }\n\
+         fn main() -> i64 {\n\
+           var exact: shared Derived? = new Derived?(Derived());\n\
+           var view: shared Base? = exact;\n\
+           *view = none;\n\
+           return 0;\n\
+         }\n",
+    );
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::resolve::INVALID_POINTEE_ASSIGNMENT));
+}
+
+#[test]
+fn polymorphic_box_views_do_not_create_bare_interface_optionals() {
+    let output = check_text(
+        "interface Marker { fn mark() -> i64; }\n\
+         class Value implements Marker { init() {} fn mark() -> i64 { return 1; } }\n\
+         fn main() -> i64 {\n\
+           var exact: shared Value? = new Value?(Value());\n\
+           var marker: shared Marker? = exact;\n\
+           var invalid: Marker? = *marker;\n\
+           return 0;\n\
+         }\n",
+    );
+    assert!(
+        output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.message.contains("interface") && diagnostic.message.contains("optional")
+        }),
+        "{:?}",
+        output.diagnostics
+    );
 }
 
 #[test]

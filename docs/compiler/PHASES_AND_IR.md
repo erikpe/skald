@@ -274,9 +274,10 @@ projection and an ordinary array-backing anchor for the complete immediate
 call. Frozen shared optional boxes now have canonical resolved, HIR, and MIR
 target identities, typed local construction/ownership, verified
 unpublished-payload and owner lifetimes, explicit exact optional-pointee
-access, and deliberate stored-position and polymorphic-view gates. Exact local
+access, and explicit polymorphic object-box views. Exact and polymorphic local
 boxes execute on x86-64 through descriptor, shared-owner, recursive optional,
-and guard lowering; optional-reference shapes remain syntax diagnostics.
+guard, dispatch, and cast lowering; stored positions remain deliberately
+gated and optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes
@@ -306,17 +307,24 @@ whole-wrapper alias. Exact pointee places retain stable, copied-place, or
 adopted-producer owner provenance; non-stable owners receive a hidden
 full-expression anchor. Object-box views retain a static
 class/interface/`Obj` view separately from the exact dynamic allocation class.
+Presence observations through interface and `Obj` views remain box operations
+rather than synthesizing invalid standalone optional identities.
 
 MIR implements a distinct optional-box allocation origin and makes allocate,
 initialize the exact `SharedAllocationPayload`, publish, and adopt separate
 verified transitions. After publication, `SharedPointee(owner)` permits no
 pre-publication observation and addresses exact optional operations only while
-its owner is verified live. Local owner copy, secure replacement, temporary
+its owner is verified live. A checked polymorphic unwrap begins one
+optional-box guard for each traversed layer and exposes
+`OptionalBoxPayload { owner, target }` as the complete object subject; matching
+ends precede anchor cleanup in reverse order. Local owner copy, secure replacement, temporary
 cleanup, and final release already reuse the ordinary shared-owner state machine. Existing
 optional initialization instructions complete the canonical wrapper without a
-parallel box-payload instruction family. The x86-64 legality pass accepts exact
-box targets with verified addressable metadata and continues to reject
-polymorphic box views.
+parallel box-payload instruction family. MIR verification ties each view,
+presence query, cast, and dispatch origin to a live compatible owner, balanced
+guards, a static box target, and exact dynamic descriptor metadata. The x86-64
+legality pass accepts both exact and polymorphic local box targets with
+verified addressable metadata.
 
 The initial x86-64 realization keeps one-word owners and the 16-byte shared
 header, uses deterministic exact optional-box descriptors/finalizers, and
@@ -325,6 +333,14 @@ box descriptor also retains exact dynamic class and view membership. The
 outer `(shared P?)?` zero niche remains separate from the allocation's inner
 optional state. All work remains compiler-owned and adds no runtime ABI
 version or public symbol.
+
+Exact object-box descriptors clone the exact class's virtual and interface
+dispatch entries while replacing only finalization with the recursive box
+finalizer. Static base/interface/`Obj` views and successful checked owner casts
+therefore retain the original allocation and dispatch exactly like ordinary
+shared objects. Copying a polymorphic wrapper into an eligible exact inline
+class optional remains target-directed and deliberately slices; interface and
+`Obj` inline optional destinations remain invalid.
 
 ## Produced exact-class alias representation
 

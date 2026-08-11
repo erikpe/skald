@@ -3,6 +3,47 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
+    /// Returns the static object leaf when `unwrap` removes the final optional
+    /// layer of a boxed object view. Intermediate layers deliberately have no
+    /// fabricated inline optional identity for interface and `Obj` leaves.
+    pub(super) fn resolved_optional_box_object_leaf(
+        &self,
+        unwrap: &ResolvedUnwrapExpr,
+    ) -> Option<ResolvedObjectTarget> {
+        let (target, remaining) = self.optional_box_view_state(&unwrap.source)?;
+        if remaining != 1 {
+            return None;
+        }
+        self.type_interner.optional_box(target)?.object_leaf
+    }
+
+    fn optional_box_view_state(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<(crate::identity::OptionalBoxTypeId, usize)> {
+        match expression {
+            ResolvedExpression::Dereference(dereference) => {
+                let ResolvedSharedTarget::OptionalBox(target) = dereference.target else {
+                    return None;
+                };
+                Some((
+                    target,
+                    self.type_interner.optional_box(target)?.optional_depth,
+                ))
+            }
+            ResolvedExpression::Unwrap(unwrap) => {
+                let (target, remaining) = self.optional_box_view_state(&unwrap.source)?;
+                remaining
+                    .checked_sub(1)
+                    .map(|remaining| (target, remaining))
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                self.optional_box_view_state(&grouped.expression)
+            }
+            _ => None,
+        }
+    }
+
     pub(super) fn report_implicit_shared_member_access(
         &mut self,
         span: Span,
@@ -126,6 +167,9 @@ impl CallableResolver<'_, '_> {
                     ResolvedObjectCastTargetMode::Shared { .. }
                 ) =>
             {
+                if let Some(target) = cast.optional_box_target {
+                    return Some(ResolvedSharedTarget::OptionalBox(target));
+                }
                 match cast.target.kind {
                     ResolvedTypeKind::Class(class) => {
                         return Some(ResolvedSharedTarget::Class(class))
@@ -171,6 +215,13 @@ impl CallableResolver<'_, '_> {
         &self,
         expression: &ResolvedExpression,
     ) -> Option<ClassId> {
+        if let ResolvedExpression::Unwrap(unwrap) = expression {
+            if let Some(ResolvedObjectTarget::Class(class)) =
+                self.resolved_optional_box_object_leaf(unwrap)
+            {
+                return Some(class);
+            }
+        }
         let kind = self.resolved_expression_type(expression)?;
         match kind {
             ResolvedTypeKind::Optional(optional) => {

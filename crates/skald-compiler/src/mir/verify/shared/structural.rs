@@ -463,9 +463,21 @@ impl<'mir> Verifier<'mir> {
             );
         }
         self.verify_shared_target_declared(function.callable(), source_target);
-        let target = shared_view_target(cast.target);
+        let Some(target) = self.shared_object_view(cast.target) else {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared cast target has no object-view capability",
+            );
+            return;
+        };
+        let source_view = self.shared_object_view(source_target);
         let relation = cast.exact_dynamic_class.map_or_else(
-            || self.classify_type_relation(source_target.ty(), target),
+            || {
+                source_view.map_or(TypeRelation::StaticFailure, |source| {
+                    self.classify_type_relation(source.ty(), target)
+                })
+            },
             |class| {
                 if self.class_provides_view(class, target) {
                     TypeRelation::StaticSuccess
@@ -492,7 +504,8 @@ impl<'mir> Verifier<'mir> {
         }
         if let Some(class) = cast.exact_dynamic_class {
             if self.program.class(class).is_none()
-                || !self.class_can_inhabit_type(class, source_target.ty())
+                || !source_view
+                    .is_some_and(|source| self.class_can_inhabit_type(class, source.ty()))
             {
                 self.block_error(
                     function.callable(),
@@ -708,13 +721,17 @@ impl<'mir> Verifier<'mir> {
             _ => None,
         }
     }
-}
 
-const fn shared_view_target(target: MirSharedTarget) -> MirViewTarget {
-    match target {
-        MirSharedTarget::Obj => MirViewTarget::Obj,
-        MirSharedTarget::Class(class) => MirViewTarget::Class(class),
-        MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
-        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_) => panic!(),
+    fn shared_object_view(&self, target: MirSharedTarget) -> Option<MirViewTarget> {
+        match target {
+            MirSharedTarget::Obj => Some(MirViewTarget::Obj),
+            MirSharedTarget::Class(class) => Some(MirViewTarget::Class(class)),
+            MirSharedTarget::Interface(interface) => Some(MirViewTarget::Interface(interface)),
+            MirSharedTarget::OptionalBox(target) => self
+                .program
+                .optional_box_type(target)
+                .and_then(|metadata| metadata.object_view),
+            MirSharedTarget::Array(_) => None,
+        }
     }
 }
