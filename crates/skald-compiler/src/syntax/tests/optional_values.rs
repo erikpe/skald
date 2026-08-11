@@ -206,6 +206,94 @@ fn semantically_deferred_optional_shapes_cross_the_syntax_boundary() {
 }
 
 #[test]
+fn parses_optional_box_allocations_as_a_distinct_source_shape() {
+    let (sources, output) = parse_text(
+        "class Item { init() {} }\n\
+         fn boxes() -> unit {\n\
+           var absent: shared i64? = new i64?();\n\
+           var nested: shared Item?? = new (Item?)?(none);\n\
+           var array: shared i64[]? = new i64[]?(none);\n\
+           var owner: shared (shared Item)? = new (shared Item)?(none);\n\
+           var grouped: shared Item? = new (Item?)();\n\
+         }\n",
+    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let source = sources.get(output.ast.span.source_id()).unwrap();
+    let boxes = function(&output.ast, 1);
+
+    let Statement::Local(absent) = &boxes.body.statements[0] else {
+        panic!("expected local declaration");
+    };
+    let Expression::OptionalBoxAllocation(absent) = &absent.initializer else {
+        panic!("expected optional-box allocation");
+    };
+    assert_eq!(source.slice(absent.new_span.range()).unwrap(), "new");
+    assert_eq!(source.slice(absent.target.span.range()).unwrap(), "i64?");
+    let OptionalBoxInitializer::Absent {
+        left_paren_span,
+        right_paren_span,
+    } = absent.initializer
+    else {
+        panic!("expected absent box initializer");
+    };
+    assert_eq!(source.slice(left_paren_span.range()).unwrap(), "(");
+    assert_eq!(source.slice(right_paren_span.range()).unwrap(), ")");
+
+    for statement in &boxes.body.statements[1..4] {
+        let Statement::Local(local) = statement else {
+            panic!("expected local declaration");
+        };
+        let Expression::OptionalBoxAllocation(allocation) = &local.initializer else {
+            panic!("expected optional-box allocation");
+        };
+        assert!(matches!(
+            allocation.initializer,
+            OptionalBoxInitializer::Value { .. }
+        ));
+    }
+
+    let Statement::Local(grouped) = &boxes.body.statements[4] else {
+        panic!("expected local declaration");
+    };
+    let Expression::OptionalBoxAllocation(grouped) = &grouped.initializer else {
+        panic!("expected grouped optional-box allocation");
+    };
+    assert_eq!(
+        source.slice(grouped.target.span.range()).unwrap(),
+        "(Item?)"
+    );
+    assert!(matches!(
+        grouped.initializer,
+        OptionalBoxInitializer::Absent { .. }
+    ));
+
+    let dump = dump_ast(&output.ast);
+    assert_eq!(dump.matches("OptionalBoxAllocation").count(), 5, "{dump}");
+    assert!(dump.contains("Initializer"), "{dump}");
+}
+
+#[test]
+fn optional_box_initializer_arity_recovers_at_the_closing_parenthesis() {
+    let (sources, output) = parse_text(
+        "fn broken() -> unit { new i64?(1, some(2)); var after: i64 = 0; }\n\
+         fn recovered() -> i64 { return 0; }\n",
+    );
+
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == INVALID_OPTIONAL_BOX_INITIALIZER)
+        .expect("expected the optional-box arity diagnostic");
+    assert!(diagnostic.message.contains("at most one"));
+    let source = sources.get(output.ast.span.source_id()).unwrap();
+    assert_eq!(
+        source.slice(diagnostic.labels[0].span.range()).unwrap(),
+        ","
+    );
+    assert_eq!(function(&output.ast, 1).name.text, "recovered");
+}
+
+#[test]
 fn optional_reference_and_missing_owner_target_recover() {
     for declaration in [
         "fn broken(ref? value: Thing) -> unit {}",

@@ -6,17 +6,18 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+[Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md) is in progress; BX0
+is complete and BX1 is next. It implements the frozen non-null `shared P?` box
+and derived `shared? P?` optional owner through canonical targets, verified
+immutable wrapper access, polymorphic class/interface/`Obj` views, exact
+metadata and finalization, stored positions, and arrays while retaining
+runtime ABI version 9. It depends on the completed compositional optional,
+shared ownership, explicit shared dereference, object cast, array, and
+static-field profiles.
 
 ## Planned
 
-[Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md) is planned; BX0 is
-next. It implements the frozen non-null `shared P?` box and derived
-`shared? P?` optional owner through canonical targets, verified immutable
-wrapper access, polymorphic class/interface/`Obj` views, exact metadata and
-finalization, stored positions, and arrays while retaining runtime ABI version
-9. It depends on the completed compositional optional, shared ownership,
-explicit shared dereference, object cast, array, and static-field profiles.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

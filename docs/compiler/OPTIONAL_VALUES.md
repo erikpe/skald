@@ -70,8 +70,10 @@ shared T    ordinary non-null shared owner
 
 `shared? T` is an exact source shorthand for `(shared T)?`; both intern to the
 same resolved identity and lower to the existing optional-owner operations.
-`shared T?`, `shared? T?`, and invalid payload families reach focused
-diagnostic boundaries and never become executable HIR types. Nested optionals
+`shared T?` and `shared? T?` receive deterministic resolved box identities and
+then reach one focused type-check availability gate; invalid standalone
+payload families retain their ordinary diagnostics. None become executable
+HIR types yet. Nested optionals
 are executable in owning positions, checked access, aliases, and internal
 callable boundaries. Alias binding mode may designate any supported inline
 optional container; it does not add a reference or optional-reference type
@@ -754,7 +756,7 @@ and failure reasons without exposing source-inaccessible machine offsets.
 Diagnostics should identify:
 
 - invalid payload and target families;
-- frozen but not-yet-implemented shared-box spellings and allocation forms;
+- shared-box forms that have reached resolution but not typed HIR;
 - missing expected type for `none`;
 - implicit unwrap and direct member/dereference attempts;
 - incompatible injection, assignment, argument, and return types;
@@ -811,9 +813,9 @@ observable behavior:
 | Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
-Compile-failure suites for `shared T?`, `shared? T?`, and box allocation remain
-required until their responsible roadmap tasks replace them with staged
-positive and focused-negative coverage.
+Parser and resolution suites provide positive coverage for `shared T?`,
+`shared? T?`, and box allocation, while compile-failure coverage verifies the
+single type-check availability gate until BX1 replaces it with typed cases.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.

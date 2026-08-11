@@ -3,6 +3,84 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
+    pub(super) fn resolve_optional_box_allocation(
+        &mut self,
+        allocation: &syntax::OptionalBoxAllocationExpr,
+    ) -> Option<ResolvedExpression> {
+        let resolved_target = self.resolve_type(&allocation.target);
+        let initializer = match &allocation.initializer {
+            syntax::OptionalBoxInitializer::Absent {
+                left_paren_span,
+                right_paren_span,
+            } => Some(ResolvedOptionalBoxInitializer::Absent {
+                left_paren_span: *left_paren_span,
+                right_paren_span: *right_paren_span,
+            }),
+            syntax::OptionalBoxInitializer::Value {
+                left_paren_span,
+                value,
+                right_paren_span,
+            } => {
+                self.resolve_expression(value)
+                    .map(|value| ResolvedOptionalBoxInitializer::Value {
+                        left_paren_span: *left_paren_span,
+                        value: Box::new(value),
+                        right_paren_span: *right_paren_span,
+                    })
+            }
+        };
+        let (Some(resolved_target), Some(initializer)) = (resolved_target, initializer) else {
+            return None;
+        };
+        let ResolvedTypeKind::Optional(exact_optional) = resolved_target.kind else {
+            unreachable!("optional-box syntax must resolve to an optional identity")
+        };
+        let target = self
+            .type_interner
+            .intern_optional_box(exact_optional, allocation.target.span);
+        match self
+            .type_interner
+            .optional_box(target)
+            .expect("newly interned optional-box target must exist")
+            .object_leaf
+        {
+            Some(ResolvedObjectTarget::Obj) => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_CONSTRUCTION_TARGET, "`Obj?` cannot be allocated")
+                        .with_primary_label(
+                            allocation.target.span,
+                            "`Obj` is a static box view; allocate an exact concrete class instead",
+                        ),
+                );
+                return None;
+            }
+            Some(ResolvedObjectTarget::Interface(_)) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CONSTRUCTION_TARGET,
+                        "an interface optional box cannot be allocated",
+                    )
+                    .with_primary_label(
+                        allocation.target.span,
+                        "allocate an optional box with an exact concrete class leaf",
+                    ),
+                );
+                return None;
+            }
+            Some(ResolvedObjectTarget::Class(_)) | None => {}
+        }
+        Some(ResolvedExpression::OptionalBoxAllocation(
+            ResolvedOptionalBoxAllocationExpr {
+                exact_optional,
+                target,
+                new_span: allocation.new_span,
+                target_span: allocation.target.span,
+                initializer,
+                span: allocation.span,
+            },
+        ))
+    }
+
     pub(super) fn resolve_allocation(
         &mut self,
         allocation: &syntax::AllocationExpr,

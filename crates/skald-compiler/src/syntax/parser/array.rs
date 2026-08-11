@@ -72,35 +72,42 @@ impl Parser<'_> {
 
     pub(super) fn starts_array_construction(&self, after_new: bool) -> bool {
         let start = usize::from(after_new);
-        self.scan_type_shape(start, 0)
-            .is_some_and(|(end, contains_array)| {
-                contains_array
-                    && matches!(
-                        self.peek_ahead(end).kind,
-                        TokenKind::LeftParen | TokenKind::LeftBrace
-                    )
-            })
+        self.scan_type_shape(start, 0).is_some_and(|shape| {
+            shape.contains_array
+                && !shape.outer_optional
+                && matches!(
+                    self.peek_ahead(shape.end).kind,
+                    TokenKind::LeftParen | TokenKind::LeftBrace
+                )
+        })
     }
 
-    fn scan_type_shape(&self, distance: usize, depth: usize) -> Option<(usize, bool)> {
+    pub(super) fn starts_optional_box_allocation(&self) -> bool {
+        self.scan_type_shape(1, 0).is_some_and(|shape| {
+            shape.outer_optional && self.peek_ahead(shape.end).kind == TokenKind::LeftParen
+        })
+    }
+
+    fn scan_type_shape(&self, distance: usize, depth: usize) -> Option<ScannedTypeShape> {
         if depth >= MAX_SYNTAX_NESTING {
             return None;
         }
         let token = self.peek_ahead(distance);
-        let (mut end, mut contains_array) =
+        let (mut end, mut contains_array, mut outer_optional) =
             if token.kind == TokenKind::Identifier && self.lexeme(token) == "shared" {
                 let mut target = distance + 1;
-                if self.peek_ahead(target).kind == TokenKind::Question {
+                let shorthand = self.peek_ahead(target).kind == TokenKind::Question;
+                if shorthand {
                     target += 1;
                 }
-                let (end, contains_array) = self.scan_type_shape(target, depth + 1)?;
-                (end, contains_array)
+                let shape = self.scan_type_shape(target, depth + 1)?;
+                (shape.end, shape.contains_array, shorthand)
             } else if token.kind == TokenKind::LeftParen {
-                let (inner_end, contains_array) = self.scan_type_shape(distance + 1, depth + 1)?;
-                if self.peek_ahead(inner_end).kind != TokenKind::RightParen {
+                let shape = self.scan_type_shape(distance + 1, depth + 1)?;
+                if self.peek_ahead(shape.end).kind != TokenKind::RightParen {
                     return None;
                 }
-                (inner_end + 1, contains_array)
+                (shape.end + 1, shape.contains_array, shape.outer_optional)
             } else if token_type_starts_array_element(token.kind) {
                 let mut end = distance + 1;
                 if token.kind == TokenKind::Identifier {
@@ -111,24 +118,30 @@ impl Parser<'_> {
                         end += 2;
                     }
                 }
-                (end, false)
+                (end, false, false)
             } else {
                 return None;
             };
 
         loop {
             if self.peek_ahead(end).kind == TokenKind::Question {
+                outer_optional = true;
                 end += 1;
             } else if self.peek_ahead(end).kind == TokenKind::LeftBracket
                 && self.peek_ahead(end + 1).kind == TokenKind::RightBracket
             {
                 contains_array = true;
+                outer_optional = false;
                 end += 2;
             } else {
                 break;
             }
         }
-        Some((end, contains_array))
+        Some(ScannedTypeShape {
+            end,
+            contains_array,
+            outer_optional,
+        })
     }
 
     pub(super) fn parse_array_construction(&mut self, shared: bool) -> Option<Expression> {
@@ -317,6 +330,13 @@ impl Parser<'_> {
             right_brace_span: right_brace.span,
         })
     }
+}
+
+#[derive(Clone, Copy)]
+struct ScannedTypeShape {
+    end: usize,
+    contains_array: bool,
+    outer_optional: bool,
 }
 
 const fn token_type_starts_array_element(kind: TokenKind) -> bool {

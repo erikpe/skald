@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: planned; BX0 is next.
+Status: in progress; BX1 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -102,7 +102,7 @@ outcome; it does not reopen those decisions.
 
 ## Progress
 
-- [ ] BX0 — Retain box allocation syntax and canonical resolved targets
+- [x] BX0 — Retain box allocation syntax and canonical resolved targets
 - [ ] BX1 — Select typed box ownership and construction plans
 - [ ] BX2 — Verify optional-box allocation and owner lifetimes in MIR
 - [ ] BX3 — Execute primitive optional boxes on x86-64
@@ -120,27 +120,27 @@ outcome; it does not reopen those decisions.
 **Purpose:** Establish one source-shaped frontend and deterministic identity
 boundary before type checking or executable phases depend on box meaning.
 
-- [ ] Extend allocation-expression parsing with a complete grouped/postfix
+- [x] Extend allocation-expression parsing with a complete grouped/postfix
       optional target for `new P?()` and `new P?(expression)`, distinct from
       class and array construction and limited to zero or one expression.
-- [ ] Preserve `new`, grouping, every relevant `?`, parentheses, initializer,
+- [x] Preserve `new`, grouping, every relevant `?`, parentheses, initializer,
       comma/recovery, and complete-expression spans through AST and resolution.
-- [ ] Resolve the class named at the leaf of an object-box allocation exactly;
+- [x] Resolve the class named at the leaf of an object-box allocation exactly;
       reject interface/`Obj` allocation targets while retaining them as static
       owner views.
-- [ ] Extend resolved shared targets with exact optional allocation targets and
+- [x] Extend resolved shared targets with exact optional allocation targets and
       a deterministic optional-object view identity carrying optional depth and
       class/interface/`Obj` leaf where `OptionalTypeId` lacks that information.
-- [ ] Normalize `shared? P?` to `(shared P?)?` without losing shorthand
+- [x] Normalize `shared? P?` to `(shared P?)?` without losing shorthand
       provenance; preserve arbitrary outer optional layers and canonical dump
       spelling.
-- [ ] Centralize resolved target capabilities so object, array, optional-place,
+- [x] Centralize resolved target capabilities so object, array, optional-place,
       and generic owner consumers are exhaustive and cannot silently classify
       an optional box as an ordinary object.
-- [ ] Replace the current resolution exclusion with one deliberate
+- [x] Replace the current resolution exclusion with one deliberate
       type-checking availability gate; valid new resolved forms must not reach
       incomplete HIR or panic lower phases.
-- [ ] Update grammar/current-availability wording as parser and resolution
+- [x] Update grammar/current-availability wording as parser and resolution
       support changes without claiming typed or executable box support.
 
 **Tests:** Lexer/parser allocation matrices; type grouping and precedence;
@@ -500,9 +500,9 @@ quality gates pass, and the roadmap is archived as complete.
 
 ## Ordering and dependencies
 
-BX0 precedes all semantic work because the current parser accepts box types but
-not box allocation, and resolution rejects optional shared targets before they
-obtain a canonical identity. BX1 establishes typed compatibility and selected
+BX0 established distinct box-allocation syntax, canonical resolved targets,
+and the deliberate type-check gate before semantic work. BX1 establishes
+typed compatibility and selected
 optional plans before BX2 commits executable ownership state. BX2 establishes
 verified target-independent allocation and owner invariants before BX3 adds a
 target realization.

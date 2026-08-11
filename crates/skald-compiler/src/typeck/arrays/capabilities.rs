@@ -61,6 +61,7 @@ fn default_element(
         ResolvedTypeKind::Shared(
             ResolvedSharedTarget::Obj | ResolvedSharedTarget::Interface(_),
         )
+        | ResolvedTypeKind::Shared(ResolvedSharedTarget::OptionalBox(_))
         | ResolvedTypeKind::Unit
         | ResolvedTypeKind::Obj
         | ResolvedTypeKind::Interface(_) => None,
@@ -292,5 +293,8 @@ fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
         ResolvedSharedTarget::Class(class) => HirSharedTarget::Class(class),
         ResolvedSharedTarget::Interface(interface) => HirSharedTarget::Interface(interface),
         ResolvedSharedTarget::Array(array) => HirSharedTarget::Array(array),
+        ResolvedSharedTarget::OptionalBox(_) => {
+            unreachable!("the shared optional-box availability gate runs before HIR lowering")
+        }
     }
 }

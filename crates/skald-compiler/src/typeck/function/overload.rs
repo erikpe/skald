@@ -323,6 +323,7 @@ impl CallableChecker<'_, '_> {
                     Type::Interface(interface)
                 }
                 crate::resolve::ResolvedSharedTarget::Array(array) => Type::Array(array),
+                crate::resolve::ResolvedSharedTarget::OptionalBox(_) => Type::Unit,
             },
             ResolvedExpression::Binary(binary) => match binary.operator {
                 crate::resolve::ResolvedBinaryOperator::Equal
@@ -391,6 +392,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Allocation(allocation) => {
                 Type::Shared(crate::hir::HirSharedTarget::Class(allocation.class))
             }
+            ResolvedExpression::OptionalBoxAllocation(_) => Type::Unit,
             ResolvedExpression::Construct(construction) => Type::Class(construction.class),
             ResolvedExpression::ArrayConstruction(construction) => {
                 let ResolvedTypeKind::Array(array) = construction.array_type.kind else {

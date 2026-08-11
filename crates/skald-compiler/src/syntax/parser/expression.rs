@@ -1,5 +1,6 @@
 //! Expression grammar, precedence, grouping, and calls.
 
+use super::declaration::TypeContext;
 use super::*;
 
 impl Parser<'_> {
@@ -678,6 +679,9 @@ impl Parser<'_> {
         if self.starts_array_construction(false) {
             return self.parse_array_construction(false);
         }
+        if self.at_contextual("new") && self.starts_optional_box_allocation() {
+            return self.parse_optional_box_allocation();
+        }
         if self.at_contextual("new") && self.starts_array_construction(true) {
             return self.parse_array_construction(true);
         }
@@ -816,6 +820,91 @@ impl Parser<'_> {
         })))
     }
 
+    fn parse_optional_box_allocation(&mut self) -> Option<Expression> {
+        let new_token = self.advance();
+        debug_assert_eq!(self.lexeme(new_token), "new");
+        let target = self.parse_type(
+            TypeContext::ArrayElement,
+            "expected an optional type after `new`",
+        )?;
+        debug_assert!(type_is_optional(&target));
+
+        let left_paren = self.advance();
+        debug_assert_eq!(left_paren.kind, TokenKind::LeftParen);
+        let initializer = if let Some(right_paren) = self.consume(TokenKind::RightParen) {
+            OptionalBoxInitializer::Absent {
+                left_paren_span: left_paren.span,
+                right_paren_span: right_paren.span,
+            }
+        } else {
+            let value =
+                self.with_syntax_nesting(left_paren.span, |parser| parser.parse_expression())?;
+            if let Some(comma) = self.consume(TokenKind::Comma) {
+                self.report(
+                    INVALID_OPTIONAL_BOX_INITIALIZER,
+                    "an optional box accepts at most one initializer expression",
+                    comma.span,
+                    "remove this comma and every following initializer",
+                );
+                self.synchronize_optional_box_initializer();
+                return None;
+            }
+            let right_paren = self.expect(
+                TokenKind::RightParen,
+                "`)` after the optional-box initializer",
+            )?;
+            OptionalBoxInitializer::Value {
+                left_paren_span: left_paren.span,
+                value: Box::new(value),
+                right_paren_span: right_paren.span,
+            }
+        };
+        let end = match &initializer {
+            OptionalBoxInitializer::Absent {
+                right_paren_span, ..
+            }
+            | OptionalBoxInitializer::Value {
+                right_paren_span, ..
+            } => *right_paren_span,
+        };
+        Some(Expression::OptionalBoxAllocation(Box::new(
+            OptionalBoxAllocationExpr {
+                new_span: new_token.span,
+                target,
+                initializer,
+                span: self.cover(new_token.span, end),
+            },
+        )))
+    }
+
+    fn synchronize_optional_box_initializer(&mut self) {
+        let mut nested_parentheses = 0usize;
+        loop {
+            match self.peek().kind {
+                TokenKind::LeftParen => {
+                    nested_parentheses += 1;
+                    self.advance();
+                }
+                TokenKind::RightParen if nested_parentheses > 0 => {
+                    nested_parentheses -= 1;
+                    self.advance();
+                }
+                TokenKind::RightParen => {
+                    self.advance();
+                    return;
+                }
+                TokenKind::Semicolon | TokenKind::RightBrace | TokenKind::Eof
+                    if nested_parentheses == 0 =>
+                {
+                    return
+                }
+                _ => {
+                    self.advance();
+                }
+            }
+        }
+    }
+
     fn name_path_followed_by(&self, start: usize, follower: TokenKind) -> bool {
         self.name_path_end(start)
             .is_some_and(|end| self.peek_ahead(end).kind == follower)
@@ -845,6 +934,14 @@ impl Parser<'_> {
             }
             distance += 1;
         }
+    }
+}
+
+fn type_is_optional(ty: &TypeSyntax) -> bool {
+    match &ty.kind {
+        TypeKind::Optional { .. } => true,
+        TypeKind::Grouped { inner, .. } => type_is_optional(inner),
+        _ => false,
     }
 }
 

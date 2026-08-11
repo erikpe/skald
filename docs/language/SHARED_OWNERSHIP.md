@@ -442,8 +442,9 @@ contract; when absent, it accounts for no owner.
 
 Optionality inside the operand of ordinary `shared` has a different meaning:
 `shared T?` denotes `Shared<Optional<T>>`, a non-null owner of a new shared-box
-allocation kind. Its design is frozen but not implemented; the current
-compiler preserves its type shape and rejects it during resolution.
+allocation kind. Its design is frozen; the current compiler parses its type
+and allocation forms, assigns canonical resolved identities, and rejects it
+at the type-check availability gate.
 
 `new P?()` allocates a box whose exact optional target begins absent, while
 `new P?(expression)` initializes that wrapper through the existing exact
@@ -478,8 +479,9 @@ authoritative in
 
 ## Exclusions
 
-The implemented profile does not yet execute the frozen shared optional box
-contract. Neither that contract nor this profile includes:
+The implemented frontend parses and resolves the frozen shared optional box
+contract, but the type-check availability gate prevents it from executing.
+Neither that contract nor this profile includes:
 
 - generalized boxes for non-optional primitive, class, array, function, or
   other inline values;

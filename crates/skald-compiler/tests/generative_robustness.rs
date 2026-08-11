@@ -120,6 +120,19 @@ fn exercise_optional_syntax_mutations() {
         insertion.insert(index, if index % 2 == 0 { '?' } else { '!' });
         assert_frontend_does_not_panic(&format!("optional-insert-{index}"), &insertion);
     }
+
+    const BOX_SEED: &str =
+        "fn main() -> i64 { var box: shared (i64[]?)? = new (i64[]?)?(none); return 0; }";
+    for index in 0..BOX_SEED.len() {
+        let mut deletion = BOX_SEED.to_owned();
+        deletion.remove(index);
+        assert_frontend_does_not_panic(&format!("optional-box-delete-{index}"), &deletion);
+    }
+    for index in 0..=BOX_SEED.len() {
+        let mut insertion = BOX_SEED.to_owned();
+        insertion.insert(index, [',', '?', '(', ')'][index % 4]);
+        assert_frontend_does_not_panic(&format!("optional-box-insert-{index}"), &insertion);
+    }
 }
 
 fn exercise_array_syntax_mutations() {

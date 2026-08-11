@@ -520,7 +520,8 @@ impl CallableChecker<'_, '_> {
                     crate::resolve::ResolvedSharedTarget::Class(class) => Some(class),
                     crate::resolve::ResolvedSharedTarget::Interface(_)
                     | crate::resolve::ResolvedSharedTarget::Obj
-                    | crate::resolve::ResolvedSharedTarget::Array(_) => None,
+                    | crate::resolve::ResolvedSharedTarget::Array(_)
+                    | crate::resolve::ResolvedSharedTarget::OptionalBox(_) => None,
                 }
             }
             crate::resolve::ResolvedExpression::Grouped(grouped) => {

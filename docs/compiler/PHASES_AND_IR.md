@@ -271,9 +271,9 @@ identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types.
 Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
-call. Frozen shared optional boxes remain resolution exclusions until their
-active roadmap establishes the target identities and deliberate lower-phase
-gates; nested and optional-array identities execute through recursive MIR
+call. Frozen shared optional boxes now have canonical resolved target
+identities and one deliberate type-check availability gate; nested and
+optional-array identities execute through recursive MIR
 lifecycle plans; optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model

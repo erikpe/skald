@@ -340,7 +340,7 @@ impl<'ast> ProgramResolver<'ast> {
                 });
 
         let span = entry_unit.ast.span;
-        let (array_types, optional_types) = self.type_interner.finish();
+        let (array_types, optional_types, optional_box_types) = self.type_interner.finish();
         ResolveOutput {
             program: ResolvedProgram {
                 modules: self.modules,
@@ -350,6 +350,7 @@ impl<'ast> ProgramResolver<'ast> {
                 module_declarations,
                 array_types,
                 optional_types,
+                optional_box_types,
                 string_language_item,
                 literal_data: ResolvedLiteralDataTable::new(self.literal_data),
                 declarations: function_declarations,

@@ -120,7 +120,6 @@ fn resolve_type(
             lookup,
             type_interner,
             diagnostics,
-            false,
         )?),
         syntax::TypeKind::Optional { payload, .. } => {
             resolve_optional_type(payload, lookup, type_interner, diagnostics)?
@@ -190,24 +189,17 @@ fn resolve_shared_target(
     lookup: ModuleLookup<'_>,
     type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
-    optional: bool,
 ) -> Option<ResolvedSharedTarget> {
-    if let syntax::TypeKind::Grouped { inner, .. } = &target.kind {
-        return resolve_shared_target(inner, lookup, type_interner, diagnostics, optional);
+    if syntax_type_is_optional(target) {
+        let resolved = resolve_type(target, lookup, type_interner, diagnostics)?;
+        let ResolvedTypeKind::Optional(optional) = resolved.kind else {
+            unreachable!("an optional target must resolve to an optional identity")
+        };
+        let target = type_interner.intern_optional_box(optional, target.span);
+        return Some(ResolvedSharedTarget::OptionalBox(target));
     }
-    if let syntax::TypeKind::Optional { question_span, .. } = &target.kind {
-        let _ = resolve_type(target, lookup, type_interner, diagnostics);
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_OPTIONAL_TYPE,
-                "shared boxes containing optional payloads are not supported",
-            )
-            .with_primary_label(
-                *question_span,
-                "`shared T?` is reserved for a future shared-box design",
-            ),
-        );
-        return None;
+    if let syntax::TypeKind::Grouped { inner, .. } = &target.kind {
+        return resolve_shared_target(inner, lookup, type_interner, diagnostics);
     }
     if matches!(target.kind, syntax::TypeKind::Array { .. }) {
         let resolved = resolve_type(target, lookup, type_interner, diagnostics)?;
@@ -253,11 +245,7 @@ fn resolve_shared_target(
             diagnostics.push(
                 Diagnostic::error(
                     UNKNOWN_TYPE,
-                    if optional {
-                        format!("unknown optional shared target `{}`", target.text)
-                    } else {
-                        format!("unknown shared target `{}`", target.text)
-                    },
+                    format!("unknown shared target `{}`", target.text),
                 )
                 .with_primary_label(
                     target.span,
@@ -267,6 +255,14 @@ fn resolve_shared_target(
             None
         }
         TopLevelLookup::Diagnosed => None,
+    }
+}
+
+fn syntax_type_is_optional(target: &syntax::TypeSyntax) -> bool {
+    match &target.kind {
+        syntax::TypeKind::Optional { .. } => true,
+        syntax::TypeKind::Grouped { inner, .. } => syntax_type_is_optional(inner),
+        _ => false,
     }
 }
 

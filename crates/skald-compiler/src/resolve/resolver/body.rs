@@ -548,6 +548,9 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 }
             }
             syntax::Expression::Allocation(allocation) => self.resolve_allocation(allocation),
+            syntax::Expression::OptionalBoxAllocation(allocation) => {
+                self.resolve_optional_box_allocation(allocation)
+            }
             syntax::Expression::ArrayConstruction(construction) => {
                 let array_type = self.resolve_type(&construction.array_type)?;
                 let arguments = match &construction.arguments {

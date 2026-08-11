@@ -182,6 +182,37 @@ fn repeated_optional_spellings_share_identities_across_modules() {
 }
 
 #[test]
+fn repeated_optional_box_views_share_deterministic_identities_across_modules() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import model;\nimport helper;\nfn use(value: shared model::Item?) -> unit {}\nfn main() -> i64 { return 0; }\n",
+            ),
+            (
+                "model.ska",
+                "public class Item { init() {} }\npublic fn keep(value: shared Item?) -> unit {}\n",
+            ),
+            (
+                "helper.ska",
+                "import model;\npublic fn keep(value: shared model::Item?) -> unit {}\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert_eq!(output.program.optional_box_types.iter().count(), 1);
+    let target = output.program.optional_box_types.iter().next().unwrap();
+    assert_eq!(target.id, crate::identity::OptionalBoxTypeId::new(0));
+    assert_eq!(target.optional_depth, 1);
+    assert_eq!(
+        target.object_leaf,
+        Some(ResolvedObjectTarget::Class(ClassId::new(0)))
+    );
+}
+
+#[test]
 fn nested_optionals_and_optional_arrays_cross_type_checking() {
     let output = resolve_text(
         "class Thing { init() {} }\n\
@@ -206,18 +237,128 @@ fn nested_optionals_and_optional_arrays_cross_type_checking() {
 }
 
 #[test]
-fn shared_boxes_with_optional_payloads_remain_a_resolution_exclusion() {
+fn shared_boxes_resolve_canonical_targets_and_stop_at_the_typeck_gate() {
     let output = resolve_text(
         "class Thing { init() {} }\n\
-         fn box_value(value: shared Thing?) -> unit {}\n\
-         fn maybe_box(value: shared? Thing?) -> unit {}\n\
+         fn box_value(value: shared Thing?, nested: shared Thing??) -> unit {}\n\
+         fn maybe_box(value: shared? Thing?, canonical: (shared Thing?)?) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert_eq!(output.program.optional_box_types.iter().count(), 2);
+    let exact = output
+        .program
+        .optional_box_types
+        .get(crate::identity::OptionalBoxTypeId::new(0))
+        .unwrap();
+    assert_eq!(exact.optional_depth, 1);
+    assert_eq!(
+        exact.object_leaf,
+        Some(ResolvedObjectTarget::Class(ClassId::new(0)))
+    );
+    let nested = output
+        .program
+        .optional_box_types
+        .get(crate::identity::OptionalBoxTypeId::new(1))
+        .unwrap();
+    assert_eq!(nested.optional_depth, 2);
+
+    let maybe = output.program.declarations.get(FunctionId::new(1)).unwrap();
+    assert_eq!(
+        maybe.parameters[0].type_syntax.kind, maybe.parameters[1].type_syntax.kind,
+        "shared shorthand must retain the canonical outer optional identity"
+    );
+
+    let checked = crate::typeck::type_check(&output.program);
+    assert!(checked.has_errors());
+    assert!(checked.hir.is_none());
+    assert_eq!(checked.diagnostics.iter().count(), 1);
+    assert_eq!(
+        checked.diagnostics.iter().next().unwrap().code,
+        crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE
+    );
+}
+
+#[test]
+fn resolves_optional_box_allocations_with_exact_targets_and_spans() {
+    let output = resolve_text(
+        "class Thing { init() {} }\n\
+         fn boxes() -> unit {\n\
+           var empty: shared i64? = new i64?();\n\
+           var object: shared Thing? = new Thing?(Thing());\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+
+    let ResolvedExpression::OptionalBoxAllocation(empty) =
+        local_initializer(&definition.body.statements[0])
+    else {
+        panic!("expected optional-box allocation");
+    };
+    assert_eq!(
+        empty.exact_optional,
+        crate::identity::OptionalTypeId::new(0)
+    );
+    assert!(matches!(
+        empty.initializer,
+        ResolvedOptionalBoxInitializer::Absent { .. }
+    ));
+
+    let ResolvedExpression::OptionalBoxAllocation(object) =
+        local_initializer(&definition.body.statements[1])
+    else {
+        panic!("expected optional-box allocation");
+    };
+    assert_eq!(
+        object.exact_optional,
+        crate::identity::OptionalTypeId::new(1)
+    );
+    assert!(matches!(
+        object.initializer,
+        ResolvedOptionalBoxInitializer::Value { .. }
+    ));
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("OptionalBoxTypes"), "{dump}");
+    assert!(
+        dump.contains("OptionalBoxAllocate exact o0 target box0"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("OptionalBoxAllocate exact o1 target box1"),
+        "{dump}"
+    );
+}
+
+#[test]
+fn rejects_non_concrete_object_box_allocation_but_retains_static_views() {
+    let output = resolve_text(
+        "interface View { fn read() -> i64; }\n\
+         fn views(owner: shared View?, any: shared Obj?) -> unit {}\n\
+         fn broken() -> unit { new View?(); new Obj?(); }\n\
          fn main() -> i64 { return 0; }\n",
     );
     assert!(output.has_errors());
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OPTIONAL_TYPE
-            && diagnostic.message == "shared boxes containing optional payloads are not supported"
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION_TARGET)
+            .count(),
+        2
+    );
+    assert!(output.program.optional_box_types.iter().any(|target| {
+        target.object_leaf
+            == Some(ResolvedObjectTarget::Interface(
+                crate::identity::InterfaceId::new(0),
+            ))
     }));
+    assert!(output
+        .program
+        .optional_box_types
+        .iter()
+        .any(|target| target.object_leaf == Some(ResolvedObjectTarget::Obj)));
 }
 
 #[test]

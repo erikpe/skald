@@ -654,6 +654,33 @@ impl AstDumper {
                     }
                 });
             }
+            Expression::OptionalBoxAllocation(allocation) => {
+                self.line("OptionalBoxAllocation", allocation.span);
+                self.indented(|dumper| {
+                    dumper.line("New", allocation.new_span);
+                    dumper.heading("Target");
+                    dumper.indented(|dumper| dumper.type_syntax(&allocation.target));
+                    match &allocation.initializer {
+                        OptionalBoxInitializer::Absent {
+                            left_paren_span,
+                            right_paren_span,
+                        } => {
+                            dumper.line("LeftParen", *left_paren_span);
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                        OptionalBoxInitializer::Value {
+                            left_paren_span,
+                            value,
+                            right_paren_span,
+                        } => {
+                            dumper.line("LeftParen", *left_paren_span);
+                            dumper.heading("Initializer");
+                            dumper.indented(|dumper| dumper.expression(value));
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                    }
+                });
+            }
             Expression::ArrayConstruction(construction) => {
                 self.line(
                     if construction.new_span.is_some() {

@@ -45,6 +45,9 @@ impl CallableResolver<'_, '_> {
             ),
             ResolvedSharedTarget::Obj => "shared Obj".to_owned(),
             ResolvedSharedTarget::Array(array) => format!("shared array {array}"),
+            ResolvedSharedTarget::OptionalBox(target) => {
+                format!("shared optional box {target}")
+            }
         }
     }
 

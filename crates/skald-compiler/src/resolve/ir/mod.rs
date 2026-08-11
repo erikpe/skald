@@ -7,7 +7,9 @@ mod expression;
 mod hierarchy;
 mod modules;
 mod object_place;
+mod optional_box_types;
 mod optional_types;
+mod shared_targets;
 mod strings;
 
 pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
@@ -29,7 +31,7 @@ pub use declarations::{
     ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedLocal,
     ResolvedMemberVisibility, ResolvedMethodDeclaration, ResolvedMethodDispatch,
     ResolvedMethodKind, ResolvedMethodModifier, ResolvedParameter, ResolvedParameterBindingMode,
-    ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget, ResolvedStaticFieldDeclaration,
+    ResolvedProgram, ResolvedReceiverAccess, ResolvedStaticFieldDeclaration,
     ResolvedStaticFieldInitializer, ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily,
     ResolvedVirtualFamilyTable,
 };
@@ -43,11 +45,11 @@ pub use expression::{
     ResolvedDirectCallExpr, ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr,
     ResolvedInterfaceCallExpr, ResolvedInterfaceReceiver, ResolvedLogicalExpr,
     ResolvedLogicalOperator, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
-    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
-    ResolvedPresenceTestKind, ResolvedPresentExpr, ResolvedPrimitiveCastExpr,
-    ResolvedPrimitiveType, ResolvedStaticCallExpr, ResolvedStaticFieldAccessExpr,
-    ResolvedStringLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
-    ResolvedUnwrapExpr,
+    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedOptionalBoxAllocationExpr,
+    ResolvedOptionalBoxInitializer, ResolvedPresenceTestExpr, ResolvedPresenceTestKind,
+    ResolvedPresentExpr, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedStaticCallExpr,
+    ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr, ResolvedTypeTestExpr,
+    ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{
@@ -57,7 +59,11 @@ pub use modules::{
     ResolvedTopLevelId, ResolvedVisibility,
 };
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};
+pub use optional_box_types::{ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable};
 pub use optional_types::{ResolvedOptionalType, ResolvedOptionalTypeTable};
+pub use shared_targets::{
+    ResolvedObjectTarget, ResolvedSharedTarget, ResolvedSharedTargetCategory,
+};
 pub use strings::{ResolvedLiteralData, ResolvedLiteralDataTable, ResolvedStringLanguageItem};
 
 pub(crate) use hierarchy::ResolvedClassHierarchyEntry;

@@ -10,7 +10,7 @@ use crate::{
 use super::ir::*;
 
 pub fn dump_resolved(program: &ResolvedProgram) -> String {
-    let mut dumper = ResolvedDumper::new(&program.optional_types);
+    let mut dumper = ResolvedDumper::new(&program.optional_types, &program.optional_box_types);
     dumper.line("ResolvedProgram", program.span);
     dumper.indented(|dumper| {
         dumper.raw_line(&format!("SelectedModule {}", program.modules.selected()));
@@ -185,6 +185,30 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if !program.optional_box_types.is_empty() {
+            dumper.heading("OptionalBoxTypes");
+            dumper.indented(|dumper| {
+                for target in program.optional_box_types.iter() {
+                    let leaf = match target.object_leaf {
+                        Some(ResolvedObjectTarget::Obj) => " object Obj".to_owned(),
+                        Some(ResolvedObjectTarget::Class(class)) => {
+                            format!(" object class {class}")
+                        }
+                        Some(ResolvedObjectTarget::Interface(interface)) => {
+                            format!(" object interface {interface}")
+                        }
+                        None => String::new(),
+                    };
+                    dumper.line(
+                        &format!(
+                            "OptionalBoxType {} exact {} depth {}{}",
+                            target.id, target.optional, target.optional_depth, leaf
+                        ),
+                        target.span,
+                    );
+                }
+            });
+        }
         if !program.array_types.is_empty() {
             dumper.heading("ArrayTypes");
             dumper.indented(|dumper| {
@@ -249,14 +273,19 @@ struct ResolvedDumper<'types> {
     output: String,
     indentation: usize,
     optional_types: &'types ResolvedOptionalTypeTable,
+    optional_box_types: &'types ResolvedOptionalBoxTypeTable,
 }
 
 impl<'types> ResolvedDumper<'types> {
-    fn new(optional_types: &'types ResolvedOptionalTypeTable) -> Self {
+    fn new(
+        optional_types: &'types ResolvedOptionalTypeTable,
+        optional_box_types: &'types ResolvedOptionalBoxTypeTable,
+    ) -> Self {
         Self {
             output: String::new(),
             indentation: 0,
             optional_types,
+            optional_box_types,
         }
     }
 
@@ -628,7 +657,7 @@ impl<'types> ResolvedDumper<'types> {
             }
             ResolvedTypeKind::Shared(target) => {
                 self.line(
-                    &format!("Type Shared {}", render_shared_target(target)),
+                    &format!("Type Shared {}", self.render_shared_target(target)),
                     type_syntax.span,
                 );
                 return;
@@ -958,6 +987,38 @@ impl<'types> ResolvedDumper<'types> {
                     }
                 });
             }
+            ResolvedExpression::OptionalBoxAllocation(allocation) => {
+                self.line(
+                    &format!(
+                        "OptionalBoxAllocate exact {} target {}",
+                        allocation.exact_optional, allocation.target
+                    ),
+                    allocation.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("New", allocation.new_span);
+                    dumper.line("Target", allocation.target_span);
+                    match &allocation.initializer {
+                        ResolvedOptionalBoxInitializer::Absent {
+                            left_paren_span,
+                            right_paren_span,
+                        } => {
+                            dumper.line("LeftParen", *left_paren_span);
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                        ResolvedOptionalBoxInitializer::Value {
+                            left_paren_span,
+                            value,
+                            right_paren_span,
+                        } => {
+                            dumper.line("LeftParen", *left_paren_span);
+                            dumper.heading("Initializer");
+                            dumper.indented(|dumper| dumper.expression(value));
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                    }
+                });
+            }
             ResolvedExpression::ArrayConstruction(construction) => {
                 self.line(
                     &format!(
@@ -1244,7 +1305,7 @@ impl<'types> ResolvedDumper<'types> {
         self.line(
             &format!(
                 "Dereference {operator} target {}",
-                render_shared_target(dereference.target)
+                self.render_shared_target(dereference.target)
             ),
             dereference.span,
         );
@@ -1290,7 +1351,9 @@ impl<'types> ResolvedDumper<'types> {
             ResolvedTypeKind::Class(class) => format!("class {class}"),
             ResolvedTypeKind::Interface(interface) => format!("interface {interface}"),
             ResolvedTypeKind::Array(array) => format!("array {array}"),
-            ResolvedTypeKind::Shared(target) => format!("shared {}", render_shared_target(target)),
+            ResolvedTypeKind::Shared(target) => {
+                format!("shared {}", self.render_shared_target(target))
+            }
             ResolvedTypeKind::Optional(optional) => {
                 let payload = self
                     .optional_types
@@ -1305,13 +1368,24 @@ impl<'types> ResolvedDumper<'types> {
             }
         }
     }
-}
 
-fn render_shared_target(target: ResolvedSharedTarget) -> String {
-    match target {
-        ResolvedSharedTarget::Obj => "Obj".to_owned(),
-        ResolvedSharedTarget::Class(class) => format!("class {class}"),
-        ResolvedSharedTarget::Interface(interface) => format!("interface {interface}"),
-        ResolvedSharedTarget::Array(array) => format!("array {array}"),
+    fn render_shared_target(&self, target: ResolvedSharedTarget) -> String {
+        match target.category() {
+            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Obj) => "Obj".to_owned(),
+            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Class(class)) => {
+                format!("class {class}")
+            }
+            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Interface(interface)) => {
+                format!("interface {interface}")
+            }
+            ResolvedSharedTargetCategory::Array(array) => format!("array {array}"),
+            ResolvedSharedTargetCategory::OptionalBox(target) => {
+                let metadata = self
+                    .optional_box_types
+                    .get(target)
+                    .expect("resolved optional-box identities must name table entries");
+                format!("optional-box {target} exact {}", metadata.optional)
+            }
+        }
     }
 }

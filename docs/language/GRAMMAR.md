@@ -253,10 +253,12 @@ The parser admits nested optionals, optional arrays, and shared boxes so their
 complete source shapes reach semantic analysis. Nested optionals and optional
 inline arrays execute in every supported owning, aggregate, internal callable,
 array-element, and checked-alias position. Semantic analysis still rejects
-`unit?` and standalone owning optional interface or `Obj` values. It also
-currently rejects `shared T?` and `shared? T?`, whose source and compiler
-semantics are frozen in [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes)
-but not implemented. Optional references such as `ref?` remain syntax errors.
+`unit?` and standalone owning optional interface or `Obj` values. Shared
+optional box types and allocations receive canonical resolved identities,
+then stop at the feature's single type-check availability gate; their source
+and compiler semantics are frozen in
+[Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes). Optional
+references such as `ref?` remain syntax errors.
 `unit[]` is likewise parsed so later semantic analysis can report element
 ineligibility; bare `unit` remains restricted to result positions.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
@@ -519,7 +521,12 @@ primary-expression
                  | "(" expression ")"
 
 allocation-expression
+                 = class-allocation-expression
+                 | optional-box-allocation-expression
+class-allocation-expression
                  = "new" declaration-path allocation-arguments
+optional-box-allocation-expression
+                 = "new" storage-type "(" [expression] ")"
 allocation-arguments
                  = "(" [argument-list] ")"
                  | copy-construction-arguments
@@ -533,6 +540,13 @@ array-inline-type
                  = postfix-array-type
 array-element-list = "{" [expression {"," expression}] "}"
 ```
+
+The `storage-type` in `optional-box-allocation-expression` must have an
+optional outer semantic constructor after grouping is removed. This admits
+targets such as `T?`, `T??`, `(T?)`, `T[]?`, and `(shared T)?`, while keeping
+ordinary class and inline/shared array construction in their existing
+productions. An optional-box initializer has zero or one expression and does
+not accept a trailing comma or `copy` marker.
 
 Leading outer `shared` or `shared?` belongs in a storage type, while `new`
 selects shared construction.
@@ -774,11 +788,12 @@ containers. The complete implemented semantics belong to
 The type grammar already preserves the frozen shared-optional-box forms:
 `shared P?` means `Shared<Optional<P>>`, `(shared P?)?` means an optional owner
 of that non-null box, and `shared? P?` is exact shorthand for the latter. The
-frozen allocation extension will add `new P?()` and `new P?(expression)` with
-one complete optional type target. Those allocation expressions are not yet
-accepted by the implemented `allocation-expression` production; the
-implementation roadmap owns that syntax change before any later phase may
-execute it.
+allocation grammar accepts `new P?()` and `new P?(expression)` with one
+complete optional type target. The AST keeps this form distinct from class and
+array construction and retains its type grouping and punctuation. Resolution
+assigns its exact optional target and static box-view identity. Type checking
+currently stops all shared optional boxes at one availability diagnostic, so
+grammar acceptance does not yet make box construction executable.
 
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with

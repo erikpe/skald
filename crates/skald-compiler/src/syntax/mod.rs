@@ -22,18 +22,20 @@ pub use ast::{
     LogicalOperator, MemberAccessExpr, MemberAccessOperator, MemberVisibility, MethodDecl,
     MethodModifier, ModuleImport, Name, NameComponent, NameComponentRef, NameComponents,
     NameQualification, NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
-    ObjectCastTargetMode, OptionalTypeSpelling, Parameter, ParameterBindingMode, PresenceTestExpr,
-    PresenceTestKind, PresentExpr, PrimitiveCastExpr, PrimitiveType, ReturnStatement,
-    SelectiveImport, SelectiveImportItem, SelfExpr, Statement, StaticFieldDecl,
-    StaticFieldInitializer, StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax,
-    TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
+    ObjectCastTargetMode, OptionalBoxAllocationExpr, OptionalBoxInitializer, OptionalTypeSpelling,
+    Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind, PresentExpr,
+    PrimitiveCastExpr, PrimitiveType, ReturnStatement, SelectiveImport, SelectiveImportItem,
+    SelfExpr, Statement, StaticFieldDecl, StaticFieldInitializer, StringLiteralExpr,
+    TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr,
+    Visibility, WhileStatement,
 };
 pub use dump::dump_ast;
 pub use parser::{
     parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
     EXPECTED_STATEMENT, EXPECTED_TOKEN, INVALID_CLASS_HEADER, INVALID_CLASS_MEMBER,
-    INVALID_COMPARISON, INVALID_IMPORT, INVALID_OPTIONAL_TYPE, INVALID_TYPE_TEST,
-    INVALID_VISIBILITY, MAX_LOGICAL_EXPRESSION_DEPTH, MAX_SYNTAX_NESTING, MISPLACED_IMPORT,
+    INVALID_COMPARISON, INVALID_IMPORT, INVALID_OPTIONAL_BOX_INITIALIZER, INVALID_OPTIONAL_TYPE,
+    INVALID_TYPE_TEST, INVALID_VISIBILITY, MAX_LOGICAL_EXPRESSION_DEPTH, MAX_SYNTAX_NESTING,
+    MISPLACED_IMPORT,
 };
 
 #[cfg(test)]

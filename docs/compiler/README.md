@@ -151,8 +151,9 @@ Distinct scalar, aggregate, and shared-owner operations remain only where the
 runtime work differs. Nested payload access, aliases, and internal callable
 boundaries use those recursive plans. Tagged optional arrays reuse ordinary
 array lifecycle across all supported aggregate, internal callable,
-array-element, and checked-alias positions. The frozen
-work adds no shared box target for `shared T?` and no C runtime ABI surface.
+array-element, and checked-alias positions. The shared-box frontend now adds a
+resolved target for `shared T?`, but the type-check availability gate prevents
+HIR/MIR/backend exposure and adds no C runtime ABI surface.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

@@ -24,12 +24,15 @@ use super::{
     },
 };
 
-pub(super) const fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
+pub(super) fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
     match target {
         ResolvedSharedTarget::Obj => HirSharedTarget::Obj,
         ResolvedSharedTarget::Class(class) => HirSharedTarget::Class(class),
         ResolvedSharedTarget::Interface(interface) => HirSharedTarget::Interface(interface),
         ResolvedSharedTarget::Array(array) => HirSharedTarget::Array(array),
+        ResolvedSharedTarget::OptionalBox(_) => {
+            unreachable!("the shared optional-box availability gate runs before HIR lowering")
+        }
     }
 }
 

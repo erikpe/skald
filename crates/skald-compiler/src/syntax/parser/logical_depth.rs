@@ -53,6 +53,13 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
             Expression::Allocation(expression) => {
                 push_arguments(&expression.arguments, depth, &mut pending);
             }
+            Expression::OptionalBoxAllocation(expression) => {
+                if let crate::syntax::ast::OptionalBoxInitializer::Value { value, .. } =
+                    &expression.initializer
+                {
+                    pending.push((value, depth));
+                }
+            }
             Expression::ArrayConstruction(expression) => match &expression.arguments {
                 ArrayConstructionArguments::Empty { .. } => {}
                 ArrayConstructionArguments::Length { length, .. } => {

@@ -165,6 +165,9 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
+            ResolvedExpression::OptionalBoxAllocation(_) => {
+                unreachable!("the shared optional-box availability gate runs before body typing")
+            }
             ResolvedExpression::ArrayConstruction(construction) => {
                 self.check_array_construction(construction)
             }

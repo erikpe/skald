@@ -24,6 +24,7 @@ use super::modules::{
     ResolvedVisibility,
 };
 use super::optional_types::ResolvedOptionalTypeTable;
+use super::{ResolvedOptionalBoxTypeTable, ResolvedSharedTarget};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
@@ -34,6 +35,7 @@ pub struct ResolvedProgram {
     pub module_declarations: ResolvedModuleDeclarationTable,
     pub array_types: ResolvedArrayTypeTable,
     pub optional_types: ResolvedOptionalTypeTable,
+    pub optional_box_types: ResolvedOptionalBoxTypeTable,
     pub string_language_item: Option<super::ResolvedStringLanguageItem>,
     pub literal_data: super::ResolvedLiteralDataTable,
     pub declarations: ResolvedFunctionDeclarationTable,
@@ -631,14 +633,6 @@ pub enum ResolvedTypeKind {
     Array(crate::identity::ArrayTypeId),
     Shared(ResolvedSharedTarget),
     Optional(OptionalTypeId),
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum ResolvedSharedTarget {
-    Obj,
-    Class(ClassId),
-    Interface(InterfaceId),
-    Array(crate::identity::ArrayTypeId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

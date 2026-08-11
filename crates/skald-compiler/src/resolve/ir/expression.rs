@@ -3,7 +3,7 @@
 use crate::{
     identity::{
         BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
-        LiteralDataId, MethodId, StaticFieldId,
+        LiteralDataId, MethodId, OptionalBoxTypeId, OptionalTypeId, StaticFieldId,
     },
     literal::NumericLiteralKind,
     source::Span,
@@ -30,6 +30,7 @@ pub enum ResolvedExpression {
     PrimitiveCast(ResolvedPrimitiveCastExpr),
     ObjectCast(ResolvedObjectCastExpr),
     Allocation(ResolvedAllocationExpr),
+    OptionalBoxAllocation(ResolvedOptionalBoxAllocationExpr),
     ArrayConstruction(Box<ResolvedArrayConstructionExpr>),
     ArrayLength(Box<ResolvedArrayLengthExpr>),
     DirectCall(ResolvedDirectCallExpr),
@@ -63,6 +64,7 @@ impl ResolvedExpression {
             Self::PrimitiveCast(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
+            Self::OptionalBoxAllocation(expression) => expression.span,
             Self::ArrayConstruction(expression) => expression.span,
             Self::ArrayLength(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
@@ -228,6 +230,30 @@ pub struct ResolvedAllocationExpr {
     pub target_span: Span,
     pub mode: ResolvedConstructionMode,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedOptionalBoxAllocationExpr {
+    /// Exact optional wrapper allocated, independent of its static owner view.
+    pub exact_optional: OptionalTypeId,
+    pub target: OptionalBoxTypeId,
+    pub new_span: Span,
+    pub target_span: Span,
+    pub initializer: ResolvedOptionalBoxInitializer,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedOptionalBoxInitializer {
+    Absent {
+        left_paren_span: Span,
+        right_paren_span: Span,
+    },
+    Value {
+        left_paren_span: Span,
+        value: Box<ResolvedExpression>,
+        right_paren_span: Span,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

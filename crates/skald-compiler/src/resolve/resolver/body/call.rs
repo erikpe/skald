@@ -241,6 +241,12 @@ impl CallableResolver<'_, '_> {
                     ResolvedTypeKind::Interface(interface)
                 }
                 ResolvedSharedTarget::Array(array) => ResolvedTypeKind::Array(array),
+                ResolvedSharedTarget::OptionalBox(target) => ResolvedTypeKind::Optional(
+                    self.type_interner
+                        .optional_box(target)
+                        .expect("resolved optional-box target must be interned")
+                        .optional,
+                ),
             }),
             ResolvedExpression::Unwrap(unwrap) => {
                 match self.resolved_expression_type(&unwrap.source)? {

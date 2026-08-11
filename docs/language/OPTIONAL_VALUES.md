@@ -94,8 +94,8 @@ the canonical `(shared T)?` form:
 | `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
 | `T[]?` | Tagged optional containing zero or one inline array | Supported owning, internal callable, aggregate, array-element, and checked-alias positions execute |
-| `shared T?` | Non-null shared box containing `T?` | Frozen design; not implemented |
-| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Frozen design; not implemented |
+| `shared T?` | Non-null shared box containing `T?` | Syntax and resolution implemented; type checking gated |
+| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Syntax and resolution implemented; type checking gated |
 
 In the implemented grammar, `shared?` is the contextual word `shared` followed
 by the `?` punctuation token. Ordinary trivia may separate those tokens.
@@ -112,7 +112,7 @@ The current compiler rejects:
 - `unit?`;
 - standalone optional interface or `Obj` views;
 - optional function types;
-- `shared T?` and `shared? T?`;
+- typed or executable use of `shared T?` and `shared? T?`;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
 
@@ -156,8 +156,9 @@ shared T?   = Shared<Optional<T>>
 shared T[]  = Shared<Array<T>>
 ```
 
-The first form requires the frozen shared-box allocation kind and is not yet
-implemented. To place optionality around an existing shared owner,
+The first form now reaches the dedicated shared-box allocation syntax and
+canonical resolved identities, but remains gated before typed HIR. To place
+optionality around an existing shared owner,
 group the shared type first:
 
 ```text
@@ -187,8 +188,8 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Frozen design; not implemented |
-| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Frozen design; not implemented |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Syntax and resolution implemented; type checking gated |
+| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Syntax and resolution implemented; type checking gated |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
 and `(shared T)?` for an optional shared owner. Source-shaped syntax inspection
@@ -299,10 +300,11 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; not implemented**. The compiler continues to reject
-the box type forms during resolution and does not yet parse their allocation
-expressions. The implementation roadmap may stage support but must not reopen
-the source semantics in this section.
+Status: **frozen design; syntax and resolution implemented**. The compiler
+parses box type and allocation forms, interns exact optional and static
+object-view targets, and then rejects the feature at one deliberate
+type-checking availability gate. Later roadmap tasks own typed and executable
+support and must not reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
 optional `P?` wrapper. It is `Shared<Optional<P>>`, not an optional ordinary

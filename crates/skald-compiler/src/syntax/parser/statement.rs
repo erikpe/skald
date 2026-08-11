@@ -458,6 +458,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         | Expression::PresenceTest(_)
         | Expression::PrimitiveCast(_)
         | Expression::Allocation(_)
+        | Expression::OptionalBoxAllocation(_)
         | Expression::ArrayConstruction(_)
         | Expression::Call(_) => false,
         Expression::ObjectCast(_) | Expression::Unwrap(_) => true,

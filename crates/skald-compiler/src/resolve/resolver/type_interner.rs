@@ -2,11 +2,15 @@
 
 use std::collections::HashMap;
 
-use crate::identity::{ArrayTypeId, OptionalTypeId};
+use crate::{
+    identity::{ArrayTypeId, OptionalBoxTypeId, OptionalTypeId},
+    source::Span,
+};
 
 use super::{
-    ResolvedArrayType, ResolvedArrayTypeTable, ResolvedOptionalType, ResolvedOptionalTypeTable,
-    ResolvedType, ResolvedTypeKind,
+    ResolvedArrayType, ResolvedArrayTypeTable, ResolvedObjectTarget, ResolvedOptionalBoxType,
+    ResolvedOptionalBoxTypeTable, ResolvedOptionalType, ResolvedOptionalTypeTable, ResolvedType,
+    ResolvedTypeKind,
 };
 
 /// Owns canonical identities for the mutually recursive array/optional graph.
@@ -19,6 +23,8 @@ pub(super) struct ResolvedTypeInterner {
     arrays: Vec<ResolvedArrayType>,
     optional_ids: HashMap<ResolvedTypeKind, OptionalTypeId>,
     optionals: Vec<ResolvedOptionalType>,
+    optional_box_ids: HashMap<OptionalTypeId, OptionalBoxTypeId>,
+    optional_boxes: Vec<ResolvedOptionalBoxType>,
 }
 
 impl ResolvedTypeInterner {
@@ -54,10 +60,79 @@ impl ResolvedTypeInterner {
             .filter(|entry| entry.id == id)
     }
 
-    pub(super) fn finish(self) -> (ResolvedArrayTypeTable, ResolvedOptionalTypeTable) {
+    pub(super) fn intern_optional_box(
+        &mut self,
+        optional: OptionalTypeId,
+        span: Span,
+    ) -> OptionalBoxTypeId {
+        if let Some(id) = self.optional_box_ids.get(&optional) {
+            return *id;
+        }
+
+        let (optional_depth, object_leaf) = self.optional_leaf(optional);
+        let id = OptionalBoxTypeId::new(self.optional_boxes.len());
+        self.optional_box_ids.insert(optional, id);
+        self.optional_boxes.push(ResolvedOptionalBoxType {
+            id,
+            optional,
+            optional_depth,
+            object_leaf,
+            span,
+        });
+        id
+    }
+
+    pub(super) fn optional_box(&self, id: OptionalBoxTypeId) -> Option<&ResolvedOptionalBoxType> {
+        self.optional_boxes
+            .get(id.index())
+            .filter(|entry| entry.id == id)
+    }
+
+    fn optional_leaf(&self, optional: OptionalTypeId) -> (usize, Option<ResolvedObjectTarget>) {
+        let mut depth = 1usize;
+        let mut leaf = self
+            .optional(optional)
+            .expect("interned optional identity must exist")
+            .payload
+            .kind;
+        while let ResolvedTypeKind::Optional(nested) = leaf {
+            depth += 1;
+            leaf = self
+                .optional(nested)
+                .expect("nested optional identity must exist")
+                .payload
+                .kind;
+        }
+        let object_leaf = match leaf {
+            ResolvedTypeKind::Obj => Some(ResolvedObjectTarget::Obj),
+            ResolvedTypeKind::Class(class) => Some(ResolvedObjectTarget::Class(class)),
+            ResolvedTypeKind::Interface(interface) => {
+                Some(ResolvedObjectTarget::Interface(interface))
+            }
+            ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+            | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Array(_)
+            | ResolvedTypeKind::Shared(_) => None,
+            ResolvedTypeKind::Optional(_) => unreachable!("optional leaf traversal is complete"),
+        };
+        (depth, object_leaf)
+    }
+
+    pub(super) fn finish(
+        self,
+    ) -> (
+        ResolvedArrayTypeTable,
+        ResolvedOptionalTypeTable,
+        ResolvedOptionalBoxTypeTable,
+    ) {
         (
             ResolvedArrayTypeTable::new(self.arrays),
             ResolvedOptionalTypeTable::new(self.optionals),
+            ResolvedOptionalBoxTypeTable::new(self.optional_boxes),
         )
     }
 }

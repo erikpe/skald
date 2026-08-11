@@ -631,6 +631,7 @@ pub enum Expression {
     PrimitiveCast(PrimitiveCastExpr),
     ObjectCast(ObjectCastExpr),
     Allocation(Box<AllocationExpr>),
+    OptionalBoxAllocation(Box<OptionalBoxAllocationExpr>),
     ArrayConstruction(Box<ArrayConstructionExpr>),
     Call(CallExpr),
     Grouped(GroupedExpr),
@@ -658,6 +659,7 @@ impl Expression {
             Self::PrimitiveCast(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
+            Self::OptionalBoxAllocation(expression) => expression.span,
             Self::ArrayConstruction(expression) => expression.span,
             Self::Call(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
@@ -708,6 +710,31 @@ pub struct AllocationExpr {
     pub target: Name,
     pub arguments: CallArguments,
     pub span: Span,
+}
+
+/// Allocation of one complete optional wrapper behind a shared owner.
+///
+/// This is deliberately distinct from class construction: its parentheses
+/// contain zero or one wrapper initializer, never class initializer arguments.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OptionalBoxAllocationExpr {
+    pub new_span: Span,
+    pub target: TypeSyntax,
+    pub initializer: OptionalBoxInitializer,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OptionalBoxInitializer {
+    Absent {
+        left_paren_span: Span,
+        right_paren_span: Span,
+    },
+    Value {
+        left_paren_span: Span,
+        value: Box<Expression>,
+        right_paren_span: Span,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -158,10 +158,8 @@ mode = "compile-fail"
 source = "optional_box_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "shared optional payload", match = "contains", inline = """error[RES022]: shared boxes containing optional payloads are not supported
- --> tests/golden/optionals/optional_box_exclusions.ska:6:35""" },
-  { name = "optional shared optional payload", match = "contains", inline = """error[RES022]: shared boxes containing optional payloads are not supported
- --> tests/golden/optionals/optional_box_exclusions.ska:7:45""" },
+  { name = "shared optional box availability gate", match = "contains", inline = """error[TYP044]: shared optional boxes are not available during type checking yet
+ --> tests/golden/optionals/optional_box_exclusions.ska:6:30""" },
 ]
 
 [[test]]
