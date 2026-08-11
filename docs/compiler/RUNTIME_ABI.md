@@ -387,16 +387,19 @@ arrays across aggregate storage, internal dispatch, array elements, and
 checked payload aliases. It reuses ordinary array backing allocation, anchors,
 and cleanup and adds no C symbol or ABI-version change.
 
-The frozen, not-yet-implemented
+The implemented primitive subset of the frozen
 [shared optional box contract](OPTIONAL_VALUES.md#frozen-shared-optional-box-representation)
-also adds no public C symbol or ABI-version change. Generated code uses
+adds no public C symbol or ABI-version change. Generated code uses
 `ska_rt_alloc` for the checked header-plus-optional size and `ska_rt_free` for
-the exact base after compiler-generated last-owner finalization. The runtime
-does not know box descriptors, optional targets, dynamic object classes,
-presence state, guards, owner views, or finalizer identities. `shared P?`
-remains a nonzero one-word owner; an absent outer `(shared P?)?` is branched
-around before any ordinary owner or allocator operation. Runtime ABI version 9
-and `ska_rt_abi_v9` remain unchanged.
+the exact base after compiler-generated last-owner finalization. Primitive box
+descriptors currently select distinct no-op finalizers; later payload
+categories will select recursive compiler-generated finalizers without
+changing this runtime boundary. The runtime does not know box descriptors,
+optional targets, dynamic object classes, presence state, guards, owner views,
+or finalizer identities. `shared P?` remains a nonzero one-word owner; an
+absent outer `(shared P?)?` is branched around before any ordinary owner or
+allocator operation. Runtime ABI version 9 and `ska_rt_abi_v9` remain
+unchanged.
 
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,

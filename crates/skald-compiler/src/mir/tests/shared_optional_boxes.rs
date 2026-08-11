@@ -57,6 +57,21 @@ fn primitive_box_program() -> MirProgram {
 }
 
 #[test]
+fn rejects_duplicate_exact_optional_box_descriptor_owners() {
+    let mut program = lower_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var signed: shared i64? = new i64?(1);\n",
+        "  var unsigned: shared u64? = new u64?(2u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let entries = program.optional_box_types.entries_mut_for_test();
+    entries[1].exact_optional = entries[0].exact_optional;
+
+    assert!(has_error(&program, "both own exact optional"));
+}
+
+#[test]
 fn lowers_and_verifies_local_optional_box_owner_lifetimes() {
     let program = primitive_box_program();
     verify_mir(&program).expect("local optional-box owner MIR must verify");
@@ -536,11 +551,12 @@ fn rejects_prepublication_observation_and_owner_cfg_disagreement() {
 }
 
 #[test]
-fn x86_backend_rejects_verified_optional_box_mir_deliberately() {
+fn x86_backend_executes_verified_primitive_optional_box_mir() {
     let program = primitive_box_program();
-    verify_mir(&program).expect("backend gate fixture must be valid MIR");
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert!(error
-        .message()
-        .contains("shared optional boxes are not yet supported by this target"));
+    verify_mir(&program).expect("primitive backend fixture must be valid MIR");
+    let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert_eq!(assembly.matches("call ska_rt_alloc").count(), 2);
+    assert_eq!(assembly.matches("call ska_rt_free").count(), 3);
+    assert!(assembly.contains(".Lska_optional_box_0_metadata"));
+    assert!(assembly.contains(".Lska_optional_box_0_finalize"));
 }

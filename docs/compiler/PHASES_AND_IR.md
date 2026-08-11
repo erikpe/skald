@@ -274,7 +274,8 @@ projection and an ordinary array-backing anchor for the complete immediate
 call. Frozen shared optional boxes now have canonical resolved, HIR, and MIR
 target identities, typed local construction/ownership, verified
 unpublished-payload and owner lifetimes, and deliberate stored-position,
-access, and backend gates; nested and
+access, and non-primitive backend gates. Primitive local boxes execute on the
+x86-64 target through exact descriptor and shared-owner lowering; nested and
 optional-array identities execute through recursive MIR
 lifecycle plans; optional-reference shapes remain syntax diagnostics.
 

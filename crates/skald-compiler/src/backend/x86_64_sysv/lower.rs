@@ -26,6 +26,7 @@ mod integer_division;
 mod io;
 mod object_abi;
 mod optional;
+mod optional_box;
 mod ownership;
 mod primitive_cast;
 mod shift;
@@ -66,6 +67,7 @@ pub(super) fn lower(
     functions.extend(array::lower_helpers(program, data_layout)?);
     functions.extend(ownership::lower_helpers(program, dispatch));
     functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
+    functions.extend(optional_box::lower_primitive_finalizers(program));
     if let Some(initializer) = static_lifecycle::lower_program_initializer(program) {
         functions.push(initializer);
     }

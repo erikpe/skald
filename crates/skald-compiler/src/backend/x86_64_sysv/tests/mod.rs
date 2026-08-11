@@ -80,6 +80,7 @@ mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;
 mod produced_aliases;
+mod shared_optional_boxes;
 mod shared_ownership;
 mod shifts;
 mod static_fields;

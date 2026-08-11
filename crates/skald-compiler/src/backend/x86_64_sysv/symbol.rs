@@ -1,7 +1,7 @@
 //! Collision-proof assembly symbols derived from canonical identities.
 
 use crate::{
-    identity::{ArrayTypeId, CallableId, ClassId, ModuleId, StaticFieldId},
+    identity::{ArrayTypeId, CallableId, ClassId, ModuleId, OptionalBoxTypeId, StaticFieldId},
     mir::{MirFunctionLinkage, MirProgram},
 };
 
@@ -88,6 +88,14 @@ pub(super) fn shared_array_metadata(array: ArrayTypeId) -> String {
 
 pub(super) fn shared_array_finalizer(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_finalize_shared", array.index())
+}
+
+pub(super) fn optional_box_metadata(target: OptionalBoxTypeId) -> String {
+    format!(".Lska_optional_box_{}_metadata", target.index())
+}
+
+pub(super) fn optional_box_finalizer(target: OptionalBoxTypeId) -> String {
+    format!(".Lska_optional_box_{}_finalize", target.index())
 }
 
 pub(super) fn literal_backing(pool_index: usize) -> String {

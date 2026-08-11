@@ -284,12 +284,14 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; verified local MIR implemented**. Local owner
+Status: **frozen design; primitive local native profile implemented**. Local owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
-owner lifetime verification. Native execution, pointee access, and broader
-stored positions remain deliberately gated at their responsible roadmap
-boundaries.
+owner lifetime verification. The x86-64 backend executes primitive wrappers
+with checked 32-byte header-plus-wrapper layouts, deterministic exact
+descriptors, and distinct no-op finalizers. Lifecycle-bearing payloads,
+pointee access, polymorphic views, and broader stored positions remain
+deliberately gated at their responsible roadmap boundaries.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and

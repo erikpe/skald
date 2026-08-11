@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX2 are complete and BX3 is next.
+Status: in progress; BX0-BX3 are complete and BX4 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -105,7 +105,7 @@ outcome; it does not reopen those decisions.
 - [x] BX0 — Retain box allocation syntax and canonical resolved targets
 - [x] BX1 — Select typed box ownership and construction plans
 - [x] BX2 — Verify optional-box allocation and owner lifetimes in MIR
-- [ ] BX3 — Execute primitive optional boxes on x86-64
+- [x] BX3 — Execute primitive optional boxes on x86-64
 - [ ] BX4 — Execute exact lifecycle-bearing box targets
 - [ ] BX5 — Add explicit immutable box-pointee access
 - [ ] BX6 — Execute polymorphic object-box views and dispatch
@@ -241,20 +241,20 @@ before every backend, and no target-dependent offset or helper enters MIR.
 one-word ABI model with the smallest payload lifecycle before aggregates and
 objects depend on it.
 
-- [ ] Extend target layout with checked header-plus-optional placement,
+- [x] Extend target layout with checked header-plus-optional placement,
       alignment, addressability, and size-overflow calculations for primitive
       optional targets.
-- [ ] Emit deterministic exact optional-box descriptor symbols and compatible
+- [x] Emit deterministic exact optional-box descriptor symbols and compatible
       no-op primitive finalizer entries without merging descriptor identity.
-- [ ] Lower verified allocate/initialize/publish/adopt, owner copy/move/release,
+- [x] Lower verified allocate/initialize/publish/adopt, owner copy/move/release,
       secure assignment, and last-owner exact-base free for primitive boxes.
-- [ ] Classify `shared P?` parameters/results as one integer word in backend
+- [x] Classify `shared P?` parameters/results as one integer word in backend
       legality even while broader callable source support remains gated.
-- [ ] Preserve checked allocation failure and common runtime trace attribution;
+- [x] Preserve checked allocation failure and common runtime trace attribution;
       add no runtime symbol, header declaration, or ABI marker change.
-- [ ] Keep aggregate payloads, pointee access, and object views behind explicit
+- [x] Keep aggregate payloads, pointee access, and object views behind explicit
       structured backend gates.
-- [ ] Add narrow source-to-native or MIR-to-native observations proving
+- [x] Add narrow source-to-native or MIR-to-native observations proving
       allocation identity, owner replacement, alias retention of the old box,
       and exactly-once deallocation without requiring unpublished access syntax.
 

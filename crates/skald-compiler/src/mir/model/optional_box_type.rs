@@ -43,4 +43,9 @@ impl MirOptionalBoxTypeTable {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
+    #[cfg(test)]
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirOptionalBoxType] {
+        self.entries.entries_mut_for_test()
+    }
 }

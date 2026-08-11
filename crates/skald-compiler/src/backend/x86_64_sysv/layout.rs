@@ -6,7 +6,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::{ArrayTypeId, ClassId, FieldId, OptionalTypeId},
+    identity::{ArrayTypeId, ClassId, FieldId, OptionalBoxTypeId, OptionalTypeId},
     mir::{MirOptionalRepresentation, MirOptionalStorage, MirProgram, MirType},
 };
 
@@ -39,6 +39,24 @@ pub(super) struct OptionalLayout {
     ty: TypeLayout,
     payload_offset: usize,
     nullable_niche: bool,
+}
+
+/// Complete allocation layout for one shared payload. The owner handle always
+/// points at byte zero; `payload_offset` is the address passed to finalizers.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct SharedAllocationLayout {
+    byte_count: u64,
+    payload_offset: usize,
+}
+
+impl SharedAllocationLayout {
+    pub(super) const fn byte_count(self) -> u64 {
+        self.byte_count
+    }
+
+    pub(super) const fn payload_offset(self) -> usize {
+        self.payload_offset
+    }
 }
 
 impl OptionalLayout {
@@ -161,6 +179,7 @@ pub(super) struct DataLayout {
     classes: Vec<ClassLayout>,
     arrays: Vec<ArrayLayout>,
     optionals: Vec<OptionalLayout>,
+    primitive_optional_boxes: Vec<Option<SharedAllocationLayout>>,
 }
 
 impl DataLayout {
@@ -221,22 +240,23 @@ impl DataLayout {
             .class(class)
             .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
             .ty();
-        if payload.alignment() > SHARED_HANDLE_ALIGNMENT {
-            return Err(layout_error(format!(
-                "shared payload class {class} requires unsupported alignment {}",
-                payload.alignment()
-            )));
-        }
-        let size = SHARED_HEADER_SIZE
-            .checked_add(payload.size())
-            .filter(|size| *size <= MAX_ADDRESSABLE_SIZE)
+        shared_allocation_layout(payload, &format!("class {class}"))
+            .map(|layout| layout.byte_count())
+    }
+
+    pub(super) fn primitive_optional_box(
+        &self,
+        target: OptionalBoxTypeId,
+    ) -> Result<SharedAllocationLayout, BackendError> {
+        self.primitive_optional_boxes
+            .get(target.index())
+            .copied()
+            .flatten()
             .ok_or_else(|| {
                 layout_error(format!(
-                    "shared allocation for class {class} exceeds target size limits"
+                    "optional-box {target} has no primitive target layout"
                 ))
-            })?;
-        u64::try_from(size)
-            .map_err(|_| layout_error(format!("shared allocation for class {class} is too large")))
+            })
     }
 }
 
@@ -272,6 +292,31 @@ impl<'mir> LayoutBuilder<'mir> {
         for optional in self.program.optional_types.iter() {
             self.compute_optional(optional.id)?;
         }
+        let primitive_optional_boxes = self
+            .program
+            .optional_box_types
+            .iter()
+            .map(|box_type| {
+                let Some(optional) = box_type.exact_optional else {
+                    return Ok(None);
+                };
+                let Some(metadata) = self.program.optional_type(optional) else {
+                    return Ok(None);
+                };
+                if metadata.primitive().is_none() {
+                    return Ok(None);
+                }
+                let payload = self
+                    .optional_layouts
+                    .get(optional.index())
+                    .copied()
+                    .flatten()
+                    .expect("every declared optional was laid out")
+                    .ty();
+                shared_allocation_layout(payload, &format!("optional-box {}", box_type.id))
+                    .map(Some)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let arrays = self
             .program
             .array_types
@@ -304,6 +349,7 @@ impl<'mir> LayoutBuilder<'mir> {
                 .into_iter()
                 .map(|layout| layout.expect("every optional identity was laid out"))
                 .collect(),
+            primitive_optional_boxes,
         })
     }
 
@@ -496,6 +542,39 @@ fn optional_layout_for(payload: TypeLayout) -> Result<OptionalLayout, BackendErr
     })
 }
 
+fn shared_allocation_layout(
+    payload: TypeLayout,
+    description: &str,
+) -> Result<SharedAllocationLayout, BackendError> {
+    if payload.alignment() > SHARED_HANDLE_ALIGNMENT {
+        return Err(layout_error(format!(
+            "shared payload {description} requires unsupported alignment {}",
+            payload.alignment()
+        )));
+    }
+    let payload_offset = abi::align_up(SHARED_HEADER_SIZE, payload.alignment())
+        .filter(|offset| *offset <= MAX_ADDRESSABLE_SIZE)
+        .ok_or_else(|| {
+            layout_error(format!(
+                "shared allocation for {description} has an unaddressable payload offset"
+            ))
+        })?;
+    let size = payload_offset
+        .checked_add(payload.size())
+        .filter(|size| *size <= MAX_ADDRESSABLE_SIZE)
+        .ok_or_else(|| {
+            layout_error(format!(
+                "shared allocation for {description} exceeds target size limits"
+            ))
+        })?;
+    let byte_count = u64::try_from(size)
+        .map_err(|_| layout_error(format!("shared allocation for {description} is too large")))?;
+    Ok(SharedAllocationLayout {
+        byte_count,
+        payload_offset,
+    })
+}
+
 fn layout_class(base: Option<(ClassId, TypeLayout)>, fields: &[TypeLayout]) -> Option<ClassLayout> {
     let mut size = base.map_or(0, |(_, layout)| layout.size());
     let mut alignment = base.map_or(1, |(_, layout)| layout.alignment());
@@ -601,6 +680,7 @@ mod tests {
             classes: vec![],
             arrays: vec![],
             optionals: vec![],
+            primitive_optional_boxes: vec![],
         };
         for ty in [MirType::I64, MirType::U64, MirType::F64] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(8, 8));
@@ -688,5 +768,21 @@ mod tests {
             error.contains("optional layout exceeds target limits"),
             "{error}"
         );
+
+        let primitive_box = shared_allocation_layout(TypeLayout::new(16, 8), "test box")
+            .expect("a primitive optional fits behind the shared header");
+        assert_eq!(primitive_box.payload_offset(), SHARED_HEADER_SIZE);
+        assert_eq!(primitive_box.byte_count(), 32);
+
+        let oversized_box =
+            shared_allocation_layout(TypeLayout::new(MAX_ADDRESSABLE_SIZE, 8), "test box")
+                .unwrap_err()
+                .to_string();
+        assert!(oversized_box.contains("exceeds target size limits"));
+
+        let over_aligned_box = shared_allocation_layout(TypeLayout::new(16, 16), "test box")
+            .unwrap_err()
+            .to_string();
+        assert!(over_aligned_box.contains("requires unsupported alignment 16"));
     }
 }

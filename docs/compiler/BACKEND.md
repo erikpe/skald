@@ -833,6 +833,14 @@ operation.
 
 ### Frozen shared optional box target boundary
 
+The primitive local profile is implemented. Exact primitive wrappers use a
+checked 32-byte allocation (the 16-byte shared header followed by the 16-byte
+tagged optional), one deterministic descriptor per exact box identity, and a
+distinct no-op finalizer. Ordinary retain, move, secure replacement, last-owner
+release, runtime tracing, and exact-base free paths operate unchanged.
+Lifecycle-bearing wrappers, polymorphic object views, and published-pointee
+access remain explicit target-legality errors.
+
 The frozen box extension keeps the one-word owner and existing shared header:
 
 | Offset | Box allocation field |

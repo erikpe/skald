@@ -482,9 +482,10 @@ authoritative in
 ## Exclusions
 
 The compiler parses, resolves, type-checks, lowers, and verifies the local-owner
-subset of the frozen shared optional box contract. A deliberate backend
-capability gate prevents native execution until exact box layout and
-finalization are implemented.
+subset of the frozen shared optional box contract. Primitive optional boxes
+also execute this owner lifetime natively through exact descriptors and no-op
+payload finalizers. Deliberate backend capability gates retain lifecycle-bearing
+payloads, object views, and pointee access for their later implementation tasks.
 Neither that contract nor this profile includes:
 
 - generalized boxes for non-optional primitive, class, array, function, or

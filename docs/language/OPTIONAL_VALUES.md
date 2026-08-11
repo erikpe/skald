@@ -189,7 +189,7 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Local construction and ownership verified in target-independent MIR; native backend gated |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Primitive local boxes execute natively; lifecycle-bearing payloads, access, and broader positions remain staged |
 | `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Local box ownership composes with the implemented optional-owner form; native backend gated |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
@@ -301,12 +301,14 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; verified local MIR implemented**. The compiler parses
+Status: **frozen design; primitive local native profile implemented**. The compiler parses
 box forms, interns exact optional and static object-view targets, selects local
 construction and owner-transfer plans, and verifies allocation, publication,
-adoption, replacement, and cleanup in target-independent MIR. Broader storage,
-pointee access, and native execution remain staged. Later roadmap tasks must
-not reopen the source semantics in this section.
+adoption, replacement, and cleanup in target-independent MIR. On x86-64,
+primitive `P?` wrappers now allocate, initialize, publish, share, replace, and
+deallocate through deterministic exact box descriptors. Lifecycle-bearing
+payloads, broader storage, polymorphic views, and pointee access remain staged.
+Later roadmap tasks must not reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
 optional `P?` wrapper. It is `Shared<Optional<P>>`, not an optional ordinary

@@ -66,6 +66,19 @@ impl MirProgram {
         self.optional_box_types.get(id)
     }
 
+    /// Returns the exact optional-box identity that owns `optional` storage.
+    ///
+    /// View-only polymorphic box identities deliberately do not participate:
+    /// allocation metadata always names the one exact physical wrapper.
+    pub fn exact_optional_box_type(
+        &self,
+        optional: crate::identity::OptionalTypeId,
+    ) -> Option<&super::MirOptionalBoxType> {
+        self.optional_box_types
+            .iter()
+            .find(|box_type| box_type.exact_optional == Some(optional))
+    }
+
     pub fn shared_target_type(&self, target: MirSharedTarget) -> Option<MirType> {
         match target {
             MirSharedTarget::OptionalBox(box_type) => self

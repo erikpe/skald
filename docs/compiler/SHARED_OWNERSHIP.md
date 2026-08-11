@@ -466,9 +466,10 @@ The frozen `shared P?` extension introduces `Shared<Optional<P>>` as a distinct
 allocation target while retaining the same non-null owner operations. The
 compiler assigns canonical resolved, HIR, and MIR targets; selects local owner
 copy/adoption/replacement and exact wrapper construction; and verifies the
-complete local lifetime before reaching an explicit x86-64 capability gate.
-Fields, statics, calls, and pointee access retain focused later-task
-diagnostics.
+complete local lifetime. The x86-64 backend now executes primitive wrapper
+targets through the ordinary header, count, and exact-base release path.
+Lifecycle-bearing wrappers, object views, fields, statics, calls, and pointee
+access retain focused later-task diagnostics.
 
 Each box allocation records a distinct optional-box origin, an exact canonical
 optional payload target, and one descriptor/finalizer identity. Allocation

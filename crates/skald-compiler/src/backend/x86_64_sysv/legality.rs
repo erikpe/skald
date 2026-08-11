@@ -31,6 +31,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         }
         for block in &function.body().blocks {
             for instruction in &block.instructions {
+                reject_optional_box_pointee_copy(function, instruction)?;
                 match instruction {
                     MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
                     MirInstruction::Initialize(initialize) => {
@@ -44,12 +45,20 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                         crate::mir::MirSharedAllocationTarget::Class(class) => {
                             data_layout.shared_allocation_size(class)?;
                         }
-                        crate::mir::MirSharedAllocationTarget::OptionalBox { .. } => {
-                            return Err(BackendError::new(
-                                Target::X86_64SysV,
-                                Some(function.callable()),
-                                "shared optional boxes are not yet supported by this target",
-                            ));
+                        crate::mir::MirSharedAllocationTarget::OptionalBox { target, optional } => {
+                            let metadata = program.optional_type(optional).expect(
+                                "verified optional-box allocation must name optional metadata",
+                            );
+                            if metadata.primitive().is_none() {
+                                return Err(BackendError::new(
+                                    Target::X86_64SysV,
+                                    Some(function.callable()),
+                                    format!(
+                                        "shared optional-box {target} has a non-primitive payload that is not yet supported by this target"
+                                    ),
+                                ));
+                            }
+                            data_layout.primitive_optional_box(target)?;
                         }
                     },
                     MirInstruction::SharedInitialize(initialize) => {
@@ -159,6 +168,35 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         }
     }
     Ok((data_layout, dispatch))
+}
+
+fn reject_optional_box_pointee_copy(
+    function: crate::mir::MirDefinitionRef<'_>,
+    instruction: &MirInstruction,
+) -> Result<(), BackendError> {
+    let MirInstruction::OptionalInitialize(initialize) = instruction else {
+        return Ok(());
+    };
+    let crate::mir::MirOptionalSource::Copy(source) = &initialize.source else {
+        return Ok(());
+    };
+    let crate::mir::MirPlaceBase::SharedPointee(owner) = source.base else {
+        return Ok(());
+    };
+    let owner = function.storage(owner);
+    if owner.is_some_and(|storage| {
+        matches!(
+            storage.ty,
+            crate::mir::MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(_))
+        )
+    }) {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            Some(function.callable()),
+            "shared optional-box pointee access is not yet supported by this target",
+        ));
+    }
+    Ok(())
 }
 
 fn primitive_cast_is_supported(operation: crate::mir::MirPrimitiveCast) -> bool {

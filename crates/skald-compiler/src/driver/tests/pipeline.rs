@@ -977,17 +977,15 @@ fn static_lifetime_cycles_are_reported_as_source_diagnostics_before_synthesis() 
 }
 
 #[test]
-fn verified_optional_boxes_stop_at_the_backend_capability_gate() {
-    let CompilationError::Backend(error) = compile_source_to_assembly(
+fn verified_primitive_optional_boxes_reach_native_assembly() {
+    let artifact = compile_source_to_assembly(
         "optional-box.ska",
         "fn main() -> i64 { var box: shared i64? = new i64?(1); return 0; }",
         Target::X86_64SysV,
     )
-    .unwrap_err() else {
-        panic!("verified optional-box MIR must stop at backend legality");
-    };
+    .expect("verified primitive optional boxes must lower through the backend");
 
-    assert!(error
-        .message()
-        .contains("shared optional boxes are not yet supported by this target"));
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains("mov rdi, 32\n    lea r11"));
+    assert!(artifact.assembly.contains(".Lska_optional_box_0_metadata"));
 }

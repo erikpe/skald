@@ -375,6 +375,31 @@ mod tests {
     }
 
     #[test]
+    fn classifies_optional_box_owners_as_one_integer_component() {
+        let box_owner = MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(
+            crate::identity::OptionalBoxTypeId::new(0),
+        ));
+        let layout = CallLayout::classify(&MirParameter::values([
+            box_owner, box_owner, box_owner, box_owner, box_owner, box_owner, box_owner,
+        ]))
+        .unwrap();
+
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rdi),
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::IntegerRegister(Register::Rdx),
+                ArgumentLocation::IntegerRegister(Register::Rcx),
+                ArgumentLocation::IntegerRegister(Register::R8),
+                ArgumentLocation::IntegerRegister(Register::R9),
+                ArgumentLocation::Stack(0),
+            ]
+        );
+        assert_eq!(layout.stack_size(), 16);
+    }
+
+    #[test]
     fn classifies_optional_aggregate_addresses_as_integer_arguments() {
         let layout = CallLayout::classify_internal_call(
             &MirParameter::values([

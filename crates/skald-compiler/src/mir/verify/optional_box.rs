@@ -6,6 +6,7 @@ use super::context::Verifier;
 
 impl Verifier<'_> {
     pub(super) fn verify_optional_box_declarations(&mut self) {
+        let mut exact_owners = vec![None; self.program.optional_types.iter().len()];
         for (index, box_type) in self.program.optional_box_types.iter().enumerate() {
             if box_type.id.index() != index {
                 self.program_error(format!(
@@ -38,6 +39,17 @@ impl Verifier<'_> {
                     "optional-box {} has inconsistent exact optional or object-view metadata",
                     box_type.id
                 ));
+            }
+            if let Some(optional) = box_type.exact_optional {
+                let Some(owner) = exact_owners.get_mut(optional.index()) else {
+                    continue;
+                };
+                if let Some(previous) = owner.replace(box_type.id) {
+                    self.program_error(format!(
+                        "optional-box {previous} and {} both own exact optional {optional}",
+                        box_type.id
+                    ));
+                }
             }
         }
     }

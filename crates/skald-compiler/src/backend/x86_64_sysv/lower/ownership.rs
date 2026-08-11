@@ -15,7 +15,7 @@ use crate::{
 
 use super::{
     super::{
-        layout::SHARED_DYNAMIC_METADATA_OFFSET,
+        layout::{SHARED_DYNAMIC_METADATA_OFFSET, SHARED_HEADER_SIZE},
         machine::{Instruction, Label, Register},
         symbol,
     },
@@ -44,12 +44,16 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         allocation: &MirSharedAllocate,
     ) -> Result<(), BackendError> {
-        let crate::mir::MirSharedAllocationTarget::Class(class) = allocation.target else {
-            return Err(self.ownership_error(
-                "optional-box allocation reached instruction selection past target legality",
-            ));
+        let byte_count = match allocation.target {
+            crate::mir::MirSharedAllocationTarget::Class(class) => {
+                self.data_layout.shared_allocation_size(class)?
+            }
+            crate::mir::MirSharedAllocationTarget::OptionalBox { target, .. } => {
+                let layout = self.data_layout.primitive_optional_box(target)?;
+                debug_assert_eq!(layout.payload_offset(), SHARED_HEADER_SIZE);
+                layout.byte_count()
+            }
         };
-        let byte_count = self.data_layout.shared_allocation_size(class)?;
         self.output.push(Instruction::MoveImmediate64 {
             bits: byte_count,
             destination: Register::Rdi,
@@ -66,22 +70,34 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         publish: &MirSharedPublish,
     ) -> Result<(), BackendError> {
-        let class = match self
+        let metadata_symbol = match self
             .function
             .storage(publish.allocation)
             .expect("verified publication names storage")
             .ty
         {
-            MirType::Class(class) => class,
+            MirType::Class(class) => symbol::dispatch_table(self.program, class),
+            MirType::Optional(optional) => {
+                let box_type = self
+                    .program
+                    .exact_optional_box_type(optional)
+                    .ok_or_else(|| {
+                        self.ownership_error(format!(
+                            "shared publication optional {optional} has no exact box identity"
+                        ))
+                    })?;
+                self.data_layout.primitive_optional_box(box_type.id)?;
+                symbol::optional_box_metadata(box_type.id)
+            }
             _ => {
-                return Err(
-                    self.ownership_error("shared publication storage has no exact dynamic class")
-                )
+                return Err(self.ownership_error(
+                    "shared publication storage has no exact allocation metadata",
+                ))
             }
         };
         self.load_shared_handle(publish.allocation, Register::R11);
         self.output.push(Instruction::LoadSymbolAddress {
-            symbol: symbol::dispatch_table(self.program, class),
+            symbol: metadata_symbol,
             destination: Register::Rax,
         });
         value::store_rax(
