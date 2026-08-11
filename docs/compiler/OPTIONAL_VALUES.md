@@ -12,7 +12,9 @@ identities and recursive lifecycle metadata.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
-authoritative for source currently accepted by the compiler.
+authoritative for source currently accepted by the compiler. This document
+also freezes the not-yet-implemented compiler representation for
+[shared optional boxes](#frozen-shared-optional-box-representation).
 
 This document defines phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
@@ -33,7 +35,7 @@ Each phase owns one stable responsibility:
 | Phase | Optional-value responsibility |
 |---|---|
 | Lexing and parsing | Preserve recursive `?`/`[]` type composition, grouping, postfix `!`, reserved `none`, contextual `some`, `shared?` shorthand provenance, presence tests, precedence, trivia, and recovery spans. |
-| Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and keep shared boxes outside the resolved type graph. |
+| Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and currently keep frozen shared boxes outside the executable resolved type graph. |
 | Type checking and HIR | Reject payload identities or positions not yet executable, then select compatibility, lifecycle, checked-view, anchor, and boundary requirements by canonical optional identity. |
 | MIR lowering | Lower the canonical optional table deterministically and make storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
 | MIR verification | Prove storage, payload, owner, guard, anchor, transition, failure, and CFG invariants independently of source shape. |
@@ -113,9 +115,10 @@ durable requirements are:
   identity, and module traversal produces deterministic IDs and dumps;
 - `(shared P)?` and `shared? P` normalize to one
   `Optional<Shared<P>>` identity; and
-- `shared P?` is instead `Shared<Optional<P>>`, remains an unsupported box
-  target, and never receives an optional or shared-target identity in
-  executable HIR.
+- `shared P?` is instead `Shared<Optional<P>>`; the current compiler rejects it
+  before executable HIR, while the frozen box extension gives it an exact
+  optional allocation target and, for object boxes, a distinct static view
+  identity.
 
 This follows the existing array-table pattern without requiring one universal
 type interner. Optional and array entries may name one another through their
@@ -274,15 +277,80 @@ layout, shared-owner zero niches, and checked unwrap remain compiler-owned.
 The existing allocator and deallocator see only ordinary valid array backing
 requests and exact allocation bases.
 
-### Shared-box exclusion
+## Frozen shared optional box representation
 
-No phase adds a box target for `Shared<Optional<P>>`. There is
-no provisional box ID, allocation origin, initialization/publication node,
-metadata record, finalizer, pointee projection, mutation operation, target
-layout, or backend helper. `shared P?` and the shorthand-derived
-`shared? P?` remain focused semantic diagnostics. A later shared-box design may
-consume the completed optional lifecycle as its pointee plan, but it must own
-all allocation and shared-target changes separately.
+Status: **frozen design; not implemented**. The current resolution diagnostic
+remains the availability gate until the implementation roadmap deliberately
+moves it. No lower phase may infer or partially execute box behavior before
+its responsible task establishes a verified representation.
+
+`Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
+allocation payload. Exact primitive, array, shared-owner, nested optional, and
+other non-object boxes may name that identity directly. Optional object boxes
+also require a canonical static box-view identity whose optional depth and
+class/interface/`Obj` leaf may differ from the allocation's exact concrete
+class optional identity. The representation must distinguish these target
+capabilities rather than treating every non-array shared target as an object:
+
+```text
+owner operations       object | array | exact optional | optional object view
+object views/dispatch  object | present optional object view
+array operations       array
+optional-place access  exact optional | optional object view
+```
+
+The exact Rust enum and interner names are implementation-private. Identities,
+compatibility, canonical names, and dumps must remain deterministic, and
+interface/`Obj` box views must not manufacture bare owning optional types.
+
+HIR owns a typed optional-box allocation producer. It records the exact
+optional allocation target, optional initialization or copy plan, static owner
+view, owner provenance, source spans, and publication boundary. A checked
+shared optional-pointee operation records its owner or anchor, access, static
+box view, known exact allocation target when available, and optional guard.
+Published pointees have no assignment plan: whole-pointee assignment and
+mutable whole-wrapper aliases are rejected before HIR.
+
+MIR gives optional boxes a distinct auditable allocation origin and keeps this
+transition explicit:
+
+```text
+allocated exact optional storage
+    -> initialized complete P? wrapper
+    -> published count-one box
+    -> adopted ordinary owner
+```
+
+`SharedAllocationPayload` denotes the unpublished exact wrapper destination;
+`SharedPointee(owner)` denotes the immutable published wrapper. Existing exact
+optional lifecycle instructions operate on those places rather than gaining a
+parallel primitive/class/array box family. Object-box view, cast, unwrap,
+copy, and dispatch operations retain both the static view and exact dynamic
+descriptor dependency through verification.
+
+Verification rejects target-family confusion, wrong or missing allocation
+origins, pre-publication observation, optional initialization/publication
+errors, owner loss or duplication, mismatched metadata/finalizers, invalid
+casts, guard/anchor imbalance, mutable wrapper access, and duplicate or missing
+cleanup. Existing optional initialization, ownership, place, lifetime, call,
+array, static-lifecycle, and CFG verifiers remain the responsible owners; the
+feature must not add a second monolithic box verifier.
+
+On x86-64 a box handle remains one integer-class owner word. Its allocation is
+the existing 16-byte shared header followed at offset 16 by the target-layout
+placement of the canonical `P?` wrapper. One deterministic descriptor records
+the exact optional target, compatible finalizer, and—only for object boxes—the
+exact dynamic class and view-membership evidence. The finalizer invokes the
+existing recursive optional destruction plan before exact-base deallocation.
+Layout uses the target data-layout authority and reports size, alignment, or
+addressability overflow instead of assuming an eight-byte payload alignment.
+
+`(shared P?)?` reuses the existing optional-owner zero niche and conditional
+owner lifecycle. Zero means no box; a nonzero word is an ordinary box handle.
+The inner optional state remains in the allocation and is independent of that
+outer niche. Allocation, tags, guards, metadata, strong counting, finalization,
+casts, dispatch, and failures remain compiler-generated; runtime ABI version 9
+and its public C symbols remain unchanged.
 
 ## Source-shaped IR
 
@@ -300,8 +368,8 @@ resolved expression IR preserves:
 Canonical semantic dumps use `T?` and `(shared T)?`, independent of source
 trivia. Syntax dumps retain whether the source used postfix notation or the
 `shared?` shorthand.
-Reserved box spellings remain visible to diagnostics but do not acquire an
-executable type identity.
+Frozen box spellings remain visible to diagnostics but do not acquire an
+executable type identity until their roadmap's identity task completes.
 
 ## Typed HIR
 
@@ -686,7 +754,7 @@ and failure reasons without exposing source-inaccessible machine offsets.
 Diagnostics should identify:
 
 - invalid payload and target families;
-- reserved shared-box spellings;
+- frozen but not-yet-implemented shared-box spellings and allocation forms;
 - missing expected type for `none`;
 - implicit unwrap and direct member/dereference attempts;
 - incompatible injection, assignment, argument, and return types;
@@ -733,7 +801,7 @@ observable behavior:
 | Concern | Required focused evidence |
 |---|---|
 | Source syntax | Tokens and AST for general grouping, left-to-right `?`/`[]` suffixes, `(shared T)?`, `shared? T`, nested depth, `some(expression)`, malformed punctuation, recovery spans, and the syntax budget |
-| Canonical identity | Resolution interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused shared-box rejection before HIR |
+| Canonical identity | Resolution interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; the current focused shared-box rejection before HIR until the active roadmap moves that gate |
 | Type and lifecycle selection | Exact payload eligibility, one-layer injection, overload ranking, `none`/`some` expectations, recursive containment, copy/assignment/destruction capabilities, aliases, statics, and array-element plans |
 | HIR and MIR shape | Explicit outer-layer operations, recursive payload plans, publication order, one-layer unwrap, guards and anchors, arguments/results, optional arrays, selected-path cleanup, and deterministic dumps |
 | Verification | Mutations for missing or mismatched identities, absent payload use, wrong lifecycle capability, premature publication, duplicate/missing cleanup, bad transfers, unbalanced or wrong-layer guards, invalid anchors, malformed CFG joins, and leaked box targets |
@@ -743,18 +811,21 @@ observable behavior:
 | Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
-Compile-failure suites for `shared T?` and `shared? T?` remain required.
+Compile-failure suites for `shared T?`, `shared? T?`, and box allocation remain
+required until their responsible roadmap tasks replace them with staged
+positive and focused-negative coverage.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
-source-to-native equivalence coverage. Box forms remain compile failures.
+source-to-native equivalence coverage.
 
 ## Exclusions
 
 The implemented compiler executes recursively nested optional owning lifecycle,
 expected-type-directed `some(expression)`, checked access, aliases, and
 internal callable boundaries. Optional inline arrays execute across supported
-owning, aggregate, callable, array-element, and checked-alias boundaries. This contract does not design
-generalized shared boxes, optional function values, first-class references,
+owning, aggregate, callable, array-element, and checked-alias boundaries. The
+frozen box design does not include generalized boxes for non-optional values,
+mutable shared optional cells, optional function values, first-class references,
 optional casts, equality or operator lifting, chaining/coalescing/propagation,
 recoverable failures, concurrency or atomic guards, external optional ABI, or
 dynamic-type-preserving cloning.

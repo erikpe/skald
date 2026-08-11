@@ -52,7 +52,7 @@ verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
 [optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#compositional-test-matrix).
 Focused compile failures remain for excluded optional payload categories and
-shared boxes.
+the frozen but not-yet-implemented shared optional boxes.
 Shared-verifier tests exercise its private propagation, transition,
 use-validation, and state owners through the unchanged MIR verification
 facade. Focused structural refactors should run the complete `mir::tests::shared`
@@ -710,6 +710,47 @@ unsuccessful termination; exact trap signals and shell-normalized statuses are
 not portable language observations. Optional full-phase determinism and the
 MIR mutation corpus cover dumps, verification, and backend rejection, while
 the extended robustness suite mutates optional punctuation deterministically.
+
+### Frozen shared optional box coverage
+
+The active roadmap must replace the current focused box rejections in staged
+increments and retain negative gates for every not-yet-enabled lower phase.
+Complete implementation evidence includes:
+
+- source type grouping, arbitrary outer optional depth, `shared? P?`
+  provenance, `new P?()`/`new P?(expression)` precedence, recovery, spans, and
+  deterministic syntax/resolved dumps;
+- exact optional allocation identities, polymorphic class/base/interface/`Obj`
+  box-view identities, invariant non-object targets, casts, impossible
+  relations, and deterministic cross-module interning;
+- absent, injected, `some`, named-copy, produced-transfer, nested optional,
+  optional-array, and optional-shared-owner box construction with allocation
+  only after failure-capable source checks and publication only after complete
+  wrapper initialization;
+- named owner copy versus independent `new P?(*box)` allocation, owner
+  replacement that leaves aliases on the old box, deterministic last-owner
+  optional cleanup, and compile-time rejection of whole-pointee assignment or
+  mutable whole-wrapper aliases through exact and polymorphic views;
+- explicit presence, owning copy, checked unwrap, primitive extraction,
+  read-only exact-wrapper aliases, owner anchors, optional guards, contained
+  object mutation, and absence/guard failures;
+- base, interface, and `Obj` up-views, checked downcasts, type tests, virtual and
+  interface dispatch, exact dynamic class retention while absent or present,
+  and deliberate slicing only when a complete object wrapper is copied to an
+  eligible exact inline optional destination;
+- locals, fields, internal arguments/results, statics, temporaries, arrays,
+  explicit element lists, outer optional box owners, and one distinct absent
+  allocation per requested default `(shared P?)[]` element;
+- malformed MIR for target confusion, allocation origin, initialization and
+  publication order, owner loss, pre-publication access, metadata/finalizer
+  mismatch, guard/anchor imbalance, mutable access, and duplicate cleanup;
+- x86-64 layout/alignment/overflow, descriptor and finalizer determinism,
+  register/stack pressure, allocation failure, native lifecycle traces,
+  assembly acceptance, and unchanged runtime ABI version 9; and
+- focused phase tests, positive/compile-failure/runtime-failure goldens,
+  independent-process determinism, `make check`, `make msrv-check`, and
+  `make robustness-long` at the roadmap tasks that alter Rust syntax or
+  frontend recovery.
 
 ## Static-field coverage
 

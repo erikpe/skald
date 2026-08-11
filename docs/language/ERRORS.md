@@ -28,8 +28,9 @@ program valid.
 Optional type syntax is resolved to canonical identities before payload
 eligibility is checked. Nested optional owning lifecycle is executable;
 `TYP043` still rejects optional inline arrays and other payload categories that
-have not reached typed HIR. Unsupported shared boxes remain resolution errors
-because they have no resolved shared-target identity.
+have not reached typed HIR. Frozen shared optional boxes remain resolution
+errors until their active roadmap installs canonical resolved shared-target
+identities.
 
 Tool usage, source I/O, target selection, backend legality, assembly, linkage,
 and artifact-publication failures are compiler or toolchain failures rather

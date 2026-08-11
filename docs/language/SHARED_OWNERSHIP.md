@@ -35,6 +35,9 @@ are owned by [Object Casts](OBJECT_CASTS.md).
 Ordinary overload and explicit-copy semantics are owned by
 [Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md) and are an implementation
 prerequisite rather than redefined by shared allocation.
+The not-yet-implemented `shared P?` allocation kind is frozen in
+[Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes) and in the
+[shared optional box contract](#shared-optional-box-allocation-contract) below.
 
 Pointee access has explicit source forms. Prefix `*source` selects a bounded
 non-owning place from a `shared T` owner, while `source->member` selects one
@@ -94,6 +97,20 @@ shared Obj
 new Widget(arguments)
 new Widget(copy source)
 ```
+
+The frozen, not-yet-implemented optional-box extension additionally defines:
+
+```ska
+shared P?
+(shared P?)?
+shared? P?
+
+new P?()
+new P?(expression)
+```
+
+Those forms follow the separate allocation contract below; they do not alter
+ordinary object allocation or the meaning of `(shared P)?`.
 
 `shared` and `new` are contextual words in these exact positions. A shared
 target may be a concrete class, an ancestor class, an interface, or `Obj`.
@@ -412,7 +429,7 @@ Future checked exceptions may extend allocation and cleanup behavior only by
 explicitly revising this contract. They are not implied by the shared
 ownership design.
 
-## Compositional optional boundary
+## Shared optional box allocation contract
 
 The implemented
 [compositional optional profile](OPTIONAL_VALUES.md#compositional-optional-types)
@@ -425,17 +442,48 @@ contract; when absent, it accounts for no owner.
 
 Optionality inside the operand of ordinary `shared` has a different meaning:
 `shared T?` denotes `Shared<Optional<T>>`, a non-null owner of a new shared-box
-allocation kind. Neither that box nor its optional-owner shorthand
-`shared? T?` is supported. The parser preserves those source shapes, but
-semantic analysis rejects them.
-This contract adds no provisional box target, allocation form, metadata,
-finalizer, pointee mutation, cast, or runtime rule.
+allocation kind. Its design is frozen but not implemented; the current
+compiler preserves its type shape and rejects it during resolution.
+
+`new P?()` allocates a box whose exact optional target begins absent, while
+`new P?(expression)` initializes that wrapper through the existing exact
+optional construction plan. Allocation, complete initialization, publication,
+and produced-owner adoption occur in that order. A named owner copy retains
+the same allocation; an owner assignment secures a replacement handle before
+releasing the old one; and the last owner invokes the exact optional
+finalization plan before deallocating the original header.
+
+The box handle remains one non-null ordinary owner. `(shared P?)?`, with
+`shared? P?` as exact shorthand, conditionally owns that handle through the
+existing optional-owner rules. Outer absence is distinct from an existing box
+whose wrapper is absent.
+
+The wrapper is immutable after publication. `*box` crosses the shared edge for
+presence, copying, read-only eligible aliases, and checked unwrap, but never
+for whole-pointee assignment or a mutable whole-wrapper alias. Assigning an
+owner variable, field, static, or array element repoints only that storage;
+other owners retain the old allocation. Mutable methods and fields inside an
+already-present contained object remain available through ordinary shared
+access.
+
+An object box fixes one exact dynamic concrete class and optional payload
+layout in allocation metadata, including while absent. Owners may use the
+ordinary class/base/interface/`Obj` static views, checked owner casts, type
+tests, and virtual/interface dispatch. These views are covariant because none
+can replace the complete wrapper. Non-object box targets remain exact and
+invariant. The complete source semantics, nested composition, construction,
+access, stored positions, default array elements, and exclusions are
+authoritative in
+[Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes).
 
 ## Exclusions
 
-This profile does not include:
+The implemented profile does not yet execute the frozen shared optional box
+contract. Neither that contract nor this profile includes:
 
-- generalized `shared T?` or `shared? T?` boxes;
+- generalized boxes for non-optional primitive, class, array, function, or
+  other inline values;
+- a mutable shared optional cell or whole-box-pointee assignment;
 - aliases whose designated container type is `(shared T)?`; compositional
   syntax does not change the existing alias eligibility boundary;
 - weak ownership;

@@ -10,17 +10,17 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently only planned.
+[Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md) is planned; BX0 is
+next. It implements the frozen non-null `shared P?` box and derived
+`shared? P?` optional owner through canonical targets, verified immutable
+wrapper access, polymorphic class/interface/`Obj` views, exact metadata and
+finalization, stored positions, and arrays while retaining runtime ABI version
+9. It depends on the completed compositional optional, shared ownership,
+explicit shared dereference, object cast, array, and static-field profiles.
 
 ## Design proposals
 
-The [shared optional boxes design proposal](SHARED_OPTIONAL_BOXES_DESIGN_PROPOSAL.md)
-is under review. It proposes non-null `shared P?` boxes containing canonical
-optional values and derives `shared? P?` as an optional owner of such a box.
-Its construction, dereference, immutable wrapper state, polymorphic object
-views, target identity, metadata, finalization, and ABI decisions remain open;
-no implementation roadmap should be created until the design is confirmed
-and promoted into living contracts.
+No design proposal is currently under review.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).

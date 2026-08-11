@@ -1,8 +1,8 @@
 # Shared Optional Boxes Design Proposal
 
-Status: draft under review; every decision in the register remains open until
-explicitly confirmed and promoted into the living language and compiler
-contracts. Freezing this proposal must precede an implementation roadmap.
+Status: frozen design; SB1 through SB13 were confirmed together and promoted
+into the living language and compiler contracts before the implementation
+roadmap was created.
 
 This proposal adds non-null shared allocations whose complete pointee is an
 already-supported optional value. It gives the reserved `shared P?` type an
@@ -16,14 +16,14 @@ last-owner release. It does not make every inline type boxable, weaken
 ordinary shared handles to nullable pointers, or reinterpret an optional
 shared owner as a box.
 
-Freezing this proposal will not make either form executable. The
+Freezing this proposal does not make either form executable. The
 [status matrix](../language/STATUS.md) remains the sole authority for compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
 the exact accepted syntax until implementation changes it.
 
 ## Intended outcome
 
-The frozen design should provide:
+The frozen design provides:
 
 - `shared P?` as a non-null owner of one shared allocation containing an exact
   optional `P?` wrapper;
@@ -123,26 +123,25 @@ therefore evidence for the use case, not for Skald's type identity or syntax.
 
 ## Decision register
 
-The directions below are recommendations for review, not confirmed language
-or implementation contracts.
+The directions below are confirmed language and implementation contracts.
 
-| ID | Decision | Recommended direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [SB1](#sb1--eligible-box-targets) | Eligible target | Accept exact value-optionals plus class/interface/`Obj` optional-box views | **Open** |
-| [SB2](#sb2--type-identity-spelling-and-precedence) | Type composition | Preserve literal composition; canonicalize `shared? P?` to `(shared P?)?` | **Open** |
-| [SB3](#sb3--construction-syntax-and-default-state) | Construction | Add `new P?()` for an absent box and `new P?(value)` for ordinary optional initialization | **Open** |
-| [SB4](#sb4--owner-copying-and-box-value-semantics) | Copy meaning | Owner copies share a box; `new P?(source)` creates an independent box payload | **Open** |
-| [SB5](#sb5--explicit-access-and-inner-unwrap) | Access | Require `*box`; do not forward `is`, `!`, `.`, or `->` through the handle | **Open** |
-| [SB6](#sb6--immutable-boxed-optional-state) | Wrapper mutation | Forbid whole-pointee assignment; replace owner handles instead | **Open** |
-| [SB7](#sb7--aliases-anchors-and-guards) | Borrow safety | Reuse shared anchors plus the optional wrapper's existing guards | **Open** |
-| [SB8](#sb8--compatibility-casts-and-polymorphism) | Compatibility | Allow object-box up-views over one immutable fixed-target allocation | **Open** |
-| [SB9](#sb9--stored-positions-and-default-array-elements) | Stored positions | Support ordinary shared-owner positions and distinct absent boxes for requested default array elements | **Open** |
-| [SB10](#sb10--canonical-compiler-representation) | Type and IR representation | Separate the static box view from its exact optional allocation target | **Open** |
-| [SB11](#sb11--allocation-layout-metadata-and-finalization) | Target realization | Reuse the non-null header with exact box metadata and an optional finalizer | **Open** |
-| [SB12](#sb12--calling-convention-runtime-and-failure-boundary) | ABI and failure | Keep the one-word internal owner ABI, runtime ABI version 9, and current non-unwinding failures | **Open** |
-| [SB13](#sb13--diagnostics-dumps-tests-and-promotion) | Quality and freeze | Freeze all rows, promote living contracts, then create an implementation roadmap | **Open** |
+| [SB1](#sb1--eligible-box-targets) | Eligible target | Accept exact value-optionals plus class/interface/`Obj` optional-box views | **Confirmed** |
+| [SB2](#sb2--type-identity-spelling-and-precedence) | Type composition | Preserve literal composition; canonicalize `shared? P?` to `(shared P?)?` | **Confirmed** |
+| [SB3](#sb3--construction-syntax-and-default-state) | Construction | Add `new P?()` for an absent box and `new P?(value)` for ordinary optional initialization | **Confirmed** |
+| [SB4](#sb4--owner-copying-and-box-value-semantics) | Copy meaning | Owner copies share a box; `new P?(source)` creates an independent box payload | **Confirmed** |
+| [SB5](#sb5--explicit-access-and-inner-unwrap) | Access | Require `*box`; do not forward `is`, `!`, `.`, or `->` through the handle | **Confirmed** |
+| [SB6](#sb6--immutable-boxed-optional-state) | Wrapper mutation | Forbid whole-pointee assignment; replace owner handles instead | **Confirmed** |
+| [SB7](#sb7--aliases-anchors-and-guards) | Borrow safety | Reuse shared anchors plus the optional wrapper's existing guards | **Confirmed** |
+| [SB8](#sb8--compatibility-casts-and-polymorphism) | Compatibility | Allow object-box up-views over one immutable fixed-target allocation | **Confirmed** |
+| [SB9](#sb9--stored-positions-and-default-array-elements) | Stored positions | Support ordinary shared-owner positions and distinct absent boxes for requested default array elements | **Confirmed** |
+| [SB10](#sb10--canonical-compiler-representation) | Type and IR representation | Separate the static box view from its exact optional allocation target | **Confirmed** |
+| [SB11](#sb11--allocation-layout-metadata-and-finalization) | Target realization | Reuse the non-null header with exact box metadata and an optional finalizer | **Confirmed** |
+| [SB12](#sb12--calling-convention-runtime-and-failure-boundary) | ABI and failure | Keep the one-word internal owner ABI, runtime ABI version 9, and current non-unwinding failures | **Confirmed** |
+| [SB13](#sb13--diagnostics-dumps-tests-and-promotion) | Quality and freeze | Freeze all rows, promote living contracts, then create an implementation roadmap | **Confirmed** |
 
-## Proposed source surface
+## Frozen source surface
 
 ### Distinct ownership and presence layers
 
@@ -186,7 +185,7 @@ flattened.
 
 ### Construction
 
-The proposed forms are:
+The frozen forms are:
 
 ```ska
 var empty: shared Item? = new Item?();
@@ -283,7 +282,7 @@ selects the boxed `Item?`, and the second `!` checks its inner presence.
 **Question:** Which pointee types should ordinary `shared` gain through this
 feature?
 
-**Recommended direction:** Retain exact canonical `OptionalTypeId` targets for
+**Confirmed direction:** Retain exact canonical `OptionalTypeId` targets for
 primitive, array, shared-owner, and recursively nested value boxes. Treat an
 optional object box separately as an exact class allocation with a compatible
 static class, interface, or `Obj` box view, mirroring the target families of
@@ -319,7 +318,7 @@ needed to implement the reserved forms.
 
 **Question:** How should the two `?` positions compose and render?
 
-**Recommended direction:** Preserve the implemented type grammar exactly:
+**Confirmed direction:** Preserve the implemented type grammar exactly:
 ordinary leading `shared` consumes its complete following inline type, while
 `shared? X` expands to `(shared X)?` before semantic normalization.
 
@@ -368,7 +367,7 @@ layers require grouping, as in `(shared? P?)?`.
 
 **Question:** How is a new optional box allocated and initialized?
 
-**Recommended direction:** Extend `new` so its complete target type selects
+**Confirmed direction:** Extend `new` so its complete target type selects
 the construction family:
 
 ```text
@@ -428,7 +427,7 @@ over that symmetry.
 **Question:** Does copying `shared P?` copy the optional payload or only the
 owner?
 
-**Recommended direction:** Reuse ordinary shared-owner semantics. A named
+**Confirmed direction:** Reuse ordinary shared-owner semantics. A named
 owner copy retains the allocation, a produced owner transfers, assignment
 secures before release, and the last owner finalizes the one boxed wrapper.
 
@@ -451,7 +450,7 @@ introduced.
 
 **Question:** Should optional operations be forwarded through a box owner?
 
-**Recommended direction:** No. Prefix `*` produces the optional pointee place
+**Confirmed direction:** No. Prefix `*` produces the optional pointee place
 or polymorphic optional-object view selected by the box target. Presence,
 unwrap, copying, aliases, and contained-object access then apply explicitly at
 that boundary.
@@ -473,7 +472,7 @@ wrapper.
 **Question:** Should `*box = source` be supported even though whole-pointee
 assignment is rejected for current object and array owners?
 
-**Revised recommended direction:** No. Construction fixes the complete
+**Confirmed direction:** No. Construction fixes the complete
 absent-or-present optional state for the allocation's lifetime. Prefix `*`
 exposes that wrapper for observation and checked payload access, not as a
 whole-value assignment destination.
@@ -516,7 +515,7 @@ runtime failure.
 **Question:** How are non-owning uses protected when boxes have multiple
 owners and immutable wrapper state?
 
-**Recommended direction:** Compose the two mechanisms already implemented:
+**Confirmed direction:** Compose the two mechanisms already implemented:
 
 - the shared owner or a hidden copied/adopted anchor keeps the allocation live;
 - the optional state word's existing guard keeps a checked present payload
@@ -555,7 +554,7 @@ users pass `shared P?` by value and explicitly dereference it when a read-only
 **Question:** Can boxes participate in the existing class/interface/`Obj`
 shared compatibility relation?
 
-**Revised recommended direction:** Yes for optional object boxes. Preserve one
+**Confirmed direction:** Yes for optional object boxes. Preserve one
 fixed exact dynamic box class in allocation metadata, allow the same
 class/base/interface/`Obj` static up-views as ordinary shared objects. The
 complete optional wrapper is immutable after publication, so these views
@@ -681,7 +680,7 @@ but neither spelling is required merely to obtain `shared Base?` from
 **Question:** Where may box owners be stored, and are they defaultable as
 array elements?
 
-**Recommended direction:** Treat `shared P?` as an ordinary non-null shared
+**Confirmed direction:** Treat `shared P?` as an ordinary non-null shared
 owner in locals, fields, internal value parameters/results, explicitly
 initialized statics, temporaries, and array elements. It remains invalid in
 external signatures. `(shared P?)?` additionally reuses the existing absent
@@ -702,7 +701,7 @@ allocation.
 
 **Question:** Does a shared optional box need a new canonical identity family?
 
-**Revised recommended direction:** Distinguish a box's static view identity
+**Confirmed direction:** Distinguish a box's static view identity
 from its exact allocation target. Exact non-object boxes may continue to name
 one canonical `OptionalTypeId` directly. Polymorphic object boxes need a
 canonical static box-view identity whose optional depth and class/interface/
@@ -767,7 +766,7 @@ descriptor dependency through verification.
 **Question:** How does the backend distinguish a box from an object while
 retaining the generic last-owner path?
 
-**Recommended direction:** Keep one non-null handle pointing to the existing
+**Confirmed direction:** Keep one non-null handle pointing to the existing
 16-byte allocation header and interpret its metadata slot as a non-null
 allocation descriptor:
 
@@ -812,7 +811,7 @@ lives at payload offset 16 and is independent of that outer zero niche.
 **Question:** Does a new target family require a new owner ABI or runtime
 service?
 
-**Recommended direction:** No. `shared P?` is one integer-class owner word in
+**Confirmed direction:** No. `shared P?` is one integer-class owner word in
 internal parameters and results, just like every ordinary shared owner.
 `(shared P?)?` is the existing nullable-owner word. The boxed `P?` aggregate
 itself crosses a callable boundary only through its existing value or alias
@@ -834,7 +833,7 @@ double finalization, and ownership underflow remain compiler/runtime defects.
 **Question:** What evidence is required before the design may be frozen and
 then implemented?
 
-**Recommended direction:** Preserve exact `shared`, shorthand `?`, target
+**Confirmed direction:** Preserve exact `shared`, shorthand `?`, target
 `?`, grouping, `new`, dereference, assignment, and initializer spans in the
 source-shaped phases. Semantic dumps use canonical type spelling and
 deterministic optional identity order. Diagnostics should distinguish invalid
@@ -881,11 +880,11 @@ The eventual implementation needs focused evidence for:
 - deterministic outputs across processes plus the repository `make check` and
   supported-toolchain gates.
 
-All decisions in this document should be confirmed together. Promotion then
-updates the living grammar, optional, shared-ownership, phase/IR, backend,
-runtime, status, and testing contracts while still describing the feature as
-not implemented. Only after that contract change is validated should a
-PR-sized implementation roadmap be created.
+All decisions in this document were confirmed together. Promotion updated the
+living grammar, optional, shared-ownership, phase/IR, backend, runtime, status,
+and testing contracts while still describing the feature as not implemented.
+The implementation sequence is tracked by the active shared optional boxes
+roadmap.
 
 ## Explicit exclusions
 

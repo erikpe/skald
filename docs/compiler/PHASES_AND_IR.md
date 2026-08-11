@@ -271,9 +271,10 @@ identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types.
 Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
-call. Reserved boxes remain resolution exclusions; nested and optional-array
-identities execute through recursive MIR lifecycle plans; optional-reference
-shapes remain syntax diagnostics.
+call. Frozen shared optional boxes remain resolution exclusions until their
+active roadmap establishes the target identities and deliberate lower-phase
+gates; nested and optional-array identities execute through recursive MIR
+lifecycle plans; optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes
@@ -283,6 +284,40 @@ state owner encapsulates storage epochs, ownership transfer, entry seeding, and
 recursive initialization of optional fields in completed class storage. This
 division is internal: diagnostic text, ordering, MIR contracts, and the
 separate immediate-consumer guard analysis are unchanged.
+
+### Frozen shared optional box phase boundary
+
+The frozen `Shared<Optional<P>>` design extends shared targets with exact
+optional allocation identities and polymorphic optional-object view
+identities. Resolution preserves target `?`, `shared?` shorthand, grouping,
+and allocation spans while interning deterministic optional and box-view
+identities. Object-only, array-only, optional-place, and generic owner
+consumers query explicit target capabilities rather than assuming every
+non-array owner is an object.
+
+HIR owns typed optional-box allocation and checked optional-pointee access. It
+records exact allocation target, static owner view, initialization/copy plan,
+owner provenance, access, anchor strategy, and diagnostic spans. Published box
+wrappers are immutable, so HIR never represents a whole-pointee assignment or
+mutable whole-wrapper alias. Object-box views retain a static
+class/interface/`Obj` view separately from the exact dynamic allocation class.
+
+MIR adds a distinct optional-box allocation origin and makes allocate,
+initialize the exact `SharedAllocationPayload`, publish, and adopt separate
+verified transitions. After publication, `SharedPointee(owner)` permits
+optional presence, copy, checked unwrap, read-only alias, and object-view
+operations but no wrapper assignment. Existing owner/anchor and optional-guard
+state machines compose; neither is replaced by box-specific lifetime rules.
+View, cast, unwrap, copy, type-test, and dispatch operations retain static view
+and exact descriptor dependencies through verification.
+
+The initial x86-64 realization keeps one-word owners and the 16-byte shared
+header, uses deterministic exact optional-box descriptors/finalizers, and
+places the canonical optional payload at target-layout offset 16. An object
+box descriptor also retains exact dynamic class and view membership. The
+outer `(shared P?)?` zero niche remains separate from the allocation's inner
+optional state. All work remains compiler-owned and adds no runtime ABI
+version or public symbol.
 
 ## Produced exact-class alias representation
 
@@ -958,12 +993,13 @@ and shared-owner state verify independently, including nested shared-array
 owners. The detailed representation boundary is in
 [the array compiler contract](ARRAYS.md#element-list-representation).
 
-Optional types use two flat, copyable resolved families rather than recursively
-wrapping the general type enum: an inline primitive/exact-class payload target,
-or an optional shared class/interface/`Obj` target. Resolved expressions retain
+Optional types use deterministic interned identities rather than recursively
+wrapping the general type enum at every use. Resolved expressions retain
 explicit absence, presence-test, and unwrap nodes. Canonical semantic dumps use
 `T?` and `(shared T)?` independently of source trivia; syntax dumps retain
-`shared? T` shorthand provenance.
+`shared? T` shorthand provenance. Frozen shared optional boxes add a static
+box-view identity only where class/interface/`Obj` views carry information
+absent from the exact optional allocation identity.
 
 Resolved programs contain one canonical class hierarchy keyed by `ClassId`.
 It validates cycles, traverses direct-to-root chains, answers subtype and
@@ -1000,7 +1036,9 @@ Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
 
-Shared type syntax resolves to an explicit class, interface, or `Obj` target.
+Executable shared type syntax resolves to an explicit class, interface, `Obj`,
+or array target. The frozen box extension adds exact optional and optional
+object-view targets once its roadmap removes the current resolution gate.
 Allocation syntax resolves to an exact concrete `ClassId` and retains ordinary
 arguments or the explicit copy source as the existing distinct construction
 modes. These facts cross resolution without a feature gate. Type checking owns
@@ -1122,8 +1160,8 @@ diagnostics. It does not contain byte offsets, registers, stack slots, calling
 convention locations, or target symbols. Lower phases therefore consume
 already checked semantic choices without reimplementing language policy.
 
-Shared types cross this boundary as canonical class, interface, or `Obj`
-targets, distinct from inline class values and non-owning views. Shared value
+Shared types cross this boundary as canonical class, interface, `Obj`, or array
+targets, distinct from inline values and non-owning views. Shared value
 consumers retain a named owner place or produced owner and explicitly select
 copy or adopt. Ordinary `new C(arguments)` retains exact `C`, its selected
 `InitializerId`, and typed source-ordered arguments. Shared locals, value
@@ -1133,6 +1171,10 @@ owner, and external shared signatures remain invalid. Explicit copy allocation
 records its checked source and selected exact-class copy operation separately
 from ordinary initializer overloads. Shared casts record their source
 provenance, static or runtime relation, target, and copy/adopt result ownership.
+Frozen box HIR follows that owner vocabulary while adding a distinct
+optional-box allocation producer and checked optional-pointee place. It does
+not encode wrapper mutation, synthesize a bare owning interface/`Obj` optional,
+or lose the exact allocation class behind a polymorphic box view.
 
 MIR lowering accepts compatible shared local initialization and assignment
 from named owners and ordinary allocations. It also carries compatible shared

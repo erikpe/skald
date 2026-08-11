@@ -555,6 +555,8 @@ The x86-64 target layout is:
 | primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
 | `(shared T)?` | 8 | 8 |
+| frozen `shared P?` box owner | 8 | 8 |
+| frozen `(shared P?)?` optional box owner | 8 | 8 |
 | inline `T[]` descriptor | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
@@ -828,6 +830,40 @@ type-test machinery. Shared-owner casts execute from owner storage and shared
 fields. Verified call anchors use the same one-word owner representation and
 the existing retain/release lowering; they add no target ABI or C runtime
 operation.
+
+### Frozen shared optional box target boundary
+
+The frozen box extension keeps the one-word owner and existing shared header:
+
+| Offset | Box allocation field |
+|---:|---|
+| 0 | non-atomic `u64` strong count |
+| 8 | exact optional-box descriptor pointer |
+| 16 | target-layout placement of the canonical `P?` wrapper |
+
+The backend data-layout owner computes payload size, alignment, total checked
+allocation size, and addressability. Offset 16 is valid for the currently
+supported optional alignments, but implementation must reject an incompatible
+future alignment rather than silently misaligning the payload.
+
+Optional-box descriptors and finalizers are emitted in deterministic exact
+target order. A descriptor names the exact `OptionalTypeId`; an object-box
+descriptor additionally retains exact dynamic class and view-membership data
+for class/base/interface/`Obj` casts, tests, and dispatch. Last-owner release
+passes the payload at offset 16 through the existing recursive optional
+destruction plan before freeing the exact allocation base. Primitive targets
+may share no-op finalizer code only when descriptor identity and output remain
+deterministic.
+
+Verified box construction lowers allocate, initialize the unpublished wrapper,
+publish, and adopt in that order. Published pointee operations lower presence,
+copy, checked unwrap, read-only alias access, and compatible object views; no
+instruction selection exists for whole-wrapper assignment. Existing owner
+anchors and optional guards compose around bounded access. `shared P?` remains
+one integer-class word in internal arguments and results, and `(shared P?)?`
+uses the existing zero niche. Allocation failure, optional unwrap failure,
+guard overflow, and layout overflow retain their current boundaries; there is
+no checked box-store failure and no public runtime ABI change.
 
 ## Symbols and process entry
 

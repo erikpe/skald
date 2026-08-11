@@ -13,6 +13,10 @@ The implemented
 ownership as `(shared T)?`; it does not weaken the non-null handle invariants
 defined here. Its zero niche is tested and branched around before existing
 retain, release, metadata, dereference, anchor, cast, or finalization paths.
+The frozen, not-yet-implemented optional-box extension is specified in
+[Optional Values](OPTIONAL_VALUES.md#frozen-shared-optional-box-representation)
+and in the [box allocation contract](#frozen-shared-optional-box-allocation)
+below.
 
 Source AST and resolved IR retain shared targets, exact allocation class
 identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical
@@ -41,9 +45,10 @@ one selected exact-class copy operation, then publishes and adopts the owner.
 The x86-64 backend executes the
 defined handle, header, checked retain, one-word internal ABI, count-one
 publication, recursively generated complete finalization, and last-owner
-deallocation. [Runtime ABI version
-5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
-deallocation. Ordinary initializer overloads, the distinct copy-constructor
+deallocation. [Runtime ABI version 9](RUNTIME_ABI.md) provides that allocation
+boundary and the current common services without a box-specific entry point.
+Ordinary
+initializer overloads, the distinct copy-constructor
 identity, and reusable ordinary-versus-copy construction modes are defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md).
 
@@ -446,7 +451,7 @@ The skipped alternative acquires and releases no owner. A selected checked
 view must still end before its matching owner or anchor is released, including
 when nested logical selections establish several owners before cleanup.
 
-## Compositional optional boundary
+## Frozen shared optional box allocation
 
 The implemented
 [compositional optional compiler contract](OPTIONAL_VALUES.md#compositional-optional-implementation)
@@ -456,12 +461,41 @@ invoke the ordinary copy, adopt, release, anchor, metadata, and finalization
 operations defined here. The x86-64 zero-handle niche remains an optional
 representation choice; zero never enters a plain-owner operation.
 
-This composition introduces no new shared allocation target or backend
-metadata. In particular, `shared T?` would require
-`Shared<Optional<T>>`: a box allocation with its own initialization,
-publication, metadata, finalizer, pointee projection, and mutation rules.
-`shared T?` and the derived `shared? T?` remain rejected, and no phase reserves
-provisional box IR or target hooks.
+The frozen `shared P?` extension introduces `Shared<Optional<P>>` as a distinct
+allocation target while retaining the same non-null one-word owner operations.
+The current compiler still rejects it; implementation proceeds only through
+the active roadmap's staged gates.
+
+Each box allocation records a distinct optional-box origin, an exact canonical
+optional payload target, and one descriptor/finalizer identity. Allocation
+storage is unpublished while the existing optional initialization plan builds
+the complete wrapper at its payload place. Publication creates count-one
+ownership only after initialization, and ordinary adopt/copy/move/release
+operations then manage the handle. Last release invokes the wrapper's exact
+recursive optional destruction plan and frees the original header once.
+
+The published optional wrapper is immutable. A box pointee supports presence,
+owning copy, checked unwrap, and eligible read-only aliases, but not
+whole-pointee assignment or mutable whole-wrapper aliases. Owner storage may
+be securely replaced with a different compatible box handle without changing
+the old allocation observed by other owners. Existing anchors keep the box
+alive through non-owning use; existing optional guards protect bounded present
+payload access.
+
+Exact non-object boxes are invariant. An object box descriptor additionally
+retains the exact concrete dynamic class while owners carry compatible static
+class/base/interface/`Obj` box views. Owner casts, type tests, and dispatch
+reuse the existing metadata relation without replacing or slicing the
+allocation. The absence/presence state remains fixed, while an already-present
+contained object remains shallowly mutable through its ordinary object view.
+
+The x86-64 realization reuses the 16-byte header and places the canonical
+optional payload at target-layout offset 16. The metadata word identifies a
+deterministic exact box descriptor and finalizer; it is not forged as an
+unrelated class or array descriptor. Optional box owners in calls remain one
+integer-class word, and `(shared P?)?` reuses the existing zero niche. All
+layout, metadata, guards, counting, finalization, and failure behavior remains
+compiler-owned, so runtime ABI version 9 and its C surface do not change.
 
 ## Minimal C runtime ABI
 

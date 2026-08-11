@@ -253,11 +253,12 @@ The parser admits nested optionals, optional arrays, and shared boxes so their
 complete source shapes reach semantic analysis. Nested optionals and optional
 inline arrays execute in every supported owning, aggregate, internal callable,
 array-element, and checked-alias position. Semantic analysis still rejects
-`unit?`, standalone optional interface or `Obj` views, `shared T?`, and
-`shared? T?`. Optional references
-such as `ref?` remain syntax errors. `unit[]` is likewise parsed so later
-semantic analysis can report element ineligibility; bare `unit` remains
-restricted to result positions.
+`unit?` and standalone owning optional interface or `Obj` values. It also
+currently rejects `shared T?` and `shared? T?`, whose source and compiler
+semantics are frozen in [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes)
+but not implemented. Optional references such as `ref?` remain syntax errors.
+`unit[]` is likewise parsed so later semantic analysis can report element
+ineligibility; bare `unit` remains restricted to result positions.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
 defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
@@ -769,6 +770,15 @@ cross explicit HIR, MIR, verification, x86-64 layout, and execution, including
 bounded checked payload views and aliases to supported inline optional
 containers. The complete implemented semantics belong to
 [Optional Values](OPTIONAL_VALUES.md).
+
+The type grammar already preserves the frozen shared-optional-box forms:
+`shared P?` means `Shared<Optional<P>>`, `(shared P?)?` means an optional owner
+of that non-null box, and `shared? P?` is exact shorthand for the latter. The
+frozen allocation extension will add `new P?()` and `new P?(expression)` with
+one complete optional type target. Those allocation expressions are not yet
+accepted by the implemented `allocation-expression` production; the
+implementation roadmap owns that syntax change before any later phase may
+execute it.
 
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with

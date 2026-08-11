@@ -9,7 +9,8 @@ access are executable. Optional arrays execute in every supported owning,
 aggregate, internal callable, array-element, and call-scoped alias position. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
-accepted by the compiler.
+accepted by the compiler. This document also freezes the not-yet-implemented
+[shared optional box](#shared-optional-boxes) contract.
 
 This document defines Skald's source-level optional-value contract. Primitive
 `i64?`, `u64?`, `u8?`, `f64?`, and `bool?` values and exact inline class `T?`
@@ -93,8 +94,8 @@ the canonical `(shared T)?` form:
 | `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
 | `T[]?` | Tagged optional containing zero or one inline array | Supported owning, internal callable, aggregate, array-element, and checked-alias positions execute |
-| `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
-| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Reserved and rejected |
+| `shared T?` | Non-null shared box containing `T?` | Frozen design; not implemented |
+| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Frozen design; not implemented |
 
 In the implemented grammar, `shared?` is the contextual word `shared` followed
 by the `?` punctuation token. Ordinary trivia may separate those tokens.
@@ -106,7 +107,7 @@ shared owner, or another supported optional type.
 `(shared T)?` and its `shared? T` shorthand accept the same class, interface,
 `Obj`, and array targets as ordinary `shared T`.
 
-The current profile rejects:
+The current compiler rejects:
 
 - `unit?`;
 - standalone optional interface or `Obj` views;
@@ -121,10 +122,9 @@ during parsing. Nested optionals and optional arrays execute in owning
 storage, aliases, checked access, and every supported internal callable
 boundary.
 
-These exclusions are deliberate. In particular, `shared T?` requires a
-generalized non-null shared box whose allocation, payload metadata, mutation,
-and finalization are separate from optional ownership. This design reserves
-the spelling without defining or implementing that box.
+The shared-box rejections are implementation staging, not an unresolved
+semantic boundary. Their frozen behavior is defined below; all other listed
+categories remain outside that design.
 
 ## Compositional optional types
 
@@ -156,8 +156,8 @@ shared T?   = Shared<Optional<T>>
 shared T[]  = Shared<Array<T>>
 ```
 
-The first form requires a new shared-box allocation kind and remains outside
-this profile. To place optionality around an existing shared owner,
+The first form requires the frozen shared-box allocation kind and is not yet
+implemented. To place optionality around an existing shared owner,
 group the shared type first:
 
 ```text
@@ -174,8 +174,8 @@ shared? T[] = (shared T[])?
 shared? T?  = (shared T?)?
 ```
 
-The last form still contains the unsupported inner
-`Shared<Optional<T>>` box and therefore remains unsupported.
+The last form contains the not-yet-implemented inner
+`Shared<Optional<T>>` box.
 
 The exact spelling and identity matrix is:
 
@@ -187,8 +187,8 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Reserved box form; rejected |
-| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Reserved box form; rejected |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Frozen design; not implemented |
+| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Frozen design; not implemented |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
 and `(shared T)?` for an optional shared owner. Source-shaped syntax inspection
@@ -297,15 +297,115 @@ inline class in any number of optional layers does not break an inline
 containment cycle. An array descriptor remains an indirection boundary, and a
 shared owner remains a shared edge, even when either is wrapped in optionals.
 
-### Shared-box boundary
+## Shared optional boxes
 
-This extension deliberately does not define `Shared<Optional<P>>`. It adds no
-shared-box target identity, construction syntax, allocation provenance,
-metadata, finalizer, dereference, mutation, cast, or backend operation.
-Consequently `shared T?` and `shared? T?` remain focused semantic errors after
-the compositional parser preserves their source shape. A later shared-box
-design may reuse the completed optional payload lifecycle without changing the
-meaning defined here.
+Status: **frozen design; not implemented**. The compiler continues to reject
+the box type forms during resolution and does not yet parse their allocation
+expressions. The implementation roadmap may stage support but must not reopen
+the source semantics in this section.
+
+`shared P?` is a non-null strong owner of one allocation containing a complete
+optional `P?` wrapper. It is `Shared<Optional<P>>`, not an optional ordinary
+owner. `(shared P?)?` is an optional owner of that box, and `shared? P?` is
+exact shorthand for that canonical form:
+
+| Source type | Canonical model | Meaning |
+|---|---|---|
+| `shared P?` | `Shared<Optional<P>>` | One non-null owner of an optional box |
+| `(shared P?)?` | `Optional<Shared<Optional<P>>>` | Zero or one owner of that box |
+| `shared? P?` | `Optional<Shared<Optional<P>>>` | Exact shorthand for `(shared P?)?` |
+| `(shared P)??` | `Optional<Optional<Shared<P>>>` | Nested optional around an ordinary owner |
+| `(shared P?)??` | `Optional<Optional<Shared<Optional<P>>>>` | Nested optional around a box owner |
+
+No optional layer is flattened. Arbitrary additional postfix layers remain
+valid within the ordinary syntax nesting budget. Primitive, exact-class,
+inline-array, shared-owner, and recursively nested optional targets are exact.
+An optional object box additionally permits class/base/interface/`Obj` static
+views while retaining one exact concrete dynamic allocation class. Bare
+owning interface and `Obj` optionals remain invalid; their box spellings are
+views rather than new inline value types.
+
+The allocation forms are:
+
+```ska
+var absent: shared Item? = new Item?();
+var also_absent: shared Item? = new Item?(none);
+var present: shared Item? = new Item?(Item());
+var nested: shared Item?? = new Item??(some(none));
+```
+
+`new P?()` default-initializes the exact optional target to outer absence.
+`new P?(expression)` accepts exactly one expression and initializes the exact
+`P?` wrapper through its ordinary absent, one-layer injection, `some`, copy,
+transfer, or direct-payload plan. The expression is not forwarded as an
+initializer argument list for `P`. The allocation is published only after the
+complete wrapper is initialized.
+
+The concrete class named after `new` fixes an object box's dynamic class and
+exact payload layout even while absent. Initializers must satisfy that exact
+target before the produced owner is up-viewed:
+
+```ska
+var base: shared Base? = new Derived?(Derived()); // valid up-view
+var bad: shared Base? = new Derived?(Base());     // invalid construction
+```
+
+Copying a named box owner retains the same allocation. A produced owner
+transfers normally. `new P?(*box)` instead creates an independent allocation
+containing an ordinary copy of the optional payload when that copy capability
+exists.
+
+Box access crosses the ownership edge explicitly. `*box` exposes the boxed
+optional wrapper for presence tests, owning copies, read-only eligible aliases,
+and checked unwrap; it does not implicitly forward `is`, `!`, `.`, or `->`
+through the owner:
+
+```ska
+if (*box is some) {
+    (*box)!.use_item();
+}
+```
+
+The published wrapper is shallowly immutable. Its absence/presence and
+complete contained value never change, so whole-pointee assignment and a
+`mut ref P?` alias are invalid even through an exact box view. An owner local,
+field, static, or array slot may instead be assigned a newly allocated box;
+other owners keep observing the old allocation. A present contained object or
+other mutable aggregate retains its ordinary internal mutation operations.
+Consequently an absent box remains absent for its allocation lifetime.
+
+Object-box views are covariant because no view can replace the complete
+wrapper. Base, interface, and `Obj` views preserve the exact dynamic class for
+type tests, checked owner casts, and virtual or interface dispatch:
+
+```ska
+var base_box: shared Base? = new Derived?(Derived());
+(*base_box)!.foo(); // dispatches through dynamic Derived metadata
+
+var interface_box: shared Interface? =
+    new Implementation?(Implementation());
+(*interface_box)!.foo(); // dispatches to Implementation
+```
+
+Static up-views preserve the owner. Possible downcasts inspect allocation
+metadata, impossible relations are rejected, and casts never allocate, copy
+the wrapper, or change presence. Primitive, array, nested value, shared-owner,
+and other non-object box targets remain invariant.
+
+Box owners are eligible in locals, fields, internal value parameters/results,
+explicitly initialized statics, temporaries, and array elements. An optional
+box owner uses the existing absent zero default. Requested nonempty default
+construction of `(shared P?)[]` creates one distinct absent box per element;
+slots never share a synthesized default box. External shared-box signatures
+remain invalid.
+
+Checked payload access combines an owner or hidden owner anchor with the
+existing optional guard. A read-only `ref P?` may designate an exact box
+wrapper for one call; mutable whole-wrapper aliases, aliases whose designated
+type is a shared owner, optional references, first-class references, and
+escaping pointers into a box remain invalid. This feature adds no mutable
+shared optional cell, checked covariant store, store-related failure, or
+atomic/thread-safety rule.
 
 ## Empty and present values
 
@@ -654,9 +754,13 @@ lifetime contract is defined.
 
 ## Explicit exclusions
 
-The implemented compositional profile does not include:
+The implemented compositional profile does not yet execute the frozen shared
+optional boxes above. Neither the implemented profile nor the frozen box
+design includes:
 
-- generalized `shared T?` boxes or `shared? T?`;
+- generalized boxes for non-optional primitive, class, array, function, or
+  other inline values;
+- mutable shared optional cells or whole-box-pointee assignment;
 - optional function values;
 - first-class or optional references;
 - optional equality or lifted arithmetic;
