@@ -1,7 +1,10 @@
 //! Target-independent shared-owner types, sources, and consuming operations.
 
 use crate::{
-    identity::{ArrayTypeId, BindingId, ClassId, InitializerId, InterfaceId},
+    identity::{
+        ArrayTypeId, BindingId, ClassId, InitializerId, InterfaceId, OptionalBoxTypeId,
+        OptionalTypeId,
+    },
     source::Span,
 };
 
@@ -16,6 +19,7 @@ pub enum HirSharedTarget {
     Class(ClassId),
     Interface(InterfaceId),
     Array(ArrayTypeId),
+    OptionalBox(OptionalBoxTypeId),
 }
 
 /// A named owner whose value use must create another strong owner.
@@ -74,6 +78,7 @@ pub enum HirSharedProducer {
         target: HirSharedTarget,
     },
     ArrayAllocation(Box<super::HirArrayConstruction>),
+    OptionalBoxAllocation(Box<HirOptionalBoxAllocation>),
 }
 
 impl HirSharedProducer {
@@ -87,6 +92,9 @@ impl HirSharedProducer {
             Self::Cast(cast) => cast.target,
             Self::OptionalUnwrap { target, .. } => *target,
             Self::ArrayAllocation(allocation) => HirSharedTarget::Array(allocation.array),
+            Self::OptionalBoxAllocation(allocation) => {
+                HirSharedTarget::OptionalBox(allocation.static_target)
+            }
         }
     }
 
@@ -97,6 +105,7 @@ impl HirSharedProducer {
             Self::Cast(cast) => cast.span,
             Self::OptionalUnwrap { operand, .. } => operand.span(),
             Self::ArrayAllocation(allocation) => allocation.span,
+            Self::OptionalBoxAllocation(allocation) => allocation.span,
         }
     }
 }
@@ -159,6 +168,26 @@ impl HirSharedSource {
             | Self::Produced(
                 HirSharedProducer::Call(_)
                 | HirSharedProducer::OptionalUnwrap { .. }
+                | HirSharedProducer::ArrayAllocation(_)
+                | HirSharedProducer::OptionalBoxAllocation(_),
+            ) => None,
+        }
+    }
+
+    /// Exact optional allocation knowledge retained only by a freshly
+    /// produced box. Named owners keep their static view but not allocation
+    /// provenance.
+    pub const fn exact_optional_box(&self) -> Option<OptionalTypeId> {
+        match self {
+            Self::Produced(HirSharedProducer::OptionalBoxAllocation(allocation)) => {
+                Some(allocation.exact_optional)
+            }
+            Self::Place(_)
+            | Self::Produced(
+                HirSharedProducer::Allocation(_)
+                | HirSharedProducer::Call(_)
+                | HirSharedProducer::Cast(_)
+                | HirSharedProducer::OptionalUnwrap { .. }
                 | HirSharedProducer::ArrayAllocation(_),
             ) => None,
         }
@@ -207,6 +236,31 @@ pub enum HirSharedAllocationMode {
         source: Box<HirObjectSource>,
         operation: HirSelectedCopyOperation<crate::identity::CopyConstructorId>,
     },
+}
+
+/// A source-ordered construction plan for one unpublished optional box.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalBoxAllocation {
+    /// Physical optional wrapper initialized in the allocation.
+    pub exact_optional: OptionalTypeId,
+    /// Exact constructible box target selected by `new`.
+    pub exact_target: OptionalBoxTypeId,
+    /// Static view produced by this expression before any consuming up-view.
+    pub static_target: OptionalBoxTypeId,
+    /// Destination-directed initialization, including direct construction,
+    /// conditional copy, or shared-owner transfer as applicable.
+    pub initialization: super::HirStoredValueInitialization,
+    pub evaluation: HirOptionalBoxEvaluationOrder,
+    pub produced_owner: HirOwnerTransfer,
+    pub new_span: Span,
+    pub target_span: Span,
+    pub publication_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirOptionalBoxEvaluationOrder {
+    SourceThenAllocateThenInitializeThenPublish,
 }
 
 /// Initialization or replacement of a shared owning field.

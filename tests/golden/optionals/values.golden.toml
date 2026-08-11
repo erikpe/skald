@@ -158,8 +158,10 @@ mode = "compile-fail"
 source = "optional_box_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "shared optional box availability gate", match = "contains", inline = """error[TYP044]: shared optional boxes are not available during type checking yet
- --> tests/golden/optionals/optional_box_exclusions.ska:6:30""" },
+  { name = "shared optional box parameter gate", match = "contains", inline = """error[TYP044]: shared optional box parameters are enabled in roadmap task BX7
+ --> tests/golden/optionals/optional_box_exclusions.ska:6:23""" },
+  { name = "optional shared box parameter gate", match = "contains", inline = """error[TYP044]: shared optional box parameters are enabled in roadmap task BX7
+ --> tests/golden/optionals/optional_box_exclusions.ska:7:32""" },
 ]
 
 [[test]]

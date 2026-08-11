@@ -116,6 +116,7 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
             HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
                 array_construction_contains_control_effect(construction)
             }
+            HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => true,
             HirSharedSource::Place(_) => false,
         },
         HirCallArgument::Array(value) => array_source_contains_control_effect(&value.source),
@@ -146,6 +147,7 @@ fn shared_source_contains_control_effect(source: &HirSharedSource) -> bool {
         HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
             array_construction_contains_control_effect(construction)
         }
+        HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => true,
     }
 }
 

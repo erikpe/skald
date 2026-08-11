@@ -254,9 +254,10 @@ complete source shapes reach semantic analysis. Nested optionals and optional
 inline arrays execute in every supported owning, aggregate, internal callable,
 array-element, and checked-alias position. Semantic analysis still rejects
 `unit?` and standalone owning optional interface or `Obj` values. Shared
-optional box types and allocations receive canonical resolved identities,
-then stop at the feature's single type-check availability gate; their source
-and compiler semantics are frozen in
+optional box types and allocations receive canonical resolved identities.
+Direct local owners and construction reach typed HIR; broader storage,
+pointee access, and executable phases retain staged availability gates. Their
+source and compiler semantics are frozen in
 [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes). Optional
 references such as `ref?` remain syntax errors.
 `unit[]` is likewise parsed so later semantic analysis can report element

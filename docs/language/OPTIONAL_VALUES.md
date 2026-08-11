@@ -300,11 +300,11 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; syntax and resolution implemented**. The compiler
-parses box type and allocation forms, interns exact optional and static
-object-view targets, and then rejects the feature at one deliberate
-type-checking availability gate. Later roadmap tasks own typed and executable
-support and must not reopen the source semantics in this section.
+Status: **frozen design; typed local HIR implemented**. The compiler parses
+box forms, interns exact optional and static object-view targets, and selects
+local construction and owner-transfer plans in HIR. Broader storage, pointee
+access, MIR, and native execution remain staged. Later roadmap tasks must not
+reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
 optional `P?` wrapper. It is `Shared<Optional<P>>`, not an optional ordinary

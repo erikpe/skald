@@ -14,10 +14,10 @@ use crate::{
     source::Span,
 };
 
+mod optional_box;
+
 use super::{
-    expression::{
-        class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
-    },
+    expression::{classify_object_view_relation, ObjectViewRelation, ObjectViewSource},
     function::CallableChecker,
     program::{
         lower_type, IMPLICIT_SHARED_DEREFERENCE, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION,
@@ -30,9 +30,7 @@ pub(super) fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarg
         ResolvedSharedTarget::Class(class) => HirSharedTarget::Class(class),
         ResolvedSharedTarget::Interface(interface) => HirSharedTarget::Interface(interface),
         ResolvedSharedTarget::Array(array) => HirSharedTarget::Array(array),
-        ResolvedSharedTarget::OptionalBox(_) => {
-            unreachable!("the shared optional-box availability gate runs before HIR lowering")
-        }
+        ResolvedSharedTarget::OptionalBox(target) => HirSharedTarget::OptionalBox(target),
     }
 }
 
@@ -41,28 +39,7 @@ pub(super) fn target_accepts(
     expected: HirSharedTarget,
     actual: HirSharedTarget,
 ) -> bool {
-    match expected {
-        HirSharedTarget::Obj => !matches!(actual, HirSharedTarget::Array(_)),
-        HirSharedTarget::Class(expected) => match actual {
-            HirSharedTarget::Class(actual) => program
-                .hierarchy
-                .is_subtype(actual, expected)
-                .unwrap_or(false),
-            HirSharedTarget::Obj | HirSharedTarget::Interface(_) | HirSharedTarget::Array(_) => {
-                false
-            }
-        },
-        HirSharedTarget::Interface(expected) => match actual {
-            HirSharedTarget::Class(actual) => {
-                class_provides_view(program, actual, HirViewTarget::Interface(expected))
-            }
-            HirSharedTarget::Interface(actual) => actual == expected,
-            HirSharedTarget::Obj | HirSharedTarget::Array(_) => false,
-        },
-        HirSharedTarget::Array(expected) => {
-            matches!(actual, HirSharedTarget::Array(actual) if actual == expected)
-        }
-    }
+    super::shared_compatibility::relation(program, actual, expected).is_implicit()
 }
 
 impl CallableChecker<'_, '_> {
@@ -165,6 +142,11 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Allocation(allocation) => self
                 .check_shared_allocation(allocation)
                 .map(HirSharedProducer::Allocation)
+                .map(HirSharedSource::Produced),
+            ResolvedExpression::OptionalBoxAllocation(allocation) => self
+                .check_optional_box_allocation(allocation)
+                .map(Box::new)
+                .map(HirSharedProducer::OptionalBoxAllocation)
                 .map(HirSharedSource::Produced),
             ResolvedExpression::ArrayConstruction(construction) => {
                 let checked = self.check_array_construction(construction)?;
@@ -280,6 +262,19 @@ impl CallableChecker<'_, '_> {
 
     fn check_shared_cast(&mut self, cast: &ResolvedObjectCastExpr) -> Option<HirSharedCast> {
         let source = self.check_shared_source(&cast.source, true)?;
+        if matches!(source.target(), HirSharedTarget::OptionalBox(_)) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
+                    "optional-box owner casts are enabled in roadmap task BX6",
+                )
+                .with_primary_label(
+                    cast.span,
+                    "BX1 records the relation but does not execute it",
+                ),
+            );
+            return None;
+        }
         let target_view =
             self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
         let target = shared_target_from_view(target_view);
@@ -393,6 +388,9 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Allocation(allocation) => {
                 Type::Shared(HirSharedTarget::Class(allocation.class))
             }
+            ResolvedExpression::OptionalBoxAllocation(allocation) => {
+                Type::Shared(HirSharedTarget::OptionalBox(allocation.target))
+            }
             _ => Type::Unit,
         }
     }
@@ -411,8 +409,32 @@ impl CallableChecker<'_, '_> {
                 .map(|interface| interface.name.clone())
                 .unwrap_or_else(|| interface.to_string()),
             HirSharedTarget::Array(array) => format!("array {array}"),
+            HirSharedTarget::OptionalBox(target) => self.optional_box_target_name(target),
         };
         format!("shared {name}")
+    }
+
+    fn optional_box_target_name(&self, target: crate::identity::OptionalBoxTypeId) -> String {
+        let target = self
+            .program
+            .optional_box_types
+            .get(target)
+            .expect("typed optional-box target must name metadata");
+        let leaf = match target.object_leaf {
+            Some(crate::resolve::ResolvedObjectTarget::Obj) => "Obj".to_owned(),
+            Some(crate::resolve::ResolvedObjectTarget::Class(class)) => self
+                .program
+                .class(class)
+                .map(|class| class.name.clone())
+                .unwrap_or_else(|| class.to_string()),
+            Some(crate::resolve::ResolvedObjectTarget::Interface(interface)) => self
+                .program
+                .interface(interface)
+                .map(|interface| interface.name.clone())
+                .unwrap_or_else(|| interface.to_string()),
+            None => return format!("optional-box {}", target.id),
+        };
+        format!("{}{}", leaf, "?".repeat(target.optional_depth))
     }
 
     pub(in crate::typeck) fn reject_implicit_shared_dereference<T>(
@@ -467,6 +489,9 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::Allocation(allocation) => {
                 Some(HirSharedTarget::Class(allocation.class))
+            }
+            ResolvedExpression::OptionalBoxAllocation(allocation) => {
+                Some(HirSharedTarget::OptionalBox(allocation.target))
             }
             ResolvedExpression::DirectCall(call) => self
                 .program
@@ -606,6 +631,9 @@ const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget {
         HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
         HirSharedTarget::Array(_) => {
             panic!("array pointee views are typed by the array projection checker")
+        }
+        HirSharedTarget::OptionalBox(_) => {
+            panic!("optional-box views are typed by the optional-box access checker")
         }
     }
 }

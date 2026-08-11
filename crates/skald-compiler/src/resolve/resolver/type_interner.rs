@@ -13,6 +13,13 @@ use super::{
     ResolvedTypeKind,
 };
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct OptionalBoxKey {
+    optional: Option<OptionalTypeId>,
+    optional_depth: usize,
+    object_leaf: Option<ResolvedObjectTarget>,
+}
+
 /// Owns canonical identities for the mutually recursive array/optional graph.
 ///
 /// Resolution interns children before parents. `ResolvedTypeKind` contains
@@ -23,7 +30,7 @@ pub(super) struct ResolvedTypeInterner {
     arrays: Vec<ResolvedArrayType>,
     optional_ids: HashMap<ResolvedTypeKind, OptionalTypeId>,
     optionals: Vec<ResolvedOptionalType>,
-    optional_box_ids: HashMap<OptionalTypeId, OptionalBoxTypeId>,
+    optional_box_ids: HashMap<OptionalBoxKey, OptionalBoxTypeId>,
     optional_boxes: Vec<ResolvedOptionalBoxType>,
 }
 
@@ -65,18 +72,45 @@ impl ResolvedTypeInterner {
         optional: OptionalTypeId,
         span: Span,
     ) -> OptionalBoxTypeId {
-        if let Some(id) = self.optional_box_ids.get(&optional) {
+        let (optional_depth, object_leaf) = self.optional_leaf(optional);
+        self.intern_optional_box_key(
+            OptionalBoxKey {
+                optional: Some(optional),
+                optional_depth,
+                object_leaf,
+            },
+            span,
+        )
+    }
+
+    pub(super) fn intern_optional_object_box_view(
+        &mut self,
+        optional_depth: usize,
+        object_leaf: ResolvedObjectTarget,
+        span: Span,
+    ) -> OptionalBoxTypeId {
+        self.intern_optional_box_key(
+            OptionalBoxKey {
+                optional: None,
+                optional_depth,
+                object_leaf: Some(object_leaf),
+            },
+            span,
+        )
+    }
+
+    fn intern_optional_box_key(&mut self, key: OptionalBoxKey, span: Span) -> OptionalBoxTypeId {
+        if let Some(id) = self.optional_box_ids.get(&key) {
             return *id;
         }
 
-        let (optional_depth, object_leaf) = self.optional_leaf(optional);
         let id = OptionalBoxTypeId::new(self.optional_boxes.len());
-        self.optional_box_ids.insert(optional, id);
+        self.optional_box_ids.insert(key, id);
         self.optional_boxes.push(ResolvedOptionalBoxType {
             id,
-            optional,
-            optional_depth,
-            object_leaf,
+            optional: key.optional,
+            optional_depth: key.optional_depth,
+            object_leaf: key.object_leaf,
             span,
         });
         id

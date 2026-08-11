@@ -237,7 +237,7 @@ fn nested_optionals_and_optional_arrays_cross_type_checking() {
 }
 
 #[test]
-fn shared_boxes_resolve_canonical_targets_and_stop_at_the_typeck_gate() {
+fn shared_box_callable_positions_stop_at_the_bx7_gate() {
     let output = resolve_text(
         "class Thing { init() {} }\n\
          fn box_value(value: shared Thing?, nested: shared Thing??) -> unit {}\n\
@@ -272,11 +272,11 @@ fn shared_boxes_resolve_canonical_targets_and_stop_at_the_typeck_gate() {
     let checked = crate::typeck::type_check(&output.program);
     assert!(checked.has_errors());
     assert!(checked.hir.is_none());
-    assert_eq!(checked.diagnostics.iter().count(), 1);
-    assert_eq!(
-        checked.diagnostics.iter().next().unwrap().code,
-        crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE
-    );
+    assert_eq!(checked.diagnostics.iter().count(), 4);
+    assert!(checked
+        .diagnostics
+        .iter()
+        .all(|diagnostic| { diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE }));
 }
 
 #[test]
@@ -359,6 +359,23 @@ fn rejects_non_concrete_object_box_allocation_but_retains_static_views() {
         .optional_box_types
         .iter()
         .any(|target| target.object_leaf == Some(ResolvedObjectTarget::Obj)));
+}
+
+#[test]
+fn interface_and_obj_box_views_do_not_create_inline_optional_identities() {
+    let output = resolve_text(
+        "interface View { fn read() -> i64; }\n\
+         fn views(owner: shared View?, any: shared Obj?) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert!(output.program.optional_types.is_empty());
+    assert_eq!(output.program.optional_box_types.iter().count(), 2);
+    assert!(output
+        .program
+        .optional_box_types
+        .iter()
+        .all(|target| target.optional.is_none()));
 }
 
 #[test]

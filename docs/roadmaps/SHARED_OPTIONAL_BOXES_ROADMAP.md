@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX1 is next.
+Status: in progress; BX0-BX1 are complete and BX2 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -103,7 +103,7 @@ outcome; it does not reopen those decisions.
 ## Progress
 
 - [x] BX0 — Retain box allocation syntax and canonical resolved targets
-- [ ] BX1 — Select typed box ownership and construction plans
+- [x] BX1 — Select typed box ownership and construction plans
 - [ ] BX2 — Verify optional-box allocation and owner lifetimes in MIR
 - [ ] BX3 — Execute primitive optional boxes on x86-64
 - [ ] BX4 — Execute exact lifecycle-bearing box targets
@@ -160,28 +160,28 @@ no consumer reconstructs target meaning from source syntax.
 **Purpose:** Give HIR a complete target-independent account of box ownership,
 compatibility, and exact wrapper construction before MIR owns lifetime state.
 
-- [ ] Extend HIR shared targets and type rendering with exact optional targets
+- [x] Extend HIR shared targets and type rendering with exact optional targets
       and optional object views, preserving the distinction between static view
       and known exact allocation target.
-- [ ] Generalize the existing shared compatibility facade for exact invariant
+- [x] Generalize the existing shared compatibility facade for exact invariant
       boxes and class/base/interface/`Obj` object-box up-views, impossible
       relations, and later checked downcasts.
-- [ ] Add a typed optional-box producer carrying exact target, static result
+- [x] Add a typed optional-box producer carrying exact target, static result
       view, selected optional initialization/copy/transfer plan, source order,
       owner provenance, and allocation/publication spans.
-- [ ] Select zero-expression absent construction and one-expression ordinary
+- [x] Select zero-expression absent construction and one-expression ordinary
       optional initialization without requesting unavailable assignment or
       mutable-container capabilities.
-- [ ] For exact object allocation, enforce `new Derived?(Derived())` versus
+- [x] For exact object allocation, enforce `new Derived?(Derived())` versus
       invalid `new Derived?(Base())`; perform possible target-directed source
       checks before allocation and retain direct destination construction where
       the existing optional plan allows it.
-- [ ] Enable local box owners, named copy, produced adoption, compatible owner
+- [x] Enable local box owners, named copy, produced adoption, compatible owner
       assignment, and independent `new P?(*source)` payload copying in HIR.
-- [ ] Reject whole-pointee assignment, mutable whole-wrapper aliases, implicit
+- [x] Reject whole-pointee assignment, mutable whole-wrapper aliases, implicit
       forwarding, external signatures, invariant target conversions, and
       unavailable construction/copy lifecycle with focused spans.
-- [ ] Retain structured gates for dereference, polymorphic execution, broader
+- [x] Retain structured gates for dereference, polymorphic execution, broader
       stored positions, MIR, and backend work owned by later tasks.
 
 **Tests:** Type-check compatibility and diagnostics; primitive/class/array/

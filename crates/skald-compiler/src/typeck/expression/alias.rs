@@ -422,6 +422,39 @@ impl CallableChecker<'_, '_> {
         expected: Type,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
+        if let ResolvedExpression::Dereference(dereference) = expression {
+            if matches!(
+                dereference.target,
+                crate::resolve::ResolvedSharedTarget::OptionalBox(_)
+            ) {
+                let mutable = matches!(
+                    parameter.binding_mode(),
+                    crate::resolve::ResolvedParameterBindingMode::MutableAlias { .. }
+                );
+                let diagnostic = if mutable {
+                    Diagnostic::error(
+                        INVALID_ALIAS_ARGUMENT,
+                        "a published optional-box wrapper cannot be mutably aliased",
+                    )
+                    .with_primary_label(
+                        dereference.operator_span,
+                        "the complete boxed optional is immutable after publication",
+                    )
+                } else {
+                    Diagnostic::error(
+                        crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
+                        "read-only optional-box aliases are enabled in roadmap task BX5",
+                    )
+                    .with_primary_label(
+                        dereference.operator_span,
+                        "pointee anchoring and guards are not lowered during BX1",
+                    )
+                }
+                .with_secondary_label(parameter.span(), "optional alias declared here");
+                self.diagnostics.push(diagnostic);
+                return None;
+            }
+        }
         let place = self.inline_optional_alias_place(expression);
         let Some(place) = place else {
             self.diagnostics.push(

@@ -60,6 +60,33 @@ pub(super) fn optional_id(ty: Type) -> Option<OptionalTypeId> {
     Some(optional)
 }
 
+pub(super) fn selected_copy_plan(
+    program: &ResolvedProgram,
+    capabilities: &CopyCapabilities,
+    optional: OptionalTypeId,
+) -> Option<HirOptionalCopyPlan> {
+    match resolved_payload_kind(program, optional) {
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool => Some(HirOptionalCopyPlan::Trivial),
+        ResolvedTypeKind::Class(class) => capabilities
+            .constructor(class)
+            .selected()
+            .map(|operation| HirOptionalCopyPlan::Class { class, operation }),
+        ResolvedTypeKind::Array(array) => capabilities
+            .array(array)
+            .lifecycle
+            .copy
+            .map(|_| HirOptionalCopyPlan::Array(array)),
+        ResolvedTypeKind::Shared(target) => Some(HirOptionalCopyPlan::Shared(lower_shared(target))),
+        ResolvedTypeKind::Optional(nested) => selected_copy_plan(program, capabilities, nested)
+            .map(|_| HirOptionalCopyPlan::Optional(nested)),
+        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+    }
+}
+
 pub(super) fn lower_optional_types(
     program: &ResolvedProgram,
     capabilities: &CopyCapabilities,

@@ -1,7 +1,7 @@
 //! Destination-directed plans for initializing previously uninitialized storage.
 
 use crate::{
-    identity::{ClassId, CopyConstructorId},
+    identity::{ClassId, CopyConstructorId, OptionalTypeId},
     source::Span,
 };
 
@@ -29,6 +29,13 @@ pub enum HirStoredValueInitialization {
     Shared(HirSharedTransfer),
     OptionalShared(HirOptionalSharedInitialize),
     Optional(Box<super::HirOptionalValue>),
+    /// Copy of one complete immutable wrapper through an exact box owner.
+    OptionalBoxPointeeCopy {
+        source: super::HirSharedSource,
+        optional: OptionalTypeId,
+        operation: super::HirOptionalCopyPlan,
+        span: Span,
+    },
 }
 
 impl HirStoredValueInitialization {
@@ -42,6 +49,7 @@ impl HirStoredValueInitialization {
             Self::Shared(value) => value.span,
             Self::OptionalShared(value) => value.span,
             Self::Optional(value) => value.span,
+            Self::OptionalBoxPointeeCopy { span, .. } => *span,
         }
     }
 }

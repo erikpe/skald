@@ -443,8 +443,9 @@ contract; when absent, it accounts for no owner.
 Optionality inside the operand of ordinary `shared` has a different meaning:
 `shared T?` denotes `Shared<Optional<T>>`, a non-null owner of a new shared-box
 allocation kind. Its design is frozen; the current compiler parses its type
-and allocation forms, assigns canonical resolved identities, and rejects it
-at the type-check availability gate.
+and allocation forms, assigns canonical resolved and HIR identities, and
+selects local construction plus owner transfers. Stored positions, pointee
+access, and executable lowering remain gated.
 
 `new P?()` allocates a box whose exact optional target begins absent, while
 `new P?(expression)` initializes that wrapper through the existing exact
@@ -479,8 +480,9 @@ authoritative in
 
 ## Exclusions
 
-The implemented frontend parses and resolves the frozen shared optional box
-contract, but the type-check availability gate prevents it from executing.
+The implemented frontend parses, resolves, and type-checks the BX1 local-owner
+subset of the frozen shared optional box contract. A structured MIR gate
+prevents it from executing until BX2.
 Neither that contract nor this profile includes:
 
 - generalized boxes for non-optional primitive, class, array, function, or

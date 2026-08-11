@@ -151,9 +151,10 @@ Distinct scalar, aggregate, and shared-owner operations remain only where the
 runtime work differs. Nested payload access, aliases, and internal callable
 boundaries use those recursive plans. Tagged optional arrays reuse ordinary
 array lifecycle across all supported aggregate, internal callable,
-array-element, and checked-alias positions. The shared-box frontend now adds a
-resolved target for `shared T?`, but the type-check availability gate prevents
-HIR/MIR/backend exposure and adds no C runtime ABI surface.
+array-element, and checked-alias positions. The shared-box frontend now adds
+resolved and HIR targets for `shared T?`; BX1 selects local construction and
+owner transfers, while structured gates prevent MIR/backend exposure and add
+no C runtime ABI surface.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

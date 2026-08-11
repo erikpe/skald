@@ -121,6 +121,22 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Boolean(boolean) => self.check_boolean_expression(boolean),
             ResolvedExpression::Unary(unary) => self.check_unary_expression(unary),
             ResolvedExpression::Dereference(dereference) => {
+                if matches!(
+                    dereference.target,
+                    crate::resolve::ResolvedSharedTarget::OptionalBox(_)
+                ) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
+                            "shared optional-box pointee access is enabled in roadmap task BX5",
+                        )
+                        .with_primary_label(
+                            dereference.operator_span,
+                            "BX1 permits this only as an exact `new P?(*source)` copy source",
+                        ),
+                    );
+                    return None;
+                }
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_CONTEXT,
@@ -165,8 +181,18 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            ResolvedExpression::OptionalBoxAllocation(_) => {
-                unreachable!("the shared optional-box availability gate runs before body typing")
+            ResolvedExpression::OptionalBoxAllocation(allocation) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "optional-box allocation must be consumed as a shared owner",
+                    )
+                    .with_primary_label(
+                        allocation.new_span,
+                        "store this produced owner in a supported local box owner",
+                    ),
+                );
+                None
             }
             ResolvedExpression::ArrayConstruction(construction) => {
                 self.check_array_construction(construction)

@@ -110,6 +110,9 @@ impl BodyLowerer<'_> {
             HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
                 self.lower_shared_array_construction(destination, construction)
             }
+            HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => {
+                unreachable!("optional-box MIR lowering is gated until BX2")
+            }
             HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
                 let source = self.lower_field_place(place);
                 self.emit(MirInstruction::SharedFieldCopy(MirSharedFieldCopy {
@@ -360,5 +363,8 @@ fn lower_shared_target(target: HirSharedTarget) -> MirSharedTarget {
         HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
         HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
+        HirSharedTarget::OptionalBox(_) => {
+            unreachable!("optional-box MIR targets are gated until BX2")
+        }
     }
 }

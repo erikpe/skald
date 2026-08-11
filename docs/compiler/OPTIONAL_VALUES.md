@@ -70,10 +70,12 @@ shared T    ordinary non-null shared owner
 
 `shared? T` is an exact source shorthand for `(shared T)?`; both intern to the
 same resolved identity and lower to the existing optional-owner operations.
-`shared T?` and `shared? T?` receive deterministic resolved box identities and
-then reach one focused type-check availability gate; invalid standalone
-payload families retain their ordinary diagnostics. None become executable
-HIR types yet. Nested optionals
+`shared T?` and `shared? T?` receive deterministic resolved and HIR box
+identities. BX1 type-checks direct local box owners, outer optional-owner
+layers, construction, compatible owner copy/replacement, and independent
+exact-wrapper copying. Stored/callable positions, pointee access, and MIR stay
+behind focused later-task gates; invalid standalone payload families retain
+their ordinary diagnostics. Nested optionals
 are executable in owning positions, checked access, aliases, and internal
 callable boundaries. Alias binding mode may designate any supported inline
 optional container; it does not add a reference or optional-reference type
@@ -281,10 +283,10 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; not implemented**. The current resolution diagnostic
-remains the availability gate until the implementation roadmap deliberately
-moves it. No lower phase may infer or partially execute box behavior before
-its responsible task establishes a verified representation.
+Status: **frozen design; typed local HIR implemented**. BX1 selects local owner
+compatibility and exact wrapper construction in HIR. MIR, native execution,
+pointee access, and broader stored positions remain deliberately gated at
+their responsible roadmap boundaries.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -305,10 +307,13 @@ The exact Rust enum and interner names are implementation-private. Identities,
 compatibility, canonical names, and dumps must remain deterministic, and
 interface/`Obj` box views must not manufacture bare owning optional types.
 
-HIR owns a typed optional-box allocation producer. It records the exact
+HIR now owns a typed optional-box allocation producer. It records the exact
 optional allocation target, optional initialization or copy plan, static owner
-view, owner provenance, source spans, and publication boundary. A checked
-shared optional-pointee operation records its owner or anchor, access, static
+view, source-before-allocation order, owner provenance, source spans, and
+publication boundary. Exact primitive, class, array, shared-owner, and nested
+optional plans reuse ordinary destination initialization. Interface and `Obj`
+box views carry no invalid standalone optional identity. A later checked
+shared optional-pointee operation will record its owner or anchor, access, static
 box view, known exact allocation target when available, and optional guard.
 Published pointees have no assignment plan: whole-pointee assignment and
 mutable whole-wrapper aliases are rejected before HIR.
@@ -803,7 +808,7 @@ observable behavior:
 | Concern | Required focused evidence |
 |---|---|
 | Source syntax | Tokens and AST for general grouping, left-to-right `?`/`[]` suffixes, `(shared T)?`, `shared? T`, nested depth, `some(expression)`, malformed punctuation, recovery spans, and the syntax budget |
-| Canonical identity | Resolution interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; the current focused shared-box rejection before HIR until the active roadmap moves that gate |
+| Canonical identity | Resolution and HIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused stored-position and MIR gates |
 | Type and lifecycle selection | Exact payload eligibility, one-layer injection, overload ranking, `none`/`some` expectations, recursive containment, copy/assignment/destruction capabilities, aliases, statics, and array-element plans |
 | HIR and MIR shape | Explicit outer-layer operations, recursive payload plans, publication order, one-layer unwrap, guards and anchors, arguments/results, optional arrays, selected-path cleanup, and deterministic dumps |
 | Verification | Mutations for missing or mismatched identities, absent payload use, wrong lifecycle capability, premature publication, duplicate/missing cleanup, bad transfers, unbalanced or wrong-layer guards, invalid anchors, malformed CFG joins, and leaked box targets |
@@ -813,9 +818,10 @@ observable behavior:
 | Native failure | Absent access at each layer, later-check suppression, guard overflow, guarded replacement, index/slice/allocation failures inside present arrays, and unsuccessful non-returning behavior |
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
-Parser and resolution suites provide positive coverage for `shared T?`,
-`shared? T?`, and box allocation, while compile-failure coverage verifies the
-single type-check availability gate until BX1 replaces it with typed cases.
+Parser, resolution, and type-check suites provide positive coverage for
+`shared T?`, `shared? T?`, local box allocation, construction plans, owner
+copy/adoption/replacement, and object-box up-views. Compile-failure coverage
+verifies the remaining stored-position, access, MIR, and backend gates.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.

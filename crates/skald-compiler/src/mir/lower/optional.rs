@@ -93,6 +93,9 @@ impl BodyLowerer<'_> {
             HirStoredValueInitialization::Optional(value) => {
                 self.lower_aggregate_optional_initialize_at(destination, value);
             }
+            HirStoredValueInitialization::OptionalBoxPointeeCopy { .. } => {
+                unreachable!("optional-box pointee copies are gated until BX2")
+            }
         }
     }
 

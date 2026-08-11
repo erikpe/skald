@@ -271,8 +271,9 @@ identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types.
 Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
-call. Frozen shared optional boxes now have canonical resolved target
-identities and one deliberate type-check availability gate; nested and
+call. Frozen shared optional boxes now have canonical resolved and HIR target
+identities, typed local construction/ownership, and deliberate stored-position
+and MIR gates; nested and
 optional-array identities execute through recursive MIR
 lifecycle plans; optional-reference shapes remain syntax diagnostics.
 
@@ -295,11 +296,13 @@ identities. Object-only, array-only, optional-place, and generic owner
 consumers query explicit target capabilities rather than assuming every
 non-array owner is an object.
 
-HIR owns typed optional-box allocation and checked optional-pointee access. It
-records exact allocation target, static owner view, initialization/copy plan,
-owner provenance, access, anchor strategy, and diagnostic spans. Published box
-wrappers are immutable, so HIR never represents a whole-pointee assignment or
-mutable whole-wrapper alias. Object-box views retain a static
+HIR owns typed optional-box allocation and local owner transfer. It records
+exact allocation target, static owner view, destination-directed
+initialization/copy/transfer plan, source-before-allocation order, owner
+provenance, publication boundary, and diagnostic spans. Published box wrappers
+are immutable, so HIR never represents a whole-pointee assignment or mutable
+whole-wrapper alias. Checked pointee access and anchor strategy remain gated
+until BX5. Object-box views retain a static
 class/interface/`Obj` view separately from the exact dynamic allocation class.
 
 MIR adds a distinct optional-box allocation origin and makes allocate,

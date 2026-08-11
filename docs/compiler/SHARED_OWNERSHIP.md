@@ -463,9 +463,10 @@ representation choice; zero never enters a plain-owner operation.
 
 The frozen `shared P?` extension introduces `Shared<Optional<P>>` as a distinct
 allocation target while retaining the same non-null one-word owner operations.
-The current compiler assigns its canonical resolved target and then rejects it
-at one type-check availability gate; later implementation proceeds only
-through the active roadmap's staged gates.
+BX1 assigns canonical resolved and HIR targets, selects local owner
+copy/adoption/replacement and exact wrapper construction, and then stops at a
+structured MIR gate. Fields, statics, calls, and pointee access retain focused
+later-task diagnostics.
 
 Each box allocation records a distinct optional-box origin, an exact canonical
 optional payload target, and one descriptor/finalizer identity. Allocation

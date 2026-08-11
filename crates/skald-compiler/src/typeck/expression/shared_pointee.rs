@@ -143,6 +143,22 @@ impl CallableChecker<'_, '_> {
         projections: Vec<ObjectProjection>,
         span: Span,
     ) -> Option<CheckedSharedPointee> {
+        if matches!(
+            dereference.target,
+            crate::resolve::ResolvedSharedTarget::OptionalBox(_)
+        ) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
+                    "shared optional-box pointee access is enabled in roadmap task BX5",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "BX1 permits this dereference only as an exact `new P?(*source)` copy source",
+                ),
+            );
+            return None;
+        }
         let pointee = self.check_shared_pointee(&dereference.source, projections, span)?;
         let resolved_target = shared_target_view(crate::typeck::shared::lower_shared_target(
             dereference.target,
@@ -209,6 +225,9 @@ pub(super) const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget
         HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
         HirSharedTarget::Array(_) => {
             panic!("array pointees do not enter object-view conversion")
+        }
+        HirSharedTarget::OptionalBox(_) => {
+            panic!("optional-box pointees are gated until roadmap task BX5")
         }
     }
 }

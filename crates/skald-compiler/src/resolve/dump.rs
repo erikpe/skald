@@ -202,7 +202,13 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                     dumper.line(
                         &format!(
                             "OptionalBoxType {} exact {} depth {}{}",
-                            target.id, target.optional, target.optional_depth, leaf
+                            target.id,
+                            target
+                                .optional
+                                .map(|optional| optional.to_string())
+                                .unwrap_or_else(|| "view-only".to_owned()),
+                            target.optional_depth,
+                            leaf
                         ),
                         target.span,
                     );
@@ -1384,7 +1390,13 @@ impl<'types> ResolvedDumper<'types> {
                     .optional_box_types
                     .get(target)
                     .expect("resolved optional-box identities must name table entries");
-                format!("optional-box {target} exact {}", metadata.optional)
+                format!(
+                    "optional-box {target} exact {}",
+                    metadata
+                        .optional
+                        .map(|optional| optional.to_string())
+                        .unwrap_or_else(|| "view-only".to_owned())
+                )
             }
         }
     }

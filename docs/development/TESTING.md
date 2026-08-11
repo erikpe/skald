@@ -711,10 +711,11 @@ not portable language observations. Optional full-phase determinism and the
 MIR mutation corpus cover dumps, verification, and backend rejection, while
 the extended robustness suite mutates optional punctuation deterministically.
 
-### Frozen shared optional box coverage
+### Staged shared optional box coverage
 
-The active roadmap must replace the current focused box rejections in staged
-increments and retain negative gates for every not-yet-enabled lower phase.
+BX1 provides positive type-check/HIR coverage for local owners and
+construction while the active roadmap retains negative gates for every
+not-yet-enabled stored or lower phase.
 Complete implementation evidence includes:
 
 - source type grouping, arbitrary outer optional depth, `shared? P?`

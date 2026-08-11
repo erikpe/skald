@@ -55,6 +55,10 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
 /// Lowers complete typed HIR into the closed-world product consumed by static
 /// lifecycle analysis. This product cannot be passed directly to a backend.
 pub fn lower_preliminary_hir(hir: &HirProgram) -> PreliminaryMirProgram {
+    assert!(
+        hir.optional_box_types.is_empty(),
+        "optional-box HIR must stop at the structured BX2 lowering gate"
+    );
     let program = program::lower_program(hir);
     let (static_fields, static_initializers) =
         static_initializer::lower_static_initializers(hir, program.string_language_item);
@@ -439,6 +443,9 @@ fn lower_shared_target(target: crate::hir::HirSharedTarget) -> MirSharedTarget {
         crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         crate::hir::HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
         crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
+        crate::hir::HirSharedTarget::OptionalBox(_) => {
+            unreachable!("optional-box MIR lowering is gated until BX2")
+        }
     }
 }
 

@@ -191,6 +191,28 @@ fn resolve_shared_target(
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedSharedTarget> {
     if syntax_type_is_optional(target) {
+        let (optional_depth, leaf_syntax) = optional_syntax_leaf(target)
+            .expect("an optional shared target must have an optional syntax leaf");
+        let leaf = resolve_type(leaf_syntax, lookup, type_interner, diagnostics)?;
+        let object_leaf = match leaf.kind {
+            ResolvedTypeKind::Obj => Some(ResolvedObjectTarget::Obj),
+            ResolvedTypeKind::Class(class) => Some(ResolvedObjectTarget::Class(class)),
+            ResolvedTypeKind::Interface(interface) => {
+                Some(ResolvedObjectTarget::Interface(interface))
+            }
+            _ => None,
+        };
+        if matches!(
+            object_leaf,
+            Some(ResolvedObjectTarget::Obj | ResolvedObjectTarget::Interface(_))
+        ) {
+            let target = type_interner.intern_optional_object_box_view(
+                optional_depth,
+                object_leaf.expect("matched object view"),
+                target.span,
+            );
+            return Some(ResolvedSharedTarget::OptionalBox(target));
+        }
         let resolved = resolve_type(target, lookup, type_interner, diagnostics)?;
         let ResolvedTypeKind::Optional(optional) = resolved.kind else {
             unreachable!("an optional target must resolve to an optional identity")
@@ -255,6 +277,20 @@ fn resolve_shared_target(
             None
         }
         TopLevelLookup::Diagnosed => None,
+    }
+}
+
+fn optional_syntax_leaf(mut target: &syntax::TypeSyntax) -> Option<(usize, &syntax::TypeSyntax)> {
+    let mut depth = 0usize;
+    loop {
+        match &target.kind {
+            syntax::TypeKind::Grouped { inner, .. } => target = inner,
+            syntax::TypeKind::Optional { payload, .. } => {
+                depth += 1;
+                target = payload;
+            }
+            _ => return (depth > 0).then_some((depth, target)),
+        }
     }
 }
 

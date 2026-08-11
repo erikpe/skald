@@ -106,6 +106,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let interface_analysis = analyze_interfaces(program, &mut diagnostics);
     let copy_capabilities = CopyCapabilities::compute(program);
     let optional_types = super::optional_types::lower_optional_types(program, &copy_capabilities);
+    let optional_box_types = super::optional_box_types::lower_optional_box_types(program);
     let classes = lower_class_declarations(
         program,
         &copy_capabilities,
@@ -143,6 +144,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
             external_links: program.external_links.clone(),
             array_types: copy_capabilities.array_types(),
             optional_types,
+            optional_box_types,
             string_language_item: program.string_language_item.as_ref().map(|item| {
                 HirStringLanguageItem {
                     class: item.class,

@@ -14,6 +14,7 @@ mod integer_division;
 mod io;
 mod object;
 mod optional;
+mod optional_box_type;
 mod optional_type;
 mod primitive;
 mod shared;
@@ -81,6 +82,7 @@ pub use optional::{
     HirOptionalValue, HirOptionalValuePlace, HirOptionalValueSource, HirOptionalWriteKind,
     HirPresenceTestKind,
 };
+pub use optional_box_type::{HirOptionalBoxType, HirOptionalBoxTypeTable};
 pub use optional_type::{
     HirOptionalAssignmentPlan, HirOptionalBoundaryPlan, HirOptionalBoundaryPlans,
     HirOptionalCheckedAccess, HirOptionalCopyPlan, HirOptionalDestructionPlan,
@@ -90,9 +92,10 @@ pub use optional_type::{
 };
 pub use primitive::{HirPrimitiveCast, HirPrimitiveCastKind, HirPrimitiveType};
 pub use shared::{
-    HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,
-    HirSharedCast, HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,
-    HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer,
+    HirOptionalBoxAllocation, HirOptionalBoxEvaluationOrder, HirOwnerTransfer, HirSharedAllocation,
+    HirSharedAllocationMode, HirSharedAssignment, HirSharedCast, HirSharedCastKind,
+    HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer,
+    HirSharedSource, HirSharedTarget, HirSharedTransfer,
 };
 pub use shift::{
     HirCheckedShift, HirRightShiftFlavor, HirShiftDirection, HirShiftFailure, HirShiftOperation,
@@ -138,6 +141,7 @@ impl Type {
                 HirSharedTarget::Class(class) => format!("shared class {class}"),
                 HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
                 HirSharedTarget::Array(array) => format!("shared array {array}"),
+                HirSharedTarget::OptionalBox(target) => format!("shared optional-box {target}"),
             }),
             Self::Optional(optional) => Cow::Owned(format!("optional {optional}")),
         }

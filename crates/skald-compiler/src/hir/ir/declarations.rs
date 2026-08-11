@@ -25,6 +25,7 @@ pub struct HirProgram {
     pub external_links: ExternalLinkTable,
     pub array_types: super::HirArrayTypeTable,
     pub optional_types: super::HirOptionalTypeTable,
+    pub optional_box_types: super::HirOptionalBoxTypeTable,
     pub string_language_item: Option<super::HirStringLanguageItem>,
     pub literal_data: super::HirLiteralDataTable,
     pub classes: HirClassDeclarationTable,
@@ -43,6 +44,13 @@ impl HirProgram {
         id: crate::identity::OptionalTypeId,
     ) -> Option<&super::HirOptionalType> {
         self.optional_types.get(id)
+    }
+
+    pub fn optional_box_type(
+        &self,
+        id: crate::identity::OptionalBoxTypeId,
+    ) -> Option<&super::HirOptionalBoxType> {
+        self.optional_box_types.get(id)
     }
 
     pub fn class(&self, id: ClassId) -> Option<&HirClassDeclaration> {

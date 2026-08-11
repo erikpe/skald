@@ -245,7 +245,7 @@ impl CallableResolver<'_, '_> {
                     self.type_interner
                         .optional_box(target)
                         .expect("resolved optional-box target must be interned")
-                        .optional,
+                        .optional?,
                 ),
             }),
             ResolvedExpression::Unwrap(unwrap) => {

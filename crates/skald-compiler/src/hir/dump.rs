@@ -10,7 +10,7 @@ use crate::{
 use super::ir::*;
 
 pub fn dump_hir(program: &HirProgram) -> String {
-    let mut dumper = HirDumper::new(&program.optional_types);
+    let mut dumper = HirDumper::new(&program.optional_types, &program.optional_box_types);
     dumper.line("HirProgram", program.span);
     dumper.indented(|dumper| {
         dumper.raw_line(&format!("SelectedModule {}", program.modules.selected()));
@@ -64,6 +64,23 @@ pub fn dump_hir(program: &HirProgram) -> String {
                             optional.boundaries.array_element,
                         ));
                     });
+                }
+            });
+        }
+        if !program.optional_box_types.is_empty() {
+            dumper.heading("OptionalBoxTypes");
+            dumper.indented(|dumper| {
+                for target in program.optional_box_types.iter() {
+                    dumper.raw_line(&format!(
+                        "OptionalBoxType {} exact={} depth={} view={:?}",
+                        target.id,
+                        target
+                            .exact_optional
+                            .map(|optional| optional.to_string())
+                            .unwrap_or_else(|| "view-only".to_owned()),
+                        target.optional_depth,
+                        target.object_view,
+                    ));
                 }
             });
         }
@@ -159,14 +176,19 @@ struct HirDumper<'types> {
     output: String,
     indentation: usize,
     optional_types: &'types HirOptionalTypeTable,
+    optional_box_types: &'types HirOptionalBoxTypeTable,
 }
 
 impl<'types> HirDumper<'types> {
-    fn new(optional_types: &'types HirOptionalTypeTable) -> Self {
+    fn new(
+        optional_types: &'types HirOptionalTypeTable,
+        optional_box_types: &'types HirOptionalBoxTypeTable,
+    ) -> Self {
         Self {
             output: String::new(),
             indentation: 0,
             optional_types,
+            optional_box_types,
         }
     }
 
@@ -178,10 +200,37 @@ impl<'types> HirDumper<'types> {
                     .get(optional)
                     .expect("HIR dump optional identity must name metadata")
                     .payload;
-                format!("{}?", self.type_name(payload))
+                let payload_name = self.type_name(payload);
+                if matches!(payload, Type::Shared(_)) {
+                    format!("({payload_name})?")
+                } else {
+                    format!("{payload_name}?")
+                }
+            }
+            Type::Shared(HirSharedTarget::OptionalBox(target)) => {
+                format!("shared {}", self.optional_box_target_name(target))
             }
             _ => ty.name().into_owned(),
         }
+    }
+
+    fn optional_box_target_name(&self, target: crate::identity::OptionalBoxTypeId) -> String {
+        let target = self
+            .optional_box_types
+            .get(target)
+            .expect("HIR dump optional-box identity must name metadata");
+        if let Some(view) = target.object_view {
+            let leaf = match view {
+                HirViewTarget::Obj => "Obj".to_owned(),
+                HirViewTarget::Class(class) => format!("class {class}"),
+                HirViewTarget::Interface(interface) => format!("interface {interface}"),
+            };
+            return format!("{}{}", leaf, "?".repeat(target.optional_depth));
+        }
+        let optional = target
+            .exact_optional
+            .expect("non-object box target must retain an exact optional identity");
+        self.type_name(Type::Optional(optional))
     }
 
     fn array_type(&mut self, array: &HirArrayType) {
@@ -253,7 +302,7 @@ impl<'types> HirDumper<'types> {
                             parameter_mode_name(parameter.mode)
                         );
                         write_quoted(&mut dumper.output, &parameter.name);
-                        let _ = write!(dumper.output, " : {}", parameter.ty.name());
+                        let _ = write!(dumper.output, " : {}", dumper.type_name(parameter.ty));
                         write_span(&mut dumper.output, parameter.span);
                         dumper.output.push('\n');
                     }
@@ -294,7 +343,7 @@ impl<'types> HirDumper<'types> {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Field {} ", field.id);
                     write_quoted(&mut dumper.output, &field.name);
-                    let _ = write!(dumper.output, " : {}", field.ty.name());
+                    let _ = write!(dumper.output, " : {}", dumper.type_name(field.ty));
                     write_span(&mut dumper.output, field.span);
                     dumper.output.push('\n');
                 }
@@ -306,7 +355,7 @@ impl<'types> HirDumper<'types> {
                         dumper.write_indentation();
                         let _ = write!(dumper.output, "StaticField {} ", field.id);
                         write_quoted(&mut dumper.output, &field.name);
-                        let _ = write!(dumper.output, " : {}", field.ty.name());
+                        let _ = write!(dumper.output, " : {}", dumper.type_name(field.ty));
                         write_span(&mut dumper.output, field.span);
                         dumper.output.push('\n');
                         dumper.indented(|dumper| match &field.initializer {
@@ -315,7 +364,7 @@ impl<'types> HirDumper<'types> {
                                     &format!(
                                         "DeclarationInitializer {} destination {}",
                                         initializer.id,
-                                        field.ty.name()
+                                        dumper.type_name(field.ty)
                                     ),
                                     initializer.span,
                                 );
@@ -609,7 +658,7 @@ impl<'types> HirDumper<'types> {
             HirParameterMode::ReadOnlyAlias => "ref",
             HirParameterMode::MutableAlias => "mut-ref",
         };
-        let _ = write!(self.output, " {mode} : {}", parameter.ty.name());
+        let _ = write!(self.output, " {mode} : {}", self.type_name(parameter.ty));
         write_span(&mut self.output, parameter.span);
         self.output.push('\n');
     }
@@ -621,7 +670,7 @@ impl<'types> HirDumper<'types> {
                 dumper.write_indentation();
                 let _ = write!(dumper.output, "Local {} ", local.id);
                 write_quoted(&mut dumper.output, &local.name);
-                let _ = write!(dumper.output, " : {}", local.ty.name());
+                let _ = write!(dumper.output, " : {}", dumper.type_name(local.ty));
                 write_span(&mut dumper.output, local.span);
                 dumper.output.push('\n');
             }
@@ -1470,6 +1519,18 @@ impl<'types> HirDumper<'types> {
             crate::hir::HirStoredValueInitialization::Optional(value) => {
                 self.aggregate_optional_value(value)
             }
+            crate::hir::HirStoredValueInitialization::OptionalBoxPointeeCopy {
+                source,
+                optional,
+                operation,
+                span,
+            } => {
+                self.line(
+                    &format!("OptionalBoxPointeeCopy {optional} via {operation:?}"),
+                    *span,
+                );
+                self.indented(|dumper| dumper.shared_source(source));
+            }
         }
     }
 
@@ -2013,6 +2074,22 @@ impl<'types> HirDumper<'types> {
             HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
                 self.array_construction(construction);
             }
+            HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(allocation)) => {
+                self.line(
+                    &format!(
+                        "OptionalBoxAllocation exact={} target={} static={} order={:?} owner={:?}",
+                        allocation.exact_optional,
+                        allocation.exact_target,
+                        allocation.static_target,
+                        allocation.evaluation,
+                        allocation.produced_owner,
+                    ),
+                    allocation.span,
+                );
+                self.indented(|dumper| {
+                    dumper.stored_value_initialization(&allocation.initialization)
+                });
+            }
         }
     }
 
@@ -2382,7 +2459,7 @@ impl<'types> HirDumper<'types> {
 
     fn typed_line(&mut self, name: &str, expression: &HirExpression) {
         self.write_indentation();
-        let _ = write!(self.output, "{name} : {}", expression.ty.name());
+        let _ = write!(self.output, "{name} : {}", self.type_name(expression.ty));
         write_span(&mut self.output, expression.span);
         self.output.push('\n');
     }
@@ -2447,6 +2524,7 @@ fn shared_target_name(target: HirSharedTarget) -> String {
         HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
         HirSharedTarget::Obj => "shared Obj".to_owned(),
         HirSharedTarget::Array(array) => format!("shared array {array}"),
+        HirSharedTarget::OptionalBox(target) => format!("shared optional-box {target}"),
     }
 }
 
@@ -2573,7 +2651,8 @@ mod tests {
             access: HirAccess::ReadOnly,
         };
         let optional_types = HirOptionalTypeTable::default();
-        let mut dumper = HirDumper::new(&optional_types);
+        let optional_box_types = HirOptionalBoxTypeTable::default();
+        let mut dumper = HirDumper::new(&optional_types, &optional_box_types);
 
         dumper.object_place(&place);
 

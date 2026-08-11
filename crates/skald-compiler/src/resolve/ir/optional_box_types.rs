@@ -12,8 +12,10 @@ use super::ResolvedObjectTarget;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedOptionalBoxType {
     pub id: OptionalBoxTypeId,
-    /// Exact canonical optional wrapper stored in the allocation.
-    pub optional: OptionalTypeId,
+    /// Exact canonical optional wrapper when this target can name physical
+    /// optional storage. Interface and `Obj` targets are box-only object views
+    /// and deliberately do not manufacture invalid standalone optionals.
+    pub optional: Option<OptionalTypeId>,
     /// Number of optional constructors between the box and its leaf.
     pub optional_depth: usize,
     /// Static object view at the leaf, when this is an object box.
