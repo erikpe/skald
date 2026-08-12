@@ -14,7 +14,12 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
-No design proposal is currently under review.
+- [Generic classes](GENERIC_CLASSES_DESIGN_PROPOSAL.md) — **Under review.**
+  Defines explicit closed generic class applications, semantic
+  monomorphization, compositional substitution, inferred contextual
+  requirements, and explicit nominal interface bounds. Next: confirm the
+  decision register before promoting living contracts or creating an
+  implementation roadmap.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).
