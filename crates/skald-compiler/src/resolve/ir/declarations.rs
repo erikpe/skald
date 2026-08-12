@@ -18,6 +18,7 @@ use super::array_types::ResolvedArrayTypeTable;
 use super::body::{
     ResolvedClassDefinitionTable, ResolvedFunctionDefinitionTable, ResolvedMemberDefinition,
 };
+use super::generic_templates::{ResolvedClassTemplateTable, ResolvedTypeParameterTable};
 use super::hierarchy::ResolvedClassHierarchy;
 use super::modules::{
     ResolvedModuleBindingTable, ResolvedModuleDeclarationTable, ResolvedOrdinaryBindingTable,
@@ -33,6 +34,8 @@ pub struct ResolvedProgram {
     pub module_bindings: ResolvedModuleBindingTable,
     pub ordinary_bindings: ResolvedOrdinaryBindingTable,
     pub module_declarations: ResolvedModuleDeclarationTable,
+    pub class_templates: ResolvedClassTemplateTable,
+    pub type_parameters: ResolvedTypeParameterTable,
     pub array_types: ResolvedArrayTypeTable,
     pub optional_types: ResolvedOptionalTypeTable,
     pub optional_box_types: ResolvedOptionalBoxTypeTable,

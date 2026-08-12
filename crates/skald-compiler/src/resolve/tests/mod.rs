@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
     identity::{
-        BindingId, CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId,
-        FunctionId, InitializerId, LocalId, MethodId, ParameterId,
+        BindingId, CallableId, ClassId, ClassTemplateId, CopyAssignmentId, CopyConstructorId,
+        DestructorId, FunctionId, InitializerId, LocalId, MethodId, ParameterId, TypeParameterId,
     },
     lexer::lex,
     literal::{IntegerRadix, NumericLiteralKind},

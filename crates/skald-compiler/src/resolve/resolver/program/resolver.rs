@@ -4,7 +4,7 @@ use super::super::body::StringLiteralResolutionEnvironment;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{CallableId, InterfaceId, LiteralDataId, ModuleId, ParameterId},
+    identity::{CallableId, ClassTemplateId, InterfaceId, LiteralDataId, ModuleId, ParameterId},
     lexer::decode_string_literal,
     module::{ModuleGraph, ModulePath, ProgramModuleTable},
 };
@@ -23,13 +23,14 @@ struct FunctionWorkItem {
     ast_index: usize,
 }
 
-struct ModuleUnit<'ast> {
-    ast: &'ast syntax::CompilationUnit,
-    module: ModuleId,
+pub(super) struct ModuleUnit<'ast> {
+    pub(super) ast: &'ast syntax::CompilationUnit,
+    pub(super) module: ModuleId,
     qualified_enabled: bool,
     top_levels: HashMap<String, TopLevelSymbol>,
     function_work: Vec<FunctionWorkItem>,
     class_work: Vec<(ClassId, usize)>,
+    pub(super) template_work: Vec<ClassTemplateWorkItem>,
     interface_work: Vec<(InterfaceId, usize)>,
     declarations: Vec<ResolvedModuleDeclaration>,
 }
@@ -81,6 +82,7 @@ impl<'ast> ModuleUnit<'ast> {
             top_levels: HashMap::new(),
             function_work: Vec::new(),
             class_work: Vec::new(),
+            template_work: Vec::new(),
             interface_work: Vec::new(),
             declarations: Vec::new(),
         }
@@ -93,6 +95,8 @@ struct ProgramLookupTables<'program> {
     ordinary_bindings: &'program ResolvedOrdinaryBindingTable,
     declarations: &'program ResolvedModuleDeclarationTable,
     module_spans: &'program [Span],
+    class_templates: &'program ResolvedClassTemplateTable,
+    type_parameters: &'program ResolvedTypeParameterTable,
 }
 
 impl<'program> ProgramLookupTables<'program> {
@@ -116,6 +120,8 @@ impl<'program> ProgramLookupTables<'program> {
                 declarations: self.declarations,
                 modules,
                 module_spans: self.module_spans,
+                class_templates: self.class_templates,
+                type_parameters: self.type_parameters,
             },
             unit.qualified_enabled,
         )
@@ -182,6 +188,9 @@ impl<'ast> ProgramResolver<'ast> {
         }
         self.collect_top_levels();
 
+        let (class_templates, type_parameters) =
+            collect_class_templates(&self.units, &mut self.diagnostics);
+
         let module_declarations = ResolvedModuleDeclarationTable::new(
             self.units
                 .iter()
@@ -200,7 +209,24 @@ impl<'ast> ProgramResolver<'ast> {
             ordinary_bindings: &ordinary_bindings,
             declarations: &module_declarations,
             module_spans: &module_spans,
+            class_templates: &class_templates,
+            type_parameters: &type_parameters,
         };
+
+        for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
+            for item in &unit.template_work {
+                let syntax::TopLevelDeclaration::Class(class) =
+                    &unit.ast.declarations[item.ast_index]
+                else {
+                    unreachable!("class-template work must reference a class declaration")
+                };
+                let parameters = type_parameters
+                    .for_template(item.id)
+                    .expect("every class template has one parameter list");
+                validate_class_template_types(class, parameters, lookup, &mut self.diagnostics);
+            }
+        }
 
         let external_link_plan = ExternalLinkPlan::new(self.units.iter().flat_map(|unit| {
             unit.function_work.iter().filter_map(|item| {
@@ -336,6 +362,7 @@ impl<'ast> ProgramResolver<'ast> {
                 .and_then(|symbol| match symbol.kind {
                     TopLevelSymbolKind::Function(function) => Some(function),
                     TopLevelSymbolKind::Class(_) => None,
+                    TopLevelSymbolKind::ClassTemplate(_) => None,
                     TopLevelSymbolKind::Interface(_) => None,
                 });
 
@@ -348,6 +375,8 @@ impl<'ast> ProgramResolver<'ast> {
                 module_bindings,
                 ordinary_bindings,
                 module_declarations,
+                class_templates,
+                type_parameters,
                 array_types,
                 optional_types,
                 optional_box_types,
@@ -371,28 +400,10 @@ impl<'ast> ProgramResolver<'ast> {
         let mut function_count = 0;
         let mut class_count = 0;
         let mut interface_count = 0;
+        let mut template_count = 0;
         for unit in &mut self.units {
             for (ast_index, declaration) in unit.ast.declarations.iter().enumerate() {
                 let name = declaration.name();
-                if let syntax::TopLevelDeclaration::Class(class) = declaration {
-                    if class.type_parameters.is_some() || class.where_clause.is_some() {
-                        let span = class.type_parameters.as_ref().map_or_else(
-                            || class.where_clause.as_ref().unwrap().span,
-                            |parameters| parameters.span,
-                        );
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                super::super::UNSUPPORTED_GENERIC_SYNTAX,
-                                "generic class semantics are not implemented yet",
-                            )
-                            .with_primary_label(
-                                span,
-                                "generic declarations are parsed but not resolved",
-                            ),
-                        );
-                        continue;
-                    }
-                }
                 if name.text == "Obj" {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -408,6 +419,11 @@ impl<'ast> ProgramResolver<'ast> {
                     | syntax::TopLevelDeclaration::ExternalFunction(_)
                     | syntax::TopLevelDeclaration::IntrinsicFunction(_) => {
                         TopLevelSymbolKind::Function(FunctionId::new(function_count))
+                    }
+                    syntax::TopLevelDeclaration::Class(class)
+                        if class.type_parameters.is_some() =>
+                    {
+                        TopLevelSymbolKind::ClassTemplate(ClassTemplateId::new(template_count))
                     }
                     syntax::TopLevelDeclaration::Class(_) => {
                         TopLevelSymbolKind::Class(ClassId::new(class_count))
@@ -461,6 +477,12 @@ impl<'ast> ProgramResolver<'ast> {
                         class_count += 1;
                         unit.class_work.push((id, ast_index));
                         ResolvedTopLevelId::Class(id)
+                    }
+                    TopLevelSymbolKind::ClassTemplate(id) => {
+                        template_count += 1;
+                        unit.template_work
+                            .push(ClassTemplateWorkItem { id, ast_index });
+                        ResolvedTopLevelId::ClassTemplate(id)
                     }
                     TopLevelSymbolKind::Interface(id) => {
                         interface_count += 1;

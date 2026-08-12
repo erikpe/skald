@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G1 is next.
+Status: in progress; G2 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -55,7 +55,7 @@ not reopen those decisions while implementing them.
 ## Progress
 
 - [x] G0 — Parse and preserve generic class syntax
-- [ ] G1 — Establish template identities and module declarations
+- [x] G1 — Establish template identities and module declarations
 - [ ] G2 — Resolve parameter-bearing type terms and nominal bounds
 - [ ] G3 — Infer and evaluate contextual generic requirements
 - [ ] G4 — Build deterministic closed-specialization identities
@@ -113,27 +113,27 @@ panicking or assigning false ordinary class meaning.
 behavior before resolving parameter-bearing types or allocating closed class
 instances.
 
-- [ ] Add `ClassTemplateId` and `TypeParameterId` to the shared identity
+- [x] Add `ClassTemplateId` and `TypeParameterId` to the shared identity
   vocabulary with deterministic display and crate-private construction.
-- [ ] Distinguish ordinary class and generic-template symbols in top-level,
+- [x] Distinguish ordinary class and generic-template symbols in top-level,
   module-declaration, ordinary-binding, import, qualification, and visibility
   tables.
-- [ ] Allocate template identities in canonical module/declaration order while
+- [x] Allocate template identities in canonical module/declaration order while
   retaining existing dense `ClassId` ordering for hand-written non-generic
   classes.
-- [ ] Collect parameter declarations in source order, reject duplicate names,
+- [x] Collect parameter declarations in source order, reject duplicate names,
   and establish their frozen scope across header clauses and all members.
-- [ ] Implement parameter shadowing of unqualified declarations while
+- [x] Implement parameter shadowing of unqualified declarations while
   preserving qualified access to module declarations.
-- [ ] Diagnose raw generic names, arguments on non-generic declarations,
+- [x] Diagnose raw generic names, arguments on non-generic declarations,
   generic wrong-kind uses, and exact arity at all initially discoverable type
   sites.
-- [ ] Preserve public/private import behavior without instantiating a template
+- [x] Preserve public/private import behavior without instantiating a template
   merely because it is imported or qualified.
-- [ ] Add template and parameter tables behind the `resolve` facade with
+- [x] Add template and parameter tables behind the `resolve` facade with
   explicit selective re-exports; keep collection and table implementation in
   cohesive private submodules.
-- [ ] Extend module and declaration dumps with stable template identities and
+- [x] Extend module and declaration dumps with stable template identities and
   parameter lists.
 
 **Tests:** Identity formatting and table tests; single- and multi-module

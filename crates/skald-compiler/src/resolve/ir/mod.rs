@@ -4,6 +4,7 @@ mod array_types;
 mod body;
 mod declarations;
 mod expression;
+mod generic_templates;
 mod hierarchy;
 mod modules;
 mod object_place;
@@ -50,6 +51,10 @@ pub use expression::{
     ResolvedPresentExpr, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedStaticCallExpr,
     ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr, ResolvedTypeTestExpr,
     ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+};
+pub use generic_templates::{
+    ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedTypeParameter,
+    ResolvedTypeParameterTable, ResolvedTypeParameters,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

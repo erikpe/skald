@@ -22,6 +22,8 @@ pub(super) struct ModuleLookupProgram<'program> {
     pub(super) declarations: &'program ResolvedModuleDeclarationTable,
     pub(super) modules: &'program ProgramModuleTable,
     pub(super) module_spans: &'program [Span],
+    pub(super) class_templates: &'program ResolvedClassTemplateTable,
+    pub(super) type_parameters: &'program ResolvedTypeParameterTable,
 }
 
 #[derive(Clone, Copy)]
@@ -33,6 +35,8 @@ pub(super) struct ModuleLookup<'program> {
     declarations: &'program ResolvedModuleDeclarationTable,
     modules: &'program ProgramModuleTable,
     module_spans: &'program [Span],
+    class_templates: &'program ResolvedClassTemplateTable,
+    type_parameters: &'program ResolvedTypeParameterTable,
     qualified_enabled: bool,
 }
 
@@ -51,6 +55,8 @@ impl<'program> ModuleLookup<'program> {
             declarations: program.declarations,
             modules: program.modules,
             module_spans: program.module_spans,
+            class_templates: program.class_templates,
+            type_parameters: program.type_parameters,
             qualified_enabled,
         }
     }
@@ -139,6 +145,9 @@ impl<'program> ModuleLookup<'program> {
             kind: match declaration.declaration {
                 ResolvedTopLevelId::Function(function) => TopLevelSymbolKind::Function(function),
                 ResolvedTopLevelId::Class(class) => TopLevelSymbolKind::Class(class),
+                ResolvedTopLevelId::ClassTemplate(template) => {
+                    TopLevelSymbolKind::ClassTemplate(template)
+                }
                 ResolvedTopLevelId::Interface(interface) => {
                     TopLevelSymbolKind::Interface(interface)
                 }
@@ -156,12 +165,23 @@ impl<'program> ModuleLookup<'program> {
             kind: match binding.target {
                 ResolvedTopLevelId::Function(function) => TopLevelSymbolKind::Function(function),
                 ResolvedTopLevelId::Class(class) => TopLevelSymbolKind::Class(class),
+                ResolvedTopLevelId::ClassTemplate(template) => {
+                    TopLevelSymbolKind::ClassTemplate(template)
+                }
                 ResolvedTopLevelId::Interface(interface) => {
                     TopLevelSymbolKind::Interface(interface)
                 }
             },
             name_span: declaration.name_span,
         }
+    }
+
+    pub(super) fn template_arity(self, template: crate::identity::ClassTemplateId) -> usize {
+        debug_assert!(self.class_templates.get(template).is_some());
+        self.type_parameters
+            .for_template(template)
+            .expect("every class template has one parameter list")
+            .len()
     }
 
     fn report_unknown_binding(

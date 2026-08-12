@@ -17,6 +17,7 @@ use crate::{
 
 mod class;
 mod class_body;
+mod generic_templates;
 mod hierarchy;
 mod interface;
 mod intrinsic_registry;
@@ -32,6 +33,9 @@ use super::{
 };
 use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
+use generic_templates::{
+    collect_class_templates, validate_class_template_types, ClassTemplateWorkItem,
+};
 use hierarchy::build_class_hierarchy;
 use interface::{collect_interface_declarations, resolve_interface_claims};
 use intrinsic_registry::{intrinsic_for_declaration, validate_intrinsic_declarations};

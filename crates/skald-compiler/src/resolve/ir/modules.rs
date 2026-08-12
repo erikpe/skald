@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{ClassId, FunctionId, InterfaceId, ModuleId},
+    identity::{ClassId, ClassTemplateId, FunctionId, InterfaceId, ModuleId},
     module::ModulePath,
     source::Span,
 };
@@ -23,6 +23,7 @@ impl ResolvedVisibility {
 pub enum ResolvedTopLevelId {
     Function(FunctionId),
     Class(ClassId),
+    ClassTemplate(ClassTemplateId),
     Interface(InterfaceId),
 }
 

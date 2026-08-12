@@ -491,13 +491,7 @@ fn resolve_direct_base(
 ) -> Option<ResolvedDirectBase> {
     let base = class.direct_base.as_ref()?;
     if base.arguments.is_some() {
-        diagnostics.push(
-            Diagnostic::error(
-                super::super::UNSUPPORTED_GENERIC_SYNTAX,
-                "generic class semantics are not implemented yet",
-            )
-            .with_primary_label(base.span, "generic base types are parsed but not resolved"),
-        );
+        super::super::report_generic_application(base, lookup, diagnostics);
         return None;
     }
     match lookup.select(&base.name, diagnostics) {

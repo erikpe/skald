@@ -287,16 +287,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         &mut self,
         named: &syntax::NamedTypeSyntax,
     ) {
-        self.diagnostics.push(
-            Diagnostic::error(
-                super::UNSUPPORTED_GENERIC_SYNTAX,
-                "generic class semantics are not implemented yet",
-            )
-            .with_primary_label(
-                named.span,
-                "generic type applications are syntax-only for now",
-            ),
-        );
+        super::report_generic_application(named, self.environment.lookup, self.diagnostics);
     }
 
     fn resolve_type(&mut self, type_syntax: &syntax::TypeSyntax) -> Option<ResolvedType> {
@@ -776,6 +767,19 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     ),
                 )
                 .with_primary_label(identifier.span, "interfaces are declaration-only"),
+            ),
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::ClassTemplate(_),
+                ..
+            }) => self.diagnostics.push(
+                Diagnostic::error(
+                    RAW_GENERIC_TYPE,
+                    format!(
+                        "generic class `{}` requires type arguments",
+                        identifier.name.text
+                    ),
+                )
+                .with_primary_label(identifier.span, "supply the template's type arguments"),
             ),
             TopLevelLookup::Missing => {
                 self.report_unknown(&identifier.name.text, identifier.span, "unknown name")

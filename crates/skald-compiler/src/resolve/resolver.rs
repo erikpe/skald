@@ -6,8 +6,8 @@ use std::path::Path;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
-        ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, FunctionId,
-        InitializerId, InterfaceId, MethodId, StaticFieldId, StaticInitializerId,
+        ClassId, ClassTemplateId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
+        FunctionId, InitializerId, InterfaceId, MethodId, StaticFieldId, StaticInitializerId,
     },
     module::ModuleGraph,
     source::Span,
@@ -62,6 +62,10 @@ pub const INVALID_STRING_LANGUAGE_ITEM: &str = "RES033";
 pub const INVALID_INTRINSIC_DECLARATION: &str = "RES034";
 pub const LOOP_EXIT_OUTSIDE_LOOP: &str = "RES035";
 pub const UNSUPPORTED_GENERIC_SYNTAX: &str = "RES036";
+pub const DUPLICATE_TYPE_PARAMETER: &str = "RES037";
+pub const INVALID_GENERIC_APPLICATION: &str = "RES038";
+pub const RAW_GENERIC_TYPE: &str = "RES039";
+pub const GENERIC_ARITY_MISMATCH: &str = "RES040";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -136,16 +140,7 @@ fn resolve_type(
             ResolvedTypeKind::Array(type_interner.intern_array(element))
         }
         syntax::TypeKind::Named(named) if named.arguments.is_some() => {
-            diagnostics.push(
-                Diagnostic::error(
-                    UNSUPPORTED_GENERIC_SYNTAX,
-                    "generic class semantics are not implemented yet",
-                )
-                .with_primary_label(
-                    named.span,
-                    "generic type applications are parsed but not resolved",
-                ),
-            );
+            report_generic_application(named, lookup, diagnostics);
             return None;
         }
         syntax::TypeKind::Named(named)
@@ -162,6 +157,23 @@ fn resolve_type(
                 kind: TopLevelSymbolKind::Interface(interface),
                 ..
             }) => ResolvedTypeKind::Interface(interface),
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::ClassTemplate(_),
+                name_span,
+            }) => {
+                diagnostics.push(
+                    Diagnostic::error(
+                        RAW_GENERIC_TYPE,
+                        format!(
+                            "generic class `{}` requires type arguments",
+                            named.name.text
+                        ),
+                    )
+                    .with_primary_label(named.name.span, "type arguments cannot be omitted")
+                    .with_secondary_label(name_span, "template declared here"),
+                );
+                return None;
+            }
             TopLevelLookup::Found(symbol) => {
                 diagnostics.push(
                     Diagnostic::error(
@@ -187,6 +199,68 @@ fn resolve_type(
         kind,
         span: type_syntax.span,
     })
+}
+
+fn report_generic_application(
+    named: &syntax::NamedTypeSyntax,
+    lookup: ModuleLookup<'_>,
+    diagnostics: &mut Diagnostics,
+) {
+    let arguments = named
+        .arguments
+        .as_ref()
+        .expect("generic application reporting requires arguments");
+    match lookup.select(&named.name, diagnostics) {
+        TopLevelLookup::Found(TopLevelSymbol {
+            kind: TopLevelSymbolKind::ClassTemplate(template),
+            name_span,
+        }) => {
+            let expected = lookup.template_arity(template);
+            let actual = arguments.arguments.len();
+            if expected != actual {
+                diagnostics.push(
+                    Diagnostic::error(
+                        GENERIC_ARITY_MISMATCH,
+                        format!(
+                            "generic class `{}` expects {expected} type argument{}, but {actual} {} supplied",
+                            named.name.text,
+                            if expected == 1 { "" } else { "s" },
+                            if actual == 1 { "was" } else { "were" },
+                        ),
+                    )
+                    .with_primary_label(arguments.span, "wrong number of type arguments")
+                    .with_secondary_label(name_span, "template declared here"),
+                );
+            } else {
+                diagnostics.push(
+                    Diagnostic::error(
+                        UNSUPPORTED_GENERIC_SYNTAX,
+                        "generic class specialization is not implemented yet",
+                    )
+                    .with_primary_label(
+                        named.span,
+                        "this application has a valid template and arity",
+                    ),
+                );
+            }
+        }
+        TopLevelLookup::Found(symbol) => diagnostics.push(
+            Diagnostic::error(
+                INVALID_GENERIC_APPLICATION,
+                format!("`{}` is not a generic class", named.name.text),
+            )
+            .with_primary_label(arguments.span, "type arguments are not allowed here")
+            .with_secondary_label(symbol.name_span, "declaration is non-generic"),
+        ),
+        TopLevelLookup::Missing => diagnostics.push(
+            Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", named.name.text))
+                .with_primary_label(
+                    named.name.span,
+                    "no generic class with this name is declared",
+                ),
+        ),
+        TopLevelLookup::Diagnosed => {}
+    }
 }
 
 fn resolve_optional_type(
@@ -257,16 +331,7 @@ fn resolve_shared_target(
         return None;
     };
     if target.arguments.is_some() {
-        diagnostics.push(
-            Diagnostic::error(
-                UNSUPPORTED_GENERIC_SYNTAX,
-                "generic class semantics are not implemented yet",
-            )
-            .with_primary_label(
-                target.span,
-                "generic shared targets are parsed but not resolved",
-            ),
-        );
+        report_generic_application(target, lookup, diagnostics);
         return None;
     }
     if !target.name.is_qualified() && target.name.text == "Obj" {
@@ -281,6 +346,23 @@ fn resolve_shared_target(
             kind: TopLevelSymbolKind::Interface(interface),
             ..
         }) => Some(ResolvedSharedTarget::Interface(interface)),
+        TopLevelLookup::Found(TopLevelSymbol {
+            kind: TopLevelSymbolKind::ClassTemplate(_),
+            name_span,
+        }) => {
+            diagnostics.push(
+                Diagnostic::error(
+                    RAW_GENERIC_TYPE,
+                    format!(
+                        "generic class `{}` requires type arguments",
+                        target.name.text
+                    ),
+                )
+                .with_primary_label(target.name.span, "type arguments cannot be omitted")
+                .with_secondary_label(name_span, "template declared here"),
+            );
+            None
+        }
         TopLevelLookup::Found(symbol) => {
             diagnostics.push(
                 Diagnostic::error(
@@ -341,6 +423,7 @@ pub(super) struct TopLevelSymbol {
 pub(super) enum TopLevelSymbolKind {
     Function(FunctionId),
     Class(ClassId),
+    ClassTemplate(ClassTemplateId),
     Interface(InterfaceId),
 }
 

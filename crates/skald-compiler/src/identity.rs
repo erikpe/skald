@@ -153,6 +153,7 @@ global_id!(
 global_id!(FunctionId, "f");
 global_id!(ExternalLinkId, "ext");
 global_id!(ClassId, "c");
+global_id!(ClassTemplateId, "template");
 global_id!(InterfaceId, "i");
 global_id!(ArrayTypeId, "a");
 global_id!(OptionalTypeId, "o");
@@ -169,6 +170,33 @@ class_member_id!(CopyAssignmentId, "assign");
 class_member_id!(DestructorId, "destroy");
 class_member_id!(MethodId, "method");
 interface_member_id!(InterfaceRequirementId, "requirement");
+
+/// Stable source-order identity for a parameter owned by one class template.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TypeParameterId {
+    template: ClassTemplateId,
+    index: usize,
+}
+
+impl TypeParameterId {
+    pub const fn template(self) -> ClassTemplateId {
+        self.template
+    }
+
+    pub const fn index(self) -> usize {
+        self.index
+    }
+
+    pub(crate) const fn new(template: ClassTemplateId, index: usize) -> Self {
+        Self { template, index }
+    }
+}
+
+impl fmt::Display for TypeParameterId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}:type{}", self.template(), self.index())
+    }
+}
 
 /// Stable executable-body identity derived from one static field declaration.
 ///
@@ -361,6 +389,8 @@ mod tests {
         let package = PackageId::new(3);
         let first = FunctionId::new(2);
         let second = FunctionId::new(3);
+        let template = ClassTemplateId::new(4);
+        let type_parameter = TypeParameterId::new(template, 1);
         let family = VirtualFamilyId::new(6);
         let slot = VirtualSlotId::new(7);
         let parameter = ParameterId::new(first, 4);
@@ -383,6 +413,10 @@ mod tests {
         assert_eq!(loop_id.callable(), CallableId::Function(first));
         assert_eq!(loop_id.index(), 6);
         assert_eq!(first.to_string(), "f2");
+        assert_eq!(template.to_string(), "template4");
+        assert_eq!(type_parameter.template(), template);
+        assert_eq!(type_parameter.index(), 1);
+        assert_eq!(type_parameter.to_string(), "template4:type1");
         assert_eq!(family.to_string(), "vf6");
         assert_eq!(slot.to_string(), "vs7");
         assert_eq!(parameter.to_string(), "f2:p4");

@@ -120,6 +120,7 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                             let identity = match binding.target {
                                 ResolvedTopLevelId::Function(function) => function.to_string(),
                                 ResolvedTopLevelId::Class(class) => class.to_string(),
+                                ResolvedTopLevelId::ClassTemplate(template) => template.to_string(),
                                 ResolvedTopLevelId::Interface(interface) => interface.to_string(),
                             };
                             dumper.write_indentation();
@@ -153,6 +154,7 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                         let identity = match declaration.declaration {
                             ResolvedTopLevelId::Function(function) => function.to_string(),
                             ResolvedTopLevelId::Class(class) => class.to_string(),
+                            ResolvedTopLevelId::ClassTemplate(template) => template.to_string(),
                             ResolvedTopLevelId::Interface(interface) => interface.to_string(),
                         };
                         let _ = write!(dumper.output, "{visibility} {identity} ");
@@ -163,6 +165,31 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 });
             }
         });
+        if !program.class_templates.is_empty() {
+            dumper.heading("ClassTemplates");
+            dumper.indented(|dumper| {
+                for template in program.class_templates.iter() {
+                    let parameters = program
+                        .type_parameters
+                        .for_template(template.id)
+                        .expect("every class template has one parameter list");
+                    dumper.write_indentation();
+                    let _ = write!(
+                        dumper.output,
+                        "Template {} module {} ",
+                        template.id, template.module
+                    );
+                    write_quoted(&mut dumper.output, &template.name);
+                    dumper.output.push_str(" parameters");
+                    for parameter in parameters.iter() {
+                        let _ = write!(dumper.output, " {}=", parameter.id);
+                        write_quoted(&mut dumper.output, &parameter.name);
+                    }
+                    write_span(&mut dumper.output, template.span);
+                    dumper.output.push('\n');
+                }
+            });
+        }
         dumper.write_indentation();
         match program.entry_function {
             Some(function) => {
