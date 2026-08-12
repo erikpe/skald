@@ -158,6 +158,14 @@ verified target-independent MIR and execute on x86-64 with deterministic exact
 descriptors and finalizers. This adds no C runtime ABI surface; external
 optional signatures remain unsupported by the existing C ABI.
 
+The frozen [generic-class specialization contract](GENERIC_CLASSES.md) adds a
+template and closed-specialization layer before ordinary resolved classes.
+Every accepted closed application receives one exact `ClassId` and reuses
+existing optional, array, shared-owner, containment, lifecycle, HIR, MIR, and
+backend machinery. No unresolved parameter reaches ordinary resolved classes
+or lower IR, and no runtime generic ABI is introduced. This contract is not
+yet implemented; the active roadmap owns delivery order.
+
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
 The x86-64 target executes inline and shared-outer arrays containing
@@ -215,6 +223,7 @@ growable read-until-EOF loops.
 source database
     -> tokens
     -> syntax AST
+    -> generic templates and closed specialization (frozen, not implemented)
     -> resolved program
     -> typed HIR
     -> target-independent MIR

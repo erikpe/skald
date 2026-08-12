@@ -1,9 +1,8 @@
 # Generic Classes Design Proposal
 
-Status: proposed design under review; GC1 through GC16 record the recommended
-direction. Generic declarations and applications remain unimplemented until
-the decisions are confirmed, promoted into living contracts, and scheduled by
-an implementation roadmap.
+Status: frozen design; GC1 through GC16 were confirmed together on 2026-08-12
+and promoted into living language and compiler contracts before the
+implementation roadmap was created.
 
 This proposal adds generic class declarations whose type parameters are
 replaced by explicit closed type arguments. It is aimed first at reusable
@@ -18,10 +17,12 @@ identity, fully substituted fields and signatures, selected lifecycle plans,
 verified MIR, and target code. No unresolved type parameter reaches ordinary
 resolved classes, HIR, MIR, verification, or the backend.
 
-Freezing this proposal would not make generic syntax executable. The
+The promoted [language contract](../language/GENERIC_CLASSES.md) and
+[compiler contract](../compiler/GENERIC_CLASSES.md) are authoritative. The
 [status matrix](../language/STATUS.md) remains the sole authority for compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains the
-exact accepted syntax until implementation changes them.
+exact accepted syntax until implementation changes it. This frozen design does
+not make generic syntax executable.
 
 ## Intended outcome
 
@@ -146,28 +147,28 @@ starting point.
 
 ## Decision register
 
-| ID | Decision | Recommended direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [GC1](#gc1--source-declarations-applications-and-constraints) | Source surface | Add `class C<T, U>`, closed `C<A, B>`, and class-level `where T: Interface` | **Proposed** |
-| [GC2](#gc2--template-parameter-and-instance-identity) | Identity | Separate template and parameter identities; give each closed application an ordinary `ClassId` | **Proposed** |
-| [GC3](#gc3--semantic-substitution-and-canonical-types) | Substitution | Substitute semantic type trees bottom-up and intern every closed compound type normally | **Proposed** |
-| [GC4](#gc4--contextual-requirement-model) | Allowed arguments | Infer role-specific predicates from every type position and operation; use no global argument whitelist | **Proposed** |
-| [GC5](#gc5--explicit-interface-constraints) | Expressed constraints | Express nominal interface knowledge with `where`; infer mechanical capabilities | **Proposed** |
-| [GC6](#gc6--class-wide-validation) | Validation granularity | Validate every member and lifecycle declaration for every closed instance | **Proposed** |
-| [GC7](#gc7--specialization-discovery-caching-and-recursion) | Specialization | Monomorphize explicit closed applications once through a deterministic worklist and cache | **Proposed** |
-| [GC8](#gc8--invariance-and-ordinary-compatibility) | Compatibility | Keep applications invariant and apply existing conversions only at their ordinary value boundaries | **Proposed** |
-| [GC9](#gc9--construction-static-state-and-lifecycle) | Class behavior | Specialize construction, allocation, static state, copying, assignment, and destruction per closed class | **Proposed** |
-| [GC10](#gc10--inheritance-interfaces-and-dispatch) | Object model | Permit closed generic bases and ordinary interfaces; validate hierarchy and conformance after substitution | **Proposed** |
-| [GC11](#gc11--modules-visibility-and-definition-context) | Modules | Resolve template names at the definition site and arguments at the application site under existing visibility | **Proposed** |
-| [GC12](#gc12--compiler-phase-and-ir-boundaries) | Compiler representation | Add a generic-template layer before ordinary resolved classes; keep HIR and MIR closed | **Proposed** |
-| [GC13](#gc13--target-realization-and-abi) | Target and ABI | Emit ordinary specialized class artifacts with deterministic distinct names and no runtime generic ABI | **Proposed** |
-| [GC14](#gc14--diagnostics-dumps-and-testing) | Quality | Make obligations, applications, specialization origins, and closed identities observable and deterministic | **Proposed** |
-| [GC15](#gc15--initial-exclusions) | Feature boundary | Exclude generic functions, methods, interfaces, inference, defaults, variance, erasure, and specialization syntax | **Proposed** |
-| [GC16](#gc16--promotion-and-roadmap-boundary) | Delivery | Confirm the complete register, promote living contracts, then create a PR-sized roadmap | **Proposed** |
+| [GC1](#gc1--source-declarations-applications-and-constraints) | Source surface | Add `class C<T, U>`, closed `C<A, B>`, and class-level `where T: Interface` | **Confirmed** |
+| [GC2](#gc2--template-parameter-and-instance-identity) | Identity | Separate template and parameter identities; give each closed application an ordinary `ClassId` | **Confirmed** |
+| [GC3](#gc3--semantic-substitution-and-canonical-types) | Substitution | Substitute semantic type trees bottom-up and intern every closed compound type normally | **Confirmed** |
+| [GC4](#gc4--contextual-requirement-model) | Allowed arguments | Infer role-specific predicates from every type position and operation; use no global argument whitelist | **Confirmed** |
+| [GC5](#gc5--explicit-interface-constraints) | Expressed constraints | Express nominal interface knowledge with `where`; infer mechanical capabilities | **Confirmed** |
+| [GC6](#gc6--class-wide-validation) | Validation granularity | Validate every member and lifecycle declaration for every closed instance | **Confirmed** |
+| [GC7](#gc7--specialization-discovery-caching-and-recursion) | Specialization | Monomorphize explicit closed applications once through a deterministic worklist and cache | **Confirmed** |
+| [GC8](#gc8--invariance-and-ordinary-compatibility) | Compatibility | Keep applications invariant and apply existing conversions only at their ordinary value boundaries | **Confirmed** |
+| [GC9](#gc9--construction-static-state-and-lifecycle) | Class behavior | Specialize construction, allocation, static state, copying, assignment, and destruction per closed class | **Confirmed** |
+| [GC10](#gc10--inheritance-interfaces-and-dispatch) | Object model | Permit closed generic bases and ordinary interfaces; validate hierarchy and conformance after substitution | **Confirmed** |
+| [GC11](#gc11--modules-visibility-and-definition-context) | Modules | Resolve template names at the definition site and arguments at the application site under existing visibility | **Confirmed** |
+| [GC12](#gc12--compiler-phase-and-ir-boundaries) | Compiler representation | Add a generic-template layer before ordinary resolved classes; keep HIR and MIR closed | **Confirmed** |
+| [GC13](#gc13--target-realization-and-abi) | Target and ABI | Emit ordinary specialized class artifacts with deterministic distinct names and no runtime generic ABI | **Confirmed** |
+| [GC14](#gc14--diagnostics-dumps-and-testing) | Quality | Make obligations, applications, specialization origins, and closed identities observable and deterministic | **Confirmed** |
+| [GC15](#gc15--initial-exclusions) | Feature boundary | Exclude generic functions, methods, interfaces, inference, defaults, variance, erasure, and specialization syntax | **Confirmed** |
+| [GC16](#gc16--promotion-and-roadmap-boundary) | Delivery | Confirm the complete register, promote living contracts, then create a PR-sized roadmap | **Confirmed** |
 
 ## GC1 — Source declarations, applications, and constraints
 
-The proposed grammar shape is:
+The confirmed grammar shape is:
 
 ```text
 generic-parameter-list     = "<" identifier {"," identifier} ">"
@@ -213,7 +214,7 @@ argument list. Arity is exact. Empty argument lists, variadic parameters,
 default arguments, inferred placeholders, wildcards, and named arguments are
 not accepted.
 
-The proposed interface-bound spelling is:
+The confirmed interface-bound spelling is:
 
 ```ska
 class SortedVec<T>
@@ -646,7 +647,7 @@ Initializer overload resolution, accessibility, explicit copy construction,
 allocation, publication, cleanup, and shared adoption are unchanged after
 substitution. Construction headed directly by a type parameter, such as
 `T()` or `new T()`, is excluded initially because interfaces do not describe
-initializer sets and the proposed constraint language has no constructor
+initializer sets and the initial constraint language has no constructor
 requirement.
 
 Each closed instance owns independent class metadata and static storage:
@@ -883,7 +884,7 @@ Focused tests should cover at least:
 - end-to-end native vector behavior across primitive, inline class, optional,
   shared exact, and shared interface-owner elements.
 
-The eventual implementation roadmap must assign tests to their phase owners,
+The active implementation roadmap assigns tests to their phase owners,
 add golden behavior only when the complete pipeline is executable, run the
 supported MSRV gate for Rust changes, and finish with the repository's
 documented `make check` interface.
@@ -920,29 +921,26 @@ specialization model once class behavior has exercised it end to end.
 
 ## GC16 — Promotion and roadmap boundary
 
-The proposal is ready to freeze only when all GC1 through GC15 decisions are
-confirmed together. Promotion should then:
+All GC1 through GC15 decisions were confirmed together. Promotion:
 
-- add the frozen generic-class surface and semantics to focused living
+- added the frozen generic-class surface and semantics to focused living
   language documentation;
-- extend the authoritative grammar with only the confirmed syntax while still
-  marking it unavailable until implementation lands, or stage grammar changes
-  in the first implementation task according to repository convention;
-- add the template/specialization phase contract to compiler architecture and
+- retained the authoritative implemented grammar unchanged until the first
+  implementation task accepts the confirmed syntax;
+- added the template/specialization phase contract to compiler architecture and
   phase documentation;
-- update the status matrix from open question to frozen design;
-- archive this proposal as the historical decision record; and
-- create an active implementation roadmap whose tasks are ordered by stable
+- updated the status matrix from open question to frozen design;
+- archived this proposal as the historical decision record; and
+- created an active implementation roadmap whose tasks are ordered by stable
   ownership boundaries rather than by source file.
 
-The later roadmap should settle implementation sequencing, not reopen the
-language decisions. A likely dependency order is syntax and identities,
-template type terms and name resolution, requirement collection, closed
-specialization, class declarations and lifecycle, bodies and nominal bounds,
-inheritance/statics, lower-phase integration, and broad hardening. Exact task
-codes and PR boundaries belong only in that roadmap after this design freezes.
+The active roadmap settles implementation sequencing without reopening the
+language decisions. It orders syntax and identities, template type terms and
+name resolution, requirement collection, closed specialization, class
+declarations and lifecycle, bodies and nominal bounds, inheritance/statics,
+lower-phase integration, and broad hardening by their stable dependencies.
 
-Promotion requires explicit confirmation that:
+The confirmation established that:
 
 - `where T: Interface` is the sole initial written bound;
 - mechanical constraints remain inferred and role-specific;
@@ -953,5 +951,6 @@ Promotion requires explicit confirmation that:
 - HIR, MIR, and the backend remain free of unresolved parameters; and
 - the initial exclusions are acceptable for the first executable profile.
 
-Until then, this document is a review proposal rather than a language
-contract or implementation plan.
+The promoted living contracts now own the frozen language and compiler
+meaning. This archived proposal preserves the decision record; the active
+roadmap owns implementation order.

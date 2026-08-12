@@ -10,16 +10,16 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **Planned; G0 is next.**
+  Implements explicit closed generic class applications through deterministic
+  semantic specialization, inferred contextual requirements, nominal
+  interface bounds, and ordinary closed HIR/MIR/backend paths. It depends on
+  the frozen generic-class language and compiler contracts and introduces no
+  runtime ABI work.
 
 ## Design proposals
 
-- [Generic classes](GENERIC_CLASSES_DESIGN_PROPOSAL.md) — **Under review.**
-  Defines explicit closed generic class applications, semantic
-  monomorphization, compositional substitution, inferred contextual
-  requirements, and explicit nominal interface bounds. Next: confirm the
-  decision register before promoting living contracts or creating an
-  implementation roadmap.
+No design proposal is currently under review.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).

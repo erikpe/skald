@@ -41,6 +41,9 @@ Use the authority closest to the behavior:
 - exact classes, inline containment, receivers, ordinary initializer
   overloading, explicit copy construction, and object places belong in
   [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
+- frozen explicit generic class applications, structural substitution,
+  contextual requirements, nominal bounds, invariance, and complete-class
+  validation belong in [generic classes](language/GENERIC_CLASSES.md);
 - implemented call-scoped alias access and lifetime, including produced
   exact-class read-only sources, belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
@@ -68,6 +71,9 @@ Use the authority closest to the behavior:
 - frozen multiple-file providers, filesystem resolution, entry selection,
   identities, loading, and linkage belong in the
   [module-system compiler contract](compiler/MODULE_SYSTEM.md);
+- frozen template identities, closed specialization, requirement evaluation,
+  recursion, lower-IR exclusion, and target realization belong in the
+  [generic-class compiler contract](compiler/GENERIC_CLASSES.md);
 - the implemented array phase, lifecycle, backing, anchor, verification, and
   runtime responsibility design belongs in
   [the array compiler and runtime contract](compiler/ARRAYS.md);

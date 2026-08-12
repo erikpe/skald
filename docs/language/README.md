@@ -49,6 +49,7 @@ arguments have deterministic source order.
 | **string** | An exact `std::str::Str` class value describing an immutable finite sequence of `u8` bytes. Literals use immortal backing; ordinary standard-library construction and concatenation use dynamically reclaimed shared backing. |
 | **alias** | A call-scoped, non-owning view of a live object place. A read-only object alias may select an existing place or materialize a compatible produced exact-class object in hidden caller-owned storage. The static target may be a class, an ancestor, an interface, or `Obj`; mutable aliases still require existing mutable places. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
+| **generic class** | A compile-time class template with named type parameters. Each accepted explicit closed application denotes a distinct ordinary exact class after semantic specialization; no unresolved parameter or erased generic value exists at runtime. |
 | **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. Ordinary `init` declarations form an overload set; `copy`, `assign`, and `destroy` retain their distinct slots. |
 
 ## Values, places, and mutation
@@ -184,6 +185,10 @@ makes a result source-observable.
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and
   object places, plus assignment, temporaries, and deterministic lifetime.
+- [Generic classes](GENERIC_CLASSES.md) freezes explicit closed generic class
+  applications, structural substitution, inferred contextual requirements,
+  nominal interface bounds, invariance, and complete-class validation. The
+  feature is not yet implemented.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the

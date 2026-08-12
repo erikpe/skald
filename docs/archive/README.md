@@ -136,6 +136,10 @@ Resolved shared-optional-box design inputs:
 
 - [shared optional boxes design record](SHARED_OPTIONAL_BOXES_DESIGN_PROPOSAL.md)
 
+Resolved generic-class design inputs:
+
+- [generic classes design record](GENERIC_CLASSES_DESIGN_PROPOSAL.md)
+
 Resolved shared-optional-box follow-ups:
 
 - [shared optional boxes discoveries](SHARED_OPTIONAL_BOXES_DISCOVERIES.md)

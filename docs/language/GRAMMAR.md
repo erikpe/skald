@@ -266,6 +266,11 @@ defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
 ## Class declarations
 
+The frozen [generic-class design](GENERIC_CLASSES.md) extends class and named
+type syntax with parameter lists, explicit closed argument lists, and
+class-level `where` clauses. Those forms are not yet accepted and therefore
+are deliberately absent from this implemented grammar.
+
 ```text
 class-declaration           = "class" identifier ["extends" declaration-path]
                               ["implements" declaration-path {"," declaration-path}]

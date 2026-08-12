@@ -529,6 +529,25 @@ native tests. Direct runtime tests continue covering the generic reporter and
 unchanged symbol/version surface rather than gaining conversion-specific C
 harnesses.
 
+## Frozen generic-class ABI boundary
+
+The frozen [generic-class specialization contract](GENERIC_CLASSES.md) adds no
+public C symbol, runtime-owned type argument, dictionary, reflection record,
+allocation-header field, or ABI-version change. Every accepted application is
+compiled as an ordinary exact class before HIR and MIR; its existing concrete
+value, owner, array, optional, call, allocation, and lifecycle operations use
+the same runtime boundary as equivalent hand-written types.
+
+Specialized private symbols and code size are compiler/backend concerns. The
+runtime receives neither a template identity nor an argument list. Existing
+external-signature eligibility remains unchanged, and the compatibility
+marker remains `ska_rt_abi_v9`.
+
+This boundary is frozen but not implemented. Direct runtime tests gain no
+generic-specific harness; implementation evidence belongs to compiler,
+backend, linker-surface, and native specialization tests plus the existing
+runtime contract suite.
+
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds

@@ -873,6 +873,26 @@ uses the existing zero niche. Allocation failure, optional unwrap failure,
 guard overflow, and layout overflow retain their current boundaries; there is
 no checked box-store failure and no public runtime ABI change.
 
+## Frozen generic-class specialization target boundary
+
+The frozen [generic-class compiler contract](GENERIC_CLASSES.md) reaches the
+backend only as ordinary closed exact classes. Each accepted application has a
+distinct `ClassId`, fully substituted base and fields, concrete member and
+lifecycle identities, and verified ordinary MIR. The backend receives no type
+parameter, specialization request, generic dictionary, or runtime argument
+list.
+
+Layout, internal ABI classification, allocation metadata, finalizers,
+dispatch tables, statics, calls, and cleanup therefore follow the existing
+rules for the generated exact types. Distinct application identities remain
+distinct even when their layouts or instructions happen to match. Private
+symbols must encode enough canonical identity to avoid collisions and remain
+deterministic; their exact spelling is not a source or compatibility contract.
+
+Generic specialization adds no target instruction family or public runtime
+call. This boundary is frozen but not implemented; backend implementation
+begins only after specialization has produced closed HIR and MIR.
+
 ## Symbols and process entry
 
 Internal callable and block symbols are derived deterministically from stable

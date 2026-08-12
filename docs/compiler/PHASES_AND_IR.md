@@ -49,6 +49,14 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
+The frozen [generic-class specialization contract](GENERIC_CLASSES.md) inserts
+a template-resolution and deterministic closed-specialization responsibility
+between syntax/module declaration collection and the ordinary resolved
+program. Its defining trust boundary is that every published ordinary class,
+type, member, and body is closed. `ResolvedClassDeclaration`, HIR, MIR,
+verification, and backends do not gain an unresolved parameter variant or a
+runtime type-argument protocol. This extension is not implemented yet.
+
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus
 the selected entry module. Every top-level function, class, and interface
