@@ -43,6 +43,7 @@ mod diagnostics;
 mod dumps;
 mod expressions;
 mod external_links;
+mod generic_classes;
 mod integer_division;
 mod interfaces;
 mod intrinsics;

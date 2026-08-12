@@ -374,6 +374,25 @@ impl<'ast> ProgramResolver<'ast> {
         for unit in &mut self.units {
             for (ast_index, declaration) in unit.ast.declarations.iter().enumerate() {
                 let name = declaration.name();
+                if let syntax::TopLevelDeclaration::Class(class) = declaration {
+                    if class.type_parameters.is_some() || class.where_clause.is_some() {
+                        let span = class.type_parameters.as_ref().map_or_else(
+                            || class.where_clause.as_ref().unwrap().span,
+                            |parameters| parameters.span,
+                        );
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                super::super::UNSUPPORTED_GENERIC_SYNTAX,
+                                "generic class semantics are not implemented yet",
+                            )
+                            .with_primary_label(
+                                span,
+                                "generic declarations are parsed but not resolved",
+                            ),
+                        );
+                        continue;
+                    }
+                }
                 if name.text == "Obj" {
                     self.diagnostics.push(
                         Diagnostic::error(

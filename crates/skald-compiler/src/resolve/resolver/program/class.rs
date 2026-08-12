@@ -490,7 +490,17 @@ fn resolve_direct_base(
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedDirectBase> {
     let base = class.direct_base.as_ref()?;
-    match lookup.select(base, diagnostics) {
+    if base.arguments.is_some() {
+        diagnostics.push(
+            Diagnostic::error(
+                super::super::UNSUPPORTED_GENERIC_SYNTAX,
+                "generic class semantics are not implemented yet",
+            )
+            .with_primary_label(base.span, "generic base types are parsed but not resolved"),
+        );
+        return None;
+    }
+    match lookup.select(&base.name, diagnostics) {
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(base_id),
             ..
@@ -516,7 +526,7 @@ fn resolve_direct_base(
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_BASE_CLASS,
-                    format!("`{}` does not name a base class", base.text),
+                    format!("`{}` does not name a base class", base.name.text),
                 )
                 .with_primary_label(base.span, "expected a class name")
                 .with_secondary_label(symbol.name_span, "function declared here"),
@@ -527,7 +537,7 @@ fn resolve_direct_base(
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_BASE_CLASS,
-                    format!("unknown base class `{}`", base.text),
+                    format!("unknown base class `{}`", base.name.text),
                 )
                 .with_primary_label(base.span, "no class with this name is declared"),
             );

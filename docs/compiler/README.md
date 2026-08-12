@@ -223,7 +223,7 @@ growable read-until-EOF loops.
 source database
     -> tokens
     -> syntax AST
-    -> generic templates and closed specialization (frozen, not implemented)
+    -> generic templates and closed specialization (syntax parsed; semantics gated)
     -> resolved program
     -> typed HIR
     -> target-independent MIR

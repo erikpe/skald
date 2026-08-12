@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: planned; G0 is next.
+Status: in progress; G1 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -54,7 +54,7 @@ not reopen those decisions while implementing them.
 
 ## Progress
 
-- [ ] G0 — Parse and preserve generic class syntax
+- [x] G0 — Parse and preserve generic class syntax
 - [ ] G1 — Establish template identities and module declarations
 - [ ] G2 — Resolve parameter-bearing type terms and nominal bounds
 - [ ] G3 — Infer and evaluate contextual generic requirements
@@ -75,24 +75,24 @@ not reopen those decisions while implementing them.
 **Purpose:** Establish the complete frozen source shape, spans, recovery, and
 unambiguous angle-bracket parsing before semantic code depends on it.
 
-- [ ] Add source-shaped AST nodes for ordered class type parameters, closed
+- [x] Add source-shaped AST nodes for ordered class type parameters, closed
   generic argument lists on named types, and ordered class-level `where`
   requirements.
-- [ ] Extend class parsing for `class C<T, U>` and the `where T: Interface`
+- [x] Extend class parsing for `class C<T, U>` and the `where T: Interface`
   clause after optional `extends` and `implements` clauses.
-- [ ] Extend named-type parsing so applications compose with grouping,
+- [x] Extend named-type parsing so applications compose with grouping,
   postfix `?`/`[]`, leading `shared`, constructor heads, allocation heads,
   static selection, casts, type tests, bases, fields, and signatures.
-- [ ] Keep `where` contextual and preserve its existing use as an identifier
+- [x] Keep `where` contextual and preserve its existing use as an identifier
   outside the class-header form.
-- [ ] Parse nested closers such as `Outer<Inner<Str>>` in type context without
+- [x] Parse nested closers such as `Outer<Inner<Str>>` in type context without
   changing expression `>`, `>=`, or `>>` token meaning.
-- [ ] Diagnose empty lists, missing separators or closers, trailing commas,
+- [x] Diagnose empty lists, missing separators or closers, trailing commas,
   malformed requirements, misplaced `where`, and argument syntax on recovery
   paths without losing later declarations.
-- [ ] Extend syntax dumps with parameters, arguments, bounds, punctuation
+- [x] Extend syntax dumps with parameters, arguments, bounds, punctuation
   spans, and grouping provenance.
-- [ ] Promote the frozen grammar extension into
+- [x] Promote the frozen grammar extension into
   [`GRAMMAR.md`](../language/GRAMMAR.md) as accepted syntax while stating that
   semantic specialization remains gated by later tasks.
 

@@ -407,11 +407,11 @@ impl Parser<'_> {
                 return None;
             }
         } else if context.accepts_named() && token.kind == TokenKind::Identifier {
-            let name = self.parse_name_path("expected a named type")?;
-            let name_span = name.span;
+            let named = self.parse_named_type("expected a named type")?;
+            let named_span = named.span;
             TypeSyntax {
-                kind: TypeKind::Named(name),
-                span: name_span,
+                kind: TypeKind::Named(named),
+                span: named_span,
             }
         } else if let Some(left_paren) = self.consume(TokenKind::LeftParen) {
             let inner = self.with_syntax_nesting(left_paren.span, |parser| {
@@ -510,7 +510,7 @@ fn token_type_kind(kind: TokenKind) -> Option<TypeKind> {
     }
 }
 
-const fn token_starts_type(kind: TokenKind) -> bool {
+pub(super) const fn token_starts_type(kind: TokenKind) -> bool {
     matches!(
         kind,
         TokenKind::Identifier

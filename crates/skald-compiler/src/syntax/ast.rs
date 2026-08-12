@@ -130,9 +130,36 @@ impl TopLevelDeclaration {
 pub struct ClassDecl {
     pub visibility: Visibility,
     pub name: Name,
-    pub direct_base: Option<Name>,
+    pub type_parameters: Option<GenericParameterList>,
+    pub direct_base: Option<NamedTypeSyntax>,
     pub implemented_interfaces: Vec<Name>,
+    pub where_clause: Option<GenericWhereClause>,
     pub members: Vec<ClassMember>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GenericParameterList {
+    pub left_angle_span: Span,
+    pub parameters: Vec<Name>,
+    pub comma_spans: Vec<Span>,
+    pub right_angle_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GenericWhereClause {
+    pub where_span: Span,
+    pub requirements: Vec<GenericRequirementSyntax>,
+    pub comma_spans: Vec<Span>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GenericRequirementSyntax {
+    pub parameter: Name,
+    pub colon_span: Span,
+    pub interface: Name,
     pub span: Span,
 }
 
@@ -457,7 +484,7 @@ pub enum TypeKind {
     F64,
     Bool,
     Unit,
-    Named(Name),
+    Named(NamedTypeSyntax),
     Shared {
         shared_span: Span,
         target: Box<TypeSyntax>,
@@ -477,6 +504,30 @@ pub enum TypeKind {
         left_bracket_span: Span,
         right_bracket_span: Span,
     },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NamedTypeSyntax {
+    pub name: Name,
+    pub arguments: Option<Box<GenericArgumentList>>,
+    pub span: Span,
+}
+
+impl Deref for NamedTypeSyntax {
+    type Target = Name;
+
+    fn deref(&self) -> &Self::Target {
+        &self.name
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GenericArgumentList {
+    pub left_angle_span: Span,
+    pub arguments: Vec<TypeSyntax>,
+    pub comma_spans: Vec<Span>,
+    pub right_angle_span: Span,
+    pub span: Span,
 }
 
 /// Source notation used to introduce one optional layer.
@@ -618,6 +669,8 @@ pub enum Expression {
     Absent(AbsentExpr),
     Present(PresentExpr),
     Identifier(IdentifierExpr),
+    GenericTypeApplication(Box<GenericTypeApplicationExpr>),
+    GenericStaticSelection(Box<GenericStaticSelectionExpr>),
     NumericLiteral(NumericLiteralExpr),
     ByteLiteral(ByteLiteralExpr),
     StringLiteral(StringLiteralExpr),
@@ -625,11 +678,11 @@ pub enum Expression {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Logical(LogicalExpr),
-    TypeTest(TypeTestExpr),
+    TypeTest(Box<TypeTestExpr>),
     PresenceTest(PresenceTestExpr),
     Unwrap(UnwrapExpr),
     PrimitiveCast(PrimitiveCastExpr),
-    ObjectCast(ObjectCastExpr),
+    ObjectCast(Box<ObjectCastExpr>),
     Allocation(Box<AllocationExpr>),
     OptionalBoxAllocation(Box<OptionalBoxAllocationExpr>),
     ArrayConstruction(Box<ArrayConstructionExpr>),
@@ -646,6 +699,8 @@ impl Expression {
             Self::Absent(expression) => expression.span,
             Self::Present(expression) => expression.span,
             Self::Identifier(expression) => expression.span,
+            Self::GenericTypeApplication(expression) => expression.span,
+            Self::GenericStaticSelection(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
             Self::ByteLiteral(expression) => expression.span,
             Self::StringLiteral(expression) => expression.span,
@@ -707,7 +762,7 @@ pub struct UnwrapExpr {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AllocationExpr {
     pub new_span: Span,
-    pub target: Name,
+    pub target: NamedTypeSyntax,
     pub arguments: CallArguments,
     pub span: Span,
 }
@@ -780,7 +835,7 @@ pub enum ArrayConstructionArguments {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ObjectCastExpr {
-    pub target: Name,
+    pub target: NamedTypeSyntax,
     pub target_mode: ObjectCastTargetMode,
     pub source: Box<Expression>,
     pub span: Span,
@@ -825,7 +880,21 @@ pub enum ObjectCastTargetMode {
 pub struct TypeTestExpr {
     pub source: Box<Expression>,
     pub is_span: Span,
-    pub target: Name,
+    pub target: NamedTypeSyntax,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GenericTypeApplicationExpr {
+    pub target: NamedTypeSyntax,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GenericStaticSelectionExpr {
+    pub target: NamedTypeSyntax,
+    pub separator_span: Span,
+    pub member: Name,
     pub span: Span,
 }
 

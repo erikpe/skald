@@ -27,7 +27,7 @@ fn object_casts_parse_at_unary_precedence_with_frozen_ambiguity_rules() {
     };
     assert!(matches!(
         grouped.expression.as_ref(),
-        Expression::ObjectCast(ObjectCastExpr {
+        Expression::ObjectCast(cast) if matches!(cast.as_ref(), ObjectCastExpr {
             target_mode: ObjectCastTargetMode::Plain,
             ..
         })
@@ -37,8 +37,8 @@ fn object_casts_parse_at_unary_precedence_with_frozen_ambiguity_rules() {
         panic!("expected shared cast expression");
     };
     assert!(matches!(
-        shared.expression,
-        Expression::ObjectCast(ObjectCastExpr {
+        &shared.expression,
+        Expression::ObjectCast(cast) if matches!(cast.as_ref(), ObjectCastExpr {
             target_mode: ObjectCastTargetMode::Shared { .. },
             ..
         })

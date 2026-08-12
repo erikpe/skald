@@ -12,6 +12,7 @@ mod array;
 mod class;
 mod declaration;
 mod expression;
+mod generic;
 mod interface;
 mod logical_depth;
 mod module;
@@ -33,6 +34,7 @@ pub const MISPLACED_IMPORT: &str = "PAR012";
 pub const INVALID_VISIBILITY: &str = "PAR013";
 pub const INVALID_COMPARISON: &str = "PAR014";
 pub const INVALID_OPTIONAL_BOX_INITIALIZER: &str = "PAR015";
+pub const INVALID_GENERIC_SYNTAX: &str = "PAR016";
 
 /// Maximum recursive grammar depth.
 ///
@@ -96,6 +98,7 @@ struct Parser<'source> {
     brace_depth: usize,
     class_depth: usize,
     recovering_from_excessive_nesting: bool,
+    pending_generic_closer: Option<Token>,
 }
 
 impl<'source> Parser<'source> {
@@ -110,6 +113,7 @@ impl<'source> Parser<'source> {
             brace_depth: 0,
             class_depth: 0,
             recovering_from_excessive_nesting: false,
+            pending_generic_closer: None,
         }
     }
 

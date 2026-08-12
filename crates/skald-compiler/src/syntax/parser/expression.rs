@@ -123,14 +123,14 @@ impl Parser<'_> {
             });
             return self.finish_type_or_presence_test(expression);
         }
-        let target = self.parse_name_path("expected a class, interface, or `Obj` after `is`")?;
+        let target = self.parse_named_type("expected a class, interface, or `Obj` after `is`")?;
         let span = self.cover(source.span(), target.span);
-        let expression = Expression::TypeTest(TypeTestExpr {
+        let expression = Expression::TypeTest(Box::new(TypeTestExpr {
             source: Box::new(source),
             is_span: is_token.span,
             target,
             span,
-        });
+        }));
         self.finish_type_or_presence_test(expression)
     }
 
@@ -400,7 +400,7 @@ impl Parser<'_> {
         } else {
             1
         };
-        let Some(right_paren_distance) = self.name_path_end(target_start) else {
+        let Some(right_paren_distance) = self.named_type_end(target_start) else {
             return false;
         };
         self.peek_ahead(right_paren_distance).kind == TokenKind::RightParen
@@ -468,16 +468,16 @@ impl Parser<'_> {
         } else {
             ObjectCastTargetMode::Plain
         };
-        let target = self.parse_name_path("expected a cast target")?;
+        let target = self.parse_named_type("expected a cast target")?;
         let _right_paren = self.expect(TokenKind::RightParen, "`)` after the cast target")?;
         let source = self.with_syntax_nesting(left_paren.span, |parser| parser.parse_unary())?;
         let span = self.cover(left_paren.span, source.span());
-        Some(Expression::ObjectCast(ObjectCastExpr {
+        Some(Expression::ObjectCast(Box::new(ObjectCastExpr {
             target,
             target_mode,
             source: Box::new(source),
             span,
-        }))
+        })))
     }
 
     fn parse_postfix(&mut self) -> Option<Expression> {
@@ -685,7 +685,7 @@ impl Parser<'_> {
         if self.at_contextual("new") && self.starts_array_construction(true) {
             return self.parse_array_construction(true);
         }
-        if self.at_contextual("new") && self.name_path_followed_by(1, TokenKind::LeftParen) {
+        if self.at_contextual("new") && self.named_type_followed_by(1, TokenKind::LeftParen) {
             return self.parse_allocation();
         }
 
@@ -698,6 +698,10 @@ impl Parser<'_> {
             && self.peek_ahead(2).kind != TokenKind::RightParen
         {
             return self.parse_present();
+        }
+
+        if self.starts_generic_type_expression() {
+            return self.parse_generic_type_expression();
         }
 
         if self.at(TokenKind::Identifier)
@@ -808,7 +812,7 @@ impl Parser<'_> {
     fn parse_allocation(&mut self) -> Option<Expression> {
         let new_token = self.advance();
         debug_assert_eq!(self.lexeme(new_token), "new");
-        let target = self.parse_name_path("expected a concrete class after `new`")?;
+        let target = self.parse_named_type("expected a concrete class after `new`")?;
         let left_paren = self.peek().span;
         let (arguments, end_span) =
             self.with_syntax_nesting(left_paren, |parser| parser.parse_construction_arguments())?;
@@ -905,9 +909,84 @@ impl Parser<'_> {
         }
     }
 
-    fn name_path_followed_by(&self, start: usize, follower: TokenKind) -> bool {
-        self.name_path_end(start)
+    fn named_type_followed_by(&self, start: usize, follower: TokenKind) -> bool {
+        self.named_type_end(start)
             .is_some_and(|end| self.peek_ahead(end).kind == follower)
+    }
+
+    fn named_type_end(&self, start: usize) -> Option<usize> {
+        let name_end = self.name_path_end(start)?;
+        if self.peek_ahead(name_end).kind != TokenKind::Less {
+            return Some(name_end);
+        }
+        self.generic_argument_list_end(name_end)
+    }
+
+    pub(super) fn generic_argument_list_end(&self, start: usize) -> Option<usize> {
+        if self.peek_ahead(start).kind != TokenKind::Less {
+            return None;
+        }
+        let mut depth = 0usize;
+        let mut distance = start;
+        loop {
+            match self.peek_ahead(distance).kind {
+                TokenKind::Less => depth += 1,
+                TokenKind::Greater => {
+                    depth = depth.checked_sub(1)?;
+                    if depth == 0 {
+                        return Some(distance + 1);
+                    }
+                }
+                TokenKind::ShiftRight => {
+                    depth = depth.checked_sub(2)?;
+                    if depth == 0 {
+                        return Some(distance + 1);
+                    }
+                }
+                TokenKind::Eof
+                | TokenKind::Semicolon
+                | TokenKind::LeftBrace
+                | TokenKind::RightBrace => return None,
+                _ => {}
+            }
+            distance += 1;
+        }
+    }
+
+    fn starts_generic_type_expression(&self) -> bool {
+        let Some(name_end) = self.name_path_end(0) else {
+            return false;
+        };
+        if self.peek_ahead(name_end).kind != TokenKind::Less {
+            return false;
+        }
+        self.generic_argument_list_end(name_end).is_some_and(|end| {
+            matches!(
+                self.peek_ahead(end).kind,
+                TokenKind::LeftParen | TokenKind::DoubleColon
+            )
+        })
+    }
+
+    fn parse_generic_type_expression(&mut self) -> Option<Expression> {
+        let target = self.parse_named_type("expected a generic class application")?;
+        debug_assert!(target.arguments.is_some());
+        if let Some(separator) = self.consume(TokenKind::DoubleColon) {
+            let member = self.parse_name("expected a static member after `::`")?;
+            let span = self.cover(target.span, member.span);
+            return Some(Expression::GenericStaticSelection(Box::new(
+                GenericStaticSelectionExpr {
+                    target,
+                    separator_span: separator.span,
+                    member,
+                    span,
+                },
+            )));
+        }
+        let span = target.span;
+        Some(Expression::GenericTypeApplication(Box::new(
+            GenericTypeApplicationExpr { target, span },
+        )))
     }
 
     fn name_path_end(&self, start: usize) -> Option<usize> {

@@ -61,6 +61,7 @@ pub const MISSING_STRING_LANGUAGE_ITEM: &str = "RES032";
 pub const INVALID_STRING_LANGUAGE_ITEM: &str = "RES033";
 pub const INVALID_INTRINSIC_DECLARATION: &str = "RES034";
 pub const LOOP_EXIT_OUTSIDE_LOOP: &str = "RES035";
+pub const UNSUPPORTED_GENERIC_SYNTAX: &str = "RES036";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -134,10 +135,25 @@ fn resolve_type(
             let element = resolve_type(element, lookup, type_interner, diagnostics)?;
             ResolvedTypeKind::Array(type_interner.intern_array(element))
         }
-        syntax::TypeKind::Named(name) if !name.is_qualified() && name.text == "Obj" => {
+        syntax::TypeKind::Named(named) if named.arguments.is_some() => {
+            diagnostics.push(
+                Diagnostic::error(
+                    UNSUPPORTED_GENERIC_SYNTAX,
+                    "generic class semantics are not implemented yet",
+                )
+                .with_primary_label(
+                    named.span,
+                    "generic type applications are parsed but not resolved",
+                ),
+            );
+            return None;
+        }
+        syntax::TypeKind::Named(named)
+            if !named.name.is_qualified() && named.name.text == "Obj" =>
+        {
             ResolvedTypeKind::Obj
         }
-        syntax::TypeKind::Named(name) => match lookup.select(name, diagnostics) {
+        syntax::TypeKind::Named(named) => match lookup.select(&named.name, diagnostics) {
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(class),
                 ..
@@ -150,17 +166,17 @@ fn resolve_type(
                 diagnostics.push(
                     Diagnostic::error(
                         UNKNOWN_TYPE,
-                        format!("`{}` does not name a type", name.text),
+                        format!("`{}` does not name a type", named.name.text),
                     )
-                    .with_primary_label(name.span, "expected a class or interface type")
+                    .with_primary_label(named.name.span, "expected a class or interface type")
                     .with_secondary_label(symbol.name_span, "function declared here"),
                 );
                 return None;
             }
             TopLevelLookup::Missing => {
                 diagnostics.push(
-                    Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", name.text))
-                        .with_primary_label(name.span, "no class with this name is declared"),
+                    Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", named.name.text))
+                        .with_primary_label(named.name.span, "no class with this name is declared"),
                 );
                 return None;
             }
@@ -240,10 +256,23 @@ fn resolve_shared_target(
         );
         return None;
     };
-    if !target.is_qualified() && target.text == "Obj" {
+    if target.arguments.is_some() {
+        diagnostics.push(
+            Diagnostic::error(
+                UNSUPPORTED_GENERIC_SYNTAX,
+                "generic class semantics are not implemented yet",
+            )
+            .with_primary_label(
+                target.span,
+                "generic shared targets are parsed but not resolved",
+            ),
+        );
+        return None;
+    }
+    if !target.name.is_qualified() && target.name.text == "Obj" {
         return Some(ResolvedSharedTarget::Obj);
     }
-    match lookup.select(target, diagnostics) {
+    match lookup.select(&target.name, diagnostics) {
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(class),
             ..
@@ -256,7 +285,7 @@ fn resolve_shared_target(
             diagnostics.push(
                 Diagnostic::error(
                     UNKNOWN_TYPE,
-                    format!("`{}` does not name a shared object type", target.text),
+                    format!("`{}` does not name a shared object type", target.name.text),
                 )
                 .with_primary_label(target.span, "expected a class, interface, or `Obj`")
                 .with_secondary_label(symbol.name_span, "function declared here"),
@@ -267,7 +296,7 @@ fn resolve_shared_target(
             diagnostics.push(
                 Diagnostic::error(
                     UNKNOWN_TYPE,
-                    format!("unknown shared target `{}`", target.text),
+                    format!("unknown shared target `{}`", target.name.text),
                 )
                 .with_primary_label(
                     target.span,

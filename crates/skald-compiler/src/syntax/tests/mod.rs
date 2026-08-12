@@ -36,6 +36,7 @@ mod declarations;
 mod dumps;
 mod eager_boolean_operators;
 mod expressions;
+mod generic_classes;
 mod integer_division;
 mod interfaces;
 mod intrinsics;

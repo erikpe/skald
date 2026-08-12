@@ -1,9 +1,10 @@
 # Generic-Class Specialization
 
-Status: frozen compiler design; not implemented. This document defines the
-target-independent compilation contract for the initial
-[generic-class language design](../language/GENERIC_CLASSES.md). Current phase
-products remain unchanged until the active implementation roadmap completes.
+Status: frozen compiler design; syntax implemented, semantic specialization
+not implemented. This document defines the target-independent compilation
+contract for the initial [generic-class language design](../language/GENERIC_CLASSES.md).
+The syntax AST now preserves generic declarations and closed applications;
+resolution rejects them explicitly until the remaining phase products exist.
 
 ## Architectural outcome
 

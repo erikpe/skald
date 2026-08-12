@@ -95,7 +95,9 @@ identifier elsewhere, including in `private: i64;`, `fn private() -> unit {}`,
 `static: i64;`, `fn static() -> unit {}`, parameters, locals, and top-level
 declarations.
 `implements`, `interface`, and `is` are likewise contextual in the exact forms
-below. `some` is contextual only after `is`; `none` is reserved by the lexer
+below. `where` is contextual after the optional base and interface clauses of
+a class header that declares generic parameters; it remains an identifier in
+all other positions. `some` is contextual only after `is`; `none` is reserved by the lexer
 and forms either an absent expression or the target of a presence test.
 `shared` is contextual before an object or array target in stored and result
 types and inside a cast target. `new` is contextual before a class allocation
@@ -213,7 +215,8 @@ value-parameter               = identifier ":" storage-type
 alias-parameter               = ["mut"] "ref" identifier ":" storage-type
 
 primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
-named-type                    = declaration-path
+generic-argument-list         = "<" storage-type {"," storage-type} ">"
+named-type                    = declaration-path [generic-argument-list]
 type-primary                  = primitive-type | named-type | "unit"
                               | "(" storage-type ")"
 postfix-type                  = type-primary {"?" | "[" "]"}
@@ -266,14 +269,16 @@ defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
 ## Class declarations
 
-The frozen [generic-class design](GENERIC_CLASSES.md) extends class and named
-type syntax with parameter lists, explicit closed argument lists, and
-class-level `where` clauses. Those forms are not yet accepted and therefore
-are deliberately absent from this implemented grammar.
-
 ```text
-class-declaration           = "class" identifier ["extends" declaration-path]
+generic-parameter-list     = "<" identifier {"," identifier} ">"
+generic-where-clause       = "where" generic-requirement
+                             {"," generic-requirement}
+generic-requirement        = identifier ":" declaration-path
+
+class-declaration           = "class" identifier [generic-parameter-list]
+                              ["extends" named-type]
                               ["implements" declaration-path {"," declaration-path}]
+                              [generic-where-clause]
                               "{" {class-member} "}"
 
 class-member                = field-declaration
@@ -307,6 +312,19 @@ interface-declaration       = "interface" identifier
 interface-requirement       = ["mut"] "fn" identifier parameter-list
                               "->" result-type ";"
 ```
+
+Generic parameter, argument, and requirement lists are nonempty and do not
+accept trailing commas. Nested generic closers are interpreted in type context,
+so `Outer<Inner<Str>>` is a named type while `left >> right` remains an
+expression shift. Syntax preserves each angle bracket, comma, colon, grouping,
+and `where` span independently.
+
+This grammar currently describes a syntax-only phase boundary. Generic class
+declarations and applications parse into dedicated source-shaped nodes, but
+resolution reports that generic semantics are unavailable. Template identity,
+constraint checking, specialization, and execution remain staged by the
+[generic-classes roadmap](../roadmaps/GENERIC_CLASSES_ROADMAP.md); no generic
+form is an executable class yet.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,
@@ -452,7 +470,7 @@ The corresponding semantics are owned by
 
 ```text
 expression                = logical-or-expression
-view-target               = declaration-path
+view-target               = named-type
 
 logical-or-expression     = logical-and-expression
                             {"||" logical-and-expression}
@@ -519,6 +537,8 @@ argument-list    = expression {"," expression}
 primary-expression
                  = "none"
                  | declaration-path
+                 | generic-application
+                 | generic-static-selection
                  | literal
                  | "self"
                  | allocation-expression
@@ -529,7 +549,7 @@ allocation-expression
                  = class-allocation-expression
                  | optional-box-allocation-expression
 class-allocation-expression
-                 = "new" declaration-path allocation-arguments
+                 = "new" named-type allocation-arguments
 optional-box-allocation-expression
                  = "new" storage-type "(" [expression] ")"
 allocation-arguments
@@ -544,7 +564,17 @@ array-construction-initializer
 array-inline-type
                  = postfix-array-type
 array-element-list = "{" [expression {"," expression}] "}"
+generic-application
+                 = declaration-path generic-argument-list
+generic-static-selection
+                 = generic-application "::" identifier
 ```
+
+A `generic-application` in expression position is accepted only as a class
+construction head immediately followed by a call suffix or as the target of
+`generic-static-selection`. Generic applications are also accepted in object
+casts, type tests, class allocations, optional-box and array construction
+types, and every declaration position that consumes `storage-type`.
 
 The `storage-type` in `optional-box-allocation-expression` must have an
 optional outer semantic constructor after grouping is removed. This admits

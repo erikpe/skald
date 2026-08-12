@@ -70,6 +70,17 @@ impl CallableResolver<'_, '_> {
     }
 
     pub(super) fn resolve_call(&mut self, call: &syntax::CallExpr) -> Option<ResolvedExpression> {
+        match call.callee.as_ref() {
+            syntax::Expression::GenericTypeApplication(application) => {
+                self.report_unsupported_generic_application(&application.target);
+                return None;
+            }
+            syntax::Expression::GenericStaticSelection(selection) => {
+                self.report_unsupported_generic_application(&selection.target);
+                return None;
+            }
+            _ => {}
+        }
         if let Some(length) = self.resolve_array_length_call(call) {
             return length;
         }

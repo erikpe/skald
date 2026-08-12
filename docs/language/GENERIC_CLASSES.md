@@ -1,10 +1,12 @@
 # Generic Classes
 
-Status: frozen design; not implemented. This document defines the intended
-initial source-visible generic-class contract. The
+Status: frozen design; syntax implemented, semantics not implemented. This
+document defines the intended initial source-visible generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
-[implemented grammar](GRAMMAR.md) remains the exact syntax accepted by the
-current compiler.
+[implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
+compiler. Generic declarations and applications currently stop at that syntax
+boundary with an explicit resolution diagnostic; template identity,
+specialization, and execution remain planned.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning

@@ -12,6 +12,8 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
         match expression {
             Expression::Absent(_)
             | Expression::Identifier(_)
+            | Expression::GenericTypeApplication(_)
+            | Expression::GenericStaticSelection(_)
             | Expression::NumericLiteral(_)
             | Expression::ByteLiteral(_)
             | Expression::StringLiteral(_)

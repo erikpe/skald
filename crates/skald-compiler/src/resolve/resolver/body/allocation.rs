@@ -85,7 +85,10 @@ impl CallableResolver<'_, '_> {
         &mut self,
         allocation: &syntax::AllocationExpr,
     ) -> Option<ResolvedExpression> {
-        let class = if !allocation.target.is_qualified() && allocation.target.text == "Obj" {
+        let class = if allocation.target.arguments.is_some() {
+            self.report_unsupported_generic_application(&allocation.target);
+            None
+        } else if !allocation.target.name.is_qualified() && allocation.target.name.text == "Obj" {
             self.diagnostics.push(
                 Diagnostic::error(INVALID_CONSTRUCTION_TARGET, "`Obj` cannot be allocated")
                     .with_primary_label(
@@ -115,7 +118,7 @@ impl CallableResolver<'_, '_> {
         match self
             .environment
             .lookup
-            .select(&allocation.target, self.diagnostics)
+            .select(&allocation.target.name, self.diagnostics)
         {
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(class),
@@ -128,7 +131,10 @@ impl CallableResolver<'_, '_> {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_CONSTRUCTION_TARGET,
-                        format!("interface `{}` cannot be allocated", allocation.target.text),
+                        format!(
+                            "interface `{}` cannot be allocated",
+                            allocation.target.name.text
+                        ),
                     )
                     .with_primary_label(allocation.target.span, "`new` requires a concrete class"),
                 );
@@ -143,7 +149,7 @@ impl CallableResolver<'_, '_> {
                         INVALID_CONSTRUCTION_TARGET,
                         format!(
                             "function `{}` is not an allocation class",
-                            allocation.target.text
+                            allocation.target.name.text
                         ),
                     )
                     .with_primary_label(allocation.target.span, "`new` requires a concrete class"),
@@ -152,7 +158,7 @@ impl CallableResolver<'_, '_> {
             }
             TopLevelLookup::Missing => {
                 self.report_unknown(
-                    &allocation.target.text,
+                    &allocation.target.name.text,
                     allocation.target.span,
                     "unknown allocation class",
                 );

@@ -42,9 +42,51 @@ impl Parser<'_> {
     pub(super) fn parse_class(&mut self, visibility: Visibility) -> Option<ClassDecl> {
         let class_token = self.advance();
         let name = self.parse_name("expected a class name after `class`");
+        let type_parameters = if self.at(TokenKind::Less) {
+            self.parse_generic_parameter_list()
+        } else {
+            None
+        };
         let direct_base = self.parse_direct_base();
         self.discard_duplicate_base_clauses();
         let implemented_interfaces = self.parse_implemented_interfaces();
+        let where_clause = if self.at_contextual("where") {
+            let where_span = self.peek().span;
+            let clause = self.parse_generic_where_clause();
+            if type_parameters.is_none() {
+                self.report(
+                    INVALID_GENERIC_SYNTAX,
+                    "a `where` clause requires generic class parameters",
+                    where_span,
+                    "add type parameters to the class or remove this clause",
+                );
+            }
+            clause
+        } else {
+            None
+        };
+        if self.at_contextual("extends") || self.at_contextual("implements") {
+            let misplaced = self.advance();
+            self.report(
+                INVALID_GENERIC_SYNTAX,
+                "`where` must follow every `extends` and `implements` clause",
+                misplaced.span,
+                "move this header clause before `where`",
+            );
+            self.synchronize_declaration();
+            return None;
+        }
+        if self.at_contextual("where") {
+            let duplicate = self.advance();
+            self.report(
+                INVALID_GENERIC_SYNTAX,
+                "a class cannot declare more than one `where` clause",
+                duplicate.span,
+                "merge the requirements into the first clause",
+            );
+            self.synchronize_declaration();
+            return None;
+        }
         let left_brace = self.expect(TokenKind::LeftBrace, "`{` after the class header")?;
         self.brace_depth += 1;
         self.class_depth += 1;
@@ -57,8 +99,10 @@ impl Parser<'_> {
         Some(ClassDecl {
             visibility,
             name,
+            type_parameters,
             direct_base,
             implemented_interfaces,
+            where_clause,
             members,
             span: self.cover(visibility.start_span(class_token.span), right_brace.span),
         })
@@ -80,13 +124,13 @@ impl Parser<'_> {
         interfaces
     }
 
-    fn parse_direct_base(&mut self) -> Option<Name> {
+    fn parse_direct_base(&mut self) -> Option<NamedTypeSyntax> {
         if !self.at_contextual("extends") {
             return None;
         }
 
         self.advance();
-        self.parse_name_path("expected a base class name after `extends`")
+        self.parse_named_type("expected a base class name after `extends`")
     }
 
     fn discard_duplicate_base_clauses(&mut self) {
@@ -99,7 +143,7 @@ impl Parser<'_> {
                 "remove this duplicate `extends` clause",
             );
             if self.at(TokenKind::Identifier) {
-                self.advance();
+                let _ = self.parse_named_type("expected a base class name after `extends`");
             } else {
                 self.report(
                     INVALID_CLASS_HEADER,

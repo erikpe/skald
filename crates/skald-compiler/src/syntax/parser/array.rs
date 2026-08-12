@@ -117,6 +117,9 @@ impl Parser<'_> {
                         }
                         end += 2;
                     }
+                    if self.peek_ahead(end).kind == TokenKind::Less {
+                        end = self.generic_argument_list_end(end)?;
+                    }
                 }
                 (end, false, false)
             } else {

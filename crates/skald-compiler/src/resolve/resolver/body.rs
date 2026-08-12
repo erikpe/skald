@@ -276,11 +276,27 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         self.resolve_expression(expression)
     }
 
-    fn resolve_view_target(&mut self, name: &syntax::Name) -> Option<ResolvedType> {
+    fn resolve_view_target(&mut self, named: &syntax::NamedTypeSyntax) -> Option<ResolvedType> {
         self.resolve_type(&syntax::TypeSyntax {
-            kind: syntax::TypeKind::Named(name.clone()),
-            span: name.span,
+            kind: syntax::TypeKind::Named(named.clone()),
+            span: named.span,
         })
+    }
+
+    pub(super) fn report_unsupported_generic_application(
+        &mut self,
+        named: &syntax::NamedTypeSyntax,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                super::UNSUPPORTED_GENERIC_SYNTAX,
+                "generic class semantics are not implemented yet",
+            )
+            .with_primary_label(
+                named.span,
+                "generic type applications are syntax-only for now",
+            ),
+        );
     }
 
     fn resolve_type(&mut self, type_syntax: &syntax::TypeSyntax) -> Option<ResolvedType> {
@@ -311,6 +327,14 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 }))
             }
             syntax::Expression::Identifier(identifier) => self.resolve_identifier(identifier),
+            syntax::Expression::GenericTypeApplication(application) => {
+                self.report_unsupported_generic_application(&application.target);
+                None
+            }
+            syntax::Expression::GenericStaticSelection(selection) => {
+                self.report_unsupported_generic_application(&selection.target);
+                None
+            }
             syntax::Expression::NumericLiteral(literal) => Some(
                 ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {
                     kind: literal.kind,

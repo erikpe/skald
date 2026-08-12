@@ -105,6 +105,28 @@ impl AstDumper {
         }
     }
 
+    fn named_type(&mut self, label: &str, named: &NamedTypeSyntax) {
+        if let Some(arguments) = &named.arguments {
+            self.line(label, named.span);
+            self.indented(|dumper| {
+                dumper.name_path("Name", &named.name);
+                dumper.line("Arguments", arguments.span);
+                dumper.indented(|dumper| {
+                    dumper.line("LeftAngle", arguments.left_angle_span);
+                    for (index, argument) in arguments.arguments.iter().enumerate() {
+                        dumper.type_syntax(argument);
+                        if let Some(comma) = arguments.comma_spans.get(index) {
+                            dumper.line("Comma", *comma);
+                        }
+                    }
+                    dumper.line("RightAngle", arguments.right_angle_span);
+                });
+            });
+        } else {
+            self.name_path(label, &named.name);
+        }
+    }
+
     fn interface(&mut self, interface: &InterfaceDecl) {
         self.line("Interface", interface.span);
         self.indented(|dumper| {
@@ -136,11 +158,45 @@ impl AstDumper {
         self.indented(|dumper| {
             dumper.visibility(class.visibility);
             dumper.named("Name", &class.name.text, class.name.span);
+            if let Some(parameters) = &class.type_parameters {
+                dumper.line("TypeParameters", parameters.span);
+                dumper.indented(|dumper| {
+                    dumper.line("LeftAngle", parameters.left_angle_span);
+                    for (index, parameter) in parameters.parameters.iter().enumerate() {
+                        dumper.named("Parameter", &parameter.text, parameter.span);
+                        if let Some(comma) = parameters.comma_spans.get(index) {
+                            dumper.line("Comma", *comma);
+                        }
+                    }
+                    dumper.line("RightAngle", parameters.right_angle_span);
+                });
+            }
             if let Some(base) = &class.direct_base {
-                dumper.name_path("DirectBase", base);
+                dumper.named_type("DirectBase", base);
             }
             for interface in &class.implemented_interfaces {
                 dumper.name_path("Implements", interface);
+            }
+            if let Some(clause) = &class.where_clause {
+                dumper.line("WhereClause", clause.span);
+                dumper.indented(|dumper| {
+                    dumper.line("Where", clause.where_span);
+                    for (index, requirement) in clause.requirements.iter().enumerate() {
+                        dumper.line("Requirement", requirement.span);
+                        dumper.indented(|dumper| {
+                            dumper.named(
+                                "Parameter",
+                                &requirement.parameter.text,
+                                requirement.parameter.span,
+                            );
+                            dumper.line("Colon", requirement.colon_span);
+                            dumper.name_path("Interface", &requirement.interface);
+                        });
+                        if let Some(comma) = clause.comma_spans.get(index) {
+                            dumper.line("Comma", *comma);
+                        }
+                    }
+                });
             }
             dumper.heading("Members");
             dumper.indented(|dumper| {
@@ -324,7 +380,7 @@ impl AstDumper {
                 self.line("Type Shared", type_syntax.span);
                 self.indented(|dumper| {
                     if let TypeKind::Named(target) = &target.kind {
-                        dumper.name_path("Target", target);
+                        dumper.named_type("Target", target);
                     } else {
                         dumper.heading("Target");
                         dumper.indented(|dumper| dumper.type_syntax(target));
@@ -376,8 +432,8 @@ impl AstDumper {
                 });
                 return;
             }
-            TypeKind::Named(name) => {
-                self.name_path("Type Named", name);
+            TypeKind::Named(named) => {
+                self.named_type("Type Named", named);
                 return;
             }
         };
@@ -504,6 +560,17 @@ impl AstDumper {
             Expression::Identifier(identifier) => {
                 self.named("Identifier", &identifier.name.text, identifier.span);
             }
+            Expression::GenericTypeApplication(application) => {
+                self.named_type("GenericTypeApplication", &application.target);
+            }
+            Expression::GenericStaticSelection(selection) => {
+                self.line("GenericStaticSelection", selection.span);
+                self.indented(|dumper| {
+                    dumper.named_type("Target", &selection.target);
+                    dumper.line("Separator", selection.separator_span);
+                    dumper.named("Member", &selection.member.text, selection.member.span);
+                });
+            }
             Expression::NumericLiteral(literal) => {
                 let name = match literal.kind {
                     crate::literal::NumericLiteralKind::I64(_) => "Integer",
@@ -585,7 +652,7 @@ impl AstDumper {
                     dumper.heading("Source");
                     dumper.indented(|dumper| dumper.expression(&test.source));
                     dumper.line("Is", test.is_span);
-                    dumper.name_path("Target", &test.target);
+                    dumper.named_type("Target", &test.target);
                 });
             }
             Expression::PresenceTest(test) => {
@@ -627,7 +694,7 @@ impl AstDumper {
                 };
                 self.line(mode, cast.span);
                 self.indented(|dumper| {
-                    dumper.name_path("Target", &cast.target);
+                    dumper.named_type("Target", &cast.target);
                     dumper.heading("Source");
                     dumper.indented(|dumper| dumper.expression(&cast.source));
                 });
@@ -636,7 +703,7 @@ impl AstDumper {
                 self.line("Allocation", allocation.span);
                 self.indented(|dumper| {
                     dumper.line("New", allocation.new_span);
-                    dumper.name_path("Target", &allocation.target);
+                    dumper.named_type("Target", &allocation.target);
                     match &allocation.arguments {
                         CallArguments::Ordinary(arguments) => {
                             dumper.heading("Arguments");

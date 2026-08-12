@@ -6,16 +6,16 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G1 is next.**
+  Implements explicit closed generic class applications through deterministic
+  semantic specialization, inferred contextual requirements, nominal
+  interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
+  frozen syntax is parsed and preserved; template identities are the next
+  implementation boundary.
 
 ## Planned
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **Planned; G0 is next.**
-  Implements explicit closed generic class applications through deterministic
-  semantic specialization, inferred contextual requirements, nominal
-  interface bounds, and ordinary closed HIR/MIR/backend paths. It depends on
-  the frozen generic-class language and compiler contracts and introduces no
-  runtime ABI work.
+No implementation roadmap is currently planned behind the active roadmap.
 
 ## Design proposals
 
