@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX6 are complete and BX7 is next.
+Status: in progress; BX0-BX7 are complete and BX8 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -109,7 +109,7 @@ outcome; it does not reopen those decisions.
 - [x] BX4 — Execute exact lifecycle-bearing box targets
 - [x] BX5 — Add explicit immutable box-pointee access
 - [x] BX6 — Execute polymorphic object-box views and dispatch
-- [ ] BX7 — Integrate box owners with stored and callable positions
+- [x] BX7 — Integrate box owners with stored and callable positions
 - [ ] BX8 — Integrate box owners with arrays and default elements
 - [ ] BX9 — Harden and publish shared optional boxes
 
@@ -384,26 +384,26 @@ class and immutable wrapper, and covariance introduces no store path.
 **Purpose:** Carry the completed owner and access model across ordinary stored
 and internal callable boundaries before arrays add generated multiplicity.
 
-- [ ] Enable `shared P?` locals, fields, explicitly initialized statics,
+- [x] Enable `shared P?` locals, fields, explicitly initialized statics,
       temporaries, internal value parameters/results, methods, interfaces,
       overrides, and initializer overloads for every eligible exact or object
       box view.
-- [ ] Execute `(shared P?)?` and `shared? P?` through the existing
+- [x] Execute `(shared P?)?` and `shared? P?` through the existing
       optional-owner zero niche, including arbitrary additional outer optional
       layers, `none`, `some`, copy/adopt/release, and secured unwrap.
-- [ ] Integrate box-owner field initialization/replacement, synthesized class
+- [x] Integrate box-owner field initialization/replacement, synthesized class
       copy/assignment/destruction, inheritance, containment, and strong-cycle
       behavior with ordinary shared edges.
-- [ ] Integrate explicit static initialization, publication dependencies,
+- [x] Integrate explicit static initialization, publication dependencies,
       replacement, normal reverse shutdown, and box finalizer reachability;
       initializer-free plain box statics remain invalid because the owner is
       non-null.
-- [ ] Carry one-word owners through internal calls/results, recursion,
+- [x] Carry one-word owners through internal calls/results, recursion,
       virtual/interface signatures, register/stack pressure, caller/callee
       cleanup, and result securing without an aggregate hidden destination.
-- [ ] Preserve owner anchors for replaceable fields, statics, produced values,
+- [x] Preserve owner anchors for replaceable fields, statics, produced values,
       and outer optional-owner unwrap before inner optional access.
-- [ ] Continue rejecting external box signatures, aliases whose designated
+- [x] Continue rejecting external box signatures, aliases whose designated
       type is a box owner, module/top-level globals, and unsupported static
       defaults.
 

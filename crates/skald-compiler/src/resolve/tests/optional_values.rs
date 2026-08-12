@@ -237,7 +237,7 @@ fn nested_optionals_and_optional_arrays_cross_type_checking() {
 }
 
 #[test]
-fn shared_box_callable_positions_stop_at_the_bx7_gate() {
+fn shared_box_callable_positions_retain_canonical_identities_through_type_checking() {
     let output = resolve_text(
         "class Thing { init() {} }\n\
          fn box_value(value: shared Thing?, nested: shared Thing??) -> unit {}\n\
@@ -270,13 +270,8 @@ fn shared_box_callable_positions_stop_at_the_bx7_gate() {
     );
 
     let checked = crate::typeck::type_check(&output.program);
-    assert!(checked.has_errors());
-    assert!(checked.hir.is_none());
-    assert_eq!(checked.diagnostics.iter().count(), 4);
-    assert!(checked
-        .diagnostics
-        .iter()
-        .all(|diagnostic| { diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE }));
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    assert!(checked.hir.is_some());
 }
 
 #[test]

@@ -272,12 +272,13 @@ container aliases use ordinary indirect MIR places plus exact optional types.
 Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
 call. Frozen shared optional boxes now have canonical resolved, HIR, and MIR
-target identities, typed local construction/ownership, verified
+target identities, typed construction/ownership, verified
 unpublished-payload and owner lifetimes, explicit exact optional-pointee
 access, and explicit polymorphic object-box views. Exact and polymorphic local
 boxes execute on x86-64 through descriptor, shared-owner, recursive optional,
-guard, dispatch, and cast lowering; stored positions remain deliberately
-gated and optional-reference shapes remain syntax diagnostics.
+guard, dispatch, cast, non-array stored-value, static-lifecycle, and internal
+call lowering. Array element positions remain deliberately gated and
+optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
 behind the existing optional-verifier facade. A propagation owner computes
@@ -317,13 +318,14 @@ pre-publication observation and addresses exact optional operations only while
 its owner is verified live. A checked polymorphic unwrap begins one
 optional-box guard for each traversed layer and exposes
 `OptionalBoxPayload { owner, target }` as the complete object subject; matching
-ends precede anchor cleanup in reverse order. Local owner copy, secure replacement, temporary
-cleanup, and final release already reuse the ordinary shared-owner state machine. Existing
+ends precede anchor cleanup in reverse order. Owner copy, secure replacement,
+field/static storage, internal calls/results, temporary cleanup, and final
+release reuse the ordinary shared-owner state machine. Existing
 optional initialization instructions complete the canonical wrapper without a
 parallel box-payload instruction family. MIR verification ties each view,
 presence query, cast, and dispatch origin to a live compatible owner, balanced
 guards, a static box target, and exact dynamic descriptor metadata. The x86-64
-legality pass accepts both exact and polymorphic local box targets with
+legality pass accepts both exact and polymorphic box targets with
 verified addressable metadata.
 
 The initial x86-64 realization keeps one-word owners and the 16-byte shared

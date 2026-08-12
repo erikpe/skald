@@ -397,7 +397,9 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Allocation(allocation) => {
                 Type::Shared(crate::hir::HirSharedTarget::Class(allocation.class))
             }
-            ResolvedExpression::OptionalBoxAllocation(_) => Type::Unit,
+            ResolvedExpression::OptionalBoxAllocation(allocation) => {
+                Type::Shared(crate::hir::HirSharedTarget::OptionalBox(allocation.target))
+            }
             ResolvedExpression::Construct(construction) => Type::Class(construction.class),
             ResolvedExpression::ArrayConstruction(construction) => {
                 let ResolvedTypeKind::Array(array) = construction.array_type.kind else {

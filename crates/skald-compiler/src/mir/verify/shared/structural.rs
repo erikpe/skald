@@ -616,6 +616,9 @@ impl<'mir> Verifier<'mir> {
             && field.is_some_and(|field| {
                 self.is_static_initializer_destination(function, destination, field.ty)
             });
+        let static_replacement = !initialization
+            && destination.base.static_field().is_some()
+            && destination.projections.is_empty();
         let valid = matches!(
             (field, source),
             (Some(field), Some(source))
@@ -625,7 +628,8 @@ impl<'mir> Verifier<'mir> {
                     && source.kind == MirStorageKind::Temporary
                     && (is_direct_field
                         || (initialization && is_unpublished_array_element)
-                        || static_initialization)
+                        || static_initialization
+                        || static_replacement)
         );
         if !valid
             || (initialization
@@ -640,7 +644,7 @@ impl<'mir> Verifier<'mir> {
                 if initialization {
                     "shared owner initialization requires a mutable receiver field or array element and matching temporary owner"
                 } else {
-                    "shared field replacement requires a mutable shared field and matching temporary owner"
+                    "shared owner replacement requires a mutable field or static and matching temporary owner"
                 },
             );
         }

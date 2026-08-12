@@ -220,6 +220,14 @@ pub struct HirSharedAssignment {
     pub span: Span,
 }
 
+/// Replacement of one live shared static after its incoming owner is secured.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirSharedStaticAssignment {
+    pub destination: super::HirStaticPlace,
+    pub value: HirSharedTransfer,
+    pub span: Span,
+}
+
 /// Exact-class allocation and its already selected construction operation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirSharedAllocation {

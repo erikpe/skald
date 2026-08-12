@@ -180,6 +180,15 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
+            Type::Shared(target) => self
+                .check_shared_transfer(&assignment.value, target, "shared static assignment")
+                .map(|value| {
+                    HirStatement::SharedStaticAssignment(crate::hir::HirSharedStaticAssignment {
+                        destination: place,
+                        value,
+                        span: assignment.span,
+                    })
+                }),
             Type::Optional(_) => match self
                 .optional_kind(ty)
                 .expect("enabled optional static must have legacy metadata")

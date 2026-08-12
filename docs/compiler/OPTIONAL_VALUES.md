@@ -71,20 +71,23 @@ shared T    ordinary non-null shared owner
 `shared? T` is an exact source shorthand for `(shared T)?`; both intern to the
 same resolved identity and lower to the existing optional-owner operations.
 `shared T?` and `shared? T?` receive deterministic resolved, HIR, and MIR box
-identities. Direct local box owners, outer optional-owner layers,
-construction, compatible owner copy/replacement, and independent exact-wrapper
-copying lower through verified target-independent MIR. The x86-64 backend
-executes local exact boxes for primitive, class, inline-array, shared-owner,
-optional-array, and recursively nested targets. Explicit exact pointee
-presence, wrapper copies, read-only aliases, one-layer unwrap, and contained
-value consumers execute. Polymorphic class/base/interface/`Obj` owner views,
+identities. Box owners in ordinary non-array storage and internal calls, outer
+optional-owner layers, construction, compatible owner copy/replacement, and
+independent exact-wrapper copying lower through verified target-independent
+MIR. The x86-64 backend executes exact boxes for primitive, class,
+inline-array, shared-owner, optional-array, and recursively nested targets.
+Explicit exact pointee presence, wrapper copies, read-only aliases, one-layer
+unwrap, and contained value consumers execute. Polymorphic
+class/base/interface/`Obj` owner views,
 presence tests, guarded unwrap, dispatch, type tests, and owner casts also
-execute for local boxes. Stored/callable positions remain behind focused gates;
-invalid standalone payload families retain their ordinary diagnostics. Nested optionals
-are executable in owning positions, checked access, aliases, and internal
-callable boundaries. Alias binding mode may designate any supported inline
-optional container; it does not add a reference or optional-reference type
-identity.
+execute across locals, fields, explicitly initialized statics, temporaries,
+internal calls/results, methods, interfaces, overrides, and initializer
+overloads. Array elements and external signatures remain behind focused gates;
+invalid standalone payload families retain their ordinary diagnostics. Nested
+optionals are executable in owning positions, checked access, aliases, and
+internal callable boundaries. Alias binding mode may designate any supported
+inline optional container; it does not add a reference or optional-reference
+type identity.
 
 ## Compositional optional implementation
 
@@ -288,14 +291,15 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; polymorphic local native access implemented**. Local owner
+Status: **frozen design; non-array stored and callable profile implemented**. Owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
 owner lifetime verification. The x86-64 backend executes every eligible exact
 wrapper with a checked header-plus-target layout, deterministic exact
 descriptor, and distinct recursive finalizer. Explicit access through exact
-and polymorphic object-box owners is implemented; broader stored positions
-remain deliberately gated.
+and polymorphic object-box owners is implemented together with ordinary
+non-array storage, static lifecycle, and internal calls. Array elements and
+external signatures remain deliberately gated.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -387,6 +391,12 @@ outer niche. Allocation, tags, guards, metadata, strong counting, finalization,
 casts, dispatch, and failures remain compiler-generated; runtime ABI version 9
 and its public C symbols remain unchanged.
 
+Box fields reuse synthesized copy, assignment, destruction, inheritance,
+containment, and ordinary strong-edge behavior. Box statics reuse dependency
+planning, publication, replacement, reverse shutdown, and exact finalizer
+reachability. One-word owners pass and return through the ordinary internal
+shared ABI, including recursion and virtual/interface calls.
+
 ## Source-shaped IR
 
 The AST preserves every optional payload as a recursive type node, including
@@ -403,8 +413,8 @@ resolved expression IR preserves:
 Canonical semantic dumps use `T?` and `(shared T)?`, independent of source
 trivia. Syntax dumps retain whether the source used postfix notation or the
 `shared?` shorthand.
-Frozen box spellings remain visible to diagnostics but do not acquire an
-executable type identity until their roadmap's identity task completes.
+Frozen box spellings remain visible to diagnostics and lower through canonical
+resolved, HIR, and MIR box identities in every enabled position.
 
 ## Typed HIR
 
@@ -836,7 +846,7 @@ observable behavior:
 | Concern | Required focused evidence |
 |---|---|
 | Source syntax | Tokens and AST for general grouping, left-to-right `?`/`[]` suffixes, `(shared T)?`, `shared? T`, nested depth, `some(expression)`, malformed punctuation, recovery spans, and the syntax budget |
-| Canonical identity | Resolution, HIR, and MIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused stored-position and backend gates |
+| Canonical identity | Resolution, HIR, and MIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused box array-element and external-signature gates |
 | Type and lifecycle selection | Exact payload eligibility, one-layer injection, overload ranking, `none`/`some` expectations, recursive containment, copy/assignment/destruction capabilities, aliases, statics, and array-element plans |
 | HIR and MIR shape | Explicit outer-layer operations, recursive payload plans, publication order, one-layer unwrap, guards and anchors, arguments/results, optional arrays, selected-path cleanup, and deterministic dumps |
 | Verification | Mutations for missing or mismatched identities, absent payload use, wrong lifecycle capability, premature publication, duplicate/missing cleanup, bad transfers, unbalanced or wrong-layer guards, invalid anchors, malformed CFG joins, and leaked box targets |
@@ -847,9 +857,10 @@ observable behavior:
 | Robustness and determinism | Hostile nesting and punctuation, excessive depth, repeated independent compilation, source-to-assembly determinism, runtime observation determinism, documentation validation, MSRV, and complete repository gates |
 
 Parser, resolution, and type-check suites provide positive coverage for
-`shared T?`, `shared? T?`, local box allocation, construction plans, owner
-copy/adoption/replacement, and exact immutable pointee access. Compile-failure
-coverage verifies the remaining stored-position gates.
+`shared T?`, `shared? T?`, box allocation, construction plans, owner
+copy/adoption/replacement, non-array storage/calls, and exact or polymorphic
+immutable pointee access. Compile-failure coverage verifies the remaining
+array-element and external-signature gates.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.

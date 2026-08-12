@@ -185,7 +185,9 @@ impl BodyLowerer<'_> {
                 self.lower_aggregate_optional_initialize_at(destination, value);
             }
             HirStoredValueInitialization::OptionalBoxPointeeCopy { .. } => {
-                unreachable!("optional-box static storage is gated until BX7")
+                unreachable!(
+                    "optional-box pointee copies are payload plans, not static value plans"
+                )
             }
         }
     }

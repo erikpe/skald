@@ -869,6 +869,13 @@ impl<'types> HirDumper<'types> {
                     dumper.shared_transfer(&statement.value);
                 });
             }
+            HirStatement::SharedStaticAssignment(statement) => {
+                self.line("SharedStaticAssignment", statement.span);
+                self.indented(|dumper| {
+                    dumper.raw_line(&format!("StaticField {}", statement.destination.field));
+                    dumper.shared_transfer(&statement.value);
+                });
+            }
             HirStatement::SharedAssignment(assignment) => {
                 self.line(
                     &format!("SharedAssignment {}", assignment.destination),

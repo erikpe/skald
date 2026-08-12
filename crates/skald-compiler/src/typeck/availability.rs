@@ -10,9 +10,9 @@ use crate::{
 
 pub const SHARED_OPTIONAL_BOX_UNAVAILABLE: &str = "TYP044";
 
-/// BX1 admits local box owners and their outer optional layers. Stored and
-/// callable positions remain explicit gates until their roadmap owners add
-/// lifetime and ABI support.
+/// Keeps shared optional boxes out of the deliberately unsupported external
+/// ABI and array-element boundary. Ordinary internal stored and callable
+/// positions use the same ownership machinery as every other shared target.
 pub(super) fn validate(program: &ResolvedProgram, diagnostics: &mut Diagnostics) -> bool {
     let mut valid = true;
 
@@ -21,89 +21,19 @@ pub(super) fn validate(program: &ResolvedProgram, diagnostics: &mut Diagnostics)
             declaration.linkage,
             ResolvedFunctionLinkage::External { .. }
         );
-        for parameter in &declaration.parameters {
-            valid &= reject_if_box(
-                program,
-                &parameter.type_syntax,
-                if external {
-                    "external signatures cannot contain shared optional boxes"
-                } else {
-                    "shared optional box parameters are enabled in roadmap task BX7"
-                },
-                diagnostics,
-            );
-        }
-        valid &= reject_if_box(
-            program,
-            &declaration.return_type,
-            if external {
-                "external signatures cannot contain shared optional boxes"
-            } else {
-                "shared optional box results are enabled in roadmap task BX7"
-            },
-            diagnostics,
-        );
-    }
-
-    for interface in program.interfaces.iter() {
-        for requirement in &interface.requirements {
-            for parameter in &requirement.parameters {
+        if external {
+            for parameter in &declaration.parameters {
                 valid &= reject_if_box(
                     program,
                     &parameter.type_syntax,
-                    "shared optional box parameters are enabled in roadmap task BX7",
+                    "external signatures cannot contain shared optional boxes",
                     diagnostics,
                 );
             }
             valid &= reject_if_box(
                 program,
-                &requirement.return_type,
-                "shared optional box results are enabled in roadmap task BX7",
-                diagnostics,
-            );
-        }
-    }
-
-    for class in program.classes.iter() {
-        for field in &class.fields {
-            valid &= reject_if_box(
-                program,
-                &field.type_syntax,
-                "shared optional box fields are enabled in roadmap task BX7",
-                diagnostics,
-            );
-        }
-        for field in &class.static_fields {
-            valid &= reject_if_box(
-                program,
-                &field.type_syntax,
-                "shared optional box statics are enabled in roadmap task BX7",
-                diagnostics,
-            );
-        }
-        for initializer in &class.initializers {
-            for parameter in &initializer.parameters {
-                valid &= reject_if_box(
-                    program,
-                    &parameter.type_syntax,
-                    "shared optional box parameters are enabled in roadmap task BX7",
-                    diagnostics,
-                );
-            }
-        }
-        for method in &class.methods {
-            for parameter in &method.parameters {
-                valid &= reject_if_box(
-                    program,
-                    &parameter.type_syntax,
-                    "shared optional box parameters are enabled in roadmap task BX7",
-                    diagnostics,
-                );
-            }
-            valid &= reject_if_box(
-                program,
-                &method.return_type,
-                "shared optional box results are enabled in roadmap task BX7",
+                &declaration.return_type,
+                "external signatures cannot contain shared optional boxes",
                 diagnostics,
             );
         }
@@ -158,7 +88,7 @@ fn validate_locals(
                 )
                 .with_primary_label(
                     local.type_syntax.span,
-                    "BX1 supports direct local box owners and outer optional-owner layers",
+                    "shared optional boxes are not array element types yet",
                 ),
             );
             valid = false;
@@ -179,7 +109,7 @@ fn reject_if_box(
     diagnostics.push(
         Diagnostic::error(SHARED_OPTIONAL_BOX_UNAVAILABLE, message).with_primary_label(
             ty.span,
-            "this position remains deliberately gated after BX1",
+            "this position remains outside the supported shared-box boundary",
         ),
     );
     false

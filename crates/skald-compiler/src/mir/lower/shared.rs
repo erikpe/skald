@@ -4,7 +4,8 @@ use super::*;
 use crate::hir::{
     HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment, HirSharedCast,
     HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,
-    HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer,
+    HirSharedProducer, HirSharedSource, HirSharedStaticAssignment, HirSharedTarget,
+    HirSharedTransfer,
 };
 
 impl BodyLowerer<'_> {
@@ -69,6 +70,21 @@ impl BodyLowerer<'_> {
                 })
             }
         });
+        self.full_expression.mark_shared_effect();
+    }
+
+    pub(super) fn lower_shared_static_assignment(
+        &mut self,
+        assignment: &HirSharedStaticAssignment,
+    ) {
+        let secured = self.new_shared_temporary(assignment.value.target, assignment.span);
+        self.lower_shared_transfer(secured, &assignment.value);
+        self.consume_shared_temporary(secured);
+        self.emit(MirInstruction::SharedFieldReplace(MirSharedFieldReplace {
+            destination: MirPlace::static_field(assignment.destination.field),
+            source: secured,
+            span: assignment.span,
+        }));
         self.full_expression.mark_shared_effect();
     }
 

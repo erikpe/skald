@@ -96,7 +96,7 @@ pub use shared::{
     HirOptionalBoxAllocation, HirOptionalBoxEvaluationOrder, HirOwnerTransfer, HirSharedAllocation,
     HirSharedAllocationMode, HirSharedAssignment, HirSharedCast, HirSharedCastKind,
     HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer,
-    HirSharedSource, HirSharedTarget, HirSharedTransfer,
+    HirSharedSource, HirSharedStaticAssignment, HirSharedTarget, HirSharedTransfer,
 };
 pub use shift::{
     HirCheckedShift, HirRightShiftFlavor, HirShiftDirection, HirShiftFailure, HirShiftOperation,

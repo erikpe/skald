@@ -94,8 +94,8 @@ the canonical `(shared T)?` form:
 | `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
 | `T[]?` | Tagged optional containing zero or one inline array | Supported owning, internal callable, aggregate, array-element, and checked-alias positions execute |
-| `shared T?` | Non-null shared box containing `T?` | Local ownership plus exact and polymorphic immutable pointee access execute |
-| `shared? T?` | Optional owner of a non-null shared box containing `T?` | Local ownership and polymorphic access after owner unwrap execute |
+| `shared T?` | Non-null shared box containing `T?` | Ownership, storage, internal calls, statics, and exact or polymorphic immutable pointee access execute outside arrays |
+| `shared? T?` | Optional owner of a non-null shared box containing `T?` | The same positions compose with the optional-owner zero niche and arbitrary outer optional layers |
 
 In the implemented grammar, `shared?` is the contextual word `shared` followed
 by the `?` punctuation token. Ordinary trivia may separate those tokens.
@@ -112,7 +112,7 @@ The current compiler rejects:
 - `unit?`;
 - standalone optional interface or `Obj` views;
 - optional function types;
-- shared optional-box owners in broader stored or callable positions;
+- shared optional-box owners as array elements;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
 
@@ -176,8 +176,8 @@ shared? T?  = (shared T?)?
 ```
 
 The last form contains an inner `Shared<Optional<T>>` box. Exact and
-polymorphic local box ownership and explicit immutable pointee access execute
-natively.
+polymorphic box ownership, ordinary non-array stored and internal callable
+positions, and explicit immutable pointee access execute natively.
 
 The exact spelling and identity matrix is:
 
@@ -189,8 +189,8 @@ The exact spelling and identity matrix is:
 | `(shared T)?` | `Optional<Shared<T>>` | Optional owner of an ordinary non-null shared allocation | Implemented canonical form |
 | `shared? T` | `Optional<Shared<T>>` | Exact shorthand for `(shared T)?` | Implemented alias |
 | `(shared T)??` | `Optional<Optional<Shared<T>>>` | Nested optional around an optional shared owner | Owning lifecycle, checked access, aliases, and internal calls execute |
-| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Exact and polymorphic local owners and explicit immutable pointee consumers execute; broader positions remain staged |
-| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | Exact local box ownership composes with the implemented optional-owner form |
+| `shared T?` | `Shared<Optional<T>>` | Non-null owner of a shared box containing `T?` | Exact and polymorphic owners execute in every ordinary stored/internal callable position except arrays |
+| `shared? T?` | `Optional<Shared<Optional<T>>>` | Optional owner of that shared box | The same positions compose with the implemented optional-owner form and outer nesting |
 
 Canonical documentation and semantic dumps use `T[]?` for an optional array
 and `(shared T)?` for an optional shared owner. Source-shaped syntax inspection
@@ -301,7 +301,7 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; polymorphic local native access implemented**. The compiler parses
+Status: **frozen design; non-array stored and callable profile implemented**. The compiler parses
 box forms, interns exact optional and static object-view targets, selects local
 construction and owner-transfer plans, and verifies allocation, publication,
 adoption, replacement, and cleanup in target-independent MIR. On x86-64,
@@ -309,9 +309,12 @@ every eligible exact `P?` wrapper now allocates, initializes, publishes,
 shares, replaces, copies into independent boxes when capable, and deallocates
 through deterministic exact box descriptors and recursive finalizers. Exact
 `*box` presence, copying, read-only aliasing, one-layer unwrap, and contained
-value use execute. Local class/base/interface/`Obj` views preserve exact
+value use execute. Class/base/interface/`Obj` views preserve exact
 descriptor identity for presence, guarded unwrap, fields, mutation, dynamic
-dispatch, type tests, and owner casts. Broader storage remains staged.
+dispatch, type tests, and owner casts. Owners also execute in fields,
+explicitly initialized statics, temporaries, internal parameters/results,
+methods, interfaces, overrides, and initializer overloads. Array elements and
+external signatures remain staged.
 Later roadmap tasks must not reopen the source semantics in this section.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
@@ -378,8 +381,8 @@ if (*box is some) {
 
 The published wrapper is shallowly immutable. Its absence/presence and
 complete contained value never change, so whole-pointee assignment and a
-`mut ref P?` alias are invalid even through an exact box view. An owner local,
-field, static, or array slot may instead be assigned a newly allocated box;
+`mut ref P?` alias are invalid even through an exact box view. An enabled owner
+local, field, or static may instead be assigned a newly allocated box;
 other owners keep observing the old allocation. A present contained object or
 other mutable aggregate retains its ordinary internal mutation operations.
 Consequently an absent box remains absent for its allocation lifetime.
@@ -403,11 +406,13 @@ the wrapper, or change presence. Primitive, array, nested value, shared-owner,
 and other non-object box targets remain invariant.
 
 Box owners are eligible in locals, fields, internal value parameters/results,
-explicitly initialized statics, temporaries, and array elements. An optional
-box owner uses the existing absent zero default. Requested nonempty default
-construction of `(shared P?)[]` creates one distinct absent box per element;
-slots never share a synthesized default box. External shared-box signatures
-remain invalid.
+methods, interfaces, overrides, initializer overloads, explicitly initialized
+statics, and temporaries. An optional box owner uses the existing absent zero
+default, including in statics. Plain non-null box statics require an explicit
+initializer. Box array elements and requested default construction remain the
+next staged part of this frozen design; when enabled, `(shared P?)[]` must
+create one distinct absent box per requested element rather than sharing a
+synthesized default. External shared-box signatures remain invalid.
 
 Checked payload access combines an owner or hidden owner anchor with the
 existing optional guard. A read-only `ref P?` may designate an exact box

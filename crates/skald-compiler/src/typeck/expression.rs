@@ -190,7 +190,7 @@ impl CallableChecker<'_, '_> {
                     )
                     .with_primary_label(
                         allocation.new_span,
-                        "store this produced owner in a supported local box owner",
+                        "store, pass, return, or otherwise consume this produced box owner",
                     ),
                 );
                 None

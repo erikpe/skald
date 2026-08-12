@@ -522,6 +522,15 @@ impl CallableChecker<'_, '_> {
                         _ => None,
                     })
             }
+            ResolvedExpression::StaticFieldAccess(access) => self
+                .program
+                .static_field(access.field)
+                .and_then(|field| match field.type_syntax.kind {
+                    crate::resolve::ResolvedTypeKind::Shared(target) => {
+                        Some(lower_shared_target(target))
+                    }
+                    _ => None,
+                }),
             ResolvedExpression::Allocation(allocation) => {
                 Some(HirSharedTarget::Class(allocation.class))
             }
@@ -613,6 +622,9 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::FieldAccess(access) => {
                 self.program.field(access.field)?.type_syntax.kind
+            }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                self.program.static_field(access.field)?.type_syntax.kind
             }
             ResolvedExpression::DirectCall(call) => {
                 self.program

@@ -341,6 +341,9 @@ impl CallableResolver<'_, '_> {
             ResolvedExpression::Allocation(allocation) => Some(ResolvedTypeKind::Shared(
                 ResolvedSharedTarget::Class(allocation.class),
             )),
+            ResolvedExpression::OptionalBoxAllocation(allocation) => Some(
+                ResolvedTypeKind::Shared(ResolvedSharedTarget::OptionalBox(allocation.target)),
+            ),
             ResolvedExpression::Construct(construction) => {
                 Some(ResolvedTypeKind::Class(construction.class))
             }

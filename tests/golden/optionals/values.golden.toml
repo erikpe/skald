@@ -158,10 +158,10 @@ mode = "compile-fail"
 source = "optional_box_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "shared optional box parameter gate", match = "contains", inline = """error[TYP044]: shared optional box parameters are enabled in roadmap task BX7
- --> tests/golden/optionals/optional_box_exclusions.ska:6:23""" },
-  { name = "optional shared box parameter gate", match = "contains", inline = """error[TYP044]: shared optional box parameters are enabled in roadmap task BX7
- --> tests/golden/optionals/optional_box_exclusions.ska:7:32""" },
+  { name = "external shared optional box gate", match = "contains", inline = """error[TYP044]: external signatures cannot contain shared optional boxes
+ --> tests/golden/optionals/optional_box_exclusions.ska:5:27""" },
+  { name = "shared optional box array gate", match = "contains", inline = """error[TYP044]: this containing type cannot store shared optional boxes yet
+ --> tests/golden/optionals/optional_box_exclusions.ska:8:17""" },
 ]
 
 [[test]]

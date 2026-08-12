@@ -190,20 +190,78 @@ fn boxes_reject_invalid_exact_sources_and_invariant_conversions() {
 }
 
 #[test]
-fn stored_box_positions_remain_focused_later_phase_gates() {
+fn stored_and_callable_box_positions_type_check_through_ordinary_owner_plans() {
+    let output = check_text(
+        "interface Forwarder { fn forward(value: shared Base?) -> shared Base?; }\n\
+         class Base { init() {} }\n\
+         class Derived extends Base { init() { super(); } }\n\
+         class Holder implements Forwarder {\n\
+           value: shared Base?;\n\
+           maybe: shared? Base?;\n\
+           static global: shared Base? = new Derived?(Derived());\n\
+           init(value: shared Base?, maybe: shared? Base?) {\n\
+             self.value = value; self.maybe = maybe;\n\
+           }\n\
+           fn forward(value: shared Base?) -> shared Base? { return value; }\n\
+           mut fn replace(value: shared Base?) -> shared Base? {\n\
+             self.value = value; return self.value;\n\
+           }\n\
+         }\n\
+         fn forward(value: shared Base?) -> shared Base? { return value; }\n\
+         fn main() -> i64 {\n\
+           var exact: shared Derived? = new Derived?(Derived());\n\
+           var holder: Holder = Holder(exact, some(exact));\n\
+           var result: shared Base? = forward(holder.forward(exact));\n\
+           if ((*result) is some) { return 0; }\n\
+           return 1;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("stored box positions must type check"));
+    assert!(dump.contains("shared optional-box"), "{dump}");
+    assert!(dump.contains("SharedField"), "{dump}");
+}
+
+#[test]
+fn external_and_array_box_positions_remain_focused_gates() {
     for source in [
-        "fn consume(value: shared i64?) -> unit {} fn main() -> i64 { return 0; }",
         "extern fn consume(value: shared i64?) -> unit; fn main() -> i64 { return 0; }",
-        "class Holder { value: shared i64?; init(value: shared i64?) { self.value = value; } } fn main() -> i64 { return 0; }",
         "fn main() -> i64 { var boxes: (shared i64?)[] = (shared i64?)[](); return 0; }",
     ] {
         let output = check_text(source);
-        assert!(output.hir.is_none(), "source unexpectedly produced HIR: {source}");
+        assert!(
+            output.hir.is_none(),
+            "source unexpectedly produced HIR: {source}"
+        );
         assert!(output
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE), "source: {source}\n{:?}", output.diagnostics);
     }
+}
+
+#[test]
+fn plain_box_statics_and_box_designated_aliases_remain_invalid() {
+    let uninitialized_static = check_text(
+        "class State { static value: shared i64?; init() {} }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(uninitialized_static.hir.is_none());
+    assert!(uninitialized_static
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_STATIC_FIELD_TYPE));
+
+    let alias = check_text(
+        "fn inspect(ref value: shared i64?) -> i64 { return 0; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(alias.hir.is_none());
+    assert!(alias
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_ALIAS_PARAMETER));
 }
 
 #[test]

@@ -262,6 +262,266 @@ fn polymorphic_optional_box_dispatch_survives_recursion_and_stack_pressure() {
 }
 
 #[test]
+fn box_owners_cross_fields_results_and_optional_owner_boundaries_natively() {
+    let source = concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Holder {\n",
+        "  current: shared Value?;\n",
+        "  maybe: shared? Value?;\n",
+        "  init(current: shared Value?, maybe: shared? Value?) {\n",
+        "    self.current = current; self.maybe = maybe;\n",
+        "  }\n",
+        "  mut fn replace(next: shared Value?) -> shared Value? {\n",
+        "    self.current = next; return self.current;\n",
+        "  }\n",
+        "}\n",
+        "fn make(value: i64) -> shared Value? { return new Value?(Value(value)); }\n",
+        "fn forward(value: shared Value?) -> shared Value? { return value; }\n",
+        "fn forward_optional(value: shared? Value?) -> shared? Value? { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var first: shared Value? = make(10);\n",
+        "  var holder: Holder = Holder(first, some(make(20)));\n",
+        "  var copied: Holder = holder;\n",
+        "  var old: shared Value? = copied.current;\n",
+        "  var replacement: shared Value? = copied.replace(make(30));\n",
+        "  var maybe: shared? Value? = forward_optional(copied.maybe);\n",
+        "  var recovered: shared Value? = maybe!;\n",
+        "  return (*forward(old))!.read() + (*replacement)!.read() + (*recovered)!.read();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(60), "{output}");
+}
+
+#[test]
+fn polymorphic_box_signatures_dispatch_through_virtual_and_interface_calls() {
+    let source = concat!(
+        "class Base {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "}\n",
+        "class Derived extends Base { init(value: i64) { super(value); } }\n",
+        "interface Forwarder { fn forward(value: shared Base?) -> shared Base?; }\n",
+        "class Parent {\n",
+        "  init() {}\n",
+        "  virtual fn forward(value: shared Base?) -> shared Base? { return value; }\n",
+        "}\n",
+        "class Child extends Parent implements Forwarder {\n",
+        "  init() { super(); }\n",
+        "  override fn forward(value: shared Base?) -> shared Base? { return value; }\n",
+        "}\n",
+        "fn through_interface(ref forwarder: Forwarder, value: shared Base?) -> shared Base? {\n",
+        "  return forwarder.forward(value);\n",
+        "}\n",
+        "fn through_virtual(ref parent: Parent, value: shared Base?) -> shared Base? {\n",
+        "  return parent.forward(value);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var child: Child = Child();\n",
+        "  var exact: shared Derived? = new Derived?(Derived(21));\n",
+        "  var first: shared Base? = through_interface(child, exact);\n",
+        "  var second: shared Base? = through_virtual(child, first);\n",
+        "  return (*second)!.value * 2;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn box_owner_arguments_and_results_survive_recursion_and_stack_pressure() {
+    let source = concat!(
+        "class Value { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn recurse(depth: i64, value: shared Value?) -> shared Value? {\n",
+        "  if (depth == 0) { return value; }\n",
+        "  return recurse(depth - 1, value);\n",
+        "}\n",
+        "fn pressured(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64, h: i64,\n",
+        "             value: shared Value?, maybe: shared? Value?) -> shared Value? {\n",
+        "  if (a + b + c + d + e + f + g + h == 8 && maybe is some) {\n",
+        "    return recurse(3, maybe!);\n",
+        "  }\n",
+        "  return value;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var exact: shared Value? = new Value?(Value(42));\n",
+        "  var result: shared Value? = pressured(1, 1, 1, 1, 1, 1, 1, 1, exact, some(exact));\n",
+        "  return (*result)!.value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn polymorphic_box_statics_preserve_dependencies_and_dynamic_dispatch() {
+    let source = concat!(
+        "interface Marker { fn mark() -> i64; }\n",
+        "class Base {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "  virtual fn mark() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Derived extends Base implements Marker {\n",
+        "  init(value: i64) { super(value); }\n",
+        "  override fn mark() -> i64 { return self.value + 1; }\n",
+        "}\n",
+        "class State {\n",
+        "  private static exact: shared Derived? = new Derived?(Derived(20));\n",
+        "  static base: shared Base? = State.exact;\n",
+        "  static marker: shared Marker? = State.exact;\n",
+        "  static absent: shared? Marker?;\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  if (State.absent is some) { return 1; }\n",
+        "  return (*State.base)!.mark() + (*State.marker)!.mark();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn box_statics_follow_dependency_replacement_and_shutdown_ownership() {
+    let source = concat!(
+        "class Value {\n",
+        "  value: i64; init(value: i64) { self.value = value; }\n",
+        "}\n",
+        "class State {\n",
+        "  private static exact: shared Value? = new Value?(Value(10));\n",
+        "  static copy: shared Value? = State.exact;\n",
+        "  static maybe: shared? Value? = some(State.copy);\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var old: shared Value? = State.copy;\n",
+        "  State.copy = new Value?(Value(20));\n",
+        "  var recovered: shared Value? = State.maybe!;\n",
+        "  return (*old)!.value + (*State.copy)!.value + (*recovered)!.value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(40), "{output}");
+}
+
+#[test]
+fn box_fields_participate_in_ordinary_strong_cycles() {
+    let source = concat!(
+        "class Node {\n",
+        "  edge: shared Node?;\n",
+        "  init(edge: shared Node?) { self.edge = edge; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var absent: shared Node? = new Node?();\n",
+        "  var first: shared Node? = new Node?(Node(absent));\n",
+        "  var second: shared Node? = new Node?(Node(first));\n",
+        "  (*first)!.edge = second;\n",
+        "  if ((*((*first)!.edge)) is some) { return 42; }\n",
+        "  return 1;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn inherited_box_fields_use_synthesized_copy_assignment_and_destruction() {
+    let source = concat!(
+        "class Value { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class ParentHolder {\n",
+        "  inherited: shared Value?;\n",
+        "  init(inherited: shared Value?) { self.inherited = inherited; }\n",
+        "}\n",
+        "class ChildHolder extends ParentHolder {\n",
+        "  own: shared? Value?;\n",
+        "  init(inherited: shared Value?, own: shared? Value?) {\n",
+        "    super(inherited); self.own = own;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var original: ChildHolder = ChildHolder(new Value?(Value(20)), some(new Value?(Value(22))));\n",
+        "  var copy: ChildHolder = original;\n",
+        "  original = ChildHolder(new Value?(Value(1)), none);\n",
+        "  return (*copy.inherited)!.value + (*(copy.own!))!.value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn deeply_optional_box_owners_cross_fields_calls_and_results() {
+    let source = concat!(
+        "class Value { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Holder {\n",
+        "  value: (shared Value?)???;\n",
+        "  init(value: (shared Value?)???) { self.value = value; }\n",
+        "}\n",
+        "fn forward(value: (shared Value?)???) -> (shared Value?)??? { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var absent0: (shared Value?)??? = none;\n",
+        "  var absent1: (shared Value?)??? = some(none);\n",
+        "  var absent2: (shared Value?)??? = some(some(none));\n",
+        "  var present: (shared Value?)??? = some(some(some(new Value?(Value(42)))));\n",
+        "  if (absent0 is some || absent1! is some || absent2!! is some) { return 1; }\n",
+        "  var holder: Holder = Holder(forward(present));\n",
+        "  var box: shared Value? = holder.value!!!;\n",
+        "  return (*box)!.value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn box_access_anchors_survive_field_static_and_optional_owner_replacement() {
+    let source = concat!(
+        "class Value { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Holder {\n",
+        "  current: shared Value?;\n",
+        "  maybe: shared? Value?;\n",
+        "  init(current: shared Value?, maybe: shared? Value?) {\n",
+        "    self.current = current; self.maybe = maybe;\n",
+        "  }\n",
+        "  mut fn replace_current(value: i64) -> i64 {\n",
+        "    self.current = new Value?(Value(value)); return 0;\n",
+        "  }\n",
+        "  mut fn replace_maybe(value: i64) -> i64 {\n",
+        "    self.maybe = new Value?(Value(value)); return 0;\n",
+        "  }\n",
+        "}\n",
+        "class State {\n",
+        "  static current: shared Value? = new Value?(Value(30));\n",
+        "  init() {}\n",
+        "}\n",
+        "fn consume(ref value: Value, later: i64) -> i64 { return value.value + later; }\n",
+        "fn replace_static() -> i64 { State.current = new Value?(Value(31)); return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  var holder: Holder = Holder(new Value?(Value(10)), new Value?(Value(20)));\n",
+        "  var field: i64 = consume((*holder.current)!, holder.replace_current(11));\n",
+        "  var outer: i64 = consume((*(holder.maybe!))!, holder.replace_maybe(21));\n",
+        "  var global: i64 = consume((*State.current)!, replace_static());\n",
+        "  var produced: i64 = consume((*(new Value?(Value(40))))!, 0);\n",
+        "  return field + outer + global + produced;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(100), "{output}");
+}
+
+#[test]
 fn polymorphic_box_copy_to_exact_optional_slices_deliberately() {
     let source = concat!(
         "class Base {\n",

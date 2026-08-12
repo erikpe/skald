@@ -131,6 +131,14 @@ impl CallableResolver<'_, '_> {
                     .type_syntax
                     .kind
             }
+            ResolvedExpression::StaticFieldAccess(access) => {
+                self.environment
+                    .classes
+                    .get(access.field.class())?
+                    .static_field(access.field)?
+                    .type_syntax
+                    .kind
+            }
             ResolvedExpression::Allocation(allocation) => {
                 return Some(ResolvedSharedTarget::Class(allocation.class))
             }
@@ -141,6 +149,14 @@ impl CallableResolver<'_, '_> {
                 self.environment
                     .functions
                     .get(call.function)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::StaticCall(call) => {
+                self.environment
+                    .classes
+                    .get(call.method.class())?
+                    .method(call.method)?
                     .return_type
                     .kind
             }

@@ -71,6 +71,10 @@ impl BodyLowerer<'_> {
                 self.lower_shared_field_write(write);
                 self.finish_full_expression(write.span);
             }
+            HirStatement::SharedStaticAssignment(assignment) => {
+                self.lower_shared_static_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
             HirStatement::OptionalAssignment(assignment) => {
                 self.lower_optional_assignment(assignment);
                 self.finish_full_expression(assignment.span);

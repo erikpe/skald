@@ -52,8 +52,7 @@ verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
 [optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#compositional-test-matrix).
 Focused compile failures remain for excluded optional payload categories and
-the shared optional-box access and stored-position boundaries. Valid local box
-programs instead reach a deliberate backend capability error.
+the shared optional-box array-element and external-signature boundaries.
 Shared-verifier tests exercise its private propagation, transition,
 use-validation, and state owners through the unchanged MIR verification
 facade. Focused structural refactors should run the complete `mir::tests::shared`
@@ -712,13 +711,12 @@ not portable language observations. Optional full-phase determinism and the
 MIR mutation corpus cover dumps, verification, and backend rejection, while
 the extended robustness suite mutates optional punctuation deterministically.
 
-### Staged shared optional box coverage
+### Shared optional box coverage
 
-Positive syntax, resolution, type-check/HIR, and MIR coverage now exercises
-local owners, construction, exact metadata, unpublished initialization,
-publication/adoption, secure replacement, cleanup, malformed protocol states,
-and the deliberate backend gate. The active roadmap retains negative gates
-for not-yet-enabled access, stored positions, and native realization.
+Positive syntax, resolution, type-check/HIR, MIR, backend, and native coverage
+exercises construction, exact metadata, unpublished initialization,
+publication/adoption, secure replacement, non-array storage, internal calls,
+cleanup, malformed protocol states, and the remaining array/external gates.
 Complete implementation evidence includes:
 
 - source type grouping, arbitrary outer optional depth, `shared? P?`
@@ -742,9 +740,10 @@ Complete implementation evidence includes:
   interface dispatch, exact dynamic class retention while absent or present,
   and deliberate slicing only when a complete object wrapper is copied to an
   eligible exact inline optional destination;
-- locals, fields, internal arguments/results, statics, temporaries, arrays,
-  explicit element lists, outer optional box owners, and one distinct absent
-  allocation per requested default `(shared P?)[]` element;
+- locals, inherited fields, internal arguments/results, methods, interfaces,
+  overrides, initializer overloads, explicitly initialized statics,
+  temporaries, arbitrary outer optional box-owner layers, and synthesized
+  lifecycle; box array elements and their distinct-default rule remain staged;
 - malformed MIR for target confusion, allocation origin, initialization and
   publication order, owner loss, pre-publication access, metadata/finalizer
   mismatch, guard/anchor imbalance, mutable access, and duplicate cleanup;

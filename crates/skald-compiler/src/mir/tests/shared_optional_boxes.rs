@@ -1,7 +1,11 @@
 use super::*;
 use crate::{
-    backend::Target, identity::OptionalBoxTypeId, passes::run_mir_pipeline,
-    test_support::emit_assembly_without_runtime_trace as emit_assembly,
+    backend::Target,
+    identity::OptionalBoxTypeId,
+    passes::run_mir_pipeline,
+    test_support::{
+        emit_assembly_without_runtime_trace as emit_assembly, lower_source_to_final_mir,
+    },
 };
 
 fn main_instructions(program: &MirProgram) -> &[MirInstruction] {
@@ -66,6 +70,26 @@ fn primitive_box_observer_program() -> MirProgram {
     ))
 }
 
+fn stored_and_callable_box_program() -> MirProgram {
+    lower_source_to_final_mir(concat!(
+        "class Holder {\n",
+        "  value: shared i64?;\n",
+        "  init(value: shared i64?) { self.value = value; }\n",
+        "  mut fn replace(value: shared i64?) -> unit { self.value = value; }\n",
+        "}\n",
+        "class State { static value: shared i64? = new i64?(1); init() {} }\n",
+        "fn forward(value: shared i64?) -> shared i64? { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var other: shared u64? = new u64?(2u);\n",
+        "  var holder: Holder = Holder(new i64?(3));\n",
+        "  holder.value = new i64?(4);\n",
+        "  State.value = new i64?(5);\n",
+        "  var result: shared i64? = forward(new i64?(6));\n",
+        "  return (*result)!;\n",
+        "}\n",
+    ))
+}
+
 #[test]
 fn lowers_and_verifies_exact_optional_box_observers() {
     let program = lower_text(concat!(
@@ -101,6 +125,59 @@ fn lowers_and_verifies_exact_optional_box_observers() {
     assert!(dump.contains("shared-anchor"), "{dump}");
     assert!(dump.contains("begin-optional-box-view"), "{dump}");
     run_mir_pipeline(program).expect("boxed optional observers must survive MIR passes");
+}
+
+#[test]
+fn rejects_malformed_box_field_static_and_call_owner_transfers() {
+    let wrong_target = MirType::Shared(MirSharedTarget::OptionalBox(OptionalBoxTypeId::new(1)));
+
+    for static_destination in [false, true] {
+        let mut program = stored_and_callable_box_program();
+        let entry = program.entry_function;
+        let function = program.definitions.get_mut_for_test(entry).unwrap();
+        let source = function
+            .body
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .find_map(|instruction| match instruction {
+                MirInstruction::SharedFieldReplace(replace)
+                    if replace.destination.base.static_field().is_some() == static_destination =>
+                {
+                    Some(replace.source)
+                }
+                _ => None,
+            })
+            .expect("source must contain both field and static box replacement");
+        function.storage[source.index()].ty = wrong_target;
+
+        assert!(has_error(
+            &program,
+            "shared owner replacement requires a mutable field or static and matching temporary owner"
+        ));
+    }
+
+    let mut call = stored_and_callable_box_program();
+    let entry = call.entry_function;
+    let function = call.definitions.get_mut_for_test(entry).unwrap();
+    let owner = function
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) if call.arguments.len() == 1 => match call.arguments[0] {
+                MirArgument::SharedOwner(owner) => Some(owner),
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("forward call must transfer a box owner");
+    function.storage[owner.index()].ty = wrong_target;
+    assert!(has_error(
+        &call,
+        "must transfer matching shared caller argument storage"
+    ));
 }
 
 #[test]
