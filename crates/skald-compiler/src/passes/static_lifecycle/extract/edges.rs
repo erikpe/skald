@@ -117,6 +117,13 @@ impl Extractor<'_> {
                 phase,
                 span,
             ),
+            MirArrayDefaultElement::SharedOptionalBoxAbsent(target) => self.add_shared_finalizers(
+                source,
+                crate::mir::MirSharedTarget::OptionalBox(target),
+                StaticEffectEdgeKind::SharedFinalizer,
+                phase,
+                span,
+            ),
             MirArrayDefaultElement::Primitive | MirArrayDefaultElement::OptionalAbsent => {}
         }
     }

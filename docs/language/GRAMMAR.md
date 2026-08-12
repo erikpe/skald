@@ -255,10 +255,8 @@ inline arrays execute in every supported owning, aggregate, internal callable,
 array-element, and checked-alias position. Semantic analysis still rejects
 `unit?` and standalone owning optional interface or `Obj` values. Shared
 optional box types and allocations receive canonical resolved identities.
-Construction, non-array stored and internal callable owners, and explicit
-exact or polymorphic pointee access execute. Box array elements retain a staged
-availability gate. Their
-source and compiler semantics are frozen in
+Construction, stored and internal callable owners, arrays, and explicit exact
+or polymorphic pointee access execute. Their source and compiler semantics are frozen in
 [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes). Optional
 references such as `ref?` remain syntax errors.
 `unit[]` is likewise parsed so later semantic analysis can report element

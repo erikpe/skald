@@ -159,6 +159,9 @@ fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
                     MirArrayDefaultElement::SharedClass { class, initializer }
                 }
                 D::SharedArrayEmpty(array) => MirArrayDefaultElement::SharedArrayEmpty(array),
+                D::SharedOptionalBoxAbsent(target) => {
+                    MirArrayDefaultElement::SharedOptionalBoxAbsent(target)
+                }
             }),
             copy: array.lifecycle.copy.map(|operation| match operation {
                 C::Primitive => MirArrayCopyElement::Primitive,

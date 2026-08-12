@@ -467,6 +467,9 @@ fn lower_array_default_element(
             MirArrayDefaultElement::SharedClass { class, initializer }
         }
         H::SharedArrayEmpty(array) => MirArrayDefaultElement::SharedArrayEmpty(array),
+        H::SharedOptionalBoxAbsent(target) => {
+            MirArrayDefaultElement::SharedOptionalBoxAbsent(target)
+        }
     }
 }
 

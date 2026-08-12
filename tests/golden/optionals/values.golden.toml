@@ -160,8 +160,6 @@ source = "optional_box_exclusions.ska"
 matches = [
   { name = "external shared optional box gate", match = "contains", inline = """error[TYP044]: external signatures cannot contain shared optional boxes
  --> tests/golden/optionals/optional_box_exclusions.ska:5:27""" },
-  { name = "shared optional box array gate", match = "contains", inline = """error[TYP044]: this containing type cannot store shared optional boxes yet
- --> tests/golden/optionals/optional_box_exclusions.ska:8:17""" },
 ]
 
 [[test]]

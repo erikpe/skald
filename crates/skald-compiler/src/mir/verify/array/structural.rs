@@ -24,7 +24,7 @@ impl Verifier<'_> {
             }
             self.verify_array_referenced_type(array.element, "element");
             if let Some(operation) = array.lifecycle.default {
-                self.verify_array_default(operation);
+                self.verify_array_default(array.element, operation);
             }
             if let Some(operation) = array.lifecycle.copy {
                 self.verify_array_copy(operation);
@@ -81,7 +81,7 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_array_default(&mut self, operation: MirArrayDefaultElement) {
+    fn verify_array_default(&mut self, element: MirType, operation: MirArrayDefaultElement) {
         match operation {
             MirArrayDefaultElement::Class { class, initializer }
             | MirArrayDefaultElement::SharedClass { class, initializer } => {
@@ -93,6 +93,21 @@ impl Verifier<'_> {
             | MirArrayDefaultElement::SharedArrayEmpty(array) => {
                 if self.program.array_type(array).is_none() {
                     self.program_error("array default element names an undeclared nested array");
+                }
+            }
+            MirArrayDefaultElement::SharedOptionalBoxAbsent(target) => {
+                if element != MirType::Shared(crate::mir::MirSharedTarget::OptionalBox(target)) {
+                    self.program_error(
+                        "array optional-box default does not match its declared element type",
+                    );
+                } else if !self
+                    .program
+                    .optional_box_type(target)
+                    .is_some_and(|metadata| metadata.exact_optional.is_some())
+                {
+                    self.program_error(
+                        "array default element names a non-constructible optional box",
+                    );
                 }
             }
             MirArrayDefaultElement::Primitive | MirArrayDefaultElement::OptionalAbsent => {}

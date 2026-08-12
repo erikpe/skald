@@ -276,8 +276,8 @@ target identities, typed construction/ownership, verified
 unpublished-payload and owner lifetimes, explicit exact optional-pointee
 access, and explicit polymorphic object-box views. Exact and polymorphic local
 boxes execute on x86-64 through descriptor, shared-owner, recursive optional,
-guard, dispatch, cast, non-array stored-value, static-lifecycle, and internal
-call lowering. Array element positions remain deliberately gated and
+guard, dispatch, cast, stored-value, array, static-lifecycle, and internal call
+lowering. External box signatures remain deliberately gated and
 optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model

@@ -2,17 +2,14 @@
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    resolve::{
-        ResolvedFunctionLinkage, ResolvedMemberDefinition, ResolvedProgram, ResolvedType,
-        ResolvedTypeKind,
-    },
+    resolve::{ResolvedFunctionLinkage, ResolvedProgram, ResolvedType, ResolvedTypeKind},
 };
 
 pub const SHARED_OPTIONAL_BOX_UNAVAILABLE: &str = "TYP044";
 
 /// Keeps shared optional boxes out of the deliberately unsupported external
-/// ABI and array-element boundary. Ordinary internal stored and callable
-/// positions use the same ownership machinery as every other shared target.
+/// ABI. Internal stored, callable, and array positions use the same ownership
+/// machinery as every other shared target.
 pub(super) fn validate(program: &ResolvedProgram, diagnostics: &mut Diagnostics) -> bool {
     let mut valid = true;
 
@@ -39,61 +36,6 @@ pub(super) fn validate(program: &ResolvedProgram, diagnostics: &mut Diagnostics)
         }
     }
 
-    for definition in program.definitions.iter() {
-        valid &= validate_locals(program, &definition.locals, diagnostics);
-    }
-    for definition in program.class_definitions.iter() {
-        for member in definition.initializers.iter() {
-            valid &= validate_member_locals(program, member, diagnostics);
-        }
-        if let Some(member) = &definition.copy_constructor {
-            valid &= validate_member_locals(program, member, diagnostics);
-        }
-        if let Some(member) = &definition.copy_assignment {
-            valid &= validate_member_locals(program, member, diagnostics);
-        }
-        if let Some(member) = &definition.destructor {
-            valid &= validate_member_locals(program, member, diagnostics);
-        }
-        for member in &definition.methods {
-            valid &= validate_member_locals(program, member, diagnostics);
-        }
-    }
-
-    valid
-}
-
-fn validate_member_locals(
-    program: &ResolvedProgram,
-    member: &ResolvedMemberDefinition,
-    diagnostics: &mut Diagnostics,
-) -> bool {
-    validate_locals(program, &member.locals, diagnostics)
-}
-
-fn validate_locals(
-    program: &ResolvedProgram,
-    locals: &[crate::resolve::ResolvedLocal],
-    diagnostics: &mut Diagnostics,
-) -> bool {
-    let mut valid = true;
-    for local in locals {
-        if type_contains_box(program, local.type_syntax.kind)
-            && !is_local_box_owner(program, local.type_syntax.kind)
-        {
-            diagnostics.push(
-                Diagnostic::error(
-                    SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                    "this containing type cannot store shared optional boxes yet",
-                )
-                .with_primary_label(
-                    local.type_syntax.span,
-                    "shared optional boxes are not array element types yet",
-                ),
-            );
-            valid = false;
-        }
-    }
     valid
 }
 
@@ -113,17 +55,6 @@ fn reject_if_box(
         ),
     );
     false
-}
-
-fn is_local_box_owner(program: &ResolvedProgram, kind: ResolvedTypeKind) -> bool {
-    match kind {
-        ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::OptionalBox(_)) => true,
-        ResolvedTypeKind::Optional(optional) => program
-            .optional_types
-            .get(optional)
-            .is_some_and(|optional| is_local_box_owner(program, optional.payload.kind)),
-        _ => false,
-    }
 }
 
 fn type_contains_box(program: &ResolvedProgram, kind: ResolvedTypeKind) -> bool {

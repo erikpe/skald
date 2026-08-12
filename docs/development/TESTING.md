@@ -52,7 +52,7 @@ verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
 [optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#compositional-test-matrix).
 Focused compile failures remain for excluded optional payload categories and
-the shared optional-box array-element and external-signature boundaries.
+the shared optional-box external-signature boundary.
 Shared-verifier tests exercise its private propagation, transition,
 use-validation, and state owners through the unchanged MIR verification
 facade. Focused structural refactors should run the complete `mir::tests::shared`
@@ -715,8 +715,8 @@ the extended robustness suite mutates optional punctuation deterministically.
 
 Positive syntax, resolution, type-check/HIR, MIR, backend, and native coverage
 exercises construction, exact metadata, unpublished initialization,
-publication/adoption, secure replacement, non-array storage, internal calls,
-cleanup, malformed protocol states, and the remaining array/external gates.
+publication/adoption, secure replacement, stored and array positions, internal
+calls, cleanup, malformed protocol states, and the remaining external gate.
 Complete implementation evidence includes:
 
 - source type grouping, arbitrary outer optional depth, `shared? P?`
@@ -742,8 +742,9 @@ Complete implementation evidence includes:
   eligible exact inline optional destination;
 - locals, inherited fields, internal arguments/results, methods, interfaces,
   overrides, initializer overloads, explicitly initialized statics,
-  temporaries, arbitrary outer optional box-owner layers, and synthesized
-  lifecycle; box array elements and their distinct-default rule remain staged;
+  temporaries, arbitrary outer optional box-owner layers, synthesized
+  lifecycle, invariant inline/shared-outer arrays, optional owner elements,
+  compatible object-box views, and distinct absent default boxes per slot;
 - malformed MIR for target confusion, allocation origin, initialization and
   publication order, owner loss, pre-publication access, metadata/finalizer
   mismatch, guard/anchor imbalance, mutable access, and duplicate cleanup;

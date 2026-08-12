@@ -124,6 +124,46 @@ fn private_initializer_array_default_plans_reject_identity_mutations() {
 }
 
 #[test]
+fn optional_box_array_defaults_reject_target_mutations() {
+    let mut program = lower_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var numbers: (shared i64?)[] = (shared i64?)[](1u);\n",
+        "  var flags: (shared bool?)[] = (shared bool?)[](1u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    verify_mir(&program).expect("typed optional-box array defaults must verify");
+
+    let targets: Vec<_> = program
+        .array_types
+        .iter()
+        .filter_map(|array| match array.lifecycle.default {
+            Some(MirArrayDefaultElement::SharedOptionalBoxAbsent(target)) => Some(target),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(targets.len(), 2);
+    let array = program
+        .array_types
+        .entries_mut_for_test()
+        .iter_mut()
+        .find(|array| {
+            array.lifecycle.default
+                == Some(MirArrayDefaultElement::SharedOptionalBoxAbsent(targets[0]))
+        })
+        .unwrap();
+    array.lifecycle.default = Some(MirArrayDefaultElement::SharedOptionalBoxAbsent(targets[1]));
+
+    let errors = verify_mir(&program)
+        .expect_err("a foreign exact box default must be rejected")
+        .to_string();
+    assert!(
+        errors.contains("does not match its declared element type"),
+        "{errors}"
+    );
+}
+
+#[test]
 fn verifier_rejects_array_table_type_storage_prefix_and_publication_mutations() {
     let errors = error_after(|program| {
         program.array_types.entries_mut_for_test()[0].id = crate::identity::ArrayTypeId::new(7);

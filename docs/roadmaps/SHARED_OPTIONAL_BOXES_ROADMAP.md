@@ -1,6 +1,6 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX7 are complete and BX8 is next.
+Status: in progress; BX0-BX8 are complete and BX9 is next.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
@@ -110,7 +110,7 @@ outcome; it does not reopen those decisions.
 - [x] BX5 — Add explicit immutable box-pointee access
 - [x] BX6 — Execute polymorphic object-box views and dispatch
 - [x] BX7 — Integrate box owners with stored and callable positions
-- [ ] BX8 — Integrate box owners with arrays and default elements
+- [x] BX8 — Integrate box owners with arrays and default elements
 - [ ] BX9 — Harden and publish shared optional boxes
 
 ## PR-sized implementation sequence
@@ -423,24 +423,24 @@ deliberately deferred array and external boundaries.
 **Purpose:** Complete aggregate storage and generated default construction
 without sharing synthesized boxes or weakening array invariance.
 
-- [ ] Add `shared P?` and `(shared P?)?` as array element categories for
+- [x] Add `shared P?` and `(shared P?)?` as array element categories for
       inline and shared-outer arrays, including fields, calls, slices, copy,
       assignment, replacement, and reverse cleanup.
-- [ ] Reuse destination-directed element-list plans for named owner copy,
+- [x] Reuse destination-directed element-list plans for named owner copy,
       produced owner adoption, optional-owner absence/presence, and compatible
       object-box views.
-- [ ] Make requested nonempty default construction of `(shared P?)[]` allocate
+- [x] Make requested nonempty default construction of `(shared P?)[]` allocate
       one distinct absent exact box per element in increasing prefix order;
       never reuse one synthesized owner across slots.
-- [ ] Preserve allocation/publication discipline for the outer array and every
+- [x] Preserve allocation/publication discipline for the outer array and every
       inner box, initialized-prefix verification, allocation-before-element
       effects, and exact reverse cleanup.
-- [ ] Keep `shared P?[]` as one shared outer array of inline `P?` elements and
+- [x] Keep `shared P?[]` as one shared outer array of inline `P?` elements and
       `(shared P?)[]` as an inline array of box owners; canonical identities,
       dumps, and operations must never conflate them.
-- [ ] Extend array capability, ownership, lifecycle, anchor, static-dependency,
+- [x] Extend array capability, ownership, lifecycle, anchor, static-dependency,
       helper-generation, layout, and backend legality owners exhaustively.
-- [ ] Preserve invariant non-object box elements and ordinary compatible
+- [x] Preserve invariant non-object box elements and ordinary compatible
       object-box view rules without introducing array covariance.
 
 **Tests:** Empty/dynamic/default arrays; distinct default box identity; absent

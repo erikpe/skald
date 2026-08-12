@@ -68,6 +68,8 @@ pub enum HirArrayDefaultElement {
         initializer: InitializerId,
     },
     SharedArrayEmpty(ArrayTypeId),
+    /// Allocate a distinct exact optional box containing an absent value.
+    SharedOptionalBoxAbsent(crate::identity::OptionalBoxTypeId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

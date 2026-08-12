@@ -2615,6 +2615,9 @@ fn array_default_name(element: HirArrayDefaultElement) -> String {
         HirArrayDefaultElement::SharedArrayEmpty(array) => {
             format!("shared-empty-array {array}")
         }
+        HirArrayDefaultElement::SharedOptionalBoxAbsent(target) => {
+            format!("shared-optional-box-absent {target}")
+        }
     }
 }
 

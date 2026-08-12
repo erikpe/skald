@@ -151,11 +151,12 @@ Distinct scalar, aggregate, and shared-owner operations remain only where the
 runtime work differs. Nested payload access, aliases, and internal callable
 boundaries use those recursive plans. Tagged optional arrays reuse ordinary
 array lifecycle across all supported aggregate, internal callable,
-array-element, and checked-alias positions. Shared optional boxes now carry
-resolved, HIR, and MIR targets for `shared T?`; local construction, owner
-transfer, replacement, and cleanup reach verified target-independent MIR,
-while the x86-64 backend rejects them deliberately until native layout and
-finalization exist. This staging adds no C runtime ABI surface.
+array-element, and checked-alias positions. Shared optional boxes carry
+resolved, HIR, and MIR targets for `shared T?`; construction, owner transfer,
+replacement, cleanup, arrays, internal calls, and static lifecycle reach
+verified target-independent MIR and execute on x86-64 with deterministic exact
+descriptors and finalizers. This adds no C runtime ABI surface; only external
+box signatures remain staged.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

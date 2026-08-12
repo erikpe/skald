@@ -7,7 +7,7 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md) is in progress; BX0
-through BX7 are complete and BX8 is next. It implements the frozen non-null `shared P?` box
+through BX8 are complete and BX9 is next. It implements the frozen non-null `shared P?` box
 and derived `shared? P?` optional owner through canonical targets, verified
 immutable wrapper access, polymorphic class/interface/`Obj` views, exact
 metadata and finalization, stored positions, and arrays while retaining
@@ -28,7 +28,10 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-No pending implementation discoveries are currently recorded.
+The [shared optional boxes discoveries](SHARED_OPTIONAL_BOXES_DISCOVERIES.md)
+record contains a control-flow value-stabilization issue found while composing
+the BX8 native matrix. It is deliberately separate from the frozen box and
+array ownership work.
 
 ## Implementation baseline
 

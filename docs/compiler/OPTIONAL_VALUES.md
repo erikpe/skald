@@ -291,15 +291,15 @@ requests and exact allocation bases.
 
 ## Frozen shared optional box representation
 
-Status: **frozen design; non-array stored and callable profile implemented**. Owner
+Status: **frozen design; internal stored, callable, and array profile implemented**. Owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
 owner lifetime verification. The x86-64 backend executes every eligible exact
 wrapper with a checked header-plus-target layout, deterministic exact
 descriptor, and distinct recursive finalizer. Explicit access through exact
 and polymorphic object-box owners is implemented together with ordinary
-non-array storage, static lifecycle, and internal calls. Array elements and
-external signatures remain deliberately gated.
+storage, static lifecycle, internal calls, and arrays. External signatures
+remain deliberately gated.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -396,6 +396,18 @@ containment, and ordinary strong-edge behavior. Box statics reuse dependency
 planning, publication, replacement, reverse shutdown, and exact finalizer
 reachability. One-word owners pass and return through the ordinary internal
 shared ABI, including recursion and virtual/interface calls.
+
+Arrays reuse the generic shared-owner copy, replacement, slice, helper, and
+reverse-destruction plans for `shared P?` elements, and the nullable-owner
+plans for `(shared P?)?`. Element lists preserve destination-directed owner
+copy/adoption and compatible object-box views without making arrays covariant.
+The generated default plan for a constructible exact `(shared P?)[]` allocates,
+initializes absent, and publishes a fresh box before advancing the verified
+initialized prefix for each slot. Consequently inner allocation failure leaves
+only the completed prefix eligible for reverse cleanup. Optional-owner array
+elements default directly to the absent zero niche. Array identities retain
+the distinction between shared outer arrays of inline optionals and inline
+arrays of box handles.
 
 ## Source-shaped IR
 
@@ -846,7 +858,7 @@ observable behavior:
 | Concern | Required focused evidence |
 |---|---|
 | Source syntax | Tokens and AST for general grouping, left-to-right `?`/`[]` suffixes, `(shared T)?`, `shared? T`, nested depth, `some(expression)`, malformed punctuation, recovery spans, and the syntax budget |
-| Canonical identity | Resolution, HIR, and MIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused box array-element and external-signature gates |
+| Canonical identity | Resolution, HIR, and MIR interning for repeated, grouped, shorthand, nested, array, and cross-module spellings; deterministic IDs and dumps; focused external-signature gate |
 | Type and lifecycle selection | Exact payload eligibility, one-layer injection, overload ranking, `none`/`some` expectations, recursive containment, copy/assignment/destruction capabilities, aliases, statics, and array-element plans |
 | HIR and MIR shape | Explicit outer-layer operations, recursive payload plans, publication order, one-layer unwrap, guards and anchors, arguments/results, optional arrays, selected-path cleanup, and deterministic dumps |
 | Verification | Mutations for missing or mismatched identities, absent payload use, wrong lifecycle capability, premature publication, duplicate/missing cleanup, bad transfers, unbalanced or wrong-layer guards, invalid anchors, malformed CFG joins, and leaked box targets |
@@ -858,9 +870,9 @@ observable behavior:
 
 Parser, resolution, and type-check suites provide positive coverage for
 `shared T?`, `shared? T?`, box allocation, construction plans, owner
-copy/adoption/replacement, non-array storage/calls, and exact or polymorphic
+copy/adoption/replacement, storage/calls/arrays, and exact or polymorphic
 immutable pointee access. Compile-failure coverage verifies the remaining
-array-element and external-signature gates.
+external-signature gate and array invariance.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.

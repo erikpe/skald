@@ -5,6 +5,5 @@ class Value {
 extern fn excluded(value: shared Value?) -> unit;
 
 fn main() -> i64 {
-    var values: (shared Value?)[] = (shared Value?)[]();
     return 0;
 }

@@ -93,6 +93,111 @@ fn owner_replacement_keeps_the_old_box_alive_and_frees_exact_bases_once() {
 }
 
 #[test]
+fn optional_box_arrays_execute_defaults_lists_views_copies_slices_and_replacement() {
+    let source = concat!(
+        "interface Marker { fn mark() -> i64; }\n",
+        "class Base {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn mark() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Derived extends Base implements Marker {\n",
+        "  init(value: i64) { super(value); }\n",
+        "  override fn mark() -> i64 { return self.value + 10; }\n",
+        "}\n",
+        "fn inspect(values: (shared Marker?)[]) -> i64 {\n",
+        "  var value: shared Marker? = values[0];\n",
+        "  return (*value)!.mark();\n",
+        "}\n",
+        "extern fn validate_counts() -> i64;\n",
+        "fn exercise() -> i64 {\n",
+        "  var defaults: (shared i64?)[] = (shared i64?)[](2u);\n",
+        "  var default_zero: shared i64? = defaults[0];\n",
+        "  var default_one: shared i64? = defaults[1];\n",
+        "  if ((*default_zero) is some) { return 90; }\n",
+        "  if ((*default_one) is some) { return 91; }\n",
+        "  defaults[0] = new i64?(7);\n",
+        "  var copied: (shared i64?)[] = defaults;\n",
+        "  var sliced: (shared i64?)[] = copied[:];\n",
+        "  var copied_zero: shared i64? = sliced[0];\n",
+        "  var maybe: ((shared i64?)?)[] = ((shared i64?)?)[]{none, copied_zero};\n",
+        "  var optional_owner: shared? i64? = maybe[1];\n",
+        "  var outer: shared (shared i64?)[] = new (shared i64?)[]{copied_zero};\n",
+        "  var outer_zero: shared i64? = outer->[0];\n",
+        "  var exact: shared Derived? = new Derived?(Derived(3));\n",
+        "  var views: (shared Marker?)[] = (shared Marker?)[]{exact};\n",
+        "  var optional_value: i64 = (*optional_owner!)!;\n",
+        "  var dispatched: i64 = inspect(views);\n",
+        "  return (*copied_zero)! + optional_value + (*outer_zero)! + dispatched;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var result: i64 = exercise();\n",
+        "  return result + validate_counts();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(&optional_box_array_counter_probe(11));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(34), "{output}");
+}
+
+#[test]
+fn optional_box_array_types_remain_invariant() {
+    let fixture = crate::test_support::type_check_source(concat!(
+        "class Base { init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn main() -> i64 {\n",
+        "  var derived: (shared Derived?)[] = (shared Derived?)[]();\n",
+        "  var invalid: (shared Base?)[] = derived;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(fixture.hir.is_none());
+    assert!(!fixture.diagnostics.is_empty());
+}
+
+#[test]
+fn optional_box_array_cleanup_releases_elements_in_reverse_order() {
+    let source = concat!(
+        "class Trace {\n",
+        "  private static order: i64;\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  destroy { Trace.order = Trace.order * 10 + self.value; }\n",
+        "  static fn result() -> i64 { return Trace.order; }\n",
+        "}\n",
+        "fn build() -> unit {\n",
+        "  var values: (shared Trace?)[] = (shared Trace?)[]{\n",
+        "    new Trace?(Trace(1)), new Trace?(Trace(2)), new Trace?(Trace(3))\n",
+        "  };\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return Trace.result(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(
+        run_native_assembly(&output).code(),
+        Some(321 & 0xff),
+        "{output}"
+    );
+}
+
+#[test]
+fn optional_box_array_inner_allocation_failure_does_not_publish_the_next_slot() {
+    let mut output = assembly(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: (shared i64?)[] = (shared i64?)[](3u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    output.push_str(third_box_array_allocation_traps());
+
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
 fn allocation_failure_uses_the_common_runtime_trace_boundary() {
     let fixture = crate::test_support::lower_source_to_final_mir_with_sources(
         "app/main.ska",
@@ -743,5 +848,71 @@ fn exact_base_allocator_probe() -> &'static str {
         "    mov rax, 60\n",
         "    mov rdi, 97\n",
         "    syscall\n",
+    )
+}
+
+fn optional_box_array_counter_probe(expected: u64) -> String {
+    format!(
+        concat!(
+            "\n.bss\n",
+            ".p2align 3\n",
+            ".Lbox_array_allocations: .quad 0\n",
+            ".Lbox_array_frees: .quad 0\n",
+            "\n.text\n",
+            ".globl ska_rt_alloc\n",
+            ".type ska_rt_alloc, @function\n",
+            "ska_rt_alloc:\n",
+            "    push rbp\n",
+            "    mov rbp, rsp\n",
+            "    add qword ptr [rip + .Lbox_array_allocations], 1\n",
+            "    call malloc@PLT\n",
+            "    leave\n",
+            "    ret\n",
+            ".size ska_rt_alloc, .-ska_rt_alloc\n",
+            ".globl ska_rt_free\n",
+            ".type ska_rt_free, @function\n",
+            "ska_rt_free:\n",
+            "    add qword ptr [rip + .Lbox_array_frees], 1\n",
+            "    jmp free@PLT\n",
+            ".size ska_rt_free, .-ska_rt_free\n",
+            ".globl validate_counts\n",
+            ".type validate_counts, @function\n",
+            "validate_counts:\n",
+            "    cmp qword ptr [rip + .Lbox_array_allocations], {expected}\n",
+            "    jne .Lbox_array_count_failure\n",
+            "    cmp qword ptr [rip + .Lbox_array_frees], {expected}\n",
+            "    jne .Lbox_array_count_failure\n",
+            "    mov rax, 0\n",
+            "    ret\n",
+            ".Lbox_array_count_failure:\n",
+            "    mov rax, 64\n",
+            "    ret\n",
+            ".size validate_counts, .-validate_counts\n",
+        ),
+        expected = expected,
+    )
+}
+
+fn third_box_array_allocation_traps() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lbox_array_failure_count: .quad 0\n",
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    add qword ptr [rip + .Lbox_array_failure_count], 1\n",
+        "    cmp qword ptr [rip + .Lbox_array_failure_count], 3\n",
+        "    je .Lbox_array_allocation_failure\n",
+        "    jmp malloc@PLT\n",
+        ".Lbox_array_allocation_failure:\n",
+        "    ud2\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
     )
 }

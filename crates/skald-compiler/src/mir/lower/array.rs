@@ -771,7 +771,9 @@ impl BodyLowerer<'_> {
                     ));
                 }
                 HirStoredValueInitialization::OptionalBoxPointeeCopy { .. } => {
-                    unreachable!("optional-box array elements are gated until BX8")
+                    unreachable!(
+                        "optional-box pointee copies are box-payload plans, not array values"
+                    )
                 }
             }
         }

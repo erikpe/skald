@@ -228,6 +228,9 @@ impl InstructionSelector<'_, '_> {
                     MirArrayDefaultElement::SharedArrayEmpty(inner) => {
                         self.select_default_shared_array_element(&destination, inner)?;
                     }
+                    MirArrayDefaultElement::SharedOptionalBoxAbsent(target) => {
+                        self.select_default_shared_optional_box_element(&destination, target)?;
+                    }
                 }
                 self.advance_array_index(*index);
                 Ok(())

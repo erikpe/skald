@@ -94,8 +94,8 @@ the canonical `(shared T)?` form:
 | `(shared T)?` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared? T` | Exact shorthand for `(shared T)?` | Same type, lifecycle, layout, and ABI |
 | `T[]?` | Tagged optional containing zero or one inline array | Supported owning, internal callable, aggregate, array-element, and checked-alias positions execute |
-| `shared T?` | Non-null shared box containing `T?` | Ownership, storage, internal calls, statics, and exact or polymorphic immutable pointee access execute outside arrays |
-| `shared? T?` | Optional owner of a non-null shared box containing `T?` | The same positions compose with the optional-owner zero niche and arbitrary outer optional layers |
+| `shared T?` | Non-null shared box containing `T?` | Ownership, storage, arrays, internal calls, statics, and exact or polymorphic immutable pointee access execute |
+| `shared? T?` | Optional owner of a non-null shared box containing `T?` | The same positions compose with the optional-owner zero niche and arbitrary outer optional layers, including array elements |
 
 In the implemented grammar, `shared?` is the contextual word `shared` followed
 by the `?` punctuation token. Ordinary trivia may separate those tokens.
@@ -112,7 +112,6 @@ The current compiler rejects:
 - `unit?`;
 - standalone optional interface or `Obj` views;
 - optional function types;
-- shared optional-box owners as array elements;
 - `ref?` and `mut ref?`; and
 - every optional external parameter or result.
 
@@ -176,8 +175,8 @@ shared? T?  = (shared T?)?
 ```
 
 The last form contains an inner `Shared<Optional<T>>` box. Exact and
-polymorphic box ownership, ordinary non-array stored and internal callable
-positions, and explicit immutable pointee access execute natively.
+polymorphic box ownership, ordinary stored and internal callable positions,
+arrays, and explicit immutable pointee access execute natively.
 
 The exact spelling and identity matrix is:
 
@@ -301,7 +300,7 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; non-array stored and callable profile implemented**. The compiler parses
+Status: **frozen design; internal stored, callable, and array profile implemented**. The compiler parses
 box forms, interns exact optional and static object-view targets, selects local
 construction and owner-transfer plans, and verifies allocation, publication,
 adoption, replacement, and cleanup in target-independent MIR. On x86-64,
@@ -407,12 +406,16 @@ and other non-object box targets remain invariant.
 
 Box owners are eligible in locals, fields, internal value parameters/results,
 methods, interfaces, overrides, initializer overloads, explicitly initialized
-statics, and temporaries. An optional box owner uses the existing absent zero
-default, including in statics. Plain non-null box statics require an explicit
-initializer. Box array elements and requested default construction remain the
-next staged part of this frozen design; when enabled, `(shared P?)[]` must
-create one distinct absent box per requested element rather than sharing a
-synthesized default. External shared-box signatures remain invalid.
+statics, temporaries, and inline or shared-outer arrays. An optional box owner
+uses the existing absent zero default, including in statics and arrays. Plain
+non-null box statics require an explicit initializer. Requested nonempty
+`(shared P?)[]` construction creates one distinct absent exact box per element
+in increasing element order; `(shared P?)?` elements default to no owner.
+Arrays remain invariant, while each object-box element accepts ordinary
+compatible class/base/interface/`Obj` owner views. `shared P?[]` remains a
+shared outer array of inline optionals and is distinct from an inline
+`(shared P?)[]` array of box owners. External shared-box signatures remain
+invalid.
 
 Checked payload access combines an owner or hidden owner anchor with the
 existing optional guard. A read-only `ref P?` may designate an exact box

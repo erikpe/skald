@@ -224,21 +224,45 @@ fn stored_and_callable_box_positions_type_check_through_ordinary_owner_plans() {
 }
 
 #[test]
-fn external_and_array_box_positions_remain_focused_gates() {
-    for source in [
-        "extern fn consume(value: shared i64?) -> unit; fn main() -> i64 { return 0; }",
-        "fn main() -> i64 { var boxes: (shared i64?)[] = (shared i64?)[](); return 0; }",
-    ] {
-        let output = check_text(source);
-        assert!(
-            output.hir.is_none(),
-            "source unexpectedly produced HIR: {source}"
-        );
-        assert!(output
-            .diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE), "source: {source}\n{:?}", output.diagnostics);
-    }
+fn external_box_positions_remain_a_focused_gate() {
+    let source = "extern fn consume(value: shared i64?) -> unit; fn main() -> i64 { return 0; }";
+    let output = check_text(source);
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE));
+}
+
+#[test]
+fn box_array_positions_use_shared_owner_lifecycle_plans() {
+    let output = check_text(
+        "class Value { init() {} }\n\
+         fn make() -> shared Value? { return new Value?(Value()); }\n\
+         fn inspect(values: (shared Value?)[]) -> i64 { return 0; }\n\
+         class Holder {\n\
+           values: (shared Value?)[];\n\
+           static global: (shared Value?)[] = (shared Value?)[]{};\n\
+           init(values: (shared Value?)[]) { self.values = values; }\n\
+         }\n\
+         fn main() -> i64 {\n\
+           var named: shared Value? = new Value?();\n\
+           var boxes: (shared Value?)[] = (shared Value?)[](2u);\n\
+           var listed: (shared Value?)[] = (shared Value?)[]{named, make()};\n\
+           var optional: ((shared Value?)?)[] = ((shared Value?)?)[]{none, named};\n\
+           var outer: shared (shared Value?)[] = new (shared Value?)[]{named};\n\
+           var inline_optionals: shared Value?[] = new Value?[]{none};\n\
+           var holder: Holder = Holder(listed);\n\
+           boxes[0] = listed[1];\n\
+           return inspect(holder.values);\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("BX8 box arrays must produce HIR"));
+    assert!(dump.contains("shared-optional-box-absent"), "{dump}");
+    assert!(dump.contains("shared optional-box"), "{dump}");
+    assert!(dump.contains("shared array"), "{dump}");
 }
 
 #[test]

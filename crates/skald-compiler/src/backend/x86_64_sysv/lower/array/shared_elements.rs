@@ -2,7 +2,7 @@
 
 use crate::{
     backend::BackendError,
-    identity::{ArrayTypeId, ClassId, InitializerId},
+    identity::{ArrayTypeId, ClassId, InitializerId, OptionalBoxTypeId},
     mir::MirPlace,
 };
 
@@ -70,6 +70,49 @@ impl InstructionSelector<'_, '_> {
         );
         self.output.push(Instruction::LoadSymbolAddress {
             symbol: symbol::shared_array_metadata(array),
+            destination: Register::Rax,
+        });
+        value::store_rax(
+            value::memory(Register::R11, SHARED_DYNAMIC_METADATA_OFFSET),
+            self.output,
+        );
+        self.publish_preserved_count();
+        self.restore_shared_element_handle();
+        self.store_shared_place(destination)
+    }
+
+    pub(super) fn select_default_shared_optional_box_element(
+        &mut self,
+        destination: &MirPlace,
+        target: OptionalBoxTypeId,
+    ) -> Result<(), BackendError> {
+        let layout = self.data_layout.exact_optional_box(target)?;
+        let payload_offset = i32::try_from(layout.payload_offset()).map_err(|_| {
+            BackendError::new(
+                crate::backend::Target::X86_64SysV,
+                Some(self.function.callable()),
+                format!("optional-box {target} payload offset exceeds x86-64 limits"),
+            )
+        })?;
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: layout.byte_count(),
+            destination: Register::Rdi,
+        });
+        self.emit_source_operation_call(RUNTIME_ALLOC.to_owned())?;
+        self.preserve_shared_element_handle();
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::R11.into(),
+        });
+        // Every canonical optional representation denotes absence with a zero
+        // outer state word. The rest of an absent payload is unpublished.
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 0,
+            destination: Register::Rax,
+        });
+        value::store_rax(value::memory(Register::R11, payload_offset), self.output);
+        self.output.push(Instruction::LoadSymbolAddress {
+            symbol: symbol::optional_box_metadata(target),
             destination: Register::Rax,
         });
         value::store_rax(

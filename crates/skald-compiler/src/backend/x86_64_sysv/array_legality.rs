@@ -120,7 +120,8 @@ fn check_instruction(
                     | MirArrayDefaultElement::Class { .. }
                     | MirArrayDefaultElement::ArrayEmpty(_)
                     | MirArrayDefaultElement::SharedClass { .. }
-                    | MirArrayDefaultElement::SharedArrayEmpty(_),
+                    | MirArrayDefaultElement::SharedArrayEmpty(_)
+                    | MirArrayDefaultElement::SharedOptionalBoxAbsent(_),
                 ..
             } => {}
             MirArrayInstruction::CopyNext {
