@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use super::{body::resolve_template_body, bounds::*, *};
+use super::{body::resolve_template_body, bounds::*, requirements::*, *};
 
 pub(crate) fn resolve_class_template_semantics(
     template: ClassTemplateId,
@@ -161,8 +161,17 @@ pub(crate) fn resolve_class_template_semantics(
         callable_parameters.push(parameters_by_name);
     }
 
+    let mut requirements = infer_declaration_requirements(class, &type_uses);
     let mut selections = Vec::new();
     for (member_index, member) in class.members.iter().enumerate() {
+        let callable_result = type_uses.iter().find_map(|type_use| {
+            matches!(
+                type_use.context,
+                ResolvedTemplateTypeUseContext::MethodResult { member }
+                    if member == member_index
+            )
+            .then_some(type_use.type_term.clone())
+        });
         resolve_template_body(
             member,
             member_index,
@@ -174,7 +183,9 @@ pub(crate) fn resolve_class_template_semantics(
             &member_names,
             direct_base.is_some(),
             &callable_parameters[member_index],
+            callable_result.as_ref(),
             &mut type_uses,
+            &mut requirements,
             &mut selections,
             diagnostics,
         );
@@ -186,6 +197,7 @@ pub(crate) fn resolve_class_template_semantics(
         implemented_interfaces,
         bounds,
         type_uses,
+        requirements,
         selections,
     }
 }

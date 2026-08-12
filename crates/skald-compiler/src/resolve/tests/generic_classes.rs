@@ -1,4 +1,5 @@
 use super::*;
+use crate::resolve::ir::ResolvedTemplateTypeKind;
 use crate::test_support::load_module_sources;
 
 #[test]
@@ -451,6 +452,145 @@ fn lifecycle_static_and_remaining_body_type_positions_are_retained() {
         ),
         "{dump}"
     );
+}
+
+#[test]
+fn contextual_requirements_preserve_roles_structures_operations_and_origins() {
+    let output = resolve_text(
+        "class Contract<T> {\n\
+           value: T;\n\
+           static cached: T?;\n\
+           init(value: T) { self.value = value; }\n\
+           fn apply(ref source: T, mut ref destination: T) -> T {\n\
+             var slots: T?[] = T?[](1u);\n\
+             var clones: T?[] = T?[](copy slots);\n\
+             slots[0u] = some(source);\n\
+             destination = source;\n\
+             return source;\n\
+           }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    for expected in [
+        "Requirement field-storage template0:type0 reason member0:field-declaration",
+        "Requirement destroyable template0:type0 reason member0:synthesized-destruction",
+        "Requirement optional-payload template0:type0 reason optional-type",
+        "Requirement static-storage optional (template0:type0) reason member1:static-field-declaration",
+        "Requirement default-constructible optional (template0:type0) reason member1:static-zero-initialization",
+        "Requirement value-parameter template0:type0 reason member2:parameter0-declaration",
+        "Requirement readonly-alias-target template0:type0 reason member3:parameter0-declaration",
+        "Requirement mutable-alias-target template0:type0 reason member3:parameter1-declaration",
+        "Requirement value-result template0:type0 reason member3:method-result",
+        "Requirement default-constructible optional (template0:type0) reason member3:array-length-construction",
+        "Requirement copy-constructible array (optional (template0:type0)) reason member3:explicit-array-copy",
+        "Requirement assignable optional (template0:type0) reason member3:assignment",
+        "Requirement assignable template0:type0 reason member3:assignment",
+    ] {
+        assert!(dump.contains(expected), "missing `{expected}` in:\n{dump}");
+    }
+}
+
+#[test]
+fn explicit_inline_and_shared_copy_construction_record_closed_target_capabilities() {
+    let output = resolve_text(
+        "class Box<T> { value: T; }\n\
+         class Copier<T> {\n\
+           fn clone(ref source: Box<T>) -> unit {\n\
+             Box<T>(copy source);\n\
+             new Box<T>(copy source);\n\
+           }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let semantics = output
+        .program
+        .template_semantics
+        .get(ClassTemplateId::new(1))
+        .unwrap();
+    let copies = semantics
+        .requirements
+        .iter()
+        .filter(|requirement| {
+            requirement.capability == GenericCapability::CopyConstructible
+                && matches!(
+                    requirement.reason,
+                    GenericRequirementReason::ExplicitCopyConstruction { member: 0 }
+                )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(copies.len(), 2);
+    assert!(copies.iter().all(|requirement| matches!(
+        requirement.type_term.kind,
+        ResolvedTemplateTypeKind::ClassTemplate { .. }
+    )));
+}
+
+#[test]
+fn optional_box_targets_skip_box_layers_but_retain_nested_payload_constructors() {
+    let output = resolve_text(
+        "class Owner<T> { value: shared T?; nested: shared (T?[])?; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("Requirement shared-target optional (template0:type0) reason shared-type")
+    );
+    assert!(dump.contains("Requirement array-element optional (template0:type0) reason array-type"));
+    let semantics = output
+        .program
+        .template_semantics
+        .get(ClassTemplateId::new(0))
+        .unwrap();
+    assert_eq!(
+        semantics
+            .requirements
+            .iter()
+            .filter(|requirement| { requirement.capability == GenericCapability::OptionalPayload })
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn copy_capabilities_are_inferred_only_for_operations_that_request_copying() {
+    let output = resolve_text(
+        "class Passive<T> { value: T; }\n\
+         class Active<T> {\n\
+           value: T;\n\
+           init(source: T) { self.value = source; }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let semantics = output
+        .program
+        .template_semantics
+        .get(ClassTemplateId::new(0))
+        .unwrap();
+    assert!(semantics
+        .requirements
+        .iter()
+        .all(|requirement| requirement.capability != GenericCapability::CopyConstructible));
+    let active = output
+        .program
+        .template_semantics
+        .get(ClassTemplateId::new(1))
+        .unwrap();
+    assert!(active.requirements.iter().any(|requirement| {
+        requirement.capability == GenericCapability::CopyConstructible
+            && matches!(
+                requirement.reason,
+                GenericRequirementReason::StoredInitializationCopy { member: 1 }
+            )
+    }));
 }
 
 #[test]

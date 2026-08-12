@@ -5,6 +5,7 @@ mod capabilities;
 mod containment;
 mod expression;
 mod function;
+mod generic_requirements;
 mod literal;
 mod optional;
 mod optional_box_types;

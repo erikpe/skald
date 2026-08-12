@@ -3,6 +3,7 @@
 mod body;
 mod bounds;
 mod collection;
+mod requirements;
 mod resolution;
 mod type_resolution;
 

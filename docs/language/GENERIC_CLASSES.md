@@ -1,15 +1,17 @@
 # Generic Classes
 
-Status: frozen design; syntax and template resolution implemented,
-specialization not implemented. This
+Status: frozen design; syntax, template resolution, and contextual mechanical
+requirement analysis implemented; specialization not implemented. This
 document defines the intended initial source-visible generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
 compiler. Generic declarations now receive stable template and parameter
-identities, structural definition-site-resolved type terms, and exact nominal
-interface bounds. Argument-independent template errors are diagnosed, while a
-valid closed application remains explicitly gated until specialization and
-execution are implemented.
+identities, structural definition-site-resolved type terms, exact nominal
+interface bounds, and inferred storage/lifecycle requirements with exact
+origins. Closed-type capability evaluation delegates to the ordinary optional,
+array, shared-owner, alias, stored-value, and class-lifecycle rules. A valid
+closed application remains explicitly gated until specialization and execution
+are implemented.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning
@@ -170,6 +172,12 @@ The compiler infers mechanical requirements for source contexts including:
 - copy construction;
 - assignment; and
 - destruction.
+
+These requirements are retained over complete structural terms. For example,
+`T`, `T?`, and `T?[]` remain distinct subjects until a closed application
+substitutes and interns them. Requirement dumps include the capability, source
+origin, and stable reason so a later application diagnostic can point back to
+the exact declaration or operation that introduced it.
 
 These roles remain distinct even when their currently accepted type sets
 overlap. A bare interface is a supported alias target but is not a stored

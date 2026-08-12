@@ -29,6 +29,7 @@ mod static_fields;
 use class::{check_class_definitions, lower_class_declarations};
 use interfaces::analyze_interfaces;
 use overrides::validate_override_signatures;
+pub(super) use static_fields::{has_zero_default, is_stored_value_type};
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -261,7 +262,7 @@ fn validate_parameters(
     valid
 }
 
-fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
+pub(super) fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
     match ty {
         Type::I64
         | Type::U64

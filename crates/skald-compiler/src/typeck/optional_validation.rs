@@ -13,16 +13,10 @@ pub(super) fn validate_optional_types(
 ) -> bool {
     let mut valid = true;
     for optional in program.optional_types.iter() {
+        if is_optional_payload(optional.payload.kind) {
+            continue;
+        }
         let (message, label) = match optional.payload.kind {
-            ResolvedTypeKind::I64
-            | ResolvedTypeKind::U64
-            | ResolvedTypeKind::U8
-            | ResolvedTypeKind::F64
-            | ResolvedTypeKind::Bool
-            | ResolvedTypeKind::Class(_)
-            | ResolvedTypeKind::Shared(_)
-            | ResolvedTypeKind::Optional(_)
-            | ResolvedTypeKind::Array(_) => continue,
             ResolvedTypeKind::Interface(_) => (
                 "interfaces cannot be inline optional payloads",
                 "use an optional shared owner for an optional owning interface view",
@@ -35,6 +29,15 @@ pub(super) fn validate_optional_types(
                 "`unit?` is not a valid optional type",
                 "`unit` has no value payload to make optional",
             ),
+            ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+            | ResolvedTypeKind::Class(_)
+            | ResolvedTypeKind::Shared(_)
+            | ResolvedTypeKind::Optional(_)
+            | ResolvedTypeKind::Array(_) => unreachable!("valid payloads returned above"),
         };
         diagnostics.push(
             Diagnostic::error(INVALID_OPTIONAL_TYPE, message)
@@ -43,4 +46,19 @@ pub(super) fn validate_optional_types(
         valid = false;
     }
     valid
+}
+
+pub(in crate::typeck) const fn is_optional_payload(kind: ResolvedTypeKind) -> bool {
+    matches!(
+        kind,
+        ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+            | ResolvedTypeKind::Class(_)
+            | ResolvedTypeKind::Shared(_)
+            | ResolvedTypeKind::Optional(_)
+            | ResolvedTypeKind::Array(_)
+    )
 }

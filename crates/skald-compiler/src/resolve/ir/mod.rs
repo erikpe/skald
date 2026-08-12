@@ -4,6 +4,7 @@ mod array_types;
 mod body;
 mod declarations;
 mod expression;
+mod generic_requirements;
 mod generic_templates;
 mod hierarchy;
 mod modules;
@@ -51,6 +52,9 @@ pub use expression::{
     ResolvedPresentExpr, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedStaticCallExpr,
     ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr, ResolvedTypeTestExpr,
     ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+};
+pub(crate) use generic_requirements::{
+    GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedTypeParameter,

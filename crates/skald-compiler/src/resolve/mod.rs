@@ -8,6 +8,9 @@ mod ir;
 mod resolver;
 
 pub use dump::dump_resolved;
+#[cfg(test)]
+pub(crate) use ir::GenericAliasAccess;
+pub(crate) use ir::{GenericCapability, GenericRequirement, GenericRequirementReason};
 pub use ir::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayAssignment,
     ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedArrayElementList,

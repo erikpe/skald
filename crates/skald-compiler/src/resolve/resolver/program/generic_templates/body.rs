@@ -2,6 +2,9 @@
 
 use std::collections::HashMap;
 
+use super::requirements::{
+    infer_type_construction, push, push_destruction, stored_initialization_copy_term,
+};
 use super::*;
 use crate::identity::TypeParameterId;
 
@@ -17,7 +20,9 @@ pub(super) fn resolve_template_body(
     member_names: &HashMap<String, usize>,
     has_direct_base: bool,
     callable_parameters: &HashMap<String, ResolvedTemplateType>,
+    callable_result: Option<&ResolvedTemplateType>,
     type_uses: &mut Vec<ResolvedTemplateTypeUse>,
+    requirements: &mut Vec<GenericRequirement>,
     selections: &mut Vec<ResolvedTemplateSelection>,
     diagnostics: &mut Diagnostics,
 ) {
@@ -36,6 +41,12 @@ pub(super) fn resolve_template_body(
         syntax::ClassMember::Destructor(declaration) => (Some(&declaration.body), None),
         syntax::ClassMember::Method(declaration) => (Some(&declaration.body), None),
     };
+    let field_writes_assign = matches!(
+        member,
+        syntax::ClassMember::CopyAssignment(_)
+            | syntax::ClassMember::Destructor(_)
+            | syntax::ClassMember::Method(_)
+    );
     let mut resolver = TemplateBodyResolver {
         member: member_index,
         parameters,
@@ -45,8 +56,11 @@ pub(super) fn resolve_template_body(
         fields,
         member_names,
         has_direct_base,
+        field_writes_assign,
         scopes: vec![callable_parameters.clone()],
+        callable_result: callable_result.cloned(),
         type_uses,
+        requirements,
         selections,
         diagnostics,
     };
@@ -67,8 +81,11 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
     fields: &'semantic HashMap<String, ResolvedTemplateType>,
     member_names: &'semantic HashMap<String, usize>,
     has_direct_base: bool,
+    field_writes_assign: bool,
     scopes: Vec<HashMap<String, ResolvedTemplateType>>,
+    callable_result: Option<ResolvedTemplateType>,
     type_uses: &'semantic mut Vec<ResolvedTemplateTypeUse>,
+    requirements: &'semantic mut Vec<GenericRequirement>,
     selections: &'semantic mut Vec<ResolvedTemplateSelection>,
     diagnostics: &'diagnostics mut Diagnostics,
 }
@@ -95,6 +112,19 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         member: self.member,
                     },
                 ) {
+                    if let Some(copy_term) =
+                        stored_initialization_copy_term(&term, &local.initializer)
+                    {
+                        self.record_requirement(
+                            copy_term,
+                            GenericCapability::CopyConstructible,
+                            local.initializer.span(),
+                            GenericRequirementReason::StoredInitializationCopy {
+                                member: self.member,
+                            },
+                        );
+                    }
+                    push_destruction(self.requirements, &term, self.member);
                     self.scopes
                         .last_mut()
                         .expect("template body always has a lexical scope")
@@ -104,6 +134,18 @@ impl TemplateBodyResolver<'_, '_, '_> {
             syntax::Statement::Return(statement) => {
                 if let Some(value) = &statement.value {
                     self.visit_expression(value);
+                    if let Some(result) = self.callable_result.clone() {
+                        if let Some(copy_term) = stored_initialization_copy_term(&result, value) {
+                            self.record_requirement(
+                                copy_term,
+                                GenericCapability::CopyConstructible,
+                                value.span(),
+                                GenericRequirementReason::StoredInitializationCopy {
+                                    member: self.member,
+                                },
+                            );
+                        }
+                    }
                 }
             }
             syntax::Statement::Break(_) | syntax::Statement::Continue(_) => {}
@@ -129,10 +171,43 @@ impl TemplateBodyResolver<'_, '_, '_> {
             syntax::Statement::FieldAssignment(statement) => {
                 self.visit_member_access(&statement.place);
                 self.visit_expression(&statement.value);
+                if let Some(term) = self.field_assignment_type(&statement.place) {
+                    if self.member_assigns_fields() {
+                        self.record_requirement(
+                            &term,
+                            GenericCapability::Assignable,
+                            statement.equal_span,
+                            GenericRequirementReason::Assignment {
+                                member: self.member,
+                            },
+                        );
+                    } else if let Some(copy_term) =
+                        stored_initialization_copy_term(&term, &statement.value)
+                    {
+                        self.record_requirement(
+                            copy_term,
+                            GenericCapability::CopyConstructible,
+                            statement.value.span(),
+                            GenericRequirementReason::StoredInitializationCopy {
+                                member: self.member,
+                            },
+                        );
+                    }
+                }
             }
             syntax::Statement::ObjectAssignment(statement) => {
                 self.visit_expression(&statement.place);
                 self.visit_expression(&statement.value);
+                if let Some(term) = self.type_of_expression(&statement.place) {
+                    self.record_requirement(
+                        &term,
+                        GenericCapability::Assignable,
+                        statement.equal_span,
+                        GenericRequirementReason::Assignment {
+                            member: self.member,
+                        },
+                    );
+                }
             }
         }
     }
@@ -251,6 +326,17 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     if let Some(parameter) = target.parameter() {
                         self.report_parameter_construction(parameter, expression.target.span);
                     } else {
+                        if let syntax::CallArguments::Copy { copy_span, .. } = &expression.arguments
+                        {
+                            self.record_requirement(
+                                &target,
+                                GenericCapability::CopyConstructible,
+                                *copy_span,
+                                GenericRequirementReason::ExplicitCopyConstruction {
+                                    member: self.member,
+                                },
+                            );
+                        }
                         self.record_operation(
                             ResolvedTemplateDependentSelectionKind::Construction(
                                 ResolvedTemplateConstructionMode::Shared,
@@ -287,14 +373,88 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         self.visit_expressions(&elements.elements)
                     }
                 }
-                self.resolve_type_use(
+                if let Some(array) = self.resolve_type_use(
                     &expression.array_type,
                     ResolvedTemplateTypeUseContext::ArrayConstructionTarget {
                         member: self.member,
                     },
-                );
+                ) {
+                    let ResolvedTemplateTypeKind::Array(element) = &array.kind else {
+                        return;
+                    };
+                    match &expression.arguments {
+                        syntax::ArrayConstructionArguments::Length { .. } => {
+                            self.record_requirement(
+                                element,
+                                GenericCapability::DefaultConstructible,
+                                element.span,
+                                GenericRequirementReason::ArrayLengthConstruction {
+                                    member: self.member,
+                                },
+                            );
+                        }
+                        syntax::ArrayConstructionArguments::Copy { copy_span, .. } => {
+                            self.record_requirement(
+                                &array,
+                                GenericCapability::CopyConstructible,
+                                *copy_span,
+                                GenericRequirementReason::ExplicitArrayCopy {
+                                    member: self.member,
+                                },
+                            );
+                        }
+                        syntax::ArrayConstructionArguments::Empty { .. } => {}
+                        syntax::ArrayConstructionArguments::Elements(elements) => {
+                            for source in &elements.elements {
+                                if let Some(copy_term) =
+                                    stored_initialization_copy_term(element, source)
+                                {
+                                    self.record_requirement(
+                                        copy_term,
+                                        GenericCapability::CopyConstructible,
+                                        source.span(),
+                                        GenericRequirementReason::StoredInitializationCopy {
+                                            member: self.member,
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
             }
             syntax::Expression::Call(expression) => {
+                if let (
+                    syntax::Expression::GenericTypeApplication(application),
+                    syntax::CallArguments::Copy { copy_span, source },
+                ) = (expression.callee.as_ref(), &expression.arguments)
+                {
+                    self.visit_expression(source);
+                    if let Some(target) = self.resolve_named_type_use(
+                        &application.target,
+                        ResolvedTemplateTypeUseContext::ConstructionTarget {
+                            member: self.member,
+                        },
+                    ) {
+                        self.record_requirement(
+                            &target,
+                            GenericCapability::CopyConstructible,
+                            *copy_span,
+                            GenericRequirementReason::ExplicitCopyConstruction {
+                                member: self.member,
+                            },
+                        );
+                        self.record_operation(
+                            ResolvedTemplateDependentSelectionKind::Construction(
+                                ResolvedTemplateConstructionMode::Inline,
+                            ),
+                            target,
+                            None,
+                            application.span,
+                        );
+                    }
+                    return;
+                }
                 if let syntax::Expression::Identifier(identifier) = expression.callee.as_ref() {
                     self.resolve_direct_call(identifier);
                 } else {
@@ -453,22 +613,9 @@ impl TemplateBodyResolver<'_, '_, '_> {
     }
 
     fn parameter_of_expression(&self, expression: &syntax::Expression) -> Option<TypeParameterId> {
-        match expression {
-            syntax::Expression::Identifier(identifier) => self
-                .lookup_binding(identifier.name.text.as_str())
-                .and_then(ResolvedTemplateType::parameter),
-            syntax::Expression::Grouped(grouped) => {
-                self.parameter_of_expression(&grouped.expression)
-            }
-            syntax::Expression::MemberAccess(access)
-                if matches!(access.receiver.as_ref(), syntax::Expression::SelfValue(_)) =>
-            {
-                self.fields
-                    .get(access.member.text.as_str())
-                    .and_then(ResolvedTemplateType::parameter)
-            }
-            _ => None,
-        }
+        self.type_of_expression(expression)
+            .as_ref()
+            .and_then(ResolvedTemplateType::parameter)
     }
 
     fn report_parameter_member(
@@ -607,6 +754,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             context,
             type_term: resolved.clone(),
         });
+        infer_type_construction(&resolved, self.requirements);
         Some(resolved)
     }
 
@@ -621,11 +769,64 @@ impl TemplateBodyResolver<'_, '_, '_> {
             context,
             type_term: resolved.clone(),
         });
+        infer_type_construction(&resolved, self.requirements);
         Some(resolved)
     }
 
     fn lookup_binding(&self, name: &str) -> Option<&ResolvedTemplateType> {
         self.scopes.iter().rev().find_map(|scope| scope.get(name))
+    }
+
+    fn type_of_expression(&self, expression: &syntax::Expression) -> Option<ResolvedTemplateType> {
+        match expression {
+            syntax::Expression::Identifier(identifier) if !identifier.name.is_qualified() => {
+                self.lookup_binding(identifier.name.text.as_str()).cloned()
+            }
+            syntax::Expression::Grouped(grouped) => self.type_of_expression(&grouped.expression),
+            syntax::Expression::MemberAccess(access)
+                if matches!(access.receiver.as_ref(), syntax::Expression::SelfValue(_)) =>
+            {
+                self.fields.get(access.member.text.as_str()).cloned()
+            }
+            syntax::Expression::ArrayProjection(projection) => {
+                let receiver = self.type_of_expression(&projection.receiver)?;
+                let ResolvedTemplateTypeKind::Array(element) = receiver.kind else {
+                    return None;
+                };
+                Some(*element)
+            }
+            syntax::Expression::Unwrap(unwrap) => {
+                let source = self.type_of_expression(&unwrap.source)?;
+                let ResolvedTemplateTypeKind::Optional(payload) = source.kind else {
+                    return None;
+                };
+                Some(*payload)
+            }
+            _ => None,
+        }
+    }
+
+    fn field_assignment_type(
+        &self,
+        place: &syntax::MemberAccessExpr,
+    ) -> Option<ResolvedTemplateType> {
+        matches!(place.receiver.as_ref(), syntax::Expression::SelfValue(_))
+            .then(|| self.fields.get(place.member.text.as_str()).cloned())
+            .flatten()
+    }
+
+    fn member_assigns_fields(&self) -> bool {
+        self.field_writes_assign
+    }
+
+    fn record_requirement(
+        &mut self,
+        term: &ResolvedTemplateType,
+        capability: GenericCapability,
+        origin: Span,
+        reason: GenericRequirementReason,
+    ) {
+        push(self.requirements, term, capability, origin, reason);
     }
 
     fn visit_call_arguments(&mut self, arguments: &syntax::CallArguments) {
@@ -643,22 +844,5 @@ impl TemplateBodyResolver<'_, '_, '_> {
 }
 
 fn type_depends_on_parameter(term: &ResolvedTemplateType) -> bool {
-    match &term.kind {
-        ResolvedTemplateTypeKind::Parameter(_) => true,
-        ResolvedTemplateTypeKind::ClassTemplate { arguments, .. } => {
-            arguments.iter().any(type_depends_on_parameter)
-        }
-        ResolvedTemplateTypeKind::Shared(target)
-        | ResolvedTemplateTypeKind::Optional(target)
-        | ResolvedTemplateTypeKind::Array(target) => type_depends_on_parameter(target),
-        ResolvedTemplateTypeKind::I64
-        | ResolvedTemplateTypeKind::U64
-        | ResolvedTemplateTypeKind::U8
-        | ResolvedTemplateTypeKind::F64
-        | ResolvedTemplateTypeKind::Bool
-        | ResolvedTemplateTypeKind::Unit
-        | ResolvedTemplateTypeKind::Obj
-        | ResolvedTemplateTypeKind::Class(_)
-        | ResolvedTemplateTypeKind::Interface(_) => false,
-    }
+    term.depends_on_parameter()
 }

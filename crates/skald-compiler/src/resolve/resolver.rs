@@ -331,7 +331,7 @@ fn resolve_shared_target(
         let ResolvedTypeKind::Array(array) = resolved.kind else {
             unreachable!("an array target must resolve to an array identity")
         };
-        return Some(ResolvedSharedTarget::Array(array));
+        return ResolvedSharedTarget::from_direct_type(ResolvedTypeKind::Array(array));
     }
     let syntax::TypeKind::Named(target) = &target.kind else {
         diagnostics.push(
@@ -348,17 +348,17 @@ fn resolve_shared_target(
         return None;
     }
     if !target.name.is_qualified() && target.name.text == "Obj" {
-        return Some(ResolvedSharedTarget::Obj);
+        return ResolvedSharedTarget::from_direct_type(ResolvedTypeKind::Obj);
     }
     match lookup.select(&target.name, diagnostics) {
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(class),
             ..
-        }) => Some(ResolvedSharedTarget::Class(class)),
+        }) => ResolvedSharedTarget::from_direct_type(ResolvedTypeKind::Class(class)),
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Interface(interface),
             ..
-        }) => Some(ResolvedSharedTarget::Interface(interface)),
+        }) => ResolvedSharedTarget::from_direct_type(ResolvedTypeKind::Interface(interface)),
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::ClassTemplate(_),
             name_span,

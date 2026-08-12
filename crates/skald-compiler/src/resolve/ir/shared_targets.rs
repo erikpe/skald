@@ -2,6 +2,8 @@
 
 use crate::identity::{ArrayTypeId, ClassId, InterfaceId, OptionalBoxTypeId};
 
+use super::ResolvedTypeKind;
+
 /// The object view carried by an ordinary shared owner or an optional box.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ResolvedObjectTarget {
@@ -32,6 +34,26 @@ pub enum ResolvedSharedTargetCategory {
 }
 
 impl ResolvedSharedTarget {
+    /// Select a direct shared target from an already resolved type.
+    /// Optional-box targets are interned separately because they carry
+    /// canonical optional metadata and may represent interface/`Obj` views.
+    pub(crate) const fn from_direct_type(kind: ResolvedTypeKind) -> Option<Self> {
+        match kind {
+            ResolvedTypeKind::Obj => Some(Self::Obj),
+            ResolvedTypeKind::Class(class) => Some(Self::Class(class)),
+            ResolvedTypeKind::Interface(interface) => Some(Self::Interface(interface)),
+            ResolvedTypeKind::Array(array) => Some(Self::Array(array)),
+            ResolvedTypeKind::I64
+            | ResolvedTypeKind::U64
+            | ResolvedTypeKind::U8
+            | ResolvedTypeKind::F64
+            | ResolvedTypeKind::Bool
+            | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Shared(_)
+            | ResolvedTypeKind::Optional(_) => None,
+        }
+    }
+
     pub const fn category(self) -> ResolvedSharedTargetCategory {
         match self {
             Self::Obj => ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Obj),

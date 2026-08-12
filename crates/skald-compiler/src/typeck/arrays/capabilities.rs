@@ -37,7 +37,7 @@ pub(in crate::typeck) fn lower_array_types(
     HirArrayTypeTable::new(entries)
 }
 
-fn default_element(
+pub(super) fn default_element(
     program: &ResolvedProgram,
     element: ResolvedTypeKind,
 ) -> Option<HirArrayDefaultElement> {

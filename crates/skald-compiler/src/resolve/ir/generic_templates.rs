@@ -8,8 +8,7 @@ use crate::{
     source::Span,
 };
 
-use super::ResolvedTopLevelId;
-use super::ResolvedVisibility;
+use super::{GenericRequirement, ResolvedTopLevelId, ResolvedVisibility};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedClassTemplate {
@@ -130,6 +129,27 @@ impl ResolvedTemplateType {
             _ => None,
         }
     }
+
+    pub(crate) fn depends_on_parameter(&self) -> bool {
+        match &self.kind {
+            ResolvedTemplateTypeKind::Parameter(_) => true,
+            ResolvedTemplateTypeKind::ClassTemplate { arguments, .. } => {
+                arguments.iter().any(Self::depends_on_parameter)
+            }
+            ResolvedTemplateTypeKind::Shared(target)
+            | ResolvedTemplateTypeKind::Optional(target)
+            | ResolvedTemplateTypeKind::Array(target) => target.depends_on_parameter(),
+            ResolvedTemplateTypeKind::I64
+            | ResolvedTemplateTypeKind::U64
+            | ResolvedTemplateTypeKind::U8
+            | ResolvedTemplateTypeKind::F64
+            | ResolvedTemplateTypeKind::Bool
+            | ResolvedTemplateTypeKind::Unit
+            | ResolvedTemplateTypeKind::Obj
+            | ResolvedTemplateTypeKind::Class(_)
+            | ResolvedTemplateTypeKind::Interface(_) => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -219,6 +239,7 @@ pub(crate) struct ResolvedClassTemplateSemantics {
     pub(crate) implemented_interfaces: Vec<InterfaceId>,
     pub(crate) bounds: Vec<ResolvedTemplateBound>,
     pub(crate) type_uses: Vec<ResolvedTemplateTypeUse>,
+    pub(crate) requirements: Vec<GenericRequirement>,
     pub(crate) selections: Vec<ResolvedTemplateSelection>,
 }
 
@@ -236,6 +257,11 @@ impl ResolvedClassTemplateSemanticTable {
 
     pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedClassTemplateSemantics> {
         self.entries.iter()
+    }
+
+    #[allow(dead_code)] // Closed specialization will query templates by identity.
+    pub(crate) fn get(&self, template: ClassTemplateId) -> Option<&ResolvedClassTemplateSemantics> {
+        self.entries.get(template, |entry| entry.template)
     }
 }
 

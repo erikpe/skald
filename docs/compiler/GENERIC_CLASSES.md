@@ -1,13 +1,16 @@
 # Generic-Class Specialization
 
-Status: frozen compiler design; template resolution implemented, semantic
-specialization not implemented. This document defines the target-independent compilation
-contract for the initial [generic-class language design](../language/GENERIC_CLASSES.md).
+Status: frozen compiler design; template resolution and contextual requirement
+analysis implemented, semantic specialization not implemented. This document
+defines the target-independent compilation contract for the initial
+[generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
 Resolution now produces stable template identities, structural template type
-terms, definition-site selections, nominal interface bounds, and explicit
-argument-dependent selections. Valid closed applications remain gated until
-the specialization phase products exist.
+terms, definition-site selections, nominal interface bounds, explicit
+argument-dependent selections, and structural mechanical requirements with
+source origins. A closed-type capability facade composes the existing
+validators and lifecycle planners; valid closed applications remain gated
+until the specialization phase products exist.
 
 ## Architectural outcome
 
@@ -162,6 +165,13 @@ planners. Optional default construction, recursive optional copy/assignment,
 array element lifecycle, shared-owner retain/release, exact-class copy
 capabilities, and stored/alias/shared-target eligibility remain single-sourced
 in their ordinary phase owners.
+
+The implemented query facade accepts already-closed subjects from the future
+specialization owner. That owner remains responsible for structural
+substitution, compound-type interning, and canonical optional-box targets; the
+facade reports the originating requirement when a capability is unavailable.
+Static all-zero initialization remains distinct from requested-length array
+element defaulting even though both arise from a default requirement reason.
 
 The generic layer may expose a cohesive query facade over those owners, but it
 must not implement parallel tables whose answers can diverge from non-generic

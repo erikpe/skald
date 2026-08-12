@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G3 is next.
+Status: in progress; G4 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -57,7 +57,7 @@ not reopen those decisions while implementing them.
 - [x] G0 — Parse and preserve generic class syntax
 - [x] G1 — Establish template identities and module declarations
 - [x] G2 — Resolve parameter-bearing type terms and nominal bounds
-- [ ] G3 — Infer and evaluate contextual generic requirements
+- [x] G3 — Infer and evaluate contextual generic requirements
 - [ ] G4 — Build deterministic closed-specialization identities
 - [ ] G5 — Specialize class declarations into ordinary closed classes
 - [ ] G6 — Specialize executable bodies and operation selections
@@ -194,26 +194,26 @@ classified as argument-dependent rather than encoded with a fake identity.
 **Purpose:** Implement the frozen rule that argument legality follows actual
 template uses, not a universal generic-argument whitelist.
 
-- [ ] Add structural `GenericRequirement` records containing a type term,
+- [x] Add structural `GenericRequirement` records containing a type term,
   role-specific capability, origin span, and stable reason.
-- [ ] Infer field/static storage, value parameter/result, alias access,
+- [x] Infer field/static storage, value parameter/result, alias access,
   optional payload, array element, and shared-target requirements from
   declarations and type construction.
-- [ ] Infer default, copy construction, assignment, and destruction
+- [x] Infer default, copy construction, assignment, and destruction
   requirements from delayed body operations and lifecycle synthesis only when
   those operations actually need them.
-- [ ] Build a narrow capability-query facade over existing optional, array,
+- [x] Build a narrow capability-query facade over existing optional, array,
   shared, stored-value, alias, and exact-class lifecycle owners; do not clone
   their eligibility or transition logic in the generic subsystem.
-- [ ] Preserve structural requirements over terms such as `T`, `T?`, and
+- [x] Preserve structural requirements over terms such as `T`, `T?`, and
   `T?[]` rather than reducing all requirements to flags on a parameter.
-- [ ] Implement recursive evaluation against closed substituted types,
+- [x] Implement recursive evaluation against closed substituted types,
   including optional absence defaulting, nested optional copying and
   assignment, array lifecycle, and shared-owner operations independent of the
   pointee's copy capability.
-- [ ] Keep unavailable class/aggregate copy operations as capabilities rather
+- [x] Keep unavailable class/aggregate copy operations as capabilities rather
   than eager errors until a recorded operation requires them.
-- [ ] Render inferred requirements and their origins in template dumps.
+- [x] Render inferred requirements and their origins in template dumps.
 
 **Tests:** Requirement-inference unit tests for every context and operation;
 positive and negative matrices for primitive, exact class, optional, nested

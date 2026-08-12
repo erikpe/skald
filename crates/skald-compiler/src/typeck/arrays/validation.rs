@@ -16,7 +16,7 @@ pub(in crate::typeck) fn validate_array_types(
 ) {
     for array in program.array_types.iter() {
         let element = lower_type(program, &array.element);
-        if matches!(element, Type::Unit | Type::Obj | Type::Interface(_)) {
+        if !is_array_element(element) {
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_ARRAY_ELEMENT,
@@ -72,6 +72,10 @@ pub(in crate::typeck) fn validate_array_types(
             }
         }
     }
+}
+
+pub(in crate::typeck) const fn is_array_element(ty: Type) -> bool {
+    !matches!(ty, Type::Unit | Type::Obj | Type::Interface(_))
 }
 
 fn is_direct_interface_array(kind: ResolvedTypeKind) -> bool {

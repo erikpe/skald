@@ -221,6 +221,17 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                 type_use.type_term.span,
                             );
                         }
+                        for requirement in &semantics.requirements {
+                            dumper.line(
+                                &format!(
+                                    "Requirement {} {} reason {}",
+                                    render_generic_capability(requirement.capability),
+                                    render_template_type(&requirement.type_term),
+                                    render_generic_requirement_reason(requirement.reason),
+                                ),
+                                requirement.origin,
+                            );
+                        }
                         for selection in &semantics.selections {
                             match selection {
                                 ResolvedTemplateSelection::TopLevel { declaration, span } => {
@@ -407,6 +418,65 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
         }
     });
     dumper.output
+}
+
+fn render_generic_capability(capability: GenericCapability) -> &'static str {
+    match capability {
+        GenericCapability::FieldStorage => "field-storage",
+        GenericCapability::StaticStorage => "static-storage",
+        GenericCapability::ValueParameter => "value-parameter",
+        GenericCapability::ValueResult => "value-result",
+        GenericCapability::AliasTarget(GenericAliasAccess::ReadOnly) => "readonly-alias-target",
+        GenericCapability::AliasTarget(GenericAliasAccess::Mutable) => "mutable-alias-target",
+        GenericCapability::OptionalPayload => "optional-payload",
+        GenericCapability::ArrayElement => "array-element",
+        GenericCapability::SharedTarget => "shared-target",
+        GenericCapability::DefaultConstructible => "default-constructible",
+        GenericCapability::CopyConstructible => "copy-constructible",
+        GenericCapability::Assignable => "assignable",
+        GenericCapability::Destroyable => "destroyable",
+    }
+}
+
+fn render_generic_requirement_reason(reason: GenericRequirementReason) -> String {
+    match reason {
+        GenericRequirementReason::FieldDeclaration { member } => {
+            format!("member{member}:field-declaration")
+        }
+        GenericRequirementReason::StaticFieldDeclaration { member } => {
+            format!("member{member}:static-field-declaration")
+        }
+        GenericRequirementReason::ParameterDeclaration { member, parameter } => {
+            format!("member{member}:parameter{parameter}-declaration")
+        }
+        GenericRequirementReason::MethodResult { member } => {
+            format!("member{member}:method-result")
+        }
+        GenericRequirementReason::OptionalType => "optional-type".to_owned(),
+        GenericRequirementReason::ArrayType => "array-type".to_owned(),
+        GenericRequirementReason::SharedType => "shared-type".to_owned(),
+        GenericRequirementReason::StaticZeroInitialization { member } => {
+            format!("member{member}:static-zero-initialization")
+        }
+        GenericRequirementReason::ArrayLengthConstruction { member } => {
+            format!("member{member}:array-length-construction")
+        }
+        GenericRequirementReason::ExplicitArrayCopy { member } => {
+            format!("member{member}:explicit-array-copy")
+        }
+        GenericRequirementReason::ExplicitCopyConstruction { member } => {
+            format!("member{member}:explicit-copy-construction")
+        }
+        GenericRequirementReason::StoredInitializationCopy { member } => {
+            format!("member{member}:stored-initialization-copy")
+        }
+        GenericRequirementReason::Assignment { member } => {
+            format!("member{member}:assignment")
+        }
+        GenericRequirementReason::SynthesizedDestruction { member } => {
+            format!("member{member}:synthesized-destruction")
+        }
+    }
 }
 
 fn render_template_type(type_term: &ResolvedTemplateType) -> String {

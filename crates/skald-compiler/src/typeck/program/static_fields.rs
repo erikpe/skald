@@ -110,11 +110,11 @@ fn report_invalid_explicit_storage(
     );
 }
 
-pub(super) const fn is_stored_value_type(ty: Type) -> bool {
+pub(in crate::typeck) const fn is_stored_value_type(ty: Type) -> bool {
     !matches!(ty, Type::Unit | Type::Obj | Type::Interface(_))
 }
 
-pub(super) const fn has_zero_default(ty: Type) -> bool {
+pub(in crate::typeck) const fn has_zero_default(ty: Type) -> bool {
     matches!(
         ty,
         Type::I64
