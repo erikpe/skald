@@ -98,7 +98,10 @@ identity and grouping. HIR prints exact forms such as
 `BitwiseComplement.u8` and `BitwiseXor.u64`; MIR prints `not.u8` and
 `xor.u64`. Each is an ordinary scalar rvalue with no operator-owned branch or
 failure edge. A scalar spill around control-affecting right-operand lowering is
-the existing eager binary evaluation rule, not a bitwise control effect.
+the existing eager binary evaluation rule, not a bitwise control effect. When
+the right operand contains a call, inspect the complete argument preparation:
+a named by-value array copy or checked array-element object copy can introduce
+blocks even when its source place is otherwise pure.
 
 For source `<<` and `>>`, AST and resolved dumps retain direction, grouping,
 and spans. HIR prints `CheckedShift` with

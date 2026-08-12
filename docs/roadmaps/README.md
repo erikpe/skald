@@ -21,10 +21,7 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-The [shared optional boxes discoveries](SHARED_OPTIONAL_BOXES_DISCOVERIES.md)
-record contains a control-flow value-stabilization issue found while composing
-the native box-array matrix. It is deliberately separate from shared
-optional-box and array ownership.
+No implementation discoveries are currently pending.
 
 ## Implementation baseline
 

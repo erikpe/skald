@@ -135,3 +135,7 @@ Resolved optional-values follow-ups:
 Resolved shared-optional-box design inputs:
 
 - [shared optional boxes design record](SHARED_OPTIONAL_BOXES_DESIGN_PROPOSAL.md)
+
+Resolved shared-optional-box follow-ups:
+
+- [shared optional boxes discoveries](SHARED_OPTIONAL_BOXES_DISCOVERIES.md)

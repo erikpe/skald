@@ -1,15 +1,15 @@
-# Shared Optional Boxes Discoveries
+# Resolved Shared Optional Boxes Discoveries
 
-Status: pending.
+Status: resolved.
 
-This record keeps follow-up work found while implementing the completed shared
-optional boxes roadmap separate from that milestone.
+This record preserves follow-up work found while implementing the completed
+shared optional boxes roadmap.
 
 ## Stabilize values across multiple control-flow-producing subexpressions
 
 **Priority:** Medium.
 
-**Status:** Pending.
+**Status:** Resolved.
 
 **Problem:** A single arithmetic return expression that combined a checked
 optional-box-owner unwrap, boxed optional unwrap, and a later internal call
@@ -34,3 +34,16 @@ stable storage home, and introduce one general stabilization rule. Preserve
 left-to-right evaluation, full-expression cleanup, guard/anchor lifetime, and
 existing MIR value dominance rules; do not special-case arrays or optional
 boxes.
+
+**Resolution:** MIR lowering already had the general rule: an earlier scalar
+is spilled before a later subexpression whose complete lowering can change
+blocks. The control-effect summary incorrectly classified named by-value array
+arguments by inspecting only their source receiver, overlooking the checked
+allocation and deep-copy loop performed while preparing the argument. It also
+treated an owning object copy from an array element as block-free despite its
+checked position lowering. The summary now classifies both complete argument
+preparation operations, so the existing general spill rule preserves values,
+evaluation order, and full-expression lifetimes without an array or
+optional-box branch in expression lowering. The original native box-array
+fixture again uses one combined expression, while a separate non-array MIR
+regression composes checked optional unwraps across an internal call.

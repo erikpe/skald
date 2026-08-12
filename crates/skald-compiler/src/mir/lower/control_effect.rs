@@ -123,7 +123,9 @@ pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) 
             HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => true,
             HirSharedSource::Place(_) => false,
         },
-        HirCallArgument::Array(value) => array_source_contains_control_effect(&value.source),
+        HirCallArgument::Array(initialization) => {
+            array_initialization_contains_control_effect(initialization)
+        }
         HirCallArgument::ArrayAlias(alias) => match &alias.source {
             crate::hir::HirArrayAliasSource::Whole(receiver) => {
                 array_receiver_contains_control_effect(receiver)
@@ -212,6 +214,19 @@ fn array_construction_contains_control_effect(
     true
 }
 
+fn array_initialization_contains_control_effect(
+    initialization: &crate::hir::HirArrayInitialize,
+) -> bool {
+    match initialization.operation {
+        // A named by-value array transfer lowers through a checked allocation
+        // and copy loop even when evaluating the source place itself is pure.
+        crate::hir::HirArrayTransfer::DeepCopy(_) => true,
+        crate::hir::HirArrayTransfer::Adopt => {
+            array_source_contains_control_effect(&initialization.source)
+        }
+    }
+}
+
 fn array_source_contains_control_effect(source: &crate::hir::HirArraySource) -> bool {
     array_receiver_contains_control_effect(&source.receiver)
 }
@@ -242,7 +257,9 @@ fn object_source_contains_control_effect(source: &HirObjectSource) -> bool {
     match source {
         HirObjectSource::Place(_) => false,
         HirObjectSource::Static { .. } => false,
-        HirObjectSource::ArrayElement(_) => false,
+        // Forming an object source from an array element performs checked
+        // position lowering before the owning copy can begin.
+        HirObjectSource::ArrayElement(_) => true,
         HirObjectSource::Produced(producer) => producer_contains_control_effect(producer),
         HirObjectSource::Checked(view) => checked_view_contains_control_effect(view),
         HirObjectSource::Slice(slice) => object_source_contains_control_effect(&slice.source),

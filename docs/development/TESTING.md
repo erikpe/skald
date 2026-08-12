@@ -401,10 +401,12 @@ Lexer, syntax, resolution, and type-check tests own punctuation distinction,
 precedence, source shape, exact selection, mixed-type rejection, and focused
 actual-type diagnostics. Typed-HIR and verified-MIR tests cover the complete
 operation/type matrix, deterministic dumps, right-control-effect spilling,
-and one-invariant verifier mutations. Backend tests own selector shape, `u8`
-canonicalization, and assembler acceptance. Native and compile-failure
-goldens own edge patterns, left-to-right exactly-once effects, arbitrary eager
-consumers, and exact rendered diagnostics.
+and one-invariant verifier mutations. General expression-stabilization tests
+also compose checked optional unwraps with later calls and cover owned
+argument preparation that creates control flow. Backend tests own selector
+shape, `u8` canonicalization, and assembler acceptance. Native and
+compile-failure goldens own edge patterns, left-to-right exactly-once effects,
+arbitrary eager consumers, and exact rendered diagnostics.
 
 Checked-shift lexer, parser, resolution, and type-check tests own longest
 match, precedence, direction, exact left kind, fixed `u64` count, source-order

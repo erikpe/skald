@@ -399,6 +399,13 @@ normal reverse parameter cleanup. Results use one caller-owned destination:
 named returns deep-copy, while produced returns transfer their backing after
 callee cleanup has preserved the completed result.
 
+The HIR-to-MIR control-effect summary classifies argument preparation, not
+only evaluation of the source place. A named by-value array argument is
+therefore control-affecting because its checked allocation and copy loop move
+lowering through successor blocks even when the named source itself is pure.
+Earlier scalar operands and scalar arguments receive spill storage before that
+preparation and are reloaded only in its continuation block.
+
 ### Whole assignment
 
 Whole inline assignment ends ownership of the old backing and installs a

@@ -29,6 +29,7 @@ mod comparisons;
 mod conditional_cleanup;
 mod copy;
 mod cycles;
+mod expression_stabilization;
 mod floating_division;
 mod integer_division;
 mod interface_dispatch;
