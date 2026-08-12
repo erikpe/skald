@@ -213,21 +213,6 @@ impl<'ast> ProgramResolver<'ast> {
             type_parameters: &type_parameters,
         };
 
-        for unit in &self.units {
-            let lookup = lookups.for_unit(unit, &self.modules);
-            for item in &unit.template_work {
-                let syntax::TopLevelDeclaration::Class(class) =
-                    &unit.ast.declarations[item.ast_index]
-                else {
-                    unreachable!("class-template work must reference a class declaration")
-                };
-                let parameters = type_parameters
-                    .for_template(item.id)
-                    .expect("every class template has one parameter list");
-                validate_class_template_types(class, parameters, lookup, &mut self.diagnostics);
-            }
-        }
-
         let external_link_plan = ExternalLinkPlan::new(self.units.iter().flat_map(|unit| {
             unit.function_work.iter().filter_map(|item| {
                 match &unit.ast.declarations[item.ast_index] {
@@ -246,6 +231,29 @@ impl<'ast> ProgramResolver<'ast> {
         let external_links =
             external_link_plan.finish(&function_declarations, &self.modules, &mut self.diagnostics);
         let interfaces = self.collect_interface_declarations(lookups);
+        let mut template_semantics = Vec::new();
+        for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
+            for item in &unit.template_work {
+                let syntax::TopLevelDeclaration::Class(class) =
+                    &unit.ast.declarations[item.ast_index]
+                else {
+                    unreachable!("class-template work must reference a class declaration")
+                };
+                let parameters = type_parameters
+                    .for_template(item.id)
+                    .expect("every class template has one parameter list");
+                template_semantics.push(resolve_class_template_semantics(
+                    item.id,
+                    class,
+                    parameters,
+                    lookup,
+                    &interfaces,
+                    &mut self.diagnostics,
+                ));
+            }
+        }
+        let template_semantics = ResolvedClassTemplateSemanticTable::new(template_semantics);
         let (class_declarations, class_symbols, class_work) =
             self.collect_class_declarations(lookups);
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
@@ -377,6 +385,7 @@ impl<'ast> ProgramResolver<'ast> {
                 module_declarations,
                 class_templates,
                 type_parameters,
+                template_semantics,
                 array_types,
                 optional_types,
                 optional_box_types,

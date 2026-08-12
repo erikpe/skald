@@ -190,6 +190,113 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if program.template_semantics.iter().next().is_some() {
+            dumper.heading("TemplateSemantics");
+            dumper.indented(|dumper| {
+                for semantics in program.template_semantics.iter() {
+                    dumper.raw_line(&format!("Template {}", semantics.template));
+                    dumper.indented(|dumper| {
+                        if let Some(base) = &semantics.direct_base {
+                            dumper.line(
+                                &format!("DirectBase {}", render_template_type(base)),
+                                base.span,
+                            );
+                        }
+                        for interface in &semantics.implemented_interfaces {
+                            dumper.raw_line(&format!("Implements {interface}"));
+                        }
+                        for bound in &semantics.bounds {
+                            dumper.line(
+                                &format!("Bound {} interface {}", bound.parameter, bound.interface),
+                                bound.span,
+                            );
+                        }
+                        for type_use in &semantics.type_uses {
+                            dumper.line(
+                                &format!(
+                                    "TypeUse {} {}",
+                                    render_template_type_context(type_use.context),
+                                    render_template_type(&type_use.type_term)
+                                ),
+                                type_use.type_term.span,
+                            );
+                        }
+                        for selection in &semantics.selections {
+                            match selection {
+                                ResolvedTemplateSelection::TopLevel { declaration, span } => {
+                                    let identity = match declaration {
+                                        ResolvedTopLevelId::Function(function) => {
+                                            function.to_string()
+                                        }
+                                        ResolvedTopLevelId::Class(class) => class.to_string(),
+                                        ResolvedTopLevelId::ClassTemplate(template) => {
+                                            template.to_string()
+                                        }
+                                        ResolvedTopLevelId::Interface(interface) => {
+                                            interface.to_string()
+                                        }
+                                    };
+                                    dumper.line(
+                                        &format!("Selection definition-site top-level {identity}"),
+                                        *span,
+                                    );
+                                }
+                                ResolvedTemplateSelection::TemplateMember {
+                                    member,
+                                    member_name,
+                                    span,
+                                } => dumper.line(
+                                    &format!(
+                                        "Selection definition-site template-member member{member} {member_name}"
+                                    ),
+                                    *span,
+                                ),
+                                ResolvedTemplateSelection::DefinitionSite {
+                                    kind,
+                                    target,
+                                    member_name,
+                                    span,
+                                } => dumper.line(
+                                    &format!(
+                                        "Selection definition-site {} {}{}",
+                                        render_template_selection_kind(*kind),
+                                        render_template_type(target),
+                                        render_template_member(member_name.as_deref())
+                                    ),
+                                    *span,
+                                ),
+                                ResolvedTemplateSelection::ArgumentDependent {
+                                    kind,
+                                    target,
+                                    member_name,
+                                    span,
+                                } => dumper.line(
+                                    &format!(
+                                        "Selection argument-dependent {} {}{}",
+                                        render_template_selection_kind(*kind),
+                                        render_template_type(target),
+                                        render_template_member(member_name.as_deref())
+                                    ),
+                                    *span,
+                                ),
+                                ResolvedTemplateSelection::BoundMember {
+                                    parameter,
+                                    interface,
+                                    requirement,
+                                    member_name,
+                                    span,
+                                } => dumper.line(
+                                    &format!(
+                                        "Selection bound-member {parameter} interface {interface} requirement {requirement} member {member_name}"
+                                    ),
+                                    *span,
+                                ),
+                            }
+                        }
+                    });
+                }
+            });
+        }
         dumper.write_indentation();
         match program.entry_function {
             Some(function) => {
@@ -300,6 +407,103 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
         }
     });
     dumper.output
+}
+
+fn render_template_type(type_term: &ResolvedTemplateType) -> String {
+    match &type_term.kind {
+        ResolvedTemplateTypeKind::I64 => "i64".to_owned(),
+        ResolvedTemplateTypeKind::U64 => "u64".to_owned(),
+        ResolvedTemplateTypeKind::U8 => "u8".to_owned(),
+        ResolvedTemplateTypeKind::F64 => "f64".to_owned(),
+        ResolvedTemplateTypeKind::Bool => "bool".to_owned(),
+        ResolvedTemplateTypeKind::Unit => "unit".to_owned(),
+        ResolvedTemplateTypeKind::Obj => "Obj".to_owned(),
+        ResolvedTemplateTypeKind::Parameter(parameter) => parameter.to_string(),
+        ResolvedTemplateTypeKind::Class(class) => format!("class {class}"),
+        ResolvedTemplateTypeKind::Interface(interface) => format!("interface {interface}"),
+        ResolvedTemplateTypeKind::ClassTemplate {
+            template,
+            arguments,
+        } => format!(
+            "{template}<{}>",
+            arguments
+                .iter()
+                .map(render_template_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        ResolvedTemplateTypeKind::Shared(target) => {
+            format!("shared ({})", render_template_type(target))
+        }
+        ResolvedTemplateTypeKind::Optional(payload) => {
+            format!("optional ({})", render_template_type(payload))
+        }
+        ResolvedTemplateTypeKind::Array(element) => {
+            format!("array ({})", render_template_type(element))
+        }
+    }
+}
+
+fn render_template_type_context(context: ResolvedTemplateTypeUseContext) -> String {
+    match context {
+        ResolvedTemplateTypeUseContext::DirectBase => "direct-base".to_owned(),
+        ResolvedTemplateTypeUseContext::Field { member } => format!("member{member}:field"),
+        ResolvedTemplateTypeUseContext::StaticField { member } => {
+            format!("member{member}:static-field")
+        }
+        ResolvedTemplateTypeUseContext::InitializerParameter { member, parameter } => {
+            format!("member{member}:initializer-parameter{parameter}")
+        }
+        ResolvedTemplateTypeUseContext::CopyConstructorParameter { member, parameter } => {
+            format!("member{member}:copy-parameter{parameter}")
+        }
+        ResolvedTemplateTypeUseContext::CopyAssignmentParameter { member, parameter } => {
+            format!("member{member}:assignment-parameter{parameter}")
+        }
+        ResolvedTemplateTypeUseContext::MethodParameter { member, parameter } => {
+            format!("member{member}:method-parameter{parameter}")
+        }
+        ResolvedTemplateTypeUseContext::MethodResult { member } => {
+            format!("member{member}:method-result")
+        }
+        ResolvedTemplateTypeUseContext::Local { member } => format!("member{member}:local"),
+        ResolvedTemplateTypeUseContext::CastTarget { member } => {
+            format!("member{member}:cast-target")
+        }
+        ResolvedTemplateTypeUseContext::TypeTestTarget { member } => {
+            format!("member{member}:type-test-target")
+        }
+        ResolvedTemplateTypeUseContext::ConstructionTarget { member } => {
+            format!("member{member}:construction-target")
+        }
+        ResolvedTemplateTypeUseContext::StaticSelectionTarget { member } => {
+            format!("member{member}:static-selection-target")
+        }
+        ResolvedTemplateTypeUseContext::ArrayConstructionTarget { member } => {
+            format!("member{member}:array-construction-target")
+        }
+        ResolvedTemplateTypeUseContext::OptionalBoxTarget { member } => {
+            format!("member{member}:optional-box-target")
+        }
+    }
+}
+
+fn render_template_selection_kind(kind: ResolvedTemplateDependentSelectionKind) -> &'static str {
+    match kind {
+        ResolvedTemplateDependentSelectionKind::Construction(
+            ResolvedTemplateConstructionMode::Inline,
+        ) => "inline-construction",
+        ResolvedTemplateDependentSelectionKind::Construction(
+            ResolvedTemplateConstructionMode::Shared,
+        ) => "shared-construction",
+        ResolvedTemplateDependentSelectionKind::Cast => "cast",
+        ResolvedTemplateDependentSelectionKind::TypeTest => "type-test",
+        ResolvedTemplateDependentSelectionKind::StaticMember => "static-member",
+    }
+}
+
+fn render_template_member(member: Option<&str>) -> String {
+    member.map_or_else(String::new, |member| format!(" member {member}"))
 }
 
 struct ResolvedDumper<'types> {

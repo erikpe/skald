@@ -66,6 +66,12 @@ pub const DUPLICATE_TYPE_PARAMETER: &str = "RES037";
 pub const INVALID_GENERIC_APPLICATION: &str = "RES038";
 pub const RAW_GENERIC_TYPE: &str = "RES039";
 pub const GENERIC_ARITY_MISMATCH: &str = "RES040";
+pub const INVALID_GENERIC_BOUND: &str = "RES041";
+pub const DUPLICATE_GENERIC_BOUND: &str = "RES042";
+pub const INVALID_GENERIC_BASE: &str = "RES043";
+pub const UNSUPPORTED_PARAMETER_CONSTRUCTION: &str = "RES044";
+pub const UNCONSTRAINED_TYPE_PARAMETER_MEMBER: &str = "RES045";
+pub const AMBIGUOUS_GENERIC_BOUND_MEMBER: &str = "RES046";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -210,6 +216,13 @@ fn report_generic_application(
         .arguments
         .as_ref()
         .expect("generic application reporting requires arguments");
+    if !named.name.is_qualified() && named.name.text == "Obj" {
+        diagnostics.push(
+            Diagnostic::error(INVALID_GENERIC_APPLICATION, "`Obj` is not a generic class")
+                .with_primary_label(arguments.span, "type arguments are not allowed here"),
+        );
+        return;
+    }
     match lookup.select(&named.name, diagnostics) {
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::ClassTemplate(template),

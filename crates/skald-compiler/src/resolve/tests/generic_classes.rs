@@ -205,3 +205,349 @@ fn resolved_dump_includes_template_and_parameter_identities() {
     assert!(dump.contains("private template0 \"Pair\""), "{dump}");
     assert!(dump.contains("Template template0 module m0 \"Pair\" parameters template0:type0=\"Left\" template0:type1=\"Right\""), "{dump}");
 }
+
+#[test]
+fn template_types_preserve_every_constructor_and_definition_site_identity() {
+    let output = resolve_text(
+        "class Inner<Value> { value: Value; }\n\
+         class Shape<T> {\n\
+           value: T;\n\
+           maybe: T?;\n\
+           nested: T??[];\n\
+           owner: shared T;\n\
+           concrete: Inner<T?[]>;\n\
+           fn transform(input: T) -> Inner<T> {\n\
+             var local: T?[] = T?[]();\n\
+             return Inner<T>(input);\n\
+           }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("TypeUse member0:field template1:type0"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("TypeUse member1:field optional (template1:type0)"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("array (optional (optional (template1:type0)))"),
+        "{dump}"
+    );
+    assert!(dump.contains("shared (template1:type0)"), "{dump}");
+    assert!(
+        dump.contains("template0<array (optional (template1:type0))>"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains(
+            "Selection argument-dependent inline-construction template0<template1:type0>"
+        ),
+        "{dump}"
+    );
+    assert!(output.program.array_types.is_empty());
+    assert!(output.program.optional_types.is_empty());
+}
+
+#[test]
+fn generic_direct_bases_resolve_structurally_but_bare_parameters_do_not() {
+    let valid = resolve_text(
+        "class Base<T> { value: T; }\n\
+         class Derived<T> extends Base<T> { init() { super(); } }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(valid.diagnostics.is_empty(), "{:?}", valid.diagnostics);
+    assert!(dump_resolved(&valid.program).contains("DirectBase template0<template1:type0>"));
+
+    let invalid = resolve_text(
+        "class Derived<T> extends T { init() { super(); } }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(invalid
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_GENERIC_BASE));
+}
+
+#[test]
+fn nominal_bounds_resolve_interface_and_requirement_identities() {
+    let output = resolve_text(
+        "interface Ranked { fn rank() -> i64; }\n\
+         class Sorted<T> where T: Ranked {\n\
+           fn inspect(ref value: T) -> i64 { return value.rank(); }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("Bound template0:type0 interface i0"),
+        "{dump}"
+    );
+    assert!(dump.contains(
+        "Selection bound-member template0:type0 interface i0 requirement i0:requirement0 member rank"
+    ), "{dump}");
+}
+
+#[test]
+fn invalid_unknown_duplicate_and_inaccessible_bounds_are_diagnosed() {
+    let local = resolve_text(
+        "interface Marker { fn mark() -> unit; }\n\
+         class NotInterface {}\n\
+         class Invalid<T> where T: Marker, T: Marker, T: NotInterface, Missing: Marker, T: Unknown {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(local
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == DUPLICATE_GENERIC_BOUND));
+    assert!(
+        local
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_GENERIC_BOUND)
+            .count()
+            >= 3,
+        "{:?}",
+        local.diagnostics
+    );
+
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep;\nclass Use<T> where T: dep::Hidden {}\nfn main() -> i64 { return 0; }\n",
+            ),
+            ("dep.ska", "interface Hidden { fn hidden() -> unit; }\n"),
+        ],
+    );
+    let inaccessible = resolve_module_graph(&graph);
+    assert!(inaccessible
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == PRIVATE_DECLARATION));
+}
+
+#[test]
+fn unconstrained_and_ambiguous_parameter_members_are_definition_errors() {
+    let unconstrained = resolve_text(
+        "class Box<T> { fn inspect(ref value: T) -> unit { value.inspect(); } }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(unconstrained
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNCONSTRAINED_TYPE_PARAMETER_MEMBER));
+
+    let ambiguous = resolve_text(
+        "interface Left { fn inspect() -> unit; }\n\
+         interface Right { fn inspect() -> unit; }\n\
+         class Box<T> where T: Left, T: Right {\n\
+           fn use(ref value: T) -> unit { value.inspect(); }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(ambiguous
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == AMBIGUOUS_GENERIC_BOUND_MEMBER));
+}
+
+#[test]
+fn construction_directly_through_a_parameter_is_rejected_in_both_modes() {
+    let output = resolve_text(
+        "class Factory<T> {\n\
+           fn make() -> unit { T(); new T(); }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == UNSUPPORTED_PARAMETER_CONSTRUCTION)
+            .count(),
+        2,
+        "{:?}",
+        output.diagnostics
+    );
+}
+
+#[test]
+fn body_type_positions_are_retained_as_argument_dependent_selections() {
+    let output = resolve_text(
+        "class View<T> {\n\
+           fn inspect(ref value: T) -> bool {\n\
+             var casted: T = (T) value;\n\
+             return casted is T;\n\
+           }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("TypeUse member0:cast-target template0:type0"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("TypeUse member0:type-test-target template0:type0"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("Selection argument-dependent cast template0:type0"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("Selection argument-dependent type-test template0:type0"),
+        "{dump}"
+    );
+}
+
+#[test]
+fn lifecycle_static_and_remaining_body_type_positions_are_retained() {
+    let output = resolve_text(
+        "class Helper<T> { value: T; static fn make() -> unit {} }\n\
+         class Complete<T> {\n\
+           static cached: T?;\n\
+           init(value: T) { var box: shared T? = new T?(); }\n\
+           copy(ref source: Complete<T>) {}\n\
+           assign(ref source: Complete<T>) {}\n\
+           fn inspect(ref value: T) -> Helper<T> {\n\
+             var values: T?[] = T?[]();\n\
+             Helper<T>::make();\n\
+             return Helper<T>(value);\n\
+           }\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    for expected in [
+        "member0:static-field optional (template1:type0)",
+        "member1:initializer-parameter0 template1:type0",
+        "member2:copy-parameter0 template1<template1:type0>",
+        "member3:assignment-parameter0 template1<template1:type0>",
+        "member4:method-parameter0 template1:type0",
+        "member4:method-result template0<template1:type0>",
+        "member1:optional-box-target optional (template1:type0)",
+        "member4:array-construction-target array (optional (template1:type0))",
+        "member4:static-selection-target template0<template1:type0>",
+    ] {
+        assert!(dump.contains(expected), "missing `{expected}` in:\n{dump}");
+    }
+    assert!(
+        dump.contains(
+            "Selection argument-dependent static-member template0<template1:type0> member make"
+        ),
+        "{dump}"
+    );
+}
+
+#[test]
+fn definition_site_lookup_preserves_parameter_shadowing_and_qualified_identity() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep;\nclass Holder<T> { local: T; external: dep::T; }\nfn main() -> i64 { return 0; }\n",
+            ),
+            ("dep.ska", "public class T {}\n"),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("TypeUse member0:field template0:type0"),
+        "{dump}"
+    );
+    assert!(dump.contains("TypeUse member1:field class c0"), "{dump}");
+}
+
+#[test]
+fn cyclic_module_templates_resolve_definition_site_names_without_instantiation() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            ("app.ska", "import a;\nfn main() -> i64 { return 0; }\n"),
+            (
+                "a.ska",
+                "import b;\npublic class A<T> { value: b::B<T>; }\n",
+            ),
+            (
+                "b.ska",
+                "import a;\npublic class B<T> { value: a::A<T>; }\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert_eq!(output.program.class_templates.len(), 2);
+    assert!(output.program.classes.is_empty());
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("template0<template1:type0>") || dump.contains("template1<template0:type0>"),
+        "{dump}"
+    );
+}
+
+#[test]
+fn nondependent_body_names_are_resolved_in_the_definition_module() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep;\nclass Box<T> { fn run() -> unit { dep::helper(); } }\nfn main() -> i64 { return 0; }\n",
+            ),
+            ("dep.ska", "public fn helper() -> unit {}\n"),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(
+        dump.contains("Selection definition-site top-level f1"),
+        "{dump}"
+    );
+
+    let unknown = resolve_text(
+        "class Box<T> { fn run() -> unit { missing(); } }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(unknown
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNKNOWN_NAME));
+}
+
+#[test]
+fn template_semantic_dump_is_stable_across_source_registration_order() {
+    fn semantic_dump(sources: &[(&str, &str)]) -> String {
+        let (_workspace, graph) = load_module_sources("app", sources);
+        let output = resolve_module_graph(&graph);
+        assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+        let dump = dump_resolved(&output.program);
+        let start = dump.find("  TemplateSemantics\n").unwrap();
+        let end = dump[start..].find("  Entry ").unwrap() + start;
+        dump[start..end].to_owned()
+    }
+
+    let app = "import model;\nclass Holder<T> { value: model::Pair<T>; }\nfn main() -> i64 { return 0; }\n";
+    let model = "public class Pair<T> { value: T?[]; }\n";
+    assert_eq!(
+        semantic_dump(&[("model.ska", model), ("app.ska", app)]),
+        semantic_dump(&[("app.ska", app), ("model.ska", model)])
+    );
+}

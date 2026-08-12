@@ -319,11 +319,14 @@ so `Outer<Inner<Str>>` is a named type while `left >> right` remains an
 expression shift. Syntax preserves each angle bracket, comma, colon, grouping,
 and `where` span independently.
 
-This grammar currently describes syntax plus the template-declaration phase
+This grammar currently describes syntax plus the template-resolution phase
 boundary. Resolution assigns generic declarations stable non-executable
 template and ordered parameter identities, includes templates in ordinary
 module lookup and visibility, and diagnoses raw names, wrong declaration
-kinds, and incorrect arity. Parameter-bearing type terms, constraint checking,
+kinds, and incorrect arity. Resolution also preserves structural
+parameter-bearing types, fixes definition-site names, resolves nominal
+interface bounds, and classifies dependent body selections without introducing
+executable placeholder types. Contextual requirement inference,
 specialization, and execution remain staged by the
 [generic-classes roadmap](../roadmaps/GENERIC_CLASSES_ROADMAP.md); no generic
 form is an executable class yet, and an otherwise valid closed application is

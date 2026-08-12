@@ -2,10 +2,13 @@
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{ClassTemplateId, ModuleId, TypeParameterId},
+    identity::{
+        ClassId, ClassTemplateId, InterfaceId, InterfaceRequirementId, ModuleId, TypeParameterId,
+    },
     source::Span,
 };
 
+use super::ResolvedTopLevelId;
 use super::ResolvedVisibility;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -90,6 +93,150 @@ impl ResolvedTypeParameters {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedTypeParameterTable {
     entries: DenseIdTable<ClassTemplateId, ResolvedTypeParameters>,
+}
+
+/// Structural type used only while a class template still contains parameters.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedTemplateType {
+    pub(crate) kind: ResolvedTemplateTypeKind,
+    pub(crate) span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateTypeKind {
+    I64,
+    U64,
+    U8,
+    F64,
+    Bool,
+    Unit,
+    Obj,
+    Parameter(TypeParameterId),
+    Class(ClassId),
+    Interface(InterfaceId),
+    ClassTemplate {
+        template: ClassTemplateId,
+        arguments: Vec<ResolvedTemplateType>,
+    },
+    Shared(Box<ResolvedTemplateType>),
+    Optional(Box<ResolvedTemplateType>),
+    Array(Box<ResolvedTemplateType>),
+}
+
+impl ResolvedTemplateType {
+    pub(crate) fn parameter(&self) -> Option<TypeParameterId> {
+        match self.kind {
+            ResolvedTemplateTypeKind::Parameter(parameter) => Some(parameter),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedTemplateBound {
+    pub(crate) parameter: TypeParameterId,
+    pub(crate) interface: InterfaceId,
+    pub(crate) parameter_span: Span,
+    pub(crate) interface_span: Span,
+    pub(crate) span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateTypeUseContext {
+    DirectBase,
+    Field { member: usize },
+    StaticField { member: usize },
+    InitializerParameter { member: usize, parameter: usize },
+    CopyConstructorParameter { member: usize, parameter: usize },
+    CopyAssignmentParameter { member: usize, parameter: usize },
+    MethodParameter { member: usize, parameter: usize },
+    MethodResult { member: usize },
+    Local { member: usize },
+    CastTarget { member: usize },
+    TypeTestTarget { member: usize },
+    ConstructionTarget { member: usize },
+    StaticSelectionTarget { member: usize },
+    ArrayConstructionTarget { member: usize },
+    OptionalBoxTarget { member: usize },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedTemplateTypeUse {
+    pub(crate) context: ResolvedTemplateTypeUseContext,
+    pub(crate) type_term: ResolvedTemplateType,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateConstructionMode {
+    Inline,
+    Shared,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateDependentSelectionKind {
+    Construction(ResolvedTemplateConstructionMode),
+    Cast,
+    TypeTest,
+    StaticMember,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateSelection {
+    TopLevel {
+        declaration: ResolvedTopLevelId,
+        span: Span,
+    },
+    TemplateMember {
+        member: usize,
+        member_name: String,
+        span: Span,
+    },
+    DefinitionSite {
+        kind: ResolvedTemplateDependentSelectionKind,
+        target: ResolvedTemplateType,
+        member_name: Option<String>,
+        span: Span,
+    },
+    ArgumentDependent {
+        kind: ResolvedTemplateDependentSelectionKind,
+        target: ResolvedTemplateType,
+        member_name: Option<String>,
+        span: Span,
+    },
+    BoundMember {
+        parameter: TypeParameterId,
+        interface: InterfaceId,
+        requirement: InterfaceRequirementId,
+        member_name: String,
+        span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedClassTemplateSemantics {
+    pub(crate) template: ClassTemplateId,
+    pub(crate) direct_base: Option<ResolvedTemplateType>,
+    pub(crate) implemented_interfaces: Vec<InterfaceId>,
+    pub(crate) bounds: Vec<ResolvedTemplateBound>,
+    pub(crate) type_uses: Vec<ResolvedTemplateTypeUse>,
+    pub(crate) selections: Vec<ResolvedTemplateSelection>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedClassTemplateSemanticTable {
+    entries: DenseIdTable<ClassTemplateId, ResolvedClassTemplateSemantics>,
+}
+
+impl ResolvedClassTemplateSemanticTable {
+    pub(crate) fn new(entries: Vec<ResolvedClassTemplateSemantics>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |entry| entry.template),
+        }
+    }
+
+    pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedClassTemplateSemantics> {
+        self.entries.iter()
+    }
 }
 
 impl ResolvedTypeParameterTable {

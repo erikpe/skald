@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G2 is next.
+Status: in progress; G3 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -56,7 +56,7 @@ not reopen those decisions while implementing them.
 
 - [x] G0 — Parse and preserve generic class syntax
 - [x] G1 — Establish template identities and module declarations
-- [ ] G2 — Resolve parameter-bearing type terms and nominal bounds
+- [x] G2 — Resolve parameter-bearing type terms and nominal bounds
 - [ ] G3 — Infer and evaluate contextual generic requirements
 - [ ] G4 — Build deterministic closed-specialization identities
 - [ ] G5 — Specialize class declarations into ordinary closed classes
@@ -152,29 +152,29 @@ is deterministic across module graphs.
 **Purpose:** Create the template semantic product that can describe complete
 generic declarations without contaminating ordinary resolved types.
 
-- [ ] Introduce a private facade-oriented generic-template subsystem under
+- [x] Introduce a private facade-oriented generic-template subsystem under
   resolution, with cohesive model, type-resolution, bound-resolution, dump,
   and test ownership rather than adding parameter variants to
   `ResolvedTypeKind`.
-- [ ] Represent parameter leaves, definition-site named identities, nested
+- [x] Represent parameter leaves, definition-site named identities, nested
   template applications, shared targets, optional payloads, and array elements
   as structural template type terms with source spans.
-- [ ] Resolve nondependent declaration names and qualified paths once in the
+- [x] Resolve nondependent declaration names and qualified paths once in the
   definition module; retain parameter-dependent applications without
   synthesizing names or parsing text.
-- [ ] Resolve every `where` target to one exact `InterfaceId`, reject other
+- [x] Resolve every `where` target to one exact `InterfaceId`, reject other
   declaration kinds, duplicates, inaccessible interfaces, and bounds on
   unknown parameters.
-- [ ] Retain parameter-bearing direct bases, fields, statics, lifecycle
+- [x] Retain parameter-bearing direct bases, fields, statics, lifecycle
   signatures, callable signatures, casts, tests, construction heads, and other
   type-bearing body shapes required by later substitution.
-- [ ] Reject definition-level operations that cannot be delayed or justified,
+- [x] Reject definition-level operations that cannot be delayed or justified,
   including construction directly through `T` and member selection on an
   unconstrained parameter.
-- [ ] Represent bound-authorized member lookup by exact interface requirement
+- [x] Represent bound-authorized member lookup by exact interface requirement
   identity while deferring the closed receiver selection needed by ordinary
   resolved bodies.
-- [ ] Add deterministic template semantic dumps for type terms, bounds,
+- [x] Add deterministic template semantic dumps for type terms, bounds,
   definition-site selections, and delayed dependent selections.
 
 **Tests:** Focused template-resolution tests for every type constructor and

@@ -1,10 +1,13 @@
 # Generic-Class Specialization
 
-Status: frozen compiler design; syntax implemented, semantic specialization
-not implemented. This document defines the target-independent compilation
+Status: frozen compiler design; template resolution implemented, semantic
+specialization not implemented. This document defines the target-independent compilation
 contract for the initial [generic-class language design](../language/GENERIC_CLASSES.md).
-The syntax AST now preserves generic declarations and closed applications;
-resolution rejects them explicitly until the remaining phase products exist.
+The syntax AST preserves generic declarations and closed applications.
+Resolution now produces stable template identities, structural template type
+terms, definition-site selections, nominal interface bounds, and explicit
+argument-dependent selections. Valid closed applications remain gated until
+the specialization phase products exist.
 
 ## Architectural outcome
 
