@@ -271,13 +271,13 @@ identical initialized optional state across CFG joins. Inline optional
 container aliases use ordinary indirect MIR places plus exact optional types.
 Checked optional-array payload aliases additionally use a guarded payload
 projection and an ordinary array-backing anchor for the complete immediate
-call. Frozen shared optional boxes now have canonical resolved, HIR, and MIR
+call. Shared optional boxes have canonical resolved, HIR, and MIR
 target identities, typed construction/ownership, verified
 unpublished-payload and owner lifetimes, explicit exact optional-pointee
 access, and explicit polymorphic object-box views. Exact and polymorphic local
 boxes execute on x86-64 through descriptor, shared-owner, recursive optional,
 guard, dispatch, cast, stored-value, array, static-lifecycle, and internal call
-lowering. External box signatures remain deliberately gated and
+lowering. External optional signatures remain deliberately unsupported and
 optional-reference shapes remain syntax diagnostics.
 
 Optional definite-initialization verification keeps one private state model
@@ -289,9 +289,9 @@ recursive initialization of optional fields in completed class storage. This
 division is internal: diagnostic text, ordering, MIR contracts, and the
 separate immediate-consumer guard analysis are unchanged.
 
-### Frozen shared optional box phase boundary
+### Shared optional box phase boundary
 
-The frozen `Shared<Optional<P>>` design extends shared targets with exact
+The `Shared<Optional<P>>` implementation extends shared targets with exact
 optional allocation identities and polymorphic optional-object view
 identities. Resolution preserves target `?`, `shared?` shorthand, grouping,
 and allocation spans while interning deterministic optional and box-view
@@ -1022,7 +1022,7 @@ Optional types use deterministic interned identities rather than recursively
 wrapping the general type enum at every use. Resolved expressions retain
 explicit absence, presence-test, and unwrap nodes. Canonical semantic dumps use
 `T?` and `(shared T)?` independently of source trivia; syntax dumps retain
-`shared? T` shorthand provenance. Frozen shared optional boxes add a static
+`shared? T` shorthand provenance. Shared optional boxes add a static
 box-view identity only where class/interface/`Obj` views carry information
 absent from the exact optional allocation identity.
 
@@ -1062,8 +1062,7 @@ object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
 
 Executable shared type syntax resolves to an explicit class, interface, `Obj`,
-or array target. The frozen box extension adds exact optional and optional
-object-view targets once its roadmap removes the current resolution gate.
+array, exact optional, or optional object-view target.
 Allocation syntax resolves to an exact concrete `ClassId` and retains ordinary
 arguments or the explicit copy source as the existing distinct construction
 modes. These facts cross resolution without a feature gate. Type checking owns
@@ -1196,7 +1195,7 @@ owner, and external shared signatures remain invalid. Explicit copy allocation
 records its checked source and selected exact-class copy operation separately
 from ordinary initializer overloads. Shared casts record their source
 provenance, static or runtime relation, target, and copy/adopt result ownership.
-Frozen box HIR follows that owner vocabulary while adding a distinct
+Box HIR follows that owner vocabulary while adding a distinct
 optional-box allocation producer and checked optional-pointee place. It does
 not encode wrapper mutation, synthesize a bare owning interface/`Obj` optional,
 or lose the exact allocation class behind a polymorphic box view.

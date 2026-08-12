@@ -77,6 +77,7 @@ Archived plans:
 - [Golden stream matcher lists](GOLDEN_STREAM_MATCHER_LISTS_ROADMAP.md)
 - [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_ROADMAP.md)
 - [Compositional optional types](COMPOSITIONAL_OPTIONAL_TYPES_ROADMAP.md)
+- [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md)
 
 Resolved string-design inputs:
 

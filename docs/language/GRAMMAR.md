@@ -256,7 +256,7 @@ array-element, and checked-alias position. Semantic analysis still rejects
 `unit?` and standalone owning optional interface or `Obj` values. Shared
 optional box types and allocations receive canonical resolved identities.
 Construction, stored and internal callable owners, arrays, and explicit exact
-or polymorphic pointee access execute. Their source and compiler semantics are frozen in
+or polymorphic pointee access execute. Their source and compiler semantics are defined in
 [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes). Optional
 references such as `ref?` remain syntax errors.
 `unit[]` is likewise parsed so later semantic analysis can report element
@@ -785,16 +785,15 @@ bounded checked payload views and aliases to supported inline optional
 containers. The complete implemented semantics belong to
 [Optional Values](OPTIONAL_VALUES.md).
 
-The type grammar already preserves the frozen shared-optional-box forms:
+The type grammar preserves the implemented shared-optional-box forms:
 `shared P?` means `Shared<Optional<P>>`, `(shared P?)?` means an optional owner
 of that non-null box, and `shared? P?` is exact shorthand for the latter. The
 allocation grammar accepts `new P?()` and `new P?(expression)` with one
 complete optional type target. The AST keeps this form distinct from class and
 array construction and retains its type grouping and punctuation. Resolution
-assigns its exact optional target and static box-view identity. Local box
-construction and owner lifetimes reach verified target-independent MIR. The
-x86-64 backend still rejects the allocation deliberately, so grammar
-acceptance does not yet imply native execution.
+assigns its exact optional target and static box-view identity. Box
+construction, owner lifetimes, immutable access, stored positions, and arrays
+reach verified MIR and native x86-64 execution.
 
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with

@@ -555,8 +555,8 @@ The x86-64 target layout is:
 | primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
 | `(shared T)?` | 8 | 8 |
-| frozen `shared P?` box owner | 8 | 8 |
-| frozen `(shared P?)?` optional box owner | 8 | 8 |
+| `shared P?` box owner | 8 | 8 |
+| `(shared P?)?` optional box owner | 8 | 8 |
 | inline `T[]` descriptor | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
@@ -831,17 +831,17 @@ fields. Verified call anchors use the same one-word owner representation and
 the existing retain/release lowering; they add no target ABI or C runtime
 operation.
 
-### Frozen shared optional box target boundary
+### Shared optional box target boundary
 
-The primitive local profile is implemented. Exact primitive wrappers use a
+Exact primitive wrappers use a
 checked 32-byte allocation (the 16-byte shared header followed by the 16-byte
 tagged optional), one deterministic descriptor per exact box identity, and a
 distinct no-op finalizer. Ordinary retain, move, secure replacement, last-owner
 release, runtime tracing, and exact-base free paths operate unchanged.
-Lifecycle-bearing wrappers, polymorphic object views, and published-pointee
-access remain explicit target-legality errors.
+Lifecycle-bearing wrappers use recursive finalizers; polymorphic object views
+and immutable published-pointee access use the same verified target boundary.
 
-The frozen box extension keeps the one-word owner and existing shared header:
+The box implementation keeps the one-word owner and existing shared header:
 
 | Offset | Box allocation field |
 |---:|---|

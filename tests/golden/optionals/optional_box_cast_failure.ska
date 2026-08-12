@@ -1,0 +1,21 @@
+class Base {
+    init() {}
+}
+
+class Left extends Base {
+    init() {
+        super();
+    }
+}
+
+class Right extends Base {
+    init() {
+        super();
+    }
+}
+
+fn main() -> i64 {
+    var box: shared Base? = new Left?(Left());
+    var down: shared Right? = (shared Right) box;
+    return 0;
+}

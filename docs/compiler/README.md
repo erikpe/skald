@@ -155,8 +155,8 @@ array-element, and checked-alias positions. Shared optional boxes carry
 resolved, HIR, and MIR targets for `shared T?`; construction, owner transfer,
 replacement, cleanup, arrays, internal calls, and static lifecycle reach
 verified target-independent MIR and execute on x86-64 with deterministic exact
-descriptors and finalizers. This adds no C runtime ABI surface; only external
-box signatures remain staged.
+descriptors and finalizers. This adds no C runtime ABI surface; external
+optional signatures remain unsupported by the existing C ABI.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

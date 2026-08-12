@@ -1,0 +1,105 @@
+interface Marker {
+    fn mark() -> i64;
+}
+
+class Base {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn mark() -> i64 {
+        return self.value;
+    }
+}
+
+class Derived extends Base implements Marker {
+    init(value: i64) {
+        super(value);
+    }
+
+    override fn mark() -> i64 {
+        return self.value + 10;
+    }
+}
+
+class Holder {
+    current: shared Base?;
+    maybe: shared? Base?;
+
+    init(current: shared Base?, maybe: shared? Base?) {
+        self.current = current;
+        self.maybe = maybe;
+    }
+}
+
+class State {
+    static exact: shared Derived? = new Derived?(Derived(4));
+    static marker: shared Marker? = State.exact;
+
+    init() {}
+}
+
+fn forward(value: shared Base?) -> shared Base? {
+    return value;
+}
+
+fn dispatch(values: (shared Marker?)[]) -> i64 {
+    var first: shared Marker? = values[0];
+    return (*first)!.mark();
+}
+
+fn main() -> i64 {
+    var signed: shared i64? = new i64?(1);
+    var unsigned: shared u64? = new u64?(2u);
+    var byte: shared u8? = new u8?(3u8);
+    var floating: shared f64? = new f64?(4.0);
+    var truth: shared bool? = new bool?(true);
+    var absent: shared i64? = new i64?();
+    if ((*signed) is none || (*unsigned) is none || (*byte) is none ||
+        (*floating) is none || (*truth) is none || (*absent) is some) {
+        return 1;
+    }
+
+    var nested: shared i64??? = new i64???(some(some(some(5))));
+    var boxed_array: shared i64[]? = new i64[]?(i64[]{6, 7});
+    var inner_owner: shared Base = new Base(8);
+    var owner_box: shared (shared Base)? = new (shared Base)?(inner_owner);
+    if ((*nested)!!! != 5 || (*boxed_array)![1] != 7 || (*owner_box)!->mark() != 8) {
+        return 2;
+    }
+
+    var exact: shared Derived? = new Derived?(Derived(2));
+    var base: shared Base? = exact;
+    var old: shared Base? = base;
+    var marker: shared Marker? = exact;
+    var object: shared Obj? = exact;
+    var optional_owner: shared? Base? = base;
+    var canonical_owner: (shared Base?)? = optional_owner;
+    var deep_owner: (shared Base?)??? = some(some(canonical_owner));
+    base = new Base?(Base(5));
+
+    var holder: Holder = Holder(forward(base), canonical_owner);
+    var defaults: (shared i64?)[] = (shared i64?)[](2u);
+    defaults[0] = new i64?(9);
+    var listed: (shared i64?)[] = (shared i64?)[]{defaults[0], signed};
+    var optional_elements: ((shared i64?)?)[] = ((shared i64?)?)[]{none, listed[0]};
+    var outer: shared (shared i64?)[] = new (shared i64?)[]{listed[1]};
+    var views: (shared Marker?)[] = (shared Marker?)[]{marker, State.marker};
+
+    var old_value: i64 = (*old)!.mark();
+    var new_value: i64 = (*holder.current)!.mark();
+    var interface_value: i64 = dispatch(views);
+    var static_value: i64 = (*State.marker)!.mark();
+    var recovered: shared Base? = deep_owner!!!;
+    var outer_element: shared i64? = outer->[0];
+    var array_value: i64 = (*(optional_elements[1]!))! + (*outer_element)!;
+    if (!((*object)! is Derived) || (*recovered)!.mark() != old_value) {
+        return 3;
+    }
+    if (old_value + new_value + interface_value + static_value + array_value != 53) {
+        return 4;
+    }
+    return 0;
+}

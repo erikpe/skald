@@ -43,7 +43,7 @@ fn local_boxes_select_construction_owner_and_polymorphic_view_plans() {
     );
 
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    let hir = output.hir.expect("BX1 local boxes must produce HIR");
+    let hir = output.hir.expect("local boxes must produce HIR");
     assert_eq!(hir.optional_box_types.iter().count(), 8);
     assert!(hir
         .optional_box_types
@@ -224,14 +224,14 @@ fn stored_and_callable_box_positions_type_check_through_ordinary_owner_plans() {
 }
 
 #[test]
-fn external_box_positions_remain_a_focused_gate() {
+fn external_box_positions_use_the_ordinary_external_abi_diagnostic() {
     let source = "extern fn consume(value: shared i64?) -> unit; fn main() -> i64 { return 0; }";
     let output = check_text(source);
     assert!(output.hir.is_none());
     assert!(output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE));
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_EXTERNAL_DECLARATION));
 }
 
 #[test]
@@ -259,7 +259,7 @@ fn box_array_positions_use_shared_owner_lifecycle_plans() {
     );
 
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    let dump = dump_hir(&output.hir.expect("BX8 box arrays must produce HIR"));
+    let dump = dump_hir(&output.hir.expect("box arrays must produce HIR"));
     assert!(dump.contains("shared-optional-box-absent"), "{dump}");
     assert!(dump.contains("shared optional-box"), "{dump}");
     assert!(dump.contains("shared array"), "{dump}");

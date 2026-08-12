@@ -194,12 +194,12 @@ impl CallableChecker<'_, '_> {
         let Some(optional) = metadata.optional else {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::SHARED_OPTIONAL_BOX_UNAVAILABLE,
-                    "polymorphic optional-box pointee access is not yet available",
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "a polymorphic optional-box view has no standalone optional value type",
                 )
                 .with_primary_label(
                     dereference.operator_span,
-                    "this static box view does not expose one exact optional wrapper",
+                    "use presence testing or checked unwrap through this box view",
                 ),
             );
             return None;

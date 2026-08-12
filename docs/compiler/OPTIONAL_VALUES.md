@@ -13,8 +13,8 @@ The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
 authoritative for source currently accepted by the compiler. This document
-also records the frozen compiler representation for
-[shared optional boxes](#frozen-shared-optional-box-representation).
+also records the implemented compiler representation for
+[shared optional boxes](#shared-optional-box-representation).
 
 This document defines phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
@@ -36,7 +36,7 @@ Each phase owns one stable responsibility:
 |---|---|
 | Lexing and parsing | Preserve recursive `?`/`[]` type composition, grouping, postfix `!`, reserved `none`, contextual `some`, `shared?` shorthand provenance, presence tests, precedence, trivia, and recovery spans. |
 | Resolution | Normalize `(shared T)?` and `shared? T`, intern complete optional payloads bottom-up without source spans in identity keys, and retain exact optional-box targets for explicit access. |
-| Type checking and HIR | Reject payload identities or positions not yet executable, then select compatibility, lifecycle, checked-view, anchor, and boundary requirements by canonical optional identity. |
+| Type checking and HIR | Reject ineligible payload identities or positions, then select compatibility, lifecycle, checked-view, anchor, and boundary requirements by canonical optional identity. |
 | MIR lowering | Lower the canonical optional table deterministically and make storage state, conditional lifecycle, failure edges, presence guards, shared ownership, temporaries, and cleanup executable and explicit. |
 | MIR verification | Prove storage, payload, owner, guard, anchor, transition, failure, and CFG invariants independently of source shape. |
 | Backend | Realize only verified layouts, state transitions, calls, traps, and ownership operations for the selected target. |
@@ -127,10 +127,9 @@ durable requirements are:
   identity, and module traversal produces deterministic IDs and dumps;
 - `(shared P)?` and `shared? P` normalize to one
   `Optional<Shared<P>>` identity; and
-- `shared P?` is instead `Shared<Optional<P>>`; the current compiler rejects it
-  before executable HIR, while the frozen box extension gives it an exact
-  optional allocation target and, for object boxes, a distinct static view
-  identity.
+- `shared P?` is instead `Shared<Optional<P>>`; the box implementation gives
+  it an exact optional allocation target and, for object boxes, a distinct
+  static view identity.
 
 This follows the existing array-table pattern without requiring one universal
 type interner. Optional and array entries may name one another through their
@@ -289,17 +288,18 @@ layout, shared-owner zero niches, and checked unwrap remain compiler-owned.
 The existing allocator and deallocator see only ordinary valid array backing
 requests and exact allocation bases.
 
-## Frozen shared optional box representation
+## Shared optional box representation
 
-Status: **frozen design; internal stored, callable, and array profile implemented**. Owner
+Status: **implemented compiler contract**. Owner
 compatibility and exact wrapper construction lower through target-independent
 MIR with explicit allocation, wrapper completion, publication, adoption, and
 owner lifetime verification. The x86-64 backend executes every eligible exact
 wrapper with a checked header-plus-target layout, deterministic exact
 descriptor, and distinct recursive finalizer. Explicit access through exact
 and polymorphic object-box owners is implemented together with ordinary
-storage, static lifecycle, internal calls, and arrays. External signatures
-remain deliberately gated.
+storage, static lifecycle, internal calls, and arrays. External optional
+signatures remain outside the supported C ABI and use the ordinary external
+signature diagnostic.
 
 `Shared<Optional<P>>` reuses the canonical `OptionalTypeId` for the exact
 allocation payload. Exact primitive, array, shared-owner, nested optional, and
@@ -871,8 +871,8 @@ observable behavior:
 Parser, resolution, and type-check suites provide positive coverage for
 `shared T?`, `shared? T?`, box allocation, construction plans, owner
 copy/adoption/replacement, storage/calls/arrays, and exact or polymorphic
-immutable pointee access. Compile-failure coverage verifies the remaining
-external-signature gate and array invariance.
+immutable pointee access. Compile-failure coverage verifies unsupported
+external signatures and array invariance.
 Nested `T??` requires positive lifecycle, access, alias, and callable
 coverage. Both `(shared T)?` and `shared? T` require positive
 source-to-native equivalence coverage.
@@ -883,7 +883,7 @@ The implemented compiler executes recursively nested optional owning lifecycle,
 expected-type-directed `some(expression)`, checked access, aliases, and
 internal callable boundaries. Optional inline arrays execute across supported
 owning, aggregate, callable, array-element, and checked-alias boundaries. The
-frozen box design does not include generalized boxes for non-optional values,
+shared optional-box contract does not include generalized boxes for non-optional values,
 mutable shared optional cells, optional function values, first-class references,
 optional casts, equality or operator lifting, chaining/coalescing/propagation,
 recoverable failures, concurrency or atomic guards, external optional ABI, or

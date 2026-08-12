@@ -58,6 +58,8 @@ fn primitive_boxes_have_checked_layout_and_distinct_exact_descriptors() {
     assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(9)"));
     assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v9"));
     assert!(!runtime_header.contains("optional_box"));
+    assert!(!runtime_header.contains("box_store"));
+    assert!(!first.contains("box store"));
     assert_system_assembler_accepts(&first);
 }
 

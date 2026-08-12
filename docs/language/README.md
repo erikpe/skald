@@ -103,8 +103,9 @@ access. `shared? T` is an exact source shorthand. Recursive identities, owning
 lifecycle, expected-type-directed `some(...)` construction, one-layer checked
 access, aliases, and internal callable boundaries now execute for nested
 optionals. Optional arrays and arrays of shared optional-box owners execute
-through their ordinary owning lifecycle; shared optional boxes retain only
-the external-signature staging boundary.
+through their ordinary owning lifecycle. Shared optional boxes are implemented
+for internal Skald positions; external optional signatures remain outside the
+current C ABI.
 Exceptional control flow remains unimplemented and exploratory.
 The separate uncatchable panic and common unrecoverable-failure reporting
 contract is implemented.

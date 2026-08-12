@@ -1,0 +1,36 @@
+class Base {
+    init() {}
+}
+
+class Derived extends Base {
+    init() {
+        super();
+    }
+}
+
+class Left {
+    init() {}
+}
+
+class Right {
+    init() {}
+}
+
+fn clear(mut ref value: i64?) -> unit {
+    value = none;
+}
+
+extern fn inspect(value: shared i64?) -> unit;
+
+fn invalid_operations() -> unit {
+    var primitive: shared i64? = new i64?(1);
+    var invariant: shared u64? = primitive;
+    var left: shared Left? = new Left?(Left());
+    var impossible: shared Right? = (shared Right) left;
+    var forwarded: i64 = primitive!;
+    clear(*primitive);
+}
+
+fn main() -> i64 {
+    return 0;
+}

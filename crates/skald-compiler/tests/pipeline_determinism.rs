@@ -880,7 +880,7 @@ fn shared_ownership_phase_dump() -> String {
 
 fn optional_phase_dump() -> String {
     format!(
-        "BASELINE\n{}COMPOSITIONAL\n{}",
+        "BASELINE\n{}COMPOSITIONAL\n{}SHARED OPTIONAL BOXES\n{}",
         complete_golden_phase_dump(include_str!(
             "../../../tests/golden/optionals/optional_shared_profile.ska"
         )),
@@ -898,6 +898,9 @@ fn optional_phase_dump() -> String {
             "  var nested: i64[]?[] = i64[]?[]{none, holder.values};\n",
             "  mutate(holder.values!); Holder.current = nested[1]; return holder.values![0];\n",
             "}\n",
+        )),
+        planned_lifecycle_phase_dump(include_str!(
+            "../../../tests/golden/optionals/optional_boxes_profile.ska"
         ))
     )
 }

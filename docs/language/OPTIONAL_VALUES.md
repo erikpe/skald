@@ -9,7 +9,7 @@ access are executable. Optional arrays execute in every supported owning,
 aggregate, internal callable, array-element, and call-scoped alias position. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
-accepted by the compiler. This document also freezes the staged
+accepted by the compiler. This document also defines the implemented
 [shared optional box](#shared-optional-boxes) contract.
 
 This document defines Skald's source-level optional-value contract. Primitive
@@ -113,17 +113,13 @@ The current compiler rejects:
 - standalone optional interface or `Obj` views;
 - optional function types;
 - `ref?` and `mut ref?`; and
-- every optional external parameter or result.
+- every optional external parameter or result, including shared optional-box
+  owners.
 
-The recursive syntax tree preserves these complete type shapes. Shared boxes
-therefore fail at a focused semantic boundary rather than being discarded
-during parsing. Nested optionals and optional arrays execute in owning
+The recursive syntax tree preserves these complete type shapes. Nested
+optionals, optional arrays, and shared optional boxes execute in owning
 storage, aliases, checked access, and every supported internal callable
 boundary.
-
-The shared-box rejections are implementation staging, not an unresolved
-semantic boundary. Their frozen behavior is defined below; all other listed
-categories remain outside that design.
 
 ## Compositional optional types
 
@@ -300,7 +296,7 @@ shared owner remains a shared edge, even when either is wrapped in optionals.
 
 ## Shared optional boxes
 
-Status: **frozen design; internal stored, callable, and array profile implemented**. The compiler parses
+Status: **implemented contract**. The compiler parses
 box forms, interns exact optional and static object-view targets, selects local
 construction and owner-transfer plans, and verifies allocation, publication,
 adoption, replacement, and cleanup in target-independent MIR. On x86-64,
@@ -312,9 +308,9 @@ value use execute. Class/base/interface/`Obj` views preserve exact
 descriptor identity for presence, guarded unwrap, fields, mutation, dynamic
 dispatch, type tests, and owner casts. Owners also execute in fields,
 explicitly initialized statics, temporaries, internal parameters/results,
-methods, interfaces, overrides, and initializer overloads. Array elements and
-external signatures remain staged.
-Later roadmap tasks must not reopen the source semantics in this section.
+methods, interfaces, overrides, initializer overloads, and array elements.
+External optional signatures remain deliberately unsupported by the current C
+ABI.
 
 `shared P?` is a non-null strong owner of one allocation containing a complete
 optional `P?` wrapper. It is `Shared<Optional<P>>`, not an optional ordinary
@@ -414,8 +410,9 @@ in increasing element order; `(shared P?)?` elements default to no owner.
 Arrays remain invariant, while each object-box element accepts ordinary
 compatible class/base/interface/`Obj` owner views. `shared P?[]` remains a
 shared outer array of inline optionals and is distinct from an inline
-`(shared P?)[]` array of box owners. External shared-box signatures remain
-invalid.
+`(shared P?)[]` array of box owners. External shared-box signatures use the
+ordinary unsupported-external-signature diagnostic because no optional C ABI
+is defined.
 
 Checked payload access combines an owner or hidden owner anchor with the
 existing optional guard. A read-only `ref P?` may designate an exact box
@@ -772,9 +769,8 @@ lifetime contract is defined.
 
 ## Explicit exclusions
 
-The implemented exact local profile executes the owning lifecycle of the
-frozen shared optional boxes above. Neither that profile nor the frozen box
-design includes:
+The implemented profile executes the owning lifecycle of the shared optional
+boxes above. It does not include:
 
 - generalized boxes for non-optional primitive, class, array, function, or
   other inline values;

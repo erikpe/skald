@@ -158,8 +158,8 @@ mode = "compile-fail"
 source = "optional_box_exclusions.ska"
 [test.expect.stderr]
 matches = [
-  { name = "external shared optional box gate", match = "contains", inline = """error[TYP044]: external signatures cannot contain shared optional boxes
- --> tests/golden/optionals/optional_box_exclusions.ska:5:27""" },
+  { name = "external shared optional box ABI", match = "contains", inline = """error[TYP009]: external function `excluded` has an unsupported signature
+ --> tests/golden/optionals/optional_box_exclusions.ska:5:1""" },
 ]
 
 [[test]]

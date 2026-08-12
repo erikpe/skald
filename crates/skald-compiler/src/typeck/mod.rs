@@ -1,7 +1,6 @@
 //! Type checking and construction of typed HIR.
 
 mod arrays;
-mod availability;
 mod capabilities;
 mod containment;
 mod expression;
@@ -20,7 +19,6 @@ pub use arrays::{
     ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE, ARRAY_PROJECTION_REQUIRES_ARRAY,
     INVALID_ARRAY_ELEMENT,
 };
-pub use availability::SHARED_OPTIONAL_BOX_UNAVAILABLE;
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
 pub use optional_validation::INVALID_OPTIONAL_TYPE;
 pub use program::{

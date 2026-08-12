@@ -1,0 +1,4 @@
+fn main() -> i64 {
+    var box: shared i64? = new i64?();
+    return (*box)!;
+}

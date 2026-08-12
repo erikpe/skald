@@ -83,12 +83,6 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    if !super::availability::validate(program, &mut diagnostics) {
-        return TypeCheckOutput {
-            hir: None,
-            diagnostics,
-        };
-    }
     let optional_types_valid =
         super::optional_validation::validate_optional_types(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);

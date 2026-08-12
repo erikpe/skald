@@ -1,0 +1,72 @@
+schema = 2
+
+[[test]]
+name = "profile"
+mode = "run"
+source = "optional_boxes_profile.ska"
+[[test.run]]
+name = "complete_source_matrix"
+
+[[test]]
+name = "absent_unwrap"
+mode = "run"
+source = "optional_box_absent_unwrap.ska"
+[[test.run]]
+name = "exact_box"
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at optional_box_absent_unwrap::main (tests/golden/optionals/optional_box_absent_unwrap.ska:3:12)
+""" } }
+
+[[test]]
+name = "polymorphic_absent_unwrap"
+mode = "run"
+source = "optional_box_polymorphic_absent_unwrap.ska"
+[[test.run]]
+name = "interface_view"
+expect = { exit = "failure", stderr = { inline = """panic: optional value is absent
+stacktrace:
+  at optional_box_polymorphic_absent_unwrap::main (tests/golden/optionals/optional_box_polymorphic_absent_unwrap.ska:16:12)
+""" } }
+
+[[test]]
+name = "cast_failure"
+mode = "run"
+source = "optional_box_cast_failure.ska"
+[[test.run]]
+name = "checked_downcast"
+expect = { exit = "failure", stderr = { inline = """panic: checked object cast failed
+stacktrace:
+  at optional_box_cast_failure::main (tests/golden/optionals/optional_box_cast_failure.ska:19:31)
+""" } }
+
+[[test]]
+name = "invalid_arity"
+mode = "compile-fail"
+source = "optional_box_invalid_arity.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR015]: an optional box accepts at most one initializer expression
+ --> tests/golden/optionals/optional_box_invalid_arity.ska:2:40"""
+
+[[test]]
+name = "invalid_assignment"
+mode = "compile-fail"
+source = "optional_box_invalid_assignment.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES020]: a complete shared pointee cannot be replaced
+ --> tests/golden/optionals/optional_box_invalid_assignment.ska:3:5"""
+
+[[test]]
+name = "invalid_operations"
+mode = "compile-fail"
+source = "optional_box_invalid_operations.ska"
+[test.expect.stderr]
+matches = [
+  { name = "invariant target", match = "contains", inline = "error[TYP033]: shared local initializer requires" },
+  { name = "impossible relation", match = "contains", inline = "error[TYP029]: shared-owner cast can never succeed" },
+  { name = "implicit forwarding", match = "contains", inline = "error[TYP005]: checked unwrap requires a primitive optional value" },
+  { name = "mutable wrapper alias", match = "contains", inline = "error[TYP020]: a published optional-box wrapper cannot be mutably aliased" },
+  { name = "external ABI", match = "contains", inline = "error[TYP009]: external function `inspect` has an unsupported signature" },
+]

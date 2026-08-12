@@ -2,8 +2,8 @@
 
 Status: pending.
 
-This record keeps follow-up work found while implementing the active shared
-optional boxes roadmap out of its frozen milestone boundaries.
+This record keeps follow-up work found while implementing the completed shared
+optional boxes roadmap separate from that milestone.
 
 ## Stabilize values across multiple control-flow-producing subexpressions
 
@@ -17,7 +17,7 @@ could lower to preliminary MIR where a value was used in a block before its
 definition. Binding the unwrap result and call result to separate locals before
 the arithmetic expression produced valid MIR and identical intended behavior.
 
-**Evidence:** The BX8 native array fixture initially combined
+**Evidence:** The shared optional-box native array fixture initially combined
 `(*optional_owner!)!` and an interface-dispatching array call in one addition
 chain. Preliminary MIR verification rejected the resulting function with a
 value-use-order error. Splitting both control-flow-producing operands into

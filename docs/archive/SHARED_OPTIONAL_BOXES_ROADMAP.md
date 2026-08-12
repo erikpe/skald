@@ -1,11 +1,11 @@
 # Shared Optional Boxes Roadmap
 
-Status: in progress; BX0-BX8 are complete and BX9 is next.
+Status: complete; BX0-BX9 were implemented and validated.
 
 This roadmap implements the frozen
 [shared optional box language contract](../language/OPTIONAL_VALUES.md#shared-optional-boxes)
 and
-[compiler representation](../compiler/OPTIONAL_VALUES.md#frozen-shared-optional-box-representation).
+[compiler representation](../compiler/OPTIONAL_VALUES.md#shared-optional-box-representation).
 It makes `shared P?` a non-null owner of one immutable published optional
 wrapper, derives `shared? P?` as the existing optional-owner shorthand, and
 preserves class/base/interface/`Obj` polymorphism for object boxes. It builds
@@ -111,7 +111,7 @@ outcome; it does not reopen those decisions.
 - [x] BX6 — Execute polymorphic object-box views and dispatch
 - [x] BX7 — Integrate box owners with stored and callable positions
 - [x] BX8 — Integrate box owners with arrays and default elements
-- [ ] BX9 — Harden and publish shared optional boxes
+- [x] BX9 — Harden and publish shared optional boxes
 
 ## PR-sized implementation sequence
 
@@ -459,30 +459,30 @@ identities remain distinct, and malformed prefix/ownership states are rejected.
 **Purpose:** Remove staging gates, prove the complete cross-phase contract, and
 leave living documentation describing only the implemented profile.
 
-- [ ] Audit every `ResolvedSharedTarget`, `HirSharedTarget`, `MirSharedTarget`,
+- [x] Audit every `ResolvedSharedTarget`, `HirSharedTarget`, `MirSharedTarget`,
       target conversion, object assumption, owner lifecycle expansion, static
       dependency, dump renderer, verifier, layout classifier, and backend match
       for explicit optional-box capability handling.
-- [ ] Complete diagnostics for invalid payloads, construction arity,
+- [x] Complete diagnostics for invalid payloads, construction arity,
       unavailable lifecycle, invariant mismatches, impossible object
       relations, implicit forwarding, whole-pointee assignment, mutable
       aliases, external signatures, layout overflow, and staged malformed IR.
-- [ ] Complete deterministic syntax/resolved/HIR/MIR/assembly dumps and
+- [x] Complete deterministic syntax/resolved/HIR/MIR/assembly dumps and
       independent-process audits for exact targets, polymorphic views,
       descriptors, finalizers, nested owners, and generated array defaults.
-- [ ] Complete positive, compile-failure, and runtime-failure goldens for the
+- [x] Complete positive, compile-failure, and runtime-failure goldens for the
       entire frozen source matrix, including interface dispatch and owner
       replacement that leaves aliases on old allocations.
-- [ ] Prove runtime header, symbol set, common reporter, ABI marker, allocation
+- [x] Prove runtime header, symbol set, common reporter, ABI marker, allocation
       failure, guard failure, exact-base free, and non-unwinding behavior remain
       version 9 with no box-store reason.
-- [ ] Remove obsolete reserved-box diagnostics, availability gates, roadmap
+- [x] Remove obsolete reserved-box diagnostics, availability gates, roadmap
       codes from living tests/comments/docs, and stale “frozen/not implemented”
       wording only after every enabled surface executes.
-- [ ] Update grammar, optional/shared language and compiler contracts,
+- [x] Update grammar, optional/shared language and compiler contracts,
       phase/IR, backend, runtime, status, testing, debugging, and relevant test
       READMEs to the implemented profile; archive this completed roadmap.
-- [ ] Audit touched Rust module responsibilities and move substantial logic
+- [x] Audit touched Rust module responsibilities and move substantial logic
       behind cohesive facades; record only genuine out-of-scope follow-ups in
       a separately indexed discoveries document.
 

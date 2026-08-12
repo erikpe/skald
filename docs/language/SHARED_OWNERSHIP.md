@@ -35,8 +35,8 @@ are owned by [Object Casts](OBJECT_CASTS.md).
 Ordinary overload and explicit-copy semantics are owned by
 [Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md) and are an implementation
 prerequisite rather than redefined by shared allocation.
-The `shared P?` allocation kind is frozen and implemented through verified
-local target-independent MIR in
+The `shared P?` allocation kind is implemented through verified
+target-independent MIR in
 [Optional Values](OPTIONAL_VALUES.md#shared-optional-boxes) and in the
 [shared optional box contract](#shared-optional-box-allocation-contract) below.
 
@@ -99,7 +99,7 @@ new Widget(arguments)
 new Widget(copy source)
 ```
 
-The frozen optional-box extension additionally defines:
+The optional-box extension additionally defines:
 
 ```ska
 shared P?
@@ -442,11 +442,10 @@ when present, the payload is one ordinary non-null owner governed by this
 contract; when absent, it accounts for no owner.
 
 Optionality inside the operand of ordinary `shared` has a different meaning:
-`shared T?` denotes `Shared<Optional<T>>`, a non-null owner of a new shared-box
-allocation kind. Its design is frozen; the current compiler parses its type
-and allocation forms, assigns canonical resolved and HIR identities, and
-selects local construction plus owner transfers. Stored positions, pointee
-access, and executable lowering remain gated.
+`shared T?` denotes `Shared<Optional<T>>`, a non-null owner of a shared-box
+allocation kind. The compiler implements its type and allocation forms,
+canonical identities, construction and owner transfers, stored positions,
+immutable pointee access, and native lowering.
 
 `new P?()` allocates a box whose exact optional target begins absent, while
 `new P?(expression)` initializes that wrapper through the existing exact
@@ -481,12 +480,11 @@ authoritative in
 
 ## Exclusions
 
-The compiler parses, resolves, type-checks, lowers, and verifies the local-owner
-subset of the frozen shared optional box contract. Primitive optional boxes
-also execute this owner lifetime natively through exact descriptors and no-op
-payload finalizers. Deliberate backend capability gates retain lifecycle-bearing
-payloads, object views, and pointee access for their later implementation tasks.
-Neither that contract nor this profile includes:
+The compiler parses, resolves, type-checks, lowers, verifies, and executes the
+complete shared optional-box contract for every eligible payload. Exact
+descriptors and recursive payload finalizers preserve lifecycle and object-view
+metadata without extending the runtime ABI. Neither that contract nor this
+profile includes:
 
 - generalized boxes for non-optional primitive, class, array, function, or
   other inline values;

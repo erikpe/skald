@@ -293,4 +293,30 @@ fn intentional_driver_paths_compile() {
     assert!(arrays.assembly.contains(".Lska_array_0_copy_element"));
     assert!(arrays.assembly.contains("[r11 + r10*1 + 16]"));
     assert!(arrays.assembly.contains("call ska_rt_free"));
+
+    let optional_boxes = compile_source_to_assembly(
+        "optional-boxes-api.ska",
+        concat!(
+            "interface Marker { fn mark() -> i64; }\n",
+            "class Base { value: i64; init(value: i64) { self.value = value; } ",
+            "virtual fn mark() -> i64 { return self.value; } }\n",
+            "class Derived extends Base implements Marker { init(value: i64) { super(value); } ",
+            "override fn mark() -> i64 { return self.value + 1; } }\n",
+            "fn main() -> i64 {\n",
+            "  var exact: shared Derived? = new Derived?(Derived(41));\n",
+            "  var marker: shared Marker? = exact;\n",
+            "  var values: (shared Marker?)[] = (shared Marker?)[]{marker};\n",
+            "  var selected: shared Marker? = values[0];\n",
+            "  return (*selected)!.mark();\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap();
+    assert!(optional_boxes
+        .assembly
+        .contains(".Lska_optional_box_0_metadata"));
+    assert!(optional_boxes
+        .assembly
+        .contains(".Lska_optional_box_0_finalize"));
 }

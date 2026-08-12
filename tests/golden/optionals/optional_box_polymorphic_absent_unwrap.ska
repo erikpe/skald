@@ -1,0 +1,17 @@
+interface Marker {
+    fn mark() -> i64;
+}
+
+class Value implements Marker {
+    init() {}
+
+    fn mark() -> i64 {
+        return 1;
+    }
+}
+
+fn main() -> i64 {
+    var exact: shared Value? = new Value?();
+    var marker: shared Marker? = exact;
+    return (*marker)!.mark();
+}

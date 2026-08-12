@@ -422,7 +422,10 @@ Inspect optional frontend behavior at the narrowest owner defined by the
   guarded payload projection and array anchor. Exact shared optional-box
   consumers additionally expose `SharedPointee(owner)` roots, hidden
   `SharedAnchor` storage for produced or replaceable owners, and optional
-  guards that must end before those anchors are released; and
+  guards that must end before those anchors are released. Polymorphic box
+  views retain a static class/interface/`Obj` target beside the exact box
+  descriptor; presence and unwrap must not synthesize a bare interface
+  optional; and
 - static-field HIR/MIR dumps expose optional shared owners through canonical
   identity-based static places, with no function-local storage carrier; final
   MIR also exposes planned activation, publication, and reverse-destruction

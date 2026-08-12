@@ -13,10 +13,10 @@ The implemented
 ownership as `(shared T)?`; it does not weaken the non-null handle invariants
 defined here. Its zero niche is tested and branched around before existing
 retain, release, metadata, dereference, anchor, cast, or finalization paths.
-The frozen optional-box extension, implemented through verified local MIR and
-still gated before native realization, is specified in
-[Optional Values](OPTIONAL_VALUES.md#frozen-shared-optional-box-representation)
-and in the [box allocation contract](#frozen-shared-optional-box-allocation)
+The optional-box extension, implemented through verified MIR and native
+x86-64 realization, is specified in
+[Optional Values](OPTIONAL_VALUES.md#shared-optional-box-representation)
+and in the [box allocation contract](#shared-optional-box-allocation)
 below.
 
 Source AST and resolved IR retain shared targets, exact allocation class
@@ -452,7 +452,7 @@ The skipped alternative acquires and releases no owner. A selected checked
 view must still end before its matching owner or anchor is released, including
 when nested logical selections establish several owners before cleanup.
 
-## Frozen shared optional box allocation
+## Shared optional box allocation
 
 The implemented
 [compositional optional compiler contract](OPTIONAL_VALUES.md#compositional-optional-implementation)
@@ -462,14 +462,13 @@ invoke the ordinary copy, adopt, release, anchor, metadata, and finalization
 operations defined here. The x86-64 zero-handle niche remains an optional
 representation choice; zero never enters a plain-owner operation.
 
-The frozen `shared P?` extension introduces `Shared<Optional<P>>` as a distinct
+The `shared P?` extension introduces `Shared<Optional<P>>` as a distinct
 allocation target while retaining the same non-null owner operations. The
 compiler assigns canonical resolved, HIR, and MIR targets; selects local owner
 copy/adoption/replacement and exact wrapper construction; and verifies the
-complete local lifetime. The x86-64 backend now executes primitive wrapper
-targets through the ordinary header, count, and exact-base release path.
-Lifecycle-bearing wrappers, object views, fields, statics, calls, and pointee
-access retain focused later-task diagnostics.
+complete lifetime. The x86-64 backend executes every eligible wrapper target,
+object view, stored position, call boundary, and immutable pointee operation
+through the ordinary header, count, and exact-base release path.
 
 Each box allocation records a distinct optional-box origin, an exact canonical
 optional payload target, and one descriptor/finalizer identity. Allocation
@@ -585,5 +584,5 @@ distinguish that specified behavior from an owner lost by incorrect lowering.
 Implemented optional-owner lowering proves that zero represents only absent
 `(shared T)?` storage and never reaches the non-null operations in this
 contract. Present optional owners reuse the same copy, adopt, release,
-metadata, finalization, and anchor rules. The frozen canonical spelling
+metadata, finalization, and anchor rules. The canonical spelling
 `(shared T)?` preserves this exact obligation.

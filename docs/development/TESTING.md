@@ -52,7 +52,7 @@ verification, layout, ABI, native, robustness, and determinism obligations, are
 owned by the
 [optional-values compiler test matrix](../compiler/OPTIONAL_VALUES.md#compositional-test-matrix).
 Focused compile failures remain for excluded optional payload categories and
-the shared optional-box external-signature boundary.
+unsupported external optional signatures.
 Shared-verifier tests exercise its private propagation, transition,
 use-validation, and state owners through the unchanged MIR verification
 facade. Focused structural refactors should run the complete `mir::tests::shared`
@@ -716,7 +716,7 @@ the extended robustness suite mutates optional punctuation deterministically.
 Positive syntax, resolution, type-check/HIR, MIR, backend, and native coverage
 exercises construction, exact metadata, unpublished initialization,
 publication/adoption, secure replacement, stored and array positions, internal
-calls, cleanup, malformed protocol states, and the remaining external gate.
+calls, cleanup, malformed protocol states, and unsupported external signatures.
 Complete implementation evidence includes:
 
 - source type grouping, arbitrary outer optional depth, `shared? P?`
