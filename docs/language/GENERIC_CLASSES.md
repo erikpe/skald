@@ -1,20 +1,22 @@
 # Generic Classes
 
 Status: frozen design; syntax, template resolution, contextual mechanical
-requirement analysis, and closed-specialization identity discovery implemented;
-generated class specialization not implemented. This document defines the
+requirement analysis, closed-specialization identity discovery, and ordinary
+closed class declaration generation implemented; executable body
+specialization not implemented. This document defines the
 intended initial source-visible generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
 compiler. Generic declarations now receive stable template and parameter
 identities, structural definition-site-resolved type terms, exact nominal
 interface bounds, inferred storage/lifecycle requirements with exact origins,
-and canonical closed application keys with deterministic reserved class
-identities, caching, recursion handling, and provenance. Closed-type capability
-evaluation delegates to the ordinary optional, array, shared-owner, alias,
-stored-value, and class-lifecycle rules. A valid closed application remains
-explicitly gated until generated declarations, bodies, and execution are
-implemented.
+and canonical closed application keys with deterministic class identities,
+caching, recursion handling, and provenance. Closed declarations substitute
+bases, interface claims, fields, statics, lifecycle signatures, initializers,
+and methods into ordinary class tables. Closed-type capability evaluation
+delegates to the ordinary optional, array, shared-owner, alias, stored-value,
+and class-lifecycle rules. A valid closed application remains explicitly gated
+until generated bodies and execution are implemented.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning

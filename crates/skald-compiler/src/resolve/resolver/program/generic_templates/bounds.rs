@@ -94,7 +94,7 @@ pub(super) fn resolve_implemented_interfaces(
     class: &syntax::ClassDecl,
     lookup: ModuleLookup<'_>,
     diagnostics: &mut Diagnostics,
-) -> Vec<InterfaceId> {
+) -> Vec<ResolvedInterfaceClaim> {
     let mut interfaces = Vec::new();
     let mut seen = HashSet::new();
     for claim in &class.implemented_interfaces {
@@ -102,7 +102,10 @@ pub(super) fn resolve_implemented_interfaces(
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Interface(interface),
                 ..
-            }) if seen.insert(interface) => interfaces.push(interface),
+            }) if seen.insert(interface) => interfaces.push(ResolvedInterfaceClaim {
+                interface,
+                span: claim.span,
+            }),
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Interface(_),
                 name_span,

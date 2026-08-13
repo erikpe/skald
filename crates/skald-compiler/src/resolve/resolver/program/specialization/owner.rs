@@ -96,6 +96,8 @@ impl<'semantic, 'interner, 'diagnostics> SpecializationOwner<'semantic, 'interne
                 origins: vec![origin],
                 recursion_path: Vec::new(),
             },
+            closed_type_uses: Vec::new(),
+            closed_requirements: Vec::new(),
         });
         self.activate(index)
     }
@@ -111,21 +113,44 @@ impl<'semantic, 'interner, 'diagnostics> SpecializationOwner<'semantic, 'interne
         let failures_before_closing = self.specialization_failures;
 
         let key = self.entries[index].key.clone();
-        let terms = self
+        let semantics = self
             .semantics
             .get(key.template)
-            .expect("specialization key references template semantics")
+            .expect("specialization key references template semantics");
+        let terms = semantics
             .type_uses
             .iter()
             .map(|type_use| type_use.type_term.clone())
             .collect::<Vec<_>>();
-        for term in &terms {
-            // A term can be contextually invalid for these arguments (for
-            // example `shared T` with `T = i64`). Contextual requirement
-            // validation diagnoses that use; identity discovery fails only
-            // when a nested specialization itself fails.
-            let _ = self.close_template_type(term, key.template, &key.arguments);
-        }
+        let requirements = semantics.requirements.clone();
+        let closed_type_uses = terms
+            .iter()
+            .map(|term| {
+                // A term can be contextually invalid for these arguments (for
+                // example `shared T` with `T = i64`). Contextual requirement
+                // validation diagnoses that use; identity discovery fails only
+                // when a nested specialization itself fails.
+                self.close_template_type(term, key.template, &key.arguments)
+            })
+            .collect();
+        let closed_requirements = requirements
+            .iter()
+            .map(|requirement| {
+                if requirement.capability == GenericCapability::SharedTarget {
+                    self.close_template_shared_target(
+                        &requirement.type_term,
+                        key.template,
+                        &key.arguments,
+                    )
+                    .map(ClosedGenericRequirementSubject::SharedTarget)
+                } else {
+                    self.close_template_type(&requirement.type_term, key.template, &key.arguments)
+                        .map(ClosedGenericRequirementSubject::Type)
+                }
+            })
+            .collect();
+        self.entries[index].closed_type_uses = closed_type_uses;
+        self.entries[index].closed_requirements = closed_requirements;
         let valid = self.specialization_failures == failures_before_closing;
 
         let popped = self.active.pop();

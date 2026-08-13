@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G5 is next.
+Status: in progress; G6 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -59,7 +59,7 @@ not reopen those decisions while implementing them.
 - [x] G2 — Resolve parameter-bearing type terms and nominal bounds
 - [x] G3 — Infer and evaluate contextual generic requirements
 - [x] G4 — Build deterministic closed-specialization identities
-- [ ] G5 — Specialize class declarations into ordinary closed classes
+- [x] G5 — Specialize class declarations into ordinary closed classes
 - [ ] G6 — Specialize executable bodies and operation selections
 - [ ] G7 — Integrate lifecycle, optionals, arrays, and ownership
 - [ ] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
@@ -273,25 +273,25 @@ ordinary declarations.
 **Purpose:** Materialize complete closed headers and member declarations that
 all existing class-level validators can consume unchanged.
 
-- [ ] Substitute the direct base, interface claims, fields, static fields,
+- [x] Substitute the direct base, interface claims, fields, static fields,
   lifecycle signatures, initializer overloads, and method signatures for each
   in-progress key.
-- [ ] Reuse `ResolvedTypeInterner` for every resulting array, optional, and
+- [x] Reuse `ResolvedTypeInterner` for every resulting array, optional, and
   optional-box identity; preserve literal `Optional<Shared<T>>` versus
   `Shared<Optional<T>>` composition.
-- [ ] Allocate deterministic field, static, initializer, lifecycle, and method
+- [x] Allocate deterministic field, static, initializer, lifecycle, and method
   identities from the generated `ClassId` and template member order.
-- [ ] Validate contextual declaration requirements before publishing a
+- [x] Validate contextual declaration requirements before publishing a
   generated class, with diagnostics at both application and originating
   template type use.
-- [ ] Insert only complete closed declarations into ordinary class tables and
+- [x] Insert only complete closed declarations into ordinary class tables and
   keep template records in their separate semantic owner.
-- [ ] Feed generated declarations through optional/array eligibility and
+- [x] Feed generated declarations through optional/array eligibility and
   finite-containment validation, including recursive graphs across existing
   legal indirection boundaries.
-- [ ] Preserve declaring-class privacy and generated member visibility without
+- [x] Preserve declaring-class privacy and generated member visibility without
   granting access to private members of argument types.
-- [ ] Extend resolved dumps to show the generated exact class, canonical
+- [x] Extend resolved dumps to show the generated exact class, canonical
   parameter mapping, substituted members, and specialization origin.
 
 **Tests:** Exact declaration substitution for `Vec<Str>`, `Vec<Str?>`,

@@ -1,8 +1,9 @@
 # Generic-Class Specialization
 
 Status: frozen compiler design; template resolution, contextual requirement
-analysis, and closed-specialization identity discovery implemented; generated
-class specialization not implemented. This document defines the
+analysis, closed-specialization identity discovery, and ordinary closed class
+declaration generation implemented; executable body specialization not
+implemented. This document defines the
 target-independent compilation contract for the initial
 [generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
@@ -10,10 +11,12 @@ Resolution now produces stable template identities, structural template type
 terms, definition-site selections, nominal interface bounds, explicit
 argument-dependent selections, structural mechanical requirements with source
 origins, canonical closed application keys, and deterministic specialization
-cache identities with recursion provenance. A closed-type capability facade
-composes the existing validators and lifecycle planners; valid closed
-applications remain gated until complete generated declarations and bodies
-exist.
+cache identities with recursion provenance. Declaration specialization now
+publishes complete closed bases, interface claims, fields, statics, lifecycle
+signatures, initializer overloads, and method signatures under deterministic
+ordinary identities. A closed-type capability facade composes the existing
+validators and lifecycle planners; valid closed applications remain gated
+until complete generated bodies exist.
 
 ## Architectural outcome
 
@@ -169,8 +172,8 @@ array element lifecycle, shared-owner retain/release, exact-class copy
 capabilities, and stored/alias/shared-target eligibility remain single-sourced
 in their ordinary phase owners.
 
-The implemented query facade accepts already-closed subjects from the future
-specialization owner. That owner remains responsible for structural
+The implemented query facade accepts already-closed subjects from the
+specialization owner. That owner is responsible for structural
 substitution, compound-type interning, and canonical optional-box targets; the
 facade reports the originating requirement when a capability is unavailable.
 Static all-zero initialization remains distinct from requested-length array

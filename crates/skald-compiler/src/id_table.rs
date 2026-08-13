@@ -128,6 +128,21 @@ impl<I: DenseId, T> DenseIdTable<I, T> {
         self.entries.is_empty()
     }
 
+    pub(crate) fn extend(&mut self, entries: impl IntoIterator<Item = T>, id_of: impl Fn(&T) -> I) {
+        for entry in entries {
+            assert_eq!(
+                id_of(&entry).index(),
+                self.entries.len(),
+                "dense ID table extensions must continue in ID order"
+            );
+            self.entries.push(entry);
+        }
+    }
+
+    pub(crate) fn truncate(&mut self, len: usize) {
+        self.entries.truncate(len);
+    }
+
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [T] {
         &mut self.entries

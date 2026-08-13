@@ -325,12 +325,13 @@ template and ordered parameter identities, includes templates in ordinary
 module lookup and visibility, and diagnoses raw names, wrong declaration
 kinds, and incorrect arity. Resolution also preserves structural
 parameter-bearing types, fixes definition-site names, resolves nominal
-interface bounds, and classifies dependent body selections without introducing
-executable placeholder types. Contextual requirement inference,
-specialization, and execution remain staged by the
+interface bounds, classifies dependent body selections, infers contextual
+requirements, and specializes requested closed declarations into ordinary
+class identities without introducing executable placeholder types. Body
+specialization and execution remain staged by the
 [generic-classes roadmap](../roadmaps/GENERIC_CLASSES_ROADMAP.md); no generic
-form is an executable class yet, and an otherwise valid closed application is
-still explicitly gated.
+form is executable yet, and an otherwise valid closed application is still
+explicitly gated.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,

@@ -8,7 +8,7 @@ use crate::{
     source::Span,
 };
 
-use super::{GenericRequirement, ResolvedTopLevelId, ResolvedVisibility};
+use super::{GenericRequirement, ResolvedInterfaceClaim, ResolvedTopLevelId, ResolvedVisibility};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedClassTemplate {
@@ -236,7 +236,7 @@ pub(crate) enum ResolvedTemplateSelection {
 pub(crate) struct ResolvedClassTemplateSemantics {
     pub(crate) template: ClassTemplateId,
     pub(crate) direct_base: Option<ResolvedTemplateType>,
-    pub(crate) implemented_interfaces: Vec<InterfaceId>,
+    pub(crate) implemented_interfaces: Vec<ResolvedInterfaceClaim>,
     pub(crate) bounds: Vec<ResolvedTemplateBound>,
     pub(crate) type_uses: Vec<ResolvedTemplateTypeUse>,
     pub(crate) requirements: Vec<GenericRequirement>,

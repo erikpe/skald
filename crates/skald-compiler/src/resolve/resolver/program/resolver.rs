@@ -256,6 +256,7 @@ impl<'ast> ProgramResolver<'ast> {
         let template_semantics = ResolvedClassTemplateSemanticTable::new(template_semantics);
         let (class_declarations, class_symbols, class_work) =
             self.collect_class_declarations(lookups);
+        let ordinary_class_count = class_declarations.len();
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
         validate_intrinsic_declarations(
             &self.modules,
@@ -274,6 +275,33 @@ impl<'ast> ProgramResolver<'ast> {
                 &mut class_declarations,
                 &mut self.diagnostics,
             );
+        }
+        let ordinary_hierarchy = {
+            let mut diagnostics = Diagnostics::new();
+            build_class_hierarchy(&class_declarations, &class_symbols, &mut diagnostics)
+        };
+        let generic_specializations = discover_specializations(
+            SpecializationDiscoveryInput::new(
+                &self.units,
+                &self.modules,
+                lookups,
+                &template_semantics,
+                &class_templates,
+                ordinary_class_count,
+            ),
+            &mut self.type_interner,
+            &mut self.diagnostics,
+        );
+        let specialized = specialize_declarations(
+            &self.units,
+            &template_semantics,
+            &generic_specializations,
+            &mut self.diagnostics,
+        );
+        let mut class_symbols = class_symbols;
+        if specialized.valid {
+            class_declarations.extend(specialized.declarations);
+            class_symbols.extend(specialized.symbols);
         }
         let hierarchy =
             build_class_hierarchy(&class_declarations, &class_symbols, &mut self.diagnostics);
@@ -375,20 +403,8 @@ impl<'ast> ProgramResolver<'ast> {
                 });
 
         let span = entry_unit.ast.span;
-        let generic_specializations = discover_specializations(
-            SpecializationDiscoveryInput::new(
-                &self.units,
-                &self.modules,
-                lookups,
-                &template_semantics,
-                &class_templates,
-                class_declarations.len(),
-            ),
-            &mut self.type_interner,
-            &mut self.diagnostics,
-        );
         let (array_types, optional_types, optional_box_types) = self.type_interner.finish();
-        ResolveOutput {
+        let mut output = ResolveOutput {
             program: ResolvedProgram {
                 modules: self.modules,
                 external_links,
@@ -415,7 +431,14 @@ impl<'ast> ProgramResolver<'ast> {
                 span,
             },
             diagnostics: self.diagnostics,
-        }
+        };
+        validate_specialization_requirements(
+            &mut output.program,
+            &mut output.diagnostics,
+            ordinary_class_count,
+            ordinary_hierarchy,
+        );
+        output
     }
 
     fn collect_top_levels(&mut self) {

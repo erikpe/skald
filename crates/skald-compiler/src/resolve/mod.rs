@@ -10,7 +10,10 @@ mod resolver;
 pub use dump::dump_resolved;
 #[cfg(test)]
 pub(crate) use ir::GenericAliasAccess;
-pub(crate) use ir::{GenericCapability, GenericRequirement, GenericRequirementReason};
+pub(crate) use ir::{
+    ClosedGenericRequirementSubject, GenericCapability, GenericRequirement,
+    GenericRequirementReason, GenericSpecializationState,
+};
 pub use ir::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayAssignment,
     ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedArrayElementList,
@@ -69,7 +72,8 @@ pub use resolver::{
     PRIVATE_MEMBER_ACCESS, RAW_GENERIC_TYPE, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE,
     UNCONSTRAINED_TYPE_PARAMETER_MEMBER, UNKNOWN_IMPORTED_DECLARATION, UNKNOWN_MEMBER,
     UNKNOWN_MODULE_BINDING, UNKNOWN_NAME, UNKNOWN_QUALIFIED_DECLARATION, UNKNOWN_TYPE,
-    UNSUPPORTED_GENERIC_SYNTAX, UNSUPPORTED_PARAMETER_CONSTRUCTION,
+    UNSATISFIED_GENERIC_REQUIREMENT, UNSUPPORTED_GENERIC_SYNTAX,
+    UNSUPPORTED_PARAMETER_CONSTRUCTION,
 };
 
 #[cfg(test)]

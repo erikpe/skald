@@ -203,7 +203,10 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                             );
                         }
                         for interface in &semantics.implemented_interfaces {
-                            dumper.raw_line(&format!("Implements {interface}"));
+                            dumper.line(
+                                &format!("Implements {}", interface.interface),
+                                interface.span,
+                            );
                         }
                         for bound in &semantics.bounds {
                             dumper.line(
@@ -410,7 +413,13 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
             dumper.heading("ClassDeclarations");
             dumper.indented(|dumper| {
                 for class in program.classes.iter() {
-                    dumper.class_declaration(class);
+                    let specialization = program.generic_specializations.for_class(class.id);
+                    let parameters = specialization.and_then(|specialization| {
+                        program
+                            .type_parameters
+                            .for_template(specialization.key.template)
+                    });
+                    dumper.class_declaration(class, specialization, parameters);
                 }
             });
         }
@@ -679,13 +688,41 @@ impl<'types> ResolvedDumper<'types> {
         self.indented(|dumper| dumper.type_syntax(&parameter.type_syntax));
     }
 
-    fn class_declaration(&mut self, class: &ResolvedClassDeclaration) {
+    fn class_declaration(
+        &mut self,
+        class: &ResolvedClassDeclaration,
+        specialization: Option<&GenericSpecialization>,
+        parameters: Option<&ResolvedTypeParameters>,
+    ) {
         self.write_indentation();
         let _ = write!(self.output, "Class {} module {} ", class.id, class.module);
         write_quoted(&mut self.output, &class.name);
         write_span(&mut self.output, class.span);
         self.output.push('\n');
         self.indented(|dumper| {
+            if let Some(specialization) = specialization {
+                dumper.raw_line(&format!(
+                    "SpecializedFrom {}",
+                    dumper.render_specialization_key(&specialization.key)
+                ));
+                if let Some(parameters) = parameters {
+                    for (parameter, argument) in
+                        parameters.iter().zip(&specialization.key.arguments)
+                    {
+                        dumper.raw_line(&format!(
+                            "TypeArgument {} = {}",
+                            parameter.id,
+                            dumper.render_type_kind(*argument)
+                        ));
+                    }
+                }
+                for origin in &specialization.provenance.origins {
+                    dumper.line(
+                        &format!("SpecializationOrigin module {}", origin.module),
+                        origin.span,
+                    );
+                }
+            }
             if let Some(base) = class.direct_base {
                 dumper.line(&format!("DirectBase {}", base.class), base.span);
             }

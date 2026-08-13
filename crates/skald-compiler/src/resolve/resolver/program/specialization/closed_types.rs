@@ -67,7 +67,7 @@ impl SpecializationOwner<'_, '_, '_> {
         })
     }
 
-    fn close_template_shared_target(
+    pub(super) fn close_template_shared_target(
         &mut self,
         target: &ResolvedTemplateType,
         template: ClassTemplateId,

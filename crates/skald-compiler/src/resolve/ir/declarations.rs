@@ -195,6 +195,14 @@ impl ResolvedClassDeclarationTable {
         self.entries.get_mut(id, |class| class.id)
     }
 
+    pub(crate) fn extend(&mut self, entries: Vec<ResolvedClassDeclaration>) {
+        self.entries.extend(entries, |class| class.id);
+    }
+
+    pub(crate) fn truncate(&mut self, len: usize) {
+        self.entries.truncate(len);
+    }
+
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [ResolvedClassDeclaration] {
         self.entries.entries_mut_for_test()

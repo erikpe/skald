@@ -6,21 +6,18 @@
 
 #![allow(dead_code)] // Closed specialization is the production consumer of this facade.
 
+use std::cell::OnceCell;
+
 use crate::{
     hir::{HirOptionalTypeTable, Type},
     resolve::{
-        GenericCapability, GenericRequirement, GenericRequirementReason, ResolvedProgram,
-        ResolvedSharedTarget, ResolvedType, ResolvedTypeKind,
+        ClosedGenericRequirementSubject, GenericCapability, GenericRequirement,
+        GenericRequirementReason, ResolvedProgram, ResolvedSharedTarget, ResolvedType,
+        ResolvedTypeKind,
     },
 };
 
 use super::{capabilities::CopyCapabilities, program::lower_type};
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum ClosedGenericRequirementSubject {
-    Type(ResolvedTypeKind),
-    SharedTarget(ResolvedSharedTarget),
-}
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct GenericRequirementFailure<'requirement> {
@@ -29,18 +26,16 @@ pub(crate) struct GenericRequirementFailure<'requirement> {
 
 pub(crate) struct GenericCapabilityQuery<'program> {
     program: &'program ResolvedProgram,
-    copy: CopyCapabilities,
-    optionals: HirOptionalTypeTable,
+    copy: OnceCell<CopyCapabilities>,
+    optionals: OnceCell<HirOptionalTypeTable>,
 }
 
 impl<'program> GenericCapabilityQuery<'program> {
     pub(crate) fn new(program: &'program ResolvedProgram) -> Self {
-        let copy = CopyCapabilities::compute(program);
-        let optionals = super::optional_types::lower_optional_types(program, &copy);
         Self {
             program,
-            copy,
-            optionals,
+            copy: OnceCell::new(),
+            optionals: OnceCell::new(),
         }
     }
 
@@ -122,10 +117,10 @@ impl<'program> GenericCapabilityQuery<'program> {
             | ResolvedTypeKind::F64
             | ResolvedTypeKind::Bool
             | ResolvedTypeKind::Shared(_) => true,
-            ResolvedTypeKind::Class(class) => self.copy.constructor(class).selected().is_some(),
-            ResolvedTypeKind::Array(array) => self.copy.array(array).lifecycle.copy.is_some(),
+            ResolvedTypeKind::Class(class) => self.copy().constructor(class).selected().is_some(),
+            ResolvedTypeKind::Array(array) => self.copy().array(array).lifecycle.copy.is_some(),
             ResolvedTypeKind::Optional(optional) => self
-                .optionals
+                .optionals()
                 .get(optional)
                 .is_some_and(|optional| optional.lifecycle.copy.is_some()),
             ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
@@ -142,10 +137,12 @@ impl<'program> GenericCapabilityQuery<'program> {
             | ResolvedTypeKind::F64
             | ResolvedTypeKind::Bool
             | ResolvedTypeKind::Shared(_) => true,
-            ResolvedTypeKind::Class(class) => self.copy.assignment(class).selected().is_some(),
-            ResolvedTypeKind::Array(array) => self.copy.array(array).lifecycle.assignment.is_some(),
+            ResolvedTypeKind::Class(class) => self.copy().assignment(class).selected().is_some(),
+            ResolvedTypeKind::Array(array) => {
+                self.copy().array(array).lifecycle.assignment.is_some()
+            }
             ResolvedTypeKind::Optional(optional) => self
-                .optionals
+                .optionals()
                 .get(optional)
                 .is_some_and(|optional| optional.lifecycle.assignment.is_some()),
             ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
@@ -153,6 +150,62 @@ impl<'program> GenericCapabilityQuery<'program> {
             }
         }
     }
+
+    fn copy(&self) -> &CopyCapabilities {
+        self.copy
+            .get_or_init(|| CopyCapabilities::compute(self.program))
+    }
+
+    fn optionals(&self) -> &HirOptionalTypeTable {
+        self.optionals
+            .get_or_init(|| super::optional_types::lower_optional_types(self.program, self.copy()))
+    }
+}
+
+pub(crate) fn failed_specialization_declaration_requirements(
+    program: &ResolvedProgram,
+) -> Vec<(crate::identity::ClassId, usize)> {
+    let query = GenericCapabilityQuery::new(program);
+    let mut failures = Vec::new();
+    for specialization in program.generic_specializations.iter() {
+        let crate::resolve::GenericSpecializationState::Complete(class) = specialization.state
+        else {
+            continue;
+        };
+        let semantics = program
+            .template_semantics
+            .get(specialization.key.template)
+            .expect("specialization key references template semantics");
+        for (index, (requirement, subject)) in semantics
+            .requirements
+            .iter()
+            .zip(&specialization.closed_requirements)
+            .enumerate()
+        {
+            if !is_declaration_requirement(requirement.reason) {
+                continue;
+            }
+            if !subject.is_some_and(|subject| query.supports(requirement, subject)) {
+                failures.push((class, index));
+                break;
+            }
+        }
+    }
+    failures
+}
+
+const fn is_declaration_requirement(reason: GenericRequirementReason) -> bool {
+    matches!(
+        reason,
+        GenericRequirementReason::FieldDeclaration { .. }
+            | GenericRequirementReason::StaticFieldDeclaration { .. }
+            | GenericRequirementReason::ParameterDeclaration { .. }
+            | GenericRequirementReason::MethodResult { .. }
+            | GenericRequirementReason::OptionalType
+            | GenericRequirementReason::ArrayType
+            | GenericRequirementReason::SharedType
+            | GenericRequirementReason::StaticZeroInitialization { .. }
+    )
 }
 
 #[cfg(test)]

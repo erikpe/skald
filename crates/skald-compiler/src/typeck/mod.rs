@@ -21,6 +21,7 @@ pub use arrays::{
     INVALID_ARRAY_ELEMENT,
 };
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
+pub(crate) use generic_requirements::failed_specialization_declaration_requirements;
 pub use optional_validation::INVALID_OPTIONAL_TYPE;
 pub use program::{
     type_check, TypeCheckOutput, AMBIGUOUS_INITIALIZER, COPY_OPERATION_UNAVAILABLE,

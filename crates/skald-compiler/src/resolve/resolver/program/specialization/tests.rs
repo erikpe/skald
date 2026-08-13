@@ -134,11 +134,15 @@ fn identical_recursive_requests_reuse_the_in_progress_class() {
         ]
     );
     assert!(specialization.provenance.recursion_path.is_empty());
-    assert!(output.program.classes.is_empty());
+    assert_eq!(output.program.classes.len(), 1);
+    assert_eq!(
+        output.program.classes.get(ClassId::new(0)).unwrap().name,
+        "Node<i64>"
+    );
 }
 
 #[test]
-fn contextual_requirement_failures_do_not_preempt_specialization_identity_discovery() {
+fn contextual_requirement_failures_reject_declaration_publication_after_identity_discovery() {
     let output = resolve_source(
         "class Nested<T> { value: T; }\n\
          class Owner<T> { invalid_for_i64: shared T; nested: Nested<T>; }\n\
@@ -158,7 +162,15 @@ fn contextual_requirement_failures_do_not_preempt_specialization_identity_discov
     assert_eq!(entries.len(), 2, "{}", dump_resolved(&output.program));
     assert!(entries
         .iter()
-        .all(|entry| matches!(entry.state, GenericSpecializationState::Complete(_))));
+        .any(|entry| matches!(entry.state, GenericSpecializationState::Failed { .. })));
+    assert_eq!(
+        diagnostic_count(
+            &output,
+            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT
+        ),
+        1
+    );
+    assert!(output.program.classes.is_empty());
 }
 
 #[test]

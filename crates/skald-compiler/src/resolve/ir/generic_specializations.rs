@@ -5,7 +5,7 @@ use crate::{
     source::Span,
 };
 
-use super::ResolvedTypeKind;
+use super::{ResolvedSharedTarget, ResolvedTypeKind};
 
 /// Canonical identity input for one closed generic class.
 ///
@@ -52,6 +52,14 @@ pub(crate) struct GenericSpecialization {
     pub(crate) state: GenericSpecializationState,
     pub(crate) transitions: Vec<GenericSpecializationTransition>,
     pub(crate) provenance: GenericSpecializationProvenance,
+    pub(crate) closed_type_uses: Vec<Option<ResolvedTypeKind>>,
+    pub(crate) closed_requirements: Vec<Option<ClosedGenericRequirementSubject>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ClosedGenericRequirementSubject {
+    Type(ResolvedTypeKind),
+    SharedTarget(ResolvedSharedTarget),
 }
 
 impl GenericSpecialization {
@@ -90,5 +98,23 @@ impl GenericSpecializationTable {
 
     pub(crate) fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+
+    pub(crate) fn fail_class(&mut self, class: ClassId) {
+        let Some(entry) = self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.class() == Some(class))
+        else {
+            return;
+        };
+        entry.state = GenericSpecializationState::Failed {
+            reserved_class: Some(class),
+        };
+        entry
+            .transitions
+            .push(GenericSpecializationTransition::Failed {
+                reserved_class: Some(class),
+            });
     }
 }
