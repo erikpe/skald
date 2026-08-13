@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G9 is next.
+Status: in progress; G10 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -63,7 +63,7 @@ not reopen those decisions while implementing them.
 - [x] G6 — Specialize executable bodies and operation selections
 - [x] G7 — Integrate lifecycle, optionals, arrays, and ownership
 - [x] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
-- [ ] G9 — Integrate per-specialization statics and whole-program effects
+- [x] G9 — Integrate per-specialization statics and whole-program effects
 - [ ] G10 — Harden diagnostics, dumps, modules, and determinism
 - [ ] G11 — Execute generic classes through MIR and x86-64
 - [ ] G12 — Deliver generic `Vec<T>` and close the feature
@@ -423,20 +423,20 @@ generic witness exists.
 **Purpose:** Give each closed class independent class-owned state while
 preserving eager lifecycle, dependency evidence, and deterministic shutdown.
 
-- [ ] Allocate distinct static field and initializer identities and backend
+- [x] Allocate distinct static field and initializer identities and backend
   storage for every closed specialization.
-- [ ] Specialize explicit static initializer bodies and infer their direct and
+- [x] Specialize explicit static initializer bodies and infer their direct and
   transitive effects through existing callable and lifecycle operations.
-- [ ] Treat a static selection as a specialization request even when no object
+- [x] Treat a static selection as a specialization request even when no object
   value or constructor otherwise requests the class.
-- [ ] Preserve zero-default versus explicit initialization validation after
+- [x] Preserve zero-default versus explicit initialization validation after
   substitution, including parameter-dependent optional and array types.
-- [ ] Include generated statics in dependency planning, cycle diagnostics,
+- [x] Include generated statics in dependency planning, cycle diagnostics,
   activation order, publication, replacement, normal-return result
   preservation, and reverse shutdown.
-- [ ] Keep template records free of static runtime storage; only a closed
+- [x] Keep template records free of static runtime storage; only a closed
   `ClassId` owns slots and lifecycle bodies.
-- [ ] Extend planned/final MIR dumps with human-readable closed generic owner
+- [x] Extend planned/final MIR dumps with human-readable closed generic owner
   names while preserving identity-selected static effects and plan indices.
 
 **Tests:** `Cache<Str>` versus `Cache<i64>` independence; zero/default and

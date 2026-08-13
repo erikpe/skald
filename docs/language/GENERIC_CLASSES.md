@@ -1,9 +1,9 @@
 # Generic Classes
 
 Status: frozen design; syntax, specialization, closed-class lifecycle and
-ownership, nominal bounds, inheritance, conformance, and dispatch integration
-implemented; per-specialization static planning and native execution remain
-staged. This document defines the
+ownership, nominal bounds, inheritance, conformance, dispatch, and
+per-specialization static lifecycle integration implemented; native execution
+remains staged. This document defines the
 intended initial source-visible generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
@@ -18,8 +18,8 @@ delegates to the ordinary optional, array, shared-owner, alias, stored-value,
 and class-lifecycle rules. Generated bodies close local types, constructions,
 allocations, calls, casts, tests, and static selections through the ordinary
 resolver, and every member is validated whether called or not. A valid closed
-application remains explicitly gated while later roadmap stages integrate
-whole-program static effects and native execution.
+application remains explicitly gated while later roadmap stages complete
+general MIR/backend execution and feature delivery.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning

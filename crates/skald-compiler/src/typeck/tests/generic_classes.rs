@@ -401,6 +401,70 @@ fn unused_type_capabilities_are_not_imposed_on_the_whole_specialization() {
 }
 
 #[test]
+fn specialized_static_defaults_and_explicit_initializers_use_substituted_types() {
+    let hir = check_generic_source(
+        "class Item { init() {} }
+         class Storage<T> {
+           static zero_optional: T?;
+           static zero_array: T[];
+           static explicit_optional: T? = none;
+           static explicit_array: T[] = T[]();
+           init() {}
+         }
+         fn main() -> i64 {
+           if (Storage<Item>::zero_optional is some) { return 1; }
+           if (Storage<Item?>::zero_optional is some) { return 2; }
+           if (Storage<shared Item>::zero_optional is some) { return 3; }
+           return 0;
+         }",
+    );
+    let specializations = hir
+        .classes
+        .iter()
+        .filter(|class| class.name.starts_with("Storage<"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(specializations.len(), 3);
+    assert_eq!(
+        specializations
+            .iter()
+            .map(|class| class.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Storage<Item>", "Storage<Item?>", "Storage<shared Item>"]
+    );
+    for class in specializations {
+        assert_eq!(class.static_fields.len(), 4);
+        assert!(matches!(class.static_fields[0].ty, Type::Optional(_)));
+        assert!(matches!(class.static_fields[1].ty, Type::Array(_)));
+        assert_eq!(class.static_fields[0].ty, class.static_fields[2].ty);
+        assert_eq!(class.static_fields[1].ty, class.static_fields[3].ty);
+        assert!(class.static_fields[0].initializer.is_none());
+        assert!(class.static_fields[1].initializer.is_none());
+        assert!(class.static_fields[2].initializer.is_some());
+        assert!(class.static_fields[3].initializer.is_some());
+    }
+}
+
+#[test]
+fn zero_default_validation_runs_after_static_type_substitution() {
+    let resolved = crate::test_support::resolve_source(
+        "class Item { init() {} }
+         class Exact<T> { static value: T; init() {} }
+         fn use(ref value: Exact<Item>) -> unit {}
+         fn main() -> i64 { return 0; }",
+    );
+    let diagnostic = resolved
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == crate::resolve::UNSATISFIED_GENERIC_REQUIREMENT)
+        .expect("substituting an exact class must reject zero-default static storage");
+
+    assert!(diagnostic.labels.iter().any(|label| label
+        .message
+        .contains("zero initialization of static member")));
+}
+
+#[test]
 fn closed_members_require_copy_operations_only_where_they_are_used() {
     let mut program = resolve_generic_source(
         "class Resource { init() {} }\n\

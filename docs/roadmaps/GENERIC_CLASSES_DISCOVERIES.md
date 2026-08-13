@@ -36,3 +36,30 @@ products that depend on generated classes, or implement one cohesive rollback
 that rebuilds every ordinary-only table and dispatch annotation. Preserve
 current application/definition evidence, dense IDs, deterministic ordering,
 and the rule that erroneous programs never reach type checking or lowering.
+
+## Qualify source-facing closed names across modules
+
+**Priority:** Medium.
+
+**Status:** Pending.
+
+**Problem:** Closed specialization names now structurally render ordinary
+class, interface, array, optional, shared, and nested-specialization arguments
+instead of leaking numeric type identities. The renderer currently uses leaf
+declaration names. Two argument declarations with the same leaf name in
+different modules therefore remain identity-distinct but can look ambiguous in
+diagnostics and MIR dumps.
+
+**Evidence:**
+`resolve/resolver/program/specialization/names.rs` resolves exact semantic
+identities to declaration names but does not yet prepend their canonical module
+paths. Backend symbols remain collision-proof through module ownership and the
+closed `ClassId`, so this is an observability issue rather than a storage alias.
+
+**Likely owner:** Generic roadmap G10 module, dump, diagnostic, and determinism
+hardening.
+
+**Useful boundary:** Render the shortest unambiguous canonical source path, or
+always render the canonical qualified path, using `ProgramModuleTable` rather
+than reparsing names. Keep semantic identity selection and backend mangling
+independent from display formatting.

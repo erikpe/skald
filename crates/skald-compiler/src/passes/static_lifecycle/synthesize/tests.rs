@@ -318,3 +318,5 @@ fn backend_boundary_accepts_synthesized_static_startup() {
     assert!(assembly.contains(".Lska.static.initialize:"));
     assert!(assembly.contains("call .Lska.static.initialize"));
 }
+
+mod generic_classes;

@@ -5,7 +5,9 @@ use crate::{
         HirLocalInitializer, HirReturnValue, HirStatement, Type,
     },
     identity::FunctionId,
-    test_support::{resolve_source, type_check_source},
+    test_support::{
+        resolve_generic_source, resolve_source, type_check_generic_source, type_check_source,
+    },
 };
 
 fn check_text(text: &str) -> TypeCheckOutput {
@@ -21,21 +23,8 @@ fn resolve_text(text: &str) -> crate::resolve::ResolvedProgram {
     resolved.program
 }
 
-fn resolve_generic_source(text: &str) -> crate::resolve::ResolvedProgram {
-    let resolved = resolve_source(text);
-    assert!(
-        resolved
-            .diagnostics
-            .iter()
-            .all(|diagnostic| diagnostic.code == crate::resolve::UNSUPPORTED_GENERIC_SYNTAX),
-        "generic source must pass every implemented resolution check: {:?}",
-        resolved.diagnostics
-    );
-    resolved.program
-}
-
 fn check_generic_source(text: &str) -> crate::hir::HirProgram {
-    let checked = crate::typeck::type_check(&resolve_generic_source(text));
+    let checked = type_check_generic_source(text);
     assert!(
         checked.diagnostics.is_empty(),
         "generic source must type check: {:?}",

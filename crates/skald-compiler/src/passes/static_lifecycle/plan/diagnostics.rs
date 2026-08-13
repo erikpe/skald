@@ -132,11 +132,7 @@ fn phase_name(phase: StaticLifetimePhase) -> &'static str {
 }
 
 fn field_name(program: &PreliminaryMirProgram, field: crate::identity::StaticFieldId) -> String {
-    let class = program
-        .class(field.class())
-        .expect("lifetime field class must exist");
-    let declaration = class
-        .static_field(field)
-        .expect("lifetime field declaration must exist");
-    format!("{}.{}", class.name, declaration.name)
+    program
+        .static_field_qualified_name(field)
+        .expect("lifetime field declaration must exist")
 }

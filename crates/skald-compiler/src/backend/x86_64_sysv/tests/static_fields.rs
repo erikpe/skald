@@ -1,5 +1,8 @@
 use super::*;
-use crate::backend::x86_64_sysv::layout::DataLayout;
+use crate::{
+    backend::x86_64_sysv::{layout::DataLayout, symbol},
+    test_support::lower_generic_source_to_final_mir,
+};
 
 const SOURCE: &str = concat!(
     "fn increment(mut ref value: i64) -> unit { value = value + 1; }\n",
@@ -56,6 +59,51 @@ fn same_named_fields_in_distinct_classes_have_distinct_symbols() {
 
     assert!(output.contains(".Lska.class.main.Left.c0.static.s0:"));
     assert!(output.contains(".Lska.class.main.Right.c1.static.s0:"));
+}
+
+#[test]
+fn closed_generic_static_slots_have_distinct_assembler_safe_symbols() {
+    let program = lower_generic_source_to_final_mir(
+        "class Cache<T> { static value: T?; init() {} }
+         fn main() -> i64 {
+           if (Cache<i64>::value is some) { return 1; }
+           if (Cache<bool>::value is some) { return 2; }
+           return 0;
+         }",
+    );
+    let fields = program
+        .classes
+        .iter()
+        .filter(|class| class.name.starts_with("Cache<"))
+        .map(|class| class.static_fields[0].id)
+        .collect::<Vec<_>>();
+    let symbols = fields
+        .iter()
+        .map(|field| symbol::static_field(&program, *field))
+        .collect::<Vec<_>>();
+    let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+
+    assert_eq!(fields.len(), 2);
+    assert!(!program.classes.iter().any(|class| class.name == "Cache"));
+    assert_ne!(fields[0], fields[1]);
+    assert_ne!(symbols[0], symbols[1]);
+    assert!(symbols.iter().all(|symbol| symbol
+        .chars()
+        .all(|character| !matches!(character, '<' | '>' | '?' | ' '))));
+    for symbol in symbols {
+        assert!(assembly.contains(&format!("{symbol}:")), "{assembly}");
+    }
+    let wrapper = function_assembly(&assembly, "main");
+    assert!(
+        wrapper.contains("mov qword ptr [rbp - 8], rax"),
+        "{wrapper}"
+    );
+    assert!(wrapper.contains("call .Lska.static.finalize"), "{wrapper}");
+    assert!(
+        wrapper.contains("mov rax, qword ptr [rbp - 8]"),
+        "{wrapper}"
+    );
+    assert_system_assembler_accepts(&assembly);
 }
 
 #[test]

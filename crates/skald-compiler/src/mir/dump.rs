@@ -14,7 +14,9 @@ pub fn dump_preliminary_mir(program: &PreliminaryMirProgram) -> String {
     let mut output = dump_program(program.program(), "PreliminaryMirProgram");
     output.push_str("  StaticInitializationModes\n");
     for field in program.static_fields() {
-        let _ = write!(output, "    StaticField {} ", field.field);
+        output.push_str("    StaticField ");
+        write_static_field_reference(&mut output, program.program(), field.field);
+        output.push(' ');
         match field.initializer {
             Some(initializer) => {
                 let _ = write!(output, "explicit {initializer}");
@@ -30,9 +32,11 @@ pub fn dump_preliminary_mir(program: &PreliminaryMirProgram) -> String {
         for initializer in program.static_initializers() {
             let _ = write!(
                 output,
-                "    StaticInitializer {} destination {} : {}",
-                initializer.id, initializer.field, initializer.destination_type
+                "    StaticInitializer {} destination ",
+                initializer.id
             );
+            write_static_field_reference(&mut output, program.program(), initializer.field);
+            let _ = write!(output, " : {}", initializer.destination_type);
             dump_executable_body(&mut output, initializer.into());
             let _ = write!(
                 output,
@@ -216,13 +220,14 @@ fn dump_program(program: &MirProgram, heading: &str) -> String {
         }
     }
     if let Some(coordinator) = &program.static_lifecycle {
-        dump_static_lifecycle_coordinator(&mut output, coordinator);
+        dump_static_lifecycle_coordinator(&mut output, program, coordinator);
     }
     output
 }
 
 fn dump_static_lifecycle_coordinator(
     output: &mut String,
+    program: &MirProgram,
     coordinator: &MirStaticLifecycleCoordinator,
 ) {
     output.push_str("  StaticLifecycleCoordinator\n");
@@ -235,7 +240,9 @@ fn dump_static_lifecycle_coordinator(
     );
     output.push_str("    ActivationRegions\n");
     for region in coordinator.activation() {
-        let _ = writeln!(output, "      Field {} {:?}", region.field, region.work);
+        output.push_str("      Field ");
+        write_static_field_reference(output, program, region.field);
+        let _ = writeln!(output, " {:?}", region.work);
         for transition in &region.transitions {
             let _ = write!(output, "        {:?}", transition.kind);
             write_span(output, transition.span);
@@ -247,9 +254,11 @@ fn dump_static_lifecycle_coordinator(
         for initializer in coordinator.initializers() {
             let _ = write!(
                 output,
-                "      StaticInitializer {} destination {} : {}",
-                initializer.id, initializer.field, initializer.destination_type
+                "      StaticInitializer {} destination ",
+                initializer.id
             );
+            write_static_field_reference(output, program, initializer.field);
+            let _ = write!(output, " : {}", initializer.destination_type);
             dump_executable_body(output, initializer.into());
             let _ = write!(
                 output,
@@ -262,7 +271,9 @@ fn dump_static_lifecycle_coordinator(
     }
     output.push_str("    DestructionRegions\n");
     for region in coordinator.shutdown() {
-        let _ = writeln!(output, "      Field {}", region.field);
+        output.push_str("      Field ");
+        write_static_field_reference(output, program, region.field);
+        output.push('\n');
         let _ = write!(output, "        {:?}", region.begin.kind);
         write_span(output, region.begin.span);
         output.push('\n');
@@ -270,6 +281,18 @@ fn dump_static_lifecycle_coordinator(
         let _ = write!(output, "        {:?}", region.finish.kind);
         write_span(output, region.finish.span);
         output.push('\n');
+    }
+}
+
+fn write_static_field_reference(
+    output: &mut String,
+    program: &MirProgram,
+    field: crate::identity::StaticFieldId,
+) {
+    let _ = write!(output, "{field}");
+    if let Some(name) = program.static_field_qualified_name(field) {
+        output.push(' ');
+        write_quoted(output, &name);
     }
 }
 

@@ -285,21 +285,22 @@ fn lifecycle_dump_has_an_exact_stable_schema() {
     };
     let span = definition.span.range();
     let transition_span = planned.lifecycle_mir().activation()[0].span.range();
+    let field_reference = format!("{field} \"State.value\"");
     let expected = format!(
         concat!(
             "StaticLifetimePlan\n",
-            "  Activation {field}\n",
-            "  Shutdown {field}\n",
+            "  Activation {field_reference}\n",
+            "  Shutdown {field_reference}\n",
             "ProgramLifecycle\n",
-            "  Field {field} i64 explicit {initializer} activation=0 shutdown=0 @{start}..{end}\n",
+            "  Field {field_reference} i64 explicit {initializer} activation=0 shutdown=0 @{start}..{end}\n",
             "  ActivationTransitions\n",
-            "    {field} BeginInitialization @{transition_start}..{transition_end}\n",
-            "    {field} PublishLive @{transition_start}..{transition_end}\n",
+            "    {field_reference} BeginInitialization @{transition_start}..{transition_end}\n",
+            "    {field_reference} PublishLive @{transition_start}..{transition_end}\n",
             "  ShutdownTransitions\n",
-            "    {field} BeginDestruction @{start}..{end}\n",
-            "    {field} FinishDestruction @{start}..{end}\n",
+            "    {field_reference} BeginDestruction @{start}..{end}\n",
+            "    {field_reference} FinishDestruction @{start}..{end}\n",
         ),
-        field = field,
+        field_reference = field_reference,
         initializer = initializer,
         start = span.start(),
         end = span.end(),

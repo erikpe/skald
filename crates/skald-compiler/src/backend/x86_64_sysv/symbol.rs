@@ -217,9 +217,28 @@ fn class_stem(program: &MirProgram, class: ClassId) -> String {
     format!(
         "class.{}.{}.c{}",
         module_stem(program, declaration.module),
-        declaration.name,
+        encode_symbol_component(&declaration.name),
         class.index()
     )
+}
+
+/// Encodes source-facing closed generic names into one assembler-safe symbol
+/// component. Ordinary identifier names remain byte-for-byte unchanged.
+///
+/// The canonical class identity suffix is still the collision-proof selector;
+/// this encoding keeps punctuation such as `<`, `?`, spaces, and `[]` out of
+/// ELF assembler tokens while preserving deterministic byte correspondence.
+fn encode_symbol_component(name: &str) -> String {
+    let mut encoded = String::with_capacity(name.len());
+    for byte in name.bytes() {
+        if byte.is_ascii_alphanumeric() || byte == b'_' {
+            encoded.push(char::from(byte));
+        } else {
+            use std::fmt::Write;
+            let _ = write!(encoded, "_x{byte:02x}_");
+        }
+    }
+    encoded
 }
 
 fn module_stem(program: &MirProgram, module: ModuleId) -> String {

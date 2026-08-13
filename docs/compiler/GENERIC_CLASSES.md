@@ -2,8 +2,8 @@
 
 Status: frozen compiler design; template resolution, specialization,
 closed-class lifecycle, ownership, nominal bounds, inheritance, conformance,
-and dispatch integration implemented; per-specialization static planning and
-native execution remain staged. This document defines the
+dispatch, and per-specialization static planning implemented; general native
+execution remains staged. This document defines the
 target-independent compilation contract for the initial
 [generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
@@ -18,8 +18,8 @@ expressions, and callable bodies under deterministic ordinary identities. The
 ordinary body resolver selects closed constructions, calls, casts, places,
 and static members without a duplicate generic resolver. A closed-type
 capability facade composes the existing validators and lifecycle planners;
-valid closed applications remain gated while later roadmap stages integrate
-whole-program static effects and native execution.
+valid closed applications remain gated while later roadmap stages complete
+general MIR/backend execution and feature delivery.
 
 ## Architectural outcome
 
@@ -273,6 +273,13 @@ bodies. Static effects, dependency evidence, activation order, shutdown, and
 backend storage treat those fields exactly like statics on hand-written
 classes. A static selection requests specialization even if no value of the
 class is otherwise constructed.
+
+Preliminary, planned, and final MIR retain identity-selected static fields,
+initializer bodies, effect witnesses, and lifecycle indices while rendering
+closed owners with source-facing argument names. Backend symbols encode that
+readable punctuation into assembler-safe components and retain the closed
+`ClassId` suffix as the collision-proof selector. Template records allocate no
+runtime slot or lifecycle body.
 
 Generic inheritance produces a closed base before ordinary hierarchy
 analysis. Generic classes may implement ordinary interfaces; conformance is

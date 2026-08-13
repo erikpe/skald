@@ -1,6 +1,7 @@
 //! Substitution of complete template headers into ordinary class declarations.
 
 use super::super::resolver::ModuleUnit;
+use super::names::specialized_name;
 use super::*;
 
 pub(crate) struct SpecializedDeclarations {
@@ -13,6 +14,9 @@ pub(crate) fn specialize_declarations(
     units: &[ModuleUnit<'_>],
     semantics: &ResolvedClassTemplateSemanticTable,
     specializations: &GenericSpecializationTable,
+    ordinary_classes: &ResolvedClassDeclarationTable,
+    interfaces: &ResolvedInterfaceDeclarationTable,
+    type_interner: &ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> SpecializedDeclarations {
     let mut output = SpecializedDeclarations {
@@ -32,10 +36,20 @@ pub(crate) fn specialize_declarations(
         let semantic = semantics
             .get(specialization.key.template)
             .expect("specialization keys reference resolved template semantics");
+        let name = specialized_name(
+            units,
+            specializations,
+            ordinary_classes,
+            interfaces,
+            type_interner,
+            source,
+            &specialization.key.arguments,
+        );
         match DeclarationSpecializer::new(
             class_id,
             unit.module,
             source,
+            name,
             semantic,
             specialization,
             diagnostics,
@@ -61,6 +75,7 @@ struct DeclarationSpecializer<'source, 'semantic, 'specialization, 'diagnostics>
     class_id: ClassId,
     module: ModuleId,
     source: &'source syntax::ClassDecl,
+    name: String,
     semantic: &'semantic ResolvedClassTemplateSemantics,
     specialization: &'specialization GenericSpecialization,
     diagnostics: &'diagnostics mut Diagnostics,
@@ -82,6 +97,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
         class_id: ClassId,
         module: ModuleId,
         source: &'source syntax::ClassDecl,
+        name: String,
         semantic: &'semantic ResolvedClassTemplateSemantics,
         specialization: &'specialization GenericSpecialization,
         diagnostics: &'diagnostics mut Diagnostics,
@@ -90,6 +106,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             class_id,
             module,
             source,
+            name,
             semantic,
             specialization,
             diagnostics,
@@ -139,7 +156,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
                     id: self.class_id,
                     module: self.module,
                     visibility: resolved_visibility(self.source.visibility),
-                    name: specialized_name(self.source, &self.specialization.key.arguments),
+                    name: self.name,
                     name_span: self.source.name.span,
                     direct_base,
                     implemented_interfaces: self.semantic.implemented_interfaces.clone(),
@@ -503,41 +520,5 @@ fn method_kind(method: &syntax::MethodDecl) -> ResolvedMethodKind {
             }
         },
         dispatch: ResolvedMethodDispatch::Direct,
-    }
-}
-
-fn specialized_name(source: &syntax::ClassDecl, arguments: &[ResolvedTypeKind]) -> String {
-    let arguments = arguments
-        .iter()
-        .map(|argument| specialized_argument_name(*argument))
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("{}<{arguments}>", source.name.text)
-}
-
-fn specialized_argument_name(argument: ResolvedTypeKind) -> String {
-    match argument {
-        ResolvedTypeKind::I64 => "i64".to_owned(),
-        ResolvedTypeKind::U64 => "u64".to_owned(),
-        ResolvedTypeKind::U8 => "u8".to_owned(),
-        ResolvedTypeKind::F64 => "f64".to_owned(),
-        ResolvedTypeKind::Bool => "bool".to_owned(),
-        ResolvedTypeKind::Unit => "unit".to_owned(),
-        ResolvedTypeKind::Obj => "Obj".to_owned(),
-        ResolvedTypeKind::Class(class) => class.to_string(),
-        ResolvedTypeKind::Interface(interface) => interface.to_string(),
-        ResolvedTypeKind::Array(array) => array.to_string(),
-        ResolvedTypeKind::Shared(target) => format!("shared {}", shared_target_name(target)),
-        ResolvedTypeKind::Optional(optional) => optional.to_string(),
-    }
-}
-
-fn shared_target_name(target: ResolvedSharedTarget) -> String {
-    match target {
-        ResolvedSharedTarget::Obj => "Obj".to_owned(),
-        ResolvedSharedTarget::Class(class) => class.to_string(),
-        ResolvedSharedTarget::Interface(interface) => interface.to_string(),
-        ResolvedSharedTarget::Array(array) => array.to_string(),
-        ResolvedSharedTarget::OptionalBox(optional_box) => optional_box.to_string(),
     }
 }

@@ -258,8 +258,16 @@ fn exact_plan_dump_retains_effects_dependencies_witnesses_and_reverse_order() {
     assert!(dump.starts_with("StaticLifetimePlan\n  Dependency "));
     assert!(dump.contains("Initialization root callable"));
     assert!(dump.contains("via callable"));
-    assert!(dump.contains(&format!("  Activation {} {}\n", fields[1], fields[0])));
-    assert!(dump.contains(&format!("  Shutdown {} {}\n", fields[0], fields[1])));
+    assert!(dump.contains(&format!(
+        "  Activation {} \"State.base\" {} \"State.result\"\n",
+        fields[1], fields[0]
+    )));
+    assert!(dump.contains(&format!(
+        "  Shutdown {} \"State.result\" {} \"State.base\"\n",
+        fields[0], fields[1]
+    )));
     assert_eq!(dump, dump_static_lifetime_plan(&planned));
     assert!(dump_planned_mir(&planned).contains("StaticEffectAnalysis\n"));
 }
+
+mod generic_classes;

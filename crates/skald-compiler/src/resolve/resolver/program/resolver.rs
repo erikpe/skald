@@ -309,6 +309,9 @@ impl<'ast> ProgramResolver<'ast> {
             &self.units,
             &template_semantics,
             &generic_specializations,
+            &class_declarations,
+            &interfaces,
+            &self.type_interner,
             &mut self.diagnostics,
         );
         let mut class_symbols = class_symbols;

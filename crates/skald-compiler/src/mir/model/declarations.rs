@@ -111,6 +111,18 @@ impl MirProgram {
         self.class(id.class())?.static_field(id)
     }
 
+    /// Returns the source-facing owner and field name for one identity-selected
+    /// static slot.
+    ///
+    /// Closed generic classes carry their canonical type arguments in the
+    /// class name, so this remains readable without weakening identity-based
+    /// lookup in analysis, planning, or code generation.
+    pub(crate) fn static_field_qualified_name(&self, id: StaticFieldId) -> Option<String> {
+        let class = self.class(id.class())?;
+        let field = class.static_field(id)?;
+        Some(format!("{}.{}", class.name, field.name))
+    }
+
     pub(crate) fn static_field_mut(
         &mut self,
         id: StaticFieldId,

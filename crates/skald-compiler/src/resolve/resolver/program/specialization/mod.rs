@@ -3,6 +3,7 @@
 mod bodies;
 mod closed_types;
 mod declarations;
+mod names;
 mod owner;
 mod requests;
 mod validation;

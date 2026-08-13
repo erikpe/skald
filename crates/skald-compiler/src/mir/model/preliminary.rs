@@ -145,6 +145,10 @@ impl PreliminaryMirProgram {
         self.program.class(id)
     }
 
+    pub(crate) fn static_field_qualified_name(&self, id: StaticFieldId) -> Option<String> {
+        self.program.static_field_qualified_name(id)
+    }
+
     pub fn array_type(&self, id: ArrayTypeId) -> Option<&MirArrayType> {
         self.program.array_type(id)
     }
