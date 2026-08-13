@@ -1,9 +1,9 @@
 # Generic-Class Specialization
 
-Status: frozen compiler design; template resolution, contextual requirement
-analysis, closed-specialization identity discovery, and ordinary closed class
-declaration and body generation implemented; lifecycle and typed-HIR
-integration remain staged. This document defines the
+Status: frozen compiler design; template resolution, specialization,
+closed-class lifecycle, ownership, nominal bounds, inheritance, conformance,
+and dispatch integration implemented; per-specialization static planning and
+native execution remain staged. This document defines the
 target-independent compilation contract for the initial
 [generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
@@ -18,8 +18,8 @@ expressions, and callable bodies under deterministic ordinary identities. The
 ordinary body resolver selects closed constructions, calls, casts, places,
 and static members without a duplicate generic resolver. A closed-type
 capability facade composes the existing validators and lifecycle planners;
-valid closed applications remain gated until lifecycle and lower-phase
-integration is complete.
+valid closed applications remain gated while later roadmap stages integrate
+whole-program static effects and native execution.
 
 ## Architectural outcome
 
@@ -325,6 +325,31 @@ is one shared owner, while `shared T?` lowers to a non-null shared owner whose
 target is the canonical optional-box identity. Adding another outer `?` to
 the latter produces an optional owner of that box; specialization never moves
 or flattens either layer.
+
+### Implemented nominal object-model boundary
+
+Every explicit `where T: Interface` bound is evaluated for each requested
+closed key. `T` must close to an exact class whose own declaration or ordinary
+base chain declares the interface; a bare interface view, a shared owner, and
+a class that merely has same-named methods do not satisfy the bound. All
+bounds are conjunctive, and failures retain both the application origin and
+the bound declaration.
+
+A bound-selected member is not reselected from the argument class. Resolution
+retains the chosen `InterfaceRequirementId`, and typed HIR forms an ordinary
+interface view over the exact object place before emitting the existing
+interface-call operation. This also applies to explicitly dereferenced
+`shared T` pointees and checked array elements. Specialization therefore
+neither introduces duck typing nor proves a virtual or interface call safe to
+devirtualize.
+
+Closed generic bases enter the ordinary hierarchy before override and body
+analysis. Generic derived classes and ordinary classes extending a closed
+application consequently use the same cycle, base-initialization, privacy,
+slicing, lifecycle, virtual-family, and interface-conformance machinery as
+hand-written classes. Each generated `ClassId` owns independent substituted
+method signatures, virtual families, and conformance maps; no relation between
+type arguments converts one invariant application to another.
 
 ## Target and ABI realization
 

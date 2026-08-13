@@ -457,6 +457,9 @@ pub enum HirCheckedObjectViewKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirViewSource {
     Place(HirObjectPlace),
+    /// An exact object selected from checked array storage. The element
+    /// carrier preserves its owner anchor and bounds-checking semantics.
+    ArrayElement(Box<super::HirArrayElementPlace>),
     Produced {
         producer: Box<HirObjectProducer>,
         /// Static base projections from the complete produced class to the

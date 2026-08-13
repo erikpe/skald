@@ -137,6 +137,42 @@ impl CallableChecker<'_, '_> {
                 };
                 (access, HirInterfaceReceiver::View(view))
             }
+            crate::resolve::ResolvedInterfaceReceiver::Object(receiver) => {
+                let checked = self.check_object_receiver(receiver, ObjectPlaceUse::Member)?;
+                let access = checked.place.access;
+                let target = HirViewTarget::Interface(call.interface);
+                debug_assert!(super::object_view_relation::class_provides_view(
+                    self.program,
+                    checked.place.class(),
+                    target,
+                ));
+                let receiver = if let Some(mut cast) = checked.checked_cast {
+                    cast.consumer_target = target;
+                    cast.consumer_access = required_access;
+                    HirInterfaceReceiver::Checked(cast)
+                } else {
+                    let mut view = if let Some(view) = checked.shared_view {
+                        *view
+                    } else if let Some(view) = checked.optional_view {
+                        *view
+                    } else {
+                        HirObjectView {
+                            source: checked.array_element.map_or_else(
+                                || HirViewSource::Place(checked.place),
+                                HirViewSource::ArrayElement,
+                            ),
+                            origin: Box::new(checked.origin),
+                            target,
+                            access,
+                            span: call.receiver_span,
+                        }
+                    };
+                    view.target = target;
+                    view.access = access;
+                    HirInterfaceReceiver::View(view)
+                };
+                (access, receiver)
+            }
             crate::resolve::ResolvedInterfaceReceiver::Cast(cast) => {
                 let mut checked = self.check_object_cast(cast)?;
                 debug_assert_eq!(

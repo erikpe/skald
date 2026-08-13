@@ -44,6 +44,7 @@ mod dumps;
 mod expressions;
 mod external_links;
 mod generic_classes;
+mod generic_object_model;
 mod integer_division;
 mod interfaces;
 mod intrinsics;

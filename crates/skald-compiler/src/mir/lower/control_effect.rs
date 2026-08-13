@@ -277,6 +277,7 @@ fn view_source_contains_control_effect(source: &HirViewSource) -> bool {
         HirViewSource::Place(_)
         | HirViewSource::Forwarded { .. }
         | HirViewSource::Shared { .. } => false,
+        HirViewSource::ArrayElement(_) => true,
         HirViewSource::AnchoredShared { source, .. } => {
             shared_source_contains_control_effect(source)
         }

@@ -45,7 +45,7 @@ use resolver::{
     ProgramResolver,
 };
 use specialization::{
-    discover_specializations, specialize_bodies, specialize_declarations,
+    discover_specializations, generated_class_work, specialize_bodies, specialize_declarations,
     validate_specialization_requirements, SpecializationBodyInput, SpecializationDiscoveryInput,
 };
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};

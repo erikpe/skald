@@ -5,34 +5,9 @@ use crate::{
         HirSynthesizedFieldCopy, Type,
     },
     identity::FieldId,
-    resolve::{ResolvedCopyOperation, ResolvedProgram, UNSUPPORTED_GENERIC_SYNTAX},
+    resolve::ResolvedCopyOperation,
     typeck::COPY_OPERATION_UNAVAILABLE,
 };
-
-fn resolve_generic_source(text: &str) -> ResolvedProgram {
-    let resolved = crate::test_support::resolve_source(text);
-    assert!(
-        resolved
-            .diagnostics
-            .iter()
-            .all(|diagnostic| diagnostic.code == UNSUPPORTED_GENERIC_SYNTAX),
-        "generic source must pass every implemented resolution check: {:?}",
-        resolved.diagnostics
-    );
-    resolved.program
-}
-
-fn check_generic_source(text: &str) -> crate::hir::HirProgram {
-    let checked = crate::typeck::type_check(&resolve_generic_source(text));
-    assert!(
-        checked.diagnostics.is_empty(),
-        "generic source must type check: {:?}",
-        checked.diagnostics
-    );
-    checked
-        .hir
-        .expect("valid closed generic classes must produce HIR")
-}
 
 #[test]
 fn ordinary_application_sites_use_the_generated_closed_class() {

@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G8 is next.
+Status: in progress; G9 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -62,7 +62,7 @@ not reopen those decisions while implementing them.
 - [x] G5 — Specialize class declarations into ordinary closed classes
 - [x] G6 — Specialize executable bodies and operation selections
 - [x] G7 — Integrate lifecycle, optionals, arrays, and ownership
-- [ ] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
+- [x] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
 - [ ] G9 — Integrate per-specialization statics and whole-program effects
 - [ ] G10 — Harden diagnostics, dumps, modules, and determinism
 - [ ] G11 — Execute generic classes through MIR and x86-64
@@ -387,23 +387,23 @@ by non-generic classes.
 **Purpose:** Complete the generic object-model contract after closed
 declarations and bodies are stable.
 
-- [ ] Evaluate each explicit interface bound against the closed exact class
+- [x] Evaluate each explicit interface bound against the closed exact class
   argument's effective nominal conformance.
-- [ ] Lower member use authorized by a bound through the selected interface
+- [x] Lower member use authorized by a bound through the selected interface
   requirement and ordinary interface dispatch semantics; reject duck-typed
   matching and shared-owner lifting.
-- [ ] Diagnose ambiguous bound member names and failed conjunctive bounds with
+- [x] Diagnose ambiguous bound member names and failed conjunctive bounds with
   definition and application evidence.
-- [ ] Materialize closed generic bases before ordinary hierarchy analysis and
+- [x] Materialize closed generic bases before ordinary hierarchy analysis and
   validate cycles, base initialization, inherited selection, privacy, slicing,
   and base lifecycle.
-- [ ] Support ordinary classes extending closed generic applications and
+- [x] Support ordinary classes extending closed generic applications and
   generic classes implementing non-generic interfaces.
-- [ ] Compute overrides, virtual families, and conformance maps independently
+- [x] Compute overrides, virtual families, and conformance maps independently
   for every generated `ClassId` using exact substituted signatures.
-- [ ] Keep applications invariant even when arguments or generated classes
+- [x] Keep applications invariant even when arguments or generated classes
   participate in valid class/interface/shared view conversions.
-- [ ] Preserve existing safe devirtualization boundaries without treating
+- [x] Preserve existing safe devirtualization boundaries without treating
   specialization alone as proof of a different dispatch result.
 
 **Tests:** Bound success/failure across direct and inherited conformance;

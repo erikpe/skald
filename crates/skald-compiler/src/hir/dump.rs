@@ -2221,6 +2221,7 @@ impl<'types> HirDumper<'types> {
         self.indented(|dumper| {
             match &view.source {
                 HirViewSource::Place(place) => dumper.object_place(place),
+                HirViewSource::ArrayElement(element) => dumper.array_element(element),
                 HirViewSource::Produced {
                     producer,
                     projections,

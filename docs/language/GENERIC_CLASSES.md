@@ -1,9 +1,9 @@
 # Generic Classes
 
-Status: frozen design; syntax, template resolution, contextual mechanical
-requirement analysis, closed-specialization identity discovery, and ordinary
-closed class declaration and body generation implemented; lifecycle and
-execution remain staged. This document defines the
+Status: frozen design; syntax, specialization, closed-class lifecycle and
+ownership, nominal bounds, inheritance, conformance, and dispatch integration
+implemented; per-specialization static planning and native execution remain
+staged. This document defines the
 intended initial source-visible generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
@@ -18,8 +18,8 @@ delegates to the ordinary optional, array, shared-owner, alias, stored-value,
 and class-lifecycle rules. Generated bodies close local types, constructions,
 allocations, calls, casts, tests, and static selections through the ordinary
 resolver, and every member is validated whether called or not. A valid closed
-application remains explicitly gated until lifecycle and lower-phase execution
-are implemented.
+application remains explicitly gated while later roadmap stages integrate
+whole-program static effects and native execution.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning
@@ -255,6 +255,11 @@ A generic body cannot select a method from an unconstrained parameter merely
 because a particular argument happens to declare a matching method. Generic
 classes do not introduce structural duck typing.
 
+When a bound authorizes a call, the call uses that interface requirement and
+ordinary interface dispatch. It is not rebound to a same-named class method
+after specialization, and specialization alone does not change virtual or
+interface devirtualization rules.
+
 A container parameterized by a shared pointee states that construction
 explicitly:
 
@@ -270,6 +275,11 @@ where T: Comparable
 This is instantiated as `SharedSortedVec<Item>` when `Item implements
 Comparable`. It is distinct from an unconstrained `Vec<shared Comparable>`,
 whose complete argument is an owning interface view.
+
+The bound applies to the exact pointee `Item`, so an explicit operation such
+as `owner->compare(...)` on `shared T` may use it. Passing `shared Item` as
+`T` does not lift `Item`'s conformance to the owner and therefore does not
+satisfy `where T: Comparable`.
 
 Storage and lifecycle capabilities are inferred rather than written as
 `stored`, `copy`, `assign`, `default`, or `destroy` bounds. Those source bounds

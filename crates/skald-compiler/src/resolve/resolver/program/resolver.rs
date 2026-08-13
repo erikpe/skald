@@ -319,9 +319,17 @@ impl<'ast> ProgramResolver<'ast> {
         let hierarchy =
             build_class_hierarchy(&class_declarations, &class_symbols, &mut self.diagnostics);
         let asts = self.units.iter().map(|unit| unit.ast).collect::<Vec<_>>();
+        let mut virtual_work = class_work.clone();
+        if specialized.valid {
+            virtual_work.extend(generated_class_work(
+                &self.units,
+                &generic_specializations,
+                &class_declarations,
+            ));
+        }
         let virtual_families = resolve_virtual_families(
             &asts,
-            &class_work,
+            &virtual_work,
             &mut class_declarations,
             &class_symbols,
             &hierarchy,

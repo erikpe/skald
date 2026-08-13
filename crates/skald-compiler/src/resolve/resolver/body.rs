@@ -80,6 +80,27 @@ impl<'program> BodySpecializationEnvironment<'program> {
             .find_map(|(type_use, closed)| (type_use.type_term.span == span).then_some(*closed))
             .flatten()
     }
+
+    fn bound_member(
+        self,
+        span: Span,
+    ) -> Option<(
+        crate::identity::InterfaceId,
+        crate::identity::InterfaceRequirementId,
+    )> {
+        self.semantics.selections.iter().find_map(|selection| {
+            let ResolvedTemplateSelection::BoundMember {
+                interface,
+                requirement,
+                span: selection_span,
+                ..
+            } = selection
+            else {
+                return None;
+            };
+            (*selection_span == span).then_some((*interface, *requirement))
+        })
+    }
 }
 
 #[derive(Clone, Copy)]

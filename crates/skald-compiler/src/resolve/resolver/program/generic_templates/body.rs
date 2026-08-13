@@ -509,7 +509,18 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 );
             }
         }
-        if let Some(parameter) = self.parameter_of_expression(&expression.receiver) {
+        let parameter = match expression.operator {
+            syntax::MemberAccessOperator::Dot { .. } => {
+                self.parameter_of_expression(&expression.receiver)
+            }
+            syntax::MemberAccessOperator::Arrow { .. } => self
+                .type_of_expression(&expression.receiver)
+                .and_then(|receiver| match receiver.kind {
+                    ResolvedTemplateTypeKind::Shared(target) => target.parameter(),
+                    _ => None,
+                }),
+        };
+        if let Some(parameter) = parameter {
             self.report_parameter_member(parameter, &expression.member, expression.span);
         }
     }

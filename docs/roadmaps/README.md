@@ -6,7 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G8 is next.**
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G9 is next.**
   Implements explicit closed generic class applications through deterministic
   semantic specialization, inferred contextual requirements, nominal
   interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
@@ -14,9 +14,10 @@ progress. Completed roadmaps and resolved discovery records move to
   bounds, delayed dependent selections, contextual mechanical requirement
   inference/evaluation, and deterministic closed-specialization identity,
   caching, provenance, recursion handling, and complete ordinary closed class
-  declarations and complete ordinary resolved bodies are implemented. The
-  next boundary integrates their lifecycle, optional, array, and ownership
-  operations into typed HIR.
+  declarations and bodies, lifecycle and ownership composition, nominal bound
+  enforcement, closed inheritance, per-application conformance, and ordinary
+  virtual/interface dispatch are implemented. The next boundary integrates
+  per-specialization statics with whole-program effects and lifecycle order.
 
 ## Planned
 
@@ -31,7 +32,9 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-No implementation discoveries are currently pending.
+- [Generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md) — atomic
+  failed-specialization rollback should remove or rebuild every dependent
+  resolved product, not only class declarations, definitions, and hierarchy.
 
 ## Implementation baseline
 

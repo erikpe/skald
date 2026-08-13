@@ -87,6 +87,35 @@ pub(super) fn specialize_bodies(
     output
 }
 
+/// Reconstructs ordinary class work metadata for every generated class.
+/// Consumers such as override validation can then inspect template syntax
+/// while operating on the substituted declaration identity.
+pub(in crate::resolve::resolver::program) fn generated_class_work(
+    units: &[resolver::ModuleUnit<'_>],
+    specializations: &GenericSpecializationTable,
+    classes: &ResolvedClassDeclarationTable,
+) -> Vec<ClassWorkItem> {
+    specializations
+        .iter()
+        .filter_map(|specialization| {
+            let GenericSpecializationState::Complete(class) = specialization.state else {
+                return None;
+            };
+            let (unit, source, ast_index) = template_source(units, specialization.key.template)
+                .expect("specialization keys reference collected templates");
+            let declaration = classes
+                .get(class)
+                .expect("complete specialization has a generated declaration");
+            Some(generated_work_item(
+                declaration,
+                source,
+                unit.module,
+                ast_index,
+            ))
+        })
+        .collect()
+}
+
 fn generated_work_item(
     declaration: &ResolvedClassDeclaration,
     source: &syntax::ClassDecl,

@@ -491,8 +491,12 @@ fn resolve_direct_base(
 ) -> Option<ResolvedDirectBase> {
     let base = class.direct_base.as_ref()?;
     if base.arguments.is_some() {
+        let specialized = lookup.specialized_class(base.span);
         super::super::report_generic_application(base, lookup, diagnostics);
-        return None;
+        return specialized.map(|class| ResolvedDirectBase {
+            class,
+            span: base.span,
+        });
     }
     match lookup.select(&base.name, diagnostics) {
         TopLevelLookup::Found(TopLevelSymbol {

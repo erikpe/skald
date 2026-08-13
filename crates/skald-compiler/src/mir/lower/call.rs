@@ -578,6 +578,12 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
         let produced_class = match &view.source {
             HirViewSource::Produced { producer, .. } => Some(producer.class()),
+            HirViewSource::ArrayElement(element) => {
+                let Type::Class(class) = element.element else {
+                    unreachable!("object view array source must have exact class type")
+                };
+                Some(class)
+            }
             HirViewSource::OptionalPayload { view, .. } => Some(optional_types::class_payload(
                 self.input.optional_types,
                 &view.source,
@@ -586,6 +592,9 @@ impl BodyLowerer<'_> {
         };
         let source = match &view.source {
             HirViewSource::Place(place) => self.lower_object_place(place),
+            HirViewSource::ArrayElement(element) => {
+                self.lower_array_alias_element_place(element, element.receiver.access)
+            }
             HirViewSource::Produced {
                 producer,
                 projections,
@@ -639,8 +648,13 @@ impl BodyLowerer<'_> {
                 )
             }
         };
-        let produced_complete = matches!(view.source, HirViewSource::Produced { .. })
-            .then(|| MirPlace::base(source.base.expect_local_storage()));
+        let produced_complete = match view.source {
+            HirViewSource::Produced { .. } => {
+                Some(MirPlace::base(source.base.expect_local_storage()))
+            }
+            HirViewSource::ArrayElement(_) => Some(source.clone()),
+            _ => None,
+        };
         let origin = produced_class.map_or_else(
             || match &view.source {
                 HirViewSource::AnchoredShared {
@@ -724,7 +738,9 @@ impl BodyLowerer<'_> {
         let source = self.lower_object_view(&checked.view);
         let direct_static_source = matches!(
             checked.view.source,
-            HirViewSource::Place(_) | HirViewSource::Produced { .. }
+            HirViewSource::Place(_)
+                | HirViewSource::ArrayElement(_)
+                | HirViewSource::Produced { .. }
         );
         if checked.kind == crate::hir::HirCheckedObjectViewKind::Static && direct_static_source {
             let projected = checked

@@ -529,6 +529,20 @@ impl CallableResolver<'_, '_> {
                 }
             }
             syntax::Expression::MemberAccess(member) => {
+                if let Some((interface, requirement)) = self
+                    .environment
+                    .specialization
+                    .and_then(|specialization| specialization.bound_member(member.span))
+                {
+                    let receiver = self.resolve_member_object_receiver(member)?;
+                    return Some(CallTarget::Interface {
+                        receiver: ResolvedInterfaceReceiver::Object(Box::new(receiver)),
+                        interface,
+                        requirement,
+                        receiver_span: member.receiver.span(),
+                        member_span: member.member.span,
+                    });
+                }
                 if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
                     match self.class_receiver(&member.receiver) {
                         ClassReceiver::Class(class) => {

@@ -324,7 +324,13 @@ pub struct ResolvedInterfaceCallExpr {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedInterfaceReceiver {
-    Binding { binding: BindingId, span: Span },
+    Binding {
+        binding: BindingId,
+        span: Span,
+    },
+    /// An exact-class receiver converted to the interface selected by a
+    /// generic bound. Type checking retains its ordinary place provenance.
+    Object(Box<ResolvedObjectReceiver>),
     Cast(Box<ResolvedObjectCastExpr>),
     Dereference(Box<ResolvedDereferenceExpr>),
     OptionalBoxPayload(Box<ResolvedUnwrapExpr>),

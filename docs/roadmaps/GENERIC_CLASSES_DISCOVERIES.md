@@ -1,0 +1,38 @@
+# Generic Classes Discoveries
+
+Status: pending.
+
+These findings were recorded while implementing the generic classes roadmap.
+They do not change the frozen language design and remain outside the active
+roadmap task that exposed them.
+
+## Make failed-specialization rollback cover every dependent resolved product
+
+**Priority:** Medium.
+
+**Status:** Pending.
+
+**Problem:** Final mechanical or nominal requirement validation atomically
+removes generated class declarations, class definitions, and the generated
+hierarchy after any closed specialization fails. Products computed before
+that validation, including virtual-family metadata and ordinary resolved
+bodies that mention generated identities, are not rebuilt. Compilation stops
+on the diagnostics, so no lower phase consumes the inconsistent program, but
+the diagnostic `ResolvedProgram` does not fully uphold its ordinary table
+invariants.
+
+**Evidence:**
+`resolve/resolver/program/specialization/validation.rs` truncates `classes` and
+`class_definitions` and restores `hierarchy`; virtual families and previously
+resolved ordinary function/class bodies are produced earlier in
+`resolve/resolver/program/resolver.rs` and remain present.
+
+**Likely owner:** Generic roadmap G10 diagnostic/product hardening,
+`resolve/resolver/program/resolver.rs`, and
+`resolve/resolver/program/specialization/validation.rs`.
+
+**Useful boundary:** Either validate all closed requirements before producing
+products that depend on generated classes, or implement one cohesive rollback
+that rebuilds every ordinary-only table and dispatch annotation. Preserve
+current application/definition evidence, dense IDs, deterministic ordering,
+and the rule that erroneous programs never reach type checking or lowering.

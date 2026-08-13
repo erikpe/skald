@@ -21,6 +21,29 @@ fn resolve_text(text: &str) -> crate::resolve::ResolvedProgram {
     resolved.program
 }
 
+fn resolve_generic_source(text: &str) -> crate::resolve::ResolvedProgram {
+    let resolved = resolve_source(text);
+    assert!(
+        resolved
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == crate::resolve::UNSUPPORTED_GENERIC_SYNTAX),
+        "generic source must pass every implemented resolution check: {:?}",
+        resolved.diagnostics
+    );
+    resolved.program
+}
+
+fn check_generic_source(text: &str) -> crate::hir::HirProgram {
+    let checked = crate::typeck::type_check(&resolve_generic_source(text));
+    assert!(
+        checked.diagnostics.is_empty(),
+        "generic source must type check: {:?}",
+        checked.diagnostics
+    );
+    checked.hir.expect("valid generic source must produce HIR")
+}
+
 fn returned_expression(function: &HirFunctionDefinition) -> &HirExpression {
     let HirStatement::Return(statement) = function.body.statements.last().unwrap() else {
         panic!("expected final return statement");
@@ -166,6 +189,7 @@ mod eager_boolean_operators;
 mod expressions;
 mod floating_division;
 mod generic_classes;
+mod generic_object_model;
 mod inline_fields;
 mod integer_division;
 mod interfaces;

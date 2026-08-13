@@ -1532,6 +1532,7 @@ impl<'types> ResolvedDumper<'types> {
                     ResolvedInterfaceReceiver::Binding { binding, .. } => {
                         format!("{binding}")
                     }
+                    ResolvedInterfaceReceiver::Object(_) => "exact object".to_owned(),
                     ResolvedInterfaceReceiver::Cast(_) => "checked-cast".to_owned(),
                     ResolvedInterfaceReceiver::Dereference(_) => "dereference".to_owned(),
                     ResolvedInterfaceReceiver::OptionalBoxPayload(_) => {
@@ -1546,8 +1547,16 @@ impl<'types> ResolvedDumper<'types> {
                     call.span,
                 );
                 self.indented(|dumper| {
-                    if let ResolvedInterfaceReceiver::Dereference(dereference) = &call.receiver {
-                        dumper.dereference(dereference);
+                    match &call.receiver {
+                        ResolvedInterfaceReceiver::Object(receiver) => {
+                            dumper.object_receiver(receiver)
+                        }
+                        ResolvedInterfaceReceiver::Dereference(dereference) => {
+                            dumper.dereference(dereference)
+                        }
+                        ResolvedInterfaceReceiver::Binding { .. }
+                        | ResolvedInterfaceReceiver::Cast(_)
+                        | ResolvedInterfaceReceiver::OptionalBoxPayload(_) => {}
                     }
                     for argument in &call.arguments {
                         dumper.expression(argument);
