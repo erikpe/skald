@@ -52,7 +52,7 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
     };
     assert_eq!(assignment.place.field, class.fields[0].id);
     assert_eq!(
-        assignment.place.receiver.root(),
+        receiver_place(&assignment.place.receiver).root(),
         BindingId::Receiver(initializer.callable)
     );
 

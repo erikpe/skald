@@ -530,7 +530,7 @@ impl CallableChecker<'_, '_> {
                 self.binding_access(*binding, false, span)
             }
             crate::hir::HirOptionalStorage::Static(_) => Some(HirAccess::Mutable),
-            crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access),
+            crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access()),
             crate::hir::HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
             crate::hir::HirOptionalStorage::SharedPointee(_) => Some(HirAccess::ReadOnly),
         }
@@ -745,9 +745,9 @@ impl CallableChecker<'_, '_> {
                     };
                     let receiver =
                         self.check_object_receiver(&access.receiver, ObjectPlaceUse::Alias)?;
-                    let optional = receiver
-                        .optional_view
-                        .expect("optional receiver must retain its checked payload view");
+                    let super::CheckedReceiverCarrier::View(optional) = receiver.carrier else {
+                        unreachable!("optional receiver must retain its checked payload view")
+                    };
                     let HirViewSource::OptionalPayload {
                         view,
                         mut projections,

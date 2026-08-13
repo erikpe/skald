@@ -133,7 +133,7 @@ impl CallableChecker<'_, '_> {
         match storage {
             HirOptionalStorage::Binding(binding) => self.binding_access(*binding, false, span),
             HirOptionalStorage::Static(_) => Some(crate::hir::HirAccess::Mutable),
-            HirOptionalStorage::Field(field) => Some(field.receiver.access),
+            HirOptionalStorage::Field(field) => Some(field.receiver.access()),
             HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
             HirOptionalStorage::SharedPointee(_) => Some(crate::hir::HirAccess::ReadOnly),
         }

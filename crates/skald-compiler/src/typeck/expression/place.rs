@@ -4,7 +4,7 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         HirAccess, HirCheckedObjectView, HirExpression, HirExpressionKind, HirFieldPlace,
-        HirObjectOrigin, HirObjectPlace, Type,
+        HirObjectOrigin, HirObjectPlace, HirObjectReceiver, HirObjectView, Type,
     },
     identity::{BindingId, FieldId, ParameterId},
     object_path::{ObjectPath, ObjectProjection},
@@ -35,10 +35,39 @@ pub(in crate::typeck) enum ObjectPlaceUse {
 pub(in crate::typeck) struct CheckedObjectReceiver {
     pub place: HirObjectPlace,
     pub origin: HirObjectOrigin,
-    pub checked_cast: Option<Box<HirCheckedObjectView>>,
-    pub shared_view: Option<Box<crate::hir::HirObjectView>>,
-    pub optional_view: Option<Box<crate::hir::HirObjectView>>,
-    pub array_element: Option<Box<crate::hir::HirArrayElementPlace>>,
+    pub carrier: CheckedReceiverCarrier,
+}
+
+pub(in crate::typeck) enum CheckedReceiverCarrier {
+    Place,
+    Checked(Box<HirCheckedObjectView>),
+    View(Box<HirObjectView>),
+    ArrayElement(Box<crate::hir::HirArrayElementPlace>),
+}
+
+impl CheckedObjectReceiver {
+    pub(in crate::typeck) fn into_hir(self) -> HirObjectReceiver {
+        match self.carrier {
+            CheckedReceiverCarrier::Place => HirObjectReceiver::Place {
+                place: self.place,
+                origin: Box::new(self.origin),
+            },
+            CheckedReceiverCarrier::Checked(view) => HirObjectReceiver::Checked {
+                place: self.place,
+                origin: Box::new(self.origin),
+                view,
+            },
+            CheckedReceiverCarrier::View(view) => HirObjectReceiver::View {
+                view,
+                inspection_place: Some(Box::new(self.place)),
+            },
+            CheckedReceiverCarrier::ArrayElement(element) => HirObjectReceiver::ArrayElement {
+                element,
+                place: self.place,
+                origin: Box::new(self.origin),
+            },
+        }
+    }
 }
 
 impl CallableChecker<'_, '_> {
@@ -52,9 +81,10 @@ impl CallableChecker<'_, '_> {
             access.span,
             ObjectPlaceUse::Member,
         )?;
-        if place.checked_cast.is_none()
-            && place.receiver.root() == BindingId::Receiver(self.callable)
-            && place.receiver.path.is_root()
+        if !matches!(place.receiver, HirObjectReceiver::Checked { .. })
+            && place.receiver.inspection_place().is_some_and(|receiver| {
+                receiver.root() == BindingId::Receiver(self.callable) && receiver.path.is_root()
+            })
             && !self.check_initializer_field_liveness(place.field, access.member_span)
         {
             return None;
@@ -92,11 +122,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirFieldPlace> {
         let checked = self.check_object_receiver(receiver, place_use)?;
         Some(HirFieldPlace {
-            receiver: checked.place,
-            checked_cast: checked.checked_cast,
-            shared_view: checked.shared_view,
-            optional_view: checked.optional_view,
-            array_element: checked.array_element,
+            receiver: checked.into_hir(),
             field,
             span,
         })
@@ -145,10 +171,7 @@ impl CallableChecker<'_, '_> {
                 return Some(CheckedObjectReceiver {
                     place,
                     origin: (*optional_view.origin).clone(),
-                    checked_cast: None,
-                    shared_view: None,
-                    optional_view: Some(Box::new(optional_view)),
-                    array_element: None,
+                    carrier: CheckedReceiverCarrier::View(Box::new(optional_view)),
                 });
             }
             let view = self.check_class_optional_view(unwrap)?;
@@ -183,10 +206,7 @@ impl CallableChecker<'_, '_> {
                     dynamic_class: root_class,
                     span: *span,
                 },
-                checked_cast: None,
-                shared_view: None,
-                optional_view: Some(Box::new(optional_view)),
-                array_element: None,
+                carrier: CheckedReceiverCarrier::View(Box::new(optional_view)),
             });
         }
         if let ResolvedObjectReceiver::ArrayElement {
@@ -231,10 +251,7 @@ impl CallableChecker<'_, '_> {
             return Some(CheckedObjectReceiver {
                 place,
                 origin,
-                checked_cast: None,
-                shared_view: None,
-                optional_view: None,
-                array_element: Some(element),
+                carrier: CheckedReceiverCarrier::ArrayElement(element),
             });
         }
         let ResolvedObjectReceiver::CastRelative {
@@ -252,10 +269,7 @@ impl CallableChecker<'_, '_> {
             return Some(CheckedObjectReceiver {
                 place,
                 origin,
-                checked_cast: None,
-                shared_view: None,
-                optional_view: None,
-                array_element: None,
+                carrier: CheckedReceiverCarrier::Place,
             });
         };
         let mut checked = self.check_object_cast(cast)?;
@@ -264,9 +278,9 @@ impl CallableChecker<'_, '_> {
             .expect("class member receivers require a class cast target");
         checked.projections.extend_from_slice(projections);
         checked.class = Some(*class);
-        // HIR member carriers still require an ordinary place alongside an
-        // optional checked cast. Lowering selects the checked cast and never
-        // observes this root; the resolved receiver itself has no fake binding.
+        // Preserve the historical inspection path beside the checked carrier.
+        // Lowering selects the checked view and never treats this root as
+        // executable provenance.
         let place = HirObjectPlace {
             path: crate::object_path::ObjectPath {
                 root: BindingId::Receiver(self.callable),
@@ -284,10 +298,7 @@ impl CallableChecker<'_, '_> {
         Some(CheckedObjectReceiver {
             place,
             origin,
-            checked_cast: Some(Box::new(checked)),
-            shared_view: None,
-            optional_view: None,
-            array_element: None,
+            carrier: CheckedReceiverCarrier::Checked(Box::new(checked)),
         })
     }
 
@@ -309,16 +320,18 @@ impl CallableChecker<'_, '_> {
             },
             access,
         };
-        let shared_view = stable_binding
-            .is_none()
-            .then(|| Box::new(pointee.into_view(crate::hir::HirViewTarget::Class(class), access)));
+        let carrier = stable_binding.map_or_else(
+            || {
+                CheckedReceiverCarrier::View(Box::new(
+                    pointee.into_view(crate::hir::HirViewTarget::Class(class), access),
+                ))
+            },
+            |_| CheckedReceiverCarrier::Place,
+        );
         CheckedObjectReceiver {
             place,
             origin,
-            checked_cast: None,
-            shared_view,
-            optional_view: None,
-            array_element: None,
+            carrier,
         }
     }
 

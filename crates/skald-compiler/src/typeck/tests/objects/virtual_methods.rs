@@ -181,7 +181,7 @@ fn virtual_calls_retain_family_selection_and_forwarded_dynamic_origin() {
         }
     );
     assert!(matches!(
-        root_receiver.origin.as_ref(),
+        root_receiver.origin(),
         HirObjectOrigin::Forwarded {
             binding: BindingId::Parameter(_),
             static_target: HirViewTarget::Class(class),
@@ -199,7 +199,7 @@ fn virtual_calls_retain_family_selection_and_forwarded_dynamic_origin() {
             selected: MethodId::new(ClassId::new(1), 0),
         }
     );
-    assert_eq!(middle_receiver.place.class(), ClassId::new(1));
+    assert_eq!(receiver_place(middle_receiver).class(), ClassId::new(1));
 
     let mutate = hir.definitions.get(FunctionId::new(3)).unwrap();
     let HirStatement::Call(call) = &mutate.body.statements[0] else {
@@ -214,7 +214,7 @@ fn virtual_calls_retain_family_selection_and_forwarded_dynamic_origin() {
             selected: MethodId::new(ClassId::new(0), 2),
         }
     );
-    assert_eq!(receiver.place.access, crate::hir::HirAccess::Mutable);
+    assert_eq!(receiver.access(), crate::hir::HirAccess::Mutable);
 }
 
 #[test]
@@ -235,7 +235,7 @@ fn self_redispatch_and_alias_forwarding_preserve_dynamic_metadata() {
     let (receiver, target) = method_call(expression);
     assert!(matches!(target, HirMethodCallTarget::Virtual { .. }));
     assert!(matches!(
-        receiver.origin.as_ref(),
+        receiver.origin(),
         HirObjectOrigin::Forwarded {
             binding: BindingId::Receiver(_),
             dispatch_limit: None,
@@ -261,7 +261,7 @@ fn self_redispatch_and_alias_forwarding_preserve_dynamic_metadata() {
         } if selected == MethodId::new(ClassId::new(2), 0)
     ));
     assert!(matches!(
-        receiver.origin.as_ref(),
+        receiver.origin(),
         HirObjectOrigin::Forwarded {
             binding: BindingId::Receiver(_),
             ..
@@ -300,7 +300,7 @@ fn exact_and_sliced_owning_receivers_select_static_calls() {
         HirMethodCallTarget::Direct(MethodId::new(ClassId::new(2), 0))
     );
     assert!(matches!(
-        exact_receiver.origin.as_ref(),
+        exact_receiver.origin(),
         HirObjectOrigin::Exact {
             dynamic_class,
             ..
@@ -313,7 +313,7 @@ fn exact_and_sliced_owning_receivers_select_static_calls() {
         HirMethodCallTarget::Direct(MethodId::new(ClassId::new(0), 0))
     );
     assert!(matches!(
-        slice_receiver.origin.as_ref(),
+        slice_receiver.origin(),
         HirObjectOrigin::Exact {
             dynamic_class,
             ..
@@ -370,7 +370,7 @@ fn destructor_self_calls_use_the_declared_dispatch_limit() {
         HirMethodCallTarget::Direct(MethodId::new(ClassId::new(0), 0))
     );
     assert!(matches!(
-        receiver.origin.as_ref(),
+        receiver.origin(),
         HirObjectOrigin::Forwarded {
             binding: BindingId::Receiver(_),
             dispatch_limit: Some(class),

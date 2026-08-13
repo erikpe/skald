@@ -164,6 +164,12 @@ fn source_place(source: &crate::hir::HirObjectSource) -> &crate::hir::HirObjectP
     place
 }
 
+fn receiver_place(receiver: &crate::hir::HirObjectReceiver) -> &crate::hir::HirObjectPlace {
+    receiver
+        .inspection_place()
+        .expect("test receiver must retain an inspectable object place")
+}
+
 mod alias_parameters;
 mod arrays;
 mod bitwise_operators;
@@ -188,6 +194,7 @@ mod objects;
 mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;
+mod receiver_carriers;
 mod shared_optional_boxes;
 mod shared_ownership;
 mod shifts;

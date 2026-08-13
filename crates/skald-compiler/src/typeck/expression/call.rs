@@ -4,13 +4,14 @@ use super::*;
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirInterfaceCallTarget,
-        HirInterfaceReceiver, HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin,
-        HirObjectView, HirViewSource, HirViewTarget,
+        HirInterfaceReceiver, HirMethodCallTarget, HirObjectOrigin, HirObjectView, HirViewSource,
+        HirViewTarget,
     },
     identity::BindingId,
     resolve::{ResolvedMethodDispatch, ResolvedParameterBindingMode},
 };
 
+use super::CheckedReceiverCarrier;
 use crate::typeck::function::MemberBodyKind;
 use crate::typeck::program::{
     lower_type, INVALID_INITIALIZER_BODY, PANIC_REQUIRES_CALL_STATEMENT, READ_ONLY_RECEIVER,
@@ -146,30 +147,34 @@ impl CallableChecker<'_, '_> {
                     checked.place.class(),
                     target,
                 ));
-                let receiver = if let Some(mut cast) = checked.checked_cast {
-                    cast.consumer_target = target;
-                    cast.consumer_access = required_access;
-                    HirInterfaceReceiver::Checked(cast)
-                } else {
-                    let mut view = if let Some(view) = checked.shared_view {
-                        *view
-                    } else if let Some(view) = checked.optional_view {
-                        *view
-                    } else {
-                        HirObjectView {
-                            source: checked.array_element.map_or_else(
-                                || HirViewSource::Place(checked.place),
-                                HirViewSource::ArrayElement,
-                            ),
+                let receiver = match checked.carrier {
+                    CheckedReceiverCarrier::Checked(mut cast) => {
+                        cast.consumer_target = target;
+                        cast.consumer_access = required_access;
+                        HirInterfaceReceiver::Checked(cast)
+                    }
+                    CheckedReceiverCarrier::View(mut view) => {
+                        view.target = target;
+                        view.access = access;
+                        HirInterfaceReceiver::View(*view)
+                    }
+                    carrier => {
+                        let source = match carrier {
+                            CheckedReceiverCarrier::Place => HirViewSource::Place(checked.place),
+                            CheckedReceiverCarrier::ArrayElement(element) => {
+                                HirViewSource::ArrayElement(element)
+                            }
+                            CheckedReceiverCarrier::Checked(_)
+                            | CheckedReceiverCarrier::View(_) => unreachable!(),
+                        };
+                        HirInterfaceReceiver::View(HirObjectView {
+                            source,
                             origin: Box::new(checked.origin),
                             target,
                             access,
                             span: call.receiver_span,
-                        }
-                    };
-                    view.target = target;
-                    view.access = access;
-                    HirInterfaceReceiver::View(view)
+                        })
+                    }
                 };
                 (access, receiver)
             }
@@ -324,14 +329,7 @@ impl CallableChecker<'_, '_> {
         };
         valid.then_some(HirExpression {
             kind: HirExpressionKind::MethodCall {
-                receiver: HirMethodReceiver {
-                    place: receiver.place,
-                    origin: Box::new(receiver.origin),
-                    checked_cast: receiver.checked_cast,
-                    shared_view: receiver.shared_view,
-                    optional_view: receiver.optional_view,
-                    array_element: receiver.array_element,
-                },
+                receiver: receiver.into_hir(),
                 target,
                 arguments,
             },

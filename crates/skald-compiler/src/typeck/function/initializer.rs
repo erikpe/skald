@@ -42,7 +42,7 @@ impl CallableChecker<'_, '_> {
                 .map(|value| {
                     HirStatement::ArrayAssignment(crate::hir::HirArrayAssignment {
                         destination: crate::hir::HirArrayPlace::Field {
-                            access: target.place.receiver.access,
+                            access: target.place.receiver.access(),
                             place: target.place.clone(),
                             array,
                             span: assignment.span,
@@ -266,7 +266,7 @@ impl CallableChecker<'_, '_> {
         let field_name = field.name.clone();
         let field_type = lower_type(self.program, &field.type_syntax);
         let mut valid = true;
-        if place.receiver.access == HirAccess::ReadOnly
+        if place.receiver.access() == HirAccess::ReadOnly
             && !matches!(
                 (field_type, body_kind),
                 (Type::Class(_), MemberBodyKind::MethodOrDestructor)
@@ -284,8 +284,9 @@ impl CallableChecker<'_, '_> {
             );
             valid = false;
         }
-        let direct_self_field = place.receiver.root() == BindingId::Receiver(self.callable)
-            && place.receiver.path.is_root();
+        let direct_self_field = place.receiver.inspection_place().is_some_and(|receiver| {
+            receiver.root() == BindingId::Receiver(self.callable) && receiver.path.is_root()
+        });
         if in_initializer {
             if !direct_self_field {
                 self.diagnostics.push(
@@ -474,13 +475,16 @@ impl CallableChecker<'_, '_> {
         class: ClassId,
         assignment: &crate::resolve::ResolvedFieldAssignment,
     ) -> CheckedStatement {
+        let receiver = place
+            .receiver
+            .inspection_place()
+            .expect("method field copy assignment requires an existing receiver place");
         let destination = HirObjectPlace {
-            path: place
-                .receiver
+            path: receiver
                 .path
                 .clone()
                 .project_field(place.field, class, assignment.span),
-            access: place.receiver.access,
+            access: receiver.access,
         };
         self.finish_copy_assignment(destination, &assignment.value, assignment.span)
     }

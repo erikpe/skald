@@ -445,12 +445,25 @@ full-expression lifetime pipeline:
   complete-object compatibility, selected-path liveness, result ordering, and
   exactly one reverse-ordered cleanup.
 
-Before the new producer provenance is admitted, receiver data must expose one
-discriminated carrier or general object-view slot for shared-backed,
-optional-backed, and produced views. A third independent `produced_view`
-option is not permitted: impossible carrier combinations must remain
-unrepresentable, and control-effect discovery, dumps, lowering, and
-verification must match the carrier exhaustively.
+Typed member-receiver provenance is already normalized without broadening the
+accepted source language. Type checking uses one exhaustive checked carrier,
+and HIR exposes one `HirObjectReceiver` enum for method and field receivers:
+
+- `Place` retains an ordinary selected place and complete-object origin;
+- `Checked` retains the checked-cast carrier and its inspection path;
+- `View` carries one `HirObjectView` for both shared-backed and
+  optional-backed receivers; and
+- `ArrayElement` keeps checked addressing and later projections explicit.
+
+Object-to-interface conversion matches that carrier exhaustively and produces
+the existing discriminated interface receiver. Access queries, control-effect
+discovery, HIR dumps, field and call lowering, and test mutation helpers also
+match the enum rather than coordinating optional fields. Existing shared
+anchors, optional guards, array anchors, origins, dispatch, cleanup, and dump
+vocabulary are unchanged. An optional inspection place preserves historical
+dump paths for existing views but is never executable provenance; a future
+produced `View` leaves it absent and therefore needs no fake binding. A third
+independent `produced_view` field is not permitted.
 
 Direct, inherited, virtual, interface, and closed-generic calls all lower
 through their existing selected method targets and receiver origins. The

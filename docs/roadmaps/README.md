@@ -9,8 +9,9 @@ progress. Completed roadmaps and resolved discovery records move to
 - [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
   is in progress. PER0 froze the living language, compiler, backend, runtime,
   string, status, and testing contracts without changing executable behavior.
-  PER1, normalizing typed receiver provenance carriers before acceptance is
-  broadened, is next.
+  PER1 normalized typed receiver provenance into one exhaustive carrier while
+  preserving existing source behavior and dumps. PER2, accepting and lowering
+  produced exact-class receivers, is next.
 
 ## Planned
 

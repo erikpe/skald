@@ -47,20 +47,23 @@ fn inherited_fields_and_methods_use_identity_selected_base_receivers() {
         crate::hir::HirMethodCallTarget::Direct(MethodId::new(ClassId::new(0), 0))
     );
     assert_eq!(
-        receiver.place.projections(),
+        receiver_place(receiver).projections(),
         [
             ObjectProjection::Base(ClassId::new(1)),
             ObjectProjection::Base(ClassId::new(0)),
         ]
     );
-    assert_eq!(receiver.place.class(), ClassId::new(0));
-    assert_eq!(receiver.place.access, HirAccess::ReadOnly);
+    assert_eq!(receiver_place(receiver).class(), ClassId::new(0));
+    assert_eq!(receiver.access(), HirAccess::ReadOnly);
 
     let HirExpressionKind::FieldRead(field) = &right.kind else {
         panic!("right operand must be the inherited field read");
     };
     assert_eq!(field.field, FieldId::new(ClassId::new(0), 0));
-    assert_eq!(field.receiver.projections(), receiver.place.projections());
+    assert_eq!(
+        receiver_place(&field.receiver).projections(),
+        receiver_place(receiver).projections()
+    );
 
     let update = hir.definitions.get(FunctionId::new(1)).unwrap();
     let HirStatement::Call(call) = &update.body.statements[0] else {
@@ -69,7 +72,7 @@ fn inherited_fields_and_methods_use_identity_selected_base_receivers() {
     let HirExpressionKind::MethodCall { receiver, .. } = &call.call.kind else {
         panic!("update must retain its method receiver");
     };
-    assert_eq!(receiver.place.access, HirAccess::Mutable);
+    assert_eq!(receiver.access(), HirAccess::Mutable);
     let mir = lower_hir(&hir);
     verify_mir(&mir).expect("inherited member MIR must verify");
     assert!(crate::mir::dump_mir(&mir).contains(".base(c1).base(c0)"));

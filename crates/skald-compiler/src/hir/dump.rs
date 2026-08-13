@@ -1205,7 +1205,14 @@ impl<'types> HirDumper<'types> {
             }
             HirExpressionKind::FieldRead(place) => {
                 self.typed_line(&format!("FieldRead {}", place.field), expression);
-                self.indented(|dumper| dumper.object_place(&place.receiver));
+                self.indented(|dumper| {
+                    dumper.object_place(
+                        place
+                            .receiver
+                            .inspection_place()
+                            .expect("current field reads retain an inspection place"),
+                    );
+                });
             }
             HirExpressionKind::StaticRead(place) => {
                 self.typed_line(&format!("StaticRead {}", place.field), expression);
@@ -2030,7 +2037,14 @@ impl<'types> HirDumper<'types> {
                     ),
                     *span,
                 );
-                self.indented(|dumper| dumper.object_place(&place.receiver));
+                self.indented(|dumper| {
+                    dumper.object_place(
+                        place
+                            .receiver
+                            .inspection_place()
+                            .expect("current shared fields retain an inspection place"),
+                    );
+                });
             }
             HirSharedSource::Place(HirSharedPlace::ArrayElement {
                 place,
@@ -2420,17 +2434,25 @@ impl<'types> HirDumper<'types> {
 
     fn field_place(&mut self, place: &HirFieldPlace) {
         self.line(&format!("FieldPlace {}", place.field), place.span);
-        self.indented(|dumper| {
-            if let Some(element) = &place.array_element {
+        self.indented(|dumper| match &place.receiver {
+            HirObjectReceiver::ArrayElement {
+                element,
+                place: receiver,
+                ..
+            } => {
                 dumper.array_element(element);
-                dumper.object_place(&place.receiver);
-            } else if let Some(view) = &place.shared_view {
-                dumper.object_view("SharedFieldReceiver", view);
-            } else if let Some(view) = &place.optional_view {
-                dumper.object_view("OptionalFieldReceiver", view);
-            } else {
-                dumper.object_place(&place.receiver);
+                dumper.object_place(receiver);
             }
+            HirObjectReceiver::View { view, .. } => {
+                let label = receiver_view_label(view, "FieldReceiver");
+                dumper.object_view(&label, view);
+            }
+            HirObjectReceiver::Place {
+                place: receiver, ..
+            }
+            | HirObjectReceiver::Checked {
+                place: receiver, ..
+            } => dumper.object_place(receiver),
         });
     }
 
@@ -2451,18 +2473,24 @@ impl<'types> HirDumper<'types> {
 
     fn method_receiver(&mut self, receiver: &HirMethodReceiver) {
         self.heading("Receiver");
-        self.indented(|dumper| {
-            if let Some(element) = &receiver.array_element {
+        self.indented(|dumper| match receiver {
+            HirObjectReceiver::ArrayElement {
+                element,
+                place,
+                origin,
+            } => {
                 dumper.array_element(element);
-                dumper.object_place(&receiver.place);
-                dumper.object_origin(&receiver.origin);
-            } else if let Some(view) = &receiver.shared_view {
-                dumper.object_view("SharedMethodReceiver", view);
-            } else if let Some(view) = &receiver.optional_view {
-                dumper.object_view("OptionalMethodReceiver", view);
-            } else {
-                dumper.object_place(&receiver.place);
-                dumper.object_origin(&receiver.origin);
+                dumper.object_place(place);
+                dumper.object_origin(origin);
+            }
+            HirObjectReceiver::View { view, .. } => {
+                let label = receiver_view_label(view, "MethodReceiver");
+                dumper.object_view(&label, view);
+            }
+            HirObjectReceiver::Place { place, origin }
+            | HirObjectReceiver::Checked { place, origin, .. } => {
+                dumper.object_place(place);
+                dumper.object_origin(origin);
             }
         });
     }
@@ -2684,6 +2712,19 @@ fn array_destruction_name(element: HirArrayDestroyElement) -> String {
         HirArrayDestroyElement::OptionalShared(target) => optional_shared_target_name(target),
         HirArrayDestroyElement::Optional(optional) => format!("optional {optional}"),
     }
+}
+
+fn receiver_view_label(view: &HirObjectView, suffix: &str) -> String {
+    let provenance = match &view.source {
+        HirViewSource::Shared { .. } | HirViewSource::AnchoredShared { .. } => "Shared",
+        HirViewSource::OptionalPayload { .. } | HirViewSource::OptionalBoxPayload { .. } => {
+            "Optional"
+        }
+        HirViewSource::Produced { .. } => "Produced",
+        HirViewSource::ArrayElement(_) => "ArrayElement",
+        HirViewSource::Place(_) | HirViewSource::Forwarded { .. } => "Object",
+    };
+    format!("{provenance}{suffix}")
 }
 
 const fn parameter_mode_name(mode: HirParameterMode) -> &'static str {

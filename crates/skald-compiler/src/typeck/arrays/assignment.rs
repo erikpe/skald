@@ -98,7 +98,7 @@ impl CallableChecker<'_, '_> {
                 let HirExpressionKind::FieldRead(place) = checked.kind else {
                     unreachable!("checked field access must remain a field read")
                 };
-                let access = place.receiver.access;
+                let access = place.receiver.access();
                 Some(ArrayAssignmentKind::Whole(Box::new(HirArrayPlace::Field {
                     place,
                     array,

@@ -238,7 +238,7 @@ impl CallableChecker<'_, '_> {
             HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
                 self.binding_access(*binding, false, span)?
             }
-            HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => place.receiver.access,
+            HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => place.receiver.access(),
             HirSharedSource::Place(HirSharedPlace::ArrayElement { .. }) => {
                 // Array access is shallow across an owning shared edge: the
                 // element handle may be read-only while its separate pointee
@@ -281,7 +281,7 @@ impl CallableChecker<'_, '_> {
             HirExpressionKind::Binding(binding) => self
                 .binding_access(*binding, false, expression.span)
                 .unwrap_or(HirAccess::ReadOnly),
-            HirExpressionKind::FieldRead(place) => place.receiver.access,
+            HirExpressionKind::FieldRead(place) => place.receiver.access(),
             HirExpressionKind::StaticRead(_) => HirAccess::Mutable,
             HirExpressionKind::ArrayElement(place) => place.receiver.access,
             HirExpressionKind::Grouped(inner) => self.array_expression_access(inner),

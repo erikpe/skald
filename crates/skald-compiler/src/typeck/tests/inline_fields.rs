@@ -108,27 +108,28 @@ fn supports_nested_places_across_every_live_root_kind() {
     let HirExpressionKind::MethodCall { receiver, .. } = &right.kind else {
         panic!("expected nested method call");
     };
+    let receiver = receiver_place(receiver);
     assert_eq!(
-        receiver.place.projections(),
+        receiver.projections(),
         [
             ObjectProjection::Field(branch_projection),
             ObjectProjection::Field(leaf_projection)
         ]
     );
-    assert_eq!(receiver.place.access, HirAccess::ReadOnly);
+    assert_eq!(receiver.access, HirAccess::ReadOnly);
 
     let through_mut = hir.definitions.get(FunctionId::new(4)).unwrap();
     let HirStatement::FieldAssignment(assignment) = &through_mut.body.statements[0] else {
         panic!("expected nested field assignment");
     };
     assert_eq!(
-        assignment.place.receiver.projections(),
+        receiver_place(&assignment.place.receiver).projections(),
         [
             ObjectProjection::Field(branch_projection),
             ObjectProjection::Field(leaf_projection)
         ]
     );
-    assert_eq!(assignment.place.receiver.access, HirAccess::Mutable);
+    assert_eq!(assignment.place.receiver.access(), HirAccess::Mutable);
 
     let dump = dump_hir(&hir);
     assert!(

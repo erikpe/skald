@@ -57,7 +57,7 @@ impl CallableChecker<'_, '_> {
             HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
                 self.binding_access(*binding, false, unwrap.span)?
             }
-            HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => place.receiver.access,
+            HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => place.receiver.access(),
             HirSharedSource::Place(HirSharedPlace::ArrayElement { place, .. }) => {
                 place.receiver.access
             }

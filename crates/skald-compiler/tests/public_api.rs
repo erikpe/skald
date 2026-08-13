@@ -14,9 +14,9 @@ use skald_compiler::{
     hir::{
         dump_hir, HirBinaryOperation, HirComparisonOperand, HirComparisonPredicate,
         HirIntegerBitwiseOperation, HirIntegerType, HirInterfaceCallTarget,
-        HirInterfaceConformance, HirInterfaceDeclaration, HirObjectSlice, HirObjectView,
-        HirPrimitiveCast, HirPrimitiveCastKind, HirPrimitiveComparison, HirPrimitiveType,
-        HirProgram, HirUnaryOperation, HirViewTarget, ObjectProjection, Type,
+        HirInterfaceConformance, HirInterfaceDeclaration, HirObjectReceiver, HirObjectSlice,
+        HirObjectView, HirPrimitiveCast, HirPrimitiveCastKind, HirPrimitiveComparison,
+        HirPrimitiveType, HirProgram, HirUnaryOperation, HirViewTarget, ObjectProjection, Type,
     },
     identity::{
         ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
@@ -161,6 +161,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _hir_dump = dump_hir(hir);
     let _base_projection: Option<ObjectProjection> = None;
     let _object_slice: Option<HirObjectSlice> = None;
+    let _object_receiver: Option<HirObjectReceiver> = None;
     let _object_view: Option<HirObjectView> = None;
     let _view_target: Option<HirViewTarget> = None;
     let _interface: Option<HirInterfaceDeclaration> = None;

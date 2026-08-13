@@ -397,23 +397,77 @@ pub enum HirObjectOrigin {
     Produced { dynamic_class: ClassId, span: Span },
 }
 
+/// One exhaustive provenance carrier for a class member receiver.
+///
+/// Stable places retain their selected subobject and complete-object origin.
+/// Checked casts and array elements remain distinct because their guards and
+/// addressing are lowered specially. Every other non-place receiver uses the
+/// common object-view path, including shared and optional-backed receivers and
+/// future produced exact-class receivers.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirMethodReceiver {
-    /// The statically selected subobject used for access and direct calls.
-    pub place: HirObjectPlace,
-    /// The complete object used by virtual selection and nested forwarding.
-    pub origin: Box<HirObjectOrigin>,
-    /// Present when the receiver place is defined by a full-expression checked
-    /// cast rather than by an ordinary stable binding path.
-    pub checked_cast: Option<Box<HirCheckedObjectView>>,
-    /// Present when receiver evaluation first materializes a hidden strong
-    /// owner for a shared field or produced shared value.
-    pub shared_view: Option<Box<HirObjectView>>,
-    /// Present when receiver evaluation unwraps an inline-class optional.
-    pub optional_view: Option<Box<HirObjectView>>,
-    /// Present when the receiver is rooted in one checked array element.
-    pub array_element: Option<Box<super::HirArrayElementPlace>>,
+pub enum HirObjectReceiver {
+    Place {
+        place: HirObjectPlace,
+        origin: Box<HirObjectOrigin>,
+    },
+    Checked {
+        /// Retained to preserve the selected member path in deterministic HIR
+        /// inspection; executable lowering consumes `view`.
+        place: HirObjectPlace,
+        origin: Box<HirObjectOrigin>,
+        view: Box<HirCheckedObjectView>,
+    },
+    View {
+        view: Box<HirObjectView>,
+        /// Existing shared and optional member paths retain their historical
+        /// inspection path without making it executable provenance. A future
+        /// produced view has no source binding and leaves this absent.
+        inspection_place: Option<Box<HirObjectPlace>>,
+    },
+    ArrayElement {
+        element: Box<super::HirArrayElementPlace>,
+        /// Projections after the checked element remain explicit for field
+        /// addressing and HIR inspection.
+        place: HirObjectPlace,
+        origin: Box<HirObjectOrigin>,
+    },
 }
+
+impl HirObjectReceiver {
+    pub fn access(&self) -> HirAccess {
+        match self {
+            Self::Place { place, .. }
+            | Self::Checked { place, .. }
+            | Self::ArrayElement { place, .. } => place.access,
+            Self::View { view, .. } => view.access,
+        }
+    }
+
+    /// Returns the retained source-path view used for deterministic inspection
+    /// and existing-place checks. Executable lowering matches the carrier and
+    /// never treats this as provenance for `View`.
+    pub fn inspection_place(&self) -> Option<&HirObjectPlace> {
+        match self {
+            Self::Place { place, .. }
+            | Self::Checked { place, .. }
+            | Self::ArrayElement { place, .. } => Some(place),
+            Self::View {
+                inspection_place, ..
+            } => inspection_place.as_deref(),
+        }
+    }
+
+    pub fn origin(&self) -> &HirObjectOrigin {
+        match self {
+            Self::Place { origin, .. }
+            | Self::Checked { origin, .. }
+            | Self::ArrayElement { origin, .. } => origin,
+            Self::View { view, .. } => &view.origin,
+        }
+    }
+}
+
+pub type HirMethodReceiver = HirObjectReceiver;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirViewTarget {
@@ -506,11 +560,7 @@ pub enum HirViewSource {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldPlace {
-    pub receiver: HirObjectPlace,
-    pub checked_cast: Option<Box<HirCheckedObjectView>>,
-    pub shared_view: Option<Box<HirObjectView>>,
-    pub optional_view: Option<Box<HirObjectView>>,
-    pub array_element: Option<Box<super::HirArrayElementPlace>>,
+    pub receiver: HirObjectReceiver,
     pub field: FieldId,
     pub span: Span,
 }

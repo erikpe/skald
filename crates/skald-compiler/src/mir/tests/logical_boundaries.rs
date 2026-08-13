@@ -312,18 +312,14 @@ fn replace_first_false_expression(
         | HirExpressionKind::StaticCall { arguments, .. } => {
             replace_first_false_argument(arguments, replacement)
         }
-        HirExpressionKind::FieldRead(place) => place
-            .shared_view
-            .as_deref_mut()
+        HirExpressionKind::FieldRead(place) => receiver_view_mut(&mut place.receiver)
             .is_some_and(|view| replace_first_false_view_source(&mut view.source, replacement)),
         HirExpressionKind::MethodCall {
             receiver,
             arguments,
             ..
         } => {
-            receiver
-                .shared_view
-                .as_deref_mut()
+            receiver_view_mut(receiver)
                 .is_some_and(|view| replace_first_false_view_source(&mut view.source, replacement))
                 || replace_first_false_argument(arguments, replacement)
         }
@@ -346,6 +342,17 @@ fn replace_first_false_expression(
             replace_first_false_expression(&mut element.index.value, replacement)
         }
         _ => false,
+    }
+}
+
+fn receiver_view_mut(
+    receiver: &mut crate::hir::HirObjectReceiver,
+) -> Option<&mut crate::hir::HirObjectView> {
+    match receiver {
+        crate::hir::HirObjectReceiver::View { view, .. } => Some(view),
+        crate::hir::HirObjectReceiver::Place { .. }
+        | crate::hir::HirObjectReceiver::Checked { .. }
+        | crate::hir::HirObjectReceiver::ArrayElement { .. } => None,
     }
 }
 

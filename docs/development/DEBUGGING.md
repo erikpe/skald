@@ -206,6 +206,15 @@ corresponding `mut ref` argument must fail with `TYP020` before HIR. Compare
 the `produced_alias_arguments` and `produced_alias_invalid_sources` goldens
 when the failure crosses more than one phase.
 
+For class member receivers, inspect the single `HirObjectReceiver` carrier in
+typed HIR. `Place`, `Checked`, `View`, and `ArrayElement` are mutually
+exclusive. Shared-backed and optional-backed receivers both use `View`; their
+`HirViewSource` distinguishes anchoring from presence guarding. HIR dump labels
+remain `SharedMethodReceiver`, `OptionalMethodReceiver`, and their field
+counterparts. If lowering behavior diverges, first check the exhaustive
+carrier matches in control-effect discovery and MIR field/call lowering; there
+are no parallel shared-view and optional-view receiver fields to reconcile.
+
 For an explicitly dereferenced shared receiver or alias argument, HIR distinguishes a stable
 `SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or
 adopted producer source. MIR declares each hidden owner as `shared-anchor`;

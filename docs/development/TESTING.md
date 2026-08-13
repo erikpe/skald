@@ -553,6 +553,14 @@ Until implementation begins, compile-failure coverage must continue to prove
 that produced dot receivers are rejected without changing adjacent object-
 place or produced-alias behavior.
 
+The implemented representation baseline has one exhaustive typed member-
+receiver carrier. Focused type-check coverage distinguishes stable places,
+checked casts, general shared/optional object views, and checked array
+elements; it also proves that field receivers reuse the same carrier. The full
+compiler unit suite freezes existing HIR/MIR dumps, anchors, guards, dispatch,
+cleanup, control effects, and native behavior while this internal shape
+changes. Produced receiver acceptance remains a later source-visible step.
+
 The implementation must add evidence at each owning boundary. Resolver and
 type-check tests cover construction, literal, direct/static/instance/interface
 result producers, grouping, inherited projection, direct/virtual/interface

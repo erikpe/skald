@@ -15,24 +15,20 @@ impl BodyLowerer<'_> {
     }
 
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
-        if let Some(element) = &place.array_element {
-            return project_object_path(
-                self.lower_array_element_place(element),
-                place.receiver.projections(),
-            )
-            .project_field(place.field);
-        }
-        let receiver = match (
-            &place.checked_cast,
-            &place.shared_view,
-            &place.optional_view,
-        ) {
-            (Some(cast), None, None) => self.lower_checked_object_view(cast).source,
-            (None, Some(view), None) | (None, None, Some(view)) => {
-                self.lower_object_view(view).source
+        let receiver = match &place.receiver {
+            crate::hir::HirObjectReceiver::Place { place, .. } => self.lower_object_place(place),
+            crate::hir::HirObjectReceiver::Checked { view, .. } => {
+                self.lower_checked_object_view(view).source
             }
-            (None, None, None) => self.lower_object_place(&place.receiver),
-            _ => unreachable!("a field carrier has one provenance"),
+            crate::hir::HirObjectReceiver::View { view, .. } => self.lower_object_view(view).source,
+            crate::hir::HirObjectReceiver::ArrayElement {
+                element,
+                place: projected,
+                ..
+            } => project_object_path(
+                self.lower_array_element_place(element),
+                projected.projections(),
+            ),
         };
         receiver.project_field(place.field)
     }

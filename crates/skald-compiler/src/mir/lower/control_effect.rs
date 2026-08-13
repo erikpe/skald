@@ -48,19 +48,7 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
                 || arguments.iter().any(call_argument_contains_control_effect)
         }
         HirExpressionKind::FieldRead(place) => {
-            place
-                .checked_cast
-                .as_deref()
-                .is_some_and(checked_view_contains_control_effect)
-                || place
-                    .shared_view
-                    .as_deref()
-                    .is_some_and(|view| view_source_contains_control_effect(&view.source))
-                || place
-                    .optional_view
-                    .as_deref()
-                    .is_some_and(|view| view_source_contains_control_effect(&view.source))
-                || place.array_element.is_some()
+            object_receiver_contains_control_effect(&place.receiver)
         }
         HirExpressionKind::TypeTest(test) => {
             view_source_contains_control_effect(&test.source.source)
@@ -316,19 +304,20 @@ fn producer_contains_control_effect(producer: &HirObjectProducer) -> bool {
 }
 
 fn method_receiver_contains_control_effect(receiver: &crate::hir::HirMethodReceiver) -> bool {
-    receiver
-        .checked_cast
-        .as_deref()
-        .is_some_and(checked_view_contains_control_effect)
-        || receiver
-            .shared_view
-            .as_deref()
-            .is_some_and(|view| view_source_contains_control_effect(&view.source))
-        || receiver
-            .optional_view
-            .as_deref()
-            .is_some_and(|view| view_source_contains_control_effect(&view.source))
-        || receiver.array_element.is_some()
+    object_receiver_contains_control_effect(receiver)
+}
+
+fn object_receiver_contains_control_effect(receiver: &crate::hir::HirObjectReceiver) -> bool {
+    match receiver {
+        crate::hir::HirObjectReceiver::Place { .. } => false,
+        crate::hir::HirObjectReceiver::Checked { view, .. } => {
+            checked_view_contains_control_effect(view)
+        }
+        crate::hir::HirObjectReceiver::View { view, .. } => {
+            view_source_contains_control_effect(&view.source)
+        }
+        crate::hir::HirObjectReceiver::ArrayElement { .. } => true,
+    }
 }
 
 fn interface_receiver_contains_control_effect(receiver: &HirInterfaceReceiver) -> bool {

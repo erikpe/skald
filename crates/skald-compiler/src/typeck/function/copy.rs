@@ -327,10 +327,11 @@ impl CallableChecker<'_, '_> {
                 };
                 let receiver =
                     self.check_object_receiver(&access.receiver, ObjectPlaceUse::CopySource)?;
-                debug_assert!(receiver.shared_view.is_none());
-                let mut checked = receiver
-                    .checked_cast
-                    .expect("cast-rooted field source must retain its checked view");
+                let super::super::expression::CheckedReceiverCarrier::Checked(mut checked) =
+                    receiver.carrier
+                else {
+                    unreachable!("cast-rooted field source must retain its checked view")
+                };
                 checked
                     .projections
                     .push(crate::object_path::ObjectProjection::Field(access.field));

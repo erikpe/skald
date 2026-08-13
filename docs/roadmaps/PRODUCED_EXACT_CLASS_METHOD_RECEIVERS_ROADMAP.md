@@ -1,6 +1,6 @@
 # Produced Exact-Class Method Receivers Roadmap
 
-Status: in progress; PER0 is complete and PER1 is next.
+Status: in progress; PER0 and PER1 are complete and PER2 is next.
 
 This roadmap lets an expression that produces one exact inline class serve
 directly as a read-only instance-method receiver. It removes staging locals
@@ -67,7 +67,7 @@ service.
 ## Progress
 
 - [x] PER0 — Freeze the produced read-only receiver contract
-- [ ] PER1 — Normalize receiver provenance carriers
+- [x] PER1 — Normalize receiver provenance carriers
 - [ ] PER2 — Accept and lower produced exact-class receivers
 - [ ] PER3 — Verify lifetime, control flow, and failure behavior
 - [ ] PER4 — Prove dispatch, generics, and native execution
@@ -121,21 +121,21 @@ executable compiler or test behavior changed.
 data before adding produced sources, keeping impossible carrier combinations
 unrepresentable and lowering ownership cohesive.
 
-- [ ] Replace the independent shared-backed and optional-backed receiver view
+- [x] Replace the independent shared-backed and optional-backed receiver view
       slots in checked and HIR method-receiver data with one discriminated
       carrier or general `HirObjectView` path.
-- [ ] Apply the same carrier boundary where field and interface receiver
+- [x] Apply the same carrier boundary where field and interface receiver
       plumbing shares the representation, without broadening accepted source
       syntax.
-- [ ] Keep checked casts and array-element receivers distinct only where their
+- [x] Keep checked casts and array-element receivers distinct only where their
       bounded guards or checked addressing require different lowering.
-- [ ] Update HIR dumps, control-effect discovery, receiver access queries, MIR
+- [x] Update HIR dumps, control-effect discovery, receiver access queries, MIR
       lowering, and local helper APIs to exhaustively match the normalized
       carrier rather than coordinating optional fields.
-- [ ] Preserve all existing shared-anchor, optional-presence-guard,
+- [x] Preserve all existing shared-anchor, optional-presence-guard,
       array-anchor, exact-origin, virtual/interface dispatch, and cleanup
       behavior byte-for-byte where phase dumps are contractual.
-- [ ] Keep implementation in the existing cohesive resolver, type-check,
+- [x] Keep implementation in the existing cohesive resolver, type-check,
       HIR-object, and MIR-call owners; do not widen facade visibility or create
       source-category-specific lowering modules.
 
@@ -147,6 +147,14 @@ tests; `make check`; `make msrv-check`.
 has exactly one explicit provenance carrier, dumps remain deterministic, and a
 produced `HirObjectView` can later occupy the general view path without adding
 another optional field or fake binding.
+
+Completed 2026-08-13. Checked and HIR method, field, and interface receivers
+now use one exhaustive provenance carrier with distinct place, checked-cast,
+general-view, and array-element variants. Existing source acceptance, access,
+guards, anchors, origins, dispatch, cleanup, and contractual dump text remain
+unchanged. Focused carrier and lowering coverage, `make check`, and
+`make msrv-check` pass. The general view variant can represent a future
+produced receiver without another parallel slot or synthesized source binding.
 
 ### PER2 — Accept and lower produced exact-class receivers
 

@@ -73,8 +73,9 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let HirExpressionKind::MethodCall { receiver, .. } = &returned_expression(&mutable).kind else {
         panic!("expected nested method receiver");
     };
-    assert_eq!(receiver.place.projections(), expected);
-    assert_eq!(receiver.place.access, HirAccess::Mutable);
+    let receiver = receiver_place(receiver);
+    assert_eq!(receiver.projections(), expected);
+    assert_eq!(receiver.access, HirAccess::Mutable);
 
     let local_declaration = resolved.declarations.get(FunctionId::new(3)).unwrap();
     let local_definition = resolved.definitions.get(FunctionId::new(3)).unwrap();
@@ -91,9 +92,10 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let HirExpressionKind::MethodCall { receiver, .. } = &returned_expression(&local).kind else {
         panic!("expected local nested method receiver");
     };
-    assert_eq!(receiver.place.projections(), expected);
-    assert_eq!(receiver.place.root(), BindingId::Local(local.locals[0].id));
-    assert_eq!(receiver.place.access, HirAccess::Mutable);
+    let receiver = receiver_place(receiver);
+    assert_eq!(receiver.projections(), expected);
+    assert_eq!(receiver.root(), BindingId::Local(local.locals[0].id));
+    assert_eq!(receiver.access, HirAccess::Mutable);
 
     let class = resolved.classes.get(ClassId::new(2)).unwrap();
     let method = &class.methods[0];
@@ -128,9 +130,10 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let HirExpressionKind::FieldRead(field) = &value.kind else {
         panic!("expected nested self field read");
     };
-    assert_eq!(field.receiver.projections(), expected);
-    assert_eq!(field.receiver.root(), BindingId::Receiver(method.id.into()));
-    assert_eq!(field.receiver.access, HirAccess::ReadOnly);
+    let receiver = receiver_place(&field.receiver);
+    assert_eq!(receiver.projections(), expected);
+    assert_eq!(receiver.root(), BindingId::Receiver(method.id.into()));
+    assert_eq!(receiver.access, HirAccess::ReadOnly);
 }
 
 #[test]

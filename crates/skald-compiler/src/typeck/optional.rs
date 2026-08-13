@@ -801,7 +801,7 @@ impl CallableChecker<'_, '_> {
                     self.binding_access(*binding, false, unwrap.span)?
                 }
                 HirOptionalStorage::Static(_) => crate::hir::HirAccess::Mutable,
-                HirOptionalStorage::Field(field) => field.receiver.access,
+                HirOptionalStorage::Field(field) => field.receiver.access(),
                 HirOptionalStorage::ArrayElement(place) => place.receiver.access,
                 HirOptionalStorage::SharedPointee(_) => crate::hir::HirAccess::Mutable,
             },

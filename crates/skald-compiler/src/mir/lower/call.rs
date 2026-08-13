@@ -3,8 +3,8 @@
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirExpression, HirInterfaceCallTarget, HirInterfaceReceiver,
-        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirSharedPlace,
-        HirSharedSource, HirViewSource, HirViewTarget,
+        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectReceiver, HirObjectView,
+        HirSharedPlace, HirSharedSource, HirViewSource, HirViewTarget,
     },
     identity::{FunctionId, MethodId},
 };
@@ -697,37 +697,32 @@ impl BodyLowerer<'_> {
         &mut self,
         receiver: &HirMethodReceiver,
     ) -> MirMethodReceiver {
-        if let Some(element) = &receiver.array_element {
-            let place = self.lower_array_alias_element_place(element, element.receiver.access);
-            let Type::Class(dynamic_class) = element.element else {
-                unreachable!("object method array receiver must have exact class type")
-            };
-            return MirMethodReceiver::exact(place, dynamic_class);
-        }
-        if let Some(cast) = &receiver.checked_cast {
-            let view = self.lower_checked_object_view(cast);
-            return MirMethodReceiver {
-                place: view.source,
-                origin: view.origin,
-            };
-        }
-        if let Some(view) = &receiver.shared_view {
-            let view = self.lower_object_view(view);
-            return MirMethodReceiver {
-                place: view.source,
-                origin: view.origin,
-            };
-        }
-        if let Some(view) = &receiver.optional_view {
-            let view = self.lower_object_view(view);
-            return MirMethodReceiver {
-                place: view.source,
-                origin: view.origin,
-            };
-        }
-        MirMethodReceiver {
-            place: self.lower_object_place(&receiver.place),
-            origin: Box::new(self.lower_object_origin(&receiver.origin)),
+        match receiver {
+            HirObjectReceiver::Place { place, origin } => MirMethodReceiver {
+                place: self.lower_object_place(place),
+                origin: Box::new(self.lower_object_origin(origin)),
+            },
+            HirObjectReceiver::Checked { view, .. } => {
+                let view = self.lower_checked_object_view(view);
+                MirMethodReceiver {
+                    place: view.source,
+                    origin: view.origin,
+                }
+            }
+            HirObjectReceiver::View { view, .. } => {
+                let view = self.lower_object_view(view);
+                MirMethodReceiver {
+                    place: view.source,
+                    origin: view.origin,
+                }
+            }
+            HirObjectReceiver::ArrayElement { element, .. } => {
+                let place = self.lower_array_alias_element_place(element, element.receiver.access);
+                let Type::Class(dynamic_class) = element.element else {
+                    unreachable!("object method array receiver must have exact class type")
+                };
+                MirMethodReceiver::exact(place, dynamic_class)
+            }
         }
     }
 

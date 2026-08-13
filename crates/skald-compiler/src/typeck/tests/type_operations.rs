@@ -52,7 +52,10 @@ fn checked_object_casts_support_direct_receivers_alias_arguments_and_fields() {
     let HirExpressionKind::MethodCall { receiver, .. } = &method.kind else {
         panic!("expected method call");
     };
-    assert!(receiver.checked_cast.is_some());
+    assert!(matches!(
+        receiver,
+        crate::hir::HirObjectReceiver::Checked { .. }
+    ));
 
     let mir = lower_hir(&hir);
     verify_mir(&mir).expect("lowered checked casts must verify");
