@@ -1,6 +1,6 @@
 # Produced Exact-Class Method Receivers Roadmap
 
-Status: planned; PER0 is next.
+Status: in progress; PER0 is complete and PER1 is next.
 
 This roadmap lets an expression that produces one exact inline class serve
 directly as a read-only instance-method receiver. It removes staging locals
@@ -66,7 +66,7 @@ service.
 
 ## Progress
 
-- [ ] PER0 — Freeze the produced read-only receiver contract
+- [x] PER0 — Freeze the produced read-only receiver contract
 - [ ] PER1 — Normalize receiver provenance carriers
 - [ ] PER2 — Accept and lower produced exact-class receivers
 - [ ] PER3 — Verify lifetime, control flow, and failure behavior
@@ -85,19 +85,19 @@ interface; this roadmap adds no repository CI.
 **Purpose:** Make the source-visible access, evaluation, lifetime, dispatch,
 failure, and exclusion rules authoritative before compiler acceptance changes.
 
-- [ ] Update the functions/control-flow and class/lifecycle contracts to
+- [x] Update the functions/control-flow and class/lifecycle contracts to
       define produced exact-class method receivers as hidden caller-owned
       read-only places.
-- [ ] Define the accepted producer families, grouping behavior, inherited and
+- [x] Define the accepted producer families, grouping behavior, inherited and
       polymorphic method selection, and closed-generic composition.
-- [ ] Freeze receiver-before-arguments order, exactly-once production,
+- [x] Freeze receiver-before-arguments order, exactly-once production,
       completion before the call, result securing, and reverse full-expression
       cleanup.
-- [ ] State the read-only restriction and retain explicit rejection of
+- [x] State the read-only restriction and retain explicit rejection of
       `mut fn` on a produced receiver.
-- [ ] Reconcile string examples, compiler phase/IR documentation, testing
+- [x] Reconcile string examples, compiler phase/IR documentation, testing
       guidance, and the status matrix with a frozen-but-unavailable boundary.
-- [ ] Record the unchanged grammar, internal/external ABI, backend, runtime,
+- [x] Record the unchanged grammar, internal/external ABI, backend, runtime,
       and runtime-version boundaries.
 
 **Tests:** `make docs-check`; audit living matches with
@@ -107,6 +107,13 @@ failure, and exclusion rules authoritative before compiler acceptance changes.
 receivers, which methods they may call, when the hidden owner lives and dies,
 how dispatch sees it, and which neighboring temporary features remain
 excluded; executable compiler behavior is unchanged.
+
+Completed 2026-08-13. The language contract now owns producer eligibility,
+read-only access, dispatch, evaluation, failure, lifetime, and exclusions.
+Compiler, string, grammar, backend, runtime-ABI, status, and testing documents
+freeze the corresponding unavailable implementation boundary. `make docs-check`,
+the prescribed living-document audit, and `git diff --check` pass; no
+executable compiler or test behavior changed.
 
 ### PER1 — Normalize receiver provenance carriers
 

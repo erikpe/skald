@@ -101,6 +101,62 @@ those anchors
 through their complete immediate consumer. The complete rule is owned by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md#strong-owner-value-semantics).
 
+## Frozen produced exact-class method receivers
+
+This section freezes a source-visible extension that is not yet accepted by
+the compiler. An expression that produces one exact inline class may serve
+directly as the receiver of a read-only instance method. The compiler will
+materialize the producer into one hidden caller-owned object place and borrow
+that place as the receiver; source does not gain a reference value or an
+implicit binding.
+
+The accepted producer families are:
+
+- exact-class construction;
+- a canonical literal whose language-item type is an exact class, including a
+  `Str` literal;
+- an exact-class result from a direct function, static method, instance
+  method, or interface call; and
+- any of those forms surrounded by grouping.
+
+Closed generic specialization composes mechanically with this rule. After
+specialization, an exact result such as `Vec<Str>.last()` is the same ordinary
+exact-class call result as a non-generic producer. The selected receiver may
+call a direct or virtual method, an inherited method through its canonical
+base projection, or an interface requirement authorized through a closed
+generic bound. Projection never slices the hidden object, and virtual or
+interface dispatch observes its exact complete-object identity and dynamic
+class.
+
+Only an ordinary read-only `fn` method is eligible. A `mut fn` method still
+requires an existing mutable object place and is rejected on a produced
+receiver. A produced `shared T` remains an owner and still requires explicit
+`->` or `*` access; dot selection does not implicitly dereference it.
+
+Receiver production occurs exactly once, before every explicit argument. The
+producer completes directly in the hidden caller-owned storage, without a
+copy made merely to obtain a receiver. Cleanup ownership is registered only
+after successful completion. Later arguments then evaluate left to right and
+the completed receiver remains live through all of them, the complete method
+call, and securing or transferring any call result. At the enclosing full-
+expression boundary, completed temporaries are destroyed in reverse
+completion order after the result has been preserved for its consumer.
+
+If receiver production terminates, no explicit argument or outer call runs
+and the incomplete storage owns no cleanup. A receiver on a skipped
+short-circuit path creates no storage, effect, view, or cleanup. Failure in a
+later argument retains the language's existing abrupt-termination boundary
+for already completed owners.
+
+This contract does not admit temporary field reads or writes, mutable
+temporary receivers, optional or array receiver families, independently
+storable references, or escaping aliases. It adds no grammar form, internal
+or external calling-convention rule, backend representation, runtime service,
+or runtime ABI-version change. The frozen compiler representation is defined
+by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-produced-exact-class-method-receiver-representation),
+and the [status matrix](STATUS.md#frozen-language-designs) records the current
+unavailable compiler boundary.
+
 ## Lexical scopes and locals
 
 A block is a lexical scope, except that a callable's outermost block shares the

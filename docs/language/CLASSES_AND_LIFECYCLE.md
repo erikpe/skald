@@ -217,6 +217,23 @@ ordinary scalar value.
 Selecting a final primitive field reads or writes that field according to the
 surrounding expression or statement and the root's access.
 
+### Frozen produced receiver places
+
+The frozen
+[produced exact-class receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
+extends only read-only instance-method receiver selection. An eligible exact-
+class producer will establish one hidden caller-owned root whose lifetime is
+bounded by the enclosing full expression. That root is read-only, retains the
+producer's exact complete-object origin and dynamic class, and may be
+canonically projected to the declaring base or an implemented interface
+without copying or slicing.
+
+The extension does not turn arbitrary expressions into object places. In
+particular, fields cannot be selected from the temporary for direct reading or
+writing, and a mutable method cannot use it as a receiver. The compiler does
+not yet accept this frozen source form; the implemented roots in the preceding
+paragraph remain the current compiler boundary.
+
 For example, in `root.branch.leaf.value`, `root` is the root place,
 `branch` and `leaf` select complete inline subobjects, and `value` selects the
 final primitive field. In `root.branch.leaf.read()`, the `leaf` endpoint is the

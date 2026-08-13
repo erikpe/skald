@@ -815,6 +815,14 @@ exact-class producers only for read-only `ref` parameters, while `mut ref`
 remains place-based. Verified MIR lifetime lowering and native execution
 require no grammar change.
 
+The same postfix grammar already parses member selection and a call suffix on
+an exact-class construction, class literal, or exact-class call result. The
+frozen
+[produced exact-class method-receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
+therefore adds no token, precedence rule, AST expression shape, or call
+syntax. Current semantic analysis still rejects those producers as method
+receivers; implementation changes only their resolved and typed eligibility.
+
 Optional type syntax crosses parsing as a recursive source-shaped node that
 retains grouping, punctuation, and `shared?` shorthand provenance. Resolution
 interns deterministic recursive optional identities for eligible primitive,

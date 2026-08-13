@@ -419,6 +419,47 @@ optional, array, raw-shared-owner, and implicit-shared-dereference sources keep
 their family-specific diagnostics. Call checking continues through later
 arguments in source order.
 
+## Frozen produced exact-class method-receiver representation
+
+The source-visible
+[produced receiver contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
+is frozen but not implemented. The current resolver and type checker continue
+to require an existing object place for dot-method receivers.
+
+Implementation will reuse the ordinary exact-class producer, object-view, and
+full-expression lifetime pipeline:
+
+- syntax keeps the existing postfix member and call nodes;
+- resolution records the selected producer once, its exact class, source span,
+  and any canonical inherited or interface selection, rather than inventing a
+  source binding;
+- type checking admits that provenance only for a read-only instance method,
+  preserves the exact complete-object origin and dynamic class, and emits one
+  explicit produced object view in typed HIR;
+- HIR-to-MIR lowering constructs the producer exactly once in one caller-owned
+  `Temporary` before explicit arguments, registers cleanup only after complete
+  construction, and uses the ordinary non-owning receiver view for the call;
+- result securing or transfer completes before full-expression cleanup, and
+  checked or bounded carriers end before the owning receiver temporary; and
+- MIR verification proves initialization, read-only access, receiver and
+  complete-object compatibility, selected-path liveness, result ordering, and
+  exactly one reverse-ordered cleanup.
+
+Before the new producer provenance is admitted, receiver data must expose one
+discriminated carrier or general object-view slot for shared-backed,
+optional-backed, and produced views. A third independent `produced_view`
+option is not permitted: impossible carrier combinations must remain
+unrepresentable, and control-effect discovery, dumps, lowering, and
+verification must match the carrier exhaustively.
+
+Direct, inherited, virtual, interface, and closed-generic calls all lower
+through their existing selected method targets and receiver origins. The
+backend receives an ordinary verified receiver place backed by explicit
+temporary storage. No target-specific producer branch, internal or external
+calling-convention change, runtime service, or runtime ABI-version change is
+introduced. Resolved, HIR, and MIR dumps must expose the provenance
+deterministically throughout rollout.
+
 ## Primitive binding reassignment boundary
 
 The source contract for

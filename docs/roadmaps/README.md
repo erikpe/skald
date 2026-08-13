@@ -6,17 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+- [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
+  is in progress. PER0 froze the living language, compiler, backend, runtime,
+  string, status, and testing contracts without changing executable behavior.
+  PER1, normalizing typed receiver provenance carriers before acceptance is
+  broadened, is next.
 
 ## Planned
 
-- [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
-  is planned. It lets exact-class literals, constructions, and call results
-  serve directly as read-only method receivers through the existing
-  caller-owned produced-object temporary machinery. PER0, freezing the living
-  language and compiler contract, is next. It depends only on completed object
-  values, produced read-only aliases, full-expression cleanup, polymorphism,
-  strings, generic classes, and `Vec<T>`; no other active roadmap blocks it.
+No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
