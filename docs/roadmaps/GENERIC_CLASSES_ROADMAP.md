@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G6 is next.
+Status: in progress; G7 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -60,7 +60,7 @@ not reopen those decisions while implementing them.
 - [x] G3 — Infer and evaluate contextual generic requirements
 - [x] G4 — Build deterministic closed-specialization identities
 - [x] G5 — Specialize class declarations into ordinary closed classes
-- [ ] G6 — Specialize executable bodies and operation selections
+- [x] G6 — Specialize executable bodies and operation selections
 - [ ] G7 — Integrate lifecycle, optionals, arrays, and ownership
 - [ ] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
 - [ ] G9 — Integrate per-specialization statics and whole-program effects
@@ -310,25 +310,25 @@ contain no parameter-bearing type, and preserve exact contextual diagnostics.
 **Purpose:** Close every generic initializer, lifecycle, method, and static
 initializer body so complete-class validation and ordinary HIR can proceed.
 
-- [ ] Substitute type-bearing nodes in expressions, statements, locals,
+- [x] Substitute type-bearing nodes in expressions, statements, locals,
   construction/allocation, casts, type tests, static selections, explicit copy
   construction, and calls.
-- [ ] Resolve delayed initializer overloads, exact callable compatibility,
+- [x] Resolve delayed initializer overloads, exact callable compatibility,
   casts, object places, and argument/result operations against substituted
   closed types using existing selection logic.
-- [ ] Preserve source evaluation order, full-expression boundaries, access,
+- [x] Preserve source evaluation order, full-expression boundaries, access,
   produced-value provenance, alias anchors, optional guards, and ownership
   selection from the template body.
-- [ ] Generate complete ordinary resolved definitions under member identities
+- [x] Generate complete ordinary resolved definitions under member identities
   allocated by the specialization.
-- [ ] Validate every body in the class even when its member is not called by
+- [x] Validate every body in the class even when its member is not called by
   reachable code; do not implement lazy method instantiation.
-- [ ] Map operation and requirement failures to the application plus the
+- [x] Map operation and requirement failures to the application plus the
   originating template expression or declaration.
-- [ ] Ensure nested applications discovered during body specialization rejoin
+- [x] Ensure nested applications discovered during body specialization rejoin
   the deterministic worklist and complete before ordinary type checking needs
   them.
-- [ ] Keep body-specialization algorithms in cohesive private modules behind a
+- [x] Keep body-specialization algorithms in cohesive private modules behind a
   small specialization facade; avoid duplicating the existing general body
   resolver wholesale.
 

@@ -1,4 +1,4 @@
-//! Validation and atomic publication of closed specialization declarations.
+//! Validation and atomic publication of closed specializations.
 
 use super::*;
 
@@ -8,7 +8,7 @@ pub(crate) fn validate_specialization_requirements(
     ordinary_class_count: usize,
     ordinary_hierarchy: ResolvedClassHierarchy,
 ) {
-    let failures = crate::typeck::failed_specialization_declaration_requirements(program);
+    let failures = crate::typeck::failed_specialization_requirements(program);
     if failures.is_empty() {
         return;
     }
@@ -36,7 +36,7 @@ pub(crate) fn validate_specialization_requirements(
             Diagnostic::error(
                 super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
                 format!(
-                    "type arguments for `{}` do not satisfy its declaration requirements",
+                    "type arguments for `{}` do not satisfy its requirements",
                     template.name
                 ),
             )
@@ -69,6 +69,7 @@ pub(crate) fn validate_specialization_requirements(
         program.generic_specializations.fail_class(class);
     }
     program.classes.truncate(ordinary_class_count);
+    program.class_definitions.truncate(ordinary_class_count);
     program.hierarchy = ordinary_hierarchy;
 }
 

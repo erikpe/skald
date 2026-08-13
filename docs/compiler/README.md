@@ -165,9 +165,9 @@ existing optional, array, shared-owner, containment, lifecycle, HIR, MIR, and
 backend machinery. No unresolved parameter reaches ordinary resolved classes
 or lower IR, and no runtime generic ABI is introduced. Template semantics,
 contextual requirements, canonical closed keys, deterministic reserved class
-identities, caching, and finite-recursion handling are implemented; generated
-ordinary class declarations and later phases remain staged by the active
-roadmap.
+identities, caching, finite-recursion handling, and complete ordinary closed
+declarations and resolved bodies are implemented; lifecycle and later phases
+remain staged by the active roadmap.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
@@ -226,7 +226,7 @@ growable read-until-EOF loops.
 source database
     -> tokens
     -> syntax AST
-    -> generic templates and closed specialization (identity/cache implemented; classes gated)
+    -> generic templates and closed resolved specialization (lower phases gated)
     -> resolved program
     -> typed HIR
     -> target-independent MIR

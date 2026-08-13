@@ -6,7 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G6 is next.**
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G7 is next.**
   Implements explicit closed generic class applications through deterministic
   semantic specialization, inferred contextual requirements, nominal
   interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
@@ -14,8 +14,9 @@ progress. Completed roadmaps and resolved discovery records move to
   bounds, delayed dependent selections, contextual mechanical requirement
   inference/evaluation, and deterministic closed-specialization identity,
   caching, provenance, recursion handling, and complete ordinary closed class
-  declarations are implemented; specialization of executable member bodies
-  and their operation selections is the next boundary.
+  declarations and complete ordinary resolved bodies are implemented. The
+  next boundary integrates their lifecycle, optional, array, and ownership
+  operations into typed HIR.
 
 ## Planned
 

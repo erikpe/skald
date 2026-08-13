@@ -86,8 +86,13 @@ impl CallableResolver<'_, '_> {
         allocation: &syntax::AllocationExpr,
     ) -> Option<ResolvedExpression> {
         let class = if allocation.target.arguments.is_some() {
-            self.report_unsupported_generic_application(&allocation.target);
-            None
+            match self.specialized_class(&allocation.target) {
+                Some(class) => self.validate_constructible_allocation_class(class, allocation),
+                None => {
+                    self.report_unsupported_generic_application(&allocation.target);
+                    None
+                }
+            }
         } else if !allocation.target.name.is_qualified() && allocation.target.name.text == "Obj" {
             self.diagnostics.push(
                 Diagnostic::error(INVALID_CONSTRUCTION_TARGET, "`Obj` cannot be allocated")

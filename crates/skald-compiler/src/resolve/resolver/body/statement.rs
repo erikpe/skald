@@ -408,6 +408,58 @@ impl CallableResolver<'_, '_> {
         &mut self,
         assignment: &syntax::ObjectAssignmentStatement,
     ) -> Option<ResolvedStatement> {
+        if let syntax::Expression::GenericStaticSelection(selection) = &assignment.place {
+            let selected = self.select_specialized_static_member(selection);
+            let value = self.resolve_expression(&assignment.value);
+            let (Some(selected), Some(value)) = (selected, value) else {
+                return None;
+            };
+            return match selected {
+                SelectedClassMember::StaticField(field) => Some(
+                    ResolvedStatement::StaticFieldAssignment(ResolvedStaticFieldAssignment {
+                        field,
+                        member_span: selection.member.span,
+                        equal_span: assignment.equal_span,
+                        value,
+                        span: assignment.span,
+                    }),
+                ),
+                SelectedClassMember::Field(field) => {
+                    let declaration = self
+                        .environment
+                        .classes
+                        .get(field.class())
+                        .and_then(|class| class.field(field))
+                        .expect("selected field must retain declaration metadata");
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            format!("field `{}` requires an object receiver", declaration.name),
+                        )
+                        .with_primary_label(selection.member.span, "class-selected field")
+                        .with_secondary_label(declaration.name_span, "field declared here"),
+                    );
+                    None
+                }
+                SelectedClassMember::Method(method) => {
+                    let declaration = self
+                        .environment
+                        .classes
+                        .get(method.class())
+                        .and_then(|class| class.method(method))
+                        .expect("selected method must retain declaration metadata");
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            format!("method `{}` cannot be assigned", declaration.name),
+                        )
+                        .with_primary_label(selection.member.span, "expected a static field here")
+                        .with_secondary_label(declaration.name_span, "method declared here"),
+                    );
+                    None
+                }
+            };
+        }
         if let Some(operator_span) = dereference_operator_through_groups(&assignment.place) {
             if self.resolve_expression(&assignment.place).is_some() {
                 self.diagnostics.push(

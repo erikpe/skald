@@ -6,7 +6,7 @@ use std::path::Path;
 use super::{
     body::{
         resolve_callable_body, resolve_static_initializer_expression, BodyResolutionEnvironment,
-        CallableResolutionContext,
+        BodySpecializationEnvironment, CallableResolutionContext,
     },
     *,
 };
@@ -45,8 +45,8 @@ use resolver::{
     ProgramResolver,
 };
 use specialization::{
-    discover_specializations, specialize_declarations, validate_specialization_requirements,
-    SpecializationDiscoveryInput,
+    discover_specializations, specialize_bodies, specialize_declarations,
+    validate_specialization_requirements, SpecializationBodyInput, SpecializationDiscoveryInput,
 };
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
 use string_language_item::validate_string_language_item;

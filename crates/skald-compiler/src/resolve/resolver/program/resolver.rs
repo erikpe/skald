@@ -354,6 +354,33 @@ impl<'ast> ProgramResolver<'ast> {
         }
         attach_static_field_initializers(&mut class_declarations, static_initializer_updates);
 
+        let specialized_bodies = specialize_bodies(
+            SpecializationBodyInput {
+                units: &self.units,
+                modules: &self.modules,
+                lookups,
+                semantics: &template_semantics,
+                specializations: &generic_specializations,
+                functions: &function_declarations,
+                classes: &class_declarations,
+                interfaces: &interfaces,
+                hierarchy: &hierarchy,
+                has_module_context: self.has_module_context,
+                string_literals: StringLiteralResolutionEnvironment::new(
+                    string_language_item.as_ref(),
+                    &self.literal_ids,
+                ),
+            },
+            &mut self.type_interner,
+            &mut self.diagnostics,
+        );
+        if specialized_bodies.valid {
+            attach_static_field_initializers(
+                &mut class_declarations,
+                specialized_bodies.static_initializers,
+            );
+        }
+
         let function_definitions = self.resolve_function_bodies(
             lookups,
             &function_declarations,
@@ -389,6 +416,9 @@ impl<'ast> ProgramResolver<'ast> {
                 &mut self.type_interner,
                 &mut self.diagnostics,
             ));
+        }
+        if specialized_bodies.valid {
+            class_definitions.extend(specialized_bodies.definitions);
         }
         let entry_unit = &self.units[self.modules.selected().index()];
         let entry_function =

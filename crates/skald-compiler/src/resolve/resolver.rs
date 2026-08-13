@@ -250,11 +250,11 @@ fn report_generic_application(
                 diagnostics.push(
                     Diagnostic::error(
                         UNSUPPORTED_GENERIC_SYNTAX,
-                        "generic class bodies are not implemented yet",
+                        "generic class execution is not implemented yet",
                     )
                     .with_primary_label(
                         named.span,
-                        "this application has a specialized declaration but no executable body",
+                        "this application is specialized but not yet available to lower phases",
                     ),
                 );
             }

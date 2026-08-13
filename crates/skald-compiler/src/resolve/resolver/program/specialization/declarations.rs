@@ -26,7 +26,7 @@ pub(crate) fn specialize_declarations(
             output.valid = false;
             continue;
         };
-        let Some((module, source)) = template_source(units, specialization.key.template) else {
+        let Some((unit, source, _)) = template_source(units, specialization.key.template) else {
             unreachable!("specialization keys reference collected templates")
         };
         let semantic = semantics
@@ -34,7 +34,7 @@ pub(crate) fn specialize_declarations(
             .expect("specialization keys reference resolved template semantics");
         match DeclarationSpecializer::new(
             class_id,
-            module,
+            unit.module,
             source,
             semantic,
             specialization,
@@ -55,24 +55,6 @@ pub(crate) fn specialize_declarations(
         output.symbols.clear();
     }
     output
-}
-
-fn template_source<'ast>(
-    units: &[ModuleUnit<'ast>],
-    template: ClassTemplateId,
-) -> Option<(ModuleId, &'ast syntax::ClassDecl)> {
-    units.iter().find_map(|unit| {
-        unit.template_work.iter().find_map(|work| {
-            (work.id == template).then(|| {
-                let syntax::TopLevelDeclaration::Class(class) =
-                    &unit.ast.declarations[work.ast_index]
-                else {
-                    unreachable!("template work references a class declaration")
-                };
-                (unit.module, class)
-            })
-        })
-    })
 }
 
 struct DeclarationSpecializer<'source, 'semantic, 'specialization, 'diagnostics> {

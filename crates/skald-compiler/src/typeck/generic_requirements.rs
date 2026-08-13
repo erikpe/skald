@@ -162,7 +162,7 @@ impl<'program> GenericCapabilityQuery<'program> {
     }
 }
 
-pub(crate) fn failed_specialization_declaration_requirements(
+pub(crate) fn failed_specialization_requirements(
     program: &ResolvedProgram,
 ) -> Vec<(crate::identity::ClassId, usize)> {
     let query = GenericCapabilityQuery::new(program);
@@ -182,9 +182,6 @@ pub(crate) fn failed_specialization_declaration_requirements(
             .zip(&specialization.closed_requirements)
             .enumerate()
         {
-            if !is_declaration_requirement(requirement.reason) {
-                continue;
-            }
             if !subject.is_some_and(|subject| query.supports(requirement, subject)) {
                 failures.push((class, index));
                 break;
@@ -192,20 +189,6 @@ pub(crate) fn failed_specialization_declaration_requirements(
         }
     }
     failures
-}
-
-const fn is_declaration_requirement(reason: GenericRequirementReason) -> bool {
-    matches!(
-        reason,
-        GenericRequirementReason::FieldDeclaration { .. }
-            | GenericRequirementReason::StaticFieldDeclaration { .. }
-            | GenericRequirementReason::ParameterDeclaration { .. }
-            | GenericRequirementReason::MethodResult { .. }
-            | GenericRequirementReason::OptionalType
-            | GenericRequirementReason::ArrayType
-            | GenericRequirementReason::SharedType
-            | GenericRequirementReason::StaticZeroInitialization { .. }
-    )
 }
 
 #[cfg(test)]

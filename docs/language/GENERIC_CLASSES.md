@@ -2,8 +2,8 @@
 
 Status: frozen design; syntax, template resolution, contextual mechanical
 requirement analysis, closed-specialization identity discovery, and ordinary
-closed class declaration generation implemented; executable body
-specialization not implemented. This document defines the
+closed class declaration and body generation implemented; lifecycle and
+execution remain staged. This document defines the
 intended initial source-visible generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
@@ -15,8 +15,11 @@ caching, recursion handling, and provenance. Closed declarations substitute
 bases, interface claims, fields, statics, lifecycle signatures, initializers,
 and methods into ordinary class tables. Closed-type capability evaluation
 delegates to the ordinary optional, array, shared-owner, alias, stored-value,
-and class-lifecycle rules. A valid closed application remains explicitly gated
-until generated bodies and execution are implemented.
+and class-lifecycle rules. Generated bodies close local types, constructions,
+allocations, calls, casts, tests, and static selections through the ordinary
+resolver, and every member is validated whether called or not. A valid closed
+application remains explicitly gated until lifecycle and lower-phase execution
+are implemented.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning

@@ -394,7 +394,10 @@ impl Parser<'_> {
         let value = value?;
         let end_span = semicolon.map_or_else(|| value.span(), |token| token.span);
 
-        if matches!(expression, Expression::ArrayProjection(_)) {
+        if matches!(
+            expression,
+            Expression::ArrayProjection(_) | Expression::GenericStaticSelection(_)
+        ) {
             return Some(Statement::ObjectAssignment(ObjectAssignmentStatement {
                 span: self.cover(expression.span(), end_span),
                 place: expression,

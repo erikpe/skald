@@ -55,9 +55,10 @@ between syntax/module declaration collection and the ordinary resolved
 program. Its defining trust boundary is that every published ordinary class,
 type, member, and body is closed. `ResolvedClassDeclaration`, HIR, MIR,
 verification, and backends do not gain an unresolved parameter variant or a
-runtime type-argument protocol. The source-shaped syntax nodes, dumps, and
-recovery are implemented and explicitly gated at resolution; template
-resolution and specialization remain unimplemented.
+runtime type-argument protocol. The source-shaped syntax nodes, template
+semantics, deterministic closed identities, declarations, and complete
+ordinary resolved bodies are implemented and explicitly gated before typed
+HIR while lifecycle and later integration remain staged.
 
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus

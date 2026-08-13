@@ -39,6 +39,10 @@ impl ResolvedClassDefinitionTable {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
+    pub(crate) fn truncate(&mut self, len: usize) {
+        self.entries.truncate(len);
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

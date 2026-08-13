@@ -3,8 +3,8 @@
 use super::*;
 
 pub(super) struct ResolvedStaticInitializerUpdate {
-    field: StaticFieldId,
-    initializer: ResolvedStaticFieldInitializer,
+    pub(super) field: StaticFieldId,
+    pub(super) initializer: ResolvedStaticFieldInitializer,
 }
 
 pub(super) fn resolve_static_field_initializers(

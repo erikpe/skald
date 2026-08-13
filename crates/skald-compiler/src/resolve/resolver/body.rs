@@ -49,6 +49,37 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     hierarchy: &'program ResolvedClassHierarchy,
     has_module_context: bool,
     string_literals: StringLiteralResolutionEnvironment<'program>,
+    specialization: Option<BodySpecializationEnvironment<'program>>,
+}
+
+/// Closed template information consulted only while resolving a generated
+/// class body. Ordinary bodies continue through the same resolver with no
+/// specialization environment.
+#[derive(Clone, Copy)]
+pub(super) struct BodySpecializationEnvironment<'program> {
+    semantics: &'program ResolvedClassTemplateSemantics,
+    specialization: &'program GenericSpecialization,
+}
+
+impl<'program> BodySpecializationEnvironment<'program> {
+    pub(super) const fn new(
+        semantics: &'program ResolvedClassTemplateSemantics,
+        specialization: &'program GenericSpecialization,
+    ) -> Self {
+        Self {
+            semantics,
+            specialization,
+        }
+    }
+
+    fn closed_type(self, span: Span) -> Option<ResolvedTypeKind> {
+        self.semantics
+            .type_uses
+            .iter()
+            .zip(&self.specialization.closed_type_uses)
+            .find_map(|(type_use, closed)| (type_use.type_term.span == span).then_some(*closed))
+            .flatten()
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -84,7 +115,16 @@ impl<'program> BodyResolutionEnvironment<'program> {
             hierarchy,
             has_module_context,
             string_literals,
+            specialization: None,
         }
+    }
+
+    pub(super) const fn with_specialization(
+        mut self,
+        specialization: BodySpecializationEnvironment<'program>,
+    ) -> Self {
+        self.specialization = Some(specialization);
+        self
     }
 }
 
@@ -283,6 +323,14 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         })
     }
 
+    fn specialized_class(&self, named: &syntax::NamedTypeSyntax) -> Option<ClassId> {
+        let kind = self.environment.specialization?.closed_type(named.span)?;
+        let ResolvedTypeKind::Class(class) = kind else {
+            return None;
+        };
+        Some(class)
+    }
+
     pub(super) fn report_unsupported_generic_application(
         &mut self,
         named: &syntax::NamedTypeSyntax,
@@ -291,6 +339,16 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
     }
 
     fn resolve_type(&mut self, type_syntax: &syntax::TypeSyntax) -> Option<ResolvedType> {
+        if let Some(kind) = self
+            .environment
+            .specialization
+            .and_then(|specialization| specialization.closed_type(type_syntax.span))
+        {
+            return Some(ResolvedType {
+                kind,
+                span: type_syntax.span,
+            });
+        }
         super::resolve_type(
             type_syntax,
             self.environment.lookup,
@@ -319,12 +377,29 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             }
             syntax::Expression::Identifier(identifier) => self.resolve_identifier(identifier),
             syntax::Expression::GenericTypeApplication(application) => {
-                self.report_unsupported_generic_application(&application.target);
+                if let Some(class) = self.specialized_class(&application.target) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            TOP_LEVEL_USED_AS_VALUE,
+                            "a specialized class cannot be used as a value",
+                        )
+                        .with_primary_label(application.span, "construct it with an argument list")
+                        .with_secondary_label(
+                            self.environment
+                                .classes
+                                .get(class)
+                                .expect("specialized body target must name a generated class")
+                                .name_span,
+                            "specialized class declared here",
+                        ),
+                    );
+                } else {
+                    self.report_unsupported_generic_application(&application.target);
+                }
                 None
             }
             syntax::Expression::GenericStaticSelection(selection) => {
-                self.report_unsupported_generic_application(&selection.target);
-                None
+                self.resolve_specialized_static_value(selection)
             }
             syntax::Expression::NumericLiteral(literal) => Some(
                 ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {

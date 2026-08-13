@@ -326,12 +326,11 @@ module lookup and visibility, and diagnoses raw names, wrong declaration
 kinds, and incorrect arity. Resolution also preserves structural
 parameter-bearing types, fixes definition-site names, resolves nominal
 interface bounds, classifies dependent body selections, infers contextual
-requirements, and specializes requested closed declarations into ordinary
-class identities without introducing executable placeholder types. Body
-specialization and execution remain staged by the
-[generic-classes roadmap](../roadmaps/GENERIC_CLASSES_ROADMAP.md); no generic
-form is executable yet, and an otherwise valid closed application is still
-explicitly gated.
+requirements, and specializes requested closed declarations and bodies into
+ordinary class and callable identities without introducing executable
+placeholder types. Lifecycle and lower-phase execution remain staged by the
+[generic-classes roadmap](../roadmaps/GENERIC_CLASSES_ROADMAP.md), so an
+otherwise valid closed application is still explicitly gated.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,

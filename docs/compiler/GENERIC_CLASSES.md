@@ -2,8 +2,8 @@
 
 Status: frozen compiler design; template resolution, contextual requirement
 analysis, closed-specialization identity discovery, and ordinary closed class
-declaration generation implemented; executable body specialization not
-implemented. This document defines the
+declaration and body generation implemented; lifecycle and typed-HIR
+integration remain staged. This document defines the
 target-independent compilation contract for the initial
 [generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
@@ -13,10 +13,13 @@ argument-dependent selections, structural mechanical requirements with source
 origins, canonical closed application keys, and deterministic specialization
 cache identities with recursion provenance. Declaration specialization now
 publishes complete closed bases, interface claims, fields, statics, lifecycle
-signatures, initializer overloads, and method signatures under deterministic
-ordinary identities. A closed-type capability facade composes the existing
-validators and lifecycle planners; valid closed applications remain gated
-until complete generated bodies exist.
+signatures, initializer overloads, method signatures, static initializer
+expressions, and callable bodies under deterministic ordinary identities. The
+ordinary body resolver selects closed constructions, calls, casts, places,
+and static members without a duplicate generic resolver. A closed-type
+capability facade composes the existing validators and lifecycle planners;
+valid closed applications remain gated until lifecycle and lower-phase
+integration is complete.
 
 ## Architectural outcome
 

@@ -3,6 +3,35 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
+    pub(super) fn resolve_specialized_static_value(
+        &mut self,
+        selection: &syntax::GenericStaticSelectionExpr,
+    ) -> Option<ResolvedExpression> {
+        let selected = self.select_specialized_static_member(selection)?;
+        if let SelectedClassMember::StaticField(field) = selected {
+            return Some(ResolvedExpression::StaticFieldAccess(
+                ResolvedStaticFieldAccessExpr {
+                    field,
+                    member_span: selection.member.span,
+                    span: selection.span,
+                },
+            ));
+        }
+        self.report_class_member_used_as_value(selected, &selection.member);
+        None
+    }
+
+    pub(super) fn select_specialized_static_member(
+        &mut self,
+        selection: &syntax::GenericStaticSelectionExpr,
+    ) -> Option<SelectedClassMember> {
+        let Some(class) = self.specialized_class(&selection.target) else {
+            self.report_unsupported_generic_application(&selection.target);
+            return None;
+        };
+        self.select_member(class, &selection.member)
+    }
+
     pub(super) fn resolve_field_access(
         &mut self,
         member: &syntax::MemberAccessExpr,
@@ -70,22 +99,51 @@ impl CallableResolver<'_, '_> {
     }
 
     pub(super) fn resolve_call(&mut self, call: &syntax::CallExpr) -> Option<ResolvedExpression> {
-        match call.callee.as_ref() {
+        let specialized_target = match call.callee.as_ref() {
             syntax::Expression::GenericTypeApplication(application) => {
-                self.report_unsupported_generic_application(&application.target);
-                return None;
+                let Some(class) = self.specialized_class(&application.target) else {
+                    self.report_unsupported_generic_application(&application.target);
+                    return None;
+                };
+                Some(CallTarget::Constructor { class })
             }
             syntax::Expression::GenericStaticSelection(selection) => {
-                self.report_unsupported_generic_application(&selection.target);
-                return None;
+                let Some(class) = self.specialized_class(&selection.target) else {
+                    self.report_unsupported_generic_application(&selection.target);
+                    return None;
+                };
+                Some(self.select_specialized_static_call_target(class, selection)?)
             }
-            _ => {}
-        }
+            _ => None,
+        };
         if let Some(length) = self.resolve_array_length_call(call) {
             return length;
         }
         let copy_mode = matches!(call.arguments, syntax::CallArguments::Copy { .. });
-        let target = self.resolve_call_target(&call.callee, copy_mode)?;
+        let target = match specialized_target {
+            Some(CallTarget::Constructor { class })
+                if !copy_mode
+                    && self
+                        .environment
+                        .classes
+                        .get(class)
+                        .is_none_or(|class| class.initializers.is_empty()) =>
+            {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CONSTRUCTION_TARGET,
+                        "specialized class has no initializer",
+                    )
+                    .with_primary_label(
+                        call.callee.span(),
+                        "construction requires an explicit `init` declaration",
+                    ),
+                );
+                return None;
+            }
+            Some(target) => target,
+            None => self.resolve_call_target(&call.callee, copy_mode)?,
+        };
         if let syntax::CallArguments::Copy { copy_span, source } = &call.arguments {
             let source = self.resolve_expression(source)?;
             return match target {
@@ -184,6 +242,14 @@ impl CallableResolver<'_, '_> {
                 span: call.span,
             }),
         })
+    }
+
+    fn select_specialized_static_call_target(
+        &mut self,
+        class: ClassId,
+        selection: &syntax::GenericStaticSelectionExpr,
+    ) -> Option<CallTarget> {
+        self.select_static_call_target(class, &selection.member)
     }
 
     fn resolve_array_length_call(
@@ -466,7 +532,7 @@ impl CallableResolver<'_, '_> {
                 if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
                     match self.class_receiver(&member.receiver) {
                         ClassReceiver::Class(class) => {
-                            return self.select_static_call_target(class, member);
+                            return self.select_static_call_target(class, &member.member);
                         }
                         ClassReceiver::Diagnosed => return None,
                         ClassReceiver::NotClass => {}
@@ -610,9 +676,9 @@ impl CallableResolver<'_, '_> {
     fn select_static_call_target(
         &mut self,
         class: ClassId,
-        member: &syntax::MemberAccessExpr,
+        member: &syntax::Name,
     ) -> Option<CallTarget> {
-        let selected = self.select_member(class, &member.member)?;
+        let selected = self.select_member(class, member)?;
         match selected {
             SelectedClassMember::Method(method) => {
                 let declaration = self
@@ -624,7 +690,7 @@ impl CallableResolver<'_, '_> {
                 if declaration.kind == ResolvedMethodKind::Static {
                     Some(CallTarget::Static {
                         method,
-                        member_span: member.member.span,
+                        member_span: member.span,
                     })
                 } else {
                     self.diagnostics.push(
@@ -635,7 +701,7 @@ impl CallableResolver<'_, '_> {
                                 declaration.name
                             ),
                         )
-                        .with_primary_label(member.member.span, "class-selected instance method")
+                        .with_primary_label(member.span, "class-selected instance method")
                         .with_secondary_label(
                             declaration.name_span,
                             "instance method declared here",
@@ -656,7 +722,7 @@ impl CallableResolver<'_, '_> {
                         INVALID_CALL_TARGET,
                         format!("field `{}` requires an object receiver", declaration.name),
                     )
-                    .with_primary_label(member.member.span, "class-selected field")
+                    .with_primary_label(member.span, "class-selected field")
                     .with_secondary_label(declaration.name_span, "field declared here"),
                 );
                 None
@@ -673,7 +739,7 @@ impl CallableResolver<'_, '_> {
                         INVALID_CALL_TARGET,
                         format!("static field `{}` is not callable", declaration.name),
                     )
-                    .with_primary_label(member.member.span, "called here")
+                    .with_primary_label(member.span, "called here")
                     .with_secondary_label(declaration.name_span, "static field declared here"),
                 );
                 None
