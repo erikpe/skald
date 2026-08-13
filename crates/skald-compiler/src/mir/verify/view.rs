@@ -333,14 +333,18 @@ impl Verifier<'_> {
                     | MirStorageKind::CheckedView(_)
             )
         });
-        let ends_at_field = matches!(
+        let ends_at_complete_object_boundary = matches!(
             complete.projections.last(),
-            Some(MirPlaceProjection::Field(_))
+            Some(
+                MirPlaceProjection::Field(_)
+                    | MirPlaceProjection::OptionalPayload(_)
+                    | MirPlaceProjection::ArrayElement { .. }
+            )
         );
         if matches!(
             complete.projections.last(),
             Some(MirPlaceProjection::Base(_))
-        ) || (forwarded_root && !ends_at_field)
+        ) || (forwarded_root && !ends_at_complete_object_boundary)
         {
             self.block_error(
                 site.function.callable(),

@@ -1,0 +1,127 @@
+from std::str import Str;
+from std::test import assert_eq_i64, assert_eq_str, assert_eq_u64, assert_false, assert_true;
+from std::vec import Vec;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Item implements Readable {
+    static destroyed: i64;
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+
+    destroy {
+        Item.destroyed = Item.destroyed + 1;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+fn exercise_primitives() -> unit {
+    var values: Vec<i64> = Vec<i64>();
+    assert_true(values.is_empty());
+    assert_eq_u64(values.capacity(), 4u);
+
+    values.push(1);
+    values.push(2);
+    values.push(3);
+    values.push(4);
+    values.push(5);
+    assert_eq_u64(values.len(), 5u);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(values.get(-1), 5);
+
+    values.set(-2, 40);
+    assert_eq_i64(values.get(3), 40);
+    assert_eq_i64(values.last(), 5);
+    assert_eq_i64(values.pop(), 5);
+
+    var copy: Vec<i64> = values;
+    var assigned: Vec<i64> = Vec<i64>::with_capacity(0u);
+    assigned = values;
+    values.set(0, 10);
+    copy.push(6);
+    assert_eq_i64(copy.get(0), 1);
+    assert_eq_i64(assigned.get(0), 1);
+    assert_eq_u64(copy.len(), 5u);
+
+    values.clear();
+    assert_true(values.is_empty());
+    assert_eq_u64(values.capacity(), 8u);
+}
+
+fn exercise_strings_and_optionals() -> unit {
+    var strings: Vec<Str> = Vec<Str>();
+    strings.push("first");
+    strings.push("second");
+    assert_eq_str(strings.get(0), "first");
+    assert_eq_str(strings.last(), "second");
+
+    var optional_strings: Vec<Str?> = Vec<Str?>();
+    optional_strings.push(none);
+    optional_strings.push("present");
+    assert_true(optional_strings.get(0) is none);
+    assert_true(optional_strings.get(1) is some);
+    assert_eq_str(optional_strings.get(1)!, "present");
+}
+
+fn exercise_inline_values_and_nested_arrays() -> unit {
+    var before_clear: i64 = 0;
+    {
+        var values: Vec<Item> = Vec<Item>();
+        values.push(Item(7));
+        values.push(Item(8));
+        before_clear = Item.destroyed;
+        values.clear();
+        assert_true(Item.destroyed > before_clear);
+    }
+
+    var rows: Vec<i64[]> = Vec<i64[]>();
+    rows.push(i64[]{1, 2});
+    var row: i64[] = rows.get(0);
+    row[0] = 9;
+    assert_eq_i64(rows.get(0)[0], 1);
+}
+
+fn exercise_shared_values() -> unit {
+    var before_prompt_release: i64 = Item.destroyed;
+    var prompt_release: Vec<shared Item> = Vec<shared Item>();
+    prompt_release.push(new Item(9));
+    prompt_release.clear();
+    assert_eq_i64(Item.destroyed, before_prompt_release + 1);
+
+    var strings: Vec<shared Str> = Vec<shared Str>();
+    var text: shared Str = new Str(copy "owned");
+    strings.push(text);
+    assert_eq_str(*strings.get(0), "owned");
+
+    var owner: shared Item = new Item(42);
+    var readable: shared Readable = owner;
+    var interfaces: Vec<shared Readable> = Vec<shared Readable>();
+    interfaces.push(readable);
+    assert_eq_i64(interfaces.get(0)->read(), 42);
+    interfaces.clear();
+    assert_eq_i64(owner->read(), 42);
+}
+
+fn main() -> i64 {
+    exercise_primitives();
+    exercise_strings_and_optionals();
+    exercise_inline_values_and_nested_arrays();
+    exercise_shared_values();
+    return 0;
+}

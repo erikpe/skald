@@ -1,0 +1,15 @@
+public class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+}

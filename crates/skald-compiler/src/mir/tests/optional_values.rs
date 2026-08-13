@@ -26,6 +26,44 @@ fn lowers_primitive_optional_state_and_checked_access_explicitly() {
 }
 
 #[test]
+fn optional_class_array_elements_clear_and_expose_complete_payload_views() {
+    let program = lower_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref source: Item) { self.value = source.value; }\n",
+        "  assign(ref source: Item) { self.value = source.value; }\n",
+        "}\n",
+        "class Bag<T> {\n",
+        "  values: T?[];\n",
+        "  init() { self.values = T?[](1u); }\n",
+        "  mut fn clear() -> unit { self.values[0] = none; }\n",
+        "  fn get() -> T { return self.values[0]!; }\n",
+        "}\n",
+        "fn main() -> i64 { var bag: Bag<Item> = Bag<Item>(); return 0; }\n",
+    ));
+
+    verify_mir(&program).expect("optional class array operations must form valid closed MIR");
+    let absent_assignments = program
+        .executable_definitions()
+        .flat_map(|definition| &definition.body().blocks)
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::ClassOptionalAssign(assignment)
+                if matches!(assignment.source, MirClassOptionalSource::Absent) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(!absent_assignments.is_empty());
+    assert!(absent_assignments.iter().all(|assignment| {
+        assignment.copy_constructor.is_none() && assignment.copy_assignment.is_none()
+    }));
+}
+
+#[test]
 fn verifier_rejects_malformed_optional_identity_lifecycle_and_boundary_metadata() {
     let error_after = |mutate: fn(&mut MirOptionalType)| {
         let mut program = lower_text(OPTIONAL_SOURCE);

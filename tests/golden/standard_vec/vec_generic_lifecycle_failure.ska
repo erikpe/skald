@@ -1,0 +1,15 @@
+from std::vec import Vec;
+
+class Node {
+    next: Node;
+
+    init(ref next: Node) {
+        self.next = next;
+    }
+}
+
+fn accept(ref values: Vec<Node>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

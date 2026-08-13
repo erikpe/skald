@@ -1,0 +1,22 @@
+from std::vec import Vec;
+
+fn main() -> i64 {
+    var values: Vec<i64> = Vec<i64>::with_capacity(0u);
+    var value: i64 = 0;
+    while (value < 4096) {
+        values.push(value);
+        value = value + 1;
+    }
+
+    var copy: Vec<i64> = values;
+    var sum: i64 = 0;
+    while (!values.is_empty()) {
+        sum = sum + values.pop();
+    }
+    copy.clear();
+
+    if (sum != 8386560 || values.capacity() != 4096u || !copy.is_empty()) {
+        return 1;
+    }
+    return 0;
+}

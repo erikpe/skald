@@ -1,5 +1,118 @@
 from std::error import panic;
 
+public class Vec<T> {
+    private _length: u64;
+    private _storage: T?[];
+
+    init() {
+        self._length = 0u;
+        self._storage = T?[](Vec<T>::_default_capacity());
+    }
+
+    private init(capacity: u64) {
+        self._length = 0u;
+        self._storage = T?[](capacity);
+    }
+
+    static fn with_capacity(capacity: u64) -> Vec<T> {
+        return Vec<T>(capacity);
+    }
+
+    fn len() -> u64 {
+        return self._length;
+    }
+
+    fn capacity() -> u64 {
+        return self._storage.len();
+    }
+
+    fn is_empty() -> bool {
+        return self._length == 0u;
+    }
+
+    mut fn clear() -> unit {
+        var remaining: u64 = self._length;
+        while (remaining > 0u) {
+            remaining = remaining - 1u;
+            self._storage[(i64) remaining] = none;
+        }
+        self._length = 0u;
+    }
+
+    mut fn push(value: T) -> unit {
+        self._ensure_capacity(self._length + 1u);
+        self._storage[(i64) self._length] = value;
+        self._length = self._length + 1u;
+    }
+
+    mut fn pop() -> T {
+        if (self._length == 0u) {
+            panic("Vec.pop: empty vector");
+        }
+
+        var index: i64 = (i64) self._length - 1;
+        var value: T = self._storage[index]!;
+        self._storage[index] = none;
+        self._length = self._length - 1u;
+        return value;
+    }
+
+    fn last() -> T {
+        if (self._length == 0u) {
+            panic("Vec.last: empty vector");
+        }
+        var value: T = self._storage[(i64) self._length - 1]!;
+        return value;
+    }
+
+    fn get(index: i64) -> T {
+        var normalized_index: i64 = self._normalize_index(index);
+        if (normalized_index < 0 || (u64) normalized_index >= self._length) {
+            panic("Vec.get: index out of bounds");
+        }
+        var value: T = self._storage[normalized_index]!;
+        return value;
+    }
+
+    mut fn set(index: i64, value: T) -> unit {
+        var normalized_index: i64 = self._normalize_index(index);
+        if (normalized_index < 0 || (u64) normalized_index >= self._length) {
+            panic("Vec.set: index out of bounds");
+        }
+        self._storage[normalized_index] = value;
+    }
+
+    private fn _normalize_index(index: i64) -> i64 {
+        if (index < 0) {
+            return (i64) self._length + index;
+        }
+        return index;
+    }
+
+    private mut fn _ensure_capacity(minimum: u64) -> unit {
+        var current: u64 = self._storage.len();
+        if (current >= minimum) {
+            return;
+        }
+
+        var next: u64 = current;
+        if (next < Vec<T>::_default_capacity()) {
+            next = Vec<T>::_default_capacity();
+        }
+        while (next < minimum) {
+            next = next * 2u;
+        }
+
+        var storage: T?[] = T?[](next);
+        storage[:(i64) self._length] = self._storage[:(i64) self._length];
+        self._storage = storage;
+    }
+
+    private static fn _default_capacity() -> u64 {
+        return 4u;
+    }
+}
+
 public class VecObj {
     private _length: u64;
     private _storage: (shared? Obj)[];

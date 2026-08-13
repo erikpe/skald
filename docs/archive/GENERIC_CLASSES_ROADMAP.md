@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G12 is next.
+Status: complete.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -10,7 +10,7 @@ interface bounds, specialize each unique application into an ordinary exact
 class, and execute the result through existing typed HIR, verified MIR, and
 x86-64 lowering without a runtime generic ABI.
 
-The archived [design record](../archive/GENERIC_CLASSES_DESIGN_PROPOSAL.md)
+The archived [design record](GENERIC_CLASSES_DESIGN_PROPOSAL.md)
 preserves the confirmed decisions. This roadmap owns delivery order and must
 not reopen those decisions while implementing them.
 
@@ -66,7 +66,7 @@ not reopen those decisions while implementing them.
 - [x] G9 — Integrate per-specialization statics and whole-program effects
 - [x] G10 — Harden diagnostics, dumps, modules, and determinism
 - [x] G11 — Execute generic classes through MIR and x86-64
-- [ ] G12 — Deliver generic `Vec<T>` and close the feature
+- [x] G12 — Deliver generic `Vec<T>` and close the feature
 
 ## PR-sized implementation sequence
 
@@ -567,34 +567,54 @@ and cleanup, and no new runtime generic or C ABI surface.
 library abstraction, finish documentation, and validate the repository from a
 clean artifact-free state.
 
-- [ ] Implement an ordinary standard-library `Vec<T>` whose backing is `T?[]`
+- [x] Implement an ordinary standard-library `Vec<T>` whose backing is `T?[]`
   and whose API establishes the intended capacity, growth, indexing, push,
   replacement, last, pop, clear, copy-independence, and prompt destruction
   semantics for every admitted `T`.
-- [ ] Let the implementation's actual operations infer the required copy and
+- [x] Let the implementation's actual operations infer the required copy and
   assignment capabilities; do not add source-visible lifecycle bounds or
   compiler-known vector methods.
-- [ ] Exercise `Vec<Str>`, `Vec<Str?>`, `Vec<shared Str>`,
+- [x] Exercise `Vec<Str>`, `Vec<Str?>`, `Vec<shared Str>`,
   `Vec<shared Interface>`, primitives, exact inline classes, nested arrays,
   and deliberately unavailable lifecycle cases.
-- [ ] Compare the generic vector's shared-object behavior with the implemented
+- [x] Compare the generic vector's shared-object behavior with the implemented
   `VecObj` contract and decide documentation/library migration without
   silently removing or renaming the existing public class.
-- [ ] Add complete native, compile-failure, panic, lifecycle, module,
+- [x] Add complete native, compile-failure, panic, lifecycle, module,
   determinism, and representative performance-measurement coverage without
   making timing a correctness gate.
-- [ ] Promote generic classes to **Implemented contract** in the status matrix
+- [x] Promote generic classes to **Implemented contract** in the status matrix
   and remove stale "not implemented" wording from living language, compiler,
   grammar, architecture, and testing documents.
-- [ ] Remove roadmap task codes or rollout language from living code, tests,
+- [x] Remove roadmap task codes or rollout language from living code, tests,
   dumps, diagnostics, and documentation while preserving them in this roadmap
   and the archived design record.
-- [ ] Audit all touched modules for facade clarity, narrow visibility,
+- [x] Audit all touched modules for facade clarity, narrow visibility,
   cohesive test placement, and remaining high-priority maintainability issues;
   record lower-priority follow-ups in an indexed discoveries document rather
   than expanding closeout.
-- [ ] Run the complete validation gates from an artifact-free snapshot and
+- [x] Run the complete validation gates from an artifact-free snapshot and
   archive this roadmap only after every task and exit criterion is complete.
+
+**Result:** The installed standard library now provides ordinary `Vec<T>`
+with private `T?[]` occupancy storage, exact substituted element semantics,
+geometric growth, signed logical indexing, structural copy independence, and
+prompt removal cleanup. Its source operations infer storage, copy, assignment,
+and destruction requirements without vector-specific compiler knowledge.
+`VecObj` remains public and unchanged as the heterogeneous `shared Obj`
+compatibility profile.
+
+**Completion summary:** Added native and failure goldens for primitive, string,
+nested-optional, exact-class, nested-array, shared exact/interface, lifecycle,
+panic, and cross-module behavior; a reproducible non-gating performance
+measurement; and focused type-check/MIR regressions. The vector acceptance
+surface exposed and fixed generic-agnostic optional-class array clearing and
+complete guarded-payload provenance defects in their owning MIR layers. Living
+language, compiler, standard-library, debugging, and testing documents now
+describe the implemented contract. The resolved discoveries record contains
+no pending work. From an artifact-free snapshot, `make check`, `make
+msrv-check`, `make robustness-long`, full golden determinism, documentation,
+formatting, and diff gates pass; runtime ABI version 9 remains unchanged.
 
 **Tests:** Focused `generic_classes/**` and `standard_vec/**` goldens during
 development; full independent-process determinism; `make check`,

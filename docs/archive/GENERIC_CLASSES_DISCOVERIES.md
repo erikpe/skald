@@ -1,6 +1,6 @@
 # Generic Classes Discoveries
 
-Status: resolved by G10.
+Status: resolved; archived with the completed generic-classes roadmap.
 
 These findings were recorded while implementing the generic classes roadmap.
 They do not change the frozen language design and remain outside the active

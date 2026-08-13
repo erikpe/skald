@@ -57,8 +57,8 @@ fn generated_definitions_close_lifecycle_methods_locals_and_static_members() {
         assert!(dump.contains(fragment), "missing `{fragment}` in:\n{dump}");
     }
 
-    // G6 publishes bodies early enough that the ordinary checker sees every
-    // generated member, including members not called by the source program.
+    // Specialization publishes complete bodies before the ordinary checker,
+    // including generated members not called by the source program.
     let checked = type_check(&output.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
 }

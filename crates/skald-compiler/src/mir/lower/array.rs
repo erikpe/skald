@@ -77,6 +77,7 @@ impl BodyLowerer<'_> {
             }
             crate::hir::HirArrayElementValue::ClassOptional(value) => {
                 let source = self.lower_class_optional_source(&value.source);
+                let source_is_absent = matches!(source, MirClassOptionalSource::Absent);
                 let MirArrayAssignElement::OptionalClass {
                     class,
                     copy_constructor,
@@ -91,8 +92,8 @@ impl BodyLowerer<'_> {
                         destination,
                         source,
                         class,
-                        copy_constructor: Some(copy_constructor),
-                        copy_assignment: Some(copy_assignment),
+                        copy_constructor: (!source_is_absent).then_some(copy_constructor),
+                        copy_assignment: (!source_is_absent).then_some(copy_assignment),
                         span: assignment.span,
                     },
                 ));

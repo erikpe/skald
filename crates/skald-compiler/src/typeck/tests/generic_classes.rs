@@ -509,3 +509,40 @@ fn closed_members_require_copy_operations_only_where_they_are_used() {
         .iter()
         .any(|diagnostic| diagnostic.message.contains("copy assignment")));
 }
+
+#[test]
+fn vector_operations_infer_unavailable_element_copy_capabilities() {
+    let resolve_vector = || {
+        resolve_generic_source(
+            "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+             class Vec<T> {\n\
+               storage: T?[];\n\
+               init() { self.storage = T?[](1u); }\n\
+               mut fn push(value: T) -> unit { self.storage[0] = value; }\n\
+               fn get() -> T { return self.storage[0]!; }\n\
+             }\n\
+             fn use(ref value: Vec<Item>) -> unit {}\n\
+             fn main() -> i64 { return 0; }\n",
+        )
+    };
+
+    let mut without_construction = resolve_vector();
+    without_construction.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    let construction = crate::typeck::type_check(&without_construction);
+    assert!(construction.hir.is_none());
+    assert!(construction.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == COPY_OPERATION_UNAVAILABLE
+            && diagnostic.message.contains("copy construction")
+    }));
+
+    let mut without_assignment = resolve_vector();
+    without_assignment.classes.entries_mut_for_test()[0].copy_assignment =
+        ResolvedCopyOperation::Unavailable;
+    let assignment = crate::typeck::type_check(&without_assignment);
+    assert!(assignment.hir.is_none());
+    assert!(assignment.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == crate::typeck::ARRAY_CAPABILITY_UNAVAILABLE
+            && diagnostic.message.contains("not assignable")
+    }));
+}

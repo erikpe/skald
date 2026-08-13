@@ -161,10 +161,10 @@ makes a result source-observable.
   snapshot, including the host invocation name at index zero, decoded from
   Linux `/proc/self/cmdline` by ordinary standard-library code. It does not
   change the parameterless entry function or runtime ABI.
-- [Object vectors](VECTORS.md) defines the implemented `std::vec::VecObj`
-  collection of non-null shared object owners, including capacity, growth,
-  logical indexing, structural copy independence, prompt removal release, and
-  its deliberate non-generic boundary.
+- [Vectors](VECTORS.md) defines the implemented generic `std::vec::Vec<T>` and
+  compatible `VecObj` contracts, including admitted element capabilities,
+  capacity, growth, logical indexing, structural copy independence, and prompt
+  removal cleanup.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
   lifetime, failure, and typed explicit element-list contract. Primitive,
@@ -185,10 +185,10 @@ makes a result source-observable.
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and
   object places, plus assignment, temporaries, and deterministic lifetime.
-- [Generic classes](GENERIC_CLASSES.md) freezes explicit closed generic class
+- [Generic classes](GENERIC_CLASSES.md) defines implemented explicit closed generic class
   applications, structural substitution, inferred contextual requirements,
-  nominal interface bounds, invariance, and complete-class validation. The
-  feature is not yet implemented.
+  nominal interface bounds, invariance, complete-class validation, and native
+  execution.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the

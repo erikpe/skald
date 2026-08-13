@@ -1,6 +1,6 @@
 # Generic-Class Specialization
 
-Status: frozen compiler design; template resolution, specialization,
+Status: implemented compiler contract; template resolution, specialization,
 closed-class lifecycle, ownership, nominal bounds, inheritance, conformance,
 dispatch, per-specialization static planning, verified MIR, and x86-64 native
 execution implemented. This document defines the
@@ -18,8 +18,9 @@ expressions, and callable bodies under deterministic ordinary identities. The
 ordinary body resolver selects closed constructions, calls, casts, places,
 and static members without a duplicate generic resolver. A closed-type
 capability facade composes the existing validators and lifecycle planners;
-valid closed applications enter the ordinary public MIR/backend pipeline.
-Standard-library feature delivery remains staged.
+valid closed applications enter the ordinary public MIR/backend pipeline. The
+standard-library `Vec<T>` exercises this complete contract through ordinary
+source specialization.
 
 ## Architectural outcome
 

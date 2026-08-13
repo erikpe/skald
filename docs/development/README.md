@@ -69,6 +69,11 @@ the default enabled trace policy with complete compile-time omission. It is a
 measurement procedure, not a timing gate, and is intentionally excluded from
 `make check`.
 
+`make generic-vec-benchmark` similarly measures a representative generic
+vector growth, structural-copy, pop, and clear workload. It reports compile,
+native-runtime, and artifact-size observations without imposing a timing
+threshold or joining `make check`.
+
 ## Minimum supported Rust version
 
 `Cargo.toml` is authoritative for `workspace.package.rust-version`, currently

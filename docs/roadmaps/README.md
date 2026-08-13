@@ -6,26 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G12 is next.**
-  Implements explicit closed generic class applications through deterministic
-  semantic specialization, inferred contextual requirements, nominal
-  interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
-  frozen syntax, template identities, structural template terms, nominal
-  bounds, delayed dependent selections, contextual mechanical requirement
-  inference/evaluation, and deterministic closed-specialization identity,
-  caching, provenance, recursion handling, and complete ordinary closed class
-  declarations and bodies, lifecycle and ownership composition, nominal bound
-  enforcement, closed inheritance, per-application conformance, and ordinary
-  virtual/interface dispatch, independent per-specialization statics,
-  whole-program effects, dependency evidence, lifecycle order, readable MIR,
-  and distinct backend storage are implemented. Diagnostics now collate failed
-  keys with application/template/lifecycle evidence; closed names are
-  canonical across modules; failed publication is atomic; and generic graph,
-  phase-dump, golden, and robustness determinism is frozen. Closed classes now
-  execute through verified ordinary MIR and x86-64 layout, ABI, symbols,
-  dispatch, statics, allocation, finalization, and cleanup without a runtime
-  generic protocol. The next boundary delivers generic `Vec<T>` and closes the
-  feature.
+No implementation roadmap is currently in progress.
 
 ## Planned
 
@@ -41,12 +22,6 @@ preserved in the [archive](../archive/README.md).
 ## Pending discoveries
 
 No pending discovery is currently recorded.
-
-## Resolved discoveries
-
-- [Generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md) — G10 resolved
-  atomic failed-publication cleanup and canonical module-qualified closed
-  names; the record remains beside the active roadmap until roadmap closeout.
 
 ## Implementation baseline
 

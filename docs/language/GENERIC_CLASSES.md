@@ -1,10 +1,7 @@
 # Generic Classes
 
-Status: frozen design; syntax, specialization, closed-class lifecycle and
-ownership, nominal bounds, inheritance, conformance, dispatch, and
-per-specialization static lifecycle integration implemented; native execution
-remains staged. This document defines the
-intended initial source-visible generic-class contract. The
+Status: implemented initial contract. This document defines the source-visible
+generic-class contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
 compiler. Generic declarations now receive stable template and parameter
@@ -18,8 +15,8 @@ delegates to the ordinary optional, array, shared-owner, alias, stored-value,
 and class-lifecycle rules. Generated bodies close local types, constructions,
 allocations, calls, casts, tests, and static selections through the ordinary
 resolver, and every member is validated whether called or not. A valid closed
-application remains explicitly gated while later roadmap stages complete
-general MIR/backend execution and feature delivery.
+application continues through verified ordinary HIR, MIR, and x86-64 lowering
+without an erased representation or runtime generic protocol.
 
 Generic classes allow one class declaration to be specialized with explicit
 closed type arguments. The initial feature is designed for reusable owning
@@ -312,7 +309,7 @@ Vec<Str>()
 Vec<Str>(copy source)
 new Vec<Str>()
 new Vec<Str>(copy source)
-Vec<Str>.factory(arguments)
+Vec<Str>::factory(arguments)
 ```
 
 Initializer overload resolution, access, allocation, publication, adoption,
@@ -322,7 +319,7 @@ or `new T()`, is not supported because the initial constraint model has no
 constructor requirement.
 
 Each closed application has independent class-owned static state. For example,
-`Cache<Str>.count` and `Cache<i64>.count` are distinct static fields with
+`Cache<Str>::count` and `Cache<i64>::count` are distinct static fields with
 independent initialization dependencies, activation, replacement, and
 shutdown.
 
@@ -388,7 +385,7 @@ cascades.
 Closed identities, specialization order, diagnostics, static activation, and
 generated artifacts are deterministic and do not depend on hash iteration.
 
-## Initial exclusions
+## Exclusions
 
 The frozen initial profile excludes:
 
@@ -408,8 +405,8 @@ The frozen initial profile excludes:
 - lazy member validation;
 - erased code, runtime type arguments, dictionaries, and reflection;
 - separate-compilation or stable package ABI for specializations; and
-- collection protocols, indexing sugar, or automatic replacement of the
-  implemented `std::vec::VecObj` API.
+- collection protocols, indexing sugar, or implicit conversion between the
+  implemented `std::vec::Vec<T>` and `VecObj` APIs.
 
 The [generic-class compiler contract](../compiler/GENERIC_CLASSES.md) defines
 specialization identities, requirement representation, phase ownership,

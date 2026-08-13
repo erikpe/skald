@@ -721,10 +721,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     declaration.name
                 ),
             )
-            .with_primary_label(
-                span,
-                "the initial generic profile has no constructor bounds",
-            )
+            .with_primary_label(span, "generic classes do not support constructor bounds")
             .with_secondary_label(declaration.name_span, "parameter declared here"),
         );
     }

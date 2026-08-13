@@ -458,10 +458,10 @@ This profile excludes:
   results;
 - local/general reference values and stored cast views;
 - external polymorphic/object ABI and cross-module metadata coalescing;
-- closures, generic interfaces, generic functions, and reflection. The frozen
-  [generic-class design](GENERIC_CLASSES.md) later specializes closed classes
-  before applying this profile; it is not yet implemented. Arrays and static
-  fields compose through their separate implemented contracts;
+- closures, generic interfaces, generic functions, and reflection. Implemented
+  [generic classes](GENERIC_CLASSES.md) specialize closed classes before
+  applying this profile. Arrays and static fields compose through their
+  separate implemented contracts;
 - aliases to optional shared owners. Primitive, exact-class, and optional
   shared-owner parameters/results, plus aliases to supported inline optional
   containers, are implemented as exact virtual and interface signature

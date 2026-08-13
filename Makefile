@@ -6,7 +6,7 @@ GOLDEN_COMPILER := target/debug/skac
 	compiler-test cli-test docs-test golden-runner-test golden-tools \
 	golden-expectations-test golden-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test \
-	msrv-check robustness-long check check-long
+	generic-vec-benchmark msrv-check robustness-long check check-long
 
 help:
 	@echo "Skald repository commands:"
@@ -37,6 +37,7 @@ help:
 	@echo "Extended validation:"
 	@echo "  make golden-determinism-test Run all goldens in full determinism mode"
 	@echo "  make runtime-trace-benchmark Compare enabled and omitted panic trace overhead"
+	@echo "  make generic-vec-benchmark Measure representative generic Vec growth"
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
 	@echo ""
@@ -104,6 +105,10 @@ golden-determinism-test: golden-tools
 runtime-trace-benchmark: runtime
 	cargo build --locked -p skac
 	python3 scripts/measure_panic_runtime_trace.py --compiler target/debug/skac
+
+generic-vec-benchmark: runtime
+	cargo build --locked -p skac
+	python3 scripts/measure_generic_vec.py --compiler target/debug/skac
 
 runtime-test: runtime
 	$(MAKE) -C runtime test

@@ -78,6 +78,7 @@ Archived plans:
 - [Explicit array element-list construction](ARRAY_ELEMENT_LIST_CONSTRUCTION_ROADMAP.md)
 - [Compositional optional types](COMPOSITIONAL_OPTIONAL_TYPES_ROADMAP.md)
 - [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md)
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -139,6 +140,10 @@ Resolved shared-optional-box design inputs:
 Resolved generic-class design inputs:
 
 - [generic classes design record](GENERIC_CLASSES_DESIGN_PROPOSAL.md)
+
+Resolved generic-class follow-ups:
+
+- [generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md)
 
 Resolved shared-optional-box follow-ups:
 

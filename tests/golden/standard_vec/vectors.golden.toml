@@ -1,6 +1,62 @@
 schema = 1
 
 [[test]]
+name = "generic_values"
+mode = "run"
+source = "vec_generic.ska"
+
+[[test.run]]
+name = "complete_element_and_lifecycle_profile"
+
+[[test]]
+name = "generic_modules"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/generic_modules/modules",
+]
+
+[[test.run]]
+name = "standard_template_with_application_type_from_another_module"
+expect = { exit = 42 }
+
+[[test]]
+name = "generic_get_bounds"
+mode = "run"
+source = "vec_generic_get_bounds.ska"
+
+[[test.run]]
+name = "logical_tail"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.get: index out of bounds\n" } }
+
+[[test]]
+name = "generic_set_bounds"
+mode = "run"
+source = "vec_generic_set_bounds.ska"
+
+[[test.run]]
+name = "empty"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.set: index out of bounds\n" } }
+
+[[test]]
+name = "generic_pop_empty"
+mode = "run"
+source = "vec_generic_pop_empty.ska"
+
+[[test.run]]
+name = "empty"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.pop: empty vector\n" } }
+
+[[test]]
+name = "generic_last_empty"
+mode = "run"
+source = "vec_generic_last_empty.ska"
+
+[[test.run]]
+name = "empty"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.last: empty vector\n" } }
+
+[[test]]
 name = "object_values"
 mode = "run"
 source = "vec_obj.ska"

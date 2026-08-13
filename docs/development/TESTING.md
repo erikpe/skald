@@ -685,9 +685,7 @@ When robustness testing finds a defect, retain the smallest focused regression
 at the owning layer. Add corpus data only when the bytes or source are clearer
 and more reusable than constructing the case in Rust.
 
-## Optional-value coverage
-
-### Closed generic lifecycle coverage
+## Generic-class and vector coverage
 
 Focused generic tests exercise the same public closed pipeline used for
 ordinary classes. Resolution tests own template terms,
@@ -715,6 +713,19 @@ it compares graph, diagnostics, resolved IR, HIR, planned MIR, final MIR, and
 static lifecycle plans without depending on assembly. Bounded frontend
 robustness mutates angle brackets, commas, `where`, constraints, and nested
 applications and requires deterministic recovery on every mutation.
+
+`tests/golden/standard_vec/` owns `std::vec::Vec<T>` and retained `VecObj`
+behavior. The generic matrix covers primitives, `Str`, nested optionals, exact
+inline lifecycle, nested arrays, shared strings, shared interface owners,
+copy/assignment independence, prompt inline and last-owner cleanup, capacity
+growth, signed logical indexing, all four public panic boundaries, a template
+and argument split across modules, bare-interface rejection, and unavailable
+element lifecycle. Full golden determinism repeats every successful compile
+and native run and every compile failure. The non-gating
+`make generic-vec-benchmark` procedure measures representative growth, copy,
+pop, and clear behavior without accepting or rejecting host timing.
+
+## Optional-value coverage
 
 The implemented
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)

@@ -33,3 +33,16 @@ make runtime-trace-benchmark
 Call the script directly to change repeat counts, select workloads, or emit
 JSON after building `skac` and the runtime. Generated measurement artifacts
 remain under the ignored `build/measurements/panic-runtime-trace/` directory.
+
+`measure_generic_vec.py` compiles the representative generic-vector growth,
+copy, pop, and clear workload under `tests/benchmarks/generic_vec/`, then
+reports assembly/executable size, compile time, and median native run time:
+
+```sh
+make generic-vec-benchmark
+python3 scripts/measure_generic_vec.py --compiler target/debug/skac --json
+```
+
+It is a reproducible measurement procedure, not a timing correctness gate.
+Artifacts remain under the ignored `build/measurements/generic-vec/`
+directory.

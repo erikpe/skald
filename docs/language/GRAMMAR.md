@@ -319,8 +319,7 @@ so `Outer<Inner<Str>>` is a named type while `left >> right` remains an
 expression shift. Syntax preserves each angle bracket, comma, colon, grouping,
 and `where` span independently.
 
-This grammar currently describes syntax plus the template-resolution phase
-boundary. Resolution assigns generic declarations stable non-executable
+Resolution assigns generic declarations stable non-executable
 template and ordered parameter identities, includes templates in ordinary
 module lookup and visibility, and diagnoses raw names, wrong declaration
 kinds, and incorrect arity. Resolution also preserves structural
@@ -328,9 +327,8 @@ parameter-bearing types, fixes definition-site names, resolves nominal
 interface bounds, classifies dependent body selections, infers contextual
 requirements, and specializes requested closed declarations and bodies into
 ordinary class and callable identities without introducing executable
-placeholder types. Lifecycle and lower-phase execution remain staged by the
-[generic-classes roadmap](../roadmaps/GENERIC_CLASSES_ROADMAP.md), so an
-otherwise valid closed application is still explicitly gated.
+placeholder types. Accepted closed applications use the ordinary lifecycle,
+HIR, MIR, verification, and backend pipeline.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,

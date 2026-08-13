@@ -1,0 +1,10 @@
+from model import Item;
+from std::vec import Vec;
+
+fn main() -> i64 {
+    var values: Vec<Item> = Vec<Item>();
+    values.push(Item(40));
+    values.push(Item(42));
+    var result: Item = values.get(-1);
+    return result.value;
+}

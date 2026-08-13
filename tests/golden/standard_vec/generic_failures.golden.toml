@@ -1,0 +1,17 @@
+schema = 2
+
+[[test]]
+name = "bare_interface_element"
+mode = "compile-fail"
+source = "vec_generic_interface_failure.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES048]: type arguments for `std::vec::Vec<vec_generic_interface_failure::Readable>` do not satisfy its requirements"
+
+[[test]]
+name = "unavailable_element_lifecycle"
+mode = "compile-fail"
+source = "vec_generic_lifecycle_failure.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES048]: type arguments for `std::vec::Vec<vec_generic_lifecycle_failure::Node>` do not satisfy its requirements"
