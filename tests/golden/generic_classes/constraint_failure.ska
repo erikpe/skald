@@ -1,0 +1,5 @@
+interface Comparable { fn compare(ref other: Obj) -> i64; }
+class Item {}
+class Sorted<T> where T: Comparable { value: T; }
+fn accept(ref value: Sorted<Item>) -> unit {}
+fn main() -> i64 { return 0; }

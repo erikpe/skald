@@ -4,13 +4,14 @@ use std::fmt::Write;
 
 use crate::{
     dump_format::{write_indentation, write_quoted, write_span},
+    identity::{ClassId, ClassTemplateId, InterfaceId, ModuleId},
     source::Span,
 };
 
 use super::ir::*;
 
 pub fn dump_resolved(program: &ResolvedProgram) -> String {
-    let mut dumper = ResolvedDumper::new(&program.optional_types, &program.optional_box_types);
+    let mut dumper = ResolvedDumper::new(program);
     dumper.line("ResolvedProgram", program.span);
     dumper.indented(|dumper| {
         dumper.raw_line(&format!("SelectedModule {}", program.modules.selected()));
@@ -179,7 +180,9 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                         "Template {} module {} ",
                         template.id, template.module
                     );
-                    write_quoted(&mut dumper.output, &template.name);
+                    let name =
+                        dumper.qualified_declaration_name(template.module, &template.name);
+                    write_quoted(&mut dumper.output, &name);
                     dumper.output.push_str(" parameters");
                     for parameter in parameters.iter() {
                         let _ = write!(dumper.output, " {}=", parameter.id);
@@ -194,7 +197,11 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
             dumper.heading("TemplateSemantics");
             dumper.indented(|dumper| {
                 for semantics in program.template_semantics.iter() {
-                    dumper.raw_line(&format!("Template {}", semantics.template));
+                    dumper.raw_line(&format!(
+                        "Template {} {}",
+                        semantics.template,
+                        dumper.template_name(semantics.template)
+                    ));
                     dumper.indented(|dumper| {
                         if let Some(base) = &semantics.direct_base {
                             dumper.line(
@@ -622,23 +629,18 @@ fn render_template_member(member: Option<&str>) -> String {
     member.map_or_else(String::new, |member| format!(" member {member}"))
 }
 
-struct ResolvedDumper<'types> {
+struct ResolvedDumper<'program> {
     output: String,
     indentation: usize,
-    optional_types: &'types ResolvedOptionalTypeTable,
-    optional_box_types: &'types ResolvedOptionalBoxTypeTable,
+    program: &'program ResolvedProgram,
 }
 
-impl<'types> ResolvedDumper<'types> {
-    fn new(
-        optional_types: &'types ResolvedOptionalTypeTable,
-        optional_box_types: &'types ResolvedOptionalBoxTypeTable,
-    ) -> Self {
+impl<'program> ResolvedDumper<'program> {
+    fn new(program: &'program ResolvedProgram) -> Self {
         Self {
             output: String::new(),
             indentation: 0,
-            optional_types,
-            optional_box_types,
+            program,
         }
     }
 
@@ -1749,6 +1751,7 @@ impl<'types> ResolvedDumper<'types> {
             }
             ResolvedTypeKind::Optional(optional) => {
                 let payload = self
+                    .program
                     .optional_types
                     .get(optional)
                     .expect("resolved optional identities must name table entries");
@@ -1762,14 +1765,60 @@ impl<'types> ResolvedDumper<'types> {
         }
     }
 
+    fn render_semantic_type_kind(
+        &self,
+        kind: ResolvedTypeKind,
+        visiting: &mut Vec<ClassId>,
+    ) -> String {
+        match kind {
+            ResolvedTypeKind::I64 => "i64".to_owned(),
+            ResolvedTypeKind::U64 => "u64".to_owned(),
+            ResolvedTypeKind::U8 => "u8".to_owned(),
+            ResolvedTypeKind::F64 => "f64".to_owned(),
+            ResolvedTypeKind::Bool => "bool".to_owned(),
+            ResolvedTypeKind::Unit => "unit".to_owned(),
+            ResolvedTypeKind::Obj => "Obj".to_owned(),
+            ResolvedTypeKind::Class(class) => self.class_name(class, visiting),
+            ResolvedTypeKind::Interface(interface) => self.interface_name(interface),
+            ResolvedTypeKind::Array(array) => self.program.array_types.get(array).map_or_else(
+                || array.to_string(),
+                |array| {
+                    format!(
+                        "{}[]",
+                        self.render_semantic_type_kind(array.element.kind, visiting)
+                    )
+                },
+            ),
+            ResolvedTypeKind::Shared(target) => {
+                format!(
+                    "shared {}",
+                    self.render_shared_target_inner(target, visiting)
+                )
+            }
+            ResolvedTypeKind::Optional(optional) => {
+                let payload = self
+                    .program
+                    .optional_types
+                    .get(optional)
+                    .expect("resolved optional identities must name table entries");
+                let name = self.render_semantic_type_kind(payload.payload.kind, visiting);
+                if matches!(payload.payload.kind, ResolvedTypeKind::Shared(_)) {
+                    format!("({name})?")
+                } else {
+                    format!("{name}?")
+                }
+            }
+        }
+    }
+
     fn render_specialization_key(&self, key: &GenericClassInstanceKey) -> String {
         let arguments = key
             .arguments
             .iter()
-            .map(|argument| self.render_type_kind(*argument))
+            .map(|argument| self.render_semantic_type_kind(*argument, &mut Vec::new()))
             .collect::<Vec<_>>()
             .join(", ");
-        format!("{}<{arguments}>", key.template)
+        format!("{}<{arguments}>", self.template_name(key.template))
     }
 
     fn render_shared_target(&self, target: ResolvedSharedTarget) -> String {
@@ -1784,6 +1833,7 @@ impl<'types> ResolvedDumper<'types> {
             ResolvedSharedTargetCategory::Array(array) => format!("array {array}"),
             ResolvedSharedTargetCategory::OptionalBox(target) => {
                 let metadata = self
+                    .program
                     .optional_box_types
                     .get(target)
                     .expect("resolved optional-box identities must name table entries");
@@ -1796,6 +1846,105 @@ impl<'types> ResolvedDumper<'types> {
                 )
             }
         }
+    }
+
+    fn render_shared_target_inner(
+        &self,
+        target: ResolvedSharedTarget,
+        visiting: &mut Vec<ClassId>,
+    ) -> String {
+        match target.category() {
+            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Obj) => "Obj".to_owned(),
+            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Class(class)) => {
+                self.class_name(class, visiting)
+            }
+            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Interface(interface)) => {
+                self.interface_name(interface)
+            }
+            ResolvedSharedTargetCategory::Array(array) => {
+                self.render_semantic_type_kind(ResolvedTypeKind::Array(array), visiting)
+            }
+            ResolvedSharedTargetCategory::OptionalBox(target) => {
+                let metadata = self
+                    .program
+                    .optional_box_types
+                    .get(target)
+                    .expect("resolved optional-box identities must name table entries");
+                if let Some(optional) = metadata.optional {
+                    return self
+                        .render_semantic_type_kind(ResolvedTypeKind::Optional(optional), visiting);
+                }
+                let mut name = metadata.object_leaf.map_or_else(
+                    || target.to_string(),
+                    |leaf| match leaf {
+                        ResolvedObjectTarget::Obj => "Obj".to_owned(),
+                        ResolvedObjectTarget::Class(class) => self.class_name(class, visiting),
+                        ResolvedObjectTarget::Interface(interface) => {
+                            self.interface_name(interface)
+                        }
+                    },
+                );
+                name.extend(std::iter::repeat_n('?', metadata.optional_depth));
+                name
+            }
+        }
+    }
+
+    fn class_name(&self, class: ClassId, visiting: &mut Vec<ClassId>) -> String {
+        if visiting.contains(&class) {
+            return class.to_string();
+        }
+        if let Some(specialization) = self.program.generic_specializations.for_class(class) {
+            if let Some(declaration) = self.program.class(class) {
+                return declaration.name.clone();
+            }
+            visiting.push(class);
+            let name = self.render_specialization_key_inner(&specialization.key, visiting);
+            visiting.pop();
+            return name;
+        }
+        self.program.class(class).map_or_else(
+            || class.to_string(),
+            |declaration| self.qualified_declaration_name(declaration.module, &declaration.name),
+        )
+    }
+
+    fn interface_name(&self, interface: InterfaceId) -> String {
+        self.program.interface(interface).map_or_else(
+            || interface.to_string(),
+            |declaration| self.qualified_declaration_name(declaration.module, &declaration.name),
+        )
+    }
+
+    fn render_specialization_key_inner(
+        &self,
+        key: &GenericClassInstanceKey,
+        visiting: &mut Vec<ClassId>,
+    ) -> String {
+        let arguments = key
+            .arguments
+            .iter()
+            .map(|argument| self.render_semantic_type_kind(*argument, visiting))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("{}<{arguments}>", self.template_name(key.template))
+    }
+
+    fn template_name(&self, template: ClassTemplateId) -> String {
+        self.program.class_templates.get(template).map_or_else(
+            || template.to_string(),
+            |template| self.qualified_declaration_name(template.module, &template.name),
+        )
+    }
+
+    fn qualified_declaration_name(&self, module: ModuleId, name: &str) -> String {
+        if self.program.modules.len() == 1 {
+            return name.to_owned();
+        }
+        self.program.modules.get(module).map_or_else(
+            || name.to_owned(),
+            |module| format!("{}::{name}", module.module_path()),
+        )
     }
 }
 

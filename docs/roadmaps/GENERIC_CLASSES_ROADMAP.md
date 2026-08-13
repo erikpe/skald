@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G10 is next.
+Status: in progress; G11 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -64,7 +64,7 @@ not reopen those decisions while implementing them.
 - [x] G7 — Integrate lifecycle, optionals, arrays, and ownership
 - [x] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
 - [x] G9 — Integrate per-specialization statics and whole-program effects
-- [ ] G10 — Harden diagnostics, dumps, modules, and determinism
+- [x] G10 — Harden diagnostics, dumps, modules, and determinism
 - [ ] G11 — Execute generic classes through MIR and x86-64
 - [ ] G12 — Deliver generic `Vec<T>` and close the feature
 
@@ -454,29 +454,39 @@ remain independent across argument keys.
 **Purpose:** Make generic failures understandable and specialization products
 reproducible before the backend and standard library depend on them broadly.
 
-- [ ] Give template-definition and application failures distinct stable
+- [x] Give template-definition and application failures distinct stable
   diagnostics without exposing private compiler terms as the primary message.
-- [ ] Render application-site primary labels, template-origin secondary
+- [x] Render application-site primary labels, template-origin secondary
   labels, nested generic/type-constructor paths, and existing lifecycle
   field/base paths in one coherent diagnostic.
-- [ ] Collate repeated failed-key uses and prevent duplicate cascades from
+- [x] Collate repeated failed-key uses and prevent duplicate cascades from
   worklist rediscovery.
-- [ ] Complete deterministic syntax, template, specialization, resolved, HIR,
+- [x] Complete deterministic syntax, template, specialization, resolved, HIR,
   and MIR dumps with qualified semantic generic names.
-- [ ] Audit module cycles, selective and qualified imports, aliases, privacy,
+- [x] Audit module cycles, selective and qualified imports, aliases, privacy,
   application-site argument lookup, and definition-site template lookup across
   multi-file graphs.
-- [ ] Add cross-process and graph-permutation tests for template IDs, closed
+- [x] Add cross-process and graph-permutation tests for template IDs, closed
   class IDs, requirement order, cache order, diagnostics, phase dumps, static
   plans, and assembly-independent semantic products.
-- [ ] Extend bounded robustness mutation for angle brackets, `where`, nested
+- [x] Extend bounded robustness mutation for angle brackets, `where`, nested
   applications, and malformed constraints while preserving termination and
   deterministic recovery.
-- [ ] Audit affected resolver and type-check modules for mixed
+- [x] Audit affected resolver and type-check modules for mixed
   responsibilities; extract substantial state machines behind private
   submodules and keep facade exports explicit and minimal.
-- [ ] Update debugging and testing guidance for template, specialization, and
+- [x] Update debugging and testing guidance for template, specialization, and
   obligation dumps.
+
+**Result:** Generic failures now distinguish definition and application
+ownership, suppress the temporary execution gate when a more specific closed
+application failure exists, collate repeated key origins, and retain inferred
+lifecycle field/base evidence. Failed contextual graphs atomically restore the
+ordinary class product and unpublish dependent definitions and virtual
+families. Whole-program closed names use canonical module-qualified semantic
+spellings through resolved, HIR, planned-MIR, final-MIR, and static-plan
+products. Specialization declaration inputs and name rendering are cohesive
+private components behind the existing facade.
 
 **Tests:** Exact compile-failure goldens for definition, arity, wrong-kind,
 constraint, contextual, lifecycle, recursion, module, and privacy failures;
@@ -488,6 +498,15 @@ golden filters; `cargo fmt --check`, Clippy for affected crates,
 location, repeated and cross-module uses remain deterministic, all semantic
 products are inspectable, and the new resolver subsystem has cohesive module
 ownership.
+
+**Completion summary:** Added nine focused generic compile-failure goldens,
+cyclic/aliased/selective multi-module resolver permutations, an independent-
+process graph-to-final-MIR comparison, and deterministic bounded mutations for
+generic punctuation and malformed constraints. `cargo test -p
+skald-compiler`, affected-crate Clippy with warnings denied, focused goldens,
+formatting, documentation checks, and whitespace validation pass. No frozen
+language decision or runtime ABI changed. Both G9 discoveries assigned to G10
+are resolved; no follow-up discovery remains from this task.
 
 ### G11 — Execute generic classes through MIR and x86-64
 

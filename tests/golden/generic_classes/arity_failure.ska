@@ -1,0 +1,3 @@
+class Box<T> { value: T; }
+fn accept(ref value: Box<i64, bool>) -> unit {}
+fn main() -> i64 { return 0; }

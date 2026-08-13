@@ -189,7 +189,7 @@ fn append_specialization_diagnostics(
             Label {
                 style: LabelStyle::Primary,
                 span: origin.span,
-                message: "this application specializes the invalid body".to_owned(),
+                message: "this application uses a generic class with an invalid body".to_owned(),
             },
         );
         diagnostic.labels.push(Label {
@@ -197,6 +197,18 @@ fn append_specialization_diagnostics(
             span: source.name.span,
             message: "template declared here".to_owned(),
         });
+        diagnostic.labels.extend(
+            specialization
+                .provenance
+                .origins
+                .iter()
+                .skip(1)
+                .map(|origin| Label {
+                    style: LabelStyle::Secondary,
+                    span: origin.span,
+                    message: "the same invalid generic application is also used here".to_owned(),
+                }),
+        );
         diagnostics.push(diagnostic);
     }
 }

@@ -1,0 +1,4 @@
+class Owner<T> { value: shared T; }
+fn first(ref value: Owner<i64>) -> unit {}
+fn second(ref value: Owner<i64>) -> unit {}
+fn main() -> i64 { return 0; }

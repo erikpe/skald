@@ -1,8 +1,40 @@
 //! Substitution of complete template headers into ordinary class declarations.
 
 use super::super::resolver::ModuleUnit;
-use super::names::specialized_name;
+use super::names::SpecializationNameRenderer;
 use super::*;
+
+pub(crate) struct SpecializationDeclarationInput<'program, 'ast> {
+    units: &'program [ModuleUnit<'ast>],
+    modules: &'program ProgramModuleTable,
+    semantics: &'program ResolvedClassTemplateSemanticTable,
+    specializations: &'program GenericSpecializationTable,
+    ordinary_classes: &'program ResolvedClassDeclarationTable,
+    interfaces: &'program ResolvedInterfaceDeclarationTable,
+    type_interner: &'program ResolvedTypeInterner,
+}
+
+impl<'program, 'ast> SpecializationDeclarationInput<'program, 'ast> {
+    pub(crate) fn new(
+        units: &'program [ModuleUnit<'ast>],
+        modules: &'program ProgramModuleTable,
+        semantics: &'program ResolvedClassTemplateSemanticTable,
+        specializations: &'program GenericSpecializationTable,
+        ordinary_classes: &'program ResolvedClassDeclarationTable,
+        interfaces: &'program ResolvedInterfaceDeclarationTable,
+        type_interner: &'program ResolvedTypeInterner,
+    ) -> Self {
+        Self {
+            units,
+            modules,
+            semantics,
+            specializations,
+            ordinary_classes,
+            interfaces,
+            type_interner,
+        }
+    }
+}
 
 pub(crate) struct SpecializedDeclarations {
     pub(crate) declarations: Vec<ResolvedClassDeclaration>,
@@ -11,12 +43,7 @@ pub(crate) struct SpecializedDeclarations {
 }
 
 pub(crate) fn specialize_declarations(
-    units: &[ModuleUnit<'_>],
-    semantics: &ResolvedClassTemplateSemanticTable,
-    specializations: &GenericSpecializationTable,
-    ordinary_classes: &ResolvedClassDeclarationTable,
-    interfaces: &ResolvedInterfaceDeclarationTable,
-    type_interner: &ResolvedTypeInterner,
+    input: SpecializationDeclarationInput<'_, '_>,
     diagnostics: &mut Diagnostics,
 ) -> SpecializedDeclarations {
     let mut output = SpecializedDeclarations {
@@ -25,26 +52,28 @@ pub(crate) fn specialize_declarations(
         valid: true,
     };
 
-    for specialization in specializations.iter() {
+    let names = SpecializationNameRenderer::new(
+        input.units,
+        input.modules,
+        input.specializations,
+        input.ordinary_classes,
+        input.interfaces,
+        input.type_interner,
+    );
+    for specialization in input.specializations.iter() {
         let GenericSpecializationState::Complete(class_id) = specialization.state else {
             output.valid = false;
             continue;
         };
-        let Some((unit, source, _)) = template_source(units, specialization.key.template) else {
+        let Some((unit, source, _)) = template_source(input.units, specialization.key.template)
+        else {
             unreachable!("specialization keys reference collected templates")
         };
-        let semantic = semantics
+        let semantic = input
+            .semantics
             .get(specialization.key.template)
             .expect("specialization keys reference resolved template semantics");
-        let name = specialized_name(
-            units,
-            specializations,
-            ordinary_classes,
-            interfaces,
-            type_interner,
-            source,
-            &specialization.key.arguments,
-        );
+        let name = names.specialized_name(unit.module, source, &specialization.key.arguments);
         match DeclarationSpecializer::new(
             class_id,
             unit.module,
@@ -456,15 +485,15 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             .origins
             .first()
             .expect("requested specialization has an application origin");
-        self.diagnostics.push(
-            Diagnostic::error(
-                super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
-                format!("cannot specialize class `{}`", self.source.name.text),
-            )
-            .with_primary_label(origin.span, message)
-            .with_secondary_label(source, "requirement originates here")
-            .with_secondary_label(self.source.name.span, "template declared here"),
-        );
+        let mut diagnostic = Diagnostic::error(
+            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            format!("generic application `{}` is invalid", self.name),
+        )
+        .with_primary_label(origin.span, message)
+        .with_secondary_label(source, "requirement originates here")
+        .with_secondary_label(self.source.name.span, "generic class declared here");
+        diagnostic = self.add_repeated_application_origins(diagnostic);
+        self.diagnostics.push(diagnostic);
     }
 
     fn fail_with_secondary(
@@ -481,15 +510,26 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             .origins
             .first()
             .expect("requested specialization has an application origin");
-        self.diagnostics.push(
-            Diagnostic::error(
-                super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
-                format!("cannot specialize class `{}`", self.source.name.text),
-            )
-            .with_primary_label(origin.span, message)
-            .with_secondary_label(source, "conflicting declaration here")
-            .with_secondary_label(secondary, secondary_message),
-        );
+        let mut diagnostic = Diagnostic::error(
+            super::super::super::UNSATISFIED_GENERIC_REQUIREMENT,
+            format!("generic application `{}` is invalid", self.name),
+        )
+        .with_primary_label(origin.span, message)
+        .with_secondary_label(source, "conflicting declaration here")
+        .with_secondary_label(secondary, secondary_message)
+        .with_secondary_label(self.source.name.span, "generic class declared here");
+        diagnostic = self.add_repeated_application_origins(diagnostic);
+        self.diagnostics.push(diagnostic);
+    }
+
+    fn add_repeated_application_origins(&self, mut diagnostic: Diagnostic) -> Diagnostic {
+        for origin in self.specialization.provenance.origins.iter().skip(1) {
+            diagnostic = diagnostic.with_secondary_label(
+                origin.span,
+                "the same invalid generic application is also used here",
+            );
+        }
+        diagnostic
     }
 }
 

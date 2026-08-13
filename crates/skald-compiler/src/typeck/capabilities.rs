@@ -78,11 +78,11 @@ impl CopyCapabilities {
         self.array_types.clone()
     }
 
-    pub(super) fn constructor_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
+    pub(crate) fn constructor_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
         self.constructors.failure(class)
     }
 
-    pub(super) fn assignment_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
+    pub(crate) fn assignment_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
         self.assignments.failure(class)
     }
 }
@@ -97,7 +97,7 @@ struct CapabilitySet<I> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum CopyPathElement {
+pub(crate) enum CopyPathElement {
     Base(ClassId),
     Field(FieldId),
 }

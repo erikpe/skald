@@ -3,36 +3,46 @@
 use super::super::resolver::ModuleUnit;
 use super::*;
 
-pub(super) fn specialized_name(
-    units: &[ModuleUnit<'_>],
-    specializations: &GenericSpecializationTable,
-    ordinary_classes: &ResolvedClassDeclarationTable,
-    interfaces: &ResolvedInterfaceDeclarationTable,
-    type_interner: &ResolvedTypeInterner,
-    source: &syntax::ClassDecl,
-    arguments: &[ResolvedTypeKind],
-) -> String {
-    SpecializationNameRenderer {
-        units,
-        specializations,
-        ordinary_classes,
-        interfaces,
-        type_interner,
-    }
-    .specialization_name(source, arguments, &mut Vec::new())
-}
-
-struct SpecializationNameRenderer<'program, 'ast> {
+pub(super) struct SpecializationNameRenderer<'program, 'ast> {
     units: &'program [ModuleUnit<'ast>],
+    modules: &'program ProgramModuleTable,
     specializations: &'program GenericSpecializationTable,
     ordinary_classes: &'program ResolvedClassDeclarationTable,
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     type_interner: &'program ResolvedTypeInterner,
 }
 
-impl SpecializationNameRenderer<'_, '_> {
+impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
+    pub(super) fn new(
+        units: &'program [ModuleUnit<'ast>],
+        modules: &'program ProgramModuleTable,
+        specializations: &'program GenericSpecializationTable,
+        ordinary_classes: &'program ResolvedClassDeclarationTable,
+        interfaces: &'program ResolvedInterfaceDeclarationTable,
+        type_interner: &'program ResolvedTypeInterner,
+    ) -> Self {
+        Self {
+            units,
+            modules,
+            specializations,
+            ordinary_classes,
+            interfaces,
+            type_interner,
+        }
+    }
+
+    pub(super) fn specialized_name(
+        &self,
+        source_module: ModuleId,
+        source: &syntax::ClassDecl,
+        arguments: &[ResolvedTypeKind],
+    ) -> String {
+        self.specialization_name(source_module, source, arguments, &mut Vec::new())
+    }
+
     fn specialization_name(
         &self,
+        source_module: ModuleId,
         source: &syntax::ClassDecl,
         arguments: &[ResolvedTypeKind],
         visiting: &mut Vec<ClassId>,
@@ -42,7 +52,10 @@ impl SpecializationNameRenderer<'_, '_> {
             .map(|argument| self.type_name(*argument, visiting))
             .collect::<Vec<_>>()
             .join(", ");
-        format!("{}<{arguments}>", source.name.text)
+        format!(
+            "{}<{arguments}>",
+            self.declaration_name(source_module, &source.name.text)
+        )
     }
 
     fn type_name(&self, ty: ResolvedTypeKind, visiting: &mut Vec<ClassId>) -> String {
@@ -83,7 +96,7 @@ impl SpecializationNameRenderer<'_, '_> {
 
     fn class_name(&self, class: ClassId, visiting: &mut Vec<ClassId>) -> String {
         if let Some(declaration) = self.ordinary_classes.get(class) {
-            return declaration.name.clone();
+            return self.declaration_name(declaration.module, &declaration.name);
         }
         if visiting.contains(&class) {
             return class.to_string();
@@ -95,11 +108,13 @@ impl SpecializationNameRenderer<'_, '_> {
         else {
             return class.to_string();
         };
-        let Some((_, source, _)) = template_source(self.units, specialization.key.template) else {
+        let Some((unit, source, _)) = template_source(self.units, specialization.key.template)
+        else {
             return class.to_string();
         };
         visiting.push(class);
-        let name = self.specialization_name(source, &specialization.key.arguments, visiting);
+        let name =
+            self.specialization_name(unit.module, source, &specialization.key.arguments, visiting);
         visiting.pop();
         name
     }
@@ -107,8 +122,22 @@ impl SpecializationNameRenderer<'_, '_> {
     fn interface_name(&self, interface: InterfaceId) -> String {
         self.interfaces
             .get(interface)
-            .map(|declaration| declaration.name.clone())
+            .map(|declaration| self.declaration_name(declaration.module, &declaration.name))
             .unwrap_or_else(|| interface.to_string())
+    }
+
+    /// Singleton compilation has no possible source-name ambiguity, so retain
+    /// the compact spelling used before module graphs existed. Whole-program
+    /// compilation uses canonical paths and is therefore independent of local
+    /// import aliases and graph traversal order.
+    fn declaration_name(&self, module: ModuleId, name: &str) -> String {
+        if self.modules.len() == 1 {
+            return name.to_owned();
+        }
+        self.modules.get(module).map_or_else(
+            || name.to_owned(),
+            |module| format!("{}::{name}", module.module_path()),
+        )
     }
 
     fn shared_target_name(

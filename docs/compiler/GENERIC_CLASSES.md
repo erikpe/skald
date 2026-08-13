@@ -391,6 +391,14 @@ template requirement source as a note or secondary label. Nested applications
 and constructors form an outer-to-inner path. Existing lifecycle field/base
 failure paths remain nested beneath the generic origin.
 
+Every canonical failed key produces one primary diagnostic. Later uses are
+collated as secondary application labels, including uses discovered through
+template bodies. If contextual validation fails after candidate declarations
+have been built, generated declarations, definitions, virtual families, and
+body products are unpublished together; diagnostic inspection therefore does
+not expose a partially published specialization graph. The temporary public
+execution gate is omitted for a key that already has a more specific failure.
+
 Deterministic inspection includes:
 
 - template and parameter identities;
@@ -400,6 +408,12 @@ Deterministic inspection includes:
 - parameter-to-argument mappings;
 - substituted declarations and body selections; and
 - application origins and recursion paths.
+
+In whole-program compilation, template, class, interface, specialization, HIR,
+planned-MIR, final-MIR, and static-owner names use canonical module-qualified
+semantic spellings. Import aliases never become specialization identity or
+dump names. Singleton compilation retains compact unqualified spellings where
+no ambiguity is possible.
 
 Ordinary resolved, HIR, MIR, and assembly dumps continue to show only closed
 semantic identities and operations.

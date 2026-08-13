@@ -1,0 +1,88 @@
+schema = 2
+
+[[test]]
+name = "definition"
+mode = "compile-fail"
+source = "definition_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES037]: duplicate type parameter `T`"
+
+[[test]]
+name = "arity"
+mode = "compile-fail"
+source = "arity_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES040]: generic class `Box` expects 1 type argument"
+
+[[test]]
+name = "wrong_kind"
+mode = "compile-fail"
+source = "wrong_kind_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES038]: `Item` is not a generic class"
+
+[[test]]
+name = "constraint"
+mode = "compile-fail"
+source = "constraint_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES048]: type argument for `Sorted<Item>` does not satisfy `T`'s bound"
+
+[[test]]
+name = "contextual"
+mode = "compile-fail"
+source = "contextual_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES048]: type arguments for `Owner<i64>` do not satisfy its requirements"
+
+[[test]]
+name = "lifecycle"
+mode = "compile-fail"
+source = "lifecycle_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES048]: type arguments for `Box<Node>` do not satisfy its requirements"
+
+[[test]]
+name = "recursion"
+mode = "compile-fail"
+source = "recursion_failure.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES047]: recursive application of `Expand` changes its type arguments"
+
+[[test]]
+name = "module_argument_lookup"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/module_argument_lookup/modules",
+  "--no-stdlib",
+]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES007]: unknown type `Missing`"
+
+[[test]]
+name = "privacy"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/privacy/modules",
+  "--no-stdlib",
+]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES026]: declaration `dep::PrivateBox` is private"

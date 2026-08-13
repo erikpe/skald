@@ -1,0 +1,3 @@
+class Item {}
+fn accept(ref value: Item<i64>) -> unit {}
+fn main() -> i64 { return 0; }

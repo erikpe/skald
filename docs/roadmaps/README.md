@@ -6,7 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G10 is next.**
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G11 is next.**
   Implements explicit closed generic class applications through deterministic
   semantic specialization, inferred contextual requirements, nominal
   interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
@@ -18,8 +18,11 @@ progress. Completed roadmaps and resolved discovery records move to
   enforcement, closed inheritance, per-application conformance, and ordinary
   virtual/interface dispatch, independent per-specialization statics,
   whole-program effects, dependency evidence, lifecycle order, readable MIR,
-  and distinct backend storage are implemented. The next boundary hardens
-  diagnostics, dumps, modules, and determinism.
+  and distinct backend storage are implemented. Diagnostics now collate failed
+  keys with application/template/lifecycle evidence; closed names are
+  canonical across modules; failed publication is atomic; and generic graph,
+  phase-dump, golden, and robustness determinism is frozen. The next boundary
+  executes the complete closed profile through the public MIR/x86-64 path.
 
 ## Planned
 
@@ -34,10 +37,13 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-- [Generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md) — atomic
-  failed-specialization rollback should remove or rebuild every dependent
-  resolved product, and source-facing closed names still need canonical module
-  qualification.
+No pending discovery is currently recorded.
+
+## Resolved discoveries
+
+- [Generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md) — G10 resolved
+  atomic failed-publication cleanup and canonical module-qualified closed
+  names; the record remains beside the active roadmap until roadmap closeout.
 
 ## Implementation baseline
 

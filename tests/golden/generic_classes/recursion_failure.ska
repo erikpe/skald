@@ -1,0 +1,3 @@
+class Expand<T> { next: shared Expand<T[]>; }
+fn accept(ref value: Expand<i64>) -> unit {}
+fn main() -> i64 { return 0; }

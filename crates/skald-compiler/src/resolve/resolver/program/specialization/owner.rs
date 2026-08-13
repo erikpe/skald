@@ -214,13 +214,13 @@ impl<'semantic, 'interner, 'diagnostics> SpecializationOwner<'semantic, 'interne
             Diagnostic::error(
                 super::super::super::NON_TERMINATING_GENERIC_SPECIALIZATION,
                 format!(
-                    "specializing `{}` recursively changes its type arguments",
+                    "recursive application of `{}` changes its type arguments",
                     template.name
                 ),
             )
             .with_primary_label(
                 application_origin,
-                "this application produces a non-terminating specialization family",
+                "this application produces a non-terminating family of types",
             )
             .with_secondary_label(
                 origin.span,

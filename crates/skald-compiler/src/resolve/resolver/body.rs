@@ -408,7 +408,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     self.diagnostics.push(
                         Diagnostic::error(
                             TOP_LEVEL_USED_AS_VALUE,
-                            "a specialized class cannot be used as a value",
+                            "an applied generic class cannot be used as a value",
                         )
                         .with_primary_label(application.span, "construct it with an argument list")
                         .with_secondary_label(
@@ -417,7 +417,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                                 .get(class)
                                 .expect("specialized body target must name a generated class")
                                 .name_span,
-                            "specialized class declared here",
+                            "generic class declared here",
                         ),
                     );
                 } else {

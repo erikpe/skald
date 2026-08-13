@@ -20,8 +20,11 @@ pub use arrays::{
     ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE, ARRAY_PROJECTION_REQUIRES_ARRAY,
     INVALID_ARRAY_ELEMENT,
 };
+pub(crate) use capabilities::CopyPathElement;
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
-pub(crate) use generic_requirements::failed_specialization_requirements;
+pub(crate) use generic_requirements::{
+    failed_specialization_requirements, FailedSpecializationRequirement,
+};
 pub use optional_validation::INVALID_OPTIONAL_TYPE;
 pub use program::{
     type_check, TypeCheckOutput, AMBIGUOUS_INITIALIZER, COPY_OPERATION_UNAVAILABLE,

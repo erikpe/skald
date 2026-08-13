@@ -1,0 +1,3 @@
+from dep import Box;
+fn accept(ref value: Box<Missing>) -> unit {}
+fn main() -> i64 { return 0; }

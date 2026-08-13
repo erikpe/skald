@@ -17,6 +17,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Typed HIR | `hir::dump_hir` | type checker and semantic operation selection |
 | Preliminary MIR | `mir::dump_preliminary_mir` | unplanned static initializer bodies and publication boundaries |
 | Static effects | `passes::static_lifecycle::dump_static_effects` | closed-world static access summaries and call/lifecycle witnesses |
+| Planned MIR | `passes::static_lifecycle::dump_planned_mir` | static activation/destruction regions and selected lifecycle certificates |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
 | GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
@@ -53,6 +54,8 @@ cargo test --locked -p skald-compiler resolved_dump
 cargo test --locked -p skald-compiler hir_dump
 cargo test --locked -p skald-compiler mir_dump
 cargo test --locked -p skald-compiler passes::static_lifecycle
+cargo test --locked -p skald-compiler specialization
+cargo test --locked -p skald-compiler --test pipeline_determinism generic_module_phase_products
 ```
 
 These tests normally assert rather than print. While investigating, call the
@@ -68,6 +71,26 @@ failure, inspect lexing, parsing, resolution, and type checking in that order;
 later products are not created after diagnostics from an earlier source phase.
 For successful typed HIR, inspect MIR before assembly so semantic lowering and
 target realization remain distinguishable.
+
+For generic classes, inspect the products in this order: AST parameter and
+application structure; resolved `ClassTemplates` and `TemplateSemantics`;
+`GenericSpecializations` keys, transitions, origins, and recursion paths;
+generated `ClassDeclarations`/`ClassDefinitions`; typed HIR; then preliminary,
+planned, and final MIR. In a module graph, source-facing specialization names
+use canonical module paths, so `model::Cache<model::Item>` should remain the
+same across selective imports, aliases, provider-root spellings, and process
+runs. Numeric IDs remain beside those names wherever identity relationships
+matter.
+
+`RES037` through `RES046` normally identify a template-definition or direct
+application error. `RES047` reports an expanding recursive application, and
+`RES048` reports a failed bound or inferred contextual requirement. For
+`RES048`, start at the primary application, follow the requirement-origin
+secondary label into the generic class, then follow any field/base lifecycle
+path. Repeated uses of the same failed closed key appear as secondary labels
+on one diagnostic. The temporary `RES036` execution gate is suppressed when a
+more specific application failure exists, but remains for otherwise valid
+generic programs until the public backend path is enabled.
 
 For `std::error::panic`, the AST dump prints `IntrinsicFunction` and the
 resolved dump prints `intrinsic Panic` beside its stable `FunctionId`.

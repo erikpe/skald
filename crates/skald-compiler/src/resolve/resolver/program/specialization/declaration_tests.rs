@@ -242,7 +242,7 @@ fn resolved_dump_links_generated_classes_to_parameters_and_origins() {
     assert_eq!(dump, dump_resolved(&output.program));
     for fragment in [
         "Class c0 module m0 \"Box<i64>\"",
-        "SpecializedFrom template0<i64>",
+        "SpecializedFrom Box<i64>",
         "TypeArgument template0:type0 = i64",
         "SpecializationOrigin module m0",
         "Field c0:field0 \"value\"",

@@ -1,0 +1,3 @@
+import dep;
+fn accept(ref value: dep::PrivateBox<i64>) -> unit {}
+fn main() -> i64 { return 0; }

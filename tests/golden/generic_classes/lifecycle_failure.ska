@@ -1,0 +1,10 @@
+class Node {
+    next: Node;
+    init(ref next: Node) { self.next = next; }
+}
+class Box<T> {
+    value: T;
+    init(ref value: T) { self.value = value; }
+}
+fn accept(ref value: Box<Node>) -> unit {}
+fn main() -> i64 { return 0; }

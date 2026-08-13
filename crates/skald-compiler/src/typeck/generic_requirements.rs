@@ -24,6 +24,13 @@ pub(crate) struct GenericRequirementFailure<'requirement> {
     pub(crate) requirement: &'requirement GenericRequirement,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct FailedSpecializationRequirement {
+    pub(crate) class: crate::identity::ClassId,
+    pub(crate) requirement_index: usize,
+    pub(crate) lifecycle_path: Vec<super::capabilities::CopyPathElement>,
+}
+
 pub(crate) struct GenericCapabilityQuery<'program> {
     program: &'program ResolvedProgram,
     copy: OnceCell<CopyCapabilities>,
@@ -164,7 +171,7 @@ impl<'program> GenericCapabilityQuery<'program> {
 
 pub(crate) fn failed_specialization_requirements(
     program: &ResolvedProgram,
-) -> Vec<(crate::identity::ClassId, usize)> {
+) -> Vec<FailedSpecializationRequirement> {
     let query = GenericCapabilityQuery::new(program);
     let mut failures = Vec::new();
     for specialization in program.generic_specializations.iter() {
@@ -176,19 +183,51 @@ pub(crate) fn failed_specialization_requirements(
             .template_semantics
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
-        for (index, (requirement, subject)) in semantics
+        for (requirement_index, (requirement, subject)) in semantics
             .requirements
             .iter()
             .zip(&specialization.closed_requirements)
             .enumerate()
         {
             if !subject.is_some_and(|subject| query.supports(requirement, subject)) {
-                failures.push((class, index));
+                let lifecycle_path = subject
+                    .and_then(|subject| requirement_failure_path(&query, requirement, subject))
+                    .unwrap_or_default();
+                failures.push(FailedSpecializationRequirement {
+                    class,
+                    requirement_index,
+                    lifecycle_path,
+                });
                 break;
             }
         }
     }
     failures
+}
+
+fn requirement_failure_path(
+    query: &GenericCapabilityQuery<'_>,
+    requirement: &GenericRequirement,
+    subject: ClosedGenericRequirementSubject,
+) -> Option<Vec<super::capabilities::CopyPathElement>> {
+    let ClosedGenericRequirementSubject::Type(ResolvedTypeKind::Class(class)) = subject else {
+        return None;
+    };
+    let path = match requirement.capability {
+        GenericCapability::CopyConstructible => query.copy().constructor_failure(class),
+        GenericCapability::Assignable => query.copy().assignment_failure(class),
+        GenericCapability::FieldStorage
+        | GenericCapability::StaticStorage
+        | GenericCapability::ValueParameter
+        | GenericCapability::ValueResult
+        | GenericCapability::AliasTarget(_)
+        | GenericCapability::OptionalPayload
+        | GenericCapability::ArrayElement
+        | GenericCapability::SharedTarget
+        | GenericCapability::DefaultConstructible
+        | GenericCapability::Destroyable => None,
+    }?;
+    Some(path.to_vec())
 }
 
 #[cfg(test)]

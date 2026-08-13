@@ -33,7 +33,44 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_class_header_mutations();
     exercise_optional_syntax_mutations();
     exercise_array_syntax_mutations();
+    exercise_generic_syntax_mutations();
     exercise_byte_literal_mutations();
+}
+
+fn exercise_generic_syntax_mutations() {
+    const SEEDS: &[&str] = &[
+        "class Pair<Left, Right> { left: Left; right: Right; } fn main() -> i64 { return 0; }",
+        "class Box<T> { value: T?[]; } fn use(ref value: Box<Box<i64?>[]>) -> unit {} fn main() -> i64 { return 0; }",
+        "interface Comparable { fn compare(ref other: Obj) -> i64; } class Sorted<T> where T: Comparable { value: T; } fn main() -> i64 { return 0; }",
+        "class Broken<T where T Comparable, T: { value: Box<T; } fn recovered() -> i64 { return 0; }",
+    ];
+
+    for (seed_index, seed) in SEEDS.iter().enumerate() {
+        for index in 0..seed.len() {
+            let mut deletion = (*seed).to_owned();
+            deletion.remove(index);
+            assert_deterministic_frontend_recovery(
+                &format!("generic-{seed_index}-delete-{index}"),
+                &deletion,
+            );
+        }
+        for index in 0..=seed.len() {
+            let mut insertion = (*seed).to_owned();
+            insertion.insert(index, ['<', '>', ',', ':'][index % 4]);
+            assert_deterministic_frontend_recovery(
+                &format!("generic-{seed_index}-insert-{index}"),
+                &insertion,
+            );
+        }
+    }
+}
+
+fn assert_deterministic_frontend_recovery(name: &str, text: &str) {
+    let first = panic::catch_unwind(|| run_frontend_case(name, text)).unwrap_or_else(|payload| {
+        panic!("frontend panicked for {name}: {}", panic_message(payload))
+    });
+    let second = run_frontend_case(name, text);
+    assert_eq!(first, second, "frontend recovery changed for {name}");
 }
 
 #[test]

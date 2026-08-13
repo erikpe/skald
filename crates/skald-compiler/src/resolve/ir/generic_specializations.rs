@@ -125,6 +125,9 @@ impl GenericSpecializationTable {
         else {
             return;
         };
+        if matches!(entry.state, GenericSpecializationState::Failed { .. }) {
+            return;
+        }
         entry.state = GenericSpecializationState::Failed {
             reserved_class: Some(class),
         };

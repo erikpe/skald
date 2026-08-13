@@ -305,13 +305,17 @@ impl<'ast> ProgramResolver<'ast> {
             let mut diagnostics = Diagnostics::new();
             build_class_hierarchy(&class_declarations, &class_symbols, &mut diagnostics)
         };
+        let ordinary_classes = class_declarations.clone();
         let specialized = specialize_declarations(
-            &self.units,
-            &template_semantics,
-            &generic_specializations,
-            &class_declarations,
-            &interfaces,
-            &self.type_interner,
+            SpecializationDeclarationInput::new(
+                &self.units,
+                &self.modules,
+                &template_semantics,
+                &generic_specializations,
+                &class_declarations,
+                &interfaces,
+                &self.type_interner,
+            ),
             &mut self.diagnostics,
         );
         let mut class_symbols = class_symbols;
@@ -491,6 +495,7 @@ impl<'ast> ProgramResolver<'ast> {
             &mut output.diagnostics,
             ordinary_class_count,
             ordinary_hierarchy,
+            ordinary_classes,
         );
         output
     }

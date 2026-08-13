@@ -139,10 +139,6 @@ impl<I: DenseId, T> DenseIdTable<I, T> {
         }
     }
 
-    pub(crate) fn truncate(&mut self, len: usize) {
-        self.entries.truncate(len);
-    }
-
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [T] {
         &mut self.entries

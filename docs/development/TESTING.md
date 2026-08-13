@@ -689,16 +689,29 @@ and more reusable than constructing the case in Rust.
 
 ### Closed generic lifecycle coverage
 
-Until generic applications enter the normal MIR/backend pipeline, focused
-generic type-check tests accept only the explicit resolution execution-gate
-diagnostic, invoke the ordinary type checker on the closed resolved program,
-and assert exact HIR identities and plans. The matrix covers primitive and
+While the public driver retains its execution gate, focused generic tests
+accept only that gate for otherwise-valid programs and then exercise the
+implemented closed pipeline directly. Resolution tests own template terms,
+requirements, cache transitions, provenance, qualified semantic names, and
+atomic failed-publication behavior. Type-check tests assert exact HIR
+identities and lifecycle plans. Preliminary/planned/final MIR and static-plan
+tests assert that generated classes use ordinary closed operations; these are
+structural compiler tests rather than a claim that public native execution is
+enabled. The matrix covers primitive and
 exact-class arguments, user and synthesized lifecycle, unavailable copy and
 assignment operations, aliases and value boundaries, stored fields and
 statics, nested arrays and recursive optionals, shared exact/base/interface/
 `Obj` owners, optional owners, shared optional boxes, destruction order,
-index failure plans, and backing anchors. These tests must not suppress any
-other resolution diagnostic or claim MIR/native coverage.
+index failure plans, and backing anchors.
+
+`tests/golden/generic_classes/` freezes definition, arity, wrong-kind, bound,
+contextual, lifecycle-path, recursion, module-lookup, and privacy failures.
+The pipeline-determinism suite recompiles a multi-module nested specialization
+in independent processes while permuting source creation and provider roots;
+it compares graph, diagnostics, resolved IR, HIR, planned MIR, final MIR, and
+static lifecycle plans without depending on assembly. Bounded frontend
+robustness mutates angle brackets, commas, `where`, constraints, and nested
+applications and requires deterministic recovery on every mutation.
 
 The implemented
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)

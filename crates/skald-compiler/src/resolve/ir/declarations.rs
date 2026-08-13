@@ -199,10 +199,6 @@ impl ResolvedClassDeclarationTable {
         self.entries.extend(entries, |class| class.id);
     }
 
-    pub(crate) fn truncate(&mut self, len: usize) {
-        self.entries.truncate(len);
-    }
-
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [ResolvedClassDeclaration] {
         self.entries.entries_mut_for_test()

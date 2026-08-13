@@ -174,6 +174,75 @@ fn contextual_requirement_failures_reject_declaration_publication_after_identity
 }
 
 #[test]
+fn repeated_failed_keys_emit_once_and_restore_coherent_specialization_products() {
+    let output = resolve_source(
+        "class Plain { init() {} }\n\
+         class Owner<T> { invalid: shared T; }\n\
+         fn first(ref value: Owner<i64>) -> unit {}\n\
+         fn second(ref value: Owner<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let failures = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT)
+        .collect::<Vec<_>>();
+    assert_eq!(failures.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(
+        failures[0]
+            .labels
+            .iter()
+            .filter(|label| label.message.contains("also used here"))
+            .count(),
+        1
+    );
+    assert!(output
+        .program
+        .generic_specializations
+        .iter()
+        .all(|entry| matches!(entry.state, GenericSpecializationState::Failed { .. })));
+    assert_eq!(output.program.classes.len(), 1);
+    assert_eq!(
+        output.program.classes.get(ClassId::new(0)).unwrap().name,
+        "Plain"
+    );
+    assert!(output.program.class_definitions.is_empty());
+    assert!(output.program.definitions.is_empty());
+    assert!(output.program.virtual_families.is_empty());
+}
+
+#[test]
+fn lifecycle_requirement_diagnostics_include_the_existing_field_path() {
+    let output = resolve_source(
+        "class Node {\n\
+           next: Node;\n\
+           init(ref next: Node) { self.next = next; }\n\
+         }\n\
+         class Box<T> {\n\
+           value: T;\n\
+           init(ref value: T) { self.value = value; }\n\
+         }\n\
+         fn use(ref value: Box<Node>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let failure = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT)
+        .expect("copying a recursively stored argument must fail its inferred contract");
+    assert!(failure
+        .labels
+        .iter()
+        .any(|label| label.message.contains("lifecycle path enters this field")));
+    assert!(failure
+        .notes
+        .iter()
+        .any(|note| note.contains("field `next`")));
+}
+
+#[test]
 fn substitution_preserves_optional_layers_and_shared_arguments_literally() {
     let output = resolve_source(
         "class Item {}\n\
@@ -351,15 +420,80 @@ fn dump_exposes_stable_keys_transitions_origins_and_recursion_paths() {
     assert_eq!(dump, dump_resolved(&output.program));
     for fragment in [
         "GenericSpecializations",
-        "Specialization template0<i64> class c0 state failed c0",
+        "Specialization Expand<i64> class c0 state failed c0",
         "Transition requested",
         "Transition in-progress c0",
         "Origin module m0",
         "RecursionPath",
-        "template0<array a0>",
+        "Expand<i64[]>",
     ] {
         assert!(dump.contains(fragment), "missing `{fragment}` in:\n{dump}");
     }
+}
+
+#[test]
+fn cyclic_module_applications_use_canonical_names_and_stable_graph_order() {
+    let first = [
+        (
+            "app.ska",
+            "from left import Box;\n\
+             from right import Item as RightItem, Wrap;\n\
+             fn accept(ref direct: Box<RightItem>, ref nested: Wrap<RightItem>) -> unit {}\n\
+             fn main() -> i64 { return 0; }\n",
+        ),
+        (
+            "left.ska",
+            "import right;\n\
+             public class Item {}\n\
+             public class Box<T> { value: T; marker: right::Marker; }\n",
+        ),
+        (
+            "right.ska",
+            "import left;\n\
+             public class Marker {}\n\
+             public class Item {}\n\
+             public class Wrap<T> { value: left::Box<T>; }\n",
+        ),
+    ];
+    let second = [first[2], first[0], first[1]];
+
+    let first = resolve_modules(&first);
+    let second = resolve_modules(&second);
+    let first_errors = first
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code != UNSUPPORTED_GENERIC_SYNTAX)
+        .collect::<Vec<_>>();
+    let second_errors = second
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code != UNSUPPORTED_GENERIC_SYNTAX)
+        .collect::<Vec<_>>();
+    assert!(first_errors.is_empty(), "{first_errors:?}");
+    assert!(second_errors.is_empty(), "{second_errors:?}");
+
+    let first_names = first
+        .program
+        .classes
+        .iter()
+        .map(|class| class.name.as_str())
+        .filter(|name| name.contains('<'))
+        .collect::<Vec<_>>();
+    let second_names = second
+        .program
+        .classes
+        .iter()
+        .map(|class| class.name.as_str())
+        .filter(|name| name.contains('<'))
+        .collect::<Vec<_>>();
+    assert_eq!(first_names, second_names);
+    assert!(first_names.contains(&"left::Box<right::Item>"));
+    assert!(first_names.contains(&"right::Wrap<right::Item>"));
+
+    assert_eq!(
+        dump_resolved(&first.program),
+        dump_resolved(&second.program)
+    );
 }
 
 fn resolve_modules(sources: &[(&str, &str)]) -> crate::resolve::ResolveOutput {

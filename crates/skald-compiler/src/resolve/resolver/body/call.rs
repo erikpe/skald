@@ -132,7 +132,7 @@ impl CallableResolver<'_, '_> {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_CONSTRUCTION_TARGET,
-                        "specialized class has no initializer",
+                        "applied generic class has no initializer",
                     )
                     .with_primary_label(
                         call.callee.span(),

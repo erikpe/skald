@@ -120,6 +120,9 @@ const PERMUTATION_HELPER_VARIANT: &str = "SKALD_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
 const MODULE_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_MODULE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_across_processes";
+const GENERIC_MODULE_HELPER_OUTPUT: &str = "SKALD_GENERIC_MODULE_DETERMINISM_OUTPUT";
+const GENERIC_MODULE_TEST_NAME: &str =
+    "generic_module_phase_products_are_deterministic_across_processes";
 const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
@@ -550,6 +553,25 @@ fn module_diagnostics_are_deterministic_across_processes() {
     );
 }
 
+#[test]
+fn generic_module_phase_products_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(GENERIC_MODULE_HELPER_OUTPUT) {
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
+        fs::write(output, generic_module_phase_dump(variant)).unwrap();
+        return;
+    }
+
+    assert_cross_process_variants(
+        "generic-modules",
+        GENERIC_MODULE_HELPER_OUTPUT,
+        GENERIC_MODULE_TEST_NAME,
+        PERMUTATION_HELPER_VARIANT,
+    );
+}
+
 fn assert_cross_process_determinism(
     label: &str,
     helper_output: &str,
@@ -757,6 +779,92 @@ fn module_diagnostic_dump(variant: usize) -> String {
     normalize_fixture_paths(
         &fixture.path,
         render_diagnostics(graph.sources(), &resolved.diagnostics),
+    )
+}
+
+fn generic_module_phase_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("generic-module-products", variant);
+    let modules = fixture.path.join("modules");
+    let modules_alias = fixture.path.join("modules-alias");
+    link_directory(&modules, &modules_alias);
+    let sources = [
+        (
+            modules.join("app.ska"),
+            "from model import Cache, Item;\n\
+             from wrapper import Envelope;\n\
+             fn accept(ref cache: Cache<Item>, ref envelope: Envelope<Item>) -> unit {}\n\
+             fn main() -> i64 { return 0; }\n",
+        ),
+        (
+            modules.join("model.ska"),
+            "public class Item {\n\
+               value: i64;\n\
+               init(value: i64) { self.value = value; }\n\
+               copy(ref source: Item) { self.value = source.value; }\n\
+               assign(ref source: Item) { self.value = source.value; }\n\
+             }\n\
+             public class Cache<T> {\n\
+               static cached: T?;\n\
+               value: T;\n\
+               init(ref value: T) { self.value = value; }\n\
+             }\n",
+        ),
+        (
+            modules.join("wrapper.ska"),
+            "import model;\n\
+             public class Envelope<T> {\n\
+               value: model::Cache<T>;\n\
+               init(ref value: model::Cache<T>) { self.value = value; }\n\
+             }\n",
+        ),
+    ];
+    for index in if variant == 0 { [0, 1, 2] } else { [2, 0, 1] } {
+        write_source(&sources[index].0, sources[index].1);
+    }
+
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::module_root(PathBuf::from("modules-alias")),
+            ProviderRootConfiguration::module_root(PathBuf::from("modules")),
+        ]
+    } else {
+        vec![
+            ProviderRootConfiguration::module_root(PathBuf::from("modules")),
+            ProviderRootConfiguration::module_root(PathBuf::from(
+                "modules-alias/..//modules-alias",
+            )),
+        ]
+    };
+    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let entry = EntrySelector::Module("app".parse().unwrap());
+    let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.iter().all(
+            |diagnostic| diagnostic.code == skald_compiler::resolve::UNSUPPORTED_GENERIC_SYNTAX
+        ),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.unwrap();
+    let preliminary = lower_preliminary_hir(&hir);
+    let planned = plan_static_lifetimes(preliminary).unwrap();
+    let planned_dump = dump_planned_mir(&planned);
+    let final_mir = synthesize_static_lifecycle(planned).unwrap();
+
+    normalize_fixture_paths(
+        &fixture.path,
+        format!(
+            "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}PLANNED MIR\n{}FINAL MIR\n{}",
+            dump_module_graph(&graph),
+            render_diagnostics(graph.sources(), &resolved.diagnostics),
+            dump_resolved(&resolved.program),
+            dump_hir(&hir),
+            planned_dump,
+            dump_mir(&final_mir),
+        ),
     )
 }
 

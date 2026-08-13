@@ -1,6 +1,6 @@
 # Generic Classes Discoveries
 
-Status: pending.
+Status: resolved by G10.
 
 These findings were recorded while implementing the generic classes roadmap.
 They do not change the frozen language design and remain outside the active
@@ -10,7 +10,7 @@ roadmap task that exposed them.
 
 **Priority:** Medium.
 
-**Status:** Pending.
+**Status:** Resolved in G10.
 
 **Problem:** Final mechanical or nominal requirement validation atomically
 removes generated class declarations, class definitions, and the generated
@@ -37,11 +37,18 @@ that rebuilds every ordinary-only table and dispatch annotation. Preserve
 current application/definition evidence, dense IDs, deterministic ordering,
 and the rule that erroneous programs never reach type checking or lowering.
 
+**Resolution:** G10 snapshots the ordinary class declarations before candidate
+publication. On a failed bound or inferred requirement it marks every reserved
+generated identity failed, restores that snapshot and the ordinary hierarchy,
+and clears dependent class/function definitions and virtual families. Focused
+tests assert that the diagnostic product contains no partially published
+specialization bodies or dispatch tables.
+
 ## Qualify source-facing closed names across modules
 
 **Priority:** Medium.
 
-**Status:** Pending.
+**Status:** Resolved in G10.
 
 **Problem:** Closed specialization names now structurally render ordinary
 class, interface, array, optional, shared, and nested-specialization arguments
@@ -63,3 +70,9 @@ hardening.
 always render the canonical qualified path, using `ProgramModuleTable` rather
 than reparsing names. Keep semantic identity selection and backend mangling
 independent from display formatting.
+
+**Resolution:** Whole-program specialization names now use canonical
+`ProgramModuleTable` paths for templates and every nominal argument, including
+nested applications. Singleton compilation retains compact leaf names. Module
+cycle, alias, selective-import, graph-permutation, and independent-process
+tests freeze the resulting resolved/HIR/MIR/static-plan observations.

@@ -163,10 +163,9 @@ fn an_invalid_unused_generated_member_is_reported_at_the_application_and_templat
         .diagnostics
         .iter()
         .find(|diagnostic| {
-            diagnostic
-                .labels
-                .iter()
-                .any(|label| label.message == "this application specializes the invalid body")
+            diagnostic.labels.iter().any(|label| {
+                label.message == "this application uses a generic class with an invalid body"
+            })
         })
         .expect("the unused generated member must still be resolved");
     assert_eq!(diagnostic.labels.len(), 3);
@@ -204,9 +203,9 @@ fn body_operation_requirements_report_application_and_template_origins() {
     assert!(diagnostic.labels[1]
         .message
         .contains("stored-value initialization"));
-    assert_eq!(diagnostic.labels[2].message, "template declared here");
+    assert_eq!(diagnostic.labels[2].message, "generic class declared here");
     assert_eq!(output.program.classes.len(), 1);
-    assert_eq!(output.program.class_definitions.len(), 1);
+    assert!(output.program.class_definitions.is_empty());
 }
 
 fn generic_body_diagnostics(output: &crate::resolve::ResolveOutput) -> usize {

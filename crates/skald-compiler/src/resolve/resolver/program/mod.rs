@@ -46,7 +46,8 @@ use resolver::{
 };
 use specialization::{
     discover_specializations, generated_class_work, specialize_bodies, specialize_declarations,
-    validate_specialization_requirements, SpecializationBodyInput, SpecializationDiscoveryInput,
+    validate_specialization_requirements, SpecializationBodyInput, SpecializationDeclarationInput,
+    SpecializationDiscoveryInput,
 };
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
 use string_language_item::validate_string_language_item;
