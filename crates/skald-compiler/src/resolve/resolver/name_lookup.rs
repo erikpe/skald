@@ -24,6 +24,7 @@ pub(super) struct ModuleLookupProgram<'program> {
     pub(super) module_spans: &'program [Span],
     pub(super) class_templates: &'program ResolvedClassTemplateTable,
     pub(super) type_parameters: &'program ResolvedTypeParameterTable,
+    pub(super) specializations: Option<&'program GenericSpecializationTable>,
 }
 
 #[derive(Clone, Copy)]
@@ -37,6 +38,7 @@ pub(super) struct ModuleLookup<'program> {
     module_spans: &'program [Span],
     class_templates: &'program ResolvedClassTemplateTable,
     type_parameters: &'program ResolvedTypeParameterTable,
+    specializations: Option<&'program GenericSpecializationTable>,
     qualified_enabled: bool,
 }
 
@@ -57,6 +59,7 @@ impl<'program> ModuleLookup<'program> {
             module_spans: program.module_spans,
             class_templates: program.class_templates,
             type_parameters: program.type_parameters,
+            specializations: program.specializations,
             qualified_enabled,
         }
     }
@@ -182,6 +185,11 @@ impl<'program> ModuleLookup<'program> {
             .for_template(template)
             .expect("every class template has one parameter list")
             .len()
+    }
+
+    pub(super) fn specialized_class(self, span: Span) -> Option<ClassId> {
+        self.specializations?
+            .class_at_application(self.current, span)
     }
 
     fn report_unknown_binding(

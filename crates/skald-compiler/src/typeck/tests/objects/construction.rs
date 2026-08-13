@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+fn materialized_exact_sources_copy_construct_inline_fields() {
+    let output = check_text(concat!(
+        "class Child { init() {} }\n",
+        "class Parent {\n",
+        "  child: Child;\n",
+        "  init(ref child: Child) { self.child = child; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = crate::hir::dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("FieldCopyConstruction"), "{dump}");
+    assert!(dump.contains("Operation Synthesized c0"), "{dump}");
+}
+
+#[test]
 fn checks_construction_fields_methods_and_all_callable_owners() {
     let output = check_text(concat!(
         "class Counter {\n",

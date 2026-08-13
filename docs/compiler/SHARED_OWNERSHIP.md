@@ -232,6 +232,15 @@ indirect interface dispatch.
 
 ## MIR verification
 
+Closed generic classes preserve ownership grouping before MIR lowering.
+Substituting `T` into `shared T`, `(shared T)?`, and `shared T?` selects,
+respectively, an ordinary non-null owner, an optional shared owner, and an
+ordinary owner targeting a shared optional box. Exact class, base class,
+interface, and `Obj` targets reuse their canonical shared identities and the
+same retain, replacement, destruction, guard, and anchor plans as hand-written
+closed code. The typed frontend does not introduce a generic owner kind, and
+generic native execution remains gated.
+
 The MIR verifier must reject a program unless all of the following hold:
 
 - every shared storage entry has a compatible shared type and is initialized

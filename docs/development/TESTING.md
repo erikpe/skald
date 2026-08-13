@@ -687,6 +687,19 @@ and more reusable than constructing the case in Rust.
 
 ## Optional-value coverage
 
+### Closed generic lifecycle coverage
+
+Until generic applications enter the normal MIR/backend pipeline, focused
+generic type-check tests accept only the explicit resolution execution-gate
+diagnostic, invoke the ordinary type checker on the closed resolved program,
+and assert exact HIR identities and plans. The matrix covers primitive and
+exact-class arguments, user and synthesized lifecycle, unavailable copy and
+assignment operations, aliases and value boundaries, stored fields and
+statics, nested arrays and recursive optionals, shared exact/base/interface/
+`Obj` owners, optional owners, shared optional boxes, destruction order,
+index failure plans, and backing anchors. These tests must not suppress any
+other resolution diagnostic or claim MIR/native coverage.
+
 The implemented
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)
 requires coverage at every owning layer. Current lexer and parser tests own

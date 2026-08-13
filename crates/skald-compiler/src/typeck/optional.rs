@@ -464,7 +464,7 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         }
-        if is_call_through_groups(source) {
+        if is_optional_producer(source) {
             let expression = self.check_expression(source)?;
             if let Some(OptionalPayloadKind::Class(actual)) = self.optional_kind(expression.ty) {
                 if actual == class {
@@ -482,7 +482,7 @@ impl CallableChecker<'_, '_> {
                 );
                 return None;
             }
-            if expression.ty == Type::Class(class) {
+            if is_call_through_groups(source) && expression.ty == Type::Class(class) {
                 return Some(HirClassOptionalSource::Present(
                     crate::hir::HirObjectSource::Produced(crate::hir::HirObjectProducer::Call(
                         super::function::lower_object_call(expression, class),

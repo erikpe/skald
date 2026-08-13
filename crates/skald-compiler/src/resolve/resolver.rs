@@ -148,8 +148,13 @@ fn resolve_type(
             ResolvedTypeKind::Array(type_interner.intern_array(element))
         }
         syntax::TypeKind::Named(named) if named.arguments.is_some() => {
-            report_generic_application(named, lookup, diagnostics);
-            return None;
+            if let Some(class) = lookup.specialized_class(named.span) {
+                report_generic_application(named, lookup, diagnostics);
+                ResolvedTypeKind::Class(class)
+            } else {
+                report_generic_application(named, lookup, diagnostics);
+                return None;
+            }
         }
         syntax::TypeKind::Named(named)
             if !named.name.is_qualified() && named.name.text == "Obj" =>

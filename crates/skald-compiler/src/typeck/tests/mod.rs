@@ -165,6 +165,7 @@ mod dumps;
 mod eager_boolean_operators;
 mod expressions;
 mod floating_division;
+mod generic_classes;
 mod inline_fields;
 mod integer_division;
 mod interfaces;

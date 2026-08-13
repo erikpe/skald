@@ -301,6 +301,31 @@ Whether template specialization is exposed as a separately inspectable public
 product is an implementation-roadmap choice, but deterministic template and
 specialization dumps are required for review and debugging.
 
+### Implemented typed-lifecycle boundary
+
+Closed applications now retain their generated exact `ClassId` at ordinary
+signature and body sites, so the existing type checker can consume generated
+classes without a generic-aware HIR path. Focused frontend tests exercise that
+boundary while the normal compiler driver still reports the explicit generic
+execution gate before MIR and backend lowering.
+
+The ordinary capability, optional, array, shared-owner, field, static, and
+destruction planners receive only substituted canonical types. Consequently a
+field such as `T?[]` becomes the existing array of the existing optional type,
+including `Str??[]` for `T = Str?` and `(shared Str)?[]` for
+`T = shared Str`. Synthesized copy and assignment retain the selected closed
+field/base operations; destruction retains reverse field order followed by the
+ordinary direct-base step. No capability is imposed merely because a type is
+an argument: it is required only when the complete substituted declaration or
+one of its bodies selects that operation.
+
+Optional shared owners and shared optional boxes remain structurally distinct
+through this boundary. `(shared T)?` lowers to optional storage whose payload
+is one shared owner, while `shared T?` lowers to a non-null shared owner whose
+target is the canonical optional-box identity. Adding another outer `?` to
+the latter produces an optional owner of that box; specialization never moves
+or flattens either layer.
+
 ## Target and ABI realization
 
 Each closed class lowers like an equivalent hand-written exact class. Layout

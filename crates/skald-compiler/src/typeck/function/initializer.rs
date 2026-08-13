@@ -388,7 +388,21 @@ impl CallableChecker<'_, '_> {
             let _ = self.check_field_construction(class, field_name, &assignment.value);
             return None;
         };
-        if actual == class || self.program.hierarchy.is_subtype(actual, class) != Some(true) {
+        if actual == class {
+            // A materialized exact-class source initializes the field through
+            // its selected copy constructor. Keep grouped construction
+            // rejected: direct construction must remain visibly ungrouped so
+            // the destination can be passed to the initializer.
+            if !matches!(
+                assignment.value,
+                crate::resolve::ResolvedExpression::Grouped(_)
+            ) {
+                return self.check_field_copy_construction(place, class, assignment);
+            }
+            let _ = self.check_field_construction(class, field_name, &assignment.value);
+            return None;
+        }
+        if self.program.hierarchy.is_subtype(actual, class) != Some(true) {
             let _ = self.check_field_construction(class, field_name, &assignment.value);
             return None;
         }

@@ -563,6 +563,19 @@ fn aggregate_operation_names_preserve_nested_optional_unwrap_semantics() {
 }
 
 #[test]
+fn nested_unwrap_can_produce_an_inline_class_optional() {
+    let output = check_text(
+        "class Item { init() {} }\n\
+         fn unwrap(value: Item??) -> Item? { return value!; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("nested class unwrap must produce HIR"));
+    assert!(dump.contains("NestedOptionalUnwrap"), "{dump}");
+    assert!(dump.contains("ClassOptionalInitialization"), "{dump}");
+}
+
+#[test]
 fn optional_arrays_type_across_aggregate_and_alias_positions() {
     let output = check_text(
         "class Holder {\n\

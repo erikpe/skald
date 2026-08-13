@@ -323,11 +323,17 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         })
     }
 
-    fn specialized_class(&self, named: &syntax::NamedTypeSyntax) -> Option<ClassId> {
-        let kind = self.environment.specialization?.closed_type(named.span)?;
-        let ResolvedTypeKind::Class(class) = kind else {
-            return None;
-        };
+    fn specialized_class(&mut self, named: &syntax::NamedTypeSyntax) -> Option<ClassId> {
+        if let Some(specialization) = self.environment.specialization {
+            let kind = specialization.closed_type(named.span)?;
+            let ResolvedTypeKind::Class(class) = kind else {
+                return None;
+            };
+            return Some(class);
+        }
+
+        let class = self.environment.lookup.specialized_class(named.span)?;
+        super::report_generic_application(named, self.environment.lookup, self.diagnostics);
         Some(class)
     }
 

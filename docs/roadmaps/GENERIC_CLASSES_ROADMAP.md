@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G7 is next.
+Status: in progress; G8 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -61,7 +61,7 @@ not reopen those decisions while implementing them.
 - [x] G4 — Build deterministic closed-specialization identities
 - [x] G5 — Specialize class declarations into ordinary closed classes
 - [x] G6 — Specialize executable bodies and operation selections
-- [ ] G7 — Integrate lifecycle, optionals, arrays, and ownership
+- [x] G7 — Integrate lifecycle, optionals, arrays, and ownership
 - [ ] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
 - [ ] G9 — Integrate per-specialization statics and whole-program effects
 - [ ] G10 — Harden diagnostics, dumps, modules, and determinism
@@ -350,23 +350,23 @@ generic operation.
 value and deterministic-lifecycle matrix rather than supporting only scalar
 or trivial classes.
 
-- [ ] Run exact-class copy construction and assignment analysis over generated
+- [x] Run exact-class copy construction and assignment analysis over generated
   fields, bases, arrays, and recursive optionals.
-- [ ] Select class destruction plans for specialized direct fields, nested
+- [x] Select class destruction plans for specialized direct fields, nested
   optionals, arrays, shared owners, and bases in ordinary order.
-- [ ] Type-check generic value parameters/results, aliases, stored-value
+- [x] Type-check generic value parameters/results, aliases, stored-value
   initialization, assignment, optional injection/unwrap, array construction,
   element access/replacement, and shared-owner operations through existing HIR
   plans.
-- [ ] Preserve the distinction between optional shared owners and shared
+- [x] Preserve the distinction between optional shared owners and shared
   optional boxes for parameter substitution and operation selection.
-- [ ] Verify capability-sensitive class-wide acceptance: a specialization may
+- [x] Verify capability-sensitive class-wide acceptance: a specialization may
   exist without copying until one member actually requires copy construction
   or assignment.
-- [ ] Add HIR assertions proving every specialized operation carries exact
+- [x] Add HIR assertions proving every specialized operation carries exact
   canonical closed types, selected lifecycle identities, guards, anchors, and
   cleanup plans.
-- [ ] Extend living optional, array, shared-ownership, class-lifecycle, and
+- [x] Extend living optional, array, shared-ownership, class-lifecycle, and
   testing documents only where generic composition adds a new implemented
   boundary; retain their existing semantics as authoritative.
 

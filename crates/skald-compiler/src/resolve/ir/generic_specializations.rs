@@ -100,6 +100,23 @@ impl GenericSpecializationTable {
         self.entries.is_empty()
     }
 
+    pub(crate) fn class_at_application(&self, module: ModuleId, span: Span) -> Option<ClassId> {
+        self.entries
+            .iter()
+            .find(|entry| {
+                entry
+                    .provenance
+                    .origins
+                    .contains(&GenericApplicationOrigin { module, span })
+            })
+            .and_then(|entry| match entry.state {
+                GenericSpecializationState::Complete(class) => Some(class),
+                GenericSpecializationState::Requested
+                | GenericSpecializationState::InProgress(_)
+                | GenericSpecializationState::Failed { .. } => None,
+            })
+    }
+
     pub(crate) fn fail_class(&mut self, class: ClassId) {
         let Some(entry) = self
             .entries

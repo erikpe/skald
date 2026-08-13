@@ -734,6 +734,17 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
+Closed generic class specializations now participate in the typed lifecycle
+model described above. After substitution, exact fields, recursive optionals,
+arrays, shared owners, optional owners, shared optional boxes, and an ordinary
+direct base contribute the same selected copy, assignment, and reverse-order
+destruction steps as equivalent hand-written classes. A closed specialization
+does not require a type argument to be copyable merely because it exists;
+copy construction or assignment becomes necessary only when a substituted
+declaration or member body uses that operation. The normal compiler pipeline
+still gates generic execution before lower IR, and the broader generic
+inheritance/conformance profile remains staged.
+
 The implemented executable class model includes primitive and exact-class
 optional fields in ordinary initialization and synthesized copy
 construction/assignment. They must be initialized exactly once and may hold

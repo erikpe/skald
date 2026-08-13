@@ -333,6 +333,15 @@ selection.
 
 ## MIR storage and operations
 
+Closed generic class fields and bodies reuse the canonical array table and
+element lifecycle selected here. In particular, `T?[]` specializes literally:
+`T = Item?` produces an array of `Item??`, while `T = shared View` produces an
+array of optional shared-interface owners. Generated element construction,
+replacement, reads, index normalization, failure plans, and backing anchors
+are ordinary typed HIR operations with exact closed identities. The generic
+frontend currently stops before MIR execution, so this adds no second array
+layout or backend protocol.
+
 MIR remains target-independent and must not contain target byte offsets or a
 runtime array-kind tag. It requires explicit storage roles for:
 

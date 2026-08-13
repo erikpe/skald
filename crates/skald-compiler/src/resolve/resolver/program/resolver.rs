@@ -97,9 +97,18 @@ pub(super) struct ProgramLookupTables<'program> {
     module_spans: &'program [Span],
     class_templates: &'program ResolvedClassTemplateTable,
     type_parameters: &'program ResolvedTypeParameterTable,
+    specializations: Option<&'program GenericSpecializationTable>,
 }
 
 impl<'program> ProgramLookupTables<'program> {
+    pub(super) const fn with_specializations(
+        mut self,
+        specializations: &'program GenericSpecializationTable,
+    ) -> Self {
+        self.specializations = Some(specializations);
+        self
+    }
+
     pub(super) fn for_unit(
         self,
         unit: &'program ModuleUnit<'_>,
@@ -122,6 +131,7 @@ impl<'program> ProgramLookupTables<'program> {
                 module_spans: self.module_spans,
                 class_templates: self.class_templates,
                 type_parameters: self.type_parameters,
+                specializations: self.specializations,
             },
             unit.qualified_enabled,
         )
@@ -211,6 +221,7 @@ impl<'ast> ProgramResolver<'ast> {
             module_spans: &module_spans,
             class_templates: &class_templates,
             type_parameters: &type_parameters,
+            specializations: None,
         };
 
         let external_link_plan = ExternalLinkPlan::new(self.units.iter().flat_map(|unit| {
@@ -226,10 +237,6 @@ impl<'ast> ProgramResolver<'ast> {
                 }
             })
         }));
-        let function_declarations =
-            self.collect_function_declarations(lookups, &external_link_plan);
-        let external_links =
-            external_link_plan.finish(&function_declarations, &self.modules, &mut self.diagnostics);
         let interfaces = self.collect_interface_declarations(lookups);
         let mut template_semantics = Vec::new();
         for unit in &self.units {
@@ -254,9 +261,27 @@ impl<'ast> ProgramResolver<'ast> {
             }
         }
         let template_semantics = ResolvedClassTemplateSemanticTable::new(template_semantics);
+        let ordinary_class_count = self.units.iter().map(|unit| unit.class_work.len()).sum();
+        let generic_specializations = discover_specializations(
+            SpecializationDiscoveryInput::new(
+                &self.units,
+                &self.modules,
+                lookups,
+                &template_semantics,
+                &class_templates,
+                ordinary_class_count,
+            ),
+            &mut self.type_interner,
+            &mut self.diagnostics,
+        );
+        let lookups = lookups.with_specializations(&generic_specializations);
+        let function_declarations =
+            self.collect_function_declarations(lookups, &external_link_plan);
+        let external_links =
+            external_link_plan.finish(&function_declarations, &self.modules, &mut self.diagnostics);
         let (class_declarations, class_symbols, class_work) =
             self.collect_class_declarations(lookups);
-        let ordinary_class_count = class_declarations.len();
+        debug_assert_eq!(class_declarations.len(), ordinary_class_count);
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
         validate_intrinsic_declarations(
             &self.modules,
@@ -280,18 +305,6 @@ impl<'ast> ProgramResolver<'ast> {
             let mut diagnostics = Diagnostics::new();
             build_class_hierarchy(&class_declarations, &class_symbols, &mut diagnostics)
         };
-        let generic_specializations = discover_specializations(
-            SpecializationDiscoveryInput::new(
-                &self.units,
-                &self.modules,
-                lookups,
-                &template_semantics,
-                &class_templates,
-                ordinary_class_count,
-            ),
-            &mut self.type_interner,
-            &mut self.diagnostics,
-        );
         let specialized = specialize_declarations(
             &self.units,
             &template_semantics,

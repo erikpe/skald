@@ -6,7 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G7 is next.**
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G8 is next.**
   Implements explicit closed generic class applications through deterministic
   semantic specialization, inferred contextual requirements, nominal
   interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
