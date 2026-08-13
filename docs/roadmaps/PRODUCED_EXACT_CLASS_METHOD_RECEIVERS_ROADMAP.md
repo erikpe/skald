@@ -1,0 +1,314 @@
+# Produced Exact-Class Method Receivers Roadmap
+
+Status: planned; PER0 is next.
+
+This roadmap lets an expression that produces one exact inline class serve
+directly as a read-only instance-method receiver. It removes staging locals
+from expressions such as `"item-".concat(Str.from_i64(index))` and
+`values.last().byte(index)` while preserving Skald's deterministic evaluation,
+inline ownership, access, and full-expression cleanup rules.
+
+The implementation reuses the completed produced-object alias machinery: one
+hidden caller-owned exact-class temporary, one non-owning view of that
+temporary, and one reverse-ordered cleanup obligation. It does not introduce
+a receiver-specific object representation, calling convention, or runtime
+service.
+
+## Scope and invariants
+
+- Accept an exact-class construction, canonical class literal, or exact-class
+  result from a direct, static, instance, or interface call as an instance-
+  method receiver. Grouping preserves the same eligibility.
+- Apply the rule to ordinary direct and virtual methods and to read-only
+  interface requirements selected through closed generic bounds. A closed
+  generic method result, including `Vec<Str>.last()`, is an ordinary exact-
+  class producer after specialization and receives no special implementation.
+- Permit only read-only `fn` methods on a produced receiver. A `mut fn` method
+  continues to require an existing mutable object place. This matches the
+  implemented produced-`ref` rule and does not create implicit mutation of an
+  unnamed value.
+- Evaluate the receiver producer exactly once before every explicit argument.
+  Complete it directly in one hidden caller-owned temporary; do not add a
+  copy-construction step merely to borrow it as the receiver.
+- Register cleanup ownership only after successful production. Keep the
+  completed receiver alive through later argument effects, the complete
+  direct/virtual/interface call, result securing, and the enclosing full-
+  expression boundary. Destroy completed temporaries in reverse completion
+  order.
+- Preserve exact complete-object provenance and dynamic class. Inherited
+  method selection may project the temporary to its declaring base without
+  slicing, and virtual/interface dispatch observes the same complete object.
+- Preserve selected-path behavior. A receiver in a skipped short-circuit path
+  creates no storage, effects, view, or cleanup; a receiver on an evaluated
+  path follows ordinary path-conditioned full-expression cleanup.
+- Preserve failure ordering. If receiver production terminates, no explicit
+  argument or outer call runs and the incomplete receiver owns no cleanup. If
+  a later argument terminates, every already completed full-expression owner
+  retains the existing abrupt-termination behavior.
+- Keep explicit shared access unchanged. A produced `shared Class` remains an
+  owner and continues to require `->` or explicit `*`; this roadmap does not
+  make raw shared handles valid dot receivers.
+- Do not generalize temporary field reads or writes, mutable temporary
+  receivers, optional or array receiver families, independently storable
+  references, or escaping aliases. These require separate motivation and
+  contracts.
+- Add no grammar form. The existing postfix expression grammar already parses
+  both target spellings.
+- Add no runtime operation, object-layout change, target-specific receiver
+  representation, external ABI surface, or runtime ABI-version change.
+- Keep resolved, HIR, and MIR dumps deterministic and explicit about produced
+  receiver provenance. Never encode a compiler-owned temporary as a fake
+  source binding.
+- Do not add a third parallel `produced_view` option beside the existing
+  shared- and optional-backed receiver carriers. Normalize receiver provenance
+  behind one discriminated carrier or one general object-view slot before
+  adding the new source category.
+
+## Progress
+
+- [ ] PER0 — Freeze the produced read-only receiver contract
+- [ ] PER1 — Normalize receiver provenance carriers
+- [ ] PER2 — Accept and lower produced exact-class receivers
+- [ ] PER3 — Verify lifetime, control flow, and failure behavior
+- [ ] PER4 — Prove dispatch, generics, and native execution
+- [ ] PER5 — Adopt the feature and publish the implemented boundary
+
+Every implementation task runs focused tests for its owning phase, followed
+by `make check` and `make msrv-check`. Documentation-only PER0 runs
+`make docs-check`. The Makefile remains the local and external automation
+interface; this roadmap adds no repository CI.
+
+## PR-sized implementation sequence
+
+### PER0 — Freeze the produced read-only receiver contract
+
+**Purpose:** Make the source-visible access, evaluation, lifetime, dispatch,
+failure, and exclusion rules authoritative before compiler acceptance changes.
+
+- [ ] Update the functions/control-flow and class/lifecycle contracts to
+      define produced exact-class method receivers as hidden caller-owned
+      read-only places.
+- [ ] Define the accepted producer families, grouping behavior, inherited and
+      polymorphic method selection, and closed-generic composition.
+- [ ] Freeze receiver-before-arguments order, exactly-once production,
+      completion before the call, result securing, and reverse full-expression
+      cleanup.
+- [ ] State the read-only restriction and retain explicit rejection of
+      `mut fn` on a produced receiver.
+- [ ] Reconcile string examples, compiler phase/IR documentation, testing
+      guidance, and the status matrix with a frozen-but-unavailable boundary.
+- [ ] Record the unchanged grammar, internal/external ABI, backend, runtime,
+      and runtime-version boundaries.
+
+**Tests:** `make docs-check`; audit living matches with
+`rg -n "method receiver|produced.*receiver|object place|call result" docs -g '*.md'`.
+
+**Exit criteria:** One living contract answers which producers may be
+receivers, which methods they may call, when the hidden owner lives and dies,
+how dispatch sees it, and which neighboring temporary features remain
+excluded; executable compiler behavior is unchanged.
+
+### PER1 — Normalize receiver provenance carriers
+
+**Purpose:** Remove the parallel optional provenance shape in typed receiver
+data before adding produced sources, keeping impossible carrier combinations
+unrepresentable and lowering ownership cohesive.
+
+- [ ] Replace the independent shared-backed and optional-backed receiver view
+      slots in checked and HIR method-receiver data with one discriminated
+      carrier or general `HirObjectView` path.
+- [ ] Apply the same carrier boundary where field and interface receiver
+      plumbing shares the representation, without broadening accepted source
+      syntax.
+- [ ] Keep checked casts and array-element receivers distinct only where their
+      bounded guards or checked addressing require different lowering.
+- [ ] Update HIR dumps, control-effect discovery, receiver access queries, MIR
+      lowering, and local helper APIs to exhaustively match the normalized
+      carrier rather than coordinating optional fields.
+- [ ] Preserve all existing shared-anchor, optional-presence-guard,
+      array-anchor, exact-origin, virtual/interface dispatch, and cleanup
+      behavior byte-for-byte where phase dumps are contractual.
+- [ ] Keep implementation in the existing cohesive resolver, type-check,
+      HIR-object, and MIR-call owners; do not widen facade visibility or create
+      source-category-specific lowering modules.
+
+**Tests:** Focused object-place, checked-cast, shared-anchor, optional-view,
+array-receiver, virtual/interface-call, HIR-dump, MIR-dump, and control-effect
+tests; `make check`; `make msrv-check`.
+
+**Exit criteria:** Existing source behavior is unchanged, each typed receiver
+has exactly one explicit provenance carrier, dumps remain deterministic, and a
+produced `HirObjectView` can later occupy the general view path without adding
+another optional field or fake binding.
+
+### PER2 — Accept and lower produced exact-class receivers
+
+**Purpose:** Add the source-to-verified-MIR vertical slice by reusing ordinary
+object producers and the normalized receiver-view path.
+
+- [ ] Add an explicit resolved produced-receiver variant carrying the resolved
+      producer once, its exact class, source span, and inherited base
+      projections.
+- [ ] Recognize canonical class literals, constructions, and exact-class
+      results from direct, static, instance, and interface calls. Continue to
+      route produced shared owners to the existing explicit-dereference
+      diagnostic.
+- [ ] Resolve the receiver before explicit arguments without resolving,
+      checking, or representing its producer twice. Retain focused diagnostics
+      for non-class results and invalid member kinds.
+- [ ] Reuse ordinary object-producer checking to build a read-only produced
+      `HirObjectView` with exact complete-object provenance. Do not synthesize
+      a source binding or copy construction.
+- [ ] Enforce read-only receiver access through the existing mutable-method
+      diagnostic, including virtual methods and interface requirements.
+- [ ] Lower the view through the common produced-object temporary helper, then
+      reuse the ordinary direct, virtual, and interface receiver ABI.
+- [ ] Include receiver production in control-effect classification so nested
+      calls, checks, and path changes spill earlier scalar state correctly.
+- [ ] Add deterministic resolved, HIR, and MIR tests for literal, constructor,
+      and each call-result producer family, including grouping, inherited
+      selection, explicit arguments, and `Vec<Str>.last().byte(...)`.
+- [ ] Add focused failures for primitive/unit/optional/array/shared results and
+      mutable methods, preserving useful source and declaration labels.
+
+**Tests:** Focused resolver, type-check, HIR, MIR-lowering, dump, and diagnostic
+tests plus one native smoke test for each motivating expression; `make check`;
+`make msrv-check`.
+
+**Exit criteria:** Both motivating expressions compile through verified MIR
+and execute natively, every accepted producer is represented once as a
+read-only produced view, invalid categories stop before MIR, and no backend or
+runtime special case is introduced.
+
+### PER3 — Verify lifetime, control flow, and failure behavior
+
+**Purpose:** Mechanically prove that nested produced receivers obey Skald's
+full-expression ownership contract on every normal selected path.
+
+- [ ] Prove storage lifetime begins before production, object initialization
+      completes before receiver use, cleanup ownership begins only after
+      completion, and the view never outlives its temporary.
+- [ ] Prove the receiver temporary survives all later arguments, nested calls,
+      dynamic dispatch, and result securing, then cleans exactly once in
+      reverse full-expression order.
+- [ ] Cover chains in which one object-returning method result becomes the
+      receiver of the next read-only method without reevaluation or an
+      intermediate copy.
+- [ ] Cover selected and skipped `&&`/`||` operands, `if`/`elif` conditions,
+      repeated `while` condition epochs, return expressions, and nested
+      full-expression owners.
+- [ ] Cover producer checks or calls that terminate before publication and
+      later argument failure after receiver completion, retaining the existing
+      non-unwinding abrupt-termination contract.
+- [ ] Strengthen MIR verification where necessary for produced receiver
+      storage kind, initialization, exact origin, read-only access, projection,
+      use-before-cleanup, and exactly-once cleanup.
+- [ ] Add verifier mutations for missing or premature cleanup, mutable view,
+      wrong complete-object origin, use after cleanup, duplicate production or
+      cleanup, invalid projection, and path-condition leakage.
+- [ ] Add deterministic lifetime traces proving receiver-before-arguments and
+      reverse cleanup with several receiver and argument temporaries.
+
+**Tests:** Focused full-expression tracker, MIR lowering/dump, verifier
+mutation, logical-path, loop-epoch, and failure-order tests; `make check`;
+`make msrv-check`.
+
+**Exit criteria:** Verified MIR proves exactly-once production, live receiver
+use, path-correct ownership, and one correctly ordered cleanup for every
+completed produced receiver; malformed access and lifetime variants are
+rejected before backend lowering.
+
+### PER4 — Prove dispatch, generics, and native execution
+
+**Purpose:** Demonstrate that produced receivers compose with every existing
+method-selection and closed-specialization path through the unchanged native
+receiver ABI.
+
+- [ ] Exercise exact, inherited, virtual, and interface calls from produced
+      derived objects, proving complete-object identity is preserved without
+      slicing or copy construction.
+- [ ] Exercise exact-class results from direct, static, instance, and interface
+      producers under register and stack pressure, recursion, and nested call
+      chains.
+- [ ] Exercise canonical string literals and string-producing factories as
+      receivers, including embedded zero/high bytes, concatenation, slicing,
+      parsing, and byte observation where those operations add distinct
+      ownership pressure.
+- [ ] Exercise closed generic classes whose methods return exact-class values,
+      including `Vec<Str>`, a nested generic result, and a generic-bound
+      interface call.
+- [ ] Add native lifecycle traces with later argument effects and owning
+      results that outlive receiver cleanup.
+- [ ] Keep compile-fail goldens for mutable methods and excluded receiver
+      families, matching frontend diagnostics rather than MIR/backend errors.
+- [ ] Audit assembly and runtime symbols to confirm ordinary receiver
+      marshaling, no layout change, no runtime addition, and no ABI-version
+      change.
+- [ ] Add cross-process phase, diagnostic, assembly, stdout, status, and
+      lifecycle determinism where each observation materially proves the
+      contract.
+
+**Tests:** Focused backend/native tests; successful and compile-failure golden
+tests; pipeline and golden determinism; runtime-symbol audit; `make check`;
+`make msrv-check`.
+
+**Exit criteria:** Every supported producer, dispatch form, and generic result
+executes correctly on x86-64; diagnostics reject excluded access before MIR;
+lifecycle traces match the frozen order; and the backend/runtime boundary is
+unchanged.
+
+### PER5 — Adopt the feature and publish the implemented boundary
+
+**Purpose:** Remove receiver-only staging workarounds, make direct produced
+receivers ordinary current behavior, and close the roadmap with repository-
+wide evidence.
+
+- [ ] Rewrite the involved `Vec<Str>` golden exercise to use both
+      `"item-".concat(Str.from_i64(index))` and
+      `snapshot.last().byte(byte_index)` directly while retaining its growth,
+      copy-independence, loop, and cleanup coverage.
+- [ ] Audit standard-library and test source for locals that exist only to turn
+      an exact-class producer into a read-only method receiver; remove only
+      those whose deletion improves clarity.
+- [ ] Add compact conformance examples for literal, construction, direct call,
+      method chain, generic result, inherited/virtual dispatch, and the mutable
+      receiver diagnostic.
+- [ ] Update language status, functions/control flow, classes/lifecycle,
+      strings, generics/vectors, compiler phase/IR, testing, and debugging
+      documentation from frozen-unavailable to implemented behavior.
+- [ ] Audit living documentation, diagnostics, dumps, source, and tests for
+      stale claims that every exact-class method receiver must be a source-
+      level place or that exact-class call results cannot be receivers.
+- [ ] Record any non-trivial mutable-temporary, produced-field, optional,
+      array, or shared-owner opportunity in a separately indexed discoveries
+      document rather than expanding this roadmap.
+- [ ] Run documentation links, the complete repository gate, MSRV, focused
+      determinism, native, and runtime checks; then archive the completed
+      roadmap and update both roadmap indexes.
+
+**Tests:** The complete produced-receiver conformance matrix;
+`./scripts/golden.sh --filter 'standard_vec/**'`; `make docs-check`;
+`make check`; `make msrv-check`; focused deterministic process and runtime
+gates identified by the implementation.
+
+**Exit criteria:** Direct produced read-only receivers are used where they
+improve source clarity, all living contracts and diagnostics agree on the
+implemented boundary, all supported gates pass, actionable out-of-scope work
+is indexed separately, and this completed roadmap is archived.
+
+## Ordering and dependencies
+
+PER0 freezes semantics before acceptance. PER1 makes the typed carrier
+maintainable without changing the language. PER2 adds one complete basic
+source-to-native path so no intermediate repository state accepts syntax that
+cannot lower. PER3 hardens the ownership and control-flow proof before broad
+native use. PER4 closes dispatch, generic-specialization, diagnostic, target,
+and determinism coverage. PER5 removes workarounds and publishes implemented
+status only after the complete pipeline is evidenced.
+
+The roadmap depends on the completed exact-class value/result, produced
+read-only alias, full-expression cleanup, polymorphism, checked-cast, string,
+generic-class, and `Vec<T>` contracts. It has no dependency on another active
+roadmap. Niflheim demonstrates the value of direct literal and call-result
+method chaining, but Skald remains authoritative and implements the feature
+through inline caller-owned temporaries rather than Niflheim's object model.
