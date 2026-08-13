@@ -546,3 +546,51 @@ fn vector_operations_infer_unavailable_element_copy_capabilities() {
             && diagnostic.message.contains("not assignable")
     }));
 }
+
+#[test]
+fn generic_slot_unwrap_can_produce_optional_shared_element_types() {
+    let hir = check_generic_source(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+         class Slot<T> {\n\
+           values: T?[];\n\
+           init() { self.values = T?[](1u); }\n\
+           fn get() -> T { return self.values[0]!; }\n\
+         }\n\
+         fn use_owner(ref value: Slot<(shared Item)?>) -> unit {}\n\
+         fn use_box(ref value: Slot<(shared Item?)?>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let item = hir
+        .classes
+        .iter()
+        .find(|class| class.name == "Item")
+        .unwrap();
+    let results = hir
+        .classes
+        .iter()
+        .filter(|class| class.name.starts_with("Slot<"))
+        .map(|class| class.methods[0].return_type)
+        .collect::<Vec<_>>();
+    assert_eq!(results.len(), 2);
+
+    assert!(results.iter().any(|result| {
+        let Type::Optional(optional) = result else {
+            return false;
+        };
+        matches!(
+            hir.optional_type(*optional).unwrap().storage,
+            HirOptionalStorageCategory::SharedOwner(HirSharedTarget::Class(class))
+                if class == item.id
+        )
+    }));
+    assert!(results.iter().any(|result| {
+        let Type::Optional(optional) = result else {
+            return false;
+        };
+        matches!(
+            hir.optional_type(*optional).unwrap().storage,
+            HirOptionalStorageCategory::SharedOwner(HirSharedTarget::OptionalBox(_))
+        )
+    }));
+}

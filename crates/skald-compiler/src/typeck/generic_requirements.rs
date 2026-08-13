@@ -9,7 +9,7 @@
 use std::cell::OnceCell;
 
 use crate::{
-    hir::{HirOptionalTypeTable, Type},
+    hir::Type,
     resolve::{
         ClosedGenericRequirementSubject, GenericCapability, GenericRequirement,
         GenericRequirementReason, ResolvedProgram, ResolvedSharedTarget, ResolvedType,
@@ -34,7 +34,6 @@ pub(crate) struct FailedSpecializationRequirement {
 pub(crate) struct GenericCapabilityQuery<'program> {
     program: &'program ResolvedProgram,
     copy: OnceCell<CopyCapabilities>,
-    optionals: OnceCell<HirOptionalTypeTable>,
 }
 
 impl<'program> GenericCapabilityQuery<'program> {
@@ -42,7 +41,6 @@ impl<'program> GenericCapabilityQuery<'program> {
         Self {
             program,
             copy: OnceCell::new(),
-            optionals: OnceCell::new(),
         }
     }
 
@@ -126,10 +124,10 @@ impl<'program> GenericCapabilityQuery<'program> {
             | ResolvedTypeKind::Shared(_) => true,
             ResolvedTypeKind::Class(class) => self.copy().constructor(class).selected().is_some(),
             ResolvedTypeKind::Array(array) => self.copy().array(array).lifecycle.copy.is_some(),
-            ResolvedTypeKind::Optional(optional) => self
-                .optionals()
-                .get(optional)
-                .is_some_and(|optional| optional.lifecycle.copy.is_some()),
+            ResolvedTypeKind::Optional(optional) => {
+                super::optional_types::selected_copy_plan(self.program, self.copy(), optional)
+                    .is_some()
+            }
             ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
                 false
             }
@@ -148,10 +146,10 @@ impl<'program> GenericCapabilityQuery<'program> {
             ResolvedTypeKind::Array(array) => {
                 self.copy().array(array).lifecycle.assignment.is_some()
             }
-            ResolvedTypeKind::Optional(optional) => self
-                .optionals()
-                .get(optional)
-                .is_some_and(|optional| optional.lifecycle.assignment.is_some()),
+            ResolvedTypeKind::Optional(optional) => {
+                super::optional_types::selected_assignment_plan(self.program, self.copy(), optional)
+                    .is_some()
+            }
             ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
                 false
             }
@@ -161,11 +159,6 @@ impl<'program> GenericCapabilityQuery<'program> {
     fn copy(&self) -> &CopyCapabilities {
         self.copy
             .get_or_init(|| CopyCapabilities::compute(self.program))
-    }
-
-    fn optionals(&self) -> &HirOptionalTypeTable {
-        self.optionals
-            .get_or_init(|| super::optional_types::lower_optional_types(self.program, self.copy()))
     }
 }
 

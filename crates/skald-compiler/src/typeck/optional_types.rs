@@ -87,6 +87,44 @@ pub(super) fn selected_copy_plan(
     }
 }
 
+pub(super) fn selected_assignment_plan(
+    program: &ResolvedProgram,
+    capabilities: &CopyCapabilities,
+    optional: OptionalTypeId,
+) -> Option<HirOptionalAssignmentPlan> {
+    match resolved_payload_kind(program, optional) {
+        ResolvedTypeKind::I64
+        | ResolvedTypeKind::U64
+        | ResolvedTypeKind::U8
+        | ResolvedTypeKind::F64
+        | ResolvedTypeKind::Bool => Some(HirOptionalAssignmentPlan::Trivial),
+        ResolvedTypeKind::Class(class) => capabilities
+            .constructor(class)
+            .selected()
+            .zip(capabilities.assignment(class).selected())
+            .map(
+                |(copy_constructor, copy_assignment)| HirOptionalAssignmentPlan::Class {
+                    class,
+                    copy_constructor,
+                    copy_assignment,
+                },
+            ),
+        ResolvedTypeKind::Array(array) => capabilities
+            .array(array)
+            .lifecycle
+            .assignment
+            .map(|_| HirOptionalAssignmentPlan::Array(array)),
+        ResolvedTypeKind::Shared(target) => {
+            Some(HirOptionalAssignmentPlan::Shared(lower_shared(target)))
+        }
+        ResolvedTypeKind::Optional(nested) => {
+            selected_assignment_plan(program, capabilities, nested)
+                .map(|_| HirOptionalAssignmentPlan::Optional(nested))
+        }
+        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+    }
+}
+
 pub(super) fn lower_optional_types(
     program: &ResolvedProgram,
     capabilities: &CopyCapabilities,

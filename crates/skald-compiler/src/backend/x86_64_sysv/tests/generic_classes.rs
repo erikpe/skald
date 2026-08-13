@@ -124,3 +124,29 @@ fn equal_layout_specializations_emit_distinct_deterministic_private_artifacts() 
     assert_system_assembler_accepts(&first);
     assert_eq!(run_native_assembly(&first).code(), Some(42));
 }
+
+#[test]
+fn nested_optional_array_elements_execute_through_generic_storage() {
+    let source = concat!(
+        "class Store<T> {\n",
+        "  values: T?[];\n",
+        "  init() { self.values = T?[](1u); }\n",
+        "  mut fn put(value: T) -> unit { self.values[0] = value; }\n",
+        "  fn get() -> T { return self.values[0]!; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var store: Store<i64[]?> = Store<i64[]?>();\n",
+        "  var row: i64[]? = some(i64[]{40, 2});\n",
+        "  store.put(row);\n",
+        "  row = none;\n",
+        "  var recovered_optional: i64[]? = store.get();\n",
+        "  var recovered: i64[] = recovered_optional!;\n",
+        "  return recovered[0] + recovered[1];\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(native_allocator());
+
+    assert_system_assembler_accepts(&assembly);
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}

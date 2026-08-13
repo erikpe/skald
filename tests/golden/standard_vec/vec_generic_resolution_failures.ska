@@ -1,0 +1,21 @@
+from std::vec import Vec;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Node {
+    next: Node;
+
+    init(ref next: Node) {
+        self.next = next;
+    }
+}
+
+fn accept_interface(ref values: Vec<Readable>) -> unit {}
+fn accept_unavailable_lifecycle(ref values: Vec<Node>) -> unit {}
+fn accept_obj(ref values: Vec<Obj>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

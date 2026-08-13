@@ -258,11 +258,9 @@ impl InstructionSelector<'_, '_> {
                     target,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
-            crate::mir::MirOptionalStorage::Nested(_) => {
+            crate::mir::MirOptionalStorage::Nested(_)
+            | crate::mir::MirOptionalStorage::InlineArray(_) => {
                 self.copy_initialize_aggregate_optional(optional, &destination, &source)
-            }
-            crate::mir::MirOptionalStorage::InlineArray(array) => {
-                self.select_array_copy_construction(&destination, &source, array)
             }
         }
     }
@@ -315,17 +313,14 @@ impl InstructionSelector<'_, '_> {
                     target,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
-            crate::mir::MirOptionalStorage::Nested(_) => {
-                self.select_aggregate_optional_assign(&MirAggregateOptionalAssign {
+            crate::mir::MirOptionalStorage::Nested(_)
+            | crate::mir::MirOptionalStorage::InlineArray(_) => self
+                .select_aggregate_optional_assign(&MirAggregateOptionalAssign {
                     optional,
                     destination,
                     source: MirAggregateOptionalSource::Copy(source),
                     span: self.active_instruction_span.expect("active instruction"),
-                })
-            }
-            crate::mir::MirOptionalStorage::InlineArray(array) => {
-                self.select_array_copy_assignment(&destination, &source, array)
-            }
+                }),
         }
     }
 
@@ -354,11 +349,9 @@ impl InstructionSelector<'_, '_> {
                     target,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
-            crate::mir::MirOptionalStorage::Nested(_) => {
+            crate::mir::MirOptionalStorage::Nested(_)
+            | crate::mir::MirOptionalStorage::InlineArray(_) => {
                 self.cleanup_aggregate_optional(optional, &destination)
-            }
-            crate::mir::MirOptionalStorage::InlineArray(array) => {
-                self.select_array_field_cleanup(&destination, array)
             }
         }
     }

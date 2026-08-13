@@ -133,9 +133,7 @@ fn copy_element(
                 .lifecycle
                 .copy
                 .map(|_| HirArrayCopyElement::Optional(optional)),
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
-                unreachable!("deferred optional payloads must not reach array lowering")
-            }
+            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
         },
         ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
     }
@@ -196,9 +194,7 @@ fn assignment_element(
                 .lifecycle
                 .assignment
                 .map(|_| HirArrayAssignElement::Optional(optional)),
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
-                unreachable!("deferred optional payloads must not reach array lowering")
-            }
+            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
         },
         ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
     }

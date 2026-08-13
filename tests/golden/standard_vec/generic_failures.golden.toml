@@ -1,17 +1,20 @@
 schema = 2
 
 [[test]]
-name = "bare_interface_element"
+name = "unsupported_element_types"
 mode = "compile-fail"
-source = "vec_generic_interface_failure.ska"
+source = "vec_generic_resolution_failures.ska"
 [test.expect.stderr]
-match = "starts-with"
-inline = "error[RES048]: type arguments for `std::vec::Vec<vec_generic_interface_failure::Readable>` do not satisfy its requirements"
+matches = [
+  { name = "bare interface element", match = "contains", inline = "error[RES048]: type arguments for `std::vec::Vec<vec_generic_resolution_failures::Readable>` do not satisfy its requirements" },
+  { name = "unavailable element lifecycle", match = "contains", inline = "error[RES048]: type arguments for `std::vec::Vec<vec_generic_resolution_failures::Node>` do not satisfy its requirements" },
+  { name = "Obj element", match = "contains", inline = "error[RES048]: type arguments for `std::vec::Vec<Obj>` do not satisfy its requirements" },
+]
 
 [[test]]
-name = "unavailable_element_lifecycle"
+name = "unit_element"
 mode = "compile-fail"
-source = "vec_generic_lifecycle_failure.ska"
+source = "vec_generic_unit_failure.ska"
 [test.expect.stderr]
 match = "starts-with"
-inline = "error[RES048]: type arguments for `std::vec::Vec<vec_generic_lifecycle_failure::Node>` do not satisfy its requirements"
+inline = "error[PAR002]: expected a generic type argument"

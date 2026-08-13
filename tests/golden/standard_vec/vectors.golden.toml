@@ -9,6 +9,14 @@ source = "vec_generic.ska"
 name = "complete_element_and_lifecycle_profile"
 
 [[test]]
+name = "generic_type_shapes"
+mode = "run"
+source = "vec_generic_type_shapes.ska"
+
+[[test.run]]
+name = "recursive_aggregate_ownership_and_box_elements"
+
+[[test]]
 name = "generic_modules"
 mode = "run"
 compiler_args = [

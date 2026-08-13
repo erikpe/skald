@@ -256,7 +256,7 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         }
-        if is_call_through_groups(source) {
+        if is_optional_producer(source) {
             let expression = self.check_expression(source)?;
             if let Some(OptionalPayloadKind::Shared(actual)) = self.optional_kind(expression.ty) {
                 if super::shared::target_accepts(self.program, target, actual) {

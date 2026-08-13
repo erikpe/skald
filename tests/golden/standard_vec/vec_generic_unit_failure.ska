@@ -1,0 +1,7 @@
+from std::vec import Vec;
+
+fn accept(ref values: Vec<unit>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

@@ -1,0 +1,416 @@
+from std::str import Str;
+from std::test import assert_eq_i64, assert_eq_str, assert_eq_u64, assert_eq_u8, assert_true;
+from std::vec import Vec;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Item implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Matrix<T> {
+    private rows: Vec<Vec<T>>;
+
+    init() {
+        self.rows = Vec<Vec<T>>();
+    }
+
+    mut fn push(row: Vec<T>) -> unit {
+        self.rows.push(row);
+    }
+
+    fn get(index: i64) -> Vec<T> {
+        return self.rows.get(index);
+    }
+
+    fn capacity() -> u64 {
+        return self.rows.capacity();
+    }
+}
+
+fn exercise_primitive() -> unit {
+    var values: Vec<i64> = Vec<i64>();
+    var index: i64 = 0;
+    while (index < 6) {
+        values.push(index * 10);
+        index = index + 1;
+    }
+
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(values.get(5), 50);
+}
+
+fn exercise_primitive_optional() -> unit {
+    // T?[] preserves both optional layers as i64??[].
+    var values: Vec<i64?> = Vec<i64?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        values.push(some(index * 10));
+        index = index + 1;
+    }
+
+    values.set(0, none);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_eq_i64(values.get(5)!, 50);
+}
+
+fn exercise_strings() -> unit {
+    var values: Vec<Str> = Vec<Str>();
+    values.push("literal-head");
+    values.push("");
+
+    var index: i64 = 0;
+    while (index < 10) {
+        var prefix: Str = "item-";
+        var suffix: Str = Str.from_i64(index);
+        var generated: Str = prefix.concat(suffix);
+        values.push(generated);
+        index = index + 1;
+    }
+
+    assert_eq_u64(values.len(), 12u);
+    assert_eq_u64(values.capacity(), 16u);
+    assert_eq_str(values.get(0), "literal-head");
+    assert_eq_str(values.get(1), "");
+
+    index = 0;
+    while (index < 10) {
+        var prefix: Str = "item-";
+        var suffix: Str = Str.from_i64(index);
+        var expected: Str = prefix.concat(suffix);
+        assert_eq_str(values.get(index + 2), expected);
+        index = index + 1;
+    }
+
+    var tail_prefix: Str = "tail-";
+    var tail_suffix: Str = "literal";
+    values.set(-1, tail_prefix.concat(tail_suffix));
+    var snapshot: Vec<Str> = values;
+    values.set(0, "changed");
+    values.clear();
+    assert_true(values.is_empty());
+    assert_eq_str(snapshot.get(0), "literal-head");
+    assert_eq_str(snapshot.last(), "tail-literal");
+
+    var expected_tail: Str = "tail-literal";
+    var recovered_tail: Str = snapshot.last();
+    var byte_index: i64 = 0;
+    while ((u64) byte_index < expected_tail.len()) {
+        assert_eq_u8(recovered_tail.byte(byte_index), expected_tail.byte(byte_index));
+        byte_index = byte_index + 1;
+    }
+
+    var removed_bytes: u64 = 0u;
+    while (!snapshot.is_empty()) {
+        var removed: Str = snapshot.pop();
+        removed_bytes = removed_bytes + removed.len();
+    }
+    assert_eq_u64(removed_bytes, 78u);
+    assert_true(snapshot.is_empty());
+}
+
+fn exercise_complex() -> unit {
+    var values: Vec<Item> = Vec<Item>();
+    var index: i64 = 0;
+    while (index < 6) {
+        values.push(Item(index * 10));
+        index = index + 1;
+    }
+
+    var recovered: Item = values.get(5);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(recovered.value, 50);
+}
+
+fn exercise_complex_generic() -> unit {
+    var rows: Vec<Vec<i64>> = Vec<Vec<i64>>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var row: Vec<i64> = Vec<i64>();
+        row.push(index * 10);
+        rows.push(row);
+        row.set(0, -1);
+        index = index + 1;
+    }
+
+    var recovered: Vec<i64> = rows.get(5);
+    assert_eq_u64(rows.capacity(), 8u);
+    assert_eq_i64(recovered.get(0), 50);
+}
+
+fn exercise_shared() -> unit {
+    var values: Vec<shared Item> = Vec<shared Item>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var owner: shared Item = new Item(index * 10);
+        values.push(owner);
+        index = index + 1;
+    }
+
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(values.get(5)->value, 50);
+}
+
+fn exercise_optional_shared() -> unit {
+    var values: Vec<shared? Item> = Vec<shared? Item>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var owner: shared Item = new Item(index * 10);
+        values.push(owner);
+        index = index + 1;
+    }
+
+    values.set(0, none);
+    var recovered: shared Item = values.get(5)!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_eq_i64(recovered->value, 50);
+}
+
+fn exercise_shared_optional_box() -> unit {
+    var values: Vec<shared Item?> = Vec<shared Item?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var box: shared Item? = new Item?(Item(index * 10));
+        values.push(box);
+        index = index + 1;
+    }
+
+    var recovered: shared Item? = values.get(5);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(*recovered is some);
+    assert_eq_i64((*recovered)!.value, 50);
+}
+
+fn exercise_optional_shared_optional_box() -> unit {
+    var values: Vec<shared? Item?> = Vec<shared? Item?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var box: shared Item? = new Item?(Item(index * 10));
+        values.push(box);
+        index = index + 1;
+    }
+
+    var absent_box: shared Item? = new Item?();
+    values.set(0, none);
+    values.set(1, absent_box);
+    var recovered_absent_box: shared Item? = values.get(1)!;
+    var recovered_present_box: shared Item? = values.get(5)!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_true(*recovered_absent_box is none);
+    assert_eq_i64((*recovered_present_box)!.value, 50);
+}
+
+fn exercise_recursive_optional() -> unit {
+    // The private slot type adds a third optional layer: i64???[].
+    var values: Vec<i64??> = Vec<i64??>();
+    var index: i64 = 0;
+    while (index < 6) {
+        values.push(some(some(index * 10)));
+        index = index + 1;
+    }
+
+    values.set(0, none);
+    values.set(1, some(none));
+    var recovered: i64?? = values.get(5);
+    var recovered_inner: i64? = recovered!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_true(values.get(1)! is none);
+    assert_eq_i64(recovered_inner!, 50);
+}
+
+fn exercise_optional_inline_array() -> unit {
+    var values: Vec<i64[]?> = Vec<i64[]?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var row: i64[] = i64[]{index * 10, index * 10 + 1};
+        values.push(some(row));
+        index = index + 1;
+    }
+
+    values.set(0, none);
+    var recovered_optional: i64[]? = values.get(5);
+    var recovered: i64[] = recovered_optional!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_eq_i64(recovered[0], 50);
+    assert_eq_i64(recovered[1], 51);
+}
+
+fn exercise_optional_shared_array() -> unit {
+    var values: Vec<shared? i64[]> = Vec<shared? i64[]>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var owner: shared i64[] = new i64[]{index * 10, index * 10 + 1};
+        values.push(owner);
+        index = index + 1;
+    }
+
+    values.set(0, none);
+    var recovered: shared i64[] = values.get(5)!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_eq_i64(recovered->[0], 50);
+    assert_eq_i64(recovered->[1], 51);
+}
+
+fn exercise_shared_optional_array_box() -> unit {
+    var values: Vec<shared i64[]?> = Vec<shared i64[]?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var box: shared i64[]? = new i64[]?(i64[]{index * 10, index * 10 + 1});
+        values.push(box);
+        index = index + 1;
+    }
+
+    var recovered_box: shared i64[]? = values.get(5);
+    var recovered_optional: i64[]? = *recovered_box;
+    var recovered: i64[] = recovered_optional!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(recovered[0], 50);
+    assert_eq_i64(recovered[1], 51);
+}
+
+fn exercise_optional_shared_optional_array_box() -> unit {
+    var values: Vec<shared? i64[]?> = Vec<shared? i64[]?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var box: shared i64[]? = new i64[]?(i64[]{index * 10, index * 10 + 1});
+        values.push(box);
+        index = index + 1;
+    }
+
+    var absent_box: shared i64[]? = new i64[]?();
+    values.set(0, none);
+    values.set(1, absent_box);
+    var recovered_absent_box: shared i64[]? = values.get(1)!;
+    var recovered_present_box: shared i64[]? = values.get(5)!;
+    var recovered_optional: i64[]? = *recovered_present_box;
+    var recovered: i64[] = recovered_optional!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_true(*recovered_absent_box is none);
+    assert_eq_i64(recovered[0], 50);
+    assert_eq_i64(recovered[1], 51);
+}
+
+fn exercise_shared_generic_optional_box() -> unit {
+    var values: Vec<shared Vec<Item?>?> = Vec<shared Vec<Item?>?>();
+    var outer: i64 = 0;
+    while (outer < 6) {
+        var inner: Vec<Item?> = Vec<Item?>();
+        var inner_index: i64 = 0;
+        while (inner_index < 6) {
+            inner.push(Item(outer * 10 + inner_index));
+            inner_index = inner_index + 1;
+        }
+        var box: shared Vec<Item?>? = new Vec<Item?>?(inner);
+        values.push(box);
+        outer = outer + 1;
+    }
+
+    var recovered_box: shared Vec<Item?>? = values.get(5);
+    var recovered_inner: Vec<Item?> = (*recovered_box)!;
+    var recovered_optional: Item? = recovered_inner.get(5);
+    var recovered: Item = recovered_optional!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_u64(recovered_inner.capacity(), 8u);
+    assert_eq_i64(recovered.value, 55);
+}
+
+fn exercise_shared_interface_optional_box() -> unit {
+    var values: Vec<shared Readable?> = Vec<shared Readable?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var exact: shared Item? = new Item?(Item(index * 10));
+        var readable: shared Readable? = exact;
+        values.push(readable);
+        index = index + 1;
+    }
+
+    var recovered: shared Readable? = values.get(5);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64((*recovered)!.read(), 50);
+}
+
+fn exercise_optional_shared_interface_optional_box() -> unit {
+    var values: Vec<shared? Readable?> = Vec<shared? Readable?>();
+    var index: i64 = 0;
+    while (index < 6) {
+        var exact: shared Item? = new Item?(Item(index * 10));
+        var readable: shared Readable? = exact;
+        values.push(readable);
+        index = index + 1;
+    }
+
+    values.set(0, none);
+    var recovered: shared Readable? = values.get(5)!;
+    assert_eq_u64(values.capacity(), 8u);
+    assert_true(values.get(0) is none);
+    assert_eq_i64((*recovered)!.read(), 50);
+}
+
+fn exercise_cascading_specialization() -> unit {
+    var matrix: Matrix<shared? Item?> = Matrix<shared? Item?>();
+    var outer: i64 = 0;
+    while (outer < 6) {
+        var row: Vec<shared? Item?> = Vec<shared? Item?>();
+        var inner: i64 = 0;
+        while (inner < 6) {
+            var box: shared Item? = new Item?(Item(outer * 10 + inner));
+            row.push(box);
+            inner = inner + 1;
+        }
+        matrix.push(row);
+        outer = outer + 1;
+    }
+
+    var recovered_row: Vec<shared? Item?> = matrix.get(5);
+    var recovered_box: shared Item? = recovered_row.get(5)!;
+    assert_eq_u64(matrix.capacity(), 8u);
+    assert_eq_u64(recovered_row.capacity(), 8u);
+    assert_eq_i64((*recovered_box)!.value, 55);
+}
+
+fn main() -> i64 {
+    exercise_primitive();
+    exercise_primitive_optional();
+    exercise_strings();
+    exercise_complex();
+    exercise_complex_generic();
+    exercise_shared();
+    exercise_optional_shared();
+    exercise_shared_optional_box();
+    exercise_optional_shared_optional_box();
+    exercise_recursive_optional();
+    exercise_optional_inline_array();
+    exercise_optional_shared_array();
+    exercise_shared_optional_array_box();
+    exercise_optional_shared_optional_array_box();
+    exercise_shared_generic_optional_box();
+    exercise_shared_interface_optional_box();
+    exercise_optional_shared_interface_optional_box();
+    exercise_cascading_specialization();
+    return 0;
+}

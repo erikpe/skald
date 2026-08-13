@@ -289,21 +289,11 @@ fn compute_class<I: Copy>(
                             .payload
                             .kind;
                         let payload = match payload {
-                            ResolvedTypeKind::I64 => {
-                                crate::hir::HirPrimitiveType::I64
-                            }
-                            ResolvedTypeKind::U64 => {
-                                crate::hir::HirPrimitiveType::U64
-                            }
-                            ResolvedTypeKind::U8 => {
-                                crate::hir::HirPrimitiveType::U8
-                            }
-                            ResolvedTypeKind::F64 => {
-                                crate::hir::HirPrimitiveType::F64
-                            }
-                            ResolvedTypeKind::Bool => {
-                                crate::hir::HirPrimitiveType::Bool
-                            }
+                            ResolvedTypeKind::I64 => crate::hir::HirPrimitiveType::I64,
+                            ResolvedTypeKind::U64 => crate::hir::HirPrimitiveType::U64,
+                            ResolvedTypeKind::U8 => crate::hir::HirPrimitiveType::U8,
+                            ResolvedTypeKind::F64 => crate::hir::HirPrimitiveType::F64,
+                            ResolvedTypeKind::Bool => crate::hir::HirPrimitiveType::Bool,
                             ResolvedTypeKind::Shared(target) => {
                                 fields.push(HirSynthesizedFieldCopy::OptionalShared {
                                     field: field.id,
@@ -363,7 +353,8 @@ fn compute_class<I: Copy>(
                                     if let Some(constructors) = required_constructors {
                                         if constructors.capability(target).selected().is_none() {
                                             let mut path = vec![CopyPathElement::Field(field.id)];
-                                            if let Some(nested_path) = constructors.failure(target) {
+                                            if let Some(nested_path) = constructors.failure(target)
+                                            {
                                                 path.extend(nested_path);
                                             }
                                             failure = Some(path);
@@ -405,9 +396,10 @@ fn compute_class<I: Copy>(
                             }
                             ResolvedTypeKind::Unit
                             | ResolvedTypeKind::Obj
-                            | ResolvedTypeKind::Interface(_) => unreachable!(
-                                "deferred optional payloads must be rejected before capability lowering"
-                            ),
+                            | ResolvedTypeKind::Interface(_) => {
+                                failure = Some(vec![CopyPathElement::Field(field.id)]);
+                                break;
+                            }
                         };
                         fields.push(HirSynthesizedFieldCopy::OptionalPrimitive {
                             field: field.id,
