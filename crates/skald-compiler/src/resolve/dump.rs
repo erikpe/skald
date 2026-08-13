@@ -308,6 +308,43 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if !program.generic_specializations.is_empty() {
+            dumper.heading("GenericSpecializations");
+            dumper.indented(|dumper| {
+                for specialization in program.generic_specializations.iter() {
+                    dumper.line(
+                        &format!(
+                            "Specialization {} class {} state {}",
+                            dumper.render_specialization_key(&specialization.key),
+                            specialization
+                                .class()
+                                .map_or_else(|| "unassigned".to_owned(), |class| class.to_string()),
+                            render_specialization_state(specialization.state),
+                        ),
+                        specialization.provenance.template_span,
+                    );
+                    dumper.indented(|dumper| {
+                        for transition in &specialization.transitions {
+                            dumper.raw_line(&format!(
+                                "Transition {}",
+                                render_specialization_transition(*transition)
+                            ));
+                        }
+                        for origin in &specialization.provenance.origins {
+                            dumper.line(&format!("Origin module {}", origin.module), origin.span);
+                        }
+                        if !specialization.provenance.recursion_path.is_empty() {
+                            dumper.raw_line("RecursionPath");
+                            dumper.indented(|dumper| {
+                                for key in &specialization.provenance.recursion_path {
+                                    dumper.raw_line(&dumper.render_specialization_key(key));
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
         dumper.write_indentation();
         match program.entry_function {
             Some(function) => {
@@ -1679,6 +1716,16 @@ impl<'types> ResolvedDumper<'types> {
         }
     }
 
+    fn render_specialization_key(&self, key: &GenericClassInstanceKey) -> String {
+        let arguments = key
+            .arguments
+            .iter()
+            .map(|argument| self.render_type_kind(*argument))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("{}<{arguments}>", key.template)
+    }
+
     fn render_shared_target(&self, target: ResolvedSharedTarget) -> String {
         match target.category() {
             ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Obj) => "Obj".to_owned(),
@@ -1703,5 +1750,29 @@ impl<'types> ResolvedDumper<'types> {
                 )
             }
         }
+    }
+}
+
+fn render_specialization_state(state: GenericSpecializationState) -> String {
+    match state {
+        GenericSpecializationState::Requested => "requested".to_owned(),
+        GenericSpecializationState::InProgress(class) => format!("in-progress {class}"),
+        GenericSpecializationState::Complete(class) => format!("complete {class}"),
+        GenericSpecializationState::Failed { reserved_class } => format!(
+            "failed {}",
+            reserved_class.map_or_else(|| "unassigned".to_owned(), |class| class.to_string())
+        ),
+    }
+}
+
+fn render_specialization_transition(transition: GenericSpecializationTransition) -> String {
+    match transition {
+        GenericSpecializationTransition::Requested => "requested".to_owned(),
+        GenericSpecializationTransition::InProgress(class) => format!("in-progress {class}"),
+        GenericSpecializationTransition::Complete(class) => format!("complete {class}"),
+        GenericSpecializationTransition::Failed { reserved_class } => format!(
+            "failed {}",
+            reserved_class.map_or_else(|| "unassigned".to_owned(), |class| class.to_string())
+        ),
     }
 }

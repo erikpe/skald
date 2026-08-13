@@ -5,6 +5,7 @@ mod body;
 mod declarations;
 mod expression;
 mod generic_requirements;
+mod generic_specializations;
 mod generic_templates;
 mod hierarchy;
 mod modules;
@@ -55,6 +56,11 @@ pub use expression::{
 };
 pub(crate) use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
+};
+pub(crate) use generic_specializations::{
+    GenericApplicationOrigin, GenericClassInstanceKey, GenericSpecialization,
+    GenericSpecializationProvenance, GenericSpecializationState, GenericSpecializationTable,
+    GenericSpecializationTransition,
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedTypeParameter,

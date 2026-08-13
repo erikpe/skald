@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G4 is next.
+Status: in progress; G5 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -58,7 +58,7 @@ not reopen those decisions while implementing them.
 - [x] G1 — Establish template identities and module declarations
 - [x] G2 — Resolve parameter-bearing type terms and nominal bounds
 - [x] G3 — Infer and evaluate contextual generic requirements
-- [ ] G4 — Build deterministic closed-specialization identities
+- [x] G4 — Build deterministic closed-specialization identities
 - [ ] G5 — Specialize class declarations into ordinary closed classes
 - [ ] G6 — Specialize executable bodies and operation selections
 - [ ] G7 — Integrate lifecycle, optionals, arrays, and ownership
@@ -234,26 +234,26 @@ planner for the same closed type.
 allocation, caching, worklist discovery, and finite recursion before emitting
 class declarations.
 
-- [ ] Add canonical instance keys containing one `ClassTemplateId` and ordered
+- [x] Add canonical instance keys containing one `ClassTemplateId` and ordered
   closed `ResolvedTypeKind` arguments; exclude spans and spelling provenance
   from equality.
-- [ ] Resolve application-site argument spellings under ordinary module and
+- [x] Resolve application-site argument spellings under ordinary module and
   visibility rules, recursively close nested applications, and intern ordinary
   compound types bottom-up.
-- [ ] Implement a deterministic specialization owner with requested,
+- [x] Implement a deterministic specialization owner with requested,
   in-progress, complete, and failed cache states.
-- [ ] Allocate one ordinary `ClassId` when a unique key enters the in-progress
+- [x] Allocate one ordinary `ClassId` when a unique key enters the in-progress
   state and reuse it for identical recursive and repeated requests.
-- [ ] Discover nested applications through substituted terms using stable
+- [x] Discover nested applications through substituted terms using stable
   module, declaration, member, expression, and argument order.
-- [ ] Diagnose transformed recursive re-entry of the same template with a
+- [x] Diagnose transformed recursive re-entry of the same template with a
   different active argument sequence, while permitting identical-key re-entry
   to close a graph.
-- [ ] Cache failures and collate later use sites without duplicate IDs or
+- [x] Cache failures and collate later use sites without duplicate IDs or
   independently ordered cascades.
-- [ ] Retain provenance from generated `ClassId` to key, template declaration,
+- [x] Retain provenance from generated `ClassId` to key, template declaration,
   and ordered application origins.
-- [ ] Extend dumps with keys, state transitions, assigned class identities, and
+- [x] Extend dumps with keys, state transitions, assigned class identities, and
   recursion paths without exposing hash iteration.
 
 **Tests:** Canonical-key equality across grouping and optional shorthand;

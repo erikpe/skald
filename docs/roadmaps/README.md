@@ -6,14 +6,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G4 is next.**
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G5 is next.**
   Implements explicit closed generic class applications through deterministic
   semantic specialization, inferred contextual requirements, nominal
   interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
   frozen syntax, template identities, structural template terms, nominal
-  bounds, delayed dependent selections, and contextual mechanical requirement
-  inference/evaluation are implemented; deterministic closed-specialization
-  identity and worklist ownership are the next implementation boundary.
+  bounds, delayed dependent selections, contextual mechanical requirement
+  inference/evaluation, and deterministic closed-specialization identity,
+  caching, provenance, and recursion handling are implemented; generation of
+  complete ordinary closed class declarations is the next boundary.
 
 ## Planned
 

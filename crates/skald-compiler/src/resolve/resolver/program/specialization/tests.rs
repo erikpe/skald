@@ -1,0 +1,364 @@
+use super::*;
+use crate::{
+    identity::{ClassId, ClassTemplateId},
+    resolve::{
+        dump_resolved, NON_TERMINATING_GENERIC_SPECIALIZATION, PRIVATE_DECLARATION, UNKNOWN_TYPE,
+        UNSUPPORTED_GENERIC_SYNTAX,
+    },
+    test_support::{load_module_sources, resolve_source},
+};
+
+#[test]
+fn grouping_and_optional_shared_shorthand_share_one_canonical_key() {
+    let output = resolve_source(
+        "class Item {}\n\
+         class Box<T> { value: T; }\n\
+         fn canonical(value: Box<(shared Item)?>) -> unit {}\n\
+         fn shorthand(value: Box<shared? Item>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(diagnostic_count(&output, UNSUPPORTED_GENERIC_SYNTAX), 2);
+    let entries = output
+        .program
+        .generic_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].key.template, ClassTemplateId::new(0));
+    assert_eq!(entries[0].provenance.origins.len(), 2);
+    assert_eq!(
+        entries[0].state,
+        GenericSpecializationState::Complete(ClassId::new(1))
+    );
+}
+
+#[test]
+fn nested_source_applications_close_inside_out_and_reuse_repeated_keys() {
+    let output = resolve_source(
+        "class Inner<T> { value: T; }\n\
+         class Outer<T> { value: T; }\n\
+         fn first(value: Outer<Inner<i64>>) -> unit {}\n\
+         fn second(value: Outer<Inner<i64>>) -> unit {}\n\
+         fn distinct(value: Outer<Inner<i64>?>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let entries = output
+        .program
+        .generic_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 3, "{}", dump_resolved(&output.program));
+    assert_eq!(entries[0].key.template, ClassTemplateId::new(0));
+    assert_eq!(
+        entries[0].state,
+        GenericSpecializationState::Complete(ClassId::new(0))
+    );
+    assert_eq!(entries[1].key.template, ClassTemplateId::new(1));
+    assert_eq!(
+        entries[1].state,
+        GenericSpecializationState::Complete(ClassId::new(1))
+    );
+    assert_eq!(entries[0].provenance.origins.len(), 3);
+    assert_eq!(entries[1].provenance.origins.len(), 2);
+    assert_eq!(entries[2].key.template, ClassTemplateId::new(1));
+    assert_eq!(
+        entries[2].state,
+        GenericSpecializationState::Complete(ClassId::new(2))
+    );
+}
+
+#[test]
+fn templates_argument_order_and_closed_type_shapes_remain_distinct() {
+    let output = resolve_source(
+        "interface View { fn inspect() -> unit; }\n\
+         class Item {}\n\
+         class One<T> { value: T; }\n\
+         class Two<T> { value: T; }\n\
+         class Pair<Left, Right> { left: Left; right: Right; }\n\
+         fn shapes(\n\
+           one: One<i64>,\n\
+           two: Two<i64>,\n\
+           forward: Pair<i64, bool>,\n\
+           reverse: Pair<bool, i64>,\n\
+           array: One<i64?[]>,\n\
+           owner: One<shared Item>,\n\
+           view: One<shared View>\n\
+         ) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let entries = output
+        .program
+        .generic_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 7, "{}", dump_resolved(&output.program));
+    assert_ne!(entries[0].key.template, entries[1].key.template);
+    assert_eq!(entries[2].key.template, entries[3].key.template);
+    assert_ne!(entries[2].key.arguments, entries[3].key.arguments);
+    assert!(entries
+        .iter()
+        .all(|entry| matches!(entry.state, GenericSpecializationState::Complete(_))));
+}
+
+#[test]
+fn identical_recursive_requests_reuse_the_in_progress_class() {
+    let output = resolve_source(
+        "class Node<T> { next: shared Node<T>; }\n\
+         fn use(value: Node<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        0
+    );
+    let specialization = output
+        .program
+        .generic_specializations
+        .iter()
+        .next()
+        .unwrap();
+    assert_eq!(
+        specialization.state,
+        GenericSpecializationState::Complete(ClassId::new(0))
+    );
+    assert_eq!(
+        specialization.transitions,
+        [
+            GenericSpecializationTransition::Requested,
+            GenericSpecializationTransition::InProgress(ClassId::new(0)),
+            GenericSpecializationTransition::Complete(ClassId::new(0)),
+        ]
+    );
+    assert!(specialization.provenance.recursion_path.is_empty());
+    assert!(output.program.classes.is_empty());
+}
+
+#[test]
+fn contextual_requirement_failures_do_not_preempt_specialization_identity_discovery() {
+    let output = resolve_source(
+        "class Nested<T> { value: T; }\n\
+         class Owner<T> { invalid_for_i64: shared T; nested: Nested<T>; }\n\
+         fn use(value: Owner<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        0
+    );
+    let entries = output
+        .program
+        .generic_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 2, "{}", dump_resolved(&output.program));
+    assert!(entries
+        .iter()
+        .all(|entry| matches!(entry.state, GenericSpecializationState::Complete(_))));
+}
+
+#[test]
+fn substitution_preserves_optional_layers_and_shared_arguments_literally() {
+    let output = resolve_source(
+        "class Item {}\n\
+         class Vec<T> { storage: T?[]; }\n\
+         fn exact(value: Vec<Item>) -> unit {}\n\
+         fn optional(value: Vec<Item?>) -> unit {}\n\
+         fn owner(value: Vec<shared Item>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(output.program.generic_specializations.iter().len(), 3);
+    let optionals = output.program.optional_types.iter().collect::<Vec<_>>();
+    assert_eq!(optionals.len(), 3);
+    assert_eq!(
+        optionals[0].payload.kind,
+        ResolvedTypeKind::Class(ClassId::new(0))
+    );
+    assert_eq!(
+        optionals[1].payload.kind,
+        ResolvedTypeKind::Optional(optionals[0].id)
+    );
+    assert!(matches!(
+        optionals[2].payload.kind,
+        ResolvedTypeKind::Shared(_)
+    ));
+
+    let arrays = output.program.array_types.iter().collect::<Vec<_>>();
+    assert_eq!(arrays.len(), 3);
+    for (array, optional) in arrays.iter().zip(optionals) {
+        assert_eq!(array.element.kind, ResolvedTypeKind::Optional(optional.id));
+    }
+}
+
+#[test]
+fn transformed_recursion_is_failed_once_and_later_uses_reuse_the_failure() {
+    let output = resolve_source(
+        "class Expand<T> { next: shared Expand<T[]>; }\n\
+         fn first(value: Expand<i64>) -> unit {}\n\
+         fn second(value: Expand<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        1
+    );
+    let entries = output
+        .program
+        .generic_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(
+        entries[0].state,
+        GenericSpecializationState::Failed {
+            reserved_class: Some(ClassId::new(0)),
+        }
+    );
+    assert_eq!(entries[0].provenance.origins.len(), 2);
+    assert_eq!(entries[0].provenance.recursion_path.len(), 2);
+    assert!(output.program.classes.is_empty());
+}
+
+#[test]
+fn transformed_edges_do_not_poison_a_separately_finite_key() {
+    fn states(source: &str) -> (GenericSpecializationState, GenericSpecializationState) {
+        let output = resolve_source(source);
+        assert_eq!(
+            diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+            1
+        );
+        let mut i64_state = None;
+        let mut bool_state = None;
+        for specialization in output.program.generic_specializations.iter() {
+            match specialization.key.arguments.as_slice() {
+                [ResolvedTypeKind::I64] => i64_state = Some(specialization.state),
+                [ResolvedTypeKind::Bool] => bool_state = Some(specialization.state),
+                arguments => panic!("unexpected specialization arguments: {arguments:?}"),
+            }
+        }
+        (i64_state.unwrap(), bool_state.unwrap())
+    }
+
+    let finite_first = states(
+        "class Switch<T> { next: shared Switch<i64>; }\n\
+         fn finite(value: Switch<i64>) -> unit {}\n\
+         fn transformed(value: Switch<bool>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let transformed_first = states(
+        "class Switch<T> { next: shared Switch<i64>; }\n\
+         fn transformed(value: Switch<bool>) -> unit {}\n\
+         fn finite(value: Switch<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(matches!(
+        finite_first.0,
+        GenericSpecializationState::Complete(_)
+    ));
+    assert!(matches!(
+        finite_first.1,
+        GenericSpecializationState::Failed { .. }
+    ));
+    assert!(matches!(
+        transformed_first.0,
+        GenericSpecializationState::Complete(_)
+    ));
+    assert!(matches!(
+        transformed_first.1,
+        GenericSpecializationState::Failed { .. }
+    ));
+}
+
+#[test]
+fn cross_module_reuse_and_source_permutation_have_identical_dumps() {
+    let app = "from dep import Box;\nfn first(value: Box<i64>) -> unit {}\nfn second(value: Box<i64>) -> unit {}\nfn main() -> i64 { return 0; }\n";
+    let dep = "public class Box<T> { value: T; }\n";
+
+    let first = resolve_modules(&[("dep.ska", dep), ("app.ska", app)]);
+    let second = resolve_modules(&[("app.ska", app), ("dep.ska", dep)]);
+
+    assert_eq!(
+        dump_resolved(&first.program),
+        dump_resolved(&second.program)
+    );
+    let specialization = first.program.generic_specializations.iter().next().unwrap();
+    assert_eq!(specialization.provenance.origins.len(), 2);
+    assert_eq!(
+        specialization.state,
+        GenericSpecializationState::Complete(ClassId::new(0))
+    );
+}
+
+#[test]
+fn application_arguments_obey_module_visibility_before_requesting_a_key() {
+    let app = "import dep;\nfn good(value: dep::Box<dep::Visible>) -> unit {}\nfn bad(value: dep::Box<dep::Hidden>) -> unit {}\nfn main() -> i64 { return 0; }\n";
+    let dep = "public class Visible {}\nclass Hidden {}\npublic class Box<T> { value: T; }\n";
+    let output = resolve_modules(&[("app.ska", app), ("dep.ska", dep)]);
+
+    assert_eq!(diagnostic_count(&output, PRIVATE_DECLARATION), 1);
+    let entries = output
+        .program
+        .generic_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 1, "{}", dump_resolved(&output.program));
+    assert!(matches!(
+        entries[0].state,
+        GenericSpecializationState::Complete(_)
+    ));
+}
+
+#[test]
+fn invalid_closed_argument_spellings_do_not_create_specialization_keys() {
+    let output = resolve_source(
+        "class Box<T> { value: T; }\n\
+         fn bad(value: Box<shared i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(diagnostic_count(&output, UNKNOWN_TYPE), 1);
+    assert!(output.program.generic_specializations.is_empty());
+}
+
+#[test]
+fn dump_exposes_stable_keys_transitions_origins_and_recursion_paths() {
+    let output = resolve_source(
+        "class Expand<T> { next: shared Expand<T[]>; }\n\
+         fn use(value: Expand<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump, dump_resolved(&output.program));
+    for fragment in [
+        "GenericSpecializations",
+        "Specialization template0<i64> class c0 state failed c0",
+        "Transition requested",
+        "Transition in-progress c0",
+        "Origin module m0",
+        "RecursionPath",
+        "template0<array a0>",
+    ] {
+        assert!(dump.contains(fragment), "missing `{fragment}` in:\n{dump}");
+    }
+}
+
+fn resolve_modules(sources: &[(&str, &str)]) -> crate::resolve::ResolveOutput {
+    let (_workspace, graph) = load_module_sources("app", sources);
+    crate::resolve::resolve_module_graph(&graph)
+}
+
+fn diagnostic_count(output: &crate::resolve::ResolveOutput, code: &str) -> usize {
+    output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == code)
+        .count()
+}

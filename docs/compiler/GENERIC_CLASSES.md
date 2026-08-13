@@ -1,16 +1,19 @@
 # Generic-Class Specialization
 
-Status: frozen compiler design; template resolution and contextual requirement
-analysis implemented, semantic specialization not implemented. This document
-defines the target-independent compilation contract for the initial
+Status: frozen compiler design; template resolution, contextual requirement
+analysis, and closed-specialization identity discovery implemented; generated
+class specialization not implemented. This document defines the
+target-independent compilation contract for the initial
 [generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
 Resolution now produces stable template identities, structural template type
 terms, definition-site selections, nominal interface bounds, explicit
-argument-dependent selections, and structural mechanical requirements with
-source origins. A closed-type capability facade composes the existing
-validators and lifecycle planners; valid closed applications remain gated
-until the specialization phase products exist.
+argument-dependent selections, structural mechanical requirements with source
+origins, canonical closed application keys, and deterministic specialization
+cache identities with recursion provenance. A closed-type capability facade
+composes the existing validators and lifecycle planners; valid closed
+applications remain gated until complete generated declarations and bodies
+exist.
 
 ## Architectural outcome
 

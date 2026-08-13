@@ -27,6 +27,7 @@ use super::modules::{
     ResolvedVisibility,
 };
 use super::optional_types::ResolvedOptionalTypeTable;
+use super::GenericSpecializationTable;
 use super::{ResolvedOptionalBoxTypeTable, ResolvedSharedTarget};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,6 +40,7 @@ pub struct ResolvedProgram {
     pub class_templates: ResolvedClassTemplateTable,
     pub type_parameters: ResolvedTypeParameterTable,
     pub(crate) template_semantics: ResolvedClassTemplateSemanticTable,
+    pub(crate) generic_specializations: GenericSpecializationTable,
     pub array_types: ResolvedArrayTypeTable,
     pub optional_types: ResolvedOptionalTypeTable,
     pub optional_box_types: ResolvedOptionalBoxTypeTable,

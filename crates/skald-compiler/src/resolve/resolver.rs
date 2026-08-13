@@ -72,6 +72,7 @@ pub const INVALID_GENERIC_BASE: &str = "RES043";
 pub const UNSUPPORTED_PARAMETER_CONSTRUCTION: &str = "RES044";
 pub const UNCONSTRAINED_TYPE_PARAMETER_MEMBER: &str = "RES045";
 pub const AMBIGUOUS_GENERIC_BOUND_MEMBER: &str = "RES046";
+pub const NON_TERMINATING_GENERIC_SPECIALIZATION: &str = "RES047";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -248,7 +249,7 @@ fn report_generic_application(
                 diagnostics.push(
                     Diagnostic::error(
                         UNSUPPORTED_GENERIC_SYNTAX,
-                        "generic class specialization is not implemented yet",
+                        "generic class generation is not implemented yet",
                     )
                     .with_primary_label(
                         named.span,

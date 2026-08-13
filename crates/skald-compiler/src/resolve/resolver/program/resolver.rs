@@ -90,7 +90,7 @@ impl<'ast> ModuleUnit<'ast> {
 }
 
 #[derive(Clone, Copy)]
-struct ProgramLookupTables<'program> {
+pub(super) struct ProgramLookupTables<'program> {
     bindings: &'program ResolvedModuleBindingTable,
     ordinary_bindings: &'program ResolvedOrdinaryBindingTable,
     declarations: &'program ResolvedModuleDeclarationTable,
@@ -100,7 +100,7 @@ struct ProgramLookupTables<'program> {
 }
 
 impl<'program> ProgramLookupTables<'program> {
-    fn for_unit(
+    pub(super) fn for_unit(
         self,
         unit: &'program ModuleUnit<'_>,
         modules: &'program ProgramModuleTable,
@@ -375,6 +375,18 @@ impl<'ast> ProgramResolver<'ast> {
                 });
 
         let span = entry_unit.ast.span;
+        let generic_specializations = discover_specializations(
+            SpecializationDiscoveryInput::new(
+                &self.units,
+                &self.modules,
+                lookups,
+                &template_semantics,
+                &class_templates,
+                class_declarations.len(),
+            ),
+            &mut self.type_interner,
+            &mut self.diagnostics,
+        );
         let (array_types, optional_types, optional_box_types) = self.type_interner.finish();
         ResolveOutput {
             program: ResolvedProgram {
@@ -386,6 +398,7 @@ impl<'ast> ProgramResolver<'ast> {
                 class_templates,
                 type_parameters,
                 template_semantics,
+                generic_specializations,
                 array_types,
                 optional_types,
                 optional_box_types,

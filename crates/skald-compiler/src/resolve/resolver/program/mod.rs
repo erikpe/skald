@@ -22,6 +22,7 @@ mod hierarchy;
 mod interface;
 mod intrinsic_registry;
 mod resolver;
+mod specialization;
 mod static_initializer;
 mod string_language_item;
 mod virtuals;
@@ -43,6 +44,7 @@ use resolver::{
     resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
     ProgramResolver,
 };
+use specialization::{discover_specializations, SpecializationDiscoveryInput};
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
 use string_language_item::validate_string_language_item;
 use virtuals::resolve_virtual_families;
