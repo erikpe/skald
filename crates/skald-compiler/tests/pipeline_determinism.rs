@@ -840,9 +840,7 @@ fn generic_module_phase_dump(variant: usize) -> String {
     let graph = load_module_graph(&entry, &fixture.path, &providers).unwrap();
     let resolved = resolve_module_graph(&graph);
     assert!(
-        resolved.diagnostics.iter().all(
-            |diagnostic| diagnostic.code == skald_compiler::resolve::UNSUPPORTED_GENERIC_SYNTAX
-        ),
+        resolved.diagnostics.is_empty(),
         "{:?}",
         resolved.diagnostics
     );

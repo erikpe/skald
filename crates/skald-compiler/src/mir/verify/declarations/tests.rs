@@ -1,10 +1,12 @@
 use crate::{
-    identity::{ArrayTypeId, ClassId, ExternalLinkId, FieldId, FunctionId, ModuleId},
-    mir::{
-        verify_mir, MirCopyCapability, MirFunctionLinkage, MirReceiverAccess,
-        MirSynthesizedFieldCopy,
+    identity::{
+        ArrayTypeId, ClassId, ExternalLinkId, FieldId, FunctionId, ModuleId, OptionalTypeId,
     },
-    test_support::lower_source_to_mir,
+    mir::{
+        verify_mir, MirCopyCapability, MirFunctionLinkage, MirReceiverAccess, MirSharedTarget,
+        MirSynthesizedFieldCopy, MirType,
+    },
+    test_support::{lower_generic_source_to_final_mir, lower_source_to_mir},
 };
 
 fn messages(source: &crate::mir::MirProgram) -> Vec<String> {
@@ -161,6 +163,57 @@ fn rejects_field_metadata_with_the_wrong_owner() {
     assert!(messages(&program)
         .iter()
         .any(|message| message.contains("field table index 0")));
+}
+
+#[test]
+fn rejects_undeclared_compound_types_across_generated_class_products() {
+    let source = concat!(
+        "class Box<T> {\n",
+        "  value: T?;\n",
+        "  init() { self.value = none; }\n",
+        "  fn pass(value: T?) -> T? { return value; }\n",
+        "}\n",
+        "fn main() -> i64 { var value: Box<i64> = Box<i64>(); return 0; }\n",
+    );
+    let program = lower_generic_source_to_final_mir(source);
+    verify_mir(&program).expect("closed generic MIR must verify before mutation");
+    let generated = program
+        .classes
+        .iter()
+        .find(|class| class.name == "Box<i64>")
+        .expect("application must produce one closed class")
+        .id;
+
+    let mut field = program.clone();
+    field.classes.entries_mut_for_test()[generated.index()].fields[0].ty =
+        MirType::Optional(OptionalTypeId::new(99));
+    assert!(messages(&field).iter().any(|message| {
+        message.contains("absent from the closed MIR type tables")
+            && message.contains("field")
+            && message.contains("optional o99")
+    }));
+
+    let mut signature = program.clone();
+    signature.classes.entries_mut_for_test()[generated.index()].methods[0].parameters[0].ty =
+        MirType::Shared(MirSharedTarget::Class(ClassId::new(99)));
+    assert!(messages(&signature).iter().any(|message| {
+        message.contains("absent from the closed MIR type tables")
+            && message.contains("method")
+            && message.contains("shared class c99")
+    }));
+
+    let mut body = program;
+    let method = body.classes.entries_mut_for_test()[generated.index()].methods[0].id;
+    body.member_definitions
+        .get_mut_for_test(method.into())
+        .expect("generated method definition must exist")
+        .storage[0]
+        .ty = MirType::Optional(OptionalTypeId::new(99));
+    assert!(messages(&body).iter().any(|message| {
+        message.contains("absent from the closed MIR type tables")
+            && message.contains("storage")
+            && message.contains("optional o99")
+    }));
 }
 
 #[test]

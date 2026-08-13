@@ -3,7 +3,6 @@ use crate::{
     identity::{ClassId, ClassTemplateId},
     resolve::{
         dump_resolved, NON_TERMINATING_GENERIC_SPECIALIZATION, PRIVATE_DECLARATION, UNKNOWN_TYPE,
-        UNSUPPORTED_GENERIC_SYNTAX,
     },
     test_support::{load_module_sources, resolve_source},
 };
@@ -18,7 +17,7 @@ fn grouping_and_optional_shared_shorthand_share_one_canonical_key() {
          fn main() -> i64 { return 0; }\n",
     );
 
-    assert_eq!(diagnostic_count(&output, UNSUPPORTED_GENERIC_SYNTAX), 2);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let entries = output
         .program
         .generic_specializations
@@ -459,18 +458,8 @@ fn cyclic_module_applications_use_canonical_names_and_stable_graph_order() {
 
     let first = resolve_modules(&first);
     let second = resolve_modules(&second);
-    let first_errors = first
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.code != UNSUPPORTED_GENERIC_SYNTAX)
-        .collect::<Vec<_>>();
-    let second_errors = second
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.code != UNSUPPORTED_GENERIC_SYNTAX)
-        .collect::<Vec<_>>();
-    assert!(first_errors.is_empty(), "{first_errors:?}");
-    assert!(second_errors.is_empty(), "{second_errors:?}");
+    assert!(first.diagnostics.is_empty(), "{:?}", first.diagnostics);
+    assert!(second.diagnostics.is_empty(), "{:?}", second.diagnostics);
 
     let first_names = first
         .program

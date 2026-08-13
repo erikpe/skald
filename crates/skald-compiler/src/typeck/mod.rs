@@ -22,9 +22,7 @@ pub use arrays::{
 };
 pub(crate) use capabilities::CopyPathElement;
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
-pub(crate) use generic_requirements::{
-    failed_specialization_requirements, FailedSpecializationRequirement,
-};
+pub(crate) use generic_requirements::failed_specialization_requirements;
 pub use optional_validation::INVALID_OPTIONAL_TYPE;
 pub use program::{
     type_check, TypeCheckOutput, AMBIGUOUS_INITIALIZER, COPY_OPERATION_UNAVAILABLE,

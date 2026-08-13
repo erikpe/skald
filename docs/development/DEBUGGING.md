@@ -88,9 +88,9 @@ application error. `RES047` reports an expanding recursive application, and
 `RES048`, start at the primary application, follow the requirement-origin
 secondary label into the generic class, then follow any field/base lifecycle
 path. Repeated uses of the same failed closed key appear as secondary labels
-on one diagnostic. The temporary `RES036` execution gate is suppressed when a
-more specific application failure exists, but remains for otherwise valid
-generic programs until the public backend path is enabled.
+on one diagnostic. A valid application continues through the public MIR and
+backend path; an unexpected later-phase failure should be debugged as an
+ordinary closed class/type identity or lifecycle problem.
 
 For `std::error::panic`, the AST dump prints `IntrinsicFunction` and the
 resolved dump prints `intrinsic Panic` beside its stable `FunctionId`.

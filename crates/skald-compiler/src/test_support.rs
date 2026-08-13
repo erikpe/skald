@@ -100,22 +100,10 @@ pub(crate) fn resolve_source(text: impl Into<String>) -> ResolveOutput {
     resolve(&parsed.ast)
 }
 
-/// Resolves source that deliberately exercises the implemented generic-class
-/// pipeline while the public feature gate remains active.
-///
-/// Generic roadmap tests must still reject every diagnostic other than the
-/// temporary syntax gate. Keeping that rule here prevents later compiler
-/// phases from silently accepting unrelated resolution failures.
+/// Resolves valid source that exercises generic-class specialization.
 pub(crate) fn resolve_generic_source(text: impl Into<String>) -> crate::resolve::ResolvedProgram {
     let resolved = resolve_source(text);
-    assert!(
-        resolved
-            .diagnostics
-            .iter()
-            .all(|diagnostic| diagnostic.code == crate::resolve::UNSUPPORTED_GENERIC_SYNTAX),
-        "generic source must pass every implemented resolution check: {:?}",
-        resolved.diagnostics
-    );
+    assert_phase_succeeded("generic resolution", &resolved.diagnostics);
     resolved.program
 }
 
@@ -125,14 +113,13 @@ pub(crate) fn type_check_source(text: impl Into<String>) -> TypeCheckOutput {
     type_check(&resolved.program)
 }
 
-/// Type-checks implemented generic-class semantics behind the temporary
-/// public syntax gate.
+/// Type-checks valid generic-class source.
 pub(crate) fn type_check_generic_source(text: impl Into<String>) -> TypeCheckOutput {
     type_check(&resolve_generic_source(text))
 }
 
 /// Lowers valid generic-class source to the product consumed by whole-program
-/// static lifecycle analysis while the public syntax gate remains enabled.
+/// static lifecycle analysis.
 pub(crate) fn lower_generic_source_to_preliminary_mir(
     text: impl Into<String>,
 ) -> crate::mir::PreliminaryMirProgram {
@@ -145,8 +132,7 @@ pub(crate) fn lower_generic_source_to_preliminary_mir(
     )
 }
 
-/// Lowers valid generic-class source through static planning and synthesis
-/// while the public syntax gate remains enabled.
+/// Lowers valid generic-class source through static planning and synthesis.
 pub(crate) fn lower_generic_source_to_final_mir(text: impl Into<String>) -> MirProgram {
     let checked = type_check_generic_source(text);
     assert_phase_succeeded("type checking", &checked.diagnostics);

@@ -6,7 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G11 is next.**
+- [Generic classes](GENERIC_CLASSES_ROADMAP.md) — **In progress; G12 is next.**
   Implements explicit closed generic class applications through deterministic
   semantic specialization, inferred contextual requirements, nominal
   interface bounds, and ordinary closed HIR/MIR/backend paths. The complete
@@ -21,8 +21,11 @@ progress. Completed roadmaps and resolved discovery records move to
   and distinct backend storage are implemented. Diagnostics now collate failed
   keys with application/template/lifecycle evidence; closed names are
   canonical across modules; failed publication is atomic; and generic graph,
-  phase-dump, golden, and robustness determinism is frozen. The next boundary
-  executes the complete closed profile through the public MIR/x86-64 path.
+  phase-dump, golden, and robustness determinism is frozen. Closed classes now
+  execute through verified ordinary MIR and x86-64 layout, ABI, symbols,
+  dispatch, statics, allocation, finalization, and cleanup without a runtime
+  generic protocol. The next boundary delivers generic `Vec<T>` and closes the
+  feature.
 
 ## Planned
 

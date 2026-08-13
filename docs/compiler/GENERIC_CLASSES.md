@@ -2,8 +2,8 @@
 
 Status: frozen compiler design; template resolution, specialization,
 closed-class lifecycle, ownership, nominal bounds, inheritance, conformance,
-dispatch, and per-specialization static planning implemented; general native
-execution remains staged. This document defines the
+dispatch, per-specialization static planning, verified MIR, and x86-64 native
+execution implemented. This document defines the
 target-independent compilation contract for the initial
 [generic-class language design](../language/GENERIC_CLASSES.md).
 The syntax AST preserves generic declarations and closed applications.
@@ -18,8 +18,8 @@ expressions, and callable bodies under deterministic ordinary identities. The
 ordinary body resolver selects closed constructions, calls, casts, places,
 and static members without a duplicate generic resolver. A closed-type
 capability facade composes the existing validators and lifecycle planners;
-valid closed applications remain gated while later roadmap stages complete
-general MIR/backend execution and feature delivery.
+valid closed applications enter the ordinary public MIR/backend pipeline.
+Standard-library feature delivery remains staged.
 
 ## Architectural outcome
 
@@ -308,13 +308,13 @@ Whether template specialization is exposed as a separately inspectable public
 product is an implementation-roadmap choice, but deterministic template and
 specialization dumps are required for review and debugging.
 
-### Implemented typed-lifecycle boundary
+### Implemented closed execution boundary
 
 Closed applications now retain their generated exact `ClassId` at ordinary
 signature and body sites, so the existing type checker can consume generated
-classes without a generic-aware HIR path. Focused frontend tests exercise that
-boundary while the normal compiler driver still reports the explicit generic
-execution gate before MIR and backend lowering.
+classes without a generic-aware HIR path. The public compiler driver lowers
+that HIR through preliminary MIR, static planning and synthesis, final MIR
+verification, and ordinary x86-64 emission.
 
 The ordinary capability, optional, array, shared-owner, field, static, and
 destruction planners receive only substituted canonical types. Consequently a
@@ -396,8 +396,7 @@ collated as secondary application labels, including uses discovered through
 template bodies. If contextual validation fails after candidate declarations
 have been built, generated declarations, definitions, virtual families, and
 body products are unpublished together; diagnostic inspection therefore does
-not expose a partially published specialization graph. The temporary public
-execution gate is omitted for a key that already has a more specific failure.
+not expose a partially published specialization graph.
 
 Deterministic inspection includes:
 
@@ -431,11 +430,14 @@ Test ownership follows existing phase boundaries:
 - HIR/MIR tests prove that specialized optionals, arrays, shared owners,
   inheritance, statics, calls, and cleanup use existing closed operations and
   that no parameter term survives;
-- backend tests own deterministic mangling, independent static storage, exact
-  layouts, dispatch metadata, and ordinary specialized emission; and
-- golden tests own complete native behavior and byte-exact source diagnostics
-  for representative primitive, inline, optional, shared exact, and shared
-  interface-owner applications.
+- MIR mutation tests additionally reject generated declarations, signatures,
+  storage, or values whose concrete identity is absent from the closed program
+  tables;
+- backend tests own substituted register/stack/hidden-result classification,
+  deterministic mangling, independent static storage, exact layouts, dispatch
+  metadata, allocation, finalization, cleanup, and ordinary emission; and
+- golden tests own native lifecycle/ownership behavior, checked failure,
+  multi-module execution, and byte-exact source diagnostics.
 
 Cross-process determinism must cover specialization IDs, diagnostics, phase
 dumps, assembly, and native observation. The active roadmap assigns focused

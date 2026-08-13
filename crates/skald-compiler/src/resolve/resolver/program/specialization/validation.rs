@@ -15,13 +15,6 @@ pub(crate) fn validate_specialization_requirements(
         return;
     }
 
-    suppress_generic_execution_gates_for_failed_applications(
-        program,
-        diagnostics,
-        &bound_failures,
-        &requirement_failures,
-    );
-
     for (class, bound_index) in &bound_failures {
         let specialization = program
             .generic_specializations
@@ -147,37 +140,6 @@ pub(crate) fn validate_specialization_requirements(
     program.definitions = ResolvedFunctionDefinitionTable::default();
     program.virtual_families = ResolvedVirtualFamilyTable::default();
     program.hierarchy = ordinary_hierarchy;
-}
-
-fn suppress_generic_execution_gates_for_failed_applications(
-    program: &ResolvedProgram,
-    diagnostics: &mut Diagnostics,
-    bound_failures: &[(ClassId, usize)],
-    requirement_failures: &[crate::typeck::FailedSpecializationRequirement],
-) {
-    let failed_classes = bound_failures
-        .iter()
-        .map(|(class, _)| *class)
-        .chain(requirement_failures.iter().map(|failure| failure.class))
-        .collect::<std::collections::BTreeSet<_>>();
-    let failed_origins = failed_classes
-        .into_iter()
-        .filter_map(|class| program.generic_specializations.for_class(class))
-        .flat_map(|specialization| {
-            specialization
-                .provenance
-                .origins
-                .iter()
-                .map(|origin| origin.span)
-        })
-        .collect::<std::collections::HashSet<_>>();
-    diagnostics.retain(|diagnostic| {
-        diagnostic.code != super::super::super::UNSUPPORTED_GENERIC_SYNTAX
-            || !diagnostic
-                .labels
-                .iter()
-                .any(|label| failed_origins.contains(&label.span))
-    });
 }
 
 fn application_name(program: &ResolvedProgram, specialization: &GenericSpecialization) -> String {

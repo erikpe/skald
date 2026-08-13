@@ -59,6 +59,46 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
+fn request_pipeline_emits_closed_generic_classes_across_modules() {
+    let directory = TemporaryDirectory::new("request-generic-pipeline").unwrap();
+    let root = directory.join("modules");
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("app.ska"),
+        concat!(
+            "from model import Box, Item;\n",
+            "fn main() -> i64 { var box: Box<Item> = Box<Item>(Item(42)); var item: Item = box.get(); return item.value; }\n",
+        ),
+    )
+    .unwrap();
+    fs::write(
+        root.join("model.ska"),
+        concat!(
+            "public class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+            "public class Box<T> { value: T; init(value: T) { self.value = value; } fn get() -> T { return self.value; } }\n",
+        ),
+    )
+    .unwrap();
+    let request = module_request(
+        &directory,
+        EntrySelector::Module("app".parse().unwrap()),
+        vec![root],
+    );
+
+    let artifact = compile_request_to_assembly(&request).unwrap();
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact
+        .assembly
+        .contains("class.model_x3a__x3a_Box_x3c_model_x3a__x3a_Item_x3e_"));
+    assert!(!artifact
+        .assembly
+        .contains("model_x3a__x3a_model_x3a__x3a_Box"));
+    assert!(artifact.assembly.contains("call ska_rt_abi_v9"));
+    assert!(!artifact.assembly.contains("ClassTemplate"));
+}
+
+#[test]
 fn request_pipeline_ignores_malformed_sources_outside_the_reachable_closure() {
     let directory = TemporaryDirectory::new("request-reachability").unwrap();
     let root = directory.join("modules");

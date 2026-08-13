@@ -1,0 +1,34 @@
+schema = 2
+
+[[test]]
+name = "native_operations"
+mode = "run"
+source = "native_operations.ska"
+compiler_args = ["--no-stdlib"]
+
+[[test.run]]
+name = "construction_copy_assignment_cleanup_optional_array_shared_static_and_dispatch"
+expect = { exit = 42 }
+
+[[test]]
+name = "native_bounds_failure"
+mode = "run"
+source = "native_bounds_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[[test.run]]
+name = "specialized_array_index"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds\n" } }
+
+[[test]]
+name = "native_modules"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/execution/modules",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "definition_and_application_modules"
+expect = { exit = 42 }

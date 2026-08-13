@@ -61,7 +61,6 @@ pub const MISSING_STRING_LANGUAGE_ITEM: &str = "RES032";
 pub const INVALID_STRING_LANGUAGE_ITEM: &str = "RES033";
 pub const INVALID_INTRINSIC_DECLARATION: &str = "RES034";
 pub const LOOP_EXIT_OUTSIDE_LOOP: &str = "RES035";
-pub const UNSUPPORTED_GENERIC_SYNTAX: &str = "RES036";
 pub const DUPLICATE_TYPE_PARAMETER: &str = "RES037";
 pub const INVALID_GENERIC_APPLICATION: &str = "RES038";
 pub const RAW_GENERIC_TYPE: &str = "RES039";
@@ -250,17 +249,6 @@ fn report_generic_application(
                     )
                     .with_primary_label(arguments.span, "wrong number of type arguments")
                     .with_secondary_label(name_span, "template declared here"),
-                );
-            } else {
-                diagnostics.push(
-                    Diagnostic::error(
-                        UNSUPPORTED_GENERIC_SYNTAX,
-                        "generic class execution is not implemented yet",
-                    )
-                    .with_primary_label(
-                        named.span,
-                        "this application is specialized but not yet available to lower phases",
-                    ),
                 );
             }
         }

@@ -20,6 +20,7 @@ use super::{
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
         self.verify_module_ownership();
+        self.verify_closed_type_references();
         self.verify_external_links();
         self.verify_optional_declarations();
         self.verify_optional_box_declarations();

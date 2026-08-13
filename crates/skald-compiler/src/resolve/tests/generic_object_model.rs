@@ -1,16 +1,8 @@
 use super::*;
 use crate::resolve::{
     ResolvedExpression, ResolvedInterfaceReceiver, INHERITANCE_CYCLE, INVALID_OVERRIDE,
-    PRIVATE_MEMBER_ACCESS, UNSATISFIED_GENERIC_REQUIREMENT, UNSUPPORTED_GENERIC_SYNTAX,
+    PRIVATE_MEMBER_ACCESS, UNSATISFIED_GENERIC_REQUIREMENT,
 };
-
-fn non_gate_diagnostics(output: &ResolveOutput) -> Vec<&crate::diagnostics::Diagnostic> {
-    output
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.code != UNSUPPORTED_GENERIC_SYNTAX)
-        .collect()
-}
 
 #[test]
 fn inherited_nominal_bound_selects_the_interface_requirement_in_generated_bodies() {
@@ -30,11 +22,7 @@ fn inherited_nominal_bound_selects_the_interface_requirement_in_generated_bodies
          fn main() -> i64 { return 0; }\n",
     );
 
-    assert!(
-        non_gate_diagnostics(&output).is_empty(),
-        "{:?}",
-        output.diagnostics
-    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let generated = output
         .program
         .classes

@@ -214,12 +214,16 @@ fn class_stem(program: &MirProgram, class: ClassId) -> String {
         .classes
         .get(class)
         .expect("verified class symbol must reference a declared class");
-    format!(
-        "class.{}.{}.c{}",
-        module_stem(program, declaration.module),
-        encode_symbol_component(&declaration.name),
-        class.index()
-    )
+    let semantic_name = if declaration.name.contains("::") {
+        encode_symbol_component(&declaration.name)
+    } else {
+        format!(
+            "{}.{}",
+            module_stem(program, declaration.module),
+            encode_symbol_component(&declaration.name)
+        )
+    };
+    format!("class.{semantic_name}.c{}", class.index())
 }
 
 /// Encodes source-facing closed generic names into one assembler-safe symbol

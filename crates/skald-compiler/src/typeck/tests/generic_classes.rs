@@ -465,6 +465,21 @@ fn zero_default_validation_runs_after_static_type_substitution() {
 }
 
 #[test]
+fn closed_applications_do_not_expand_the_external_signature_profile() {
+    let checked = crate::typeck::type_check(&resolve_generic_source(
+        "class Box<T> { value: T; init(value: T) { self.value = value; } }\n\
+         extern fn consume(value: Box<i64>) -> unit;\n\
+         fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(checked.hir.is_none());
+    assert!(checked
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_EXTERNAL_DECLARATION));
+}
+
+#[test]
 fn closed_members_require_copy_operations_only_where_they_are_used() {
     let mut program = resolve_generic_source(
         "class Resource { init() {} }\n\

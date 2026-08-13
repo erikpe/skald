@@ -29,9 +29,8 @@ pub(super) fn callable(program: &MirProgram, id: CallableId) -> Result<String, B
                 .static_field(initializer.field())
                 .ok_or_else(|| error(Some(id), "runtime trace static initializer has no field"))?;
             Ok(format!(
-                "{}::{}.{}::<static-init>",
-                module_name(program, class.module, id)?,
-                class.name,
+                "{}.{}::<static-init>",
+                qualified_class_name(program, class, id)?,
                 field.name
             ))
         }
@@ -41,9 +40,8 @@ pub(super) fn callable(program: &MirProgram, id: CallableId) -> Result<String, B
                 .initializer(initializer)
                 .ok_or_else(|| error(Some(id), "runtime trace initializer has no declaration"))?;
             Ok(format!(
-                "{}::{}.init({})",
-                module_name(program, class.module, id)?,
-                class.name,
+                "{}.init({})",
+                qualified_class_name(program, class, id)?,
                 parameter_list(program, &declaration.parameters, id)?
             ))
         }
@@ -62,9 +60,8 @@ pub(super) fn callable(program: &MirProgram, id: CallableId) -> Result<String, B
                 .method(method)
                 .ok_or_else(|| error(Some(id), "runtime trace method has no declaration"))?;
             Ok(format!(
-                "{}::{}.{}",
-                module_name(program, class.module, id)?,
-                class.name,
+                "{}.{}",
+                qualified_class_name(program, class, id)?,
                 declaration.name
             ))
         }
@@ -103,9 +100,8 @@ fn member_lifecycle_name(
 ) -> Result<String, BackendError> {
     let class = class(program, class_id, callable)?;
     Ok(format!(
-        "{}::{}.{}",
-        module_name(program, class.module, callable)?,
-        class.name,
+        "{}.{}",
+        qualified_class_name(program, class, callable)?,
         operation
     ))
 }
@@ -224,11 +220,23 @@ fn class_name(
     callable: CallableId,
 ) -> Result<String, BackendError> {
     let class = class(program, class_id, callable)?;
-    Ok(format!(
-        "{}::{}",
-        module_name(program, class.module, callable)?,
-        class.name
-    ))
+    qualified_class_name(program, class, callable)
+}
+
+fn qualified_class_name(
+    program: &MirProgram,
+    class: &crate::mir::MirClassDeclaration,
+    callable: CallableId,
+) -> Result<String, BackendError> {
+    if class.name.contains("::") {
+        Ok(class.name.clone())
+    } else {
+        Ok(format!(
+            "{}::{}",
+            module_name(program, class.module, callable)?,
+            class.name
+        ))
+    }
 }
 
 fn interface_name(

@@ -67,6 +67,7 @@ mod copy;
 mod destruction;
 mod floating_comparisons;
 mod floating_division;
+mod generic_classes;
 mod instruction_selection;
 mod integer_division;
 mod interface_dispatch;

@@ -466,8 +466,8 @@ lowering. Structural substitution interns every layer independently: a member
 results, array elements, injection, copying, assignment, presence tests, and
 unwraps select the canonical plans documented above; no generic-only optional
 operation exists. Shared optional-box targets remain governed by the separate
-box identity below. Native generic execution is still gated after this typed
-frontend boundary.
+box identity below and executes through the ordinary verified MIR/backend
+path.
 
 Every source-visible optional local, field, parameter, result, owning
 temporary, inline-optional static, and optional shared-owner static lowers to

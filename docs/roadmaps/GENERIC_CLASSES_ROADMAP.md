@@ -1,6 +1,6 @@
 # Generic Classes Roadmap
 
-Status: in progress; G11 is next.
+Status: in progress; G12 is next.
 
 Implement the frozen [generic-class language contract](../language/GENERIC_CLASSES.md)
 and [compiler specialization contract](../compiler/GENERIC_CLASSES.md). The
@@ -65,7 +65,7 @@ not reopen those decisions while implementing them.
 - [x] G8 — Integrate nominal bounds, inheritance, conformance, and dispatch
 - [x] G9 — Integrate per-specialization statics and whole-program effects
 - [x] G10 — Harden diagnostics, dumps, modules, and determinism
-- [ ] G11 — Execute generic classes through MIR and x86-64
+- [x] G11 — Execute generic classes through MIR and x86-64
 - [ ] G12 — Deliver generic `Vec<T>` and close the feature
 
 ## PR-sized implementation sequence
@@ -513,23 +513,43 @@ are resolved; no follow-up discovery remains from this task.
 **Purpose:** Prove that closed specialization needs no generic lower-IR or
 runtime protocol and executes through the existing backend trust boundary.
 
-- [ ] Lower specialized constructors, methods, lifecycle operations,
+- [x] Lower specialized constructors, methods, lifecycle operations,
   inheritance, dispatch, arrays, optionals, shared owners, aliases, and statics
   through ordinary closed HIR-to-MIR paths.
-- [ ] Add verifier assertions or structural audits proving every generated
+- [x] Add verifier assertions or structural audits proving every generated
   class, member, type, place, operation, and helper identity is concrete and
   belongs to the closed program tables.
-- [ ] Generate deterministic collision-free private symbols that distinguish
+- [x] Generate deterministic collision-free private symbols that distinguish
   template identity and complete canonical argument identity while keeping
   user-facing dumps semantic.
-- [ ] Emit layouts, allocation metadata, finalizers, dispatch tables, statics,
+- [x] Emit layouts, allocation metadata, finalizers, dispatch tables, statics,
   calls, and cleanup for generated classes exactly as for hand-written classes.
-- [ ] Confirm register/stack ABI behavior follows each substituted exact type
+- [x] Confirm register/stack ABI behavior follows each substituted exact type
   and that external signature restrictions remain unchanged.
-- [ ] Add backend/native coverage for multiple specializations with identical
+- [x] Add backend/native coverage for multiple specializations with identical
   layouts but distinct identities and for applications spanning modules.
-- [ ] Confirm runtime ABI version 9 and the public C header/archive remain
+- [x] Confirm runtime ABI version 9 and the public C header/archive remain
   unchanged.
+
+**Result:** Valid closed applications now enter the public compiler pipeline
+without a staging diagnostic. Final MIR applies a generic-agnostic closed-type
+audit to declarations, signatures, fields, statics, storage, and values before
+the existing operation/place/lifecycle verification. The x86-64 backend uses
+ordinary substituted layout, register/stack/hidden-result classification,
+allocation, dispatch, finalization, static, call, and cleanup paths. Private
+symbols encode canonical semantic applications and retain the closed
+`ClassId`; qualified runtime-trace owners avoid duplicating module paths.
+
+**Completion summary:** Added verifier mutations for generated fields,
+signatures, and body storage; public-driver multi-module emission coverage;
+backend/native tests for scalar, SSE, stack, hidden-result, lifecycle,
+optional-array/shared-owner, static, bound-dispatch, inheritance, equal-layout
+identity, and assembly acceptance; and three source-to-process goldens for
+normal execution, checked bounds failure, and cross-module applications.
+Runtime ABI version 9, `skald_runtime.h`, and the archive surface are unchanged.
+Focused generic tests and goldens, the full compiler suite, runtime suite,
+Clippy, formatting, documentation, and diff gates pass. No follow-up discovery
+was created.
 
 **Tests:** MIR lowering and verifier mutation tests; backend layout/symbol/
 dispatch/static tests; assembly acceptance; native construction, copy,

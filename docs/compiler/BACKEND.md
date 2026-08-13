@@ -873,7 +873,7 @@ uses the existing zero niche. Allocation failure, optional unwrap failure,
 guard overflow, and layout overflow retain their current boundaries; there is
 no checked box-store failure and no public runtime ABI change.
 
-## Frozen generic-class specialization target boundary
+## Implemented generic-class specialization target boundary
 
 The frozen [generic-class compiler contract](GENERIC_CLASSES.md) reaches the
 backend only as ordinary closed exact classes. Each accepted application has a
@@ -890,8 +890,13 @@ symbols must encode enough canonical identity to avoid collisions and remain
 deterministic; their exact spelling is not a source or compatibility contract.
 
 Generic specialization adds no target instruction family or public runtime
-call. This boundary is frozen but not implemented; backend implementation
-begins only after specialization has produced closed HIR and MIR.
+call. The implementation verifies all concrete identities against the closed
+MIR tables, classifies substituted signatures through the ordinary
+register/stack/hidden-result rules, and emits layouts, dispatch, allocation,
+finalization, statics, calls, and cleanup through the existing paths. Private
+symbols encode the canonical semantic application plus the closed `ClassId`;
+assembler and native tests cover equal-layout identities and cross-module
+applications.
 
 ## Symbols and process entry
 

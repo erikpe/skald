@@ -16,6 +16,7 @@ mod body;
 mod call;
 mod checked_scalar;
 mod cleanup;
+mod closed_program;
 mod context;
 mod dataflow;
 mod declarations;

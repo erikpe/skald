@@ -689,15 +689,16 @@ and more reusable than constructing the case in Rust.
 
 ### Closed generic lifecycle coverage
 
-While the public driver retains its execution gate, focused generic tests
-accept only that gate for otherwise-valid programs and then exercise the
-implemented closed pipeline directly. Resolution tests own template terms,
+Focused generic tests exercise the same public closed pipeline used for
+ordinary classes. Resolution tests own template terms,
 requirements, cache transitions, provenance, qualified semantic names, and
 atomic failed-publication behavior. Type-check tests assert exact HIR
 identities and lifecycle plans. Preliminary/planned/final MIR and static-plan
-tests assert that generated classes use ordinary closed operations; these are
-structural compiler tests rather than a claim that public native execution is
-enabled. The matrix covers primitive and
+tests assert that generated classes use ordinary closed operations. MIR
+mutation tests reject concrete identities absent from the closed program
+tables, and backend/native tests cover substituted register, stack, and hidden
+result behavior, layouts, symbols, dispatch, allocation, finalization, and
+cleanup. The matrix covers primitive and
 exact-class arguments, user and synthesized lifecycle, unavailable copy and
 assignment operations, aliases and value boundaries, stored fields and
 statics, nested arrays and recursive optionals, shared exact/base/interface/
@@ -705,7 +706,9 @@ statics, nested arrays and recursive optionals, shared exact/base/interface/
 index failure plans, and backing anchors.
 
 `tests/golden/generic_classes/` freezes definition, arity, wrong-kind, bound,
-contextual, lifecycle-path, recursion, module-lookup, and privacy failures.
+contextual, lifecycle-path, recursion, module-lookup, and privacy failures, as
+well as native lifecycle/ownership behavior, checked array failure, and
+multi-module execution.
 The pipeline-determinism suite recompiles a multi-module nested specialization
 in independent processes while permuting source creation and provider roots;
 it compares graph, diagnostics, resolved IR, HIR, planned MIR, final MIR, and

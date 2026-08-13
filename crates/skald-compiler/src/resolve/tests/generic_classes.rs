@@ -91,7 +91,7 @@ fn generic_type_uses_distinguish_raw_wrong_kind_arity_and_valid_application() {
     assert!(codes.contains(&RAW_GENERIC_TYPE));
     assert!(codes.contains(&INVALID_GENERIC_APPLICATION));
     assert!(codes.contains(&GENERIC_ARITY_MISMATCH));
-    assert!(codes.contains(&UNSUPPORTED_GENERIC_SYNTAX));
+    assert_eq!(codes.len(), 3);
 }
 
 #[test]

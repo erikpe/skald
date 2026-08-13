@@ -1,0 +1,19 @@
+public class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+public class Box<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}

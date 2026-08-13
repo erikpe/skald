@@ -209,9 +209,5 @@ fn body_operation_requirements_report_application_and_template_origins() {
 }
 
 fn generic_body_diagnostics(output: &crate::resolve::ResolveOutput) -> usize {
-    output
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.code != super::super::super::UNSUPPORTED_GENERIC_SYNTAX)
-        .count()
+    output.diagnostics.len()
 }
