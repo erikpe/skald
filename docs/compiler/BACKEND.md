@@ -681,13 +681,12 @@ produced-value branch. Construction, liveness, reverse full-expression
 cleanup, and any owning copy made by the callee are already explicit in
 verified MIR and add no target layout or calling-convention rule.
 
-The frozen produced exact-class method-receiver extension will reach the
-backend through this same boundary. Verified MIR will already contain the
+Produced exact-class method receivers reach the backend through this same
+boundary. Verified MIR already contains the
 caller-owned temporary, its ordinary read-only receiver view, complete-object
 origin, selected call target, and cleanup. The backend will marshal the
 existing three receiver components and will not classify the source producer,
-create ownership, or add a receiver-specific operation. The current compiler
-does not yet emit this MIR shape from produced dot receivers.
+create ownership, or add a receiver-specific operation.
 
 The verified definition's optional receiver storage is the sole authority for
 incoming receiver classification, spilling, frame homes, and object-origin

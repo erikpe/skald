@@ -106,6 +106,16 @@ impl CallableResolver<'_, '_> {
                     span,
                 })
             }
+            syntax::Expression::StringLiteral(_) => {
+                let producer = self.resolve_expression(expression)?;
+                let ResolvedExpression::StringLiteral(literal) = producer else {
+                    unreachable!("string-literal syntax must retain its resolved node")
+                };
+                Some(ResolvedObjectReceiver::from_produced(
+                    ResolvedExpression::StringLiteral(literal),
+                    literal.class,
+                ))
+            }
             syntax::Expression::Allocation(_) => {
                 let source = self.resolve_expression(expression)?;
                 let ResolvedExpression::Allocation(allocation) = &source else {
@@ -118,22 +128,26 @@ impl CallableResolver<'_, '_> {
                 None
             }
             syntax::Expression::Call(_) => {
-                let source = self.resolve_expression(expression)?;
-                let Some(target) = self.resolved_shared_target(&source) else {
+                let producer = self.resolve_expression(expression)?;
+                if let Some(target) = self.resolved_shared_target(&producer) {
+                    self.report_implicit_shared_member_access(expression.span(), target);
+                    return None;
+                }
+                let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(&producer)
+                else {
                     self.diagnostics.push(
                         Diagnostic::error(
                             INVALID_MEMBER_SELECTION,
-                            "call result is not a shared class owner",
+                            "call result is not an exact inline class",
                         )
                         .with_primary_label(
                             expression.span(),
-                            "a produced method receiver must return `shared Class`",
+                            "only an exact-class result can be a produced method receiver",
                         ),
                     );
                     return None;
                 };
-                self.report_implicit_shared_member_access(expression.span(), target);
-                None
+                Some(ResolvedObjectReceiver::from_produced(producer, class))
             }
             syntax::Expression::MemberAccess(member) => {
                 let receiver = self.resolve_member_object_receiver(member)?;
@@ -391,6 +405,20 @@ impl CallableResolver<'_, '_> {
             .get(field.class())
             .and_then(|class| class.field(field))
             .expect("member symbols must reference declaration metadata");
+        if matches!(receiver, ResolvedObjectReceiver::Produced { .. }) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_MEMBER_SELECTION,
+                    "fields cannot be selected from a produced object",
+                )
+                .with_primary_label(
+                    member_span,
+                    "store the object in a local before selecting this field",
+                )
+                .with_secondary_label(declaration.name_span, "field declared here"),
+            );
+            return None;
+        }
         if let ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) =
             declaration.type_syntax.kind
         {

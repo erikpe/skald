@@ -194,6 +194,7 @@ mod objects;
 mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;
+mod produced_receivers;
 mod receiver_carriers;
 mod shared_optional_boxes;
 mod shared_ownership;

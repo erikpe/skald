@@ -18,6 +18,7 @@ pub(super) fn resolve_template_body(
     lookup: ModuleLookup<'_>,
     fields: &HashMap<String, ResolvedTemplateType>,
     member_names: &HashMap<String, usize>,
+    member_results: &HashMap<String, ResolvedTemplateType>,
     has_direct_base: bool,
     callable_parameters: &HashMap<String, ResolvedTemplateType>,
     callable_result: Option<&ResolvedTemplateType>,
@@ -55,6 +56,7 @@ pub(super) fn resolve_template_body(
         lookup,
         fields,
         member_names,
+        member_results,
         has_direct_base,
         field_writes_assign,
         scopes: vec![callable_parameters.clone()],
@@ -80,6 +82,7 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
     lookup: ModuleLookup<'lookup>,
     fields: &'semantic HashMap<String, ResolvedTemplateType>,
     member_names: &'semantic HashMap<String, usize>,
+    member_results: &'semantic HashMap<String, ResolvedTemplateType>,
     has_direct_base: bool,
     field_writes_assign: bool,
     scopes: Vec<HashMap<String, ResolvedTemplateType>>,
@@ -810,6 +813,16 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 };
                 Some(*payload)
             }
+            syntax::Expression::Call(call) => match call.callee.as_ref() {
+                syntax::Expression::MemberAccess(access)
+                    if matches!(access.receiver.as_ref(), syntax::Expression::SelfValue(_)) =>
+                {
+                    self.member_results
+                        .get(access.member.text.as_str())
+                        .cloned()
+                }
+                _ => None,
+            },
             _ => None,
         }
     }

@@ -33,39 +33,86 @@ pub(in crate::typeck) enum ObjectPlaceUse {
 }
 
 pub(in crate::typeck) struct CheckedObjectReceiver {
-    pub place: HirObjectPlace,
     pub origin: HirObjectOrigin,
     pub carrier: CheckedReceiverCarrier,
 }
 
 pub(in crate::typeck) enum CheckedReceiverCarrier {
-    Place,
-    Checked(Box<HirCheckedObjectView>),
-    View(Box<HirObjectView>),
-    ArrayElement(Box<crate::hir::HirArrayElementPlace>),
+    Place(HirObjectPlace),
+    Checked {
+        place: HirObjectPlace,
+        view: Box<HirCheckedObjectView>,
+    },
+    View {
+        view: Box<HirObjectView>,
+        inspection_place: Option<Box<HirObjectPlace>>,
+    },
+    ArrayElement {
+        element: Box<crate::hir::HirArrayElementPlace>,
+        place: HirObjectPlace,
+    },
 }
 
 impl CheckedObjectReceiver {
+    pub(in crate::typeck) fn access(&self) -> HirAccess {
+        match &self.carrier {
+            CheckedReceiverCarrier::Place(place)
+            | CheckedReceiverCarrier::Checked { place, .. }
+            | CheckedReceiverCarrier::ArrayElement { place, .. } => place.access,
+            CheckedReceiverCarrier::View { view, .. } => view.access,
+        }
+    }
+
+    pub(in crate::typeck) fn class(&self) -> crate::identity::ClassId {
+        match &self.carrier {
+            CheckedReceiverCarrier::Place(place)
+            | CheckedReceiverCarrier::Checked { place, .. }
+            | CheckedReceiverCarrier::ArrayElement { place, .. } => place.class(),
+            CheckedReceiverCarrier::View { view, .. } => match view.target {
+                crate::hir::HirViewTarget::Class(class) => class,
+                crate::hir::HirViewTarget::Interface(_) | crate::hir::HirViewTarget::Obj => {
+                    unreachable!("ordinary object receivers require a class view")
+                }
+            },
+        }
+    }
+
+    pub(in crate::typeck) fn inspection_place(&self) -> Option<&HirObjectPlace> {
+        match &self.carrier {
+            CheckedReceiverCarrier::Place(place)
+            | CheckedReceiverCarrier::Checked { place, .. }
+            | CheckedReceiverCarrier::ArrayElement { place, .. } => Some(place),
+            CheckedReceiverCarrier::View {
+                inspection_place, ..
+            } => inspection_place.as_deref(),
+        }
+    }
+
     pub(in crate::typeck) fn into_hir(self) -> HirObjectReceiver {
         match self.carrier {
-            CheckedReceiverCarrier::Place => HirObjectReceiver::Place {
-                place: self.place,
+            CheckedReceiverCarrier::Place(place) => HirObjectReceiver::Place {
+                place,
                 origin: Box::new(self.origin),
             },
-            CheckedReceiverCarrier::Checked(view) => HirObjectReceiver::Checked {
-                place: self.place,
+            CheckedReceiverCarrier::Checked { place, view } => HirObjectReceiver::Checked {
+                place,
                 origin: Box::new(self.origin),
                 view,
             },
-            CheckedReceiverCarrier::View(view) => HirObjectReceiver::View {
+            CheckedReceiverCarrier::View {
                 view,
-                inspection_place: Some(Box::new(self.place)),
+                inspection_place,
+            } => HirObjectReceiver::View {
+                view,
+                inspection_place,
             },
-            CheckedReceiverCarrier::ArrayElement(element) => HirObjectReceiver::ArrayElement {
-                element,
-                place: self.place,
-                origin: Box::new(self.origin),
-            },
+            CheckedReceiverCarrier::ArrayElement { element, place } => {
+                HirObjectReceiver::ArrayElement {
+                    element,
+                    place,
+                    origin: Box::new(self.origin),
+                }
+            }
         }
     }
 }
@@ -133,6 +180,41 @@ impl CallableChecker<'_, '_> {
         receiver: &ResolvedObjectReceiver,
         place_use: ObjectPlaceUse,
     ) -> Option<CheckedObjectReceiver> {
+        if let ResolvedObjectReceiver::Produced {
+            producer,
+            exact_class,
+            projections,
+            class,
+            span,
+        } = receiver
+        {
+            let source =
+                self.check_object_source(producer, *exact_class, "produced method receiver")?;
+            let crate::hir::HirObjectSource::Produced(producer) = source else {
+                unreachable!("resolved produced receiver must retain one object producer")
+            };
+            let origin = HirObjectOrigin::Produced {
+                dynamic_class: *exact_class,
+                span: *span,
+            };
+            let view = HirObjectView {
+                source: crate::hir::HirViewSource::Produced {
+                    producer: Box::new(producer),
+                    projections: projections.clone(),
+                },
+                origin: Box::new(origin.clone()),
+                target: crate::hir::HirViewTarget::Class(*class),
+                access: HirAccess::ReadOnly,
+                span: *span,
+            };
+            return Some(CheckedObjectReceiver {
+                origin,
+                carrier: CheckedReceiverCarrier::View {
+                    view: Box::new(view),
+                    inspection_place: None,
+                },
+            });
+        }
         if let ResolvedObjectReceiver::Dereference {
             dereference,
             projections,
@@ -169,9 +251,11 @@ impl CallableChecker<'_, '_> {
                     access,
                 };
                 return Some(CheckedObjectReceiver {
-                    place,
                     origin: (*optional_view.origin).clone(),
-                    carrier: CheckedReceiverCarrier::View(Box::new(optional_view)),
+                    carrier: CheckedReceiverCarrier::View {
+                        view: Box::new(optional_view),
+                        inspection_place: Some(Box::new(place)),
+                    },
                 });
             }
             let view = self.check_class_optional_view(unwrap)?;
@@ -201,12 +285,14 @@ impl CallableChecker<'_, '_> {
                 access,
             };
             return Some(CheckedObjectReceiver {
-                place,
                 origin: HirObjectOrigin::Produced {
                     dynamic_class: root_class,
                     span: *span,
                 },
-                carrier: CheckedReceiverCarrier::View(Box::new(optional_view)),
+                carrier: CheckedReceiverCarrier::View {
+                    view: Box::new(optional_view),
+                    inspection_place: Some(Box::new(place)),
+                },
             });
         }
         if let ResolvedObjectReceiver::ArrayElement {
@@ -249,9 +335,8 @@ impl CallableChecker<'_, '_> {
                 dynamic_class: element_class,
             };
             return Some(CheckedObjectReceiver {
-                place,
                 origin,
-                carrier: CheckedReceiverCarrier::ArrayElement(element),
+                carrier: CheckedReceiverCarrier::ArrayElement { element, place },
             });
         }
         let ResolvedObjectReceiver::CastRelative {
@@ -267,9 +352,8 @@ impl CallableChecker<'_, '_> {
             let place = self.check_object_place(path, place_use)?;
             let origin = self.object_origin(&place);
             return Some(CheckedObjectReceiver {
-                place,
                 origin,
-                carrier: CheckedReceiverCarrier::Place,
+                carrier: CheckedReceiverCarrier::Place(place),
             });
         };
         let mut checked = self.check_object_cast(cast)?;
@@ -296,9 +380,11 @@ impl CallableChecker<'_, '_> {
         );
         let origin = (*checked.view.origin).clone();
         Some(CheckedObjectReceiver {
-            place,
             origin,
-            carrier: CheckedReceiverCarrier::Checked(Box::new(checked)),
+            carrier: CheckedReceiverCarrier::Checked {
+                place,
+                view: Box::new(checked),
+            },
         })
     }
 
@@ -320,19 +406,14 @@ impl CallableChecker<'_, '_> {
             },
             access,
         };
-        let carrier = stable_binding.map_or_else(
-            || {
-                CheckedReceiverCarrier::View(Box::new(
-                    pointee.into_view(crate::hir::HirViewTarget::Class(class), access),
-                ))
+        let carrier = match stable_binding {
+            None => CheckedReceiverCarrier::View {
+                view: Box::new(pointee.into_view(crate::hir::HirViewTarget::Class(class), access)),
+                inspection_place: Some(Box::new(place.clone())),
             },
-            |_| CheckedReceiverCarrier::Place,
-        );
-        CheckedObjectReceiver {
-            place,
-            origin,
-            carrier,
-        }
+            Some(_) => CheckedReceiverCarrier::Place(place),
+        };
+        CheckedObjectReceiver { origin, carrier }
     }
 
     pub(in crate::typeck) fn check_object_place(

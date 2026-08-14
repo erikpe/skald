@@ -423,10 +423,11 @@ arguments in source order.
 
 The source-visible
 [produced receiver contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
-is frozen but not implemented. The current resolver and type checker continue
-to require an existing object place for dot-method receivers.
+is implemented for the basic source-to-verified-MIR path. The resolver and
+type checker admit eligible exact-class producers for read-only dot-method
+receivers while retaining the existing-place requirement for mutable methods.
 
-Implementation will reuse the ordinary exact-class producer, object-view, and
+Implementation reuses the ordinary exact-class producer, object-view, and
 full-expression lifetime pipeline:
 
 - syntax keeps the existing postfix member and call nodes;
@@ -445,14 +446,13 @@ full-expression lifetime pipeline:
   complete-object compatibility, selected-path liveness, result ordering, and
   exactly one reverse-ordered cleanup.
 
-Typed member-receiver provenance is already normalized without broadening the
-accepted source language. Type checking uses one exhaustive checked carrier,
-and HIR exposes one `HirObjectReceiver` enum for method and field receivers:
+Typed member-receiver provenance uses one exhaustive checked carrier, and HIR
+exposes one `HirObjectReceiver` enum for method and field receivers:
 
 - `Place` retains an ordinary selected place and complete-object origin;
 - `Checked` retains the checked-cast carrier and its inspection path;
-- `View` carries one `HirObjectView` for both shared-backed and
-  optional-backed receivers; and
+- `View` carries one `HirObjectView` for shared-backed, optional-backed, and
+  produced receivers; and
 - `ArrayElement` keeps checked addressing and later projections explicit.
 
 Object-to-interface conversion matches that carrier exhaustively and produces
@@ -461,8 +461,8 @@ discovery, HIR dumps, field and call lowering, and test mutation helpers also
 match the enum rather than coordinating optional fields. Existing shared
 anchors, optional guards, array anchors, origins, dispatch, cleanup, and dump
 vocabulary are unchanged. An optional inspection place preserves historical
-dump paths for existing views but is never executable provenance; a future
-produced `View` leaves it absent and therefore needs no fake binding. A third
+dump paths for existing views but is never executable provenance; a produced
+`View` leaves it absent and therefore needs no fake binding. A third
 independent `produced_view` field is not permitted.
 
 Direct, inherited, virtual, interface, and closed-generic calls all lower

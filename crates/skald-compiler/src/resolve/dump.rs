@@ -1689,6 +1689,32 @@ impl<'program> ResolvedDumper<'program> {
                     }
                 });
             }
+            ResolvedObjectReceiver::Produced {
+                producer,
+                exact_class,
+                projections,
+                class,
+                span,
+            } => {
+                self.line(
+                    &format!("ProducedReceiver class {class} complete {exact_class}"),
+                    *span,
+                );
+                self.indented(|dumper| {
+                    dumper.heading("Producer");
+                    dumper.indented(|dumper| dumper.expression(producer));
+                    for projection in projections {
+                        match projection {
+                            crate::object_path::ObjectProjection::Base(base) => {
+                                dumper.heading(&format!("BaseProjection {base}"));
+                            }
+                            crate::object_path::ObjectProjection::Field(field) => {
+                                dumper.heading(&format!("FieldProjection {field}"));
+                            }
+                        }
+                    }
+                });
+            }
         }
     }
 

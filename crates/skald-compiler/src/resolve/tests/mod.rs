@@ -53,6 +53,7 @@ mod objects;
 mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;
+mod produced_receivers;
 mod shared_ownership;
 mod shifts;
 mod short_circuit_boolean;

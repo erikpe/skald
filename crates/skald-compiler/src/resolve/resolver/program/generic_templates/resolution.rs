@@ -163,6 +163,27 @@ pub(crate) fn resolve_class_template_semantics(
 
     let mut requirements = infer_declaration_requirements(class, &type_uses);
     let mut selections = Vec::new();
+    let member_results = class
+        .members
+        .iter()
+        .enumerate()
+        .filter_map(|(member_index, member)| {
+            let syntax::ClassMember::Method(method) = member else {
+                return None;
+            };
+            type_uses
+                .iter()
+                .find_map(|type_use| {
+                    matches!(
+                        type_use.context,
+                        ResolvedTemplateTypeUseContext::MethodResult { member }
+                            if member == member_index
+                    )
+                    .then_some(type_use.type_term.clone())
+                })
+                .map(|result| (method.name.text.to_string(), result))
+        })
+        .collect::<HashMap<_, _>>();
     for (member_index, member) in class.members.iter().enumerate() {
         let callable_result = type_uses.iter().find_map(|type_use| {
             matches!(
@@ -181,6 +202,7 @@ pub(crate) fn resolve_class_template_semantics(
             lookup,
             &fields,
             &member_names,
+            &member_results,
             direct_base.is_some(),
             &callable_parameters[member_index],
             callable_result.as_ref(),

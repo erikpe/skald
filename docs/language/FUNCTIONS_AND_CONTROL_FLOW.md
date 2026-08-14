@@ -103,8 +103,8 @@ through their complete immediate consumer. The complete rule is owned by
 
 ## Frozen produced exact-class method receivers
 
-This section freezes a source-visible extension that is not yet accepted by
-the compiler. An expression that produces one exact inline class may serve
+This section defines the implemented basic source-to-native behavior. An
+expression that produces one exact inline class may serve
 directly as the receiver of a read-only instance method. The compiler will
 materialize the producer into one hidden caller-owned object place and borrow
 that place as the receiver; source does not gain a reference value or an
@@ -152,10 +152,10 @@ This contract does not admit temporary field reads or writes, mutable
 temporary receivers, optional or array receiver families, independently
 storable references, or escaping aliases. It adds no grammar form, internal
 or external calling-convention rule, backend representation, runtime service,
-or runtime ABI-version change. The frozen compiler representation is defined
+or runtime ABI-version change. The compiler representation is defined
 by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-produced-exact-class-method-receiver-representation),
 and the [status matrix](STATUS.md#frozen-language-designs) records the current
-unavailable compiler boundary.
+implementation boundary while broader conformance hardening continues.
 
 ## Lexical scopes and locals
 

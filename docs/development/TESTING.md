@@ -548,18 +548,19 @@ factory-result aliases, preventing a return to source-only staging locals.
 
 ## Produced exact-class method receiver coverage
 
-The produced exact-class method-receiver contract is frozen but unavailable.
-Until implementation begins, compile-failure coverage must continue to prove
-that produced dot receivers are rejected without changing adjacent object-
-place or produced-alias behavior.
+The basic produced exact-class method-receiver path is implemented. Focused
+coverage proves that construction, literal, direct/static/instance/interface
+result, grouping, and closed-generic producers become one read-only view with
+no fake binding and lower through verified MIR.
 
 The implemented representation baseline has one exhaustive typed member-
 receiver carrier. Focused type-check coverage distinguishes stable places,
 checked casts, general shared/optional object views, and checked array
 elements; it also proves that field receivers reuse the same carrier. The full
 compiler unit suite freezes existing HIR/MIR dumps, anchors, guards, dispatch,
-cleanup, control effects, and native behavior while this internal shape
-changes. Produced receiver acceptance remains a later source-visible step.
+cleanup, control effects, and native behavior. Compile-failure coverage keeps
+primitive, unit, optional, array, shared-owner, field, and mutable-method
+categories outside the accepted boundary.
 
 The implementation must add evidence at each owning boundary. Resolver and
 type-check tests cover construction, literal, direct/static/instance/interface

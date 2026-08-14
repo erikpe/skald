@@ -214,6 +214,10 @@ remain `SharedMethodReceiver`, `OptionalMethodReceiver`, and their field
 counterparts. If lowering behavior diverges, first check the exhaustive
 carrier matches in control-effect discovery and MIR field/call lowering; there
 are no parallel shared-view and optional-view receiver fields to reconcile.
+Produced receivers also use `View`, with `HirViewSource::Produced`, read-only
+access, and no inspection place. Their MIR should show one caller-owned
+`temporary`, production before explicit arguments, the ordinary receiver
+components, and full-expression cleanup after the call result is secured.
 
 For an explicitly dereferenced shared receiver or alias argument, HIR distinguishes a stable
 `SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or

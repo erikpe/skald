@@ -62,6 +62,26 @@ impl CallableResolver<'_, '_> {
             self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
         match selected {
             SelectedClassMember::Field(field) => {
+                if matches!(receiver, ResolvedObjectReceiver::Produced { .. }) {
+                    let declaration = self
+                        .environment
+                        .classes
+                        .get(field.class())
+                        .and_then(|class| class.field(field))
+                        .expect("selected field must reference declaration metadata");
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            "fields cannot be read from a produced object",
+                        )
+                        .with_primary_label(
+                            member.member.span,
+                            "store the object in a local before reading this field",
+                        )
+                        .with_secondary_label(declaration.name_span, "field declared here"),
+                    );
+                    return None;
+                }
                 Some(ResolvedExpression::FieldAccess(ResolvedFieldAccessExpr {
                     receiver,
                     field,
@@ -304,6 +324,9 @@ impl CallableResolver<'_, '_> {
         expression: &ResolvedExpression,
     ) -> Option<ResolvedTypeKind> {
         match expression {
+            ResolvedExpression::StringLiteral(literal) => {
+                Some(ResolvedTypeKind::Class(literal.class))
+            }
             ResolvedExpression::Binding(binding) => self
                 .scopes
                 .iter()

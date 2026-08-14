@@ -80,7 +80,7 @@ changes only when feature maturity or compiler support changes.
 
 | Area | Maturity | Current compiler boundary |
 |---|---|---|
-| [Produced exact-class method receivers](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers) | **Frozen design** | Exact-class constructions, canonical class literals, and exact-class results from direct, static, instance, and interface calls are settled as hidden caller-owned read-only receiver places, including inherited, virtual, interface, and closed-generic composition. The current compiler still rejects these produced receiver forms; named staging places remain required. Mutable temporary receivers, temporary field access, optional and array receiver families, raw shared dot access, references, and escape remain excluded. |
+| [Produced exact-class method receivers](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers) | **Implementation in progress** | Exact-class constructions, canonical class literals, and exact-class results from direct, static, instance, and interface calls compile through hidden caller-owned read-only receiver places, including grouping, inherited selection, and closed-generic results such as `Vec<Str>.last()`. Mutable temporary receivers, temporary field access, optional and array receiver families, raw shared dot access, references, and escape remain excluded; broader lifetime, dispatch, and conformance hardening remains planned. |
 
 ## Compiler availability
 

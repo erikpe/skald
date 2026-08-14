@@ -509,6 +509,7 @@ impl CallableChecker<'_, '_> {
             ResolvedObjectReceiver::ArrayElement { projection, .. } => self
                 .static_place_access(&projection.receiver)
                 .unwrap_or(HirAccess::Mutable),
+            ResolvedObjectReceiver::Produced { .. } => HirAccess::ReadOnly,
         }
     }
 

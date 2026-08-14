@@ -553,7 +553,7 @@ contract suite continues to freeze the version-9 header and archive surface.
 The frozen
 [produced exact-class method-receiver contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
 adds no public C symbol, allocation-header field, object-layout rule, panic
-reason, or runtime-owned lifetime operation. The compiler and backend will use
+reason, or runtime-owned lifetime operation. The compiler and backend use
 ordinary caller-owned temporary storage, the existing compiler-private
 receiver convention, and ordinary generated cleanup. External object-bearing
 signatures remain unsupported.
@@ -561,7 +561,7 @@ signatures remain unsupported.
 The compatibility marker remains `ska_rt_abi_v9`; the public header and
 runtime ABI version 9 are unchanged. Runtime tests therefore gain no
 receiver-specific harness. Compiler phase, verifier, backend, linker-surface,
-and native tests own the future implementation evidence. The current runtime
+and native tests own the implementation evidence. The current runtime
 already supplies every service required by the frozen design.
 
 ## Verification

@@ -402,8 +402,8 @@ pub enum HirObjectOrigin {
 /// Stable places retain their selected subobject and complete-object origin.
 /// Checked casts and array elements remain distinct because their guards and
 /// addressing are lowered specially. Every other non-place receiver uses the
-/// common object-view path, including shared and optional-backed receivers and
-/// future produced exact-class receivers.
+/// common object-view path, including shared, optional-backed, and produced
+/// exact-class receivers.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirObjectReceiver {
     Place {

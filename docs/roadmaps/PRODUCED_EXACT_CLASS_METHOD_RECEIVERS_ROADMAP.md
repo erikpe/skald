@@ -1,6 +1,6 @@
 # Produced Exact-Class Method Receivers Roadmap
 
-Status: in progress; PER0 and PER1 are complete and PER2 is next.
+Status: in progress; PER0 through PER2 are complete and PER3 is next.
 
 This roadmap lets an expression that produces one exact inline class serve
 directly as a read-only instance-method receiver. It removes staging locals
@@ -68,7 +68,7 @@ service.
 
 - [x] PER0 — Freeze the produced read-only receiver contract
 - [x] PER1 — Normalize receiver provenance carriers
-- [ ] PER2 — Accept and lower produced exact-class receivers
+- [x] PER2 — Accept and lower produced exact-class receivers
 - [ ] PER3 — Verify lifetime, control flow, and failure behavior
 - [ ] PER4 — Prove dispatch, generics, and native execution
 - [ ] PER5 — Adopt the feature and publish the implemented boundary
@@ -161,29 +161,29 @@ produced receiver without another parallel slot or synthesized source binding.
 **Purpose:** Add the source-to-verified-MIR vertical slice by reusing ordinary
 object producers and the normalized receiver-view path.
 
-- [ ] Add an explicit resolved produced-receiver variant carrying the resolved
+- [x] Add an explicit resolved produced-receiver variant carrying the resolved
       producer once, its exact class, source span, and inherited base
       projections.
-- [ ] Recognize canonical class literals, constructions, and exact-class
+- [x] Recognize canonical class literals, constructions, and exact-class
       results from direct, static, instance, and interface calls. Continue to
       route produced shared owners to the existing explicit-dereference
       diagnostic.
-- [ ] Resolve the receiver before explicit arguments without resolving,
+- [x] Resolve the receiver before explicit arguments without resolving,
       checking, or representing its producer twice. Retain focused diagnostics
       for non-class results and invalid member kinds.
-- [ ] Reuse ordinary object-producer checking to build a read-only produced
+- [x] Reuse ordinary object-producer checking to build a read-only produced
       `HirObjectView` with exact complete-object provenance. Do not synthesize
       a source binding or copy construction.
-- [ ] Enforce read-only receiver access through the existing mutable-method
+- [x] Enforce read-only receiver access through the existing mutable-method
       diagnostic, including virtual methods and interface requirements.
-- [ ] Lower the view through the common produced-object temporary helper, then
+- [x] Lower the view through the common produced-object temporary helper, then
       reuse the ordinary direct, virtual, and interface receiver ABI.
-- [ ] Include receiver production in control-effect classification so nested
+- [x] Include receiver production in control-effect classification so nested
       calls, checks, and path changes spill earlier scalar state correctly.
-- [ ] Add deterministic resolved, HIR, and MIR tests for literal, constructor,
+- [x] Add deterministic resolved, HIR, and MIR tests for literal, constructor,
       and each call-result producer family, including grouping, inherited
       selection, explicit arguments, and `Vec<Str>.last().byte(...)`.
-- [ ] Add focused failures for primitive/unit/optional/array/shared results and
+- [x] Add focused failures for primitive/unit/optional/array/shared results and
       mutable methods, preserving useful source and declaration labels.
 
 **Tests:** Focused resolver, type-check, HIR, MIR-lowering, dump, and diagnostic
@@ -194,6 +194,17 @@ tests plus one native smoke test for each motivating expression; `make check`;
 and execute natively, every accepted producer is represented once as a
 read-only produced view, invalid categories stop before MIR, and no backend or
 runtime special case is introduced.
+
+Completed 2026-08-13. Resolution now retains one explicit produced receiver
+for literals, constructions, and direct, static, instance, or interface call
+results, including grouping and inherited base projections. Type checking
+turns it into one read-only produced `HirObjectView` without an inspection
+place or copy, and existing object-producer temporary lowering supplies the
+ordinary receiver ABI and cleanup. Focused deterministic phase, diagnostic,
+control-effect, generic `Vec<Str>`, and native motivating-expression coverage
+passes, as do `make check` and `make msrv-check`. Excluded fields, mutable
+methods, non-class results, and shared owners stop before MIR with their
+frontend diagnostics; no backend or runtime special case was added.
 
 ### PER3 — Verify lifetime, control flow, and failure behavior
 

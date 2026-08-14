@@ -142,7 +142,7 @@ An implementation may pool equal decoded byte sequences and should use one
 canonical empty backing per program. Backing identity is unobservable, so the
 language does not promise whether distinct occurrences share storage.
 
-The frozen produced-receiver contract will allow a literal or exact `Str`
+The produced-receiver contract allows a literal or exact `Str`
 call result to invoke a read-only method directly:
 
 ```ska
@@ -150,14 +150,11 @@ var generated: Str = "item-".concat(Str.from_i64(index));
 var byte_value: u8 = values.last().byte(byte_index);
 ```
 
-Both receivers are exact produced `Str` values. Each will be completed once
+Both receivers are exact produced `Str` values. Each is completed once
 in hidden caller-owned storage before its method arguments and kept live
-through the call and result transfer. This source is intentionally still
-rejected by the current compiler; staging either receiver in a named `Str`
-local remains required until the frozen
-[produced exact-class method-receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
-is implemented. No `Str` method name receives compiler significance from this
-extension.
+through the call and result transfer. The current compiler accepts both forms
+without staging either receiver in a named `Str` local. No `Str` method name
+receives compiler significance from this extension.
 
 Single-quoted [byte literals](TYPES_AND_VALUES.md#literal-types-and-ranges)
 reuse the byte-oriented escape vocabulary where applicable but have exact type

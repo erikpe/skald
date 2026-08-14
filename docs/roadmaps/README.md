@@ -10,8 +10,10 @@ progress. Completed roadmaps and resolved discovery records move to
   is in progress. PER0 froze the living language, compiler, backend, runtime,
   string, status, and testing contracts without changing executable behavior.
   PER1 normalized typed receiver provenance into one exhaustive carrier while
-  preserving existing source behavior and dumps. PER2, accepting and lowering
-  produced exact-class receivers, is next.
+  preserving existing source behavior and dumps. PER2 added the basic
+  source-to-native produced receiver path through the existing temporary and
+  receiver ABI. PER3, verifying lifetime, control flow, and failure behavior,
+  is next.
 
 ## Planned
 

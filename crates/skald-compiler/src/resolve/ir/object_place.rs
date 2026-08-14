@@ -7,14 +7,13 @@ use crate::{
 };
 
 use super::{
-    ResolvedArrayProjectionExpr, ResolvedDereferenceExpr, ResolvedObjectCastExpr,
-    ResolvedUnwrapExpr,
+    ResolvedArrayProjectionExpr, ResolvedDereferenceExpr, ResolvedExpression,
+    ResolvedObjectCastExpr, ResolvedUnwrapExpr,
 };
 
 pub type ResolvedObjectPlace = ObjectPath;
 
-/// A class-typed receiver selected from either a stable binding path or a
-/// projection path relative to a full-expression checked cast.
+/// One class-typed member receiver with explicit source provenance.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedObjectReceiver {
     BindingPath(ResolvedObjectPlace),
@@ -38,6 +37,18 @@ pub enum ResolvedObjectReceiver {
     },
     ArrayElement {
         projection: Box<ResolvedArrayProjectionExpr>,
+        projections: Vec<ObjectProjection>,
+        class: ClassId,
+        span: Span,
+    },
+    /// One exact inline class produced for a read-only method receiver.
+    ///
+    /// `exact_class` is the complete-object class while `class` follows base
+    /// projections used for inherited member selection. The producer is kept
+    /// once and is never represented as a synthetic source binding.
+    Produced {
+        producer: Box<ResolvedExpression>,
+        exact_class: ClassId,
         projections: Vec<ObjectProjection>,
         class: ClassId,
         span: Span,
@@ -69,6 +80,17 @@ impl ResolvedObjectReceiver {
         }
     }
 
+    pub fn from_produced(producer: ResolvedExpression, class: ClassId) -> Self {
+        let span = producer.span();
+        Self::Produced {
+            producer: Box::new(producer),
+            exact_class: class,
+            projections: Vec::new(),
+            class,
+            span,
+        }
+    }
+
     pub const fn class(&self) -> ClassId {
         match self {
             Self::BindingPath(path) => path.class,
@@ -76,6 +98,7 @@ impl ResolvedObjectReceiver {
             Self::Dereference { class, .. } => *class,
             Self::OptionalPayload { class, .. } => *class,
             Self::ArrayElement { class, .. } => *class,
+            Self::Produced { class, .. } => *class,
         }
     }
 
@@ -86,6 +109,7 @@ impl ResolvedObjectReceiver {
             Self::Dereference { span, .. } => *span,
             Self::OptionalPayload { span, .. } => *span,
             Self::ArrayElement { span, .. } => *span,
+            Self::Produced { span, .. } => *span,
         }
     }
 
@@ -95,7 +119,8 @@ impl ResolvedObjectReceiver {
             Self::CastRelative { .. }
             | Self::Dereference { .. }
             | Self::OptionalPayload { .. }
-            | Self::ArrayElement { .. } => None,
+            | Self::ArrayElement { .. }
+            | Self::Produced { .. } => None,
         }
     }
 
@@ -105,7 +130,8 @@ impl ResolvedObjectReceiver {
             Self::CastRelative { .. }
             | Self::Dereference { .. }
             | Self::OptionalPayload { .. }
-            | Self::ArrayElement { .. } => None,
+            | Self::ArrayElement { .. }
+            | Self::Produced { .. } => None,
         }
     }
 
@@ -116,6 +142,7 @@ impl ResolvedObjectReceiver {
             Self::Dereference { projections, .. } => projections,
             Self::OptionalPayload { projections, .. } => projections,
             Self::ArrayElement { projections, .. } => projections,
+            Self::Produced { projections, .. } => projections,
         }
     }
 
@@ -123,9 +150,10 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(_) => None,
             Self::CastRelative { cast, .. } => Some(cast),
-            Self::Dereference { .. } | Self::OptionalPayload { .. } | Self::ArrayElement { .. } => {
-                None
-            }
+            Self::Dereference { .. }
+            | Self::OptionalPayload { .. }
+            | Self::ArrayElement { .. }
+            | Self::Produced { .. } => None,
         }
     }
 
@@ -172,6 +200,19 @@ impl ResolvedObjectReceiver {
                 ..
             } => Self::ArrayElement {
                 projection,
+                projections,
+                class,
+                span,
+            },
+            Self::Produced {
+                producer,
+                exact_class,
+                projections,
+                class,
+                ..
+            } => Self::Produced {
+                producer,
+                exact_class,
                 projections,
                 class,
                 span,
@@ -229,6 +270,21 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Base(base));
                 Self::ArrayElement {
                     projection,
+                    projections,
+                    class: base,
+                    span,
+                }
+            }
+            Self::Produced {
+                producer,
+                exact_class,
+                mut projections,
+                ..
+            } => {
+                projections.push(ObjectProjection::Base(base));
+                Self::Produced {
+                    producer,
+                    exact_class,
                     projections,
                     class: base,
                     span,
@@ -311,6 +367,9 @@ impl ResolvedObjectReceiver {
                     class,
                     span,
                 }
+            }
+            Self::Produced { .. } => {
+                unreachable!("produced receiver fields are rejected before projection")
             }
         }
     }

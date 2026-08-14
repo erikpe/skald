@@ -327,8 +327,10 @@ impl CallableChecker<'_, '_> {
                 };
                 let receiver =
                     self.check_object_receiver(&access.receiver, ObjectPlaceUse::CopySource)?;
-                let super::super::expression::CheckedReceiverCarrier::Checked(mut checked) =
-                    receiver.carrier
+                let super::super::expression::CheckedReceiverCarrier::Checked {
+                    view: mut checked,
+                    ..
+                } = receiver.carrier
                 else {
                     unreachable!("cast-rooted field source must retain its checked view")
                 };

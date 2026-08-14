@@ -745,7 +745,9 @@ impl CallableChecker<'_, '_> {
                     };
                     let receiver =
                         self.check_object_receiver(&access.receiver, ObjectPlaceUse::Alias)?;
-                    let super::CheckedReceiverCarrier::View(optional) = receiver.carrier else {
+                    let super::CheckedReceiverCarrier::View { view: optional, .. } =
+                        receiver.carrier
+                    else {
                         unreachable!("optional receiver must retain its checked payload view")
                     };
                     let HirViewSource::OptionalPayload {

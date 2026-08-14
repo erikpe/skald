@@ -140,32 +140,33 @@ impl CallableChecker<'_, '_> {
             }
             crate::resolve::ResolvedInterfaceReceiver::Object(receiver) => {
                 let checked = self.check_object_receiver(receiver, ObjectPlaceUse::Member)?;
-                let access = checked.place.access;
+                let access = checked.access();
+                let class = checked.class();
                 let target = HirViewTarget::Interface(call.interface);
                 debug_assert!(super::object_view_relation::class_provides_view(
                     self.program,
-                    checked.place.class(),
+                    class,
                     target,
                 ));
                 let receiver = match checked.carrier {
-                    CheckedReceiverCarrier::Checked(mut cast) => {
-                        cast.consumer_target = target;
-                        cast.consumer_access = required_access;
-                        HirInterfaceReceiver::Checked(cast)
+                    CheckedReceiverCarrier::Checked { mut view, .. } => {
+                        view.consumer_target = target;
+                        view.consumer_access = required_access;
+                        HirInterfaceReceiver::Checked(view)
                     }
-                    CheckedReceiverCarrier::View(mut view) => {
+                    CheckedReceiverCarrier::View { mut view, .. } => {
                         view.target = target;
                         view.access = access;
                         HirInterfaceReceiver::View(*view)
                     }
                     carrier => {
                         let source = match carrier {
-                            CheckedReceiverCarrier::Place => HirViewSource::Place(checked.place),
-                            CheckedReceiverCarrier::ArrayElement(element) => {
+                            CheckedReceiverCarrier::Place(place) => HirViewSource::Place(place),
+                            CheckedReceiverCarrier::ArrayElement { element, .. } => {
                                 HirViewSource::ArrayElement(element)
                             }
-                            CheckedReceiverCarrier::Checked(_)
-                            | CheckedReceiverCarrier::View(_) => unreachable!(),
+                            CheckedReceiverCarrier::Checked { .. }
+                            | CheckedReceiverCarrier::View { .. } => unreachable!(),
                         };
                         HirInterfaceReceiver::View(HirObjectView {
                             source,
@@ -260,8 +261,9 @@ impl CallableChecker<'_, '_> {
         if self
             .member_body_kind
             .is_some_and(MemberBodyKind::initializes_receiver)
-            && receiver.place.root() == BindingId::Receiver(self.callable)
-            && receiver.place.path.is_root()
+            && receiver.inspection_place().is_some_and(|place| {
+                place.root() == BindingId::Receiver(self.callable) && place.path.is_root()
+            })
         {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -277,7 +279,7 @@ impl CallableChecker<'_, '_> {
             .receiver_access()
             .expect("resolved object-selected methods must be instance methods");
         if receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
-            && receiver.place.access == HirAccess::ReadOnly
+            && receiver.access() == HirAccess::ReadOnly
         {
             self.diagnostics.push(
                 Diagnostic::error(

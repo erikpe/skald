@@ -817,11 +817,11 @@ require no grammar change.
 
 The same postfix grammar already parses member selection and a call suffix on
 an exact-class construction, class literal, or exact-class call result. The
-frozen
+implemented
 [produced exact-class method-receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
 therefore adds no token, precedence rule, AST expression shape, or call
-syntax. Current semantic analysis still rejects those producers as method
-receivers; implementation changes only their resolved and typed eligibility.
+syntax. Semantic analysis records an eligible producer once as a read-only
+method receiver; grammar remains unchanged.
 
 Optional type syntax crosses parsing as a recursive source-shaped node that
 retains grouping, punctuation, and `shared?` shorthand provenance. Resolution

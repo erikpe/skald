@@ -81,6 +81,7 @@ mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;
 mod produced_aliases;
+mod produced_receivers;
 mod shared_optional_boxes;
 mod shared_ownership;
 mod shifts;

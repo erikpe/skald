@@ -296,6 +296,36 @@ fn nominal_bounds_resolve_interface_and_requirement_identities() {
 }
 
 #[test]
+fn bound_members_remain_interface_selected_on_parameter_returning_calls() {
+    let program = crate::test_support::resolve_generic_source(
+        "interface Ranked { fn rank() -> i64; }\n\
+         class Item implements Ranked {\n\
+           init() {}\n\
+           copy(ref source: Item) {}\n\
+           assign(ref source: Item) {}\n\
+           fn rank() -> i64 { return 1; }\n\
+         }\n\
+         class Box<T> where T: Ranked {\n\
+           value: T;\n\
+           init(value: T) { self.value = value; }\n\
+           fn produce() -> T { return self.value; }\n\
+           fn inspect() -> i64 { return self.produce().rank(); }\n\
+         }\n\
+         fn main() -> i64 { var box: Box<Item> = Box<Item>(Item()); return 0; }\n",
+    );
+
+    let dump = dump_resolved(&program);
+    assert!(dump.contains(
+        "Selection bound-member template0:type0 interface i0 requirement i0:requirement0 member rank"
+    ), "{dump}");
+    assert!(
+        dump.contains("InterfaceCall i0 i0:requirement0 receiver exact object"),
+        "{dump}"
+    );
+    assert!(dump.contains("ProducedReceiver"), "{dump}");
+}
+
+#[test]
 fn invalid_unknown_duplicate_and_inaccessible_bounds_are_diagnosed() {
     let local = resolve_text(
         "interface Marker { fn mark() -> unit; }\n\
