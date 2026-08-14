@@ -418,8 +418,8 @@ The frozen initial profile excludes:
 - lazy member validation;
 - erased code, runtime type arguments, dictionaries, and reflection;
 - separate-compilation or stable package ABI for specializations; and
-- collection protocols, indexing sugar, or implicit conversion between the
-  implemented `std::vec::Vec<T>` and `VecObj` APIs.
+- collection protocols or indexing sugar for the implemented
+  `std::vec::Vec<T>` API.
 
 The [generic-class compiler contract](../compiler/GENERIC_CLASSES.md) defines
 specialization identities, requirement representation, phase ownership,

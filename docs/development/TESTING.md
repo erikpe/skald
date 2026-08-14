@@ -767,9 +767,9 @@ static lifecycle plans without depending on assembly. Bounded frontend
 robustness mutates angle brackets, commas, `where`, constraints, and nested
 applications and requires deterministic recovery on every mutation.
 
-`tests/golden/standard_vec/` owns `std::vec::Vec<T>` and retained `VecObj`
-behavior. The generic matrix covers primitives, `Str`, nested optionals, exact
-inline lifecycle, nested arrays, shared strings, shared interface owners,
+`tests/golden/standard_vec/` owns `std::vec::Vec<T>` behavior. The matrix covers
+primitives, `Str`, nested optionals, exact inline lifecycle, nested arrays,
+shared strings, shared interface and heterogeneous `shared Obj` owners,
 copy/assignment independence, prompt inline and last-owner cleanup, capacity
 growth, signed logical indexing, all four public panic boundaries, a template
 and argument split across modules, bare-interface rejection, and unavailable

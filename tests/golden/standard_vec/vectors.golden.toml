@@ -65,45 +65,9 @@ name = "empty"
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.last: empty vector\n" } }
 
 [[test]]
-name = "object_values"
+name = "shared_object_values"
 mode = "run"
-source = "vec_obj.ska"
+source = "vec_shared_obj.ska"
 
 [[test.run]]
-name = "growth_ownership_and_copy"
-
-[[test]]
-name = "get_bounds"
-mode = "run"
-source = "vec_obj_get_bounds.ska"
-
-[[test.run]]
-name = "logical_tail"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: VecObj.get: index out of bounds\n" } }
-
-[[test]]
-name = "set_bounds"
-mode = "run"
-source = "vec_obj_set_bounds.ska"
-
-[[test.run]]
-name = "empty"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: VecObj.set: index out of bounds\n" } }
-
-[[test]]
-name = "pop_empty"
-mode = "run"
-source = "vec_obj_pop_empty.ska"
-
-[[test.run]]
-name = "empty"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: VecObj.pop: empty vector\n" } }
-
-[[test]]
-name = "last_empty"
-mode = "run"
-source = "vec_obj_last_empty.ska"
-
-[[test.run]]
-name = "empty"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: VecObj.last: empty vector\n" } }
+name = "heterogeneous_growth_ownership_and_copy"

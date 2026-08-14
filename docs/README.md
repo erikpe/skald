@@ -27,8 +27,8 @@ Use the authority closest to the behavior:
 - the implemented source-visible invocation-vector, byte, snapshot, ownership, and
   Linux discovery contract belongs in
   [process arguments](language/PROCESS.md);
-- the implemented `std::vec::Vec<T>` and compatible `VecObj` collection
-  contracts belong in [vectors](language/VECTORS.md);
+- the implemented `std::vec::Vec<T>` collection contract belongs in
+  [vectors](language/VECTORS.md);
 - the implemented source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
   [arrays](language/ARRAYS.md);

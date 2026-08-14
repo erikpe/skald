@@ -1,5 +1,5 @@
 from std::test import assert_eq_i64, assert_eq_u64, assert_false, assert_true;
-from std::vec import VecObj;
+from std::vec import Vec;
 
 class Item {
     value: i64;
@@ -29,7 +29,7 @@ fn item_value(value: shared Obj) -> i64 {
 }
 
 fn check_prompt_release() -> unit {
-    var values: VecObj = VecObj.with_capacity(1u);
+    var values: Vec<shared Obj> = Vec<shared Obj>::with_capacity(1u);
     values.push(new Tracked());
     assert_eq_i64(Tracked.destroyed(), 0);
 
@@ -48,17 +48,17 @@ fn main() -> i64 {
     check_prompt_release();
     assert_eq_i64(Tracked.destroyed(), 3);
 
-    var empty: VecObj = VecObj();
+    var empty: Vec<shared Obj> = Vec<shared Obj>();
     assert_true(empty.is_empty());
     assert_eq_u64(empty.len(), 0u);
     assert_eq_u64(empty.capacity(), 4u);
 
-    var zero_capacity: VecObj = VecObj.with_capacity(0u);
+    var zero_capacity: Vec<shared Obj> = Vec<shared Obj>::with_capacity(0u);
     assert_eq_u64(zero_capacity.capacity(), 0u);
     zero_capacity.push(new Item(9));
     assert_eq_u64(zero_capacity.capacity(), 4u);
 
-    var values: VecObj = VecObj.with_capacity(1u);
+    var values: Vec<shared Obj> = Vec<shared Obj>::with_capacity(1u);
     values.push(new Item(1));
     values.push(new Item(2));
     values.push(new Item(3));
@@ -81,8 +81,8 @@ fn main() -> i64 {
     assert_eq_u64(values.len(), 5u);
     assert_eq_i64(item_value(values.last()), 50);
 
-    var copy: VecObj = values;
-    var assigned: VecObj = VecObj();
+    var copy: Vec<shared Obj> = values;
+    var assigned: Vec<shared Obj> = Vec<shared Obj>();
     assigned = values;
     values.set(0, new Item(10));
     values.set(1, new Item(20));

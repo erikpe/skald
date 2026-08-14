@@ -161,8 +161,8 @@ makes a result source-observable.
   snapshot, including the host invocation name at index zero, decoded from
   Linux `/proc/self/cmdline` by ordinary standard-library code. It does not
   change the parameterless entry function or runtime ABI.
-- [Vectors](VECTORS.md) defines the implemented generic `std::vec::Vec<T>` and
-  compatible `VecObj` contracts, including admitted element capabilities,
+- [Vectors](VECTORS.md) defines the implemented generic `std::vec::Vec<T>`
+  contract, including admitted element capabilities,
   capacity, growth, logical indexing, structural copy independence, and prompt
   removal cleanup.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array

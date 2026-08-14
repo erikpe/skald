@@ -1,11 +1,11 @@
 # Vectors
 
-**Status:** implemented generic and shared-object compatibility profiles.
+**Status:** implemented generic profile.
 
 This document defines the source-visible contract of the ordinary Skald
-standard-library classes `std::vec::Vec<T>` and `std::vec::VecObj`. Built-in
-fixed-size array semantics remain defined by [Arrays](ARRAYS.md), while generic
-application legality is defined by [Generic classes](GENERIC_CLASSES.md).
+standard-library class `std::vec::Vec<T>`. Built-in fixed-size array semantics
+remain defined by [Arrays](ARRAYS.md), while generic application legality is
+defined by [Generic classes](GENERIC_CLASSES.md).
 
 ## Generic vector surface
 
@@ -109,40 +109,13 @@ Vector length, capacity storage, and slots are independent afterward. Inline
 elements follow their selected copy operations, while corresponding shared
 elements retain the same pointee allocations under independent owner handles.
 
-## `VecObj` compatibility profile
-
-`VecObj` remains public and unchanged for source compatibility and for
-heterogeneous collections erased to non-null `shared Obj`:
-
-```text
-public class VecObj {
-    init();
-    static fn with_capacity(capacity: u64) -> VecObj;
-    fn len() -> u64;
-    fn capacity() -> u64;
-    fn is_empty() -> bool;
-    mut fn clear() -> unit;
-    mut fn push(value: shared Obj) -> unit;
-    mut fn pop() -> shared Obj;
-    fn last() -> shared Obj;
-    fn get(index: i64) -> shared Obj;
-    mut fn set(index: i64, value: shared Obj) -> unit;
-}
-```
-
-Its capacity, growth, indexing, structural-copy, and prompt-release behavior
-matches the corresponding `Vec<shared Obj>` mechanics, but the two classes
-have distinct nominal identities and no implicit conversion. `VecObj` retains
-its established panic messages prefixed by `VecObj.`. New homogeneous code can
-prefer `Vec<T>` to preserve its exact element type; existing `VecObj` users do
-not require migration.
-
 ## Language, compiler, and runtime boundary
 
-Both vectors are ordinary standard-library source composed from classes,
-arrays, optionals, loops, casts, panic, and shared ownership. Neither adds an
-indexing protocol, compiler intrinsic, IR instruction, target operation, or
-runtime ABI entry.
+The vector is ordinary standard-library source composed from classes, arrays,
+optionals, loops, casts, panic, and shared ownership. It adds no indexing
+protocol, compiler intrinsic, IR instruction, target operation, or runtime ABI
+entry. Heterogeneous shared-object collections use `Vec<shared Obj>` through
+the same generic implementation.
 
 ## Deliberate limits
 

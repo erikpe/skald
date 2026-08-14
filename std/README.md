@@ -41,12 +41,12 @@ read the Linux invocation vector. It introduces no compiler intrinsic,
 entry-function parameter, static cache, or runtime ABI addition.
 
 The `std::vec` module provides the implemented generic
-[`Vec<T>` vector and `VecObj` compatibility class](../docs/language/VECTORS.md).
-`Vec<T>` owns independent `T?[]` capacity storage and infers its element
-lifecycle requirements from ordinary method operations. `VecObj` retains its
-established `(shared? Obj)[]` API for heterogeneous shared-object code. Both
-provide capacity, geometric growth, checked positive and negative indexing,
-push, pop, last, replacement, and clear without compiler or runtime machinery.
+[`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`
+capacity storage and infers its element lifecycle requirements from ordinary
+method operations. Heterogeneous shared-object code uses `Vec<shared Obj>`.
+The vector provides capacity, geometric growth, checked positive and negative
+indexing, push, pop, last, replacement, and clear without compiler or runtime
+machinery.
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`
