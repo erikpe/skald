@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0 is complete; IS1 is next.
+Status: **in progress**. IS0 and IS1 are complete; IS2 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -25,7 +25,7 @@ baselines. No other active roadmap blocks IS0.
 ## Progress
 
 - [x] IS0 — Neutral bracket syntax representation
-- [ ] IS1 — Structural index selection and normalization
+- [x] IS1 — Structural index selection and normalization
 - [ ] IS2 — Structural slice selection and normalization
 - [ ] IS3 — Receiver and dynamic-dispatch integration
 - [ ] IS4 — Ownership, lifecycle, and evaluation hardening
@@ -67,29 +67,29 @@ one resolver-owned protocol selector.
 
 Checklist:
 
-- centralize the four frozen protocol names in one resolver concern;
-- classify array, class, interface, shared-arrow, and unsupported receivers,
+- [x] centralize the four frozen protocol names in one resolver concern;
+- [x] classify array, class, interface, shared-arrow, and unsupported receivers,
   retaining intrinsic arrays before structural lookup;
-- select inherited accessible `index_get` and `index_set` declarations using
+- [x] select inherited accessible `index_get` and `index_set` declarations using
   ordinary hierarchy and privacy services;
-- validate getter/setter access, arity, parameter modes, and exact `unit`
+- [x] validate getter/setter access, arity, parameter modes, and exact `unit`
   setter result;
-- support arbitrary signature-selected key types and independent getter result
+- [x] support arbitrary signature-selected key types and independent getter result
   and setter replacement types;
-- normalize reads to ordinary calls and writes to unit-call statements without
+- [x] normalize reads to ordinary calls and writes to unit-call statements without
   requiring a getter; and
-- update language status and current compiler boundaries for exactly the
+- [x] update language status and current compiler boundaries for exactly the
   capability delivered.
 
 Tests:
 
-- direct and inherited class reads/writes, getter-only and setter-only types,
+- [x] direct and inherited class reads/writes, getter-only and setter-only types,
   different read/write value types, non-`i64` keys, and closed generics;
-- fields/static members, wrong access, arity, result, and alias modes;
-- mutable-receiver rejection, private selection in and out of the declaring
+- [x] fields/static members, wrong access, arity, result, and alias modes;
+- [x] mutable-receiver rejection, private selection in and out of the declaring
   class, and explicit method-call equivalence;
-- arrays proving unchanged precedence and resolved/HIR representation; and
-- deterministic resolved and HIR dumps.
+- [x] arrays proving unchanged precedence and resolved/HIR representation; and
+- [x] deterministic resolved and HIR dumps.
 
 Exit: eligible class indexing works on both sides of assignment as ordinary
 calls, arrays remain intrinsic, and malformed protocols fail at their owning

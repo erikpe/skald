@@ -783,7 +783,7 @@ fn rejects_wrong_index_bound_access_and_alias_root_rebinding() {
         .iter()
         .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_ALIAS_ARGUMENT));
 
-    let structural_index = check_text(concat!(
+    let structural_index = crate::test_support::resolve_source(concat!(
         "class Sequence { init() {} fn len() -> u64 { return 1u; } }\n",
         "fn main() -> i64 {\n",
         "  var values: Sequence = Sequence();\n",
@@ -793,7 +793,7 @@ fn rejects_wrong_index_bound_access_and_alias_root_rebinding() {
     assert!(structural_index
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_OBJECT_CONTEXT));
+        .any(|diagnostic| diagnostic.code == crate::resolve::INVALID_INDEX_PROTOCOL));
 
     let raw_shared = check_text(concat!(
         "fn main() -> i64 {\n",

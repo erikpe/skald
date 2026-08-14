@@ -549,16 +549,7 @@ impl CallableResolver<'_, '_> {
         }
 
         if is_bracket_projection_through_groups(&assignment.place) {
-            let destination = self.resolve_expression(&assignment.place)?;
-            let source = self.resolve_expression(&assignment.value)?;
-            return Some(ResolvedStatement::ArrayAssignment(
-                ResolvedArrayAssignment {
-                    destination,
-                    equal_span: assignment.equal_span,
-                    source,
-                    span: assignment.span,
-                },
-            ));
+            return self.resolve_bracket_assignment(assignment);
         }
 
         let destination = self.resolve_object_place(&assignment.place);

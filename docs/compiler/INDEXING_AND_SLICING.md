@@ -1,13 +1,14 @@
 # Structural Indexing and Slicing Compiler Contract
 
-Status: **frozen design; neutral source-AST representation implemented,
-structural resolution not yet implemented**.
+Status: **frozen design; neutral source AST and structural class indexing
+implemented**.
 
 This document owns the compiler representation and phase boundaries for the
 planned [structural indexing and slicing language contract](../language/INDEXING_AND_SLICING.md).
-The source AST now preserves every bracket projection with type-neutral
-vocabulary. Resolution still maps each projection to an array operation, and
-type checking rejects non-array receivers. The
+The source AST preserves every bracket projection with type-neutral
+vocabulary. Resolution now retains intrinsic arrays or normalizes eligible
+class `index_get` and `index_set` uses to ordinary resolved method calls.
+Structural slices and interface-requirement selection remain pending. The
 [status matrix](../language/STATUS.md) is authoritative for availability.
 
 ## Responsibility split
@@ -61,6 +62,23 @@ For structural slicing, resolution creates typed `none` operands for omitted
 bounds and uses ordinary one-layer injection for supplied `i64` bounds. For a
 write, the replacement remains the final argument. A structural assignment
 becomes an ordinary unit-call statement without selecting a getter.
+
+### Current implementation boundary
+
+Exact-class index reads and writes are implemented, including inherited and
+private-in-owner selection, closed specializations, produced read-only
+receivers, and explicit shared-class arrows. The selector classifies arrays,
+classes, interfaces, explicit shared arrows, and unsupported receivers in one
+resolver concern. Arrays keep `ResolvedArrayProjection` and
+`ResolvedArrayAssignment`; accepted class indexing becomes
+`ResolvedMethodCall`, with assignment represented as an ordinary expression
+statement returning `unit`.
+
+Interface classifications currently remain on the pre-existing rejected
+projection path until interface-call normalization lands. Slice bounds also
+remain intrinsic-array-only. Protocol shape failures use `RES049`;
+ordinary privacy, receiver access, argument mode, and type failures continue
+to use their existing diagnostics.
 
 ## Lower-phase boundary
 

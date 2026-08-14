@@ -978,26 +978,39 @@ impl CallableResolver<'_, '_> {
         class: ClassId,
         name: &syntax::Name,
     ) -> Option<SelectedClassMember> {
-        let member = self
-            .environment
-            .hierarchy
-            .member(class, &name.text)
-            .or_else(|| {
-                let class_name = &self
-                    .environment
-                    .classes
-                    .get(class)
-                    .expect("resolved object place must reference a class")
-                    .name;
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        UNKNOWN_MEMBER,
-                        format!("class `{class_name}` has no member `{}`", name.text),
-                    )
-                    .with_primary_label(name.span, "unknown member"),
-                );
-                None
-            })?;
+        self.select_member_named(
+            class,
+            &name.text,
+            name.span,
+            UNKNOWN_MEMBER,
+            "unknown member",
+        )
+    }
+
+    pub(super) fn select_member_named(
+        &mut self,
+        class: ClassId,
+        name: &str,
+        name_span: Span,
+        missing_code: &'static str,
+        missing_label: &'static str,
+    ) -> Option<SelectedClassMember> {
+        let member = self.environment.hierarchy.member(class, name).or_else(|| {
+            let class_name = &self
+                .environment
+                .classes
+                .get(class)
+                .expect("resolved object place must reference a class")
+                .name;
+            self.diagnostics.push(
+                Diagnostic::error(
+                    missing_code,
+                    format!("class `{class_name}` has no member `{name}`"),
+                )
+                .with_primary_label(name_span, missing_label),
+            );
+            None
+        })?;
 
         let declaring_class = member.declaring_class();
         let private_span = match member {
@@ -1037,12 +1050,9 @@ impl CallableResolver<'_, '_> {
             self.diagnostics.push(
                 Diagnostic::error(
                     PRIVATE_MEMBER_ACCESS,
-                    format!(
-                        "member `{}` is private to class `{}`",
-                        name.text, owner.name
-                    ),
+                    format!("member `{name}` is private to class `{}`", owner.name),
                 )
-                .with_primary_label(name.span, "private member is not accessible here")
+                .with_primary_label(name_span, "private member is not accessible here")
                 .with_secondary_label(private_span, "declared private here")
                 .with_note("private access is granted only inside the declaring class"),
             );

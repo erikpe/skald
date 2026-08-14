@@ -73,6 +73,7 @@ pub const UNCONSTRAINED_TYPE_PARAMETER_MEMBER: &str = "RES045";
 pub const AMBIGUOUS_GENERIC_BOUND_MEMBER: &str = "RES046";
 pub const NON_TERMINATING_GENERIC_SPECIALIZATION: &str = "RES047";
 pub const UNSATISFIED_GENERIC_REQUIREMENT: &str = "RES048";
+pub const INVALID_INDEX_PROTOCOL: &str = "RES049";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

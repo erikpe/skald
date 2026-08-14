@@ -16,6 +16,7 @@ mod call;
 mod dereference;
 mod place;
 mod statement;
+mod structural_bracket;
 
 /// A selected ordinary class member after privacy and hierarchy lookup.
 #[derive(Clone, Copy)]
@@ -769,50 +770,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             syntax::Expression::SelfValue(self_value) => self.resolve_self(self_value.span),
             syntax::Expression::MemberAccess(member) => self.resolve_field_access(member),
             syntax::Expression::BracketProjection(projection) => {
-                let receiver = Box::new(self.resolve_expression(&projection.receiver)?);
-                let operator = match projection.operator {
-                    syntax::BracketProjectionOperator::Ordinary { left_bracket_span } => {
-                        ResolvedArrayProjectionOperator::Ordinary { left_bracket_span }
-                    }
-                    syntax::BracketProjectionOperator::Shared {
-                        arrow_span,
-                        left_bracket_span,
-                    } => ResolvedArrayProjectionOperator::Shared {
-                        arrow_span,
-                        left_bracket_span,
-                    },
-                };
-                let bounds = match &projection.bounds {
-                    syntax::BracketProjectionBounds::Index(index) => {
-                        ResolvedArrayProjectionBounds::Index(Box::new(
-                            self.resolve_expression(index)?,
-                        ))
-                    }
-                    syntax::BracketProjectionBounds::Slice {
-                        start,
-                        colon_span,
-                        end,
-                    } => ResolvedArrayProjectionBounds::Slice {
-                        start: match start {
-                            Some(bound) => Some(Box::new(self.resolve_expression(bound)?)),
-                            None => None,
-                        },
-                        colon_span: *colon_span,
-                        end: match end {
-                            Some(bound) => Some(Box::new(self.resolve_expression(bound)?)),
-                            None => None,
-                        },
-                    },
-                };
-                Some(ResolvedExpression::ArrayProjection(Box::new(
-                    ResolvedArrayProjectionExpr {
-                        receiver,
-                        operator,
-                        bounds,
-                        right_bracket_span: projection.right_bracket_span,
-                        span: projection.span,
-                    },
-                )))
+                self.resolve_bracket_projection(projection)
             }
         }
     }

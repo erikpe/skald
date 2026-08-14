@@ -60,5 +60,6 @@ mod short_circuit_boolean;
 mod static_fields;
 mod static_methods;
 mod strings;
+mod structural_indexing;
 mod type_operations;
 mod while_loops;
