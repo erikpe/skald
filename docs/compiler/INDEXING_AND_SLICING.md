@@ -67,8 +67,9 @@ becomes an ordinary unit-call statement without selecting a getter.
 Class and interface index and slice reads and writes are implemented, including
 inherited and private-in-owner class selection, virtual overrides, interface
 witness dispatch, closed specializations, produced read-only receivers,
-class-valued fields and statics, checked views, and explicit shared class or
-interface crossing. The selector classifies arrays, classes, interfaces,
+class-valued fields and statics, checked views, explicit shared class or
+interface crossing, and read-only member calls on exact-class structural
+getter results. The selector classifies arrays, classes, interfaces,
 explicit shared arrows, and unsupported receivers in one resolver concern.
 Arrays keep `ResolvedArrayProjection` and `ResolvedArrayAssignment`; accepted
 class brackets become `ResolvedMethodCall`, and accepted interface brackets
@@ -76,6 +77,11 @@ become `ResolvedInterfaceCall`. Assignments are ordinary expression statements
 returning `unit`. Slice omissions become resolved absent operands; ordinary
 call checking turns those into typed optional `none` arguments and injects
 each supplied `i64` bound once.
+
+The installed `Str` read protocols require no string-specific selection.
+Resolution sees the ordinary public declarations in `std::str`, and exact
+`Str` slice results may immediately receive another read-only method through
+the same produced-call-result receiver path as explicit method calls.
 
 Protocol shape failures use `RES049`;
 ordinary privacy, receiver access, argument mode, and type failures continue

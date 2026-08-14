@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0 through IS4 are complete; IS5 is next.
+Status: **in progress**. IS0 through IS5 are complete; IS6 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -29,7 +29,7 @@ baselines. No other active roadmap blocks IS0.
 - [x] IS2 — Structural slice selection and normalization
 - [x] IS3 — Receiver and dynamic-dispatch integration
 - [x] IS4 — Ownership, lifecycle, and evaluation hardening
-- [ ] IS5 — Read-only `Str` adoption
+- [x] IS5 — Read-only `Str` adoption
 - [ ] IS6 — Complete `Vec<T>` adoption
 - [ ] IS7 — Diagnostics, documentation, and release closure
 
@@ -192,24 +192,24 @@ ordinary-library status.
 
 Checklist:
 
-- add public `index_get(index: i64) -> u8` over the existing checked byte
+- [x] add public `index_get(index: i64) -> u8` over the existing checked byte
   implementation;
-- add `slice_get(start: i64?, end: i64?) -> Str`, mapping omission to logical
+- [x] add `slice_get(start: i64?, end: i64?) -> Str`, mapping omission to logical
   beginning/end before the existing normalized constant-time slice path;
-- keep the backing private and add neither setter;
-- avoid compiler special cases or new string language-item requirements; and
-- update the string contract and examples to implemented status.
+- [x] keep the backing private and add neither setter;
+- [x] avoid compiler special cases or new string language-item requirements; and
+- [x] update the string contract and examples to implemented status.
 
 Tests:
 
-- literal, named, produced, copied, shared, and interface-mediated read forms;
-- every slice omission shape, empty/full slices, normalized negative bounds,
+- [x] literal, named, produced, copied, shared, and interface-mediated read forms;
+- [x] every slice omission shape, empty/full slices, normalized negative bounds,
   and current panic behavior;
-- independent descriptor and backing-lifetime behavior; and
-- compile failures for index/slice assignment.
+- [x] independent descriptor and backing-lifetime behavior; and
+- [x] compile failures for index/slice assignment.
 
 Exit: `Str` bracket reads match its ordinary byte/slice methods and writes are
-rejected because no setter exists.
+rejected because no setter exists. Complete; IS6 is next.
 
 ## IS6 — Complete `Vec<T>` adoption
 

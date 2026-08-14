@@ -3,7 +3,8 @@
 This directory contains the installed Skald standard-library source. The
 canonical `std::str::Str` module provides the frozen byte-string descriptor,
 safe byte-copying construction, checked observation and slicing, independent
-array conversion, byte equality against generic objects, concatenation, and
+array conversion, read-only structural byte indexing and omitted-bound
+descriptor slicing, byte equality against generic objects, concatenation, and
 canonical formatting plus optional parsing for every primitive type. Its
 integer methods delegate to type-named helpers in
 `std::str::format_integer` and `std::str::parse_integer`; the descriptor keeps

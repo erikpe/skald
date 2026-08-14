@@ -1,0 +1,57 @@
+schema = 2
+
+[[test]]
+name = "string_reads"
+mode = "run"
+source = "string_reads.ska"
+[[test.run]]
+name = "receiver_forms_bounds_and_lifetime"
+expect = { exit = 0 }
+
+[[test]]
+name = "string_failures"
+mode = "run"
+source = "string_failures.ska"
+
+[[test.run]]
+name = "index_below_range"
+args = ["index-low"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds\n" } }
+
+[[test.run]]
+name = "index_above_range"
+args = ["index-high"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds\n" } }
+
+[[test.run]]
+name = "slice_below_range"
+args = ["slice-low"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds\n" } }
+
+[[test.run]]
+name = "slice_reversed_range"
+args = ["slice-reversed"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds\n" } }
+
+[[test.run]]
+name = "slice_above_range"
+args = ["slice-high"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: array index out of bounds\n" } }
+
+[[test]]
+name = "string_index_assignment"
+mode = "compile-fail"
+source = "string_index_assignment.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES049]: class `Str` has no member `index_set`
+ --> tests/golden/structural_indexing/string_index_assignment.ska:5:10"""
+
+[[test]]
+name = "string_slice_assignment"
+mode = "compile-fail"
+source = "string_slice_assignment.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES049]: class `Str` has no member `slice_set`
+ --> tests/golden/structural_indexing/string_slice_assignment.ska:5:10"""

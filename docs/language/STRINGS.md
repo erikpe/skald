@@ -5,7 +5,8 @@ string-literal syntax, conditionally discovers and validates
 `std::str::Str`, and represents literals as exact typed produced values
 through verified MIR descriptor materialization and deterministic x86-64
 execution. The installed standard library provides copying construction,
-observation, slicing, conversion, and concatenation behavior.
+observation, read-only structural indexing and slicing, conversion, and
+concatenation behavior.
 This document is authoritative for the source-visible string contract, while
 the [status matrix](STATUS.md) remains authoritative for compiler availability.
 
@@ -200,8 +201,10 @@ The installed representative public surface is:
 | `static fn from_bytes(ref bytes: u8[]) -> Str` | Copy caller bytes into fresh shared storage. |
 | `fn len() -> u64` | Return the descriptor length. |
 | `fn byte(index: i64) -> u8` | Return one checked byte using array index semantics. |
+| `fn index_get(index: i64) -> u8` | Structural read entry point for `value[index]`; delegates to `byte`. |
 | `fn equals(ref other: Obj) -> bool` | Return whether `other` is a `Str` with an identical byte sequence. |
 | `fn slice(start: i64, end: i64) -> Str` | Return an `O(1)` shared-backing half-open slice using array bound semantics. |
+| `fn slice_get(start: i64?, end: i64?) -> Str` | Structural read entry point for `value[start:end]`; omitted bounds select the logical beginning or end before delegating to `slice`. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 | `static fn from_bool(value: bool) -> Str` | Return canonical lowercase boolean text. |
@@ -216,14 +219,30 @@ The installed representative public surface is:
 
 Byte indices and slice bounds use the same one-time negative normalization as
 array indices and explicit array slice bounds, relative to the current
-string's length. Thus `byte(-1)` selects the final byte, and
-`slice(1, -1)` excludes the first and final bytes. Slice ranges are half-open:
-the normalized start is included and the normalized end is excluded. Both
-bounds are required because this method surface has no omitted-argument form.
-A valid byte position satisfies `0 <= index < len`; a valid slice satisfies
-`0 <= start <= end <= len` after normalization. See
+string's length. Thus `byte(-1)` and `value[-1]` select the final byte, while
+`slice(1, -1)` and `value[1:-1]` exclude the first and final bytes. Slice
+ranges are half-open: the normalized start is included and the normalized end
+is excluded. The explicit `slice` method requires both bounds. Structural
+brackets pass optional bounds to `slice_get`: `value[:end]` supplies only the
+end, `value[start:]` supplies only the start, and `value[:]` selects the full
+logical range. A valid byte position satisfies `0 <= index < len`; a valid
+slice satisfies `0 <= start <= end <= len` after normalization. See
 [array length, indices, and bounds](ARRAYS.md#length-indices-and-bounds) and
 [array slices](ARRAYS.md#slices).
+
+For example:
+
+```ska
+var text: Str = "skald";
+var first: u8 = text[0];
+var tail: Str = text[1:];
+var copy: Str = text[:];
+```
+
+Both slice results are independent descriptors that retain the same immutable
+backing allocation. Reassigning or destroying `text` cannot invalidate them.
+`Str` declares neither `index_set` nor `slice_set`, so both bracket assignment
+forms are rejected by ordinary structural protocol selection.
 
 Invalid byte and slice bounds call the imported
 `std::error::panic("array index out of bounds")` declaration as a standalone
@@ -251,9 +270,9 @@ The required asymptotic behavior is:
 | Copy assignment | `O(1)` secure incoming owner, release old owner, copy bounds |
 | Destruction | `O(1)` shared release, possibly reclaiming dynamic backing |
 | Length | `O(1)` descriptor read |
-| Byte access | `O(1)` checked range access |
+| Byte access, including `value[index]` | `O(1)` checked range access |
 | Equality | `O(n)` dynamic `Str` check, length check, and byte comparison; no byte copy |
-| Slice | `O(1)` owner copy plus adjusted bounds; no byte copy |
+| Slice, including `value[start:end]` | `O(1)` owner copy plus adjusted bounds; no byte copy |
 | Convert from caller-owned bytes | `O(n)` fresh allocation and byte copy |
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
@@ -478,12 +497,12 @@ The backing-array maximum-length rule makes the descriptor length and every
 valid absolute position representable as `i64`. The compiler adds neither a
 checked cast nor string-only numeric rules.
 
-The frozen [structural bracket design](INDEXING_AND_SLICING.md) plans read-only
-`index_get` and `slice_get` methods that share the existing checked byte and
-constant-time descriptor-slice implementations. Omitted bounds will select the
-logical beginning/end. `Str` will add neither setter, and the compiler will
-not recognize `Str` specially when selecting the ordinary methods. This
-bracket surface is not yet implemented.
+The implemented [structural bracket design](INDEXING_AND_SLICING.md) selects
+the ordinary read-only `index_get` and `slice_get` methods. These methods share
+the existing checked byte and constant-time descriptor-slice implementations;
+omitted bounds select the logical beginning or end. `Str` adds neither setter,
+and the compiler does not recognize `Str` specially when selecting the
+ordinary methods.
 
 ## Exclusions
 

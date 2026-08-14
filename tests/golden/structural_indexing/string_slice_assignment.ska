@@ -1,0 +1,7 @@
+from std::str import Str;
+
+fn main() -> i64 {
+    var value: Str = "abc";
+    value[:] = "replacement";
+    return 0;
+}

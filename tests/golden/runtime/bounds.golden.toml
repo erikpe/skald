@@ -101,7 +101,7 @@ name = "string_slice_invalid_bounds"
 args = ["string-slice"]
 expect = { exit = "failure", stderr = { inline = """panic: array index out of bounds
 stacktrace:
-  at std::str::Str.slice (std/str.ska:80:13)
+  at std::str::Str.slice (std/str.ska:84:13)
   at runtime_bounds_failures::string_slice (tests/golden/runtime/runtime_bounds_failures.ska:68:24)
   at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:104:12)
 """ } }

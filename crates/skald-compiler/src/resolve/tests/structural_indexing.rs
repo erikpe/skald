@@ -503,6 +503,43 @@ fn structural_slice_keeps_effectful_receiver_and_bounds_once_without_hidden_leng
 }
 
 #[test]
+fn structural_getter_results_can_receive_read_only_methods_directly() {
+    let output = resolve_text(concat!(
+        "class Part { init() {} fn read() -> i64 { return 1; } }\n",
+        "interface Source { fn slice_get(start: i64?, end: i64?) -> Part; }\n",
+        "class Value implements Source {\n",
+        "  fn index_get(key: i64) -> Part { return Part(); }\n",
+        "  fn slice_get(start: i64?, end: i64?) -> Part { return Part(); }\n",
+        "}\n",
+        "fn direct(ref value: Value) -> i64 { return value[0].read(); }\n",
+        "fn through_interface(ref value: Source) -> i64 { return value[:].read(); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let direct = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::MethodCall(direct_call) = return_value(&direct.body.statements[0])
+    else {
+        panic!("structural result member access must select an ordinary method call");
+    };
+    let ResolvedObjectReceiver::Produced { producer, .. } = &direct_call.receiver else {
+        panic!("structural class result must become a produced receiver");
+    };
+    assert!(matches!(&**producer, ResolvedExpression::MethodCall(_)));
+
+    let through_interface = output.program.definitions.get(FunctionId::new(1)).unwrap();
+    let ResolvedExpression::MethodCall(interface_call) =
+        return_value(&through_interface.body.statements[0])
+    else {
+        panic!("interface structural result member access must select an ordinary method call");
+    };
+    let ResolvedObjectReceiver::Produced { producer, .. } = &interface_call.receiver else {
+        panic!("structural interface result must become a produced receiver");
+    };
+    assert!(matches!(&**producer, ResolvedExpression::InterfaceCall(_)));
+}
+
+#[test]
 fn normalizes_interface_brackets_to_exact_declared_requirements() {
     let output = resolve_text(concat!(
         "interface Sequence {\n",

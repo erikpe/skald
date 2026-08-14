@@ -1,0 +1,21 @@
+import std::process;
+from std::str import Str;
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    var value: Str = "abc";
+
+    if (arguments[1].equals("index-low")) {
+        return (i64) value[-4];
+    }
+    if (arguments[1].equals("index-high")) {
+        return (i64) value[3];
+    }
+    if (arguments[1].equals("slice-low")) {
+        return (i64) value[-4:].len();
+    }
+    if (arguments[1].equals("slice-reversed")) {
+        return (i64) value[2:1].len();
+    }
+    return (i64) value[:4].len();
+}

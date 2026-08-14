@@ -46,7 +46,7 @@ arguments have deterministic source order.
 | **optional value** | An explicit `T?` or `(shared T)?` wrapper containing either no payload or one complete valid payload. Primitive, exact-class, and shared-owner optionals execute across internal owning boundaries; class unwrap supplies a bounded checked payload view and shared unwrap secures an ordinary non-null owner. `shared? T` is shorthand for the latter. |
 | **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **array** | A built-in invariant fixed-size sequence. Inline `T[]` values deep-copy named sources and adopt produced backing; `shared T[]` owners share one allocation. Arrays support nested owning element categories, immutable length, checked indexing, copied slices, explicit shared projection, deterministic lifecycle, and call-scoped aliases on x86-64. |
-| **string** | An exact `std::str::Str` class value describing an immutable finite sequence of `u8` bytes. Literals use immortal backing; ordinary standard-library construction and concatenation use dynamically reclaimed shared backing. |
+| **string** | An exact `std::str::Str` class value describing an immutable finite sequence of `u8` bytes. Literals use immortal backing; ordinary standard-library construction and concatenation use dynamically reclaimed shared backing. Read-only brackets select checked byte access or constant-time descriptor slicing. |
 | **alias** | A call-scoped, non-owning view of a live object place. A read-only object alias may select an existing place or materialize a compatible produced exact-class object in hidden caller-owned storage. The static target may be a class, an ancestor, an interface, or `Obj`; mutable aliases still require existing mutable places. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **generic class** | A compile-time class template with named type parameters. Each accepted explicit closed application denotes a distinct ordinary exact class after semantic specialization; no unresolved parameter or erased generic value exists at runtime. |
@@ -169,8 +169,9 @@ makes a result source-observable.
   class/interface bracket protocol, exact method shapes, array precedence,
   receiver and evaluation rules, and initial `Vec<T>`/`Str` adoption boundary.
   Class and interface index and slice reads and assignments are implemented
-  through verified ordinary direct, virtual, and witness call ownership;
-  standard-library adoption remains pending.
+  through verified ordinary direct, virtual, and witness call ownership.
+  `Str` read-only adoption is implemented; complete `Vec<T>` adoption remains
+  pending.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
   lifetime, failure, and typed explicit element-list contract. Primitive,

@@ -81,31 +81,58 @@ impl CallableResolver<'_, '_> {
             ),
             syntax::Expression::BracketProjection(_) => {
                 let resolved = self.resolve_expression(expression)?;
-                let ResolvedExpression::ArrayProjection(projection) = resolved else {
-                    unreachable!("bracket projection syntax must resolve to the current array node")
-                };
-                let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(
-                    &ResolvedExpression::ArrayProjection(projection.clone()),
-                ) else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_MEMBER_SELECTION,
-                            "member selection requires an exact-class array element",
-                        )
-                        .with_primary_label(
-                            projection.span,
-                            "this projected element is not an inline class",
-                        ),
-                    );
-                    return None;
-                };
-                let span = projection.span;
-                Some(ResolvedObjectReceiver::ArrayElement {
-                    projection,
-                    projections: Vec::new(),
-                    class,
-                    span,
-                })
+                match resolved {
+                    ResolvedExpression::ArrayProjection(projection) => {
+                        let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(
+                            &ResolvedExpression::ArrayProjection(projection.clone()),
+                        ) else {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_MEMBER_SELECTION,
+                                    "member selection requires an exact-class array element",
+                                )
+                                .with_primary_label(
+                                    projection.span,
+                                    "this projected element is not an inline class",
+                                ),
+                            );
+                            return None;
+                        };
+                        let span = projection.span;
+                        Some(ResolvedObjectReceiver::ArrayElement {
+                            projection,
+                            projections: Vec::new(),
+                            class,
+                            span,
+                        })
+                    }
+                    producer @ (ResolvedExpression::MethodCall(_)
+                    | ResolvedExpression::InterfaceCall(_)) => {
+                        if let Some(target) = self.resolved_shared_target(&producer) {
+                            self.report_implicit_shared_member_access(expression.span(), target);
+                            return None;
+                        }
+                        let Some(ResolvedTypeKind::Class(class)) =
+                            self.resolved_expression_type(&producer)
+                        else {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_MEMBER_SELECTION,
+                                    "bracket result is not an exact inline class",
+                                )
+                                .with_primary_label(
+                                    expression.span(),
+                                    "only an exact-class result can be a produced method receiver",
+                                ),
+                            );
+                            return None;
+                        };
+                        Some(ResolvedObjectReceiver::from_produced(producer, class))
+                    }
+                    _ => unreachable!(
+                        "bracket projection syntax must resolve to an array projection or structural call"
+                    ),
+                }
             }
             syntax::Expression::StringLiteral(_) => {
                 let producer = self.resolve_expression(expression)?;

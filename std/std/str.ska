@@ -40,6 +40,10 @@ public class Str {
         return self._storage->[self._start + normalized_index];
     }
 
+    fn index_get(index: i64) -> u8 {
+        return self.byte(index);
+    }
+
     fn equals(ref other: Obj) -> bool {
         if (!(other is Str)) {
             return false;
@@ -81,6 +85,20 @@ public class Str {
         }
 
         return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
+    }
+
+    fn slice_get(start: i64?, end: i64?) -> Str {
+        var concrete_start: i64 = 0;
+        if (start is some) {
+            concrete_start = start!;
+        }
+
+        var concrete_end: i64 = (i64) self._length;
+        if (end is some) {
+            concrete_end = end!;
+        }
+
+        return self.slice(concrete_start, concrete_end);
     }
 
     fn concat(ref other: Str) -> Str {
