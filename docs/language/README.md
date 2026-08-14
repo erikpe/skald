@@ -169,8 +169,8 @@ makes a result source-observable.
   class/interface bracket protocol, exact method shapes, array precedence,
   receiver and evaluation rules, and initial `Vec<T>`/`Str` adoption boundary.
   Class and interface index and slice reads and assignments are implemented
-  through ordinary direct, virtual, and witness calls; ownership hardening and
-  standard-library adoption remain pending.
+  through verified ordinary direct, virtual, and witness call ownership;
+  standard-library adoption remains pending.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
   lifetime, failure, and typed explicit element-list contract. Primitive,

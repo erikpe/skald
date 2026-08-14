@@ -94,7 +94,8 @@ The frozen
 uses neutral source-only bracket vocabulary. Resolution retains built-in arrays
 and normalizes eligible class and interface index and slice brackets to
 ordinary direct, virtual, or interface calls before HIR. The implemented
-selection adds no lower IR, backend operation, or runtime ABI.
+selection and ownership matrix add no lower IR, backend operation, or runtime
+ABI.
 
 The implemented [strings compiler contract](STRINGS.md) defines canonical
 `std::str::Str` discovery and validation, intrinsic produced-value lowering,

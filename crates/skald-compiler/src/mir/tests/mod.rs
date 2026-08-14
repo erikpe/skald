@@ -64,6 +64,7 @@ mod static_initializers;
 mod static_methods;
 mod storage_lifetimes;
 mod strings;
+mod structural_indexing;
 mod type_operation_fixtures;
 mod type_operations;
 mod value_parameters;

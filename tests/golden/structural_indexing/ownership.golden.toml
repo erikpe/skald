@@ -1,0 +1,52 @@
+schema = 2
+
+[[test]]
+name = "ownership_values"
+mode = "run"
+source = "ownership_values.ska"
+[[test.run]]
+name = "complete_value_family_matrix"
+expect = { exit = 0 }
+
+[[test]]
+name = "evaluation_order"
+mode = "run"
+source = "evaluation_order.ska"
+[[test.run]]
+name = "receiver_operands_call_and_reverse_cleanup"
+expect = { stdout = { file = "data/evaluation_order.stdout" } }
+
+[[test]]
+name = "failure_order"
+mode = "run"
+source = "failure_order.ska"
+
+[[test.run]]
+name = "receiver_before_key"
+args = ["receiver"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: optional value is absent\n" } }
+
+[[test.run]]
+name = "key_before_call"
+args = ["key"]
+expect = { exit = "failure", stdout = { inline = "10\n" }, stderr = { match = "starts-with", inline = "panic: optional value is absent\n" } }
+
+[[test.run]]
+name = "start_before_end"
+args = ["start"]
+expect = { exit = "failure", stdout = { inline = "20\n" }, stderr = { match = "starts-with", inline = "panic: optional value is absent\n" } }
+
+[[test.run]]
+name = "end_after_start"
+args = ["end"]
+expect = { exit = "failure", stdout = { inline = "30\n31\n" }, stderr = { match = "starts-with", inline = "panic: optional value is absent\n" } }
+
+[[test.run]]
+name = "replacement_after_key"
+args = ["replacement"]
+expect = { exit = "failure", stdout = { inline = "40\n41\n" }, stderr = { match = "starts-with", inline = "panic: optional value is absent\n" } }
+
+[[test.run]]
+name = "call_body_after_operands"
+args = ["body"]
+expect = { exit = "failure", stdout = { inline = "50\n51\n52\n" }, stderr = { match = "starts-with", inline = "panic: structural call body failure\n" } }

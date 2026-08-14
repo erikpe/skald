@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0 through IS3 are complete; IS4 is next.
+Status: **in progress**. IS0 through IS4 are complete; IS5 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -28,7 +28,7 @@ baselines. No other active roadmap blocks IS0.
 - [x] IS1 — Structural index selection and normalization
 - [x] IS2 — Structural slice selection and normalization
 - [x] IS3 — Receiver and dynamic-dispatch integration
-- [ ] IS4 — Ownership, lifecycle, and evaluation hardening
+- [x] IS4 — Ownership, lifecycle, and evaluation hardening
 - [ ] IS5 — Read-only `Str` adoption
 - [ ] IS6 — Complete `Vec<T>` adoption
 - [ ] IS7 — Diagnostics, documentation, and release closure
@@ -161,26 +161,26 @@ result, temporary, and evaluation-order contract.
 
 Checklist:
 
-- exercise primitive, class, array, optional, shared-owner, and specialized
+- [x] exercise primitive, class, array, optional, shared-owner, and specialized
   generic getter results and setter replacements;
-- preserve receiver-before-operands and replacement-last order with one
+- [x] preserve receiver-before-operands and replacement-last order with one
   evaluation per present expression;
-- verify target-directed copies, produced-value adoption, owner retention or
+- [x] verify target-directed copies, produced-value adoption, owner retention or
   transfer, alias anchors, selected-path temporaries, and reverse cleanup;
-- extend preliminary/final MIR checks only when an existing ordinary-call
+- [x] extend preliminary/final MIR checks only when an existing ordinary-call
   invariant lacks coverage, without adding structural IR; and
-- confirm reachability, static-effect inference, backend call lowering, and
+- [x] confirm reachability, static-effect inference, backend call lowering, and
   runtime ABI remain ordinary-call paths.
 
 Tests:
 
-- effect counters and failure ordering for receiver, key, bounds, replacement,
+- [x] effect counters and failure ordering for receiver, key, bounds, replacement,
   call body, and cleanup;
-- owning result consumption and discard, assignment source transfer/copy,
+- [x] owning result consumption and discard, assignment source transfer/copy,
   self-aliasing arguments, and checked receiver anchors;
-- representative verifier rejection tests for malformed ordinary-call MIR;
-- source-to-native coverage for every supported value family; and
-- focused compiler and full-artifact determinism checks.
+- [x] representative verifier rejection tests for malformed ordinary-call MIR;
+- [x] source-to-native coverage for every supported value family; and
+- [x] focused compiler and full-artifact determinism checks.
 
 Exit: the supported ownership matrix executes through existing verified call
 machinery with no new lower-IR, backend, or runtime operation.

@@ -1,0 +1,144 @@
+from std::test import assert_eq_i64, assert_true;
+
+class Item {
+    static destroyed: i64;
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+
+    destroy {
+        Item.destroyed = Item.destroyed + 1;
+    }
+}
+
+class Cell<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn index_get(key: i64) -> T {
+        return self.value;
+    }
+
+    mut fn index_set(key: i64, replacement: T) -> unit {
+        self.value = replacement;
+    }
+
+    fn slice_get(start: i64?, end: i64?) -> T {
+        return self.value;
+    }
+
+    mut fn slice_set(start: i64?, end: i64?, replacement: T) -> unit {
+        self.value = replacement;
+    }
+}
+
+fn discard_item(value: Item) -> unit {}
+
+fn exercise_primitive() -> unit {
+    var cell: Cell<i64> = Cell<i64>(1);
+    cell[0] = 2;
+    cell[:] = 3;
+    assert_eq_i64(cell[0], 3);
+    assert_eq_i64(cell[:], 3);
+}
+
+fn exercise_class() -> unit {
+    var cell: Cell<Item> = Cell<Item>(Item(10));
+    var named: Item = Item(20);
+    cell[0] = named;
+    named.value = 21;
+    var copied: Item = cell[0];
+    assert_eq_i64(copied.value, 20);
+
+    cell[:] = Item(30);
+    var adopted: Item = cell[:];
+    assert_eq_i64(adopted.value, 30);
+    cell[0] = cell[0];
+    discard_item(cell[:]);
+}
+
+fn exercise_array() -> unit {
+    var cell: Cell<i64[]> = Cell<i64[]>(i64[]{1, 2});
+    var named: i64[] = i64[]{3, 4};
+    cell[0] = named;
+    named[0] = 9;
+    var copied: i64[] = cell[0];
+    assert_eq_i64(copied[0], 3);
+    copied[0] = 8;
+    assert_eq_i64(cell[0][0], 3);
+
+    cell[:] = i64[]{5, 6};
+    cell[0] = cell[0];
+    var adopted: i64[] = cell[:];
+    assert_eq_i64(adopted[1], 6);
+}
+
+fn exercise_optional() -> unit {
+    var cell: Cell<Item?> = Cell<Item?>(Item(40));
+    var absent: Item? = none;
+    cell[0] = absent;
+    assert_true(cell[0] is none);
+
+    cell[:] = Item(41);
+    cell[0] = cell[0];
+    var present: Item? = cell[:];
+    assert_true(present is some);
+    assert_eq_i64(present!.value, 41);
+}
+
+fn exercise_shared() -> unit {
+    var owner: shared Item = new Item(50);
+    var cell: Cell<shared Item> = Cell<shared Item>(owner);
+    var retained: shared Item = cell[0];
+    cell[0] = new Item(51);
+    assert_eq_i64(retained->value, 50);
+
+    var latest: shared Item = cell[:];
+    assert_eq_i64(latest->value, 51);
+    cell[:] = owner;
+    cell[0] = cell[0];
+    assert_eq_i64(cell[:]->value, 50);
+}
+
+fn exercise_specialized_generic() -> unit {
+    var inner: Cell<Item> = Cell<Item>(Item(60));
+    var outer: Cell<Cell<Item>> = Cell<Cell<Item>>(inner);
+    outer[0] = inner;
+    outer[:] = Cell<Item>(Item(61));
+    outer[0] = outer[0];
+
+    var result: Cell<Item> = outer[:];
+    var item: Item = result[0];
+    assert_eq_i64(item.value, 61);
+}
+
+fn main() -> i64 {
+    exercise_primitive();
+    var before: i64 = Item.destroyed;
+    exercise_class();
+    assert_true(Item.destroyed > before);
+    exercise_array();
+    before = Item.destroyed;
+    exercise_optional();
+    assert_true(Item.destroyed > before);
+    before = Item.destroyed;
+    exercise_shared();
+    assert_true(Item.destroyed > before);
+    before = Item.destroyed;
+    exercise_specialized_generic();
+    assert_true(Item.destroyed > before);
+    return 0;
+}

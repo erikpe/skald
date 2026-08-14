@@ -81,6 +81,15 @@ Protocol shape failures use `RES049`;
 ordinary privacy, receiver access, argument mode, and type failures continue
 to use their existing diagnostics.
 
+Preliminary and final MIR verification cover structural-call primitive, class,
+array, optional, shared-owner, and closed-generic result and replacement
+families through existing call instructions. Target-directed class and array
+destinations, named-source copies, produced sources, shared transfers, checked
+receiver anchors, self-aliasing operands, full-expression temporaries, and
+reverse cleanup add no structural ownership representation. Static-effect
+analysis observes structural-selected targets and static receiver places as
+ordinary method-call effects.
+
 ## Lower-phase boundary
 
 Accepted class sugar becomes the same resolved method-call form as an explicit

@@ -113,6 +113,13 @@ protocol defines no borrowed result category and no compiler-known bounds or
 slice-length failure. Method bodies may fail through ordinary language
 mechanisms; array failures remain intrinsic and separately specified.
 
+The implemented compiler verifies this ordinary-call behavior for primitive,
+class, array, optional, shared-owner, and closed-generic results and
+replacements. Named and produced sources, self-aliasing replacements, checked
+receiver anchors, consuming calls, and reverse temporary cleanup retain their
+existing ownership behavior; bracket spelling introduces no additional
+lifetime category.
+
 ## Standard-library adoption
 
 The initial library profile will keep `Vec<T>` and `Str` as ordinary Skald

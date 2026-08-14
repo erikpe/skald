@@ -1034,6 +1034,9 @@ ordinary call checking; no synthetic length call or repeated receiver
 evaluation is introduced. Class calls retain ordinary direct or virtual
 selection and interface calls retain ordinary witness selection. The
 extension adds no structural HIR, MIR, verifier, backend, or runtime operation.
+Primitive and owning result and replacement families, checked receiver
+anchors, static effects, self-aliasing arguments, and reverse cleanup are
+verified through the existing ordinary-call phase products.
 
 Type checking lowers array declarations, owning locals/fields/signatures,
 inline and shared construction, exact element lifecycle capabilities,

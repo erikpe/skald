@@ -358,3 +358,4 @@ fn string_language_item_initialization_is_in_the_effect_inventory() {
 }
 
 mod generic_classes;
+mod structural_indexing;

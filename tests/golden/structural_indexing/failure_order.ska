@@ -1,0 +1,68 @@
+import std::io;
+import std::process;
+from std::error import panic;
+from std::str import Str;
+
+class Probe {
+    body_marker: i64;
+    fail_in_body: bool;
+
+    init(body_marker: i64, fail_in_body: bool) {
+        self.body_marker = body_marker;
+        self.fail_in_body = fail_in_body;
+    }
+
+    fn index_get(key: i64) -> i64 {
+        std::io::println_i64(self.body_marker);
+        if (self.fail_in_body) {
+            panic("structural call body failure");
+        }
+        return key;
+    }
+
+    mut fn index_set(key: i64, replacement: i64) -> unit {
+        std::io::println_i64(self.body_marker);
+    }
+
+    fn slice_get(start: i64?, end: i64?) -> i64 {
+        std::io::println_i64(self.body_marker);
+        return 0;
+    }
+}
+
+fn make_owner(event: i64, body: i64, fail_in_body: bool) -> shared Probe {
+    std::io::println_i64(event);
+    return new Probe(body, fail_in_body);
+}
+
+fn effect(marker: i64) -> i64 {
+    std::io::println_i64(marker);
+    return marker;
+}
+
+fn missing() -> i64 {
+    var value: i64? = none;
+    return value!;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    if (arguments[1].equals("receiver")) {
+        var absent: (shared Probe)? = none;
+        return absent!->[effect(1)];
+    }
+    if (arguments[1].equals("key")) {
+        return make_owner(10, 12, false)->[missing()];
+    }
+    if (arguments[1].equals("start")) {
+        return make_owner(20, 23, false)->[missing():effect(21)];
+    }
+    if (arguments[1].equals("end")) {
+        return make_owner(30, 33, false)->[effect(31):missing()];
+    }
+    if (arguments[1].equals("replacement")) {
+        make_owner(40, 43, false)->[effect(41)] = missing();
+        return 0;
+    }
+    return make_owner(50, 52, true)->[effect(51)];
+}

@@ -1,0 +1,108 @@
+import std::io;
+
+class Probe {
+    body_marker: i64;
+    cleanup_marker: i64;
+
+    init(body_marker: i64, cleanup_marker: i64) {
+        self.body_marker = body_marker;
+        self.cleanup_marker = cleanup_marker;
+    }
+
+    destroy {
+        std::io::println_i64(self.cleanup_marker);
+    }
+
+    fn index_get(key: i64) -> i64 {
+        std::io::println_i64(self.body_marker);
+        return key;
+    }
+
+    mut fn index_set(key: i64, replacement: i64) -> unit {
+        std::io::println_i64(self.body_marker);
+    }
+
+    fn slice_get(start: i64?, end: i64?) -> i64 {
+        std::io::println_i64(self.body_marker);
+        return 0;
+    }
+
+    mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit {
+        std::io::println_i64(self.body_marker);
+    }
+}
+
+class Token {
+    cleanup_marker: i64;
+
+    init(cleanup_marker: i64) {
+        self.cleanup_marker = cleanup_marker;
+    }
+
+    copy(ref source: Token) {
+        self.cleanup_marker = source.cleanup_marker + 100;
+    }
+
+    assign(ref source: Token) {
+        self.cleanup_marker = source.cleanup_marker;
+    }
+
+    destroy {
+        std::io::println_i64(self.cleanup_marker);
+    }
+}
+
+class OwnedProbe {
+    body_marker: i64;
+    cleanup_marker: i64;
+
+    init(body_marker: i64, cleanup_marker: i64) {
+        self.body_marker = body_marker;
+        self.cleanup_marker = cleanup_marker;
+    }
+
+    destroy {
+        std::io::println_i64(self.cleanup_marker);
+    }
+
+    mut fn index_set(key: i64, replacement: Token) -> unit {
+        std::io::println_i64(self.body_marker);
+    }
+}
+
+fn mark(marker: i64) -> i64 {
+    std::io::println_i64(marker);
+    return marker;
+}
+
+fn make_inline(event: i64, body: i64, cleanup: i64) -> Probe {
+    std::io::println_i64(event);
+    return Probe(body, cleanup);
+}
+
+fn make_shared(event: i64, body: i64, cleanup: i64) -> shared Probe {
+    std::io::println_i64(event);
+    return new Probe(body, cleanup);
+}
+
+fn make_owned(event: i64, body: i64, cleanup: i64) -> shared OwnedProbe {
+    std::io::println_i64(event);
+    return new OwnedProbe(body, cleanup);
+}
+
+fn token_marker(event: i64, cleanup: i64) -> i64 {
+    std::io::println_i64(event);
+    return cleanup;
+}
+
+fn consume(value: i64) -> unit {}
+
+fn main() -> i64 {
+    consume(make_inline(10, 12, 19)[mark(11)]);
+    consume(make_inline(20, 23, 29)[mark(21):mark(22)]);
+    make_shared(30, 33, 39)->[mark(31)] = mark(32);
+    make_shared(40, 44, 49)->[mark(41):mark(42)] = mark(43);
+    make_shared(50, 52, 59)->[:] = mark(51);
+    make_owned(60, 63, 69)->[mark(61)] = Token(token_marker(62, 68));
+    return 0;
+}

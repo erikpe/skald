@@ -7,7 +7,7 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
-is **in progress**; IS0 through IS3 are complete and IS4 is next. It implements
+is **in progress**; IS0 through IS4 are complete and IS5 is next. It implements
 the frozen class/interface bracket protocol while preserving built-in array
 precedence and an unchanged lower-IR and runtime boundary.
 
@@ -26,7 +26,11 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-No pending discovery is currently recorded.
+[Generic array copy lifecycle](GENERIC_ARRAY_COPY_LIFECYCLE_DISCOVERY.md)
+records an internal MIR failure when an explicit generic copy body initializes
+a type-parameter field specialized to an array. Synthesized lifecycle remains
+the current workaround; the eventual fix belongs to generic-class lifecycle
+lowering rather than structural indexing.
 
 ## Implementation baseline
 
