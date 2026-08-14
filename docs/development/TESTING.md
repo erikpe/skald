@@ -618,9 +618,10 @@ String coverage follows the
   sentinel-aware retain/release, dynamic reclamation, malformed-input
   rejection, and the unchanged runtime ABI;
 - native goldens own copying, assignment, arguments, results, temporaries,
-  signed and negative byte positions, half-open and negative slice bounds,
-  checked failures, factory isolation, conversion, concatenation, embedded
-  zero/high bytes, canonical boolean and integer formatting through
+  repeated default construction over one private static empty backing, signed
+  and negative byte positions, half-open and negative slice bounds, checked
+  failures, factory isolation, conversion, concatenation, embedded zero/high
+  bytes, canonical boolean and integer formatting through
   `std::io`, every integer width boundary, powers of ten, exact optional
   boolean and integer parsing, exhaustive `u8` round trips, malformed and
   arbitrary-length input, correctly rounded binary64 parsing against a
@@ -628,7 +629,10 @@ String coverage follows the
   across every exponent field and bounded exhaustive significand sweeps
   against an independent generated oracle, bit-identical formatter/parser
   round trips, repeated execution, and reuse of the statically initialized
-  compact Ryū tables throughout the 2,929-input formatting corpus; and
+  compact Ryū tables throughout the 2,929-input formatting corpus;
+- backend allocation probes prove that repeated `Str()` construction adds no
+  allocation or early free beyond the one private empty-backing static;
+  ordinary static-shutdown coverage owns the root owner's final release; and
 - `pipeline_determinism` compares canonical graph, diagnostics, resolved HIR,
   verified MIR, and assembly across independent processes and provider/source
   permutations.

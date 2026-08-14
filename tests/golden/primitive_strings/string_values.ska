@@ -19,6 +19,12 @@ fn concatenated_byte(left: Str, right: Str, index: i64) -> u8 {
 }
 
 fn main() -> i64 {
+    var first_empty: Str = Str();
+    var second_empty: Str = Str();
+    std::io::println_u64(first_empty.len());
+    std::io::println_bool(first_empty.equals(second_empty));
+    std::io::println_u8(first_empty.concat("Q").byte(0));
+
     var literal: Str = "a\0\x80\xff";
     observe(literal);
     std::io::println_u8(literal.byte(1));

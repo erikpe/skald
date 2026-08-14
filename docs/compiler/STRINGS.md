@@ -199,11 +199,14 @@ The standard library owns range preservation, public constructors/factories,
 slicing, byte access, conversion, concatenation, and the broader API. It may
 use ordinary public static factories, private initializers, and private
 instance/static helpers. The canonical implementation retains its public empty
-initializer and uses one private ordinary initializer for a trusted backing
-owner, start, and length. Caller-provided mutable bytes are accepted only
-through copying APIs; trusted slices pass an existing backing and checked
-subrange to that initializer. No initializer or method spelling is
-compiler-selected.
+initializer and initializes one ordinary private static `_EMPTY_STORAGE` owner
+with `new u8[]()`. Default descriptors copy this shared owner, so repeated
+`Str()` construction performs no per-instance allocation; reverse normal-return
+static shutdown releases the root owner. One private ordinary initializer
+accepts a trusted backing owner, start, and length. Caller-provided mutable
+bytes are accepted only through copying APIs; trusted slices pass an existing
+backing and checked subrange to that initializer. No initializer, field, or
+method spelling is compiler-selected.
 Checked public range APIs accept exact `i64` positions and implement the same
 one-time negative normalization as arrays, relative to the descriptor length.
 Every backing-array length is at most `i64::MAX`, so converting the descriptor
@@ -214,10 +217,10 @@ conversion. The descriptor invariant keeps the resulting absolute position
 within the backing. No checked cast or string-specific numeric intrinsic is
 required.
 
-Dynamic strings use ordinary shared-array allocation and the existing generic
-allocator/free boundary. No public runtime symbol, runtime ABI version, native
-string object, interning service, or external `Str` calling convention is
-added.
+Dynamic strings and the private default-empty static use ordinary shared-array
+allocation and the existing generic allocator/free boundary. No public runtime
+symbol, runtime ABI version, native string object, interning service, or
+external `Str` calling convention is added.
 
 Runtime ABI version 9 includes one common length-delimited reporter, not a
 string ABI. Panic lowering validates the canonical `Str` identity, then

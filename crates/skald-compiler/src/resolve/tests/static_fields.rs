@@ -265,8 +265,8 @@ fn resolves_imported_string_call_and_inherited_static_initializer_uses_determini
     assert_eq!(first_dump, dump_resolved(&second.program));
     assert_eq!(
         first_dump.matches("DeclarationInitializer").count(),
-        6,
-        "inherited aliases must not create work beyond the three application and three canonical table initializers: {first_dump}"
+        7,
+        "inherited aliases must not create work beyond the three application, three canonical table, and one empty-string backing initializers: {first_dump}"
     );
 }
 

@@ -241,14 +241,68 @@ fn private_initializer_dynamic_strings_reclaim_their_last_backing_owner() {
         "report:\n",
         "    mov rax, 1\n",
         "    mov rcx, qword ptr [rip + .Lstring_allocations]\n",
-        // The three conversion tables remain live until program shutdown; the
-        // two dynamic string allocations have already been reclaimed here.
-        "    cmp rcx, 5\n",
+        // The three conversion tables and Str's empty backing remain live
+        // until program shutdown; the two dynamic string allocations have
+        // already been reclaimed here.
+        "    cmp rcx, 6\n",
         "    jne .Lstring_report_done\n",
         "    cmp qword ptr [rip + .Lstring_frees], 2\n",
         "    jne .Lstring_report_done\n",
         "    xor rax, rax\n",
         ".Lstring_report_done:\n",
+        "    ret\n",
+        ".size report, .-report\n",
+    ));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(0));
+}
+
+#[test]
+fn default_strings_share_one_static_empty_backing() {
+    let program = canonical_string_program(concat!(
+        "from std::str import Str;\n",
+        "extern fn report() -> i64;\n",
+        "fn main() -> i64 {\n",
+        "  var index: i64 = 0;\n",
+        "  while (index < 32) {\n",
+        "    var value: Str = Str();\n",
+        "    if (value.len() != 0u) { return 2; }\n",
+        "    index = index + 1;\n",
+        "  }\n",
+        "  return report();\n",
+        "}\n",
+    ));
+    let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    output.push_str(concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Ldefault_string_allocations: .quad 0\n",
+        ".Ldefault_string_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    inc qword ptr [rip + .Ldefault_string_allocations]\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    inc qword ptr [rip + .Ldefault_string_frees]\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl report\n",
+        ".type report, @function\n",
+        "report:\n",
+        "    mov rax, 1\n",
+        // The three conversion tables and one empty string backing are the
+        // only allocations before ordinary static shutdown.
+        "    cmp qword ptr [rip + .Ldefault_string_allocations], 4\n",
+        "    jne .Ldefault_string_report_done\n",
+        "    cmp qword ptr [rip + .Ldefault_string_frees], 0\n",
+        "    jne .Ldefault_string_report_done\n",
+        "    xor rax, rax\n",
+        ".Ldefault_string_report_done:\n",
         "    ret\n",
         ".size report, .-report\n",
     ));

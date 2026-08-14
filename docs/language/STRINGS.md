@@ -91,11 +91,14 @@ copying.
 
 Ordinary initializers may be private; copy construction, assignment, and
 destruction remain visibility-free lifecycle slots. The canonical `Str`
-implementation keeps its empty initializer public and uses a private ordinary
-initializer to install a trusted backing owner, start, and length. Dynamic
-factories pass fresh backing and its complete range, while slicing passes the
-existing backing and a checked subrange. These paths use the ordinary
-declaring-class privacy rules; they are not string-specific capabilities.
+implementation keeps its empty initializer public. One private static
+`_EMPTY_STORAGE: shared u8[]` owns a single empty backing initialized through
+ordinary eager static initialization. Each default construction copies that
+owner into its descriptor instead of allocating another empty array. A private
+ordinary initializer installs a trusted backing owner, start, and length for
+dynamic factories and slices. These paths use ordinary static-field,
+declaring-class privacy, and ownership rules; they are not string-specific
+capabilities.
 
 ## String literals
 
@@ -243,6 +246,7 @@ The required asymptotic behavior is:
 
 | Operation | Required behavior |
 |---|---|
+| Default construction | `O(1)` descriptor initialization and one retain of the shared private empty backing; no per-instance allocation |
 | Copy construction | `O(1)` descriptor copy and one shared retain |
 | Copy assignment | `O(1)` secure incoming owner, release old owner, copy bounds |
 | Destruction | `O(1)` shared release, possibly reclaiming dynamic backing |
@@ -486,7 +490,8 @@ This frozen profile does not define:
 - compile-time concatenation or general constant evaluation;
 - a complete `Str`/builder API beyond the frozen primitive conversions;
 - `final` fields, immutable classes, or frozen shared-owner types;
-- source-visible static fields, globals, or module initialization/shutdown;
+- string-specific global storage or initialization rules beyond ordinary
+  private class statics;
 - weak ownership, atomic counts, or threading;
 - public backing, metadata, count, or allocation identity;
 - external C ABI passage of `Str`; or
