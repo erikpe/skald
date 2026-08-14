@@ -738,6 +738,38 @@ When robustness testing finds a defect, retain the smallest focused regression
 at the owning layer. Add corpus data only when the bytes or source are clearer
 and more reusable than constructing the case in Rust.
 
+## Structural bracket coverage
+
+Structural indexing and slicing coverage follows the normalization boundary.
+Syntax tests own neutral bracket shapes, punctuation, spans, recovery, and AST
+dumps. Resolver tests own array precedence, class/interface protocol shape,
+privacy, static receiver classification, canonical identities, and conversion
+to ordinary calls. Type-check tests own receiver access, argument modes and
+types, optional slice-bound injection, dispatch, produced/shared receiver
+anchors, and deterministic HIR. MIR and static-lifecycle tests prove ordinary
+call ownership, cleanup, verification, and effects without structural IR.
+The `tests/golden/structural_indexing/` and `tests/golden/standard_vec/`
+groups own complete native dispatch, evaluation, failure, `Str`, and `Vec<T>`
+observations.
+
+Use these focused commands:
+
+```text
+cargo test --locked -p skald-compiler syntax::tests::bracket_projections
+cargo test --locked -p skald-compiler resolve::tests::structural_indexing
+cargo test --locked -p skald-compiler typeck::tests::structural_indexing
+cargo test --locked -p skald-compiler mir::tests::structural_indexing
+cargo test --locked -p skald-compiler passes::static_lifecycle::tests::structural_indexing
+./scripts/golden.sh --determinism full --filter 'structural_indexing/**'
+./scripts/golden.sh --determinism full --filter 'standard_vec/**'
+```
+
+The phase-dump regression requires `BracketProjection` only in the AST and
+the same canonical ordinary method identities in resolved IR, HIR, and MIR.
+Diagnostic regressions preserve separate owners for unsupported receivers,
+missing or malformed protocols, privacy, explicit dereference, mutability, and
+ordinary call compatibility.
+
 ## Generic-class and vector coverage
 
 Focused generic tests exercise the same public closed pipeline used for

@@ -29,7 +29,7 @@ Use the authority closest to the behavior:
   [process arguments](language/PROCESS.md);
 - the implemented `std::vec::Vec<T>` collection contract belongs in
   [vectors](language/VECTORS.md);
-- the frozen source-visible structural bracket protocol, including array
+- the implemented source-visible structural bracket protocol, including array
   precedence and class/interface method selection, belongs in
   [structural indexing and slicing](language/INDEXING_AND_SLICING.md);
 - the implemented source-visible contract for inline, shared, optional-shared,

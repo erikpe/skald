@@ -48,9 +48,9 @@ An array is not a class, interface, or `Obj`. It has no dynamic class, does not
 participate in object casts or type tests, and does not acquire structural
 behavior from methods with particular names. Construction, `len()`, indexing,
 slicing, and shared array projection are intrinsic array operations.
-The separately frozen
+The separately implemented
 [structural indexing and slicing protocol](INDEXING_AND_SLICING.md) preserves
-this precedence: class/interface sugar will never replace these operations or
+this precedence: class/interface sugar does not replace these operations or
 make protocol-named array methods part of the array surface.
 
 Array storage is an indirection boundary. Inline array elements belong to the

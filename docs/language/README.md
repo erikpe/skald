@@ -165,9 +165,10 @@ makes a result source-observable.
   contract, including admitted element capabilities,
   capacity, growth, structural indexing and slicing, snapshot replacement,
   structural copy independence, and prompt removal cleanup.
-- [Structural indexing and slicing](INDEXING_AND_SLICING.md) freezes the
-  class/interface bracket protocol, exact method shapes, array precedence,
-  receiver and evaluation rules, and initial `Vec<T>`/`Str` adoption boundary.
+- [Structural indexing and slicing](INDEXING_AND_SLICING.md) defines the
+  implemented class/interface bracket protocol, exact method shapes, array
+  precedence, receiver and evaluation rules, and `Vec<T>`/`Str` adoption
+  boundary.
   Class and interface index and slice reads and assignments are implemented
   through verified ordinary direct, virtual, and witness call ownership.
   `Str` supplies immutable reads and `Vec<T>` supplies all four protocols.

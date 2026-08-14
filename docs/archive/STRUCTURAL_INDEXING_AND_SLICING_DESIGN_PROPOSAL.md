@@ -6,9 +6,9 @@ implementation roadmap was created.
 
 The living [language contract](../language/INDEXING_AND_SLICING.md) and
 [compiler contract](../compiler/INDEXING_AND_SLICING.md) are authoritative for
-the frozen direction. The
-[active roadmap](../roadmaps/STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md) owns
-delivery order and progress.
+implemented behavior. The
+[completed roadmap](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md) preserves the
+delivery order and acceptance record.
 
 This proposal lets ordinary classes and interfaces opt into bracket indexing
 and slicing through structurally selected instance methods. It is intended to

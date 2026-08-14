@@ -259,6 +259,13 @@ That prohibition applies to the alias root and to every class subobject
 projected from it. Supported field mutation and method calls do not rebind the
 alias or end the object's lifetime.
 
+[Structural bracket calls](INDEXING_AND_SLICING.md) use this same access
+propagation. Index and slice getters are read-only method calls; setters are
+mutable method calls. Their key, bounds, replacement, result, produced
+receiver temporary, shared-owner anchor, and cleanup follow ordinary call and
+alias rules after resolution. Bracket spelling grants no additional mutable
+access and creates no storable alias or borrowed-result category.
+
 For an optional-container alias, read-only access permits presence tests,
 copying the optional into an owning boundary, and checked payload consumers.
 Mutable access additionally permits whole-container assignment from `none`, a

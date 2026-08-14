@@ -1,6 +1,81 @@
 use super::*;
 
 #[test]
+fn structural_sugar_exists_only_in_the_source_ast_dump() {
+    let source = concat!(
+        "class Cell {\n",
+        "  init() {}\n",
+        "  fn index_get(key: i64) -> i64 { return key; }\n",
+        "  mut fn index_set(key: i64, replacement: i64) -> unit {}\n",
+        "  fn slice_get(start: i64?, end: i64?) -> i64 { return 1; }\n",
+        "  mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var cell: Cell = Cell();\n",
+        "  var index: i64 = cell[0];\n",
+        "  cell[0] = 2;\n",
+        "  var slice: i64 = cell[:];\n",
+        "  cell[:] = slice;\n",
+        "  return index;\n",
+        "}\n",
+    );
+    let (_, parsed) = crate::test_support::parse_source(source);
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let ast_dump = crate::syntax::dump_ast(&parsed.ast);
+    assert_eq!(ast_dump, crate::syntax::dump_ast(&parsed.ast));
+    assert_eq!(ast_dump.matches("BracketProjection").count(), 4);
+
+    let resolved = crate::resolve::resolve(&parsed.ast);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let resolved_dump = crate::resolve::dump_resolved(&resolved.program);
+    assert_eq!(
+        resolved_dump,
+        crate::resolve::dump_resolved(&resolved.program)
+    );
+    for method in 0..4 {
+        assert!(
+            resolved_dump.contains(&format!("MethodCall c0:method{method}")),
+            "{resolved_dump}"
+        );
+    }
+    assert!(!resolved_dump.contains("BracketProjection"));
+    assert!(!resolved_dump.contains("Structural"));
+
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked
+        .hir
+        .expect("valid structural source must produce HIR");
+    let hir_dump = dump_hir(&hir);
+    assert_eq!(hir_dump, dump_hir(&hir));
+    for method in 0..4 {
+        assert!(
+            hir_dump.contains(&format!("MethodCall Direct c0:method{method}")),
+            "{hir_dump}"
+        );
+    }
+    assert!(!hir_dump.contains("BracketProjection"));
+    assert!(!hir_dump.contains("Structural"));
+
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("ordinary calls selected by brackets must verify");
+    let mir_dump = crate::mir::dump_mir(&mir);
+    assert_eq!(mir_dump, crate::mir::dump_mir(&mir));
+    for method in 0..4 {
+        assert!(
+            mir_dump.contains(&format!("call direct c0:method{method}")),
+            "{mir_dump}"
+        );
+    }
+    assert!(!mir_dump.contains("BracketProjection"));
+    assert!(!mir_dump.contains("Structural"));
+}
+
+#[test]
 fn checks_structural_indexing_with_independent_key_result_and_replacement_types() {
     let output = check_text(concat!(
         "class Key { init() {} }\n",
@@ -532,10 +607,23 @@ fn rejects_raw_shared_and_produced_mutable_bracket_receivers() {
         "fn use(owner: shared Item) -> i64 { return owner[0]; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    assert!(raw
+    let diagnostic = raw
         .diagnostics
         .iter()
-        .any(|diagnostic| { diagnostic.code == crate::resolve::IMPLICIT_SHARED_DEREFERENCE }));
+        .find(|diagnostic| diagnostic.code == crate::resolve::IMPLICIT_SHARED_DEREFERENCE)
+        .expect("raw shared brackets must require explicit dereference");
+    assert_eq!(
+        diagnostic.message,
+        "shared owner bracket access requires explicit dereference"
+    );
+    assert!(diagnostic
+        .notes
+        .iter()
+        .any(|note| note.contains("owner->[...]")));
+    assert!(diagnostic
+        .notes
+        .iter()
+        .any(|note| note.contains("(*owner)[...]")));
 
     let optional_raw = check_text(concat!(
         "class Item { init() {} fn index_get(key: i64) -> i64 { return key; } }\n",

@@ -80,6 +80,7 @@ Archived plans:
 - [Shared optional boxes](SHARED_OPTIONAL_BOXES_ROADMAP.md)
 - [Generic classes](GENERIC_CLASSES_ROADMAP.md)
 - [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
+- [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
 
 Resolved string-design inputs:
 

@@ -49,20 +49,48 @@ impl CallableResolver<'_, '_> {
         span: Span,
         target: ResolvedSharedTarget,
     ) {
+        self.report_implicit_shared_access(
+            span,
+            target,
+            "shared owner member access requires explicit dereference",
+            "use `owner->member` to cross one shared edge",
+            "use `(*owner).member` when grouping is clearer",
+        );
+    }
+
+    pub(super) fn report_implicit_shared_bracket_access(
+        &mut self,
+        span: Span,
+        target: ResolvedSharedTarget,
+    ) {
+        self.report_implicit_shared_access(
+            span,
+            target,
+            "shared owner bracket access requires explicit dereference",
+            "use `owner->[...]` to cross one shared edge",
+            "use `(*owner)[...]` when grouping is clearer",
+        );
+    }
+
+    fn report_implicit_shared_access(
+        &mut self,
+        span: Span,
+        target: ResolvedSharedTarget,
+        message: &'static str,
+        arrow_note: &'static str,
+        dereference_note: &'static str,
+    ) {
         self.diagnostics.push(
-            Diagnostic::error(
-                IMPLICIT_SHARED_DEREFERENCE,
-                "shared owner member access requires explicit dereference",
-            )
-            .with_primary_label(
-                span,
-                format!(
-                    "this expression has type `{}`",
-                    self.resolved_shared_target_name(target)
-                ),
-            )
-            .with_note("use `owner->member` to cross one shared edge")
-            .with_note("use `(*owner).member` when grouping is clearer"),
+            Diagnostic::error(IMPLICIT_SHARED_DEREFERENCE, message)
+                .with_primary_label(
+                    span,
+                    format!(
+                        "this expression has type `{}`",
+                        self.resolved_shared_target_name(target)
+                    ),
+                )
+                .with_note(arrow_note)
+                .with_note(dereference_note),
         );
     }
 

@@ -82,6 +82,18 @@ same across selective imports, aliases, provider-root spellings, and process
 runs. Numeric IDs remain beside those names wherever identity relationships
 matter.
 
+For bracket syntax, first distinguish an intrinsic array receiver from a
+class or interface receiver. The AST always prints `BracketProjection` and
+retains index/slice shape, omitted bounds, punctuation, and ordinary versus
+shared-arrow spelling. A true array remains an array projection after
+resolution. An eligible class or interface bracket must instead print a
+canonical `MethodCall` or `InterfaceCall`; HIR and MIR continue to print only
+that ordinary direct, virtual, or witness target and must contain no structural
+node or protocol string. For failures, start with `RES049` for missing or
+malformed protocols, `RES031` for privacy, `RES021` for raw shared brackets,
+`TYP018` for mutable calls through read-only receivers, and ordinary call
+argument diagnostics after selection.
+
 `RES037` through `RES046` normally identify a template-definition or direct
 application error. `RES047` reports an expanding recursive application, and
 `RES048` reports a failed bound or inferred contextual requirement. For

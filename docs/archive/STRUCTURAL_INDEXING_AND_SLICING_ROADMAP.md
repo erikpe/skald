@@ -1,11 +1,11 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0 through IS6 are complete; IS7 is next.
+Status: **complete**. IS0 through IS7 are complete.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
 [compiler](../compiler/INDEXING_AND_SLICING.md) contracts. The confirmed
-[design record](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md)
+[design record](STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md)
 is historical context; this roadmap owns implementation order and acceptance.
 
 ## Scope and invariants
@@ -31,7 +31,7 @@ baselines. No other active roadmap blocks IS0.
 - [x] IS4 — Ownership, lifecycle, and evaluation hardening
 - [x] IS5 — Read-only `Str` adoption
 - [x] IS6 — Complete `Vec<T>` adoption
-- [ ] IS7 — Diagnostics, documentation, and release closure
+- [x] IS7 — Diagnostics, documentation, and release closure
 
 ## IS0 — Neutral bracket syntax representation
 
@@ -247,28 +247,28 @@ documentation, and repository-wide validation.
 
 Checklist:
 
-- audit diagnostics for unsupported receivers, missing/malformed/inaccessible
+- [x] audit diagnostics for unsupported receivers, missing/malformed/inaccessible
   protocols, mutability, explicit dereference, and ordinary call failures;
-- ensure AST, resolved, HIR, and MIR dumps expose the intended phase boundary
+- [x] ensure AST, resolved, HIR, and MIR dumps expose the intended phase boundary
   with deterministic canonical identities;
-- update grammar, language/compiler overviews, arrays, strings, vectors,
+- [x] update grammar, language/compiler overviews, arrays, strings, vectors,
   classes, ownership, phases, testing guidance, and status to current behavior;
-- confirm runtime ABI documentation records no change and no structural symbol;
-- remove stale planned wording, mark this roadmap complete, and archive it.
+- [x] confirm runtime ABI documentation records no change and no structural symbol;
+- [x] remove stale planned wording, mark this roadmap complete, and archive it.
 
 Tests and gates:
 
-- run focused syntax, resolver, type-check, call, receiver, interface, generic,
+- [x] run focused syntax, resolver, type-check, call, receiver, interface, generic,
   array, optional, shared-ownership, `Str`, and `Vec<T>` suites;
-- run `make docs-check` and `make check`;
-- run `make msrv-check` because the roadmap changes Rust compiler code;
-- run `make golden-determinism-test`; and
-- inspect the final diff for stale names, contracts, roadmap state, and ABI
+- [x] run `make docs-check` and `make check`;
+- [x] run `make msrv-check` because the roadmap changes Rust compiler code;
+- [x] run `make golden-determinism-test`; and
+- [x] inspect the final diff for stale names, contracts, roadmap state, and ABI
   claims.
 
 Exit: all frozen behavior is implemented and documented, repository-wide
 quality gates pass, the runtime ABI is unchanged, and the completed roadmap is
-archived.
+archived. Complete.
 
 ## Ordering and discoveries
 

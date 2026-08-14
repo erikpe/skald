@@ -40,6 +40,14 @@ over `std::io::read_file`; runtime ABI version 9 and the parameterless process
 wrapper remain current. It adds no C `argc`/`argv` capture, retained host
 pointer, runtime global, public symbol, or compatibility-marker change.
 
+Implemented
+[structural indexing and slicing](INDEXING_AND_SLICING.md) likewise changes no
+runtime boundary. Class and interface brackets become ordinary direct,
+virtual, or witness calls before HIR; built-in arrays retain their existing
+intrinsic pipeline. `Str` and `Vec<T>` protocols are ordinary standard-library
+methods. There is no structural runtime symbol, descriptor, dispatch shape,
+panic entry point, ABI-version change, or compatibility-marker change.
+
 The current header contract is:
 
 ```c

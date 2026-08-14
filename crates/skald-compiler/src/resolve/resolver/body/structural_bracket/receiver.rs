@@ -91,7 +91,7 @@ impl CallableResolver<'_, '_> {
                     target @ (ResolvedSharedTarget::Class(_) | ResolvedSharedTarget::Interface(_)),
                 )),
             ) => {
-                self.report_implicit_shared_member_access(receiver.span(), target);
+                self.report_implicit_shared_bracket_access(receiver.span(), target);
                 BracketReceiver::Diagnosed
             }
             _ => BracketReceiver::Unsupported(receiver),

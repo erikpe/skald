@@ -89,7 +89,7 @@ ownership and selection are defined by
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
-The frozen
+The implemented
 [structural indexing and slicing compiler contract](INDEXING_AND_SLICING.md)
 uses neutral source-only bracket vocabulary. Resolution retains built-in arrays
 and normalizes eligible class and interface index and slice brackets to

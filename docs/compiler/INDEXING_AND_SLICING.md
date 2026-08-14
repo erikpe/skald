@@ -1,10 +1,9 @@
 # Structural Indexing and Slicing Compiler Contract
 
-Status: **frozen design; neutral source AST and structural class/interface
-indexing and slicing implemented**.
+Status: **implemented compiler contract**.
 
 This document owns the compiler representation and phase boundaries for the
-frozen [structural indexing and slicing language contract](../language/INDEXING_AND_SLICING.md).
+implemented [structural indexing and slicing language contract](../language/INDEXING_AND_SLICING.md).
 The source AST preserves every bracket projection with type-neutral
 vocabulary. Resolution now retains intrinsic arrays or normalizes eligible
 class and interface bracket uses to ordinary resolved calls. The
@@ -28,9 +27,8 @@ receiver, `[` and `]`, optional `:`, optional `->`, every supplied expression,
 and their exact spans. AST dumps use `BracketProjection`; the AST makes no
 type, array, or protocol choice.
 
-The implemented grammar already parses every required read and
-assignment-shaped bracket form. Structural meaning must not be claimed there
-until the corresponding implementation milestone lands.
+The grammar parses every required read and assignment-shaped bracket form.
+Syntax remains type-neutral; structural meaning begins only during resolution.
 
 ## Resolution and validation
 
@@ -87,9 +85,15 @@ through their ordinary specialized declarations; logical bounds, independent
 slice construction, equal-length replacement, and snapshot policy remain in
 standard-library method bodies.
 
-Protocol shape failures use `RES049`;
-ordinary privacy, receiver access, argument mode, and type failures continue
-to use their existing diagnostics.
+Missing or malformed class/interface protocols use `RES049`. Inaccessible
+members retain `RES031`; raw shared class/interface brackets retain `RES021`
+with bracket-specific `owner->[...]` and `(*owner)[...]` guidance. Mutable
+calls through read-only receivers retain `TYP018`, while ordinary argument
+type and mode failures retain `TYP005` and `TYP020`. A receiver outside the
+array/class/interface families reaches the existing non-array receiver
+diagnostic `TYP039`. Optional shared owners still require explicit unwrap and
+use their ordinary shared-conversion diagnostic. Each failure therefore stays
+with the phase and reusable service that owns the violated rule.
 
 Preliminary and final MIR verification cover structural-call primitive, class,
 array, optional, shared-owner, and closed-generic result and replacement
@@ -131,5 +135,5 @@ intrinsic arrays from selected class or interface calls and show canonical
 identities. HIR and MIR dumps show ordinary call targets only. Diagnostics,
 dumps, and generated artifacts must remain deterministic.
 
-Implementation order and validation commands belong to the
-[active roadmap](../roadmaps/STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md).
+The completed implementation sequence and acceptance record are preserved in
+the [archived roadmap](../archive/STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md).

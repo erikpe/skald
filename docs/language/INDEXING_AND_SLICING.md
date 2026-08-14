@@ -1,7 +1,6 @@
 # Structural Indexing and Slicing
 
-Status: **frozen design; class and interface indexing and slicing
-implemented**.
+Status: **implemented contract**.
 
 This document is authoritative for the source-visible meaning of bracket
 indexing and slicing on classes and interfaces. The current compiler
@@ -122,7 +121,7 @@ lifetime category.
 
 ## Standard-library adoption
 
-The initial library profile keeps `Vec<T>` and `Str` as ordinary Skald classes
+The standard-library profile keeps `Vec<T>` and `Str` as ordinary Skald classes
 rather than compiler language items for this feature.
 
 `Vec<T>` provides all four methods. Its slice bounds use logical length, not
@@ -140,11 +139,11 @@ call paths use the same ordinary protocol machinery.
 
 ## Exclusions
 
-The initial design does not include iteration, structural length or capacity,
-multi-index syntax, range values, inclusive ranges, strides, compound or
-value-producing assignment, user-declared operators, automatic forwarding,
-implicit shared or optional dereference, built-in-array method aliases,
-external ABI mappings, recoverable bounds failures, or exceptions.
+The implemented contract does not include iteration, structural length or
+capacity, multi-index syntax, range values, inclusive ranges, strides,
+compound or value-producing assignment, user-declared operators, automatic
+forwarding, implicit shared or optional dereference, built-in-array method
+aliases, external ABI mappings, recoverable bounds failures, or exceptions.
 
 Compiler representation and normalization are specified by the
 [structural indexing and slicing compiler contract](../compiler/INDEXING_AND_SLICING.md).

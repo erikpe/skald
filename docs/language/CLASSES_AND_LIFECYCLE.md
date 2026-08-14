@@ -56,6 +56,13 @@ non-overloaded member namespace. A field and method in the same class cannot
 have the same name, and methods cannot be overloaded. The same member name may
 be declared independently by unrelated classes.
 
+The ordinary method names `index_get`, `index_set`, `slice_get`, and
+`slice_set` may additionally make a compatible class eligible for
+[structural bracket syntax](INDEXING_AND_SLICING.md). They remain ordinary
+members for declaration collisions, inherited lookup, declaring-class
+privacy, receiver access, virtual dispatch, arguments, results, and lifecycle.
+Bracket selection creates no new member category or operator declaration.
+
 Lifecycle declarations occupy dedicated class-owned slots rather than the
 ordinary member namespace. `init`, `copy`, `assign`, and `destroy` are
 contextual in their declaration or construction-marker shapes and remain
