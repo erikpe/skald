@@ -71,3 +71,42 @@ source = "vec_shared_obj.ska"
 
 [[test.run]]
 name = "heterogeneous_growth_ownership_and_copy"
+
+[[test]]
+name = "structural_slices"
+mode = "run"
+source = "vec_structural_slices.ska"
+
+[[test.run]]
+name = "value_families_snapshot_lifecycle_and_growth"
+expect = { exit = 0 }
+
+[[test]]
+name = "structural_failures"
+mode = "run"
+source = "vec_structural_failures.ska"
+
+[[test.run]]
+name = "logical_index_excludes_spare_capacity"
+args = ["index-capacity"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.get: index out of bounds\n" } }
+
+[[test.run]]
+name = "slice_below_range"
+args = ["slice-low"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice: invalid bounds\n" } }
+
+[[test.run]]
+name = "slice_reversed_range"
+args = ["slice-reversed"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice: invalid bounds\n" } }
+
+[[test.run]]
+name = "slice_above_range"
+args = ["slice-high"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice: invalid bounds\n" } }
+
+[[test.run]]
+name = "slice_replacement_length_mismatch"
+args = ["length-mismatch"]
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice_set: length mismatch\n" } }

@@ -82,6 +82,10 @@ The installed `Str` read protocols require no string-specific selection.
 Resolution sees the ordinary public declarations in `std::str`, and exact
 `Str` slice results may immediately receive another read-only method through
 the same produced-call-result receiver path as explicit method calls.
+Likewise, closed `Vec<T>` specializations expose all four protocols solely
+through their ordinary specialized declarations; logical bounds, independent
+slice construction, equal-length replacement, and snapshot policy remain in
+standard-library method bodies.
 
 Protocol shape failures use `RES049`;
 ordinary privacy, receiver access, argument mode, and type failures continue

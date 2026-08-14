@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0 through IS5 are complete; IS6 is next.
+Status: **in progress**. IS0 through IS6 are complete; IS7 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -30,7 +30,7 @@ baselines. No other active roadmap blocks IS0.
 - [x] IS3 — Receiver and dynamic-dispatch integration
 - [x] IS4 — Ownership, lifecycle, and evaluation hardening
 - [x] IS5 — Read-only `Str` adoption
-- [ ] IS6 — Complete `Vec<T>` adoption
+- [x] IS6 — Complete `Vec<T>` adoption
 - [ ] IS7 — Diagnostics, documentation, and release closure
 
 ## IS0 — Neutral bracket syntax representation
@@ -218,26 +218,27 @@ documented vector-specific slice semantics.
 
 Checklist:
 
-- add protocol entry points while retaining `get`/`set` as compatibility
+- [x] add protocol entry points while retaining `get`/`set` as compatibility
   wrappers if useful and sharing one normalization/bounds implementation;
-- implement logical-length `slice_get` returning an independent `Vec<T>`;
-- implement equal-length `slice_set` without changing destination length;
-- secure or copy the complete replacement before the first increasing-order
+- [x] implement logical-length `slice_get` returning an independent `Vec<T>`;
+- [x] implement equal-length `slice_set` without changing destination length;
+- [x] secure or copy the complete replacement before the first increasing-order
   destination write, including self-aliasing and overlap; and
-- update vector API, capability, cost, failure, and cleanup documentation.
+- [x] update vector API, capability, cost, failure, and cleanup documentation.
 
 Tests:
 
-- reads/writes and slice reads/writes for representative primitive, class,
+- [x] reads/writes and slice reads/writes for representative primitive, class,
   shared-owner, optional, and nested eligible element types;
-- logical length versus capacity, empty/full/omitted/negative bounds, bad
+- [x] logical length versus capacity, empty/full/omitted/negative bounds, bad
   bounds, and mismatched replacement length;
-- result independence, self replacement, overlap snapshot behavior, prompt
+- [x] result independence, self replacement, overlap snapshot behavior, prompt
   replacement cleanup, growth after slicing, and destruction; and
-- closed-specialization resolved/HIR/native and determinism goldens.
+- [x] closed-specialization resolved/HIR/native and determinism goldens.
 
 Exit: `Vec<T>` implements the frozen four-method profile without exposing
-capacity as logical data or weakening element lifecycle.
+capacity as logical data or weakening element lifecycle. Complete; IS7 is
+next.
 
 ## IS7 — Diagnostics, documentation, and release closure
 

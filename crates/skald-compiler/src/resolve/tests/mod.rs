@@ -63,4 +63,5 @@ mod static_methods;
 mod strings;
 mod structural_indexing;
 mod type_operations;
+mod vectors;
 mod while_loops;

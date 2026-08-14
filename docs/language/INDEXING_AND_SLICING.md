@@ -125,20 +125,18 @@ lifetime category.
 The initial library profile keeps `Vec<T>` and `Str` as ordinary Skald classes
 rather than compiler language items for this feature.
 
-`Vec<T>` will provide all four methods. Its slice bounds use logical length,
-not capacity. `slice_get` returns an independent vector. `slice_set` preserves
+`Vec<T>` provides all four methods. Its slice bounds use logical length, not
+capacity. `slice_get` returns an independent vector. `slice_set` preserves
 destination length, requires equal logical lengths, assigns in increasing
 order, and secures or copies the complete replacement before the first write
 so self-aliasing and overlap have snapshot behavior. Existing `get` and `set`
-may remain as wrappers while one implementation owns normalization and bounds
-behavior.
+remain compatibility wrappers over the same checked index implementation.
 
 `Str` provides only `index_get` and `slice_get`, sharing its checked byte lookup
 and constant-time descriptor slicing. Omitted slice bounds map to the logical
 beginning and end. It provides no setter and remains immutable. Literal,
 named, produced, copied, explicitly dereferenced shared, and interface-selected
-call paths use the same ordinary protocol machinery. `Vec<T>` adoption remains
-pending.
+call paths use the same ordinary protocol machinery.
 
 ## Exclusions
 

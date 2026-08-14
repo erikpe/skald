@@ -46,8 +46,9 @@ The `std::vec` module provides the implemented generic
 capacity storage and infers its element lifecycle requirements from ordinary
 method operations. Heterogeneous shared-object code uses `Vec<shared Obj>`.
 The vector provides capacity, geometric growth, checked positive and negative
-indexing, push, pop, last, replacement, and clear without compiler or runtime
-machinery.
+indexing through compatibility methods and structural brackets, independent
+logical-length slices, equal-length snapshot slice replacement, push, pop,
+last, replacement, and clear without compiler or runtime machinery.
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`

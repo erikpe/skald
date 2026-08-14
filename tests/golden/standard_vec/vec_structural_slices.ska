@@ -1,0 +1,170 @@
+from std::test import assert_eq_i64, assert_eq_u64, assert_true;
+from std::vec import Vec;
+
+class Item {
+    static destroyed: i64;
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+
+    destroy {
+        Item.destroyed = Item.destroyed + 1;
+    }
+}
+
+fn item_value(ref values: Vec<Item>, index: i64) -> i64 {
+    var value: Item = values[index];
+    return value.value;
+}
+
+fn make_items(value: i64) -> Vec<Item> {
+    var result: Vec<Item> = Vec<Item>();
+    result.push(Item(value));
+    return result;
+}
+
+fn exercise_primitive_slices() -> unit {
+    var values: Vec<i64> = Vec<i64>();
+    var index: i64 = 0;
+    while (index < 6) {
+        values.push(index);
+        index = index + 1;
+    }
+
+    assert_eq_u64(values.len(), 6u);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(values[0], values.get(0));
+    assert_eq_i64(values[-1], 5);
+    values[-1] = 50;
+    assert_eq_i64(values.get(5), 50);
+
+    var full: Vec<i64> = values[:];
+    var prefix: Vec<i64> = values[:2];
+    var suffix: Vec<i64> = values[-2:];
+    var middle: Vec<i64> = values[1:-1];
+    var empty: Vec<i64> = values[2:2];
+    assert_eq_u64(full.len(), 6u);
+    assert_eq_u64(prefix.len(), 2u);
+    assert_eq_u64(suffix.len(), 2u);
+    assert_eq_u64(middle.len(), 4u);
+    assert_eq_u64(empty.len(), 0u);
+    assert_eq_i64(prefix[-1], 1);
+    assert_eq_i64(suffix[0], 4);
+    assert_eq_i64(middle[-1], 4);
+
+    middle[0] = 99;
+    assert_eq_i64(values[1], 1);
+
+    var replacement: Vec<i64> = Vec<i64>();
+    replacement.push(7);
+    replacement.push(8);
+    values[1:3] = replacement;
+    assert_eq_u64(values.len(), 6u);
+    assert_eq_u64(values.capacity(), 8u);
+    assert_eq_i64(values[1], 7);
+    assert_eq_i64(values[2], 8);
+
+    values[:] = values;
+    assert_eq_i64(values[1], 7);
+    assert_eq_i64(values[-1], 50);
+
+    values[1:4] = values[0:3];
+    assert_eq_i64(values[0], 0);
+    assert_eq_i64(values[1], 0);
+    assert_eq_i64(values[2], 7);
+    assert_eq_i64(values[3], 8);
+
+    var edge: Vec<i64> = Vec<i64>();
+    edge.push(90);
+    values[:1] = edge;
+    values[-1:] = edge;
+    assert_eq_i64(values[0], 90);
+    assert_eq_i64(values[-1], 90);
+
+    var grown: Vec<i64> = values[1:3];
+    assert_eq_u64(grown.capacity(), 2u);
+    grown.push(70);
+    assert_eq_u64(grown.len(), 3u);
+    assert_eq_u64(grown.capacity(), 4u);
+    assert_eq_i64(values[1], 0);
+}
+
+fn exercise_owning_values() -> unit {
+    var values: Vec<Item> = Vec<Item>();
+    values.push(Item(1));
+    values.push(Item(2));
+    values.push(Item(3));
+
+    var selected: Vec<Item> = values[1:];
+    selected[0] = Item(20);
+    assert_eq_i64(item_value(values, 1), 2);
+    assert_eq_i64(item_value(selected, 0), 20);
+
+    var before_replacement: i64 = Item.destroyed;
+    values[0:1] = make_items(9);
+    assert_true(Item.destroyed > before_replacement);
+    assert_eq_i64(item_value(values, 0), 9);
+
+    var self_snapshot: Vec<Item> = values;
+    self_snapshot[:] = self_snapshot;
+    assert_eq_i64(item_value(self_snapshot, 2), 3);
+}
+
+fn exercise_shared_and_optional_values() -> unit {
+    var shared_values: Vec<shared Item> = Vec<shared Item>();
+    shared_values.push(new Item(30));
+    shared_values.push(new Item(31));
+    var shared_slice: Vec<shared Item> = shared_values[1:];
+    shared_values.clear();
+    assert_eq_i64(shared_slice[0]->value, 31);
+
+    var optional_values: Vec<i64?> = Vec<i64?>();
+    optional_values.push(none);
+    optional_values.push(40);
+    optional_values.push(41);
+    var optional_slice: Vec<i64?> = optional_values[:2];
+    assert_true(optional_slice[0] is none);
+    assert_eq_i64(optional_slice[1]!, 40);
+    optional_values[1:3] = optional_slice;
+    assert_true(optional_values[1] is none);
+    assert_eq_i64(optional_values[2]!, 40);
+}
+
+fn exercise_nested_vectors() -> unit {
+    var first: Vec<i64> = Vec<i64>();
+    first.push(50);
+    var second: Vec<i64> = Vec<i64>();
+    second.push(60);
+
+    var rows: Vec<Vec<i64>> = Vec<Vec<i64>>();
+    rows.push(first);
+    rows.push(second);
+    assert_eq_i64(rows[0][0], 50);
+
+    var selected: Vec<Vec<i64>> = rows[-1:];
+    var selected_row: Vec<i64> = selected[0];
+    selected_row[0] = 61;
+    selected[0] = selected_row;
+    assert_eq_i64(rows[1][0], 60);
+    assert_eq_i64(selected[0][0], 61);
+}
+
+fn main() -> i64 {
+    exercise_primitive_slices();
+    var before_owning_values: i64 = Item.destroyed;
+    exercise_owning_values();
+    assert_true(Item.destroyed > before_owning_values);
+    exercise_shared_and_optional_values();
+    exercise_nested_vectors();
+    return 0;
+}

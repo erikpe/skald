@@ -163,15 +163,14 @@ makes a result source-observable.
   change the parameterless entry function or runtime ABI.
 - [Vectors](VECTORS.md) defines the implemented generic `std::vec::Vec<T>`
   contract, including admitted element capabilities,
-  capacity, growth, logical indexing, structural copy independence, and prompt
-  removal cleanup.
+  capacity, growth, structural indexing and slicing, snapshot replacement,
+  structural copy independence, and prompt removal cleanup.
 - [Structural indexing and slicing](INDEXING_AND_SLICING.md) freezes the
   class/interface bracket protocol, exact method shapes, array precedence,
   receiver and evaluation rules, and initial `Vec<T>`/`Str` adoption boundary.
   Class and interface index and slice reads and assignments are implemented
   through verified ordinary direct, virtual, and witness call ownership.
-  `Str` read-only adoption is implemented; complete `Vec<T>` adoption remains
-  pending.
+  `Str` supplies immutable reads and `Vec<T>` supplies all four protocols.
 - [Arrays](ARRAYS.md) defines the implemented syntax-parsed inline/shared array
   type, construction, copying, adoption, indexing, slicing, nesting, alias,
   lifetime, failure, and typed explicit element-list contract. Primitive,

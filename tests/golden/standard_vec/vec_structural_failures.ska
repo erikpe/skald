@@ -1,0 +1,33 @@
+import std::process;
+from std::str import Str;
+from std::vec import Vec;
+
+fn one_value() -> Vec<i64> {
+    var values: Vec<i64> = Vec<i64>::with_capacity(8u);
+    values.push(1);
+    return values;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    var values: Vec<i64> = one_value();
+
+    if (arguments[1].equals("index-capacity")) {
+        return values[1];
+    }
+    if (arguments[1].equals("slice-low")) {
+        return (i64) values[-2:].len();
+    }
+    if (arguments[1].equals("slice-reversed")) {
+        return (i64) values[1:0].len();
+    }
+    if (arguments[1].equals("slice-high")) {
+        return (i64) values[:2].len();
+    }
+
+    var replacement: Vec<i64> = Vec<i64>();
+    replacement.push(2);
+    replacement.push(3);
+    values[:] = replacement;
+    return 0;
+}

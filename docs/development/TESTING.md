@@ -771,10 +771,13 @@ applications and requires deterministic recovery on every mutation.
 primitives, `Str`, nested optionals, exact inline lifecycle, nested arrays,
 shared strings, shared interface and heterogeneous `shared Obj` owners,
 copy/assignment independence, prompt inline and last-owner cleanup, capacity
-growth, signed logical indexing, all four public panic boundaries, a template
-and argument split across modules, bare-interface rejection, and unavailable
-element lifecycle. Full golden determinism repeats every successful compile
-and native run and every compile failure. The non-gating
+growth, signed logical indexing, all slice omission and bounds shapes,
+independent slice results, self/overlap snapshot replacement, nested closed
+specializations, all six public panic boundaries, a template and argument
+split across modules, bare-interface rejection, and unavailable element
+lifecycle. A compiler-owner test additionally pins ordinary specialized
+resolved/HIR selection. Full golden determinism repeats every successful
+compile and native run and every compile failure. The non-gating
 `make generic-vec-benchmark` procedure measures representative growth, copy,
 pop, and clear behavior without accepting or rejecting host timing.
 

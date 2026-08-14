@@ -1,6 +1,6 @@
 # Vectors
 
-**Status:** implemented generic profile.
+**Status:** implemented generic structural-collection profile.
 
 This document defines the source-visible contract of the ordinary Skald
 standard-library class `std::vec::Vec<T>`. Built-in fixed-size array semantics
@@ -26,6 +26,10 @@ public class Vec<T> {
     fn last() -> T;
     fn get(index: i64) -> T;
     mut fn set(index: i64, value: T) -> unit;
+    fn index_get(index: i64) -> T;
+    mut fn index_set(index: i64, value: T) -> unit;
+    fn slice_get(start: i64?, end: i64?) -> Vec<T>;
+    mut fn slice_set(start: i64?, end: i64?, replacement: Vec<T>) -> unit;
 }
 ```
 
@@ -77,23 +81,58 @@ starts at capacity four when the old capacity is smaller, then doubles until
 the requested length fits. Allocation limits and failures inherit the built-in
 array contract.
 
-`get` and `set` accept non-negative indices from the beginning and negative
-indices relative to the current logical length. `last` selects the final
-logical element. Capacity slots outside `0..len()` are never elements and
-cannot be observed through the public API.
+`get`, `set`, and bracket indexing accept non-negative indices from the
+beginning and negative indices relative to the current logical length. `get`
+and `set` are compatibility wrappers over `index_get` and `index_set`, so both
+spellings share one normalization and bounds implementation. `last` selects
+the final logical element. Capacity slots outside `0..len()` are never
+elements and cannot be observed through the public API.
 
 Invalid `get` or `set` indices terminate through `std::error::panic` with
 `Vec.get: index out of bounds` or `Vec.set: index out of bounds`. `pop` and
 `last` on an empty vector use `Vec.pop: empty vector` and
 `Vec.last: empty vector`.
 
+## Slices
+
+Vector slices are half-open logical ranges. Each supplied bound is normalized
+once relative to `len()`: a negative bound adds the logical length. An omitted
+start selects zero and an omitted end selects the logical length. After
+normalization a valid range satisfies `0 <= start <= end <= len`. Capacity is
+never a valid bound and does not contribute elements.
+
+`slice_get` and `values[start:end]` return an independent `Vec<T>`. The result
+has logical length and initial capacity equal to the selected range length;
+each element follows the ordinary `T` copy or owner-retain behavior. Mutating,
+growing, clearing, or destroying either vector cannot change the other's
+length, capacity storage, or inline elements. Corresponding shared elements
+remain independent owners of the same pointee allocation.
+
+`slice_set` and slice assignment preserve the destination length and capacity.
+The replacement logical length must exactly equal the selected range length.
+After both checks succeed, elements are assigned in increasing destination
+index order. The replacement is an owning value parameter: ordinary call
+preparation deep-copies a named vector before the method body and transfers a
+produced slice result into the parameter. The complete replacement therefore
+exists before the first destination write, including `values[:] = values` and
+overlapping forms such as `values[1:4] = values[0:3]`. The parameter and its
+temporary element copies are cleaned promptly when the call returns.
+
+Invalid slice bounds terminate with `Vec.slice: invalid bounds`; a replacement
+length mismatch terminates with `Vec.slice_set: length mismatch`. Bounds are
+validated before replacement length and both are validated before any
+destination element changes. Under ordinary call evaluation, however, the
+replacement expression and any required argument copy complete before the
+method body performs those checks.
+
 ## Ownership and lifetime
 
 Arguments and results follow the ordinary value rules for the substituted
-`T`. `push` and `set` secure the new value before their parameters are cleaned.
-`get`, `last`, and `pop` return independent inline copies or secured shared
-owners as appropriate. `pop` clears the removed slot before returning, and
-`clear` clears all logical slots in reverse order. Removed exact values are
+`T`. `push`, `set`, `index_set`, and slice replacement secure the new value
+before their parameters or element temporaries are cleaned. `get`, `index_get`,
+`last`, `pop`, and slice reads return independent inline copies or secured
+shared owners as appropriate. `pop` clears the removed slot before returning,
+and `clear` clears all logical slots in reverse order. Removed exact values are
 destroyed and removed last shared owners are finalized promptly; spare
 capacity retains no removed value.
 
@@ -112,20 +151,23 @@ elements retain the same pointee allocations under independent owner handles.
 ## Language, compiler, and runtime boundary
 
 The vector is ordinary standard-library source composed from classes, arrays,
-optionals, loops, casts, panic, and shared ownership. The current implementation
-adds no indexing protocol, compiler intrinsic, IR instruction, target
-operation, or runtime ABI entry. Heterogeneous shared-object collections use
-`Vec<shared Obj>` through the same generic implementation.
+optionals, loops, casts, panic, and shared ownership. Its four
+[structural bracket](INDEXING_AND_SLICING.md) entry points are ordinary methods:
+the compiler adds no vector identity check, intrinsic, IR instruction, target
+operation, or runtime ABI entry. Closed specializations select those methods
+before HIR like any other generic class. Heterogeneous shared-object
+collections use `Vec<shared Obj>` through the same generic implementation.
 
-The frozen [structural bracket design](INDEXING_AND_SLICING.md) plans ordinary
-`index_get`, `index_set`, `slice_get`, and `slice_set` entry points for
-`Vec<T>`. Vector slices will use logical length, return independent vectors,
-and use equal-length snapshot replacement without changing destination length.
-These methods and bracket syntax are not yet implemented.
+Index reads and writes are `O(1)`. A slice read is `O(n)` in the selected
+length and allocates one exact-capacity result backing. Slice replacement
+performs `O(n)` element assignments after ordinary argument preparation. A
+named replacement's independent vector copy additionally costs time and
+storage proportional to its capacity; a produced slice is transferred without
+a second complete-vector copy.
 
 ## Deliberate limits
 
 The implemented profile does not include insertion or removal at arbitrary
-positions, append, slicing or indexing syntax yet, iteration protocols, sorting,
-function-valued algorithms, capacity reservation after construction, explicit
-shrinking, allocators, or small-vector optimization.
+positions, append, iteration protocols, sorting, function-valued algorithms,
+capacity reservation after construction, explicit shrinking, allocators, or
+small-vector optimization.
