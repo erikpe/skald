@@ -1,0 +1,63 @@
+from std::str import Str;
+from std::vec import Vec;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn next(amount: i64) -> Item {
+        return Item(self.value + amount);
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Root {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn inherited() -> i64 {
+        return self.value;
+    }
+
+    virtual fn dynamic() -> i64 {
+        return self.value;
+    }
+}
+
+class Leaf extends Root {
+    additional: i64;
+
+    init(value: i64, additional: i64) {
+        super(value);
+        self.additional = additional;
+    }
+
+    override fn dynamic() -> i64 {
+        return self.value + self.additional;
+    }
+}
+
+fn make_item(value: i64) -> Item {
+    return Item(value);
+}
+
+fn main() -> i64 {
+    var values: Vec<Str> = Vec<Str>();
+    values.push("Z");
+
+    return (i64) "A".byte(0) - 65
+        + Item(1).next(1).read()
+        + make_item(27).read()
+        + Leaf(4, 5).inherited()
+        + Leaf(4, 5).dynamic()
+        + (i64) values.last().byte(0) - 90;
+}

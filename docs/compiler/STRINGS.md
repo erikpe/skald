@@ -99,13 +99,13 @@ cleanup machinery handles the resulting `Str`.
 Literal-bearing HIR passes through MIR lowering, verification, target
 selection, and assembly emission. No driver-only feature gate remains.
 
-The produced exact-class receiver extension treats a literal or
+The produced exact-class receiver contract treats a literal or
 `Str`-returning call as an ordinary exact-class producer when it is followed
 by a read-only instance method. It adds no string-specific AST or HIR node and
 does not make any method name compiler-known. The compiler lowers that
 receiver through the ordinary produced-object temporary path; the shared phase
 representation is defined in
-[Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#frozen-produced-exact-class-method-receiver-representation).
+[Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#produced-exact-class-method-receiver-representation).
 
 ### MIR and verification
 

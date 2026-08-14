@@ -548,10 +548,11 @@ factory-result aliases, preventing a return to source-only staging locals.
 
 ## Produced exact-class method receiver coverage
 
-The basic produced exact-class method-receiver path is implemented. Focused
-coverage proves that construction, literal, direct/static/instance/interface
-result, grouping, and closed-generic producers become one read-only view with
-no fake binding and lower through verified MIR.
+The complete supported produced exact-class method-receiver path is
+implemented. Focused coverage proves that construction, literal,
+direct/static/instance/interface result, grouping, and closed-generic
+producers become one read-only view with no fake binding and lower through
+verified MIR.
 
 The implemented representation baseline has one exhaustive typed member-
 receiver carrier. Focused type-check coverage distinguishes stable places,

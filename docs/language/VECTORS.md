@@ -97,6 +97,13 @@ owners as appropriate. `pop` clears the removed slot before returning, and
 destroyed and removed last shared owners are finalized promptly; spare
 capacity retains no removed value.
 
+When `T` is an exact inline class, the result of `get`, `last`, or `pop` may
+directly receive a read-only method call. For example, a string vector can use
+`snapshot.last().byte(index)` without a receiver-only `Str` local. The result
+is secured in the ordinary caller-owned temporary, remains live through the
+method call, and is then cleaned at the full-expression boundary. A mutable
+method on that unnamed result remains invalid.
+
 Copying or assigning a named `Vec<T>` deep-copies its inline backing array.
 Vector length, capacity storage, and slots are independent afterward. Inline
 elements follow their selected copy operations, while corresponding shared

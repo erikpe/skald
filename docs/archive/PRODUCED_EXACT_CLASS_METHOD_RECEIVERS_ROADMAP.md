@@ -1,6 +1,6 @@
 # Produced Exact-Class Method Receivers Roadmap
 
-Status: in progress; PER0 through PER4 are complete and PER5 is next.
+Status: complete; implemented and archived 2026-08-14.
 
 This roadmap lets an expression that produces one exact inline class serve
 directly as a read-only instance-method receiver. It removes staging locals
@@ -71,7 +71,7 @@ service.
 - [x] PER2 — Accept and lower produced exact-class receivers
 - [x] PER3 — Verify lifetime, control flow, and failure behavior
 - [x] PER4 — Prove dispatch, generics, and native execution
-- [ ] PER5 — Adopt the feature and publish the implemented boundary
+- [x] PER5 — Adopt the feature and publish the implemented boundary
 
 Every implementation task runs focused tests for its owning phase, followed
 by `make check` and `make msrv-check`. Documentation-only PER0 runs
@@ -318,26 +318,26 @@ surface, ABI version 9, and `ska_rt_abi_v9`. Focused checks, `make check`, and
 receivers ordinary current behavior, and close the roadmap with repository-
 wide evidence.
 
-- [ ] Rewrite the involved `Vec<Str>` golden exercise to use both
+- [x] Rewrite the involved `Vec<Str>` golden exercise to use both
       `"item-".concat(Str.from_i64(index))` and
       `snapshot.last().byte(byte_index)` directly while retaining its growth,
       copy-independence, loop, and cleanup coverage.
-- [ ] Audit standard-library and test source for locals that exist only to turn
+- [x] Audit standard-library and test source for locals that exist only to turn
       an exact-class producer into a read-only method receiver; remove only
       those whose deletion improves clarity.
-- [ ] Add compact conformance examples for literal, construction, direct call,
+- [x] Add compact conformance examples for literal, construction, direct call,
       method chain, generic result, inherited/virtual dispatch, and the mutable
       receiver diagnostic.
-- [ ] Update language status, functions/control flow, classes/lifecycle,
+- [x] Update language status, functions/control flow, classes/lifecycle,
       strings, generics/vectors, compiler phase/IR, testing, and debugging
       documentation from frozen-unavailable to implemented behavior.
-- [ ] Audit living documentation, diagnostics, dumps, source, and tests for
+- [x] Audit living documentation, diagnostics, dumps, source, and tests for
       stale claims that every exact-class method receiver must be a source-
       level place or that exact-class call results cannot be receivers.
-- [ ] Record any non-trivial mutable-temporary, produced-field, optional,
+- [x] Record any non-trivial mutable-temporary, produced-field, optional,
       array, or shared-owner opportunity in a separately indexed discoveries
       document rather than expanding this roadmap.
-- [ ] Run documentation links, the complete repository gate, MSRV, focused
+- [x] Run documentation links, the complete repository gate, MSRV, focused
       determinism, native, and runtime checks; then archive the completed
       roadmap and update both roadmap indexes.
 
@@ -350,6 +350,22 @@ gates identified by the implementation.
 improve source clarity, all living contracts and diagnostics agree on the
 implemented boundary, all supported gates pass, actionable out-of-scope work
 is indexed separately, and this completed roadmap is archived.
+
+Completed 2026-08-14. The `Vec<Str>` stress golden now uses direct produced
+string and generic-result receivers throughout growth, copy, loop, and cleanup
+coverage. Receiver-only staging was removed from the standard test library,
+and one compact conformance golden collects literal, construction, call-chain,
+generic-result, inherited, and virtual forms while the focused compile-failure
+case retains the mutable-receiver diagnostic. Living language, compiler, and
+development documentation now presents the feature as implemented current
+behavior. The repository audit found no new actionable out-of-scope discovery;
+the deliberate mutable, field, optional, array, and raw shared-owner exclusions
+remain documented by the language contract. Focused standard-vector,
+standard-test, produced-receiver, determinism, backend, native, and runtime
+checks pass. An artifact-free repository snapshot passes `make check` with 300
+golden cases, 1,899 compiler unit tests, three robustness tests, and 37 pipeline
+determinism tests; `make msrv-check`, `make docs-check`, formatting, and diff
+validation also pass.
 
 ## Ordering and dependencies
 

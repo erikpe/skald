@@ -101,10 +101,10 @@ those anchors
 through their complete immediate consumer. The complete rule is owned by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md#strong-owner-value-semantics).
 
-## Frozen produced exact-class method receivers
+## Produced exact-class method receivers
 
-This section defines the implemented basic source-to-native behavior. An
-expression that produces one exact inline class may serve
+This section defines the implemented source-to-native behavior. An expression
+that produces one exact inline class may serve
 directly as the receiver of a read-only instance method. The compiler will
 materialize the producer into one hidden caller-owned object place and borrow
 that place as the receiver; source does not gain a reference value or an
@@ -153,10 +153,9 @@ temporary receivers, optional or array receiver families, independently
 storable references, or escaping aliases. It adds no grammar form, internal
 or external calling-convention rule, backend representation, runtime service,
 or runtime ABI-version change. The compiler representation is defined
-by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-produced-exact-class-method-receiver-representation),
-and the [status matrix](STATUS.md#frozen-language-designs) records the current
-implementation boundary while repository adoption and final publication
-remain in progress.
+by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#produced-exact-class-method-receiver-representation),
+and the [status matrix](STATUS.md#implemented-language) records the implemented
+boundary.
 
 ## Lexical scopes and locals
 

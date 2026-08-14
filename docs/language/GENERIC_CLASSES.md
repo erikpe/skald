@@ -93,6 +93,19 @@ Inside a template, an application may contain its own parameters, such as
 `Pair<T, Str>` or `Base<T>`. It must become closed through substitution before
 it denotes an executable class.
 
+After specialization, an exact-class result produced by a generic member is
+an ordinary exact value and may directly receive a read-only method call. A
+bound requirement authorizes the same form through interface selection:
+
+```ska
+var byte: u8 = values.last().byte(0);       // Vec<Str>.last() -> Str
+var rank: i64 = wrapper.produce().rank();   // T: Ranked
+```
+
+The compiler does not add a generic receiver representation or require a
+source staging local for either form. Mutable methods still require an
+existing mutable object place.
+
 ## Exact specialization and identity
 
 A generic declaration is a compile-time template, not a runtime class. Every

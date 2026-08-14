@@ -818,7 +818,7 @@ require no grammar change.
 The same postfix grammar already parses member selection and a call suffix on
 an exact-class construction, class literal, or exact-class call result. The
 implemented
-[produced exact-class method-receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
+[produced exact-class method-receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#produced-exact-class-method-receivers)
 therefore adds no token, precedence rule, AST expression shape, or call
 syntax. Semantic analysis records an eligible producer once as a read-only
 method receiver; grammar remains unchanged.

@@ -80,9 +80,7 @@ fn exercise_strings() -> unit {
 
     var index: i64 = 0;
     while (index < 10) {
-        var prefix: Str = "item-";
-        var suffix: Str = Str.from_i64(index);
-        var generated: Str = prefix.concat(suffix);
+        var generated: Str = "item-".concat(Str.from_i64(index));
         values.push(generated);
         index = index + 1;
     }
@@ -94,16 +92,12 @@ fn exercise_strings() -> unit {
 
     index = 0;
     while (index < 10) {
-        var prefix: Str = "item-";
-        var suffix: Str = Str.from_i64(index);
-        var expected: Str = prefix.concat(suffix);
+        var expected: Str = "item-".concat(Str.from_i64(index));
         assert_eq_str(values.get(index + 2), expected);
         index = index + 1;
     }
 
-    var tail_prefix: Str = "tail-";
-    var tail_suffix: Str = "literal";
-    values.set(-1, tail_prefix.concat(tail_suffix));
+    values.set(-1, "tail-".concat("literal"));
     var snapshot: Vec<Str> = values;
     values.set(0, "changed");
     values.clear();
@@ -112,10 +106,9 @@ fn exercise_strings() -> unit {
     assert_eq_str(snapshot.last(), "tail-literal");
 
     var expected_tail: Str = "tail-literal";
-    var recovered_tail: Str = snapshot.last();
     var byte_index: i64 = 0;
     while ((u64) byte_index < expected_tail.len()) {
-        assert_eq_u8(recovered_tail.byte(byte_index), expected_tail.byte(byte_index));
+        assert_eq_u8(snapshot.last().byte(byte_index), expected_tail.byte(byte_index));
         byte_index = byte_index + 1;
     }
 

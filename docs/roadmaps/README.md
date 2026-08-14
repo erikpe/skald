@@ -6,17 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
-  is in progress. PER0 froze the living language, compiler, backend, runtime,
-  string, status, and testing contracts without changing executable behavior.
-  PER1 normalized typed receiver provenance into one exhaustive carrier while
-  preserving existing source behavior and dumps. PER2 added the basic
-  source-to-native produced receiver path through the existing temporary and
-  receiver ABI. PER3 hardened explicit MIR access and provenance plus
-  lifetime, control-flow, failure-order, mutation, and native trace coverage.
-  PER4 proved dispatch, producer-family, string, generic, lifecycle,
-  diagnostic, determinism, and unchanged ABI/runtime conformance. PER5,
-  adopting the feature in source and publishing the final boundary, is next.
+No implementation roadmap is currently in progress.
 
 ## Planned
 

@@ -1,6 +1,15 @@
 schema = 2
 
 [[test]]
+name = "compact_forms"
+mode = "run"
+source = "produced_receiver_compact.ska"
+
+[[test.run]]
+name = "literal_construction_call_chain_generic_and_dispatch"
+expect = { exit = 42 }
+
+[[test]]
 name = "conformance"
 mode = "run"
 source = "produced_receiver_conformance.ska"

@@ -2,14 +2,7 @@ from std::error import panic;
 from std::str import Str;
 
 fn _not_equal_message(ref left: Str, ref right: Str) -> Str {
-    var prefix: Str = "Assert failed: '";
-    var separator: Str = "' != '";
-    var suffix: Str = "'";
-
-    var message: Str = prefix.concat(left);
-    message = message.concat(separator);
-    message = message.concat(right);
-    return message.concat(suffix);
+    return "Assert failed: '".concat(left).concat("' != '").concat(right).concat("'");
 }
 
 public fn assert_eq_i64(left: i64, right: i64) -> unit {
@@ -62,6 +55,5 @@ public fn assert_false(condition: bool) -> unit {
 }
 
 public fn fail(ref message: Str) -> unit {
-    var prefix: Str = "Test failed: ";
-    panic(prefix.concat(message));
+    panic("Test failed: ".concat(message));
 }

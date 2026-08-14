@@ -217,10 +217,10 @@ ordinary scalar value.
 Selecting a final primitive field reads or writes that field according to the
 surrounding expression or statement and the root's access.
 
-### Frozen produced receiver places
+### Produced receiver places
 
 The implemented
-[produced exact-class receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
+[produced exact-class receiver contract](FUNCTIONS_AND_CONTROL_FLOW.md#produced-exact-class-method-receivers)
 extends only read-only instance-method receiver selection. An eligible exact-
 class producer establishes one hidden caller-owned root whose lifetime is
 bounded by the enclosing full expression. That root is read-only, retains the

@@ -419,11 +419,11 @@ optional, array, raw-shared-owner, and implicit-shared-dereference sources keep
 their family-specific diagnostics. Call checking continues through later
 arguments in source order.
 
-## Frozen produced exact-class method-receiver representation
+## Produced exact-class method-receiver representation
 
 The source-visible
-[produced receiver contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-exact-class-method-receivers)
-is implemented for the basic source-to-verified-MIR path. The resolver and
+[produced receiver contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#produced-exact-class-method-receivers)
+is implemented through verified MIR. The resolver and
 type checker admit eligible exact-class producers for read-only dot-method
 receivers while retaining the existing-place requirement for mutable methods.
 
