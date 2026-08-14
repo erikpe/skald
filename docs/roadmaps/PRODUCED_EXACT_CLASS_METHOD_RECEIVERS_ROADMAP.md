@@ -1,6 +1,6 @@
 # Produced Exact-Class Method Receivers Roadmap
 
-Status: in progress; PER0 through PER2 are complete and PER3 is next.
+Status: in progress; PER0 through PER3 are complete and PER4 is next.
 
 This roadmap lets an expression that produces one exact inline class serve
 directly as a read-only instance-method receiver. It removes staging locals
@@ -69,7 +69,7 @@ service.
 - [x] PER0 — Freeze the produced read-only receiver contract
 - [x] PER1 — Normalize receiver provenance carriers
 - [x] PER2 — Accept and lower produced exact-class receivers
-- [ ] PER3 — Verify lifetime, control flow, and failure behavior
+- [x] PER3 — Verify lifetime, control flow, and failure behavior
 - [ ] PER4 — Prove dispatch, generics, and native execution
 - [ ] PER5 — Adopt the feature and publish the implemented boundary
 
@@ -211,28 +211,28 @@ frontend diagnostics; no backend or runtime special case was added.
 **Purpose:** Mechanically prove that nested produced receivers obey Skald's
 full-expression ownership contract on every normal selected path.
 
-- [ ] Prove storage lifetime begins before production, object initialization
+- [x] Prove storage lifetime begins before production, object initialization
       completes before receiver use, cleanup ownership begins only after
       completion, and the view never outlives its temporary.
-- [ ] Prove the receiver temporary survives all later arguments, nested calls,
+- [x] Prove the receiver temporary survives all later arguments, nested calls,
       dynamic dispatch, and result securing, then cleans exactly once in
       reverse full-expression order.
-- [ ] Cover chains in which one object-returning method result becomes the
+- [x] Cover chains in which one object-returning method result becomes the
       receiver of the next read-only method without reevaluation or an
       intermediate copy.
-- [ ] Cover selected and skipped `&&`/`||` operands, `if`/`elif` conditions,
+- [x] Cover selected and skipped `&&`/`||` operands, `if`/`elif` conditions,
       repeated `while` condition epochs, return expressions, and nested
       full-expression owners.
-- [ ] Cover producer checks or calls that terminate before publication and
+- [x] Cover producer checks or calls that terminate before publication and
       later argument failure after receiver completion, retaining the existing
       non-unwinding abrupt-termination contract.
-- [ ] Strengthen MIR verification where necessary for produced receiver
+- [x] Strengthen MIR verification where necessary for produced receiver
       storage kind, initialization, exact origin, read-only access, projection,
       use-before-cleanup, and exactly-once cleanup.
-- [ ] Add verifier mutations for missing or premature cleanup, mutable view,
+- [x] Add verifier mutations for missing or premature cleanup, mutable view,
       wrong complete-object origin, use after cleanup, duplicate production or
       cleanup, invalid projection, and path-condition leakage.
-- [ ] Add deterministic lifetime traces proving receiver-before-arguments and
+- [x] Add deterministic lifetime traces proving receiver-before-arguments and
       reverse cleanup with several receiver and argument temporaries.
 
 **Tests:** Focused full-expression tracker, MIR lowering/dump, verifier
@@ -243,6 +243,19 @@ mutation, logical-path, loop-epoch, and failure-order tests; `make check`;
 use, path-correct ownership, and one correctly ordered cleanup for every
 completed produced receiver; malformed access and lifetime variants are
 rejected before backend lowering.
+
+Completed 2026-08-14. MIR now retains source-granted method-receiver access
+and explicit ordinary-versus-produced view provenance independently from the
+mutability of backing storage. Verification ties a produced marker to one
+exact complete `Temporary`, requires read-only access, and composes with the
+existing path-sensitive storage and owner analyses. Focused lowering,
+mutation, closed-generic interface, and native lifecycle tests prove chained
+receivers, receiver-before-argument order, result preservation, selected and
+skipped logical paths, `if`/`elif`, repeated `while` epochs, return
+expressions, reverse cleanup, and non-unwinding producer or argument failure.
+Malformed storage kind, origin, projection, access, production, cleanup,
+post-cleanup use, and path leakage are rejected before backend lowering.
+`make check` and `make msrv-check` pass.
 
 ### PER4 — Prove dispatch, generics, and native execution
 

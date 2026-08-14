@@ -290,7 +290,16 @@ pub struct MirObjectView {
     pub origin: Box<MirObjectOrigin>,
     pub target: MirViewTarget,
     pub access: MirAliasAccess,
+    pub provenance: MirViewProvenance,
     pub span: Span,
+}
+
+/// Whether a non-owning MIR view comes directly from an unnamed object
+/// producer or from an ordinary place, cast, or anchored view boundary.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirViewProvenance {
+    Ordinary,
+    Produced,
 }
 
 impl From<ValueId> for MirArgument {
@@ -352,16 +361,23 @@ impl MirMethodCallTarget {
 pub struct MirMethodReceiver {
     pub place: MirPlace,
     pub origin: Box<MirObjectOrigin>,
+    /// Access granted by the source-level receiver view. This is distinct
+    /// from the mutability of compiler-owned backing storage: a produced
+    /// temporary is mutable storage carrying a read-only method view.
+    pub access: MirAliasAccess,
+    pub provenance: MirViewProvenance,
 }
 
 impl MirMethodReceiver {
-    pub fn exact(place: MirPlace, dynamic_class: ClassId) -> Self {
+    pub fn exact(place: MirPlace, dynamic_class: ClassId, access: MirAliasAccess) -> Self {
         Self {
             origin: Box::new(MirObjectOrigin::Exact {
                 complete: place.clone(),
                 dynamic_class,
             }),
             place,
+            access,
+            provenance: MirViewProvenance::Ordinary,
         }
     }
 }

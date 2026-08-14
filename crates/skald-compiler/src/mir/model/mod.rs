@@ -47,7 +47,8 @@ pub use instruction::{
     MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCheckedViewBinding,
     MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction, MirEndFullExpression,
     MirInitialize, MirInstruction, MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver,
-    MirObjectOrigin, MirObjectView, MirStorageDead, MirStorageLive, MirStore, MirViewTarget,
+    MirObjectOrigin, MirObjectView, MirStorageDead, MirStorageLive, MirStore, MirViewProvenance,
+    MirViewTarget,
 };
 pub use integer_division::{
     MirIntegerDivisionKind, MirIntegerDivisionOperation, MirIntegerDivisorCheck,

@@ -689,6 +689,11 @@ impl BodyLowerer<'_> {
             origin: Box::new(origin),
             target: type_operations::lower_view_target(view.target),
             access: type_operations::lower_access(view.access),
+            provenance: if matches!(view.source, HirViewSource::Produced { .. }) {
+                MirViewProvenance::Produced
+            } else {
+                MirViewProvenance::Ordinary
+            },
             span: view.span,
         }
     }
@@ -701,12 +706,16 @@ impl BodyLowerer<'_> {
             HirObjectReceiver::Place { place, origin } => MirMethodReceiver {
                 place: self.lower_object_place(place),
                 origin: Box::new(self.lower_object_origin(origin)),
+                access: type_operations::lower_access(place.access),
+                provenance: MirViewProvenance::Ordinary,
             },
             HirObjectReceiver::Checked { view, .. } => {
                 let view = self.lower_checked_object_view(view);
                 MirMethodReceiver {
                     place: view.source,
                     origin: view.origin,
+                    access: view.access,
+                    provenance: MirViewProvenance::Ordinary,
                 }
             }
             HirObjectReceiver::View { view, .. } => {
@@ -714,6 +723,8 @@ impl BodyLowerer<'_> {
                 MirMethodReceiver {
                     place: view.source,
                     origin: view.origin,
+                    access: view.access,
+                    provenance: view.provenance,
                 }
             }
             HirObjectReceiver::ArrayElement { element, .. } => {
@@ -721,7 +732,11 @@ impl BodyLowerer<'_> {
                 let Type::Class(dynamic_class) = element.element else {
                     unreachable!("object method array receiver must have exact class type")
                 };
-                MirMethodReceiver::exact(place, dynamic_class)
+                MirMethodReceiver::exact(
+                    place,
+                    dynamic_class,
+                    type_operations::lower_access(element.receiver.access),
+                )
             }
         }
     }
@@ -752,6 +767,7 @@ impl BodyLowerer<'_> {
                 origin: source.origin,
                 target: type_operations::lower_view_target(checked.consumer_target),
                 access: type_operations::lower_access(checked.consumer_access),
+                provenance: MirViewProvenance::Ordinary,
                 span: checked.span,
             };
         }
@@ -815,6 +831,7 @@ impl BodyLowerer<'_> {
             origin,
             target: type_operations::lower_view_target(checked.consumer_target),
             access: type_operations::lower_access(checked.consumer_access),
+            provenance: MirViewProvenance::Ordinary,
             span: checked.span,
         }
     }

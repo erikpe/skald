@@ -778,6 +778,10 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     match receiver {
                         MirCallReceiver::Method(receiver) => {
                             dump_place(output, &receiver.place);
+                            let _ = write!(output, " {}", receiver.access);
+                            if receiver.provenance == MirViewProvenance::Produced {
+                                output.push_str(" produced");
+                            }
                             output.push_str(" origin ");
                             dump_object_origin(output, &receiver.origin);
                         }
@@ -1858,7 +1862,11 @@ fn dump_object_view(output: &mut String, view: &MirObjectView) {
     dump_place(output, &view.source);
     output.push_str(" -> ");
     dump_view_target(output, view.target);
-    let _ = write!(output, " {} origin ", view.access);
+    let _ = write!(output, " {}", view.access);
+    if view.provenance == MirViewProvenance::Produced {
+        output.push_str(" produced");
+    }
+    output.push_str(" origin ");
     dump_object_origin(output, &view.origin);
     output.push(')');
 }

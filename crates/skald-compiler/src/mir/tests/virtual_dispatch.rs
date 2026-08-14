@@ -98,7 +98,7 @@ fn virtual_mir_dump_is_deterministic_and_target_independent() {
     assert!(dump
         .contains("Family vf0 slot vs0 root c0:method0 members c0:method0 c1:method0 c2:method0"));
     assert!(dump.contains(
-        "call virtual vf0 slot vs0 selected c0:method0 on indirect(f1:s0) origin forwarded(f1:s0 : class c0 readonly)"
+        "call virtual vf0 slot vs0 selected c0:method0 on indirect(f1:s0) readonly origin forwarded(f1:s0 : class c0 readonly)"
     ));
     assert!(!dump.contains("offset"));
     assert!(!dump.contains("register"));
@@ -228,7 +228,14 @@ fn rejects_dead_exact_virtual_receiver_origins() {
         .instructions
         .push(MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(ids.relay)),
-            receiver: Some(MirMethodReceiver::exact(MirPlace::base(storage), ids.root).into()),
+            receiver: Some(
+                MirMethodReceiver::exact(
+                    MirPlace::base(storage),
+                    ids.root,
+                    MirAliasAccess::Mutable,
+                )
+                .into(),
+            ),
             arguments: vec![
                 MirArgument::Value(ValueId::new(ids.forward, 0)),
                 MirArgument::View(MirObjectView {
@@ -242,6 +249,7 @@ fn rejects_dead_exact_virtual_receiver_origins() {
                     }),
                     target: MirViewTarget::Class(ids.root),
                     access: MirAliasAccess::ReadOnly,
+                    provenance: MirViewProvenance::Ordinary,
                     span: function.span,
                 }),
             ],

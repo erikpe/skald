@@ -205,6 +205,8 @@ fn rejects_direct_alias_homes_readonly_writes_and_mutable_receiver_calls() {
                         dispatch_limit: None,
                         span: function.span,
                     }),
+                    access: MirAliasAccess::ReadOnly,
+                    provenance: MirViewProvenance::Ordinary,
                 }
                 .into(),
             ),

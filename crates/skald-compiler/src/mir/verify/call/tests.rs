@@ -1,8 +1,8 @@
 use crate::{
     identity::{ClassId, FieldId, FunctionId, InitializerId, MethodId},
     mir::{
-        verify_mir, MirCall, MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind,
-        MirMethodReceiver, MirPlace, MirReceiverAccess, MirType, MirValue, ValueId,
+        verify_mir, MirAliasAccess, MirCall, MirCallTarget, MirInstruction, MirMethodCallTarget,
+        MirMethodKind, MirMethodReceiver, MirPlace, MirReceiverAccess, MirType, MirValue, ValueId,
     },
     test_support::lower_source_to_mir,
 };
@@ -149,6 +149,7 @@ fn initializer_and_method_receiver_contracts_retain_exact_diagnostics() {
         MirMethodReceiver::exact(
             MirPlace::base(storage).project_field(FieldId::new(ClassId::new(0), 0)),
             ClassId::new(0),
+            MirAliasAccess::Mutable,
         )
         .into(),
     );
@@ -175,8 +176,14 @@ fn static_and_instance_call_kinds_require_matching_targets_and_receivers() {
         .unwrap()
         .storage[0]
         .id;
-    call_mut(&mut receiver).receiver =
-        Some(MirMethodReceiver::exact(MirPlace::base(storage), ClassId::new(0)).into());
+    call_mut(&mut receiver).receiver = Some(
+        MirMethodReceiver::exact(
+            MirPlace::base(storage),
+            ClassId::new(0),
+            MirAliasAccess::Mutable,
+        )
+        .into(),
+    );
     assert!(messages(&receiver)
         .iter()
         .any(|message| message == "static method call must not have a receiver"));

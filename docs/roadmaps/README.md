@@ -12,8 +12,9 @@ progress. Completed roadmaps and resolved discovery records move to
   PER1 normalized typed receiver provenance into one exhaustive carrier while
   preserving existing source behavior and dumps. PER2 added the basic
   source-to-native produced receiver path through the existing temporary and
-  receiver ABI. PER3, verifying lifetime, control flow, and failure behavior,
-  is next.
+  receiver ABI. PER3 hardened explicit MIR access and provenance plus
+  lifetime, control-flow, failure-order, mutation, and native trace coverage.
+  PER4, proving the broader dispatch, generic, and native matrix, is next.
 
 ## Planned
 

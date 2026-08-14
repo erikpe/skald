@@ -26,6 +26,39 @@ struct OriginSite<'mir> {
 }
 
 impl Verifier<'_> {
+    pub(super) fn verify_produced_view_provenance(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        source: &MirPlace,
+        origin: &MirObjectOrigin,
+        provenance: super::super::model::MirViewProvenance,
+        kind: &str,
+    ) {
+        if provenance != super::super::model::MirViewProvenance::Produced {
+            return;
+        }
+        let valid = match origin {
+            MirObjectOrigin::Exact { complete, .. } => {
+                complete.projections.is_empty()
+                    && is_ancestor(complete, source)
+                    && complete
+                        .base
+                        .local_storage()
+                        .and_then(|storage| function.storage(storage))
+                        .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
+            }
+            MirObjectOrigin::Forwarded { .. } | MirObjectOrigin::Shared { .. } => false,
+        };
+        if !valid {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!("produced {kind} requires an exact complete temporary origin"),
+            );
+        }
+    }
+
     pub(super) fn verify_object_view(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -55,6 +88,14 @@ impl Verifier<'_> {
         allow_dynamic_conversion: bool,
     ) -> Option<VerifiedPlace> {
         let source = self.verify_place(function, block, &view.source);
+        self.verify_produced_view_provenance(
+            function,
+            block,
+            &view.source,
+            &view.origin,
+            view.provenance,
+            kind,
+        );
         let valid_conversion = source.is_some_and(|source| {
             allow_dynamic_conversion
                 && matches!(
@@ -88,6 +129,15 @@ impl Verifier<'_> {
                 function.callable(),
                 block.id,
                 format!("{kind} grants mutable access"),
+            );
+        }
+        if view.provenance == super::super::model::MirViewProvenance::Produced
+            && view.access == MirAliasAccess::Mutable
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!("produced {kind} must be read-only"),
             );
         }
         let origin =

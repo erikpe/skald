@@ -352,6 +352,14 @@ impl<'mir> Verifier<'mir> {
             return;
         };
         let place = self.verify_place(function, block, &receiver.place);
+        self.verify_produced_view_provenance(
+            function,
+            block,
+            &receiver.place,
+            &receiver.origin,
+            receiver.provenance,
+            "method receiver",
+        );
         let target_id = call_target.selected();
         if place.map(|place| place.ty) != Some(MirType::Class(target_id.class())) {
             self.block_error(
@@ -360,8 +368,26 @@ impl<'mir> Verifier<'mir> {
                 "method receiver has the wrong class type",
             );
         }
-        if target.kind.receiver_access() == Some(MirReceiverAccess::Mutable)
+        if receiver.access == MirAliasAccess::Mutable
             && place.is_some_and(|place| place.access != MirAliasAccess::Mutable)
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "method receiver grants mutable access",
+            );
+        }
+        if receiver.provenance == super::super::model::MirViewProvenance::Produced
+            && receiver.access == MirAliasAccess::Mutable
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "produced method receiver must be read-only",
+            );
+        }
+        if target.kind.receiver_access() == Some(MirReceiverAccess::Mutable)
+            && receiver.access != MirAliasAccess::Mutable
         {
             self.block_error(
                 function.callable(),

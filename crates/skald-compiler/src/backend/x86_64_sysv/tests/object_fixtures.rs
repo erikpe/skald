@@ -317,7 +317,9 @@ pub(super) fn counter_member_program() -> MirProgram {
         ),
         MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(add)),
-            receiver: Some(MirMethodReceiver::exact(object.into(), class).into()),
+            receiver: Some(
+                MirMethodReceiver::exact(object.into(), class, MirAliasAccess::Mutable).into(),
+            ),
             arguments: MirArgument::values([ValueId::new(main_id, 2)]),
             result: None,
             shared_result: None,
@@ -326,7 +328,9 @@ pub(super) fn counter_member_program() -> MirProgram {
         }),
         MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(get_via_receiver)),
-            receiver: Some(MirMethodReceiver::exact(object.into(), class).into()),
+            receiver: Some(
+                MirMethodReceiver::exact(object.into(), class, MirAliasAccess::Mutable).into(),
+            ),
             arguments: vec![],
             result: Some(ValueId::new(main_id, 3)),
             shared_result: None,
@@ -464,7 +468,10 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
         .instructions
         .push(MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
-            receiver: Some(MirMethodReceiver::exact(ids.first.into(), ids.container).into()),
+            receiver: Some(
+                MirMethodReceiver::exact(ids.first.into(), ids.container, MirAliasAccess::Mutable)
+                    .into(),
+            ),
             arguments,
             result: None,
             shared_result: None,
@@ -653,6 +660,8 @@ fn forwarding_get_definition(
                         dispatch_limit: None,
                         span,
                     }),
+                    access: MirAliasAccess::ReadOnly,
+                    provenance: MirViewProvenance::Ordinary,
                 }),
                 vec![],
                 Some(result),

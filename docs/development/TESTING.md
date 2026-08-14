@@ -562,20 +562,25 @@ cleanup, control effects, and native behavior. Compile-failure coverage keeps
 primitive, unit, optional, array, shared-owner, field, and mutable-method
 categories outside the accepted boundary.
 
-The implementation must add evidence at each owning boundary. Resolver and
-type-check tests cover construction, literal, direct/static/instance/interface
-result producers, grouping, inherited projection, direct/virtual/interface
-selection, closed-generic bound authorization, and read-only versus `mut fn`
+Current resolver and type-check tests cover construction, literal,
+direct/static/instance/interface result producers, grouping, inherited
+projection, closed-generic bound authorization, and read-only versus `mut fn`
 diagnostics. HIR and MIR tests cover one explicit producer, no fake binding,
-receiver-before-argument ordering, exactly-once completion, result securing,
-selected-path liveness, and reverse cleanup. Verifier mutations reject wrong
-access, origin, carrier, ordering, initialization, or cleanup.
+receiver-before-argument ordering, chained results without receiver copies,
+closed-generic interface dispatch, exactly-once completion, result securing,
+selected and skipped logical paths, conditional conditions, repeated loop
+epochs, return expressions, and reverse cleanup. Verifier mutations reject
+wrong storage kind, mutable produced access, mismatched complete origin,
+invalid projection, missing or premature cleanup, post-cleanup use, duplicate
+production or cleanup, and skipped-path leakage.
 
-Backend and native goldens must exercise ordinary receiver marshaling and
-dispatch for each producer family, including string literals and a
-`Vec<Str>.last().byte(index)` chain. Effect and destruction traces cover later
-arguments, nested receiver chains, skipped short-circuit paths, and completed
-receiver cleanup. Compile-failure goldens retain mutable methods, temporary
+Focused native tests already trace receiver-before-argument evaluation,
+nested receiver chains, `if`/`elif`, selected and skipped short-circuit paths,
+loop epochs, return expressions, reverse cleanup, and non-unwinding failure
+before or after receiver publication. Broader backend and native conformance
+still covers ordinary receiver marshaling and dispatch for each producer
+family, including string literals and a `Vec<Str>.last().byte(index)` chain.
+Compile-failure goldens retain mutable methods, temporary
 field access, optional and array producers, raw shared dot access, unrelated
 types, and escaping uses. Determinism tests compare resolved, HIR, MIR,
 assembly, stdout, stderr, and status as appropriate, while runtime-surface

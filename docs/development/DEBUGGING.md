@@ -217,7 +217,12 @@ are no parallel shared-view and optional-view receiver fields to reconcile.
 Produced receivers also use `View`, with `HirViewSource::Produced`, read-only
 access, and no inspection place. Their MIR should show one caller-owned
 `temporary`, production before explicit arguments, the ordinary receiver
-components, and full-expression cleanup after the call result is secured.
+components, and full-expression cleanup after the call result is secured. A
+direct or virtual MIR call prints `readonly produced origin exact(...)`; the backing
+temporary remains internally mutable only so production and destruction can
+write it. If a produced call instead prints mutable access, loses the exact
+complete root, is used after its `end-full-expression`, or cleans on a skipped
+path, MIR verification must reject it before backend lowering.
 
 For an explicitly dereferenced shared receiver or alias argument, HIR distinguishes a stable
 `SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or

@@ -440,6 +440,12 @@ full-expression lifetime pipeline:
 - HIR-to-MIR lowering constructs the producer exactly once in one caller-owned
   `Temporary` before explicit arguments, registers cleanup only after complete
   construction, and uses the ordinary non-owning receiver view for the call;
+- direct and virtual `MirMethodReceiver` values retain the access granted by
+  HIR separately from their backing place. This matters for produced objects:
+  their compiler-owned storage is mutable while their callable view is
+  read-only. A `MirViewProvenance` marker distinguishes that direct produced
+  view from ordinary place, cast, and anchored views. Interface receivers
+  retain the same access and provenance distinction in `MirObjectView`;
 - result securing or transfer completes before full-expression cleanup, and
   checked or bounded carriers end before the owning receiver temporary; and
 - MIR verification proves initialization, read-only access, receiver and
@@ -470,8 +476,9 @@ through their existing selected method targets and receiver origins. The
 backend receives an ordinary verified receiver place backed by explicit
 temporary storage. No target-specific producer branch, internal or external
 calling-convention change, runtime service, or runtime ABI-version change is
-introduced. Resolved, HIR, and MIR dumps must expose the provenance
-deterministically throughout rollout.
+introduced. Resolved, HIR, and MIR dumps expose provenance deterministically;
+MIR method-call dumps include the receiver's granted access before its exact
+or forwarded origin.
 
 ## Primitive binding reassignment boundary
 
