@@ -14,7 +14,14 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-No design proposal is currently under review.
+[Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md)
+is a **draft under review**. It proposes structural `index_get`, `index_set`,
+`slice_get`, and `slice_set` method selection for class and interface bracket
+syntax while preserving built-in array precedence, explicit shared
+dereference, evaluate-once receiver semantics, and ordinary call lowering.
+SIS1 through SIS15 are the next confirmation boundary. The proposal depends
+only on the implemented array, optional-value, generic-class, ownership, and
+dispatch baselines; no other active roadmap blocks review.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).
