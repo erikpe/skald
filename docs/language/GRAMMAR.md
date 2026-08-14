@@ -858,6 +858,12 @@ equal-length slice assignment execute. Call-scoped whole-array and exact
 element aliases execute with hidden backing or shared-owner anchors. The
 implemented semantics belong to [Arrays](ARRAYS.md).
 
+The same parsed bracket shapes have a separately frozen, not-yet-implemented
+[structural class/interface meaning](INDEXING_AND_SLICING.md). That extension
+adds no tokens or precedence rules. Until its implementation roadmap lands,
+semantic analysis continues to accept bracket projections only for the array
+receivers described above.
+
 The implemented [standard I/O API](IO.md) composes existing modules, functions,
 calls, loops, arrays, aliases, and intrinsic declarations. It adds no token,
 precedence level, expression shape, statement shape, or declaration form.

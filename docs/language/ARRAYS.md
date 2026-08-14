@@ -48,6 +48,10 @@ An array is not a class, interface, or `Obj`. It has no dynamic class, does not
 participate in object casts or type tests, and does not acquire structural
 behavior from methods with particular names. Construction, `len()`, indexing,
 slicing, and shared array projection are intrinsic array operations.
+The separately frozen
+[structural indexing and slicing protocol](INDEXING_AND_SLICING.md) preserves
+this precedence: class/interface sugar will never replace these operations or
+make protocol-named array methods part of the array surface.
 
 Array storage is an indirection boundary. Inline array elements belong to the
 array's deterministic lifetime, but their dynamically sized backing does not
@@ -779,8 +783,9 @@ The following are intentionally outside the implemented array profile:
   other dynamic-buffer operations;
 - non-copying slice views, reverse ranges, and strides;
 - general equality, ordering, hashing, identity, or array casts and type tests;
-- structural `index_get`, `index_set`, `slice_get`, `slice_set`, or iteration
-  protocols;
+- method-form `index_get`, `index_set`, `slice_get`, or `slice_set` aliases for
+  arrays, and iteration protocols; the separately frozen structural bracket
+  protocol applies only after array precedence is resolved;
 - `for` iteration and iterator lifetime behavior;
 - whole-pointee shared array assignment;
 - array external ABI mappings;

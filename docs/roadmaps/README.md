@@ -10,18 +10,16 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No additional implementation roadmap is currently planned.
+[Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
+is **planned**; IS0 is next. It implements the frozen class/interface bracket
+protocol while preserving built-in array precedence and an unchanged lower-IR
+and runtime boundary.
 
 ## Design proposals
 
-[Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md)
-is a **draft under review**. It proposes structural `index_get`, `index_set`,
-`slice_get`, and `slice_set` method selection for class and interface bracket
-syntax while preserving built-in array precedence, explicit shared
-dereference, evaluate-once receiver semantics, and ordinary call lowering.
-SIS1 through SIS15 are the next confirmation boundary. The proposal depends
-only on the implemented array, optional-value, generic-class, ownership, and
-dispatch baselines; no other active roadmap blocks review.
+No design proposal is currently under review. The confirmed structural
+indexing and slicing decisions are preserved in the
+[archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).

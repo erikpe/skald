@@ -1,8 +1,14 @@
 # Structural Indexing and Slicing Design Proposal
 
-Status: draft under review; SIS1 through SIS15 record the proposed direction
-and await confirmation together before promotion into living contracts or
-implementation-roadmap work.
+Status: frozen design record. SIS1 through SIS15 were confirmed together on
+2026-08-14 and promoted into living language and compiler contracts before the
+implementation roadmap was created.
+
+The living [language contract](../language/INDEXING_AND_SLICING.md) and
+[compiler contract](../compiler/INDEXING_AND_SLICING.md) are authoritative for
+the frozen direction. The
+[active roadmap](../roadmaps/STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md) owns
+delivery order and progress.
 
 This proposal lets ordinary classes and interfaces opt into bracket indexing
 and slicing through structurally selected instance methods. It is intended to
@@ -18,7 +24,7 @@ class or interface sugar to ordinary selected calls before HIR.
 
 ## Intended outcome
 
-The confirmed design should provide:
+The confirmed design provides:
 
 - right-side class and interface indexing through `index_get`;
 - left-side class and interface indexing through `index_set`;
@@ -37,7 +43,7 @@ The confirmed design should provide:
 - focused diagnostics and deterministic phase dumps that expose the selected
   structural operation.
 
-Confirming this proposal will not make the feature executable. The
+Freezing this design does not make the feature executable. The
 [status matrix](../language/STATUS.md) remains the sole authority for compiler
 availability, and the
 [implemented grammar](../language/GRAMMAR.md) remains the exact accepted
@@ -149,25 +155,25 @@ and target-directed call results remain authoritative.
 
 ## Decision register
 
-| ID | Decision | Proposed direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [SIS1](#sis1--source-surface-and-precedence) | Source surface | Reuse existing postfix bracket and assignment syntax; built-in arrays take precedence | **Proposed** |
-| [SIS2](#sis2--protocol-names-and-structural-eligibility) | Protocol identity | Select exact instance names `index_get`, `index_set`, `slice_get`, and `slice_set` structurally | **Proposed** |
-| [SIS3](#sis3--index-read-contract) | Index reads | Lower `receiver[key]` to one ordinary read-only `index_get` call with signature-selected key and result types | **Proposed** |
-| [SIS4](#sis4--index-assignment-contract) | Index writes | Lower `receiver[key] = source` to one mutable unit-returning `index_set` call; do not require or invoke `index_get` | **Proposed** |
-| [SIS5](#sis5--slice-bound-representation) | Omitted bounds | Require value parameters `start: i64?` and `end: i64?`; pass omitted bounds as `none` | **Proposed** |
-| [SIS6](#sis6--slice-read-and-assignment-contracts) | Slice operations | Select read-only `slice_get` and mutable unit-returning `slice_set`; keep read and write value types independent | **Proposed** |
-| [SIS7](#sis7--receiver-access-shared-owners-and-produced-values) | Receiver behavior | Apply existing access and explicit-dereference rules, including produced-receiver restrictions and anchors | **Proposed** |
-| [SIS8](#sis8--inheritance-visibility-and-dispatch) | Object model | Use ordinary inherited lookup, declaring-class privacy, virtual selection, and interface requirements | **Proposed** |
-| [SIS9](#sis9--evaluation-order-lifetimes-and-failure) | Effects and lifetime | Evaluate receiver, operands, and source exactly once in source order and reuse ordinary call cleanup | **Proposed** |
-| [SIS10](#sis10--built-in-array-boundary) | Array coexistence | Keep array brackets intrinsic and do not add structural method-form array operations | **Proposed** |
-| [SIS11](#sis11--compiler-phase-and-ir-boundaries) | Representation | Generalize source AST naming, select calls during resolution, and leave no structural-sugar node in HIR or MIR | **Proposed** |
-| [SIS12](#sis12--diagnostics-dumps-and-recovery) | Compiler quality | Preserve punctuation spans, distinguish unsupported operations, and dump selected identities deterministically | **Proposed** |
-| [SIS13](#sis13--standard-library-adoption) | Library use | Add protocol entry points to `Vec<T>` and read-only protocol entry points to `Str` without making either a compiler language item | **Proposed** |
-| [SIS14](#sis14--initial-exclusions) | Feature boundary | Exclude iteration, multi-indexing, strides, compound assignment, user-declared operators, and implicit shared dereference | **Proposed** |
-| [SIS15](#sis15--promotion-and-delivery-boundary) | Delivery | Confirm the register, promote living contracts, then create a PR-sized implementation roadmap | **Proposed** |
+| [SIS1](#sis1--source-surface-and-precedence) | Source surface | Reuse existing postfix bracket and assignment syntax; built-in arrays take precedence | **Confirmed** |
+| [SIS2](#sis2--protocol-names-and-structural-eligibility) | Protocol identity | Select exact instance names `index_get`, `index_set`, `slice_get`, and `slice_set` structurally | **Confirmed** |
+| [SIS3](#sis3--index-read-contract) | Index reads | Lower `receiver[key]` to one ordinary read-only `index_get` call with signature-selected key and result types | **Confirmed** |
+| [SIS4](#sis4--index-assignment-contract) | Index writes | Lower `receiver[key] = source` to one mutable unit-returning `index_set` call; do not require or invoke `index_get` | **Confirmed** |
+| [SIS5](#sis5--slice-bound-representation) | Omitted bounds | Require value parameters `start: i64?` and `end: i64?`; pass omitted bounds as `none` | **Confirmed** |
+| [SIS6](#sis6--slice-read-and-assignment-contracts) | Slice operations | Select read-only `slice_get` and mutable unit-returning `slice_set`; keep read and write value types independent | **Confirmed** |
+| [SIS7](#sis7--receiver-access-shared-owners-and-produced-values) | Receiver behavior | Apply existing access and explicit-dereference rules, including produced-receiver restrictions and anchors | **Confirmed** |
+| [SIS8](#sis8--inheritance-visibility-and-dispatch) | Object model | Use ordinary inherited lookup, declaring-class privacy, virtual selection, and interface requirements | **Confirmed** |
+| [SIS9](#sis9--evaluation-order-lifetimes-and-failure) | Effects and lifetime | Evaluate receiver, operands, and source exactly once in source order and reuse ordinary call cleanup | **Confirmed** |
+| [SIS10](#sis10--built-in-array-boundary) | Array coexistence | Keep array brackets intrinsic and do not add structural method-form array operations | **Confirmed** |
+| [SIS11](#sis11--compiler-phase-and-ir-boundaries) | Representation | Generalize source AST naming, select calls during resolution, and leave no structural-sugar node in HIR or MIR | **Confirmed** |
+| [SIS12](#sis12--diagnostics-dumps-and-recovery) | Compiler quality | Preserve punctuation spans, distinguish unsupported operations, and dump selected identities deterministically | **Confirmed** |
+| [SIS13](#sis13--standard-library-adoption) | Library use | Add protocol entry points to `Vec<T>` and read-only protocol entry points to `Str` without making either a compiler language item | **Confirmed** |
+| [SIS14](#sis14--initial-exclusions) | Feature boundary | Exclude iteration, multi-indexing, strides, compound assignment, user-declared operators, and implicit shared dereference | **Confirmed** |
+| [SIS15](#sis15--promotion-and-delivery-boundary) | Delivery | Confirm the register, promote living contracts, then create a PR-sized implementation roadmap | **Confirmed** |
 
-## Proposed source behavior
+## Frozen source behavior
 
 ### Indexing a mutable vector-like class
 
@@ -263,7 +269,7 @@ An interface-typed receiver is eligible only when the interface declares the
 required exact requirement. A concrete implementation method that is absent
 from the receiver's static interface does not become visible structurally.
 
-## Proposed structural contracts
+## Frozen structural contracts
 
 The following signatures use `K`, `R`, and `W` as design metavariables, not
 new Skald generic-method syntax.
@@ -327,7 +333,7 @@ view, or any other distinguished shape.
 **Question:** Does structural collection sugar add syntax, and how does it
 coexist with arrays?
 
-**Proposed decision:** Add no token or new bracket grammar. Reinterpret the
+**Confirmed decision:** Add no token or new bracket grammar. Reinterpret the
 existing postfix projection source shape according to the receiver's resolved
 static type.
 
@@ -364,7 +370,7 @@ No chained assignment or assignment-expression value is introduced.
 
 **Question:** How does a type opt in?
 
-**Proposed decision:** Reserve no new keyword or annotation. The resolver looks
+**Confirmed decision:** Reserve no new keyword or annotation. The resolver looks
 for exactly one applicable ordinary instance member with the exact name
 selected by the source operation:
 
@@ -398,7 +404,7 @@ selection.
 
 **Question:** What does `receiver[key]` mean for a class or interface?
 
-**Proposed decision:** Select `index_get`, validate the read protocol, and
+**Confirmed decision:** Select `index_get`, validate the read protocol, and
 normalize the operation to the equivalent ordinary instance or interface call:
 
 ```text
@@ -422,7 +428,7 @@ result category.
 
 **Question:** What does `receiver[key] = source` mean?
 
-**Proposed decision:** Select `index_set` directly and normalize the statement
+**Confirmed decision:** Select `index_set` directly and normalize the statement
 to one ordinary unit-returning call:
 
 ```text
@@ -445,7 +451,7 @@ protocol-focused diagnostic.
 **Question:** How are independently omitted class-slice bounds represented
 without evaluating the receiver twice?
 
-**Proposed decision:** Require exact `i64?` value parameters for the first two
+**Confirmed decision:** Require exact `i64?` value parameters for the first two
 slice arguments. A supplied bound uses existing implicit optional injection,
 and an omitted bound is a synthetic resolved `none` carrying the omission's
 source position.
@@ -472,7 +478,7 @@ The compiler does not select a `len` method, cast a length, or evaluate the
 receiver again. Direct calls such as `value.slice_get(1, 3)` remain valid
 through ordinary one-layer optional injection.
 
-Alternatives rejected by the proposed direction are:
+Alternatives rejected by the confirmed direction are:
 
 - parser rewriting to `receiver.len()`, which duplicates an effectful receiver
   unless the compiler introduces a separate stabilization operation;
@@ -487,7 +493,7 @@ Alternatives rejected by the proposed direction are:
 
 **Question:** How do structural slice reads and writes select behavior?
 
-**Proposed decision:** A read selects `slice_get`; an assignment selects
+**Confirmed decision:** A read selects `slice_get`; an assignment selects
 `slice_set` directly.
 
 ```text
@@ -514,7 +520,7 @@ do not infer array snapshot semantics for arbitrary classes.
 
 **Question:** Which receiver forms can use the protocol?
 
-**Proposed decision:** Reuse ordinary method and interface receiver rules.
+**Confirmed decision:** Reuse ordinary method and interface receiver rules.
 
 - Mutable owning locals, value parameters, mutable aliases, mutable fields,
   mutable static fields, and mutable `self` paths may call setters when their
@@ -537,7 +543,7 @@ would lack.
 
 **Question:** How does protocol selection interact with the object model?
 
-**Proposed decision:** Use the same declaration lookup and dispatch metadata as
+**Confirmed decision:** Use the same declaration lookup and dispatch metadata as
 ordinary calls.
 
 - Inherited methods participate through the existing class hierarchy index.
@@ -562,7 +568,7 @@ no unresolved template parameter reaches HIR.
 
 **Question:** What order and lifetime guarantees apply?
 
-**Proposed decision:** Structural sugar has the same order as its conceptual
+**Confirmed decision:** Structural sugar has the same order as its conceptual
 ordinary call, with assignment syntax fixing the replacement as the last
 argument:
 
@@ -591,7 +597,7 @@ array projections retain their distinct compiler-known failure reasons.
 
 **Question:** Does structural sugar replace or expose array implementation?
 
-**Proposed decision:** No. Arrays remain a privileged exact type constructor
+**Confirmed decision:** No. Arrays remain a privileged exact type constructor
 with their current intrinsic operations.
 
 For arrays, the compiler continues to own:
@@ -616,7 +622,7 @@ surface with no benefit to bracket sugar.
 
 **Question:** Where should the sugar be represented and eliminated?
 
-**Proposed decision:** Preserve generic bracket syntax through parsing, select
+**Confirmed decision:** Preserve generic bracket syntax through parsing, select
 the final operation during resolution, and expose only ordinary calls or true
 array operations to type checking and lower phases.
 
@@ -674,13 +680,13 @@ verification, target lowering, and ABI marshaling continue to inspect ordinary
 calls.
 
 No public C runtime symbol, descriptor field, vtable shape, interface witness
-shape, or target ABI change is proposed.
+shape, or target ABI change is required.
 
 ## SIS12 — Diagnostics, dumps, and recovery
 
 **Question:** What quality guarantees should accompany the feature?
 
-**Proposed decision:** Preserve exact source punctuation and diagnose failures
+**Confirmed decision:** Preserve exact source punctuation and diagnose failures
 at the phase that owns them without freezing final prose in the design.
 
 Focused diagnostics should distinguish at least:
@@ -715,7 +721,7 @@ byte-identical diagnostics and dumps.
 
 **Question:** Which standard-library types should demonstrate the protocol?
 
-**Proposed decision:** Adopt it first in `Vec<T>` and `Str` while keeping both
+**Confirmed decision:** Adopt it first in `Vec<T>` and `Str` while keeping both
 types ordinary Skald classes.
 
 ### `Vec<T>`
@@ -754,7 +760,7 @@ or `Str`.
 
 **Question:** What remains outside the first profile?
 
-**Proposed decision:** Exclude:
+**Confirmed decision:** Exclude:
 
 - `for` iteration and iterator lifetime protocols;
 - structural `len`, capacity, resizing, append, or collection construction;
@@ -780,7 +786,7 @@ named explicit methods or composing existing arrays internally.
 
 **Question:** What must happen after design confirmation?
 
-**Proposed decision:** Confirm SIS1 through SIS15 together, then promote the
+**Confirmed decision:** Confirm SIS1 through SIS15 together, then promote the
 frozen meaning before implementation begins.
 
 Promotion should:
@@ -801,7 +807,7 @@ Promotion should:
 The later roadmap should not use this proposal as a substitute for task
 checklists, validation commands, or progress state.
 
-## Validation obligations for a later roadmap
+## Validation obligations for implementation
 
 The implementation roadmap should include proportionate coverage at every
 owning boundary.
@@ -849,23 +855,23 @@ array, and generic specialization suites affected by each task. Before
 roadmap completion, run `make check`, the supported-toolchain gate when Rust
 targets or manifests are touched, and proportionate full-determinism goldens.
 
-## Confirmation checklist
+## Confirmation record
 
-Before promoting this proposal, review should explicitly confirm:
+The freezing review explicitly confirmed:
 
-- [ ] the four exact protocol names;
-- [ ] structural rather than marker-interface eligibility;
-- [ ] arbitrary signature-driven index key types;
-- [ ] independent read and write capabilities and value types;
-- [ ] read-only getters and mutable unit-returning setters;
-- [ ] optional-`i64` slice bound parameters and `none` omission;
-- [ ] ordinary value/read-only-alias operand modes and rejection of mutable
+- [x] the four exact protocol names;
+- [x] structural rather than marker-interface eligibility;
+- [x] arbitrary signature-driven index key types;
+- [x] independent read and write capabilities and value types;
+- [x] read-only getters and mutable unit-returning setters;
+- [x] optional-`i64` slice bound parameters and `none` omission;
+- [x] ordinary value/read-only-alias operand modes and rejection of mutable
       alias operands;
-- [ ] built-in array precedence and unchanged intrinsic behavior;
-- [ ] explicit shared dereference and existing receiver access;
-- [ ] inherited, private, virtual, and interface selection;
-- [ ] one source-ordered evaluation of every present operand;
-- [ ] resolved-call normalization with no HIR/MIR sugar node;
-- [ ] `Vec<T>` and read-only `Str` adoption boundaries;
-- [ ] diagnostics, dumps, tests, and runtime non-expansion; and
-- [ ] the initial exclusions and promotion sequence.
+- [x] built-in array precedence and unchanged intrinsic behavior;
+- [x] explicit shared dereference and existing receiver access;
+- [x] inherited, private, virtual, and interface selection;
+- [x] one source-ordered evaluation of every present operand;
+- [x] resolved-call normalization with no HIR/MIR sugar node;
+- [x] `Vec<T>` and read-only `Str` adoption boundaries;
+- [x] diagnostics, dumps, tests, and runtime non-expansion; and
+- [x] the initial exclusions and promotion sequence.

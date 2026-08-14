@@ -112,14 +112,20 @@ elements retain the same pointee allocations under independent owner handles.
 ## Language, compiler, and runtime boundary
 
 The vector is ordinary standard-library source composed from classes, arrays,
-optionals, loops, casts, panic, and shared ownership. It adds no indexing
-protocol, compiler intrinsic, IR instruction, target operation, or runtime ABI
-entry. Heterogeneous shared-object collections use `Vec<shared Obj>` through
-the same generic implementation.
+optionals, loops, casts, panic, and shared ownership. The current implementation
+adds no indexing protocol, compiler intrinsic, IR instruction, target
+operation, or runtime ABI entry. Heterogeneous shared-object collections use
+`Vec<shared Obj>` through the same generic implementation.
+
+The frozen [structural bracket design](INDEXING_AND_SLICING.md) plans ordinary
+`index_get`, `index_set`, `slice_get`, and `slice_set` entry points for
+`Vec<T>`. Vector slices will use logical length, return independent vectors,
+and use equal-length snapshot replacement without changing destination length.
+These methods and bracket syntax are not yet implemented.
 
 ## Deliberate limits
 
 The implemented profile does not include insertion or removal at arbitrary
-positions, append, slicing, iteration protocols, indexing syntax, sorting,
+positions, append, slicing or indexing syntax yet, iteration protocols, sorting,
 function-valued algorithms, capacity reservation after construction, explicit
 shrinking, allocators, or small-vector optimization.

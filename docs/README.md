@@ -29,6 +29,9 @@ Use the authority closest to the behavior:
   [process arguments](language/PROCESS.md);
 - the implemented `std::vec::Vec<T>` collection contract belongs in
   [vectors](language/VECTORS.md);
+- the frozen source-visible structural bracket protocol, including array
+  precedence and class/interface method selection, belongs in
+  [structural indexing and slicing](language/INDEXING_AND_SLICING.md);
 - the implemented source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
   [arrays](language/ARRAYS.md);
@@ -77,6 +80,9 @@ Use the authority closest to the behavior:
 - the implemented array phase, lifecycle, backing, anchor, verification, and
   runtime responsibility design belongs in
   [the array compiler and runtime contract](compiler/ARRAYS.md);
+- the frozen syntax, resolution, call-normalization, and lower-phase boundary
+  for class/interface brackets belongs in the
+  [structural indexing and slicing compiler contract](compiler/INDEXING_AND_SLICING.md);
 - the implemented optional HIR, checked views, verification, x86-64 layout,
   internal ABI, and explicit exclusions belong in
   [the optional-values compiler contract](compiler/OPTIONAL_VALUES.md);

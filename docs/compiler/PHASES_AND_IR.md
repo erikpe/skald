@@ -1024,6 +1024,14 @@ arrays remain outside class hierarchy, interface conformance, `Obj`, casts,
 and type tests. Resolved construction, projection, and array-assignment nodes
 retain their source structure.
 
+The separately frozen
+[structural indexing and slicing contract](INDEXING_AND_SLICING.md) will make
+the source AST's bracket vocabulary type-neutral, then classify receivers in
+resolution. True arrays will retain these resolved array nodes; eligible
+class/interface operations will become ordinary resolved calls before HIR.
+That planned extension adds no HIR, MIR, verifier, backend, or runtime
+operation and is not yet accepted by the compiler.
+
 Type checking lowers array declarations, owning locals/fields/signatures,
 inline and shared construction, exact element lifecycle capabilities,
 projection, replacement, slices, aliases, and named-copy versus

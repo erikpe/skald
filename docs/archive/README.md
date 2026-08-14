@@ -96,6 +96,7 @@ Resolved operator-design inputs:
 Resolved array-design inputs:
 
 - [Explicit array element-list construction design proposal](ARRAY_ELEMENT_LIST_CONSTRUCTION_DESIGN_PROPOSAL.md)
+- [Structural indexing and slicing design proposal](STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md)
 
 Resolved module-system design inputs:
 

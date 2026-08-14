@@ -467,9 +467,8 @@ private intrinsic pipeline, lower-phase execution, and four public functions
 are implemented.
 
 The broader public method and builder APIs remain standard-library design.
-Indexing,
-slicing, equality, comparison, hashing, concatenation, formatting, and parsing
-are not string-specific operators in this contract. The frozen primitive
+Equality, comparison, hashing, concatenation, formatting, and parsing are not
+string-specific operators in this contract. The frozen primitive
 conversion methods above are ordinary methods rather than operators or
 compiler conversions. In particular, `+` is not
 lowered by searching for a method named `concat`. Public checked byte/range
@@ -478,6 +477,13 @@ general primitive comparison, arithmetic, and total conversion operations.
 The backing-array maximum-length rule makes the descriptor length and every
 valid absolute position representable as `i64`. The compiler adds neither a
 checked cast nor string-only numeric rules.
+
+The frozen [structural bracket design](INDEXING_AND_SLICING.md) plans read-only
+`index_get` and `slice_get` methods that share the existing checked byte and
+constant-time descriptor-slice implementations. Omitted bounds will select the
+logical beginning/end. `Str` will add neither setter, and the compiler will
+not recognize `Str` specially when selecting the ordinary methods. This
+bracket surface is not yet implemented.
 
 ## Exclusions
 

@@ -14,6 +14,10 @@ element lifecycle, copied slices, checked equal-length slice assignment, and
 call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
+The separately frozen
+[structural bracket compiler contract](INDEXING_AND_SLICING.md) keeps these
+array operations on the intrinsic path and selects ordinary calls only after
+array precedence has been resolved.
 
 The design borrows Niflheim's useful recursive type syntax, invariant typing,
 fixed-size allocation, checked indexing, copied slices, and explicit array IR.
@@ -137,11 +141,13 @@ existing tokens. Syntax retains:
 - ordinary bracket projection versus `->` bracket projection; and
 - exact spans for each bracket, colon, arrow, length, bound, and copy source.
 
-`owner->[index]` and `owner->[start:end]` are source nodes for one explicit
-shared dereference followed by an array projection. Resolution normalizes them
-to one owner evaluation and one array-pointee projection without synthesizing
-a source `*` span. `(*owner)[...]` reaches the same typed operation through the
-general explicit-dereference form.
+`owner->[index]` and `owner->[start:end]` are currently source nodes for one
+explicit shared dereference followed by an array projection. The frozen
+structural-bracket work will give the source-only AST neutral vocabulary while
+preserving this exact operation after receiver classification. Resolution
+normalizes them to one owner evaluation and one array-pointee projection
+without synthesizing a source `*` span. `(*owner)[...]` reaches the same typed
+operation through the general explicit-dereference form.
 
 Resolution assigns an `ArrayTypeId` after resolving the exact element type. It
 retains whether `shared` or `shared?` applies outside the array identity or
