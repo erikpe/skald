@@ -1,12 +1,13 @@
 # Structural Indexing and Slicing
 
-Status: **frozen design; class indexing and slicing implemented**.
+Status: **frozen design; class and interface indexing and slicing
+implemented**.
 
 This document is authoritative for the source-visible meaning of bracket
 indexing and slicing on classes and interfaces. The current compiler
-implements all four operations for exact class receivers. Interface-typed
-receivers remain pending. Built-in arrays retain their complete intrinsic
-behavior. Availability remains authoritative in the [status matrix](STATUS.md).
+implements all four operations for class and interface receivers. Built-in
+arrays retain their complete intrinsic behavior. Availability remains
+authoritative in the [status matrix](STATUS.md).
 
 The design adds no syntax. It gives the existing postfix bracket forms a
 structural meaning when the receiver's static type is a class or interface:
@@ -21,8 +22,7 @@ value[:]
 value[start:end] = replacement
 ```
 
-All forms are currently implemented for class receivers. Interface-requirement
-selection describes the frozen next stage.
+All forms are implemented for eligible class and interface receivers.
 
 ## Selection and precedence
 
@@ -53,10 +53,11 @@ lookups are structural conveniences, not general structural typing, a marker
 interface, or an operator-declaration system. Static methods, fields, and
 static fields never satisfy the protocol.
 
-Current class indexing and slicing use inherited lookup, declaring-class
-privacy, closed generic specialization, ordinary argument checking, and
-explicit shared crossing with `owner->[...]`. Interface participation begins
-with the later receiver-integration stage.
+Class indexing and slicing use inherited lookup, declaring-class privacy,
+closed generic specialization, ordinary argument checking, and explicit
+shared crossing with `owner->[...]`. Interface receivers select the matching
+declared requirement and reuse ordinary witness dispatch, including explicit
+shared-interface crossing.
 
 ## Method requirements
 

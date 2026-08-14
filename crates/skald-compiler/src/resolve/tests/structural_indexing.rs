@@ -212,18 +212,49 @@ fn permits_private_protocol_selection_inside_the_declaring_class() {
 }
 
 #[test]
-fn diagnoses_a_static_field_receiver_without_panicking() {
+fn supports_class_valued_static_field_receivers() {
     let output = resolve_text(concat!(
-        "class Item { fn index_get(key: i64) -> i64 { return key; } }\n",
-        "class Holder { static item: Item; }\n",
-        "fn use() -> i64 { return Holder.item[0]; }\n",
+        "class Item {\n",
+        "  init() {}\n",
+        "  fn index_get(key: i64) -> i64 { return key; }\n",
+        "  mut fn slice_set(start: i64?, end: i64?, value: i64) -> unit {}\n",
+        "}\n",
+        "class Holder { static item: Item = Item(); }\n",
+        "fn read() -> i64 { return Holder.item[0]; }\n",
+        "fn write() -> unit { Holder.item[:] = 1; }\n",
+        "fn explicit() -> i64 { return Holder.item.index_get(0); }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    assert!(output.has_errors());
-    assert!(output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_INDEX_PROTOCOL));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let read = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::MethodCall(call) = return_value(&read.body.statements[0]) else {
+        panic!("static field bracket read must normalize to a method call");
+    };
+    assert!(matches!(
+        call.receiver,
+        ResolvedObjectReceiver::StaticField { .. }
+    ));
+
+    let write = output.program.definitions.get(FunctionId::new(1)).unwrap();
+    let ResolvedStatement::Expression(statement) = &write.body.statements[0] else {
+        panic!("static field bracket write must normalize to a call statement");
+    };
+    let ResolvedExpression::MethodCall(call) = &statement.expression else {
+        panic!("static field bracket write must normalize to a method call");
+    };
+    assert!(matches!(
+        call.receiver,
+        ResolvedObjectReceiver::StaticField { .. }
+    ));
+
+    let explicit = output.program.definitions.get(FunctionId::new(2)).unwrap();
+    let ResolvedExpression::MethodCall(call) = return_value(&explicit.body.statements[0]) else {
+        panic!("explicit static field method call must use the same receiver carrier");
+    };
+    assert!(matches!(
+        call.receiver,
+        ResolvedObjectReceiver::StaticField { .. }
+    ));
 }
 
 #[test]
@@ -469,4 +500,110 @@ fn structural_slice_keeps_effectful_receiver_and_bounds_once_without_hidden_leng
     assert_eq!(dump.matches("MethodCall").count(), 1);
     assert!(!dump.contains("ArrayProjection"));
     assert!(!dump.contains("ArrayLength"));
+}
+
+#[test]
+fn normalizes_interface_brackets_to_exact_declared_requirements() {
+    let output = resolve_text(concat!(
+        "interface Sequence {\n",
+        "  fn index_get(key: bool) -> i64;\n",
+        "  mut fn index_set(key: bool, replacement: u8) -> unit;\n",
+        "  fn slice_get(start: i64?, end: i64?) -> bool;\n",
+        "  mut fn slice_set(start: i64?, end: i64?, replacement: u8) -> unit;\n",
+        "}\n",
+        "fn read_index(ref value: Sequence) -> i64 { return value[true]; }\n",
+        "fn write_index(mut ref value: Sequence) -> unit { value[false] = 1u8; }\n",
+        "fn read_slice(ref value: Sequence) -> bool { return value[:]; }\n",
+        "fn write_slice(mut ref value: Sequence) -> unit { value[1:] = 2u8; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    for (function, requirement, assignment) in
+        [(0, 0, false), (1, 1, true), (2, 2, false), (3, 3, true)]
+    {
+        let definition = output
+            .program
+            .definitions
+            .get(FunctionId::new(function))
+            .unwrap();
+        let expression = if assignment {
+            let ResolvedStatement::Expression(statement) = &definition.body.statements[0] else {
+                panic!("interface bracket write must normalize to a call statement");
+            };
+            &statement.expression
+        } else {
+            return_value(&definition.body.statements[0])
+        };
+        let ResolvedExpression::InterfaceCall(call) = expression else {
+            panic!("interface bracket must normalize to an interface call");
+        };
+        assert_eq!(call.interface, InterfaceId::new(0));
+        assert_eq!(
+            call.requirement,
+            InterfaceRequirementId::new(InterfaceId::new(0), requirement)
+        );
+        assert!(matches!(
+            call.receiver,
+            ResolvedInterfaceReceiver::Binding { .. }
+        ));
+    }
+}
+
+#[test]
+fn supports_shared_interface_arrow_and_star_bracket_receivers() {
+    let output = resolve_text(concat!(
+        "interface Sequence { fn index_get(key: i64) -> i64; fn slice_get(start: i64?, end: i64?) -> i64; }\n",
+        "fn arrow(owner: shared Sequence) -> i64 { return owner->[0]; }\n",
+        "fn star(owner: shared Sequence) -> i64 { return (*owner)[:]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    for function in 0..=1 {
+        let definition = output
+            .program
+            .definitions
+            .get(FunctionId::new(function))
+            .unwrap();
+        let ResolvedExpression::InterfaceCall(call) = return_value(&definition.body.statements[0])
+        else {
+            panic!("shared interface bracket must normalize to an interface call");
+        };
+        assert!(matches!(
+            call.receiver,
+            ResolvedInterfaceReceiver::Dereference(_)
+        ));
+    }
+}
+
+#[test]
+fn validates_interface_protocol_requirements_before_call_checking() {
+    let cases = [
+        (
+            "interface Bad { mut fn index_get(key: i64) -> i64; } fn use(ref value: Bad) -> i64 { return value[0]; } fn main() -> i64 { return 0; }",
+            "index_get",
+        ),
+        (
+            "interface Bad { fn index_set(key: i64, value: i64) -> unit; } fn use(mut ref value: Bad) -> unit { value[0] = 1; } fn main() -> i64 { return 0; }",
+            "index_set",
+        ),
+        (
+            "interface Bad { fn slice_get(start: i64, end: i64?) -> i64; } fn use(ref value: Bad) -> i64 { return value[:]; } fn main() -> i64 { return 0; }",
+            "slice_get",
+        ),
+        (
+            "interface Bad { mut fn slice_set(start: i64?, end: i64?, value: i64) -> i64; } fn use(mut ref value: Bad) -> unit { value[:] = 1; } fn main() -> i64 { return 0; }",
+            "slice_set",
+        ),
+    ];
+    for (source, protocol) in cases {
+        let output = resolve_text(source);
+        assert!(
+            output.diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == INVALID_INDEX_PROTOCOL && diagnostic.message.contains(protocol)
+            }),
+            "{:?}",
+            output.diagnostics
+        );
+    }
 }

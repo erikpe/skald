@@ -144,7 +144,9 @@ impl CheckedObjectViewSource {
     pub(super) fn exact_dynamic_class(&self) -> Option<crate::identity::ClassId> {
         match self {
             Self::Class {
-                origin: HirObjectOrigin::Exact { dynamic_class, .. },
+                origin:
+                    HirObjectOrigin::Exact { dynamic_class, .. }
+                    | HirObjectOrigin::Static { dynamic_class, .. },
                 ..
             } => Some(*dynamic_class),
             Self::Class {
@@ -1366,6 +1368,7 @@ fn forwarded_object_view(
 fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {
     match origin {
         HirObjectOrigin::Exact { complete, .. } => complete.path.span = span,
+        HirObjectOrigin::Static { place, .. } => place.span = span,
         HirObjectOrigin::Forwarded {
             span: origin_span, ..
         } => *origin_span = span,

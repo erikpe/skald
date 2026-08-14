@@ -1,14 +1,13 @@
 # Structural Indexing and Slicing Compiler Contract
 
-Status: **frozen design; neutral source AST and structural class indexing and
-slicing implemented**.
+Status: **frozen design; neutral source AST and structural class/interface
+indexing and slicing implemented**.
 
 This document owns the compiler representation and phase boundaries for the
 frozen [structural indexing and slicing language contract](../language/INDEXING_AND_SLICING.md).
 The source AST preserves every bracket projection with type-neutral
 vocabulary. Resolution now retains intrinsic arrays or normalizes eligible
-class bracket uses to ordinary resolved method calls. Interface-requirement
-selection remains pending. The
+class and interface bracket uses to ordinary resolved calls. The
 [status matrix](../language/STATUS.md) is authoritative for availability.
 
 ## Responsibility split
@@ -65,20 +64,20 @@ becomes an ordinary unit-call statement without selecting a getter.
 
 ### Current implementation boundary
 
-Exact-class index and slice reads and writes are implemented, including
-inherited and private-in-owner selection, closed specializations, produced
-read-only receivers, and explicit shared-class arrows. The selector classifies
-arrays, classes, interfaces, explicit shared arrows, and unsupported receivers
-in one resolver concern. Arrays keep `ResolvedArrayProjection` and
-`ResolvedArrayAssignment`; accepted class brackets become
-`ResolvedMethodCall`, with assignment represented as an ordinary expression
-statement returning `unit`. Slice omissions become resolved absent operands;
-ordinary call checking turns those into typed optional `none` arguments and
-injects each supplied `i64` bound once.
+Class and interface index and slice reads and writes are implemented, including
+inherited and private-in-owner class selection, virtual overrides, interface
+witness dispatch, closed specializations, produced read-only receivers,
+class-valued fields and statics, checked views, and explicit shared class or
+interface crossing. The selector classifies arrays, classes, interfaces,
+explicit shared arrows, and unsupported receivers in one resolver concern.
+Arrays keep `ResolvedArrayProjection` and `ResolvedArrayAssignment`; accepted
+class brackets become `ResolvedMethodCall`, and accepted interface brackets
+become `ResolvedInterfaceCall`. Assignments are ordinary expression statements
+returning `unit`. Slice omissions become resolved absent operands; ordinary
+call checking turns those into typed optional `none` arguments and injects
+each supplied `i64` bound once.
 
-Interface classifications currently remain on the pre-existing rejected
-projection path until interface-call normalization lands. Protocol shape
-failures use `RES049`;
+Protocol shape failures use `RES049`;
 ordinary privacy, receiver access, argument mode, and type failures continue
 to use their existing diagnostics.
 

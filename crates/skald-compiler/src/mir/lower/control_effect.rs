@@ -263,6 +263,7 @@ fn view_source_contains_control_effect(source: &HirViewSource) -> bool {
     match source {
         HirViewSource::Produced { producer, .. } => producer_contains_control_effect(producer),
         HirViewSource::Place(_)
+        | HirViewSource::Static { .. }
         | HirViewSource::Forwarded { .. }
         | HirViewSource::Shared { .. } => false,
         HirViewSource::ArrayElement(_) => true,

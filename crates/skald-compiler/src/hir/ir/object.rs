@@ -367,6 +367,11 @@ pub enum HirObjectOrigin {
         complete: HirObjectPlace,
         dynamic_class: ClassId,
     },
+    /// A receiver-free exact object stored in a mutable static slot.
+    Static {
+        place: super::HirStaticPlace,
+        dynamic_class: ClassId,
+    },
     /// A call-scoped alias or method receiver carrying runtime complete-object
     /// and dynamic-class metadata from its caller.
     Forwarded {
@@ -511,6 +516,11 @@ pub enum HirCheckedObjectViewKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirViewSource {
     Place(HirObjectPlace),
+    /// An exact object selected from receiver-free static storage.
+    Static {
+        place: super::HirStaticPlace,
+        projections: Vec<crate::object_path::ObjectProjection>,
+    },
     /// An exact object selected from checked array storage. The element
     /// carrier preserves its owner anchor and bounds-checking semantics.
     ArrayElement(Box<super::HirArrayElementPlace>),

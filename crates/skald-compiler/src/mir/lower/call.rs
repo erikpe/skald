@@ -592,6 +592,9 @@ impl BodyLowerer<'_> {
         };
         let source = match &view.source {
             HirViewSource::Place(place) => self.lower_object_place(place),
+            HirViewSource::Static { place, projections } => projections
+                .iter()
+                .fold(MirPlace::static_field(place.field), lower_projection),
             HirViewSource::ArrayElement(element) => {
                 self.lower_array_alias_element_place(element, element.receiver.access)
             }
@@ -749,6 +752,7 @@ impl BodyLowerer<'_> {
         let direct_static_source = matches!(
             checked.view.source,
             HirViewSource::Place(_)
+                | HirViewSource::Static { .. }
                 | HirViewSource::ArrayElement(_)
                 | HirViewSource::Produced { .. }
         );
@@ -843,6 +847,13 @@ impl BodyLowerer<'_> {
                 dynamic_class,
             } => MirObjectOrigin::Exact {
                 complete: self.lower_object_place(complete),
+                dynamic_class: *dynamic_class,
+            },
+            HirObjectOrigin::Static {
+                place,
+                dynamic_class,
+            } => MirObjectOrigin::Exact {
+                complete: MirPlace::static_field(place.field),
                 dynamic_class: *dynamic_class,
             },
             HirObjectOrigin::Forwarded {

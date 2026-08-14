@@ -2,7 +2,8 @@ use super::*;
 use crate::{
     identity::{
         BindingId, CallableId, ClassId, ClassTemplateId, CopyAssignmentId, CopyConstructorId,
-        DestructorId, FunctionId, InitializerId, LocalId, MethodId, ParameterId, TypeParameterId,
+        DestructorId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId,
+        MethodId, ParameterId, TypeParameterId,
     },
     lexer::lex,
     literal::{IntegerRadix, NumericLiteralKind},

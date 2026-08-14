@@ -7,9 +7,9 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
-is **in progress**; IS0 is complete and IS1 is next. It implements the frozen
-class/interface bracket protocol while preserving built-in array precedence
-and an unchanged lower-IR and runtime boundary.
+is **in progress**; IS0 through IS3 are complete and IS4 is next. It implements
+the frozen class/interface bracket protocol while preserving built-in array
+precedence and an unchanged lower-IR and runtime boundary.
 
 ## Planned
 

@@ -215,6 +215,47 @@ impl CallableChecker<'_, '_> {
                 },
             });
         }
+        if let ResolvedObjectReceiver::StaticField {
+            field,
+            projections,
+            class,
+            span,
+        } = receiver
+        {
+            let declaration = self
+                .program
+                .static_field(*field)
+                .expect("resolved static receiver must reference a static field");
+            let Type::Class(dynamic_class) = lower_type(self.program, &declaration.type_syntax)
+            else {
+                unreachable!("resolved static object receiver must retain an exact class type")
+            };
+            let place = crate::hir::HirStaticPlace {
+                field: *field,
+                span: *span,
+            };
+            let origin = HirObjectOrigin::Static {
+                place,
+                dynamic_class,
+            };
+            let view = HirObjectView {
+                source: crate::hir::HirViewSource::Static {
+                    place,
+                    projections: projections.clone(),
+                },
+                origin: Box::new(origin.clone()),
+                target: crate::hir::HirViewTarget::Class(*class),
+                access: HirAccess::Mutable,
+                span: *span,
+            };
+            return Some(CheckedObjectReceiver {
+                origin,
+                carrier: CheckedReceiverCarrier::View {
+                    view: Box::new(view),
+                    inspection_place: None,
+                },
+            });
+        }
         if let ResolvedObjectReceiver::Dereference {
             dereference,
             projections,

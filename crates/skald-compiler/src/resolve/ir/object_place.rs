@@ -1,7 +1,7 @@
 //! Object paths selected during name resolution.
 
 use crate::{
-    identity::{BindingId, ClassId, FieldId},
+    identity::{BindingId, ClassId, FieldId, StaticFieldId},
     object_path::{ObjectPath, ObjectProjection},
     source::Span,
 };
@@ -17,6 +17,12 @@ pub type ResolvedObjectPlace = ObjectPath;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedObjectReceiver {
     BindingPath(ResolvedObjectPlace),
+    StaticField {
+        field: StaticFieldId,
+        projections: Vec<ObjectProjection>,
+        class: ClassId,
+        span: Span,
+    },
     CastRelative {
         cast: Box<ResolvedObjectCastExpr>,
         projections: Vec<ObjectProjection>,
@@ -70,6 +76,15 @@ impl ResolvedObjectReceiver {
         }
     }
 
+    pub fn from_static_field(field: StaticFieldId, class: ClassId, span: Span) -> Self {
+        Self::StaticField {
+            field,
+            projections: Vec::new(),
+            class,
+            span,
+        }
+    }
+
     pub fn from_optional_payload(unwrap: ResolvedUnwrapExpr, class: ClassId) -> Self {
         let span = unwrap.span;
         Self::OptionalPayload {
@@ -94,6 +109,7 @@ impl ResolvedObjectReceiver {
     pub const fn class(&self) -> ClassId {
         match self {
             Self::BindingPath(path) => path.class,
+            Self::StaticField { class, .. } => *class,
             Self::CastRelative { class, .. } => *class,
             Self::Dereference { class, .. } => *class,
             Self::OptionalPayload { class, .. } => *class,
@@ -105,6 +121,7 @@ impl ResolvedObjectReceiver {
     pub const fn span(&self) -> Span {
         match self {
             Self::BindingPath(path) => path.span,
+            Self::StaticField { span, .. } => *span,
             Self::CastRelative { span, .. } => *span,
             Self::Dereference { span, .. } => *span,
             Self::OptionalPayload { span, .. } => *span,
@@ -116,7 +133,8 @@ impl ResolvedObjectReceiver {
     pub const fn binding_path(&self) -> Option<&ResolvedObjectPlace> {
         match self {
             Self::BindingPath(path) => Some(path),
-            Self::CastRelative { .. }
+            Self::StaticField { .. }
+            | Self::CastRelative { .. }
             | Self::Dereference { .. }
             | Self::OptionalPayload { .. }
             | Self::ArrayElement { .. }
@@ -127,7 +145,8 @@ impl ResolvedObjectReceiver {
     pub const fn root(&self) -> Option<BindingId> {
         match self {
             Self::BindingPath(path) => Some(path.root),
-            Self::CastRelative { .. }
+            Self::StaticField { .. }
+            | Self::CastRelative { .. }
             | Self::Dereference { .. }
             | Self::OptionalPayload { .. }
             | Self::ArrayElement { .. }
@@ -138,6 +157,7 @@ impl ResolvedObjectReceiver {
     pub fn projections(&self) -> &[ObjectProjection] {
         match self {
             Self::BindingPath(path) => &path.projections,
+            Self::StaticField { projections, .. } => projections,
             Self::CastRelative { projections, .. } => projections,
             Self::Dereference { projections, .. } => projections,
             Self::OptionalPayload { projections, .. } => projections,
@@ -148,7 +168,7 @@ impl ResolvedObjectReceiver {
 
     pub const fn cast(&self) -> Option<&ResolvedObjectCastExpr> {
         match self {
-            Self::BindingPath(_) => None,
+            Self::BindingPath(_) | Self::StaticField { .. } => None,
             Self::CastRelative { cast, .. } => Some(cast),
             Self::Dereference { .. }
             | Self::OptionalPayload { .. }
@@ -160,6 +180,17 @@ impl ResolvedObjectReceiver {
     pub fn with_span(self, span: Span) -> Self {
         match self {
             Self::BindingPath(path) => Self::BindingPath(path.with_span(span)),
+            Self::StaticField {
+                field,
+                projections,
+                class,
+                ..
+            } => Self::StaticField {
+                field,
+                projections,
+                class,
+                span,
+            },
             Self::CastRelative {
                 cast,
                 projections,
@@ -223,6 +254,19 @@ impl ResolvedObjectReceiver {
     pub fn project_base(self, base: ClassId, span: Span) -> Self {
         match self {
             Self::BindingPath(path) => Self::BindingPath(path.project_base(base, span)),
+            Self::StaticField {
+                field,
+                mut projections,
+                ..
+            } => {
+                projections.push(ObjectProjection::Base(base));
+                Self::StaticField {
+                    field,
+                    projections,
+                    class: base,
+                    span,
+                }
+            }
             Self::CastRelative {
                 cast,
                 mut projections,
@@ -296,6 +340,21 @@ impl ResolvedObjectReceiver {
     pub fn project_field(self, field: FieldId, class: ClassId, span: Span) -> Self {
         match self {
             Self::BindingPath(path) => Self::BindingPath(path.project_field(field, class, span)),
+            Self::StaticField {
+                field: root,
+                mut projections,
+                class: receiver_class,
+                ..
+            } => {
+                assert_eq!(field.class(), receiver_class);
+                projections.push(ObjectProjection::Field(field));
+                Self::StaticField {
+                    field: root,
+                    projections,
+                    class,
+                    span,
+                }
+            }
             Self::CastRelative {
                 cast,
                 mut projections,

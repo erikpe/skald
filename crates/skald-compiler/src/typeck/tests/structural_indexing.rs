@@ -313,3 +313,288 @@ fn supplied_slice_bounds_are_injected_once_as_ordinary_call_arguments() {
         assert!(matches!(bound.kind, HirExpressionKind::DirectCall { .. }));
     }
 }
+
+#[test]
+fn interface_brackets_reuse_interface_calls_for_all_four_operations() {
+    let output = check_text(concat!(
+        "interface Sequence {\n",
+        "  fn index_get(key: i64) -> i64;\n",
+        "  mut fn index_set(key: i64, replacement: i64) -> unit;\n",
+        "  fn slice_get(start: i64?, end: i64?) -> i64;\n",
+        "  mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit;\n",
+        "}\n",
+        "fn use(mut ref value: Sequence) -> i64 {\n",
+        "  value[0] = 1;\n",
+        "  value[:] = 2;\n",
+        "  return value[0] + value[:];\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
+
+    for (statement, requirement) in definition.body.statements[..2].iter().zip([1, 3]) {
+        let HirStatement::Call(statement) = statement else {
+            panic!("interface bracket assignment must be a call statement");
+        };
+        let HirExpressionKind::InterfaceCall { target, .. } = &statement.call.kind else {
+            panic!("interface bracket assignment must remain an interface call");
+        };
+        assert_eq!(target.requirement.index(), requirement);
+    }
+
+    let HirExpressionKind::Binary { left, right, .. } = &returned_expression(definition).kind
+    else {
+        panic!("expected two interface bracket reads");
+    };
+    for (expression, requirement) in [(left, 0), (right, 2)] {
+        let HirExpressionKind::InterfaceCall { target, .. } = &expression.kind else {
+            panic!("interface bracket read must remain an interface call");
+        };
+        assert_eq!(target.requirement.index(), requirement);
+    }
+
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("InterfaceCall").count(), 4);
+    assert!(!dump.contains("ArrayElement"));
+    assert!(!dump.contains("ArraySlice"));
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("structural interface calls must lower and verify");
+}
+
+#[test]
+fn structural_brackets_preserve_virtual_and_private_dispatch_selection() {
+    let output = check_text(concat!(
+        "class Root {\n",
+        "  init() {}\n",
+        "  virtual fn index_get(key: i64) -> i64 { return 1; }\n",
+        "  virtual fn slice_get(start: i64?, end: i64?) -> i64 { return 2; }\n",
+        "}\n",
+        "class Leaf extends Root {\n",
+        "  init() { super(); }\n",
+        "  override fn index_get(key: i64) -> i64 { return 3; }\n",
+        "  override fn slice_get(start: i64?, end: i64?) -> i64 { return 4; }\n",
+        "}\n",
+        "class Secret {\n",
+        "  init() {}\n",
+        "  private fn index_get(key: i64) -> i64 { return key; }\n",
+        "  fn read() -> i64 { return self[5]; }\n",
+        "}\n",
+        "fn through(ref value: Root) -> i64 { return value[0] + value[:]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let through = hir.definitions.get(FunctionId::new(0)).unwrap();
+    let HirExpressionKind::Binary { left, right, .. } = &returned_expression(through).kind else {
+        panic!("expected virtual index and slice reads");
+    };
+    for expression in [left, right] {
+        assert!(matches!(
+            expression.kind,
+            HirExpressionKind::MethodCall {
+                target: crate::hir::HirMethodCallTarget::Virtual { .. },
+                ..
+            }
+        ));
+    }
+
+    let secret = hir
+        .class_definitions
+        .get(crate::identity::ClassId::new(2))
+        .unwrap()
+        .methods
+        .get(1)
+        .expect("private bracket caller method must exist");
+    let HirStatement::Return(returned) = &secret.body.statements[0] else {
+        panic!("private structural read must return its call");
+    };
+    let crate::hir::HirReturnValue::Scalar(expression) = returned.value.as_ref().unwrap() else {
+        panic!("private structural read must return a scalar");
+    };
+    assert!(matches!(
+        expression.kind,
+        HirExpressionKind::MethodCall {
+            target: crate::hir::HirMethodCallTarget::Direct(_),
+            ..
+        }
+    ));
+}
+
+#[test]
+fn class_brackets_support_fields_statics_checked_views_and_unwrapped_owners() {
+    let output = check_text(concat!(
+        "class Item {\n",
+        "  init() {}\n",
+        "  fn index_get(key: i64) -> i64 { return key; }\n",
+        "  mut fn index_set(key: i64, value: i64) -> unit {}\n",
+        "  fn slice_get(start: i64?, end: i64?) -> i64 { return 7; }\n",
+        "  mut fn slice_set(start: i64?, end: i64?, value: i64) -> unit {}\n",
+        "}\n",
+        "class Holder {\n",
+        "  item: Item;\n",
+        "  static current: Item = Item();\n",
+        "  init() { self.item = Item(); }\n",
+        "  mut fn through_self() -> i64 { self.item[0] = 1; return self.item[:]; }\n",
+        "}\n",
+        "fn field(mut ref holder: Holder) -> i64 { holder.item[:] = 1; return holder.item[2]; }\n",
+        "fn static_field() -> i64 { Holder.current[:] = 2; return Holder.current[3]; }\n",
+        "fn checked(ref value: Obj) -> i64 { return ((Item) value)[4]; }\n",
+        "fn optional(value: Item?) -> i64 { return value![:]; }\n",
+        "fn unwrapped(owner: (shared Item)?) -> i64 { return owner!->[5]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let static_read = returned_expression(hir.definitions.get(FunctionId::new(1)).unwrap());
+    let HirExpressionKind::MethodCall { receiver, .. } = &static_read.kind else {
+        panic!("static field bracket must remain a method call");
+    };
+    assert!(matches!(
+        receiver,
+        crate::hir::HirObjectReceiver::View { view, .. }
+            if matches!(view.source, crate::hir::HirViewSource::Static { .. })
+    ));
+
+    let checked = returned_expression(hir.definitions.get(FunctionId::new(2)).unwrap());
+    assert!(matches!(
+        checked.kind,
+        HirExpressionKind::MethodCall {
+            receiver: crate::hir::HirObjectReceiver::Checked { .. },
+            ..
+        }
+    ));
+    let optional = returned_expression(hir.definitions.get(FunctionId::new(3)).unwrap());
+    assert!(matches!(
+        optional.kind,
+        HirExpressionKind::MethodCall {
+            receiver: crate::hir::HirObjectReceiver::View { .. },
+            ..
+        }
+    ));
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("StaticMethodReceiver"), "{dump}");
+    let mir = crate::test_support::lower_hir_to_final_mir(&hir);
+    crate::mir::verify_mir(&mir).expect("all structural receiver forms must lower and verify");
+}
+
+#[test]
+fn shared_bracket_receivers_preserve_stable_and_anchored_sources_before_arguments() {
+    let output = check_text(concat!(
+        "class Item { init() {} fn index_get(key: i64) -> i64 { return key; } }\n",
+        "class Holder { owner: shared Item; init() { self.owner = new Item(); } }\n",
+        "fn effect() -> i64 { return 1; }\n",
+        "fn make() -> shared Item { return new Item(); }\n",
+        "fn stable(owner: shared Item) -> i64 { return owner->[effect()]; }\n",
+        "fn replaceable(ref holder: Holder) -> i64 { return holder.owner->[effect()]; }\n",
+        "fn produced() -> i64 { return make()->[effect()]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    for (function, anchored) in [(2, false), (3, true), (4, true)] {
+        let expression =
+            returned_expression(hir.definitions.get(FunctionId::new(function)).unwrap());
+        let HirExpressionKind::MethodCall {
+            receiver,
+            arguments,
+            ..
+        } = &expression.kind
+        else {
+            panic!("shared bracket must remain a method call");
+        };
+        match (receiver, anchored) {
+            (crate::hir::HirObjectReceiver::Place { .. }, false) => {}
+            (crate::hir::HirObjectReceiver::View { view, .. }, true) => assert!(matches!(
+                view.source,
+                crate::hir::HirViewSource::AnchoredShared { .. }
+            )),
+            _ => panic!("shared bracket receiver has the wrong stable/anchored carrier"),
+        }
+        assert!(matches!(
+            arguments[0],
+            crate::hir::HirCallArgument::Value(HirExpression {
+                kind: HirExpressionKind::DirectCall { .. },
+                ..
+            })
+        ));
+    }
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("stable and anchored shared brackets must verify");
+}
+
+#[test]
+fn rejects_raw_shared_and_produced_mutable_bracket_receivers() {
+    let raw = crate::test_support::resolve_source(concat!(
+        "class Item { init() {} fn index_get(key: i64) -> i64 { return key; } }\n",
+        "fn use(owner: shared Item) -> i64 { return owner[0]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(raw
+        .diagnostics
+        .iter()
+        .any(|diagnostic| { diagnostic.code == crate::resolve::IMPLICIT_SHARED_DEREFERENCE }));
+
+    let optional_raw = check_text(concat!(
+        "class Item { init() {} fn index_get(key: i64) -> i64 { return key; } }\n",
+        "fn use(owner: (shared Item)?) -> i64 { return owner->[0]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(optional_raw.hir.is_none());
+    assert!(
+        optional_raw
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.code == crate::typeck::INVALID_SHARED_CONVERSION }),
+        "{:?}",
+        optional_raw.diagnostics
+    );
+
+    for assignment in ["Item()[0] = 1;", "Item()[:] = 1;"] {
+        let output = check_text(&format!(
+            "class Item {{ init() {{}} mut fn index_set(key: i64, value: i64) -> unit {{}} mut fn slice_set(start: i64?, end: i64?, value: i64) -> unit {{}} }} fn use() -> unit {{ {assignment} }} fn main() -> i64 {{ return 0; }}"
+        ));
+        assert!(output.hir.is_none());
+        assert!(
+            output
+                .diagnostics
+                .iter()
+                .any(|diagnostic| { diagnostic.code == crate::typeck::READ_ONLY_RECEIVER }),
+            "{:?}",
+            output.diagnostics
+        );
+    }
+}
+
+#[test]
+fn checks_structural_slicing_on_a_closed_generic_class() {
+    let hir = check_generic_source(concat!(
+        "class Window<R, W> {\n",
+        "  result: R;\n",
+        "  init(result: R) { self.result = result; }\n",
+        "  fn slice_get(start: i64?, end: i64?) -> R { return self.result; }\n",
+        "  mut fn slice_set(start: i64?, end: i64?, replacement: W) -> unit {}\n",
+        "}\n",
+        "fn use(mut ref value: Window<bool, u8>) -> bool { value[:] = 1u8; return value[:]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let definition = hir
+        .definitions
+        .iter()
+        .find(|definition| {
+            hir.declarations
+                .get(definition.function)
+                .is_some_and(|declaration| declaration.name == "use")
+        })
+        .expect("closed generic structural slice function must exist");
+    assert!(matches!(
+        definition.body.statements[0],
+        HirStatement::Call(_)
+    ));
+    assert!(matches!(
+        returned_expression(definition).kind,
+        HirExpressionKind::MethodCall { .. }
+    ));
+}

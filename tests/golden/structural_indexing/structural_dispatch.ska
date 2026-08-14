@@ -1,0 +1,111 @@
+import std::io;
+
+interface Sequence {
+    fn index_get(key: i64) -> i64;
+    mut fn index_set(key: i64, replacement: i64) -> unit;
+    fn slice_get(start: i64?, end: i64?) -> i64;
+    mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit;
+}
+
+class Root implements Sequence {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn index_get(key: i64) -> i64 {
+        return self.value + key;
+    }
+
+    virtual mut fn index_set(key: i64, replacement: i64) -> unit {
+        self.value = replacement + key;
+    }
+
+    virtual fn slice_get(start: i64?, end: i64?) -> i64 {
+        return self.value + 100;
+    }
+
+    virtual mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit {
+        self.value = replacement + 200;
+    }
+}
+
+class Leaf extends Root {
+    init(value: i64) {
+        super(value);
+    }
+
+    override fn index_get(key: i64) -> i64 {
+        return self.value + key + 1000;
+    }
+
+    override mut fn index_set(key: i64, replacement: i64) -> unit {
+        self.value = replacement + key + 1000;
+    }
+
+    override fn slice_get(start: i64?, end: i64?) -> i64 {
+        return self.value + 2000;
+    }
+
+    override mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit {
+        self.value = replacement + 3000;
+    }
+}
+
+class State {
+    static root: Root = Root(9);
+
+    init() {}
+}
+
+fn through_root(ref value: Root) -> i64 {
+    return value[1] + value[:];
+}
+
+fn update_root(mut ref value: Root) -> unit {
+    value[2] = 10;
+    value[:] = 20;
+}
+
+fn through_interface(ref value: Sequence) -> i64 {
+    return value[1] + value[:];
+}
+
+fn update_interface(mut ref value: Sequence) -> unit {
+    value[3] = 7;
+    value[:] = 8;
+}
+
+fn through_shared(owner: shared Sequence) -> i64 {
+    return owner->[2] + owner->[:];
+}
+
+fn main() -> i64 {
+    var direct: Root = Root(10);
+    std::io::println_i64(direct[2]);
+    direct[3] = 20;
+    std::io::println_i64(direct[0]);
+    direct[:] = 30;
+    std::io::println_i64(direct[:]);
+    std::io::println_i64(Root(7)[1]);
+
+    std::io::println_i64(State.root[1]);
+    State.root[2] = 10;
+    std::io::println_i64(State.root[:]);
+
+    var leaf: Leaf = Leaf(5);
+    std::io::println_i64(through_root(leaf));
+    update_root(leaf);
+    std::io::println_i64(leaf[0]);
+    std::io::println_i64(through_interface(leaf));
+    update_interface(leaf);
+    std::io::println_i64(through_interface(leaf));
+
+    var owner: shared Leaf = new Leaf(4);
+    std::io::println_i64(through_shared(owner));
+    var interface_owner: shared Sequence = owner;
+    var maybe: (shared Sequence)? = interface_owner;
+    std::io::println_i64(maybe!->[1]);
+    return 0;
+}

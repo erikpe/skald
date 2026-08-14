@@ -4,8 +4,12 @@ use super::*;
 
 pub(super) enum BracketReceiver {
     Intrinsic(ResolvedExpression),
-    Structural(ResolvedObjectReceiver),
-    Interface(ResolvedExpression),
+    Class(ResolvedObjectReceiver),
+    Interface {
+        receiver: ResolvedInterfaceReceiver,
+        interface: InterfaceId,
+        receiver_span: Span,
+    },
     Unsupported(ResolvedExpression),
     Diagnosed,
 }
@@ -30,7 +34,7 @@ impl CallableResolver<'_, '_> {
                 syntax::BracketProjectionOperator::Ordinary { .. },
                 Some(ResolvedTypeKind::Class(class)),
             ) => match self.object_receiver_from_resolved_expression(receiver, class) {
-                Some(receiver) => BracketReceiver::Structural(receiver),
+                Some(receiver) => BracketReceiver::Class(receiver),
                 None => BracketReceiver::Diagnosed,
             },
             (
@@ -38,7 +42,7 @@ impl CallableResolver<'_, '_> {
                 Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Class(class))),
             ) => {
                 let span = self.cover(receiver.span(), arrow_span);
-                BracketReceiver::Structural(ResolvedObjectReceiver::Dereference {
+                BracketReceiver::Class(ResolvedObjectReceiver::Dereference {
                     dereference: Box::new(ResolvedDereferenceExpr {
                         source: Box::new(receiver),
                         target: ResolvedSharedTarget::Class(class),
@@ -53,21 +57,92 @@ impl CallableResolver<'_, '_> {
             }
             (
                 syntax::BracketProjectionOperator::Ordinary { .. },
-                Some(ResolvedTypeKind::Interface(_)),
-            )
-            | (
-                syntax::BracketProjectionOperator::Shared { .. },
-                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Interface(_))),
-            ) => BracketReceiver::Interface(receiver),
+                Some(ResolvedTypeKind::Interface(interface)),
+            ) => match self.interface_receiver_from_resolved_expression(receiver, interface) {
+                Some((receiver, receiver_span)) => BracketReceiver::Interface {
+                    receiver,
+                    interface,
+                    receiver_span,
+                },
+                None => BracketReceiver::Diagnosed,
+            },
+            (
+                syntax::BracketProjectionOperator::Shared { arrow_span, .. },
+                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Interface(interface))),
+            ) => {
+                let span = self.cover(receiver.span(), arrow_span);
+                BracketReceiver::Interface {
+                    receiver: ResolvedInterfaceReceiver::Dereference(Box::new(
+                        ResolvedDereferenceExpr {
+                            source: Box::new(receiver),
+                            target: ResolvedSharedTarget::Interface(interface),
+                            operator: ResolvedDereferenceOperator::Arrow,
+                            operator_span: arrow_span,
+                            span,
+                        },
+                    )),
+                    interface,
+                    receiver_span: span,
+                }
+            }
             (
                 syntax::BracketProjectionOperator::Ordinary { .. },
-                Some(ResolvedTypeKind::Shared(target @ ResolvedSharedTarget::Class(_))),
+                Some(ResolvedTypeKind::Shared(
+                    target @ (ResolvedSharedTarget::Class(_) | ResolvedSharedTarget::Interface(_)),
+                )),
             ) => {
                 self.report_implicit_shared_member_access(receiver.span(), target);
                 BracketReceiver::Diagnosed
             }
             _ => BracketReceiver::Unsupported(receiver),
         }
+    }
+
+    fn interface_receiver_from_resolved_expression(
+        &mut self,
+        expression: ResolvedExpression,
+        interface: InterfaceId,
+    ) -> Option<(ResolvedInterfaceReceiver, Span)> {
+        let span = expression.span();
+        let receiver = match expression {
+            ResolvedExpression::Binding(binding) => ResolvedInterfaceReceiver::Binding {
+                binding: binding.binding,
+                span: binding.span,
+            },
+            ResolvedExpression::Grouped(grouped) => {
+                let (receiver, _) = self
+                    .interface_receiver_from_resolved_expression(*grouped.expression, interface)?;
+                return Some((receiver, grouped.span));
+            }
+            ResolvedExpression::ObjectCast(cast)
+                if cast.target.kind == ResolvedTypeKind::Interface(interface)
+                    && cast.target_mode == ResolvedObjectCastTargetMode::Plain =>
+            {
+                ResolvedInterfaceReceiver::Cast(Box::new(cast))
+            }
+            ResolvedExpression::Dereference(dereference)
+                if dereference.target == ResolvedSharedTarget::Interface(interface) =>
+            {
+                ResolvedInterfaceReceiver::Dereference(Box::new(dereference))
+            }
+            ResolvedExpression::Unwrap(unwrap)
+                if self.resolved_optional_box_object_leaf(&unwrap)
+                    == Some(ResolvedObjectTarget::Interface(interface)) =>
+            {
+                ResolvedInterfaceReceiver::OptionalBoxPayload(Box::new(unwrap))
+            }
+            unsupported => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INDEX_PROTOCOL,
+                        "this interface expression cannot be used as a structural bracket receiver",
+                    )
+                    .with_primary_label(unsupported.span(), "unsupported interface receiver form"),
+                );
+                return None;
+            }
+        };
+        Some((receiver, span))
     }
 
     fn object_receiver_from_resolved_expression(
@@ -112,17 +187,7 @@ impl CallableResolver<'_, '_> {
                     .project_field(access.field, class, access.span)
             }
             ResolvedExpression::StaticFieldAccess(access) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_INDEX_PROTOCOL,
-                        "a static field cannot be used directly as a structural index receiver",
-                    )
-                    .with_primary_label(
-                        access.span,
-                        "store this class value in a local before indexing it",
-                    ),
-                );
-                return None;
+                return self.object_receiver_from_static_field_access(access);
             }
             producer @ (ResolvedExpression::StringLiteral(_)
             | ResolvedExpression::DirectCall(_)

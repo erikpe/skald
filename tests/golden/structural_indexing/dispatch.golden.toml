@@ -1,0 +1,9 @@
+schema = 1
+
+[[test]]
+name = "dispatch"
+mode = "run"
+source = "structural_dispatch.ska"
+[[test.run]]
+name = "direct_virtual_interface_and_shared_calls"
+expect = { stdout = { file = "data/structural_dispatch.stdout" } }

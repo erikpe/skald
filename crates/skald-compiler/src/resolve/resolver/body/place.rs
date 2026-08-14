@@ -1,5 +1,6 @@
 //! Recursive object-place resolution and projected-member diagnostics.
 
+use super::call::ClassReceiver;
 use super::*;
 
 impl CallableResolver<'_, '_> {
@@ -150,6 +151,21 @@ impl CallableResolver<'_, '_> {
                 Some(ResolvedObjectReceiver::from_produced(producer, class))
             }
             syntax::Expression::MemberAccess(member) => {
+                if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
+                    match self.class_receiver(&member.receiver) {
+                        ClassReceiver::Class(_) => {
+                            let resolved = self.resolve_expression(expression)?;
+                            let ResolvedExpression::StaticFieldAccess(access) = resolved else {
+                                unreachable!(
+                                    "class-selected object receiver must be a static field"
+                                )
+                            };
+                            return self.object_receiver_from_static_field_access(access);
+                        }
+                        ClassReceiver::Diagnosed => return None,
+                        ClassReceiver::NotClass => {}
+                    }
+                }
                 let receiver = self.resolve_member_object_receiver(member)?;
                 let selected = self.select_member(receiver.class(), &member.member)?;
                 let receiver =
@@ -192,10 +208,48 @@ impl CallableResolver<'_, '_> {
                     }
                 }
             }
+            syntax::Expression::GenericStaticSelection(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let ResolvedExpression::StaticFieldAccess(access) = resolved else {
+                    unreachable!("generic static object receiver must be a static field")
+                };
+                self.object_receiver_from_static_field_access(access)
+            }
             _ => self
                 .resolve_object_place(expression)
                 .map(ResolvedObjectReceiver::from_place),
         }
+    }
+
+    pub(super) fn object_receiver_from_static_field_access(
+        &mut self,
+        access: ResolvedStaticFieldAccessExpr,
+    ) -> Option<ResolvedObjectReceiver> {
+        let declaration = self
+            .environment
+            .classes
+            .get(access.field.class())
+            .and_then(|class| class.static_field(access.field))
+            .expect("resolved static field access must retain declaration metadata");
+        let ResolvedTypeKind::Class(class) = declaration.type_syntax.kind else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_MEMBER_SELECTION,
+                    format!(
+                        "static field `{}` does not contain an inline class object",
+                        declaration.name
+                    ),
+                )
+                .with_primary_label(access.span, "expected an exact-class static field")
+                .with_secondary_label(declaration.type_syntax.span, "field type declared here"),
+            );
+            return None;
+        };
+        Some(ResolvedObjectReceiver::from_static_field(
+            access.field,
+            class,
+            access.span,
+        ))
     }
 
     pub(super) fn resolve_member_object_receiver(

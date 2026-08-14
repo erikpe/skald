@@ -1599,6 +1599,26 @@ impl<'program> ResolvedDumper<'program> {
     fn object_receiver(&mut self, receiver: &ResolvedObjectReceiver) {
         match receiver {
             ResolvedObjectReceiver::BindingPath(path) => self.object_place(path),
+            ResolvedObjectReceiver::StaticField {
+                field,
+                projections,
+                class,
+                span,
+            } => {
+                self.line(&format!("StaticFieldReceiver {field} class {class}"), *span);
+                self.indented(|dumper| {
+                    for projection in projections {
+                        match projection {
+                            crate::object_path::ObjectProjection::Base(base) => {
+                                dumper.heading(&format!("BaseProjection {base}"));
+                            }
+                            crate::object_path::ObjectProjection::Field(field) => {
+                                dumper.heading(&format!("FieldProjection {field}"));
+                            }
+                        }
+                    }
+                });
+            }
             ResolvedObjectReceiver::CastRelative {
                 cast,
                 projections,

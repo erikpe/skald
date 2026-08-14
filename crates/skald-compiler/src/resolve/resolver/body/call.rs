@@ -328,12 +328,17 @@ impl CallableResolver<'_, '_> {
                 Some(ResolvedTypeKind::Class(literal.class))
             }
             ResolvedExpression::Binding(binding) => self
-                .scopes
-                .iter()
-                .rev()
-                .flat_map(|scope| scope.values())
-                .find(|symbol| symbol.id == binding.binding)
-                .map(|symbol| symbol.ty),
+                .receiver_class
+                .filter(|_| binding.binding == BindingId::Receiver(self.callable))
+                .map(ResolvedTypeKind::Class)
+                .or_else(|| {
+                    self.scopes
+                        .iter()
+                        .rev()
+                        .flat_map(|scope| scope.values())
+                        .find(|symbol| symbol.id == binding.binding)
+                        .map(|symbol| symbol.ty)
+                }),
             ResolvedExpression::Dereference(dereference) => Some(match dereference.target {
                 ResolvedSharedTarget::Obj => ResolvedTypeKind::Obj,
                 ResolvedSharedTarget::Class(class) => ResolvedTypeKind::Class(class),
@@ -369,6 +374,19 @@ impl CallableResolver<'_, '_> {
             ResolvedExpression::Grouped(grouped) => {
                 self.resolved_expression_type(&grouped.expression)
             }
+            ResolvedExpression::ObjectCast(cast) => Some(match cast.target_mode {
+                ResolvedObjectCastTargetMode::Plain => cast.target.kind,
+                ResolvedObjectCastTargetMode::Shared { .. } => {
+                    ResolvedTypeKind::Shared(match cast.target.kind {
+                        ResolvedTypeKind::Class(class) => ResolvedSharedTarget::Class(class),
+                        ResolvedTypeKind::Interface(interface) => {
+                            ResolvedSharedTarget::Interface(interface)
+                        }
+                        ResolvedTypeKind::Obj => ResolvedSharedTarget::Obj,
+                        _ => return None,
+                    })
+                }
+            }),
             ResolvedExpression::ArrayConstruction(construction) => {
                 let ResolvedTypeKind::Array(array) = construction.array_type.kind else {
                     return None;

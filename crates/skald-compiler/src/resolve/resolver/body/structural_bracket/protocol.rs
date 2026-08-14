@@ -7,8 +7,6 @@ const INDEX_SET: &str = "index_set";
 const SLICE_GET: &str = "slice_get";
 const SLICE_SET: &str = "slice_set";
 
-// Keep the complete structural bracket protocol vocabulary together even
-// while indexing and slicing land in separate implementation stages.
 const _: [&str; 4] = [INDEX_GET, INDEX_SET, SLICE_GET, SLICE_SET];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -86,99 +84,26 @@ impl CallableResolver<'_, '_> {
             .expect("selected protocol method must retain declaration metadata")
             .clone();
 
-        let invalid_shape = match protocol {
-            StructuralBracketProtocol::IndexGet => match declaration.kind {
-                ResolvedMethodKind::Static => Some("`index_get` must be an instance method"),
-                ResolvedMethodKind::Instance {
-                    receiver_access: ResolvedReceiverAccess::Mutable,
-                    ..
-                } => Some("`index_get` must have a read-only receiver"),
-                ResolvedMethodKind::Instance { .. } if declaration.parameters.len() != 1 => {
-                    Some("`index_get` must take exactly one key parameter")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if matches!(
-                        declaration.parameters[0].binding_mode,
-                        ResolvedParameterBindingMode::MutableAlias { .. }
-                    ) =>
-                {
-                    Some("`index_get` key parameter cannot be a mutable alias")
-                }
-                ResolvedMethodKind::Instance { .. } => None,
-            },
-            StructuralBracketProtocol::IndexSet => match declaration.kind {
-                ResolvedMethodKind::Static => Some("`index_set` must be an instance method"),
-                ResolvedMethodKind::Instance {
-                    receiver_access: ResolvedReceiverAccess::ReadOnly,
-                    ..
-                } => Some("`index_set` must have a mutable receiver"),
-                ResolvedMethodKind::Instance { .. } if declaration.parameters.len() != 2 => {
-                    Some("`index_set` must take exactly a key and replacement parameter")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if declaration.parameters.iter().any(|parameter| {
-                        matches!(
-                            parameter.binding_mode,
-                            ResolvedParameterBindingMode::MutableAlias { .. }
-                        )
-                    }) =>
-                {
-                    Some("`index_set` parameters cannot be mutable aliases")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if declaration.return_type.kind != ResolvedTypeKind::Unit =>
-                {
-                    Some("`index_set` must return exactly `unit`")
-                }
-                ResolvedMethodKind::Instance { .. } => None,
-            },
-            StructuralBracketProtocol::SliceGet => match declaration.kind {
-                ResolvedMethodKind::Static => Some("`slice_get` must be an instance method"),
-                ResolvedMethodKind::Instance {
-                    receiver_access: ResolvedReceiverAccess::Mutable,
-                    ..
-                } => Some("`slice_get` must have a read-only receiver"),
-                ResolvedMethodKind::Instance { .. } if declaration.parameters.len() != 2 => {
-                    Some("`slice_get` must take exactly start and end parameters")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if !self.has_exact_slice_bound_parameters(&declaration.parameters[..2]) =>
-                {
-                    Some("`slice_get` bounds must be exact value parameters of type `i64?`")
-                }
-                ResolvedMethodKind::Instance { .. } => None,
-            },
-            StructuralBracketProtocol::SliceSet => match declaration.kind {
-                ResolvedMethodKind::Static => Some("`slice_set` must be an instance method"),
-                ResolvedMethodKind::Instance {
-                    receiver_access: ResolvedReceiverAccess::ReadOnly,
-                    ..
-                } => Some("`slice_set` must have a mutable receiver"),
-                ResolvedMethodKind::Instance { .. } if declaration.parameters.len() != 3 => {
-                    Some("`slice_set` must take start, end, and replacement parameters")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if !self.has_exact_slice_bound_parameters(&declaration.parameters[..2]) =>
-                {
-                    Some("`slice_set` bounds must be exact value parameters of type `i64?`")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if matches!(
-                        declaration.parameters[2].binding_mode,
-                        ResolvedParameterBindingMode::MutableAlias { .. }
-                    ) =>
-                {
-                    Some("`slice_set` replacement cannot be a mutable alias")
-                }
-                ResolvedMethodKind::Instance { .. }
-                    if declaration.return_type.kind != ResolvedTypeKind::Unit =>
-                {
-                    Some("`slice_set` must return exactly `unit`")
-                }
-                ResolvedMethodKind::Instance { .. } => None,
-            },
+        let mutable = match declaration.kind {
+            ResolvedMethodKind::Static => {
+                self.report_invalid_structural_bracket_protocol(
+                    protocol,
+                    bracket_span,
+                    declaration.name_span,
+                    "structural bracket protocols require an instance method",
+                );
+                return None;
+            }
+            ResolvedMethodKind::Instance {
+                receiver_access, ..
+            } => receiver_access == ResolvedReceiverAccess::Mutable,
         };
-        if let Some(reason) = invalid_shape {
+        if let Some(reason) = self.invalid_structural_bracket_signature(
+            protocol,
+            mutable,
+            &declaration.parameters,
+            declaration.return_type.kind,
+        ) {
             self.report_invalid_structural_bracket_protocol(
                 protocol,
                 bracket_span,
@@ -190,12 +115,134 @@ impl CallableResolver<'_, '_> {
         Some(method)
     }
 
-    fn has_exact_slice_bound_parameters(&self, parameters: &[ResolvedParameter]) -> bool {
+    pub(super) fn select_structural_bracket_requirement(
+        &mut self,
+        interface: InterfaceId,
+        protocol: StructuralBracketProtocol,
+        bracket_span: Span,
+    ) -> Option<InterfaceRequirementId> {
+        let declaration = self
+            .environment
+            .interfaces
+            .get(interface)
+            .expect("interface receiver type must reference a declaration");
+        let Some(requirement) = declaration
+            .requirements
+            .iter()
+            .find(|requirement| requirement.name == protocol.name())
+            .cloned()
+        else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INDEX_PROTOCOL,
+                    format!(
+                        "interface `{}` has no structural bracket requirement `{}`",
+                        declaration.name,
+                        protocol.name()
+                    ),
+                )
+                .with_primary_label(
+                    bracket_span,
+                    "required structural bracket protocol requirement is missing",
+                ),
+            );
+            return None;
+        };
+        if let Some(reason) = self.invalid_structural_bracket_signature(
+            protocol,
+            requirement.mutable,
+            &requirement.parameters,
+            requirement.return_type.kind,
+        ) {
+            self.report_invalid_structural_bracket_protocol(
+                protocol,
+                bracket_span,
+                requirement.name_span,
+                reason,
+            );
+            return None;
+        }
+        Some(requirement.id)
+    }
+
+    fn invalid_structural_bracket_signature<P: StructuralBracketParameter>(
+        &self,
+        protocol: StructuralBracketProtocol,
+        mutable: bool,
+        parameters: &[P],
+        return_type: ResolvedTypeKind,
+    ) -> Option<&'static str> {
+        match protocol {
+            StructuralBracketProtocol::IndexGet if mutable => {
+                Some("`index_get` must have a read-only receiver")
+            }
+            StructuralBracketProtocol::IndexGet if parameters.len() != 1 => {
+                Some("`index_get` must take exactly one key parameter")
+            }
+            StructuralBracketProtocol::IndexGet
+                if parameters[0].binding_mode().matches_mutable_alias() =>
+            {
+                Some("`index_get` key parameter cannot be a mutable alias")
+            }
+            StructuralBracketProtocol::IndexSet if !mutable => {
+                Some("`index_set` must have a mutable receiver")
+            }
+            StructuralBracketProtocol::IndexSet if parameters.len() != 2 => {
+                Some("`index_set` must take exactly a key and replacement parameter")
+            }
+            StructuralBracketProtocol::IndexSet
+                if parameters
+                    .iter()
+                    .any(|parameter| parameter.binding_mode().matches_mutable_alias()) =>
+            {
+                Some("`index_set` parameters cannot be mutable aliases")
+            }
+            StructuralBracketProtocol::IndexSet if return_type != ResolvedTypeKind::Unit => {
+                Some("`index_set` must return exactly `unit`")
+            }
+            StructuralBracketProtocol::SliceGet if mutable => {
+                Some("`slice_get` must have a read-only receiver")
+            }
+            StructuralBracketProtocol::SliceGet if parameters.len() != 2 => {
+                Some("`slice_get` must take exactly start and end parameters")
+            }
+            StructuralBracketProtocol::SliceGet
+                if !self.has_exact_slice_bound_parameters(parameters) =>
+            {
+                Some("`slice_get` bounds must be exact value parameters of type `i64?`")
+            }
+            StructuralBracketProtocol::SliceSet if !mutable => {
+                Some("`slice_set` must have a mutable receiver")
+            }
+            StructuralBracketProtocol::SliceSet if parameters.len() != 3 => {
+                Some("`slice_set` must take start, end, and replacement parameters")
+            }
+            StructuralBracketProtocol::SliceSet
+                if !self.has_exact_slice_bound_parameters(&parameters[..2]) =>
+            {
+                Some("`slice_set` bounds must be exact value parameters of type `i64?`")
+            }
+            StructuralBracketProtocol::SliceSet
+                if parameters[2].binding_mode().matches_mutable_alias() =>
+            {
+                Some("`slice_set` replacement cannot be a mutable alias")
+            }
+            StructuralBracketProtocol::SliceSet if return_type != ResolvedTypeKind::Unit => {
+                Some("`slice_set` must return exactly `unit`")
+            }
+            _ => None,
+        }
+    }
+
+    fn has_exact_slice_bound_parameters<P: StructuralBracketParameter>(
+        &self,
+        parameters: &[P],
+    ) -> bool {
         parameters.iter().all(|parameter| {
-            if !matches!(parameter.binding_mode, ResolvedParameterBindingMode::Value) {
+            if parameter.binding_mode() != ResolvedParameterBindingMode::Value {
                 return false;
             }
-            let ResolvedTypeKind::Optional(optional) = parameter.type_syntax.kind else {
+            let ResolvedTypeKind::Optional(optional) = parameter.type_kind() else {
                 return false;
             };
             self.type_interner
@@ -219,6 +266,41 @@ impl CallableResolver<'_, '_> {
             .with_primary_label(bracket_span, reason)
             .with_secondary_label(declaration_span, "protocol member declared here"),
         );
+    }
+}
+
+trait StructuralBracketParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode;
+    fn type_kind(&self) -> ResolvedTypeKind;
+}
+
+impl StructuralBracketParameter for ResolvedParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode {
+        self.binding_mode
+    }
+
+    fn type_kind(&self) -> ResolvedTypeKind {
+        self.type_syntax.kind
+    }
+}
+
+impl StructuralBracketParameter for ResolvedInterfaceParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode {
+        self.binding_mode
+    }
+
+    fn type_kind(&self) -> ResolvedTypeKind {
+        self.type_syntax.kind
+    }
+}
+
+trait ParameterBindingModeExt {
+    fn matches_mutable_alias(self) -> bool;
+}
+
+impl ParameterBindingModeExt for ResolvedParameterBindingMode {
+    fn matches_mutable_alias(self) -> bool {
+        matches!(self, Self::MutableAlias { .. })
     }
 }
 

@@ -6,7 +6,8 @@ use super::*;
 use crate::{
     diagnostics::Diagnostic,
     identity::{
-        BindingId, CallableId, ClassId, FieldId, LiteralDataId, LoopId, MethodId, StaticFieldId,
+        BindingId, CallableId, ClassId, FieldId, InterfaceId, InterfaceRequirementId,
+        LiteralDataId, LoopId, MethodId, StaticFieldId,
     },
     source::{Span, TextRange},
 };

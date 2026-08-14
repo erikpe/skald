@@ -2235,6 +2235,21 @@ impl<'types> HirDumper<'types> {
         self.indented(|dumper| {
             match &view.source {
                 HirViewSource::Place(place) => dumper.object_place(place),
+                HirViewSource::Static { place, projections } => {
+                    dumper.line(&format!("StaticView {}", place.field), place.span);
+                    dumper.indented(|dumper| {
+                        for projection in projections {
+                            match projection {
+                                crate::object_path::ObjectProjection::Base(base) => {
+                                    dumper.heading(&format!("BaseProjection {base}"));
+                                }
+                                crate::object_path::ObjectProjection::Field(field) => {
+                                    dumper.heading(&format!("FieldProjection {field}"));
+                                }
+                            }
+                        }
+                    });
+                }
                 HirViewSource::ArrayElement(element) => dumper.array_element(element),
                 HirViewSource::Produced {
                     producer,
@@ -2504,6 +2519,13 @@ impl<'types> HirDumper<'types> {
                 self.heading(&format!("Origin Exact dynamic {dynamic_class}"));
                 self.indented(|dumper| dumper.object_place(complete));
             }
+            HirObjectOrigin::Static {
+                place,
+                dynamic_class,
+            } => self.line(
+                &format!("Origin Static {} dynamic {dynamic_class}", place.field),
+                place.span,
+            ),
             HirObjectOrigin::Forwarded {
                 binding,
                 static_target,
@@ -2722,6 +2744,7 @@ fn receiver_view_label(view: &HirObjectView, suffix: &str) -> String {
         }
         HirViewSource::Produced { .. } => "Produced",
         HirViewSource::ArrayElement(_) => "ArrayElement",
+        HirViewSource::Static { .. } => "Static",
         HirViewSource::Place(_) | HirViewSource::Forwarded { .. } => "Object",
     };
     format!("{provenance}{suffix}")

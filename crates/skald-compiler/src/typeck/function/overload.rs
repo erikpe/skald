@@ -499,6 +499,7 @@ impl CallableChecker<'_, '_> {
     fn static_receiver_access(&self, receiver: &ResolvedObjectReceiver) -> HirAccess {
         match receiver {
             ResolvedObjectReceiver::BindingPath(path) => self.static_binding_access(path.root),
+            ResolvedObjectReceiver::StaticField { .. } => HirAccess::Mutable,
             ResolvedObjectReceiver::CastRelative { cast, .. } => {
                 self.static_cast_access(&cast.source)
             }

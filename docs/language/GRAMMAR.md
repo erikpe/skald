@@ -859,11 +859,11 @@ equal-length slice assignment execute. Call-scoped whole-array and exact
 element aliases execute with hidden backing or shared-owner anchors. The
 implemented semantics belong to [Arrays](ARRAYS.md).
 
-The same parsed bracket shapes have an implemented exact-class and frozen
-interface [structural meaning](INDEXING_AND_SLICING.md). Exact-class reads and
-assignments select ordinary index or slice methods during resolution, with no
-new token, precedence rule, or downstream structural operation. Interface-typed
-receiver selection remains pending.
+The same parsed bracket shapes have an implemented class and interface
+[structural meaning](INDEXING_AND_SLICING.md). Eligible reads and assignments
+select ordinary index or slice methods or interface requirements during
+resolution, with no new token, precedence rule, or downstream structural
+operation.
 
 The implemented [standard I/O API](IO.md) composes existing modules, functions,
 calls, loops, arrays, aliases, and intrinsic declarations. It adds no token,

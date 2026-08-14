@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0, IS1, and IS2 are complete; IS3 is next.
+Status: **in progress**. IS0 through IS3 are complete; IS4 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -27,7 +27,7 @@ baselines. No other active roadmap blocks IS0.
 - [x] IS0 — Neutral bracket syntax representation
 - [x] IS1 — Structural index selection and normalization
 - [x] IS2 — Structural slice selection and normalization
-- [ ] IS3 — Receiver and dynamic-dispatch integration
+- [x] IS3 — Receiver and dynamic-dispatch integration
 - [ ] IS4 — Ownership, lifecycle, and evaluation hardening
 - [ ] IS5 — Read-only `Str` adoption
 - [ ] IS6 — Complete `Vec<T>` adoption
@@ -132,24 +132,24 @@ rather than forming a direct-class-only feature.
 
 Checklist:
 
-- support requirements selected through interface-typed receivers;
-- preserve virtual families, overrides, direct private calls, and interface
+- [x] support requirements selected through interface-typed receivers;
+- [x] preserve virtual families, overrides, direct private calls, and interface
   witness selection exactly as explicit calls do;
-- support read-only and mutable aliases, fields, statics, `self` paths, and
+- [x] support read-only and mutable aliases, fields, statics, `self` paths, and
   explicit shared `->` or `*` receiver forms within their existing access;
-- support getter calls on produced exact-class receivers and reject setters on
-  unnamed produced inline values;
-- preserve checked-view and optional-owner unwrap requirements; and
-- keep generic specialization complete before HIR.
+- [x] support getter calls on produced exact-class receivers and reject setters
+  on unnamed produced inline values;
+- [x] preserve checked-view and optional-owner unwrap requirements; and
+- [x] keep generic specialization complete before HIR.
 
 Tests:
 
-- exact, inherited, virtual override, interface, shared-interface, private,
+- [x] exact, inherited, virtual override, interface, shared-interface, private,
   and closed-generic calls for index and slice operations;
-- read-only receiver write rejection and produced receiver read/write split;
-- raw shared and optional shared rejection versus explicit crossing success;
-- stable/replaceable/produced shared owners with later argument effects; and
-- native direct, virtual, and interface dispatch goldens.
+- [x] read-only receiver write rejection and produced receiver read/write split;
+- [x] raw shared and optional shared rejection versus explicit crossing success;
+- [x] stable/replaceable/produced shared owners with later argument effects; and
+- [x] native direct, virtual, and interface dispatch goldens.
 
 Exit: bracket selection has the same receiver eligibility, access, and dispatch
 matrix as the equivalent explicit ordinary call.

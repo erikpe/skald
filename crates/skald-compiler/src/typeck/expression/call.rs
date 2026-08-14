@@ -313,6 +313,7 @@ impl CallableChecker<'_, '_> {
                 if matches!(
                     receiver.origin,
                     HirObjectOrigin::Exact { .. }
+                        | HirObjectOrigin::Static { .. }
                         | HirObjectOrigin::Produced { .. }
                         | HirObjectOrigin::Forwarded {
                             dispatch_limit: Some(_),

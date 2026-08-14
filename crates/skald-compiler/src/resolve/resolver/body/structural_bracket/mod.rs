@@ -16,12 +16,10 @@ impl CallableResolver<'_, '_> {
         let receiver = self.resolve_expression(&projection.receiver)?;
 
         match self.classify_bracket_receiver(receiver, projection.operator) {
-            BracketReceiver::Intrinsic(receiver)
-            | BracketReceiver::Interface(receiver)
-            | BracketReceiver::Unsupported(receiver) => {
+            BracketReceiver::Intrinsic(receiver) | BracketReceiver::Unsupported(receiver) => {
                 self.resolve_intrinsic_bracket_projection(receiver, projection)
             }
-            BracketReceiver::Structural(receiver) => {
+            BracketReceiver::Class(receiver) => {
                 let protocol = match &projection.bounds {
                     syntax::BracketProjectionBounds::Index(_) => {
                         StructuralBracketProtocol::IndexGet
@@ -45,6 +43,37 @@ impl CallableResolver<'_, '_> {
                     span: projection.span,
                 }))
             }
+            BracketReceiver::Interface {
+                receiver,
+                interface,
+                receiver_span,
+            } => {
+                let protocol = match &projection.bounds {
+                    syntax::BracketProjectionBounds::Index(_) => {
+                        StructuralBracketProtocol::IndexGet
+                    }
+                    syntax::BracketProjectionBounds::Slice { .. } => {
+                        StructuralBracketProtocol::SliceGet
+                    }
+                };
+                let requirement = self.select_structural_bracket_requirement(
+                    interface,
+                    protocol,
+                    projection.left_bracket_span(),
+                )?;
+                let arguments = self.resolve_structural_bracket_arguments(projection)?;
+                Some(ResolvedExpression::InterfaceCall(
+                    ResolvedInterfaceCallExpr {
+                        receiver,
+                        interface,
+                        requirement,
+                        receiver_span,
+                        member_span: projection.left_bracket_span(),
+                        arguments,
+                        span: projection.span,
+                    },
+                ))
+            }
             BracketReceiver::Diagnosed => None,
         }
     }
@@ -58,9 +87,7 @@ impl CallableResolver<'_, '_> {
 
         let receiver = self.resolve_expression(&projection.receiver)?;
         match self.classify_bracket_receiver(receiver, projection.operator) {
-            BracketReceiver::Intrinsic(receiver)
-            | BracketReceiver::Interface(receiver)
-            | BracketReceiver::Unsupported(receiver) => {
+            BracketReceiver::Intrinsic(receiver) | BracketReceiver::Unsupported(receiver) => {
                 let destination =
                     self.resolve_intrinsic_bracket_projection(receiver, projection)?;
                 let destination = restore_projection_groups(&assignment.place, destination);
@@ -74,7 +101,7 @@ impl CallableResolver<'_, '_> {
                     },
                 ))
             }
-            BracketReceiver::Structural(receiver) => {
+            BracketReceiver::Class(receiver) => {
                 let protocol = match &projection.bounds {
                     syntax::BracketProjectionBounds::Index(_) => {
                         StructuralBracketProtocol::IndexSet
@@ -95,6 +122,40 @@ impl CallableResolver<'_, '_> {
                 let expression = ResolvedExpression::MethodCall(ResolvedMethodCallExpr {
                     receiver,
                     method,
+                    member_span: projection.left_bracket_span(),
+                    arguments,
+                    span: assignment.span,
+                });
+                Some(ResolvedStatement::Expression(ResolvedExpressionStatement {
+                    expression,
+                    span: assignment.span,
+                }))
+            }
+            BracketReceiver::Interface {
+                receiver,
+                interface,
+                receiver_span,
+            } => {
+                let protocol = match &projection.bounds {
+                    syntax::BracketProjectionBounds::Index(_) => {
+                        StructuralBracketProtocol::IndexSet
+                    }
+                    syntax::BracketProjectionBounds::Slice { .. } => {
+                        StructuralBracketProtocol::SliceSet
+                    }
+                };
+                let requirement = self.select_structural_bracket_requirement(
+                    interface,
+                    protocol,
+                    projection.left_bracket_span(),
+                )?;
+                let mut arguments = self.resolve_structural_bracket_arguments(projection)?;
+                arguments.push(self.resolve_expression(&assignment.value)?);
+                let expression = ResolvedExpression::InterfaceCall(ResolvedInterfaceCallExpr {
+                    receiver,
+                    interface,
+                    requirement,
+                    receiver_span,
                     member_span: projection.left_bracket_span(),
                     arguments,
                     span: assignment.span,

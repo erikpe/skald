@@ -1027,12 +1027,13 @@ retain their source structure.
 The separately frozen
 [structural indexing and slicing contract](INDEXING_AND_SLICING.md) has made
 the source AST's bracket vocabulary type-neutral. Resolution retains the array
-representation above for true arrays and normalizes eligible exact-class index
-and slice operations to ordinary calls before HIR. Independently omitted slice
-bounds become typed optional arguments through ordinary call checking; no
-synthetic length call or repeated receiver evaluation is introduced.
-Interface-typed receiver selection remains pending. The class extension adds
-no HIR, MIR, verifier, backend, or runtime operation.
+representation above for true arrays and normalizes eligible class and
+interface index and slice operations to ordinary calls before HIR.
+Independently omitted slice bounds become typed optional arguments through
+ordinary call checking; no synthetic length call or repeated receiver
+evaluation is introduced. Class calls retain ordinary direct or virtual
+selection and interface calls retain ordinary witness selection. The
+extension adds no structural HIR, MIR, verifier, backend, or runtime operation.
 
 Type checking lowers array declarations, owning locals/fields/signatures,
 inline and shared construction, exact element lifecycle capabilities,
