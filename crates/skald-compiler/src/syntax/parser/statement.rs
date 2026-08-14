@@ -396,7 +396,7 @@ impl Parser<'_> {
 
         if matches!(
             expression,
-            Expression::ArrayProjection(_) | Expression::GenericStaticSelection(_)
+            Expression::BracketProjection(_) | Expression::GenericStaticSelection(_)
         ) {
             return Some(Statement::ObjectAssignment(ObjectAssignmentStatement {
                 span: self.cover(expression.span(), end_span),
@@ -446,7 +446,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         Expression::Identifier(_) | Expression::SelfValue(_) => true,
         Expression::Grouped(grouped) => is_receiver_place(&grouped.expression),
         Expression::MemberAccess(member) => is_receiver_place(&member.receiver),
-        Expression::ArrayProjection(projection) => is_receiver_place(&projection.receiver),
+        Expression::BracketProjection(projection) => is_receiver_place(&projection.receiver),
         Expression::Unary(unary) if unary.operator == UnaryOperator::Dereference => true,
         Expression::NumericLiteral(_)
         | Expression::GenericTypeApplication(_)

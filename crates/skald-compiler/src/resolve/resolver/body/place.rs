@@ -78,10 +78,10 @@ impl CallableResolver<'_, '_> {
                 self.resolve_object_receiver(&grouped.expression)?
                     .with_span(grouped.span),
             ),
-            syntax::Expression::ArrayProjection(_) => {
+            syntax::Expression::BracketProjection(_) => {
                 let resolved = self.resolve_expression(expression)?;
                 let ResolvedExpression::ArrayProjection(projection) = resolved else {
-                    unreachable!("array projection syntax must retain its resolved node")
+                    unreachable!("bracket projection syntax must resolve to the current array node")
                 };
                 let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(
                     &ResolvedExpression::ArrayProjection(projection.clone()),

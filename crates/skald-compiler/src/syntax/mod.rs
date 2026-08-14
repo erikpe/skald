@@ -12,8 +12,8 @@ mod parser;
 
 pub use ast::{
     AbsentExpr, AllocationExpr, ArrayConstructionArguments, ArrayConstructionExpr,
-    ArrayElementList, ArrayProjectionBounds, ArrayProjectionExpr, ArrayProjectionOperator,
-    BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, BreakStatement,
+    ArrayElementList, BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr,
+    BracketProjectionBounds, BracketProjectionExpr, BracketProjectionOperator, BreakStatement,
     ByteLiteralExpr, CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit,
     ConditionalArm, ConditionalStatement, ContinueStatement, CopyAssignmentDecl,
     CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement, ExternalFunctionDecl,

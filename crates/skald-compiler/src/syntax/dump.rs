@@ -833,20 +833,20 @@ impl AstDumper {
             }
             Expression::SelfValue(self_value) => self.line("Self", self_value.span),
             Expression::MemberAccess(member) => self.member_access(member),
-            Expression::ArrayProjection(projection) => self.array_projection(projection),
+            Expression::BracketProjection(projection) => self.bracket_projection(projection),
         }
     }
 
-    fn array_projection(&mut self, projection: &ArrayProjectionExpr) {
-        self.line("ArrayProjection", projection.span);
+    fn bracket_projection(&mut self, projection: &BracketProjectionExpr) {
+        self.line("BracketProjection", projection.span);
         self.indented(|dumper| {
             dumper.heading("Receiver");
             dumper.indented(|dumper| dumper.expression(&projection.receiver));
             match projection.operator {
-                ArrayProjectionOperator::Ordinary { left_bracket_span } => {
+                BracketProjectionOperator::Ordinary { left_bracket_span } => {
                     dumper.line("LeftBracket", left_bracket_span);
                 }
-                ArrayProjectionOperator::Shared {
+                BracketProjectionOperator::Shared {
                     arrow_span,
                     left_bracket_span,
                 } => {
@@ -855,11 +855,11 @@ impl AstDumper {
                 }
             }
             match &projection.bounds {
-                ArrayProjectionBounds::Index(index) => {
+                BracketProjectionBounds::Index(index) => {
                     dumper.heading("Index");
                     dumper.indented(|dumper| dumper.expression(index));
                 }
-                ArrayProjectionBounds::Slice {
+                BracketProjectionBounds::Slice {
                     start,
                     colon_span,
                     end,

@@ -843,9 +843,10 @@ construction, owner lifetimes, immutable access, stored positions, and arrays
 reach verified MIR and native x86-64 execution.
 
 Array tokens, recursive type grouping, construction modes, index and slice
-shapes, and explicit shared bracket projection cross the syntax boundary with
-deterministic AST dumps. Resolution assigns deterministic canonical recursive
-array identities, and type checking retains structured lifecycle,
+shapes, and explicit shared bracket projection cross the syntax boundary as
+type-neutral `BracketProjection` nodes with deterministic AST dumps. Resolution
+currently maps them to array projections and assigns deterministic canonical
+recursive array identities, while type checking retains structured lifecycle,
 construction, projection, assignment, slice, and alias operations. These
 forms lower to verified target-independent MIR. The x86-64 backend executes
 inline and shared-outer arrays containing primitives, optionals, exact

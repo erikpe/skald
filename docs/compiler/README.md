@@ -91,10 +91,10 @@ prerequisites and validation are defined by the
 
 The frozen
 [structural indexing and slicing compiler contract](INDEXING_AND_SLICING.md)
-generalizes source-only bracket vocabulary, retains built-in arrays before
-structural selection, and normalizes eligible class/interface brackets to
-ordinary calls before HIR. It is not yet implemented and adds no lower IR,
-backend operation, or runtime ABI.
+uses neutral source-only bracket vocabulary. Resolution currently retains
+built-in arrays; its planned structural selection will normalize eligible
+class/interface brackets to ordinary calls before HIR. That semantic selection
+is not yet implemented and adds no lower IR, backend operation, or runtime ABI.
 
 The implemented [strings compiler contract](STRINGS.md) defines canonical
 `std::str::Str` discovery and validation, intrinsic produced-value lowering,

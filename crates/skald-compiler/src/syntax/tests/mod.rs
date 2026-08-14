@@ -30,6 +30,7 @@ fn return_value(function: &FunctionDecl) -> &Expression {
 mod alias_parameters;
 mod arrays;
 mod bitwise_operators;
+mod bracket_projections;
 mod comparisons;
 mod conditionals;
 mod declarations;

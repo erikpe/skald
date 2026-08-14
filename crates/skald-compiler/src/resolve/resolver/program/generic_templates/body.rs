@@ -469,11 +469,11 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.visit_expression(&expression.expression)
             }
             syntax::Expression::MemberAccess(expression) => self.visit_member_access(expression),
-            syntax::Expression::ArrayProjection(expression) => {
+            syntax::Expression::BracketProjection(expression) => {
                 self.visit_expression(&expression.receiver);
                 match &expression.bounds {
-                    syntax::ArrayProjectionBounds::Index(index) => self.visit_expression(index),
-                    syntax::ArrayProjectionBounds::Slice { start, end, .. } => {
+                    syntax::BracketProjectionBounds::Index(index) => self.visit_expression(index),
+                    syntax::BracketProjectionBounds::Slice { start, end, .. } => {
                         if let Some(start) = start {
                             self.visit_expression(start);
                         }
@@ -799,7 +799,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
             {
                 self.fields.get(access.member.text.as_str()).cloned()
             }
-            syntax::Expression::ArrayProjection(projection) => {
+            syntax::Expression::BracketProjection(projection) => {
                 let receiver = self.type_of_expression(&projection.receiver)?;
                 let ResolvedTemplateTypeKind::Array(element) = receiver.kind else {
                     return None;

@@ -515,7 +515,7 @@ impl Parser<'_> {
             {
                 let start_span = self.peek().span;
                 expression = self.with_syntax_nesting(start_span, move |parser| {
-                    parser.finish_array_projection(expression)
+                    parser.finish_bracket_projection(expression)
                 })?;
             } else {
                 expression = self.finish_member_access(expression)?;

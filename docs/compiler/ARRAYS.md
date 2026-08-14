@@ -141,13 +141,12 @@ existing tokens. Syntax retains:
 - ordinary bracket projection versus `->` bracket projection; and
 - exact spans for each bracket, colon, arrow, length, bound, and copy source.
 
-`owner->[index]` and `owner->[start:end]` are currently source nodes for one
-explicit shared dereference followed by an array projection. The frozen
-structural-bracket work will give the source-only AST neutral vocabulary while
-preserving this exact operation after receiver classification. Resolution
-normalizes them to one owner evaluation and one array-pointee projection
-without synthesizing a source `*` span. `(*owner)[...]` reaches the same typed
-operation through the general explicit-dereference form.
+`owner->[index]` and `owner->[start:end]` are neutral bracket-projection source
+nodes for one explicit shared dereference followed by a projection. Resolution
+currently preserves this exact operation as an array projection and normalizes
+it to one owner evaluation and one array-pointee projection without
+synthesizing a source `*` span. `(*owner)[...]` reaches the same typed operation
+through the general explicit-dereference form.
 
 Resolution assigns an `ArrayTypeId` after resolving the exact element type. It
 retains whether `shared` or `shared?` applies outside the array identity or

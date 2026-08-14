@@ -548,7 +548,7 @@ impl CallableResolver<'_, '_> {
             }
         }
 
-        if is_array_projection_through_groups(&assignment.place) {
+        if is_bracket_projection_through_groups(&assignment.place) {
             let destination = self.resolve_expression(&assignment.place)?;
             let source = self.resolve_expression(&assignment.value)?;
             return Some(ResolvedStatement::ArrayAssignment(
@@ -602,11 +602,11 @@ impl CallableResolver<'_, '_> {
     }
 }
 
-fn is_array_projection_through_groups(expression: &syntax::Expression) -> bool {
+fn is_bracket_projection_through_groups(expression: &syntax::Expression) -> bool {
     match expression {
-        syntax::Expression::ArrayProjection(_) => true,
+        syntax::Expression::BracketProjection(_) => true,
         syntax::Expression::Grouped(grouped) => {
-            is_array_projection_through_groups(&grouped.expression)
+            is_bracket_projection_through_groups(&grouped.expression)
         }
         _ => false,
     }

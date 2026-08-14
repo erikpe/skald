@@ -1,22 +1,22 @@
-//! Array construction and postfix projection source shapes.
+//! Array construction and neutral postfix bracket source shapes.
 
 use super::{declaration::TypeContext, *};
 
 impl Parser<'_> {
-    pub(super) fn finish_array_projection(&mut self, receiver: Expression) -> Option<Expression> {
+    pub(super) fn finish_bracket_projection(&mut self, receiver: Expression) -> Option<Expression> {
         let operator = if let Some(arrow) = self.consume(TokenKind::Arrow) {
             let left_bracket = self.expect(
                 TokenKind::LeftBracket,
                 "`[` after the shared projection arrow",
             )?;
-            ArrayProjectionOperator::Shared {
+            BracketProjectionOperator::Shared {
                 arrow_span: arrow.span,
                 left_bracket_span: left_bracket.span,
             }
         } else {
             let left_bracket = self.advance();
             debug_assert_eq!(left_bracket.kind, TokenKind::LeftBracket);
-            ArrayProjectionOperator::Ordinary {
+            BracketProjectionOperator::Ordinary {
                 left_bracket_span: left_bracket.span,
             }
         };
@@ -26,7 +26,7 @@ impl Parser<'_> {
                 .then(|| self.parse_expression())
                 .flatten()
                 .map(Box::new);
-            ArrayProjectionBounds::Slice {
+            BracketProjectionBounds::Slice {
                 start: None,
                 colon_span: colon.span,
                 end,
@@ -35,7 +35,7 @@ impl Parser<'_> {
             if self.at(TokenKind::RightBracket) {
                 self.report(
                     EXPECTED_EXPRESSION,
-                    "expected an array index or slice",
+                    "expected an index or slice expression",
                     self.peek().span,
                     "use `[:]` for a full slice",
                 );
@@ -48,26 +48,27 @@ impl Parser<'_> {
                     .then(|| self.parse_expression())
                     .flatten()
                     .map(Box::new);
-                ArrayProjectionBounds::Slice {
+                BracketProjectionBounds::Slice {
                     start: Some(Box::new(start)),
                     colon_span: colon.span,
                     end,
                 }
             } else {
-                ArrayProjectionBounds::Index(Box::new(start))
+                BracketProjectionBounds::Index(Box::new(start))
             }
         };
 
-        let right_bracket =
-            self.expect(TokenKind::RightBracket, "`]` after the array projection")?;
+        let right_bracket = self.expect(TokenKind::RightBracket, "`]` after the index or slice")?;
         let span = self.cover(receiver.span(), right_bracket.span);
-        Some(Expression::ArrayProjection(Box::new(ArrayProjectionExpr {
-            receiver: Box::new(receiver),
-            operator,
-            bounds,
-            right_bracket_span: right_bracket.span,
-            span,
-        })))
+        Some(Expression::BracketProjection(Box::new(
+            BracketProjectionExpr {
+                receiver: Box::new(receiver),
+                operator,
+                bounds,
+                right_bracket_span: right_bracket.span,
+                span,
+            },
+        )))
     }
 
     pub(super) fn starts_array_construction(&self, after_new: bool) -> bool {

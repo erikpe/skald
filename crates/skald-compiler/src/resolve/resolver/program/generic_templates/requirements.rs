@@ -202,7 +202,7 @@ pub(super) fn expression_is_named(expression: &syntax::Expression) -> bool {
         syntax::Expression::Identifier(_)
         | syntax::Expression::SelfValue(_)
         | syntax::Expression::MemberAccess(_)
-        | syntax::Expression::ArrayProjection(_)
+        | syntax::Expression::BracketProjection(_)
         | syntax::Expression::Unwrap(_) => true,
         syntax::Expression::Grouped(grouped) => expression_is_named(&grouped.expression),
         _ => false,

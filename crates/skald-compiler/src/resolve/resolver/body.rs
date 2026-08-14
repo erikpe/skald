@@ -768,13 +768,13 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             }
             syntax::Expression::SelfValue(self_value) => self.resolve_self(self_value.span),
             syntax::Expression::MemberAccess(member) => self.resolve_field_access(member),
-            syntax::Expression::ArrayProjection(projection) => {
+            syntax::Expression::BracketProjection(projection) => {
                 let receiver = Box::new(self.resolve_expression(&projection.receiver)?);
                 let operator = match projection.operator {
-                    syntax::ArrayProjectionOperator::Ordinary { left_bracket_span } => {
+                    syntax::BracketProjectionOperator::Ordinary { left_bracket_span } => {
                         ResolvedArrayProjectionOperator::Ordinary { left_bracket_span }
                     }
-                    syntax::ArrayProjectionOperator::Shared {
+                    syntax::BracketProjectionOperator::Shared {
                         arrow_span,
                         left_bracket_span,
                     } => ResolvedArrayProjectionOperator::Shared {
@@ -783,12 +783,12 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     },
                 };
                 let bounds = match &projection.bounds {
-                    syntax::ArrayProjectionBounds::Index(index) => {
+                    syntax::BracketProjectionBounds::Index(index) => {
                         ResolvedArrayProjectionBounds::Index(Box::new(
                             self.resolve_expression(index)?,
                         ))
                     }
-                    syntax::ArrayProjectionBounds::Slice {
+                    syntax::BracketProjectionBounds::Slice {
                         start,
                         colon_span,
                         end,

@@ -1,11 +1,13 @@
 # Structural Indexing and Slicing Compiler Contract
 
-Status: **frozen design; not yet implemented**.
+Status: **frozen design; neutral source-AST representation implemented,
+structural resolution not yet implemented**.
 
 This document owns the compiler representation and phase boundaries for the
 planned [structural indexing and slicing language contract](../language/INDEXING_AND_SLICING.md).
-The current compiler still resolves every bracket projection as an array
-operation and rejects non-array receivers. The
+The source AST now preserves every bracket projection with type-neutral
+vocabulary. Resolution still maps each projection to an array operation, and
+type checking rejects non-array receivers. The
 [status matrix](../language/STATUS.md) is authoritative for availability.
 
 ## Responsibility split
@@ -20,12 +22,11 @@ operation and rejects non-array receivers. The
 
 ## Syntax representation
 
-The source AST must use neutral bracket or subscript vocabulary rather than
-`ArrayProjectionExpr`, `ArrayProjectionOperator`, and
-`ArrayProjectionBounds`. This is a source-only generalization: parsing and
-recovery continue to retain the receiver, `[` and `]`, optional `:`, optional
-`->`, every supplied expression, and their exact spans. The AST makes no type,
-array, or protocol choice.
+The source AST uses `BracketProjectionExpr`, `BracketProjectionOperator`, and
+`BracketProjectionBounds`. This source-only representation retains the
+receiver, `[` and `]`, optional `:`, optional `->`, every supplied expression,
+and their exact spans. AST dumps use `BracketProjection`; the AST makes no
+type, array, or protocol choice.
 
 The implemented grammar already parses every required read and
 assignment-shaped bracket form. Structural meaning must not be claimed there

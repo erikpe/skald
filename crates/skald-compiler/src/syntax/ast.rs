@@ -690,7 +690,7 @@ pub enum Expression {
     Grouped(GroupedExpr),
     SelfValue(SelfExpr),
     MemberAccess(MemberAccessExpr),
-    ArrayProjection(Box<ArrayProjectionExpr>),
+    BracketProjection(Box<BracketProjectionExpr>),
 }
 
 impl Expression {
@@ -720,7 +720,7 @@ impl Expression {
             Self::Grouped(expression) => expression.span,
             Self::SelfValue(expression) => expression.span,
             Self::MemberAccess(expression) => expression.span,
-            Self::ArrayProjection(expression) => expression.span,
+            Self::BracketProjection(expression) => expression.span,
         }
     }
 }
@@ -912,16 +912,16 @@ pub struct MemberAccessExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ArrayProjectionExpr {
+pub struct BracketProjectionExpr {
     pub receiver: Box<Expression>,
-    pub operator: ArrayProjectionOperator,
-    pub bounds: ArrayProjectionBounds,
+    pub operator: BracketProjectionOperator,
+    pub bounds: BracketProjectionBounds,
     pub right_bracket_span: Span,
     pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ArrayProjectionOperator {
+pub enum BracketProjectionOperator {
     Ordinary {
         left_bracket_span: Span,
     },
@@ -932,7 +932,7 @@ pub enum ArrayProjectionOperator {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ArrayProjectionBounds {
+pub enum BracketProjectionBounds {
     Index(Box<Expression>),
     Slice {
         start: Option<Box<Expression>>,

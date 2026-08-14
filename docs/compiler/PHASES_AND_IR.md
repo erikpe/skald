@@ -1025,12 +1025,13 @@ and type tests. Resolved construction, projection, and array-assignment nodes
 retain their source structure.
 
 The separately frozen
-[structural indexing and slicing contract](INDEXING_AND_SLICING.md) will make
-the source AST's bracket vocabulary type-neutral, then classify receivers in
-resolution. True arrays will retain these resolved array nodes; eligible
-class/interface operations will become ordinary resolved calls before HIR.
-That planned extension adds no HIR, MIR, verifier, backend, or runtime
-operation and is not yet accepted by the compiler.
+[structural indexing and slicing contract](INDEXING_AND_SLICING.md) has made
+the source AST's bracket vocabulary type-neutral. Resolution currently maps
+every such node to the array representation above. Later receiver
+classification will retain these resolved nodes for true arrays and normalize
+eligible class/interface operations to ordinary calls before HIR. That planned
+semantic extension adds no HIR, MIR, verifier, backend, or runtime operation
+and is not yet accepted by the compiler.
 
 Type checking lowers array declarations, owning locals/fields/signatures,
 inline and shared construction, exact element lifecycle capabilities,

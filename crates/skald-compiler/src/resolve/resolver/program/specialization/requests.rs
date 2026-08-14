@@ -535,11 +535,11 @@ impl SourceRequestScanner<'_, '_, '_, '_, '_> {
             syntax::Expression::MemberAccess(expression) => {
                 self.visit_expression(&expression.receiver)
             }
-            syntax::Expression::ArrayProjection(expression) => {
+            syntax::Expression::BracketProjection(expression) => {
                 self.visit_expression(&expression.receiver);
                 match &expression.bounds {
-                    syntax::ArrayProjectionBounds::Index(index) => self.visit_expression(index),
-                    syntax::ArrayProjectionBounds::Slice { start, end, .. } => {
+                    syntax::BracketProjectionBounds::Index(index) => self.visit_expression(index),
+                    syntax::BracketProjectionBounds::Slice { start, end, .. } => {
                         if let Some(start) = start {
                             self.visit_expression(start);
                         }

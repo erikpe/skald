@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **planned**. IS0 is next.
+Status: **in progress**. IS0 is complete; IS1 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -24,16 +24,14 @@ baselines. No other active roadmap blocks IS0.
 
 ## Progress
 
-| Task | Status | Depends on |
-|---|---|---|
-| IS0 — Neutral bracket syntax representation | **Next** | Frozen contracts |
-| IS1 — Structural index selection and normalization | Planned | IS0 |
-| IS2 — Structural slice selection and normalization | Planned | IS1 |
-| IS3 — Receiver and dynamic-dispatch integration | Planned | IS2 |
-| IS4 — Ownership, lifecycle, and evaluation hardening | Planned | IS3 |
-| IS5 — Read-only `Str` adoption | Planned | IS4 |
-| IS6 — Complete `Vec<T>` adoption | Planned | IS4 |
-| IS7 — Diagnostics, documentation, and release closure | Planned | IS5, IS6 |
+- [x] IS0 — Neutral bracket syntax representation
+- [ ] IS1 — Structural index selection and normalization
+- [ ] IS2 — Structural slice selection and normalization
+- [ ] IS3 — Receiver and dynamic-dispatch integration
+- [ ] IS4 — Ownership, lifecycle, and evaluation hardening
+- [ ] IS5 — Read-only `Str` adoption
+- [ ] IS6 — Complete `Vec<T>` adoption
+- [ ] IS7 — Diagnostics, documentation, and release closure
 
 ## IS0 — Neutral bracket syntax representation
 
@@ -42,21 +40,21 @@ syntax or current array semantics.
 
 Checklist:
 
-- rename source-only array-projection AST types and visitors to neutral bracket
-  or subscript names;
-- update parser construction, assignment-target handling, recovery, source
+- [x] rename source-only array-projection AST types and visitors to neutral
+  bracket or subscript names;
+- [x] update parser construction, assignment-target handling, recovery, source
   spans, dumps, generic-template traversal, and test helpers;
-- preserve ordinary versus `->` projection and all index/slice bound shapes;
-- keep resolved array identities and every downstream array representation
+- [x] preserve ordinary versus `->` projection and all index/slice bound shapes;
+- [x] keep resolved array identities and every downstream array representation
   unchanged; and
-- update compiler documentation in the same change.
+- [x] update compiler documentation in the same change.
 
 Tests:
 
-- parser and AST dump coverage for reads, assignments, all four slice-bound
+- [x] parser and AST dump coverage for reads, assignments, all four slice-bound
   shapes, postfix chains, grouping, and shared arrows;
-- malformed bracket/colon recovery and span assertions; and
-- existing array compile and native goldens unchanged apart from intentional
+- [x] malformed bracket/colon recovery and span assertions; and
+- [x] existing array compile and native goldens unchanged apart from intentional
   source-AST vocabulary.
 
 Exit: source syntax has neutral names everywhere, while every valid and

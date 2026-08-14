@@ -1,7 +1,7 @@
 //! Iterative logical-expression depth validation for path-sensitive phases.
 
 use crate::syntax::ast::{
-    ArrayConstructionArguments, ArrayProjectionBounds, CallArguments, Expression,
+    ArrayConstructionArguments, BracketProjectionBounds, CallArguments, Expression,
 };
 
 use super::MAX_LOGICAL_EXPRESSION_DEPTH;
@@ -84,13 +84,13 @@ pub(super) fn exceeds_limit(root: &Expression) -> bool {
             Expression::MemberAccess(expression) => {
                 pending.push((&expression.receiver, depth));
             }
-            Expression::ArrayProjection(expression) => {
+            Expression::BracketProjection(expression) => {
                 pending.push((&expression.receiver, depth));
                 match &expression.bounds {
-                    ArrayProjectionBounds::Index(index) => {
+                    BracketProjectionBounds::Index(index) => {
                         pending.push((index, depth));
                     }
-                    ArrayProjectionBounds::Slice { start, end, .. } => {
+                    BracketProjectionBounds::Slice { start, end, .. } => {
                         if let Some(start) = start {
                             pending.push((start, depth));
                         }
