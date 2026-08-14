@@ -1,13 +1,12 @@
 # Structural Indexing and Slicing
 
-Status: **frozen design; class indexing implemented**.
+Status: **frozen design; class indexing and slicing implemented**.
 
 This document is authoritative for the source-visible meaning of bracket
 indexing and slicing on classes and interfaces. The current compiler
-implements `index_get` and `index_set` selection for exact class receivers;
-structural slicing and interface-typed receivers remain pending. Built-in
-arrays retain their complete intrinsic behavior. Availability remains
-authoritative in the [status matrix](STATUS.md).
+implements all four operations for exact class receivers. Interface-typed
+receivers remain pending. Built-in arrays retain their complete intrinsic
+behavior. Availability remains authoritative in the [status matrix](STATUS.md).
 
 The design adds no syntax. It gives the existing postfix bracket forms a
 structural meaning when the receiver's static type is a class or interface:
@@ -22,8 +21,8 @@ value[:]
 value[start:end] = replacement
 ```
 
-The first two forms are currently implemented for class receivers. The slice
-forms and interface-requirement selection describe the frozen next stages.
+All forms are currently implemented for class receivers. Interface-requirement
+selection describes the frozen next stage.
 
 ## Selection and precedence
 
@@ -54,10 +53,10 @@ lookups are structural conveniences, not general structural typing, a marker
 interface, or an operator-declaration system. Static methods, fields, and
 static fields never satisfy the protocol.
 
-Current class indexing uses inherited lookup, declaring-class privacy, closed
-generic specialization, ordinary argument checking, and explicit shared
-crossing with `owner->[...]`. Interface participation begins with the later
-receiver-integration stage.
+Current class indexing and slicing use inherited lookup, declaring-class
+privacy, closed generic specialization, ordinary argument checking, and
+explicit shared crossing with `owner->[...]`. Interface participation begins
+with the later receiver-integration stage.
 
 ## Method requirements
 

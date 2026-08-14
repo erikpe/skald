@@ -119,6 +119,8 @@ fn preserves_intrinsic_array_projection_and_assignment_nodes() {
     let output = resolve_text(concat!(
         "fn update(mut ref values: i64[]) -> i64 {\n",
         "  values[1] = 2;\n",
+        "  values[1:] = values[:1];\n",
+        "  var copy: i64[] = values[:];\n",
         "  return values[1];\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",
@@ -130,7 +132,15 @@ fn preserves_intrinsic_array_projection_and_assignment_nodes() {
         ResolvedStatement::ArrayAssignment(_)
     ));
     assert!(matches!(
-        return_value(&update.body.statements[1]),
+        update.body.statements[1],
+        ResolvedStatement::ArrayAssignment(_)
+    ));
+    assert!(matches!(
+        local_initializer(&update.body.statements[2]),
+        ResolvedExpression::ArrayProjection(_)
+    ));
+    assert!(matches!(
+        return_value(&update.body.statements[3]),
         ResolvedExpression::ArrayProjection(_)
     ));
 }
@@ -266,4 +276,197 @@ fn diagnoses_invalid_setter_shapes_without_requiring_a_getter() {
             diagnostic.code == INVALID_INDEX_PROTOCOL && diagnostic.message.contains("index_get")
         }));
     }
+}
+
+#[test]
+fn normalizes_every_structural_slice_shape_to_protocol_arguments() {
+    let output = resolve_text(concat!(
+        "class Window {\n",
+        "  fn slice_get(start: i64?, end: i64?) -> bool { return true; }\n",
+        "  mut fn slice_set(start: i64?, end: i64?, replacement: u8) -> unit {}\n",
+        "}\n",
+        "fn read_both(ref value: Window, start: i64, end: i64) -> bool { return value[start:end]; }\n",
+        "fn read_start(ref value: Window, start: i64) -> bool { return value[start:]; }\n",
+        "fn read_end(ref value: Window, end: i64) -> bool { return value[:end]; }\n",
+        "fn read_neither(ref value: Window) -> bool { return value[:]; }\n",
+        "fn write_both(mut ref value: Window, start: i64, end: i64) -> unit { value[start:end] = 1u8; }\n",
+        "fn write_start(mut ref value: Window, start: i64) -> unit { value[start:] = 2u8; }\n",
+        "fn write_end(mut ref value: Window, end: i64) -> unit { value[:end] = 3u8; }\n",
+        "fn write_neither(mut ref value: Window) -> unit { value[:] = 4u8; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let expected_bounds = [(true, true), (true, false), (false, true), (false, false)];
+    for (index, (start_present, end_present)) in expected_bounds.into_iter().enumerate() {
+        let read = output
+            .program
+            .definitions
+            .get(FunctionId::new(index))
+            .unwrap();
+        let ResolvedExpression::MethodCall(call) = return_value(&read.body.statements[0]) else {
+            panic!("slice read must normalize to slice_get");
+        };
+        assert_eq!(call.method, MethodId::new(ClassId::new(0), 0));
+        assert_slice_bound_presence(&call.arguments, start_present, end_present);
+
+        let write = output
+            .program
+            .definitions
+            .get(FunctionId::new(index + 4))
+            .unwrap();
+        let ResolvedStatement::Expression(statement) = &write.body.statements[0] else {
+            panic!("slice assignment must normalize to a call statement");
+        };
+        let ResolvedExpression::MethodCall(call) = &statement.expression else {
+            panic!("slice assignment must normalize to slice_set");
+        };
+        assert_eq!(call.method, MethodId::new(ClassId::new(0), 1));
+        assert_eq!(call.arguments.len(), 3);
+        assert_slice_bound_presence(&call.arguments[..2], start_present, end_present);
+        assert!(!matches!(call.arguments[2], ResolvedExpression::Absent(_)));
+    }
+}
+
+fn assert_slice_bound_presence(
+    arguments: &[ResolvedExpression],
+    start_present: bool,
+    end_present: bool,
+) {
+    assert_eq!(arguments.len(), 2);
+    assert_eq!(
+        !matches!(arguments[0], ResolvedExpression::Absent(_)),
+        start_present
+    );
+    assert_eq!(
+        !matches!(arguments[1], ResolvedExpression::Absent(_)),
+        end_present
+    );
+}
+
+#[test]
+fn slice_getter_and_setter_are_independent() {
+    let output = resolve_text(concat!(
+        "class ReadOnly { fn slice_get(start: i64?, end: i64?) -> bool { return true; } }\n",
+        "class WriteOnly { mut fn slice_set(start: i64?, end: i64?, value: u8) -> unit {} }\n",
+        "fn read(ref value: ReadOnly) -> bool { return value[:]; }\n",
+        "fn write(mut ref value: WriteOnly) -> unit { value[:] = 1u8; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+}
+
+#[test]
+fn diagnoses_missing_slice_protocol_members_by_operation() {
+    let cases = [
+        (
+            "class Value {} fn use(ref value: Value) -> i64 { return value[:]; } fn main() -> i64 { return 0; }",
+            "slice_get",
+        ),
+        (
+            "class Value {} fn use(mut ref value: Value) -> unit { value[:] = 1; } fn main() -> i64 { return 0; }",
+            "slice_set",
+        ),
+    ];
+    for (source, protocol) in cases {
+        let output = resolve_text(source);
+        assert!(
+            output.diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == INVALID_INDEX_PROTOCOL && diagnostic.message.contains(protocol)
+            }),
+            "{:?}",
+            output.diagnostics
+        );
+    }
+}
+
+#[test]
+fn diagnoses_invalid_slice_getter_shapes() {
+    let declarations = [
+        "static fn slice_get(start: i64?, end: i64?) -> i64 { return 0; }",
+        "mut fn slice_get(start: i64?, end: i64?) -> i64 { return 0; }",
+        "fn slice_get(start: i64?) -> i64 { return 0; }",
+        "fn slice_get(start: i64, end: i64?) -> i64 { return 0; }",
+        "fn slice_get(start: i64?, end: u64?) -> i64 { return 0; }",
+        "fn slice_get(ref start: i64?, end: i64?) -> i64 { return 0; }",
+    ];
+    for declaration in declarations {
+        let source = format!(
+            "class Value {{ {declaration} }} fn use(ref value: Value) -> i64 {{ return value[:]; }} fn main() -> i64 {{ return 0; }}"
+        );
+        let output = resolve_text(&source);
+        assert!(
+            output.diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == INVALID_INDEX_PROTOCOL
+                    && diagnostic.message.contains("slice_get")
+            }),
+            "{:?}",
+            output.diagnostics
+        );
+    }
+}
+
+#[test]
+fn diagnoses_invalid_slice_setter_shapes_without_selecting_a_getter() {
+    let declarations = [
+        "static fn slice_set(start: i64?, end: i64?, value: i64) -> unit {}",
+        "fn slice_set(start: i64?, end: i64?, value: i64) -> unit {}",
+        "mut fn slice_set(start: i64?, end: i64?) -> unit {}",
+        "mut fn slice_set(start: i64, end: i64?, value: i64) -> unit {}",
+        "mut fn slice_set(start: i64?, ref end: i64?, value: i64) -> unit {}",
+        "mut fn slice_set(start: i64?, end: i64?, mut ref value: Item) -> unit {}",
+        "mut fn slice_set(start: i64?, end: i64?, value: i64) -> bool { return true; }",
+    ];
+    for declaration in declarations {
+        let source = format!(
+            "class Item {{}} class Value {{ {declaration} }} fn use(mut ref value: Value, mut ref item: Item) -> unit {{ value[:] = item; }} fn main() -> i64 {{ return 0; }}"
+        );
+        let output = resolve_text(&source);
+        assert!(
+            output.diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == INVALID_INDEX_PROTOCOL
+                    && diagnostic.message.contains("slice_set")
+            }),
+            "{:?}",
+            output.diagnostics
+        );
+        assert!(!output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == INVALID_INDEX_PROTOCOL && diagnostic.message.contains("slice_get")
+        }));
+    }
+}
+
+#[test]
+fn structural_slice_keeps_effectful_receiver_and_bounds_once_without_hidden_length() {
+    let output = resolve_text(concat!(
+        "class Window { init() {} fn slice_get(start: i64?, end: i64?) -> bool { return true; } }\n",
+        "fn make() -> Window { return Window(); }\n",
+        "fn start() -> i64 { return 1; }\n",
+        "fn end() -> i64 { return 2; }\n",
+        "fn read() -> bool { return make()[start():end()]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let read = output.program.definitions.get(FunctionId::new(3)).unwrap();
+    let ResolvedExpression::MethodCall(call) = return_value(&read.body.statements[0]) else {
+        panic!("structural slice read must normalize to a method call");
+    };
+    let ResolvedObjectReceiver::Produced { producer, .. } = &call.receiver else {
+        panic!("effectful class result must remain one produced receiver");
+    };
+    assert!(matches!(&**producer, ResolvedExpression::DirectCall(_)));
+    assert!(matches!(
+        call.arguments[0],
+        ResolvedExpression::DirectCall(_)
+    ));
+    assert!(matches!(
+        call.arguments[1],
+        ResolvedExpression::DirectCall(_)
+    ));
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump, dump_resolved(&output.program));
+    assert_eq!(dump.matches("MethodCall").count(), 1);
+    assert!(!dump.contains("ArrayProjection"));
+    assert!(!dump.contains("ArrayLength"));
 }

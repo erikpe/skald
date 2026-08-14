@@ -1,6 +1,6 @@
 # Structural Indexing and Slicing Implementation Roadmap
 
-Status: **in progress**. IS0 and IS1 are complete; IS2 is next.
+Status: **in progress**. IS0, IS1, and IS2 are complete; IS3 is next.
 
 This roadmap implements the frozen
 [language](../language/INDEXING_AND_SLICING.md) and
@@ -26,7 +26,7 @@ baselines. No other active roadmap blocks IS0.
 
 - [x] IS0 — Neutral bracket syntax representation
 - [x] IS1 — Structural index selection and normalization
-- [ ] IS2 — Structural slice selection and normalization
+- [x] IS2 — Structural slice selection and normalization
 - [ ] IS3 — Receiver and dynamic-dispatch integration
 - [ ] IS4 — Ownership, lifecycle, and evaluation hardening
 - [ ] IS5 — Read-only `Str` adoption
@@ -102,25 +102,25 @@ bounds and no hidden receiver use.
 
 Checklist:
 
-- select and validate `slice_get` and `slice_set` through the IS1 selector;
-- require exact `i64?` value parameters for the two bounds, inject supplied
+- [x] select and validate `slice_get` and `slice_set` through the IS1 selector;
+- [x] require exact `i64?` value parameters for the two bounds, inject supplied
   `i64` values once, and create typed `none` operands for omissions;
-- preserve all four bound shapes in read and assignment positions;
-- append the replacement only for `slice_set`, require mutable receiver and
+- [x] preserve all four bound shapes in read and assignment positions;
+- [x] append the replacement only for `slice_set`, require mutable receiver and
   exact `unit`, and never select `slice_get` for a write;
-- leave bound normalization, logical length, copy/view, overlap, and failure
+- [x] leave bound normalization, logical length, copy/view, overlap, and failure
   policy to method bodies; and
-- promote implemented slice semantics into grammar, phase, and status docs.
+- [x] promote implemented slice semantics into grammar, phase, and status docs.
 
 Tests:
 
-- all omission shapes, supplied-bound effects, getter/setter independence,
+- [x] all omission shapes, supplied-bound effects, getter/setter independence,
   and distinct getter result/replacement categories;
-- malformed bound parameter types/modes, wrong arity/access/result, missing
+- [x] malformed bound parameter types/modes, wrong arity/access/result, missing
   members, and immutable receivers;
-- effectful receiver evaluated once and no synthetic `len()` call;
-- unchanged array slice read/write semantics and snapshot goldens; and
-- deterministic resolution/HIR dumps with typed omitted bounds.
+- [x] effectful receiver evaluated once and no synthetic `len()` call;
+- [x] unchanged array slice read/write semantics and snapshot goldens; and
+- [x] deterministic resolution/HIR dumps with typed omitted bounds.
 
 Exit: eligible class slicing works on both sides of assignment, each supplied
 operand evaluates once, and no structural node survives into HIR.

@@ -845,7 +845,7 @@ reach verified MIR and native x86-64 execution.
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary as
 type-neutral `BracketProjection` nodes with deterministic AST dumps. Resolution
-currently maps them to array projections and assigns deterministic canonical
+maps array receivers to array projections and assigns deterministic canonical
 recursive array identities, while type checking retains structured lifecycle,
 construction, projection, assignment, slice, and alias operations. These
 forms lower to verified target-independent MIR. The x86-64 backend executes
@@ -859,11 +859,11 @@ equal-length slice assignment execute. Call-scoped whole-array and exact
 element aliases execute with hidden backing or shared-owner anchors. The
 implemented semantics belong to [Arrays](ARRAYS.md).
 
-The same parsed bracket shapes have a separately frozen, not-yet-implemented
-[structural class/interface meaning](INDEXING_AND_SLICING.md). That extension
-adds no tokens or precedence rules. Until its implementation roadmap lands,
-semantic analysis continues to accept bracket projections only for the array
-receivers described above.
+The same parsed bracket shapes have an implemented exact-class and frozen
+interface [structural meaning](INDEXING_AND_SLICING.md). Exact-class reads and
+assignments select ordinary index or slice methods during resolution, with no
+new token, precedence rule, or downstream structural operation. Interface-typed
+receiver selection remains pending.
 
 The implemented [standard I/O API](IO.md) composes existing modules, functions,
 calls, loops, arrays, aliases, and intrinsic declarations. It adds no token,

@@ -15,15 +15,6 @@ impl CallableResolver<'_, '_> {
     ) -> Option<ResolvedExpression> {
         let receiver = self.resolve_expression(&projection.receiver)?;
 
-        // Structural slicing is not enabled yet. Keeping it on the existing
-        // node also preserves all current array diagnostics and lowering.
-        if matches!(
-            projection.bounds,
-            syntax::BracketProjectionBounds::Slice { .. }
-        ) {
-            return self.resolve_intrinsic_bracket_projection(receiver, projection);
-        }
-
         match self.classify_bracket_receiver(receiver, projection.operator) {
             BracketReceiver::Intrinsic(receiver)
             | BracketReceiver::Interface(receiver)
@@ -31,21 +22,26 @@ impl CallableResolver<'_, '_> {
                 self.resolve_intrinsic_bracket_projection(receiver, projection)
             }
             BracketReceiver::Structural(receiver) => {
-                let method = self.select_index_protocol_method(
+                let protocol = match &projection.bounds {
+                    syntax::BracketProjectionBounds::Index(_) => {
+                        StructuralBracketProtocol::IndexGet
+                    }
+                    syntax::BracketProjectionBounds::Slice { .. } => {
+                        StructuralBracketProtocol::SliceGet
+                    }
+                };
+                let method = self.select_structural_bracket_method(
                     receiver.class(),
-                    StructuralBracketProtocol::IndexGet,
+                    protocol,
                     projection.left_bracket_span(),
                 )?;
                 let receiver = self.project_receiver_to_declaring_class(receiver, method.class());
-                let syntax::BracketProjectionBounds::Index(index) = &projection.bounds else {
-                    unreachable!("slice projections return through the intrinsic path")
-                };
-                let index = self.resolve_expression(index)?;
+                let arguments = self.resolve_structural_bracket_arguments(projection)?;
                 Some(ResolvedExpression::MethodCall(ResolvedMethodCallExpr {
                     receiver,
                     method,
                     member_span: projection.left_bracket_span(),
-                    arguments: vec![index],
+                    arguments,
                     span: projection.span,
                 }))
             }
@@ -59,13 +55,6 @@ impl CallableResolver<'_, '_> {
     ) -> Option<ResolvedStatement> {
         let projection = bracket_projection_through_groups(&assignment.place)
             .expect("bracket assignment dispatch requires a bracket projection");
-
-        if matches!(
-            projection.bounds,
-            syntax::BracketProjectionBounds::Slice { .. }
-        ) {
-            return self.resolve_intrinsic_bracket_assignment(assignment);
-        }
 
         let receiver = self.resolve_expression(&projection.receiver)?;
         match self.classify_bracket_receiver(receiver, projection.operator) {
@@ -86,22 +75,28 @@ impl CallableResolver<'_, '_> {
                 ))
             }
             BracketReceiver::Structural(receiver) => {
-                let method = self.select_index_protocol_method(
+                let protocol = match &projection.bounds {
+                    syntax::BracketProjectionBounds::Index(_) => {
+                        StructuralBracketProtocol::IndexSet
+                    }
+                    syntax::BracketProjectionBounds::Slice { .. } => {
+                        StructuralBracketProtocol::SliceSet
+                    }
+                };
+                let method = self.select_structural_bracket_method(
                     receiver.class(),
-                    StructuralBracketProtocol::IndexSet,
+                    protocol,
                     projection.left_bracket_span(),
                 )?;
                 let receiver = self.project_receiver_to_declaring_class(receiver, method.class());
-                let syntax::BracketProjectionBounds::Index(index) = &projection.bounds else {
-                    unreachable!("slice assignments return through the intrinsic path")
-                };
-                let index = self.resolve_expression(index)?;
+                let mut arguments = self.resolve_structural_bracket_arguments(projection)?;
                 let replacement = self.resolve_expression(&assignment.value)?;
+                arguments.push(replacement);
                 let expression = ResolvedExpression::MethodCall(ResolvedMethodCallExpr {
                     receiver,
                     method,
                     member_span: projection.left_bracket_span(),
-                    arguments: vec![index, replacement],
+                    arguments,
                     span: assignment.span,
                 });
                 Some(ResolvedStatement::Expression(ResolvedExpressionStatement {
@@ -113,20 +108,32 @@ impl CallableResolver<'_, '_> {
         }
     }
 
-    fn resolve_intrinsic_bracket_assignment(
+    fn resolve_structural_bracket_arguments(
         &mut self,
-        assignment: &syntax::ObjectAssignmentStatement,
-    ) -> Option<ResolvedStatement> {
-        let destination = self.resolve_expression(&assignment.place)?;
-        let source = self.resolve_expression(&assignment.value)?;
-        Some(ResolvedStatement::ArrayAssignment(
-            ResolvedArrayAssignment {
-                destination,
-                equal_span: assignment.equal_span,
-                source,
-                span: assignment.span,
-            },
-        ))
+        projection: &syntax::BracketProjectionExpr,
+    ) -> Option<Vec<ResolvedExpression>> {
+        match &projection.bounds {
+            syntax::BracketProjectionBounds::Index(index) => {
+                Some(vec![self.resolve_expression(index)?])
+            }
+            syntax::BracketProjectionBounds::Slice {
+                start,
+                colon_span,
+                end,
+            } => {
+                let start = match start {
+                    Some(start) => self.resolve_expression(start)?,
+                    None => ResolvedExpression::Absent(ResolvedAbsentExpr { span: *colon_span }),
+                };
+                let end = match end {
+                    Some(end) => self.resolve_expression(end)?,
+                    None => ResolvedExpression::Absent(ResolvedAbsentExpr {
+                        span: projection.right_bracket_span,
+                    }),
+                };
+                Some(vec![start, end])
+            }
+        }
     }
 
     fn resolve_intrinsic_bracket_projection(
