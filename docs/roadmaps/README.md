@@ -14,7 +14,9 @@ progress. Completed roadmaps and resolved discovery records move to
   source-to-native produced receiver path through the existing temporary and
   receiver ABI. PER3 hardened explicit MIR access and provenance plus
   lifetime, control-flow, failure-order, mutation, and native trace coverage.
-  PER4, proving the broader dispatch, generic, and native matrix, is next.
+  PER4 proved dispatch, producer-family, string, generic, lifecycle,
+  diagnostic, determinism, and unchanged ABI/runtime conformance. PER5,
+  adopting the feature in source and publishing the final boundary, is next.
 
 ## Planned
 

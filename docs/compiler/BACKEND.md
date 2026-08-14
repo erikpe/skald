@@ -684,9 +684,12 @@ verified MIR and add no target layout or calling-convention rule.
 Produced exact-class method receivers reach the backend through this same
 boundary. Verified MIR already contains the
 caller-owned temporary, its ordinary read-only receiver view, complete-object
-origin, selected call target, and cleanup. The backend will marshal the
-existing three receiver components and will not classify the source producer,
-create ownership, or add a receiver-specific operation.
+origin, selected call target, and cleanup. The backend marshals the
+existing three receiver components; it does not classify the source producer,
+create ownership, or add a receiver-specific operation. Focused native tests
+exercise this path through exact, inherited, virtual, interface, generic, and
+register/stack-pressure calls, while assembly assertions retain the ordinary
+private method symbols and receiver component sequence.
 
 The verified definition's optional receiver storage is the sole authority for
 incoming receiver classification, spilling, frame homes, and object-origin

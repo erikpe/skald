@@ -1,0 +1,37 @@
+schema = 2
+
+[[test]]
+name = "conformance"
+mode = "run"
+source = "produced_receiver_conformance.ska"
+
+[[test.run]]
+name = "dispatch_producers_strings_generics_and_lifecycle"
+expect = { stdout = { file = "data/produced_receiver_conformance.stdout" } }
+
+[[test]]
+name = "mutable_method"
+mode = "compile-fail"
+source = "produced_receiver_mutable_failure.ska"
+
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP018]: mutable method `change` requires mutable receiver access
+ --> tests/golden/produced_receivers/produced_receiver_mutable_failure.ska:14:12"""
+
+[[test]]
+name = "excluded_families"
+mode = "compile-fail"
+source = "produced_receiver_failures.ska"
+
+[test.expect.stderr]
+matches = [
+  { name = "temporary field", match = "contains", inline = """error[RES009]: fields cannot be read from a produced object
+ --> tests/golden/produced_receivers/produced_receiver_failures.ska:30:12""" },
+  { name = "optional result", match = "contains", inline = """error[RES009]: call result is not an exact inline class
+ --> tests/golden/produced_receivers/produced_receiver_failures.ska:31:5""" },
+  { name = "array result", match = "contains", inline = """error[RES009]: call result is not an exact inline class
+ --> tests/golden/produced_receivers/produced_receiver_failures.ska:32:5""" },
+  { name = "shared result", match = "contains", inline = """error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/produced_receivers/produced_receiver_failures.ska:33:5""" },
+]

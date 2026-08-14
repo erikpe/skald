@@ -1,5 +1,37 @@
 use super::*;
 
+const PRODUCER_PRESSURE_SOURCE: &str = concat!(
+    "class Product {\n",
+    "  value: i64;\n",
+    "  init(value: i64) { self.value = value; }\n",
+    "  static fn make_static(value: i64) -> Product { return Product(value); }\n",
+    "  fn make_instance(value: i64) -> Product { return Product(value); }\n",
+    "  fn next(amount: i64) -> Product { return Product(self.value + amount); }\n",
+    "  fn pressured(flag: bool, a: i64, b: i64, c: i64, d: i64, e: i64,\n",
+    "      f: i64, g: i64, x: f64, y: f64, z: f64) -> i64 {\n",
+    "    if (flag) { return self.pressured(false, a, b, c, d, e, f, g, x, y, z); }\n",
+    "    return self.value + a + b + c + d + e + f + g;\n",
+    "  }\n",
+    "}\n",
+    "interface Producer { fn produce(value: i64) -> Product; }\n",
+    "class Factory implements Producer {\n",
+    "  init() {}\n",
+    "  fn produce(value: i64) -> Product { return Product(value); }\n",
+    "}\n",
+    "fn make_direct(value: i64) -> Product { return Product(value); }\n",
+    "fn zero_pressure(ref factory: Producer, ref seed: Product) -> i64 {\n",
+    "  return make_direct(5).next(3).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)\n",
+    "    + Product.make_static(9).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)\n",
+    "    + seed.make_instance(10).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)\n",
+    "    + factory.produce(15).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0);\n",
+    "}\n",
+    "fn main() -> i64 {\n",
+    "  var factory: Factory = Factory();\n",
+    "  var seed: Product = Product(0);\n",
+    "  return zero_pressure(factory, seed);\n",
+    "}\n",
+);
+
 #[test]
 fn exact_class_construction_and_call_results_execute_as_readonly_receivers() {
     let source = concat!(
@@ -37,31 +69,17 @@ fn exact_class_construction_and_call_results_execute_as_readonly_receivers() {
 
 #[test]
 fn motivating_string_literal_and_vec_result_receivers_execute_natively() {
-    let (_workspace, graph) = crate::test_support::load_module_sources_with_standard_library(
-        "app",
-        &[(
-            "app.ska",
-            concat!(
-                "from std::str import Str;\n",
-                "from std::vec import Vec;\n",
-                "fn main() -> i64 {\n",
-                "  var values: Vec<Str> = Vec<Str>();\n",
-                "  values.push(\"tail\");\n",
-                "  var generated: Str = \"item-\".concat(Str.from_i64(7));\n",
-                "  return (i64) generated.byte(5) - 55\n",
-                "    + (i64) \"abc\".byte(1) + (i64) values.last().byte(0);\n",
-                "}\n",
-            ),
-        )],
-    );
-    let resolved = crate::resolve::resolve_module_graph(&graph);
-    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
-    let checked = crate::typeck::type_check(&resolved.program);
-    assert!(!checked.has_errors(), "{:?}", checked.diagnostics);
-    let hir = checked.hir.unwrap();
-    let mir = crate::test_support::lower_hir_to_final_mir(&hir);
-    let mut assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
-    assembly.push_str(native_allocator());
+    let assembly = standard_library_assembly(concat!(
+        "from std::str import Str;\n",
+        "from std::vec import Vec;\n",
+        "fn main() -> i64 {\n",
+        "  var values: Vec<Str> = Vec<Str>();\n",
+        "  values.push(\"tail\");\n",
+        "  var generated: Str = \"item-\".concat(Str.from_i64(7));\n",
+        "  return (i64) generated.byte(5) - 55\n",
+        "    + (i64) \"abc\".byte(1) + (i64) values.last().byte(0);\n",
+        "}\n",
+    ));
 
     assert_system_assembler_accepts(&assembly);
     assert_eq!(run_native_assembly(&assembly).code(), Some(214));
@@ -203,6 +221,197 @@ fn terminating_production_and_arguments_preserve_non_unwinding_failure_order() {
         assert_eq!(result.stdout, expected_stdout);
         assert_eq!(result.stderr, b"panic: integer division by zero\n");
     }
+}
+
+#[test]
+fn produced_derived_receivers_preserve_complete_identity_for_each_dispatch_form() {
+    let source = concat!(
+        "interface Readable { fn dynamic(extra: i64) -> i64; }\n",
+        "class Root implements Readable {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn inherited(extra: i64) -> i64 { return self.value + extra; }\n",
+        "  virtual fn dynamic(extra: i64) -> i64 { return self.value + extra; }\n",
+        "}\n",
+        "class Leaf extends Root {\n",
+        "  additional: i64;\n",
+        "  init(value: i64, additional: i64) { super(value); self.additional = additional; }\n",
+        "  fn exact(extra: i64) -> i64 { return self.value + self.additional + extra; }\n",
+        "  override fn dynamic(extra: i64) -> i64 {\n",
+        "    return self.value + self.additional + extra;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  return Leaf(10, 5).exact(1)\n",
+        "    + Leaf(10, 5).inherited(2)\n",
+        "    + Leaf(10, 5).dynamic(3);\n",
+        "}\n",
+    );
+    let assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+
+    assert!(assembly.contains("method.exact"), "{assembly}");
+    assert!(assembly.contains("method.inherited"), "{assembly}");
+    assert!(
+        assembly.contains("call .Lska.class.main.Leaf.c1.method.dynamic.m1"),
+        "{assembly}"
+    );
+    assert!(
+        assembly.contains("lea rdx, [rip + .Lska.class.main.Leaf.c1.dispatch]"),
+        "{assembly}"
+    );
+    assert_system_assembler_accepts(&assembly);
+    assert_eq!(run_native_assembly(&assembly).code(), Some(46));
+}
+
+#[test]
+fn every_call_result_producer_survives_recursion_and_register_stack_pressure() {
+    let first = lower_source_to_assembly(PRODUCER_PRESSURE_SOURCE, Target::X86_64SysV).unwrap();
+    let second = lower_source_to_assembly(PRODUCER_PRESSURE_SOURCE, Target::X86_64SysV).unwrap();
+
+    assert_eq!(first, second);
+    assert!(first.contains("call r11"), "{first}");
+    assert_system_assembler_accepts(&first);
+    assert_eq!(run_native_assembly(&first).code(), Some(42));
+}
+
+#[test]
+fn canonical_string_producers_cover_raw_bytes_composition_slicing_and_parsing() {
+    let assembly = standard_library_assembly(concat!(
+        "from std::str import Str;\n",
+        "fn main() -> i64 {\n",
+        "  if (\"A\\0\\x80\\xff\".byte(1) != 0u8) { return 1; }\n",
+        "  if (\"A\\0\\x80\\xff\".slice(1, -1).byte(-1) != 128u8) { return 2; }\n",
+        "  if (\"A\".concat(\"\\xff\").byte(1) != 255u8) { return 3; }\n",
+        "  if (Str.from_i64(-42).to_i64()! != -42) { return 4; }\n",
+        "  var bytes: u8[] = u8[]{65u8, 0u8, 255u8};\n",
+        "  if (Str.from_bytes(bytes).byte(-1) != 255u8) { return 5; }\n",
+        "  return 42;\n",
+        "}\n",
+    ));
+
+    assert_system_assembler_accepts(&assembly);
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn closed_generic_exact_results_execute_for_vec_nested_results_and_bounds() {
+    let assembly = standard_library_assembly(concat!(
+        "from std::str import Str;\n",
+        "from std::vec import Vec;\n",
+        "interface Readable { fn read(extra: i64) -> i64; }\n",
+        "class Item implements Readable {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref source: Item) { self.value = source.value; }\n",
+        "  assign(ref source: Item) { self.value = source.value; }\n",
+        "  fn read(extra: i64) -> i64 { return self.value + extra; }\n",
+        "}\n",
+        "class Box<T> {\n",
+        "  value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "  copy(ref source: Box<T>) { self.value = source.value; }\n",
+        "  assign(ref source: Box<T>) { self.value = source.value; }\n",
+        "  fn get() -> T { return self.value; }\n",
+        "}\n",
+        "class Outer<T> {\n",
+        "  value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "  fn produce() -> Box<T> { return Box<T>(self.value); }\n",
+        "}\n",
+        "class Invoke<T> where T: Readable {\n",
+        "  value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "  fn produce() -> T { return self.value; }\n",
+        "  fn run() -> i64 { return self.produce().read(0); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var values: Vec<Str> = Vec<Str>();\n",
+        "  values.push(\"tail\");\n",
+        "  var outer: Outer<Str> = Outer<Str>(\"A\");\n",
+        "  var invoke: Invoke<Item> = Invoke<Item>(Item(42));\n",
+        "  return (i64) values.last().byte(0) - 116\n",
+        "    + (i64) outer.produce().get().byte(0) - 65\n",
+        "    + invoke.run();\n",
+        "}\n",
+    ));
+
+    assert!(assembly.contains("call r11"), "{assembly}");
+    assert_system_assembler_accepts(&assembly);
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn owning_result_is_secured_before_receiver_cleanup_and_outlives_it() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Result {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { test_record_i64(4); return self.value; }\n",
+        "  destroy { test_record_i64(5); }\n",
+        "}\n",
+        "class Trace {\n",
+        "  marker: i64;\n",
+        "  init(marker: i64) { self.marker = marker; }\n",
+        "  fn make(value: i64) -> Result { test_record_i64(3); return Result(value + 40); }\n",
+        "  destroy { test_record_i64(self.marker); }\n",
+        "}\n",
+        "fn effect() -> i64 { test_record_i64(2); return 2; }\n",
+        "fn main() -> i64 {\n",
+        "  var result: Result = Trace(1).make(effect());\n",
+        "  var value: i64 = result.read();\n",
+        "  return value;\n",
+        "}\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(trace_digit_recorder());
+
+    let result = run_native_assembly_output(&assembly);
+    assert_eq!(result.status.code(), Some(42));
+    assert_eq!(result.stdout, b"2\n3\n1\n4\n5\n");
+}
+
+#[test]
+fn produced_receivers_keep_the_ordinary_layout_runtime_surface_and_abi_marker() {
+    let program = lower_source_to_final_mir(PRODUCER_PRESSURE_SOURCE);
+    let layouts = super::super::layout::DataLayout::compute(&program).unwrap();
+    let product = program
+        .classes
+        .iter()
+        .find(|class| class.name == "Product")
+        .expect("fixture Product class must exist");
+    assert_eq!(layouts.ty(MirType::Class(product.id)).unwrap().size(), 8);
+
+    let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    let runtime_calls = assembly
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("call ska_rt_"))
+        .collect::<Vec<_>>();
+    assert_eq!(runtime_calls, ["call ska_rt_abi_v9"]);
+    assert!(!assembly.contains("produced_receiver"));
+    assert!(!assembly.contains("produced.receiver"));
+    assert!(assembly.contains("call r11"), "{assembly}");
+    assert_system_assembler_accepts(&assembly);
+
+    let runtime_header = include_str!("../../../../../../runtime/include/skald_runtime.h");
+    assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(9)"));
+    assert!(runtime_header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v9"));
+}
+
+fn standard_library_assembly(source: &str) -> String {
+    let (_workspace, graph) = crate::test_support::load_module_sources_with_standard_library(
+        "app",
+        &[("app.ska", source)],
+    );
+    let resolved = crate::resolve::resolve_module_graph(&graph);
+    assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(!checked.has_errors(), "{:?}", checked.diagnostics);
+    let mir = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
+    let mut assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    assembly.push_str(native_allocator());
+    assembly
 }
 
 fn trace_digit_recorder() -> &'static str {

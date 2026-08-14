@@ -1,0 +1,226 @@
+import std::io;
+
+from std::str import Str;
+from std::vec import Vec;
+
+interface Readable {
+    fn dynamic(extra: i64) -> i64;
+}
+
+class Root implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn inherited(extra: i64) -> i64 {
+        return self.value + extra;
+    }
+
+    virtual fn dynamic(extra: i64) -> i64 {
+        return self.value + extra;
+    }
+}
+
+class Leaf extends Root {
+    additional: i64;
+
+    init(value: i64, additional: i64) {
+        super(value);
+        self.additional = additional;
+    }
+
+    copy(ref source: Leaf) {
+        self.additional = source.additional;
+    }
+
+    assign(ref source: Leaf) {
+        self.additional = source.additional;
+    }
+
+    fn exact(extra: i64) -> i64 {
+        return self.value + self.additional + extra;
+    }
+
+    override fn dynamic(extra: i64) -> i64 {
+        return self.value + self.additional + extra;
+    }
+}
+
+class Product {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    static fn make_static(value: i64) -> Product {
+        return Product(value);
+    }
+
+    fn make_instance(value: i64) -> Product {
+        return Product(value);
+    }
+
+    fn next(amount: i64) -> Product {
+        return Product(self.value + amount);
+    }
+
+    fn pressured(
+        flag: bool,
+        a: i64,
+        b: i64,
+        c: i64,
+        d: i64,
+        e: i64,
+        f: i64,
+        g: i64,
+        x: f64,
+        y: f64,
+        z: f64
+    ) -> i64 {
+        if (flag) {
+            return self.pressured(false, a, b, c, d, e, f, g, x, y, z);
+        }
+        return self.value + a + b + c + d + e + f + g;
+    }
+}
+
+interface Producer {
+    fn produce(value: i64) -> Product;
+}
+
+class Factory implements Producer {
+    init() {}
+
+    fn produce(value: i64) -> Product {
+        return Product(value);
+    }
+}
+
+fn make_direct(value: i64) -> Product {
+    return Product(value);
+}
+
+class GenericBox<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    copy(ref source: GenericBox<T>) {
+        self.value = source.value;
+    }
+
+    assign(ref source: GenericBox<T>) {
+        self.value = source.value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}
+
+class Outer<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn produce() -> GenericBox<T> {
+        return GenericBox<T>(self.value);
+    }
+}
+
+class Invoke<T>
+where T: Readable
+{
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn produce() -> T {
+        return self.value;
+    }
+
+    fn run() -> i64 {
+        return self.produce().dynamic(3);
+    }
+}
+
+class OwnedResult {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+
+    destroy {
+        std::io::println_i64(32);
+    }
+}
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    fn make(value: i64) -> OwnedResult {
+        std::io::println_i64(29);
+        return OwnedResult(value + 40);
+    }
+
+    destroy {
+        std::io::println_i64(self.marker);
+    }
+}
+
+fn later_argument() -> i64 {
+    std::io::println_i64(30);
+    return 2;
+}
+
+fn main() -> i64 {
+    std::io::println_i64(Leaf(10, 5).exact(1));
+    std::io::println_i64(Leaf(10, 5).inherited(2));
+    std::io::println_i64(Leaf(10, 5).dynamic(3));
+
+    var factory: Factory = Factory();
+    var seed: Product = Product(0);
+    std::io::println_i64(
+        make_direct(5).next(3).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)
+        + Product.make_static(9).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)
+        + seed.make_instance(10).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)
+        + factory.produce(15).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)
+    );
+
+    std::io::println_u8("A\0\x80\xff".byte(1));
+    std::io::println_u8("A\0\x80\xff".slice(1, -1).byte(-1));
+    std::io::println_u8("A".concat("\xff").byte(1));
+    std::io::println_i64(Str.from_i64(-42).to_i64()!);
+
+    var values: Vec<Str> = Vec<Str>();
+    values.push("tail");
+    std::io::println_u8(values.last().byte(0));
+
+    var outer: Outer<Str> = Outer<Str>("A");
+    std::io::println_u8(outer.produce().get().byte(0));
+
+    var invoke: Invoke<Leaf> = Invoke<Leaf>(Leaf(34, 5));
+    std::io::println_i64(invoke.run());
+
+    var result: OwnedResult = Trace(31).make(later_argument());
+    std::io::println_i64(result.read());
+    return 0;
+}

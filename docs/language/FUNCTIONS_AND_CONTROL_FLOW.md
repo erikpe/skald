@@ -155,7 +155,8 @@ or external calling-convention rule, backend representation, runtime service,
 or runtime ABI-version change. The compiler representation is defined
 by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-produced-exact-class-method-receiver-representation),
 and the [status matrix](STATUS.md#frozen-language-designs) records the current
-implementation boundary while broader conformance hardening continues.
+implementation boundary while repository adoption and final publication
+remain in progress.
 
 ## Lexical scopes and locals
 

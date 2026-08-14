@@ -1,6 +1,6 @@
 # Produced Exact-Class Method Receivers Roadmap
 
-Status: in progress; PER0 through PER3 are complete and PER4 is next.
+Status: in progress; PER0 through PER4 are complete and PER5 is next.
 
 This roadmap lets an expression that produces one exact inline class serve
 directly as a read-only instance-method receiver. It removes staging locals
@@ -70,7 +70,7 @@ service.
 - [x] PER1 — Normalize receiver provenance carriers
 - [x] PER2 — Accept and lower produced exact-class receivers
 - [x] PER3 — Verify lifetime, control flow, and failure behavior
-- [ ] PER4 — Prove dispatch, generics, and native execution
+- [x] PER4 — Prove dispatch, generics, and native execution
 - [ ] PER5 — Adopt the feature and publish the implemented boundary
 
 Every implementation task runs focused tests for its owning phase, followed
@@ -263,27 +263,27 @@ post-cleanup use, and path leakage are rejected before backend lowering.
 method-selection and closed-specialization path through the unchanged native
 receiver ABI.
 
-- [ ] Exercise exact, inherited, virtual, and interface calls from produced
+- [x] Exercise exact, inherited, virtual, and interface calls from produced
       derived objects, proving complete-object identity is preserved without
       slicing or copy construction.
-- [ ] Exercise exact-class results from direct, static, instance, and interface
+- [x] Exercise exact-class results from direct, static, instance, and interface
       producers under register and stack pressure, recursion, and nested call
       chains.
-- [ ] Exercise canonical string literals and string-producing factories as
+- [x] Exercise canonical string literals and string-producing factories as
       receivers, including embedded zero/high bytes, concatenation, slicing,
       parsing, and byte observation where those operations add distinct
       ownership pressure.
-- [ ] Exercise closed generic classes whose methods return exact-class values,
+- [x] Exercise closed generic classes whose methods return exact-class values,
       including `Vec<Str>`, a nested generic result, and a generic-bound
       interface call.
-- [ ] Add native lifecycle traces with later argument effects and owning
+- [x] Add native lifecycle traces with later argument effects and owning
       results that outlive receiver cleanup.
-- [ ] Keep compile-fail goldens for mutable methods and excluded receiver
+- [x] Keep compile-fail goldens for mutable methods and excluded receiver
       families, matching frontend diagnostics rather than MIR/backend errors.
-- [ ] Audit assembly and runtime symbols to confirm ordinary receiver
+- [x] Audit assembly and runtime symbols to confirm ordinary receiver
       marshaling, no layout change, no runtime addition, and no ABI-version
       change.
-- [ ] Add cross-process phase, diagnostic, assembly, stdout, status, and
+- [x] Add cross-process phase, diagnostic, assembly, stdout, status, and
       lifecycle determinism where each observation materially proves the
       contract.
 
@@ -295,6 +295,22 @@ tests; pipeline and golden determinism; runtime-symbol audit; `make check`;
 executes correctly on x86-64; diagnostics reject excluded access before MIR;
 lifecycle traces match the frozen order; and the backend/runtime boundary is
 unchanged.
+
+Completed 2026-08-14. Focused backend and native tests now exercise exact,
+inherited, devirtualized virtual, and closed-bound interface selection while
+preserving the produced derived object's complete identity. Direct, static,
+instance, and interface result producers execute through recursive nested
+chains under mixed register and stack pressure. Canonical strings cover
+embedded zero and high bytes, concatenation, slicing, parsing, and byte
+observation; closed specialization covers `Vec<Str>`, nested generic results,
+and interface-bound calls. Owning-result traces prove later argument order and
+that secured results outlive receiver cleanup. Feature-owned success and
+compile-failure goldens retain native output, lifecycle order, process status,
+mutable access, and excluded-family diagnostics across repeated processes.
+Cross-process phase products are deterministic, and assembly/runtime audits
+confirm the ordinary receiver convention, unchanged layouts and runtime-call
+surface, ABI version 9, and `ska_rt_abi_v9`. Focused checks, `make check`, and
+`make msrv-check` pass.
 
 ### PER5 — Adopt the feature and publish the implemented boundary
 

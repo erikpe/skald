@@ -574,17 +574,25 @@ wrong storage kind, mutable produced access, mismatched complete origin,
 invalid projection, missing or premature cleanup, post-cleanup use, duplicate
 production or cleanup, and skipped-path leakage.
 
-Focused native tests already trace receiver-before-argument evaluation,
+Focused native tests trace receiver-before-argument evaluation,
 nested receiver chains, `if`/`elif`, selected and skipped short-circuit paths,
 loop epochs, return expressions, reverse cleanup, and non-unwinding failure
-before or after receiver publication. Broader backend and native conformance
-still covers ordinary receiver marshaling and dispatch for each producer
-family, including string literals and a `Vec<Str>.last().byte(index)` chain.
-Compile-failure goldens retain mutable methods, temporary
-field access, optional and array producers, raw shared dot access, unrelated
-types, and escaping uses. Determinism tests compare resolved, HIR, MIR,
-assembly, stdout, stderr, and status as appropriate, while runtime-surface
-tests continue to freeze ABI version 9 without a receiver-specific harness.
+before or after receiver publication. Backend and native conformance covers
+exact, inherited, virtual, and closed-bound interface selection; direct,
+static, instance, and interface producers under recursive register/stack
+pressure; raw-byte string composition, slicing, parsing, and observation;
+`Vec<Str>`, nested generic results, and owning results that outlive receiver
+cleanup. Compile-failure goldens retain mutable methods, temporary field
+access, optional and array producers, raw shared dot access, unrelated types,
+and escaping uses.
+
+`pipeline_determinism` compares token-through-assembly phase products across
+independent compiler processes. The `produced_receivers` golden group repeats
+successful assembly, exact stdout, lifecycle order, stderr, and process status
+and separately repeats resolver- and type-check-stage diagnostics. Backend
+surface assertions freeze ordinary receiver marshaling, class layout, the
+runtime-call set, ABI version 9, and `ska_rt_abi_v9` without a receiver-specific
+runtime harness.
 
 ## String coverage
 

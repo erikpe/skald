@@ -562,7 +562,10 @@ The compatibility marker remains `ska_rt_abi_v9`; the public header and
 runtime ABI version 9 are unchanged. Runtime tests therefore gain no
 receiver-specific harness. Compiler phase, verifier, backend, linker-surface,
 and native tests own the implementation evidence. The current runtime
-already supplies every service required by the frozen design.
+already supplies every service required by the frozen design. Backend surface
+tests additionally audit the emitted runtime-call set, unchanged exact-class
+layout, public header version, and compatibility marker for a produced-
+receiver program; no receiver-named symbol or operation is emitted.
 
 ## Verification
 

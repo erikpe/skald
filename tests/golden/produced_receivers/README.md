@@ -1,0 +1,16 @@
+# Produced receiver golden tests
+
+`receivers.golden.toml` owns complete source-to-native and source-to-diagnostic
+coverage for read-only method calls on produced exact-class values. The native
+case combines exact, inherited, virtual, and interface selection; every call-
+result producer family; recursive register/stack pressure; raw-byte strings;
+closed generic results; and owning-result lifetime observations in one
+compilation unit. The compile-failure case keeps mutable methods and excluded
+field, optional, array, and raw-shared receiver families at frontend
+diagnostics.
+
+Run this group, including repeated compiler and native processes, with:
+
+```text
+scripts/golden.sh --determinism full --filter 'produced_receivers/**'
+```

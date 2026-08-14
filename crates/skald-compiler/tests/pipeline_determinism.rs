@@ -38,6 +38,9 @@ const POLYMORPHISM_TEST_NAME: &str =
 const PRODUCED_ALIAS_HELPER_OUTPUT: &str = "SKALD_PRODUCED_ALIAS_DETERMINISM_OUTPUT";
 const PRODUCED_ALIAS_TEST_NAME: &str =
     "produced_alias_phase_products_are_deterministic_across_processes";
+const PRODUCED_RECEIVER_HELPER_OUTPUT: &str = "SKALD_PRODUCED_RECEIVER_DETERMINISM_OUTPUT";
+const PRODUCED_RECEIVER_TEST_NAME: &str =
+    "produced_receiver_phase_products_are_deterministic_across_processes";
 const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
 const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
 const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
@@ -169,6 +172,16 @@ fn produced_alias_phase_products_are_deterministic_across_processes() {
         PRODUCED_ALIAS_HELPER_OUTPUT,
         PRODUCED_ALIAS_TEST_NAME,
         produced_alias_phase_dump,
+    );
+}
+
+#[test]
+fn produced_receiver_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "produced-receivers",
+        PRODUCED_RECEIVER_HELPER_OUTPUT,
+        PRODUCED_RECEIVER_TEST_NAME,
+        produced_receiver_phase_dump,
     );
 }
 
@@ -975,6 +988,16 @@ fn polymorphism_phase_dump() -> String {
 fn produced_alias_phase_dump() -> String {
     complete_golden_phase_dump(include_str!(
         "../../../tests/golden/aliases/produced_alias_arguments.ska"
+    ))
+}
+
+fn produced_receiver_phase_dump() -> String {
+    complete_phase_dump(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } ",
+        "fn next(amount: i64) -> Item { return Item(self.value + amount); } ",
+        "fn read() -> i64 { return self.value; } }\n",
+        "fn produce(value: i64) -> Item { return Item(value); }\n",
+        "fn main() -> i64 { return produce(40).next(2).read(); }\n",
     ))
 }
 

@@ -1,0 +1,38 @@
+class Item {
+    value: i64;
+
+    init() {
+        self.value = 1;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+
+    mut fn change() -> unit {
+        self.value = 2;
+    }
+}
+
+fn optional_item() -> Item? {
+    return none;
+}
+
+fn array_item() -> Item[] {
+    return Item[]();
+}
+
+fn shared_item() -> shared Item {
+    return new Item();
+}
+
+fn invalid_receivers() -> unit {
+    Item().value;
+    optional_item().read();
+    array_item().read();
+    shared_item().read();
+}
+
+fn main() -> i64 {
+    return 0;
+}
