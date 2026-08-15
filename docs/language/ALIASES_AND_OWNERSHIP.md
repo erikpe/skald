@@ -113,7 +113,7 @@ Alias binding does not copy the object or begin a new object lifetime. The
 callee operates on the same place selected by the caller.
 
 The implemented
-[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#produced-object-field-reads)
 allows an exact-class field projected from one accepted produced root to
 serve as a read-only `ref` source. The hidden complete root, rather than the
 projected field, owns cleanup and remains live through the call; the projected

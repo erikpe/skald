@@ -245,8 +245,8 @@ consumers. Field writes and mutable methods on the inline produced root remain
 outside the executable boundary; explicitly crossing a shared owning edge
 retains the separate pointee's ordinary access.
 
-The frozen, partially implemented
-[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+The implemented
+[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#produced-object-field-reads)
 extends that hidden root to read-only field projection. Canonical base and
 exact inline-class field projections remain subordinate to the same complete
 produced object, preserve its exact dynamic origin, and do not create source
@@ -257,7 +257,7 @@ ordinary securing, guard, anchor, copy, transfer, and explicit-dereference
 rules. Every bounded consumer ends and every owning result is secured before
 the complete produced root is destroyed.
 
-The frozen root has read-only access. Projection therefore cannot authorize a
+The produced root has read-only access. Projection therefore cannot authorize a
 direct or nested write, mutable method, `mut ref`, whole-object replacement,
 or escaping alias. Declaring-class privacy, inherited lookup, field identity,
 and finite containment are unchanged. Resolution retains this read-only root

@@ -139,6 +139,13 @@ is secured in the ordinary caller-owned temporary, remains live through the
 method call, and is then cleaned at the full-expression boundary. A mutable
 method on that unnamed result remains invalid.
 
+The same exact result may expose a readable field directly. A primitive field
+is loaded before the vector-result temporary is cleaned, while class,
+optional, array, and owner fields retain their ordinary bounded or owning
+consumer rules. The standard `Str.join` implementation uses this composition
+to read `values[index]._length` without a staging `Str` local; declaring-class
+privacy is unchanged.
+
 Copying or assigning a named `Vec<T>` deep-copies its inline backing array.
 Vector length, capacity storage, and slots are independent afterward. Inline
 elements follow their selected copy operations, while corresponding shared

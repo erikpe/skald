@@ -102,8 +102,7 @@ fn exercise_cleanup() -> i64 {
     var second: Box<Tracked> = Box<Tracked>(copy first);
     second.replace(second_value);
     first = second;
-    var result: Tracked = first.get();
-    return result.value;
+    return first.get().value;
 }
 
 fn main() -> i64 {

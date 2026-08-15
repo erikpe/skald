@@ -80,7 +80,6 @@ fn main() -> i64 {
     var deep_owner: (shared Base?)??? = some(some(canonical_owner));
     base = new Base?(Base(5));
 
-    var holder: Holder = Holder(forward(base), canonical_owner);
     var defaults: (shared i64?)[] = (shared i64?)[](2u);
     defaults[0] = new i64?(9);
     var listed: (shared i64?)[] = (shared i64?)[]{defaults[0], signed};
@@ -89,7 +88,7 @@ fn main() -> i64 {
     var views: (shared Marker?)[] = (shared Marker?)[]{marker, State.marker};
 
     var old_value: i64 = (*old)!.mark();
-    var new_value: i64 = (*holder.current)!.mark();
+    var new_value: i64 = (*Holder(forward(base), canonical_owner).current)!.mark();
     var interface_value: i64 = dispatch(views);
     var static_value: i64 = (*State.marker)!.mark();
     var recovered: shared Base? = deep_owner!!!;

@@ -136,9 +136,7 @@ public class Str {
         var total_length: u64 = 0u;
         var index: u64 = 0u;
         while (index < value_count) {
-            var value: Str = values[(i64) index];
-            total_length = total_length + value._length;
-            //total_length = total_length + values[(i64) index]._length;
+            total_length = total_length + values[(i64) index]._length;
             index = index + 1u;
         }
         total_length = total_length + (value_count - 1u) * self._length;
@@ -247,10 +245,10 @@ public class Str {
     }
 
     fn to_bool() -> bool? {
-        if (self.equals_str("true")) {
+        if (self._length == "true"._length && self.equals_str("true")) {
             return true;
         }
-        if (self.equals_str("false")) {
+        if (self._length == "false"._length && self.equals_str("false")) {
             return false;
         }
         return none;

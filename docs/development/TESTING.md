@@ -583,9 +583,9 @@ exact, inherited, virtual, and closed-bound interface selection; direct,
 static, instance, and interface producers under recursive register/stack
 pressure; raw-byte string composition, slicing, parsing, and observation;
 `Vec<Str>`, nested generic results, and owning results that outlive receiver
-cleanup. Compile-failure goldens retain mutable methods, temporary field
-access, optional and array producers, raw shared dot access, unrelated types,
-and escaping uses.
+cleanup. Compile-failure goldens retain mutable methods, optional and array
+producers, raw shared dot access, unrelated types, and escaping uses. Produced
+field reads have separate success and read-only-rejection coverage below.
 
 `pipeline_determinism` compares token-through-assembly phase products across
 independent compiler processes. The `produced_receivers` golden group repeats
@@ -595,10 +595,10 @@ surface assertions freeze ordinary receiver marshaling, class layout, the
 runtime-call set, ABI version 9, and `ska_rt_abi_v9` without a receiver-specific
 runtime harness.
 
-## Frozen produced-object field-read coverage
+## Produced-object field-read coverage
 
-Produced-object field reads are frozen, with every implemented readable field
-category typed through verified MIR and native execution. Resolver tests must admit
+Produced-object field reads are implemented, with every readable field
+category typed through verified MIR and native execution. Resolver tests admit
 eligible reads without `RES009`, while
 the produced-receiver compile-failure golden retains only the excluded
 optional, array, and raw shared-owner roots. A write-shaped produced field must
@@ -641,8 +641,8 @@ getters, and `Vec<Str>`. Backend assertions retain ordinary layouts, receiver
 and alias marshaling, runtime calls, ABI version 9, and `ska_rt_abi_v9`; no
 field-read-specific runtime harness or symbol is permitted.
 
-`produced_fields/fields::lifecycle_order` is the focused generated-code trace
-for PFR4. It observes explicit field copy securing before root destruction,
+`produced_fields/fields::lifecycle_order` is the focused generated-code
+lifetime trace. It observes explicit field copy securing before root destruction,
 later argument effects, call execution, reverse cleanup of multiple produced
 roots, nested field destruction, and exactly-once destruction of the secured
 copy. The two rejection leaves in the same group freeze read-only, mutable-

@@ -81,6 +81,7 @@ Archived plans:
 - [Generic classes](GENERIC_CLASSES_ROADMAP.md)
 - [Produced exact-class method receivers](PRODUCED_EXACT_CLASS_METHOD_RECEIVERS_ROADMAP.md)
 - [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
+- [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md)
 
 Resolved string-design inputs:
 

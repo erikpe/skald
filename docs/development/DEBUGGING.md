@@ -242,7 +242,7 @@ resolution as one `ProducedReceiver` plus canonical base and intermediate
 field projections; the final field remains on `FieldAccess`. A produced field
 assignment crosses the same representation and must fail through the ordinary
 read-only access diagnostic. The
-[frozen field-read representation](../compiler/PHASES_AND_IR.md#frozen-produced-object-field-read-representation)
+[field-read representation](../compiler/PHASES_AND_IR.md#produced-object-field-read-representation)
 reuses the same produced `View`: HIR contains an ordinary field place with
 read-only produced provenance and no inspection binding, nested beneath the
 existing optional, array, shared-owner, optional-box, alias, or copy carrier

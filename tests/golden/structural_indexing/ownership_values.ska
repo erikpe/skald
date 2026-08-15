@@ -120,9 +120,7 @@ fn exercise_specialized_generic() -> unit {
     outer[:] = Cell<Item>(Item(61));
     outer[0] = outer[0];
 
-    var result: Cell<Item> = outer[:];
-    var item: Item = result[0];
-    assert_eq_i64(item.value, 61);
+    assert_eq_i64(outer[:][0].value, 61);
 }
 
 fn main() -> i64 {

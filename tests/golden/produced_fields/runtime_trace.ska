@@ -1,0 +1,28 @@
+from std::error import panic;
+
+class Leaf {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Holder {
+    leaf: Leaf;
+
+    init(value: i64) {
+        self.leaf = Leaf(value);
+    }
+}
+
+fn consume(ref leaf: Leaf) -> i64 {
+    if (leaf.value == 7) {
+        panic("produced field failure");
+    }
+    return leaf.value;
+}
+
+fn main() -> i64 {
+    return consume(Holder(7).leaf);
+}

@@ -107,6 +107,14 @@ receiver through the ordinary produced-object temporary path; the shared phase
 representation is defined in
 [Compiler Phases and Intermediate Representations](PHASES_AND_IR.md#produced-exact-class-method-receiver-representation).
 
+Produced-object field reads use that same path. Within the declaring `Str`
+class, a closed-generic `Vec<Str>` getter result may project private descriptor
+fields directly; `Str.join` uses this for its length pass, and `to_bool` reads
+the private length of literal producers before comparison. Resolution still
+applies declaring-class privacy, and HIR/MIR reuse ordinary produced views,
+field projections, owner operations, logical lifetimes, and cleanup without a
+string-specific carrier.
+
 ### MIR and verification
 
 MIR gives decoded byte blocks deterministic program-local identities distinct

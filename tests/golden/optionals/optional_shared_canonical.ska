@@ -33,9 +33,8 @@ fn main() -> i64 {
     var shorthand: shared? Value = canonical;
     var elements: ((shared Value)?)[] = ((shared Value)?)[]{shorthand};
     var readable: (shared Readable)? = forward(elements[0]);
-    var holder: Holder = Holder(readable);
     assert_true(canonical is some);
     assert_true(shorthand is some);
-    assert_eq_i64(holder.value!->read(), 42);
+    assert_eq_i64(Holder(readable).value!->read(), 42);
     return 0;
 }

@@ -6,16 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-[Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md) is in
-progress; PFR4 is next. Every implemented readable field category now
-type-checks and lowers through one ordinary produced temporary, including
-optional, array, shared-owner, optional-owner, and optional-box copies,
-transfers, aliases, anchors, guards, assignment sources, and results. Canonical
-projections retain exact origin and every independent result is secured before
-root cleanup. Comprehensive lifetime and control-flow verifier hardening is
-the next boundary. The roadmap depends on the completed produced receiver,
-object-cast, ownership, optional, array, generic-class, and structural
-indexing foundations.
+No implementation roadmap is currently in progress.
 
 ## Planned
 

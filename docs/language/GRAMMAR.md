@@ -826,14 +826,14 @@ method receiver; grammar remains unchanged.
 That same postfix grammar already parses field selection and longer member
 chains on an exact-class construction, class literal, exact-class call result,
 or structural getter result. The
-[frozen produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#produced-object-field-reads)
 therefore adds no token, precedence rule, AST expression shape, assignment
 form, or reference syntax. Resolution classifies an eligible exact-class
 producer once as a hidden read-only root and applies the existing member chain
 to that root. A member assignment retains its expression receiver for semantic
 access checking, where a produced root receives the ordinary read-only
-diagnostic. Grammar and resolution acceptance do not imply that the staged
-typed and executable feature is published.
+diagnostic. The implemented typed and executable behavior introduces no
+additional grammar surface.
 
 Optional type syntax crosses parsing as a recursive source-shaped node that
 retains grouping, punctuation, and `shared?` shorthand provenance. Resolution

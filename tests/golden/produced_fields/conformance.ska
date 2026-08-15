@@ -1,0 +1,129 @@
+from std::str import Str;
+from std::vec import Vec;
+
+class Cell {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Base {
+    inherited: i64;
+
+    init(value: i64) {
+        self.inherited = value;
+    }
+}
+
+class Envelope extends Base {
+    cell: Cell;
+    enabled: bool;
+
+    init(value: i64) {
+        super(value);
+        self.cell = Cell(value);
+        self.enabled = true;
+    }
+
+    static fn create(value: i64) -> Envelope {
+        return Envelope(value);
+    }
+}
+
+interface Producer {
+    fn produce(value: i64) -> Envelope;
+}
+
+class Factory implements Producer {
+    init() {}
+
+    fn produce(value: i64) -> Envelope {
+        return Envelope(value);
+    }
+}
+
+class GenericBox<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn produce() -> T {
+        return self.value;
+    }
+}
+
+fn direct(value: i64) -> Envelope {
+    return Envelope(value);
+}
+
+fn interface_value(ref producer: Producer, value: i64) -> i64 {
+    return producer.produce(value).cell.value;
+}
+
+fn mark(value: i64) -> i64 {
+    return value;
+}
+
+fn combine(ref cell: Cell, later: i64) -> i64 {
+    return cell.value + later;
+}
+
+fn returned_cell(value: i64) -> Cell {
+    return direct(value).cell;
+}
+
+fn pressured(
+    a: i64,
+    b: i64,
+    c: i64,
+    d: i64,
+    e: i64,
+    f: i64,
+    g: i64,
+    h: i64
+) -> Envelope {
+    return Envelope(a + b + c + d + e + f + g + h);
+}
+
+fn main() -> i64 {
+    var factory: Factory = Factory();
+    var values: Vec<Envelope> = Vec<Envelope>();
+    values.push(Envelope(6));
+    var words: Vec<Str> = Vec<Str>();
+    words.push("a");
+    words.push("b");
+
+    var copied: Cell = Cell(copy direct(9).cell);
+    var returned: Cell = returned_cell(10);
+    var loop_count: i64 = 0;
+    while (loop_count < 2 && direct(loop_count).enabled) {
+        loop_count = loop_count + 1;
+    }
+
+    if (false && direct(99).enabled) {
+        return 0;
+    }
+
+    var direct_forms: bool = direct(1).cell.value == 1
+        && Envelope.create(2).cell.value == 2
+        && factory.produce(3).cell.value == 3
+        && interface_value(factory, 4) == 4;
+    var composed_forms: bool = GenericBox<Envelope>(Envelope(5)).produce().cell.value == 5
+        && values[0].cell.value == 6
+        && ((Base) direct(7)).inherited == 7
+        && combine(direct(8).cell, mark(1)) == 9;
+    var owned_forms: bool = copied.value == 9
+        && returned.value == 10
+        && pressured(1, 2, 3, 4, 5, 6, 7, 8).cell.value == 36
+        && loop_count == 2
+        && ",".join(words).len() == 3u;
+
+    if (direct_forms && composed_forms && owned_forms) {
+        return 42;
+    }
+    return 0;
+}

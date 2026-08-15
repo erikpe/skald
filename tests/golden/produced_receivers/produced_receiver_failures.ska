@@ -27,7 +27,6 @@ fn shared_item() -> shared Item {
 }
 
 fn invalid_receivers() -> unit {
-    Item().value;
     optional_item().read();
     array_item().read();
     shared_item().read();

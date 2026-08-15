@@ -51,7 +51,7 @@ that produce class objects are accepted only in the supported object
 initialization, assignment, argument, and return contexts.
 
 The implemented
-[produced-object field-read extension](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+[produced-object field-read extension](FUNCTIONS_AND_CONTROL_FLOW.md#produced-object-field-reads)
 does not change that distinction. It materializes an eligible exact-class
 producer into one hidden read-only place, then applies ordinary field typing to
 that place for one bounded full expression. Primitive endpoints produce
@@ -144,7 +144,7 @@ The implemented expression families have these value effects:
 | literal | A value of the spelling-selected primitive type. |
 | primitive binding | The stored primitive value, with the binding's declared type. |
 | grouping | The inner expression's type and value; grouping remains source-significant for the limited object materialization rules. |
-| primitive field selection | The field's stored primitive value. The frozen produced-root extension will permit the same load from a hidden exact-class temporary once implemented. |
+| primitive field selection | The field's stored primitive value, including a read from an eligible hidden exact-class produced root. |
 | direct function call | The declared primitive or `unit` result; an exact-class result is an object producer restricted to object contexts. |
 | method call | The declared primitive or `unit` result; an exact-class result has the same object-context restriction. |
 | shared dereference | A bounded non-owning class, interface, or `Obj` place selected from a `shared T` owner; it does not copy or transfer ownership. |

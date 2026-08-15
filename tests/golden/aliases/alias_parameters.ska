@@ -68,8 +68,7 @@ fn main() -> i64 {
     counter.add_from(counter);
     std::io::println_i64(read(counter));
 
-    var snapshot: Snapshot = Snapshot(counter);
-    std::io::println_i64(snapshot.value);
+    std::io::println_i64(Snapshot(counter).value);
 
     choose(counter, true);
     std::io::println_i64(read(counter));

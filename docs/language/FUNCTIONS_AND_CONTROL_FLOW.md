@@ -148,19 +148,20 @@ short-circuit path creates no storage, effect, view, or cleanup. Failure in a
 later argument retains the language's existing abrupt-termination boundary
 for already completed owners.
 
-The current compiler does not admit temporary field reads or writes, mutable
-temporary receivers, optional or array receiver families, independently
-storable references, or escaping aliases. It adds no grammar form, internal
-or external calling-convention rule, backend representation, runtime service,
-or runtime ABI-version change. The compiler representation is defined
+The current compiler admits the read-only produced-object field surface below,
+but not temporary field writes, mutable temporary receivers, optional or array
+receiver families, independently storable references, or escaping aliases. It
+adds no grammar form, internal or external calling-convention rule, backend
+representation, runtime service, or runtime ABI-version change. The compiler
+representation is defined
 by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#produced-exact-class-method-receiver-representation),
 and the [status matrix](STATUS.md#implemented-language) records the implemented
 boundary.
 
-### Frozen produced-object field reads
+### Produced-object field reads
 
 The source-visible contract for reading fields from a produced exact-class
-object is frozen. Every implemented readable field category is typed through
+object is implemented. Every readable field category is typed through
 verified MIR and native execution: primitives, exact inline classes,
 optionals, inline arrays, shared and optional-shared owners, shared arrays,
 and optional boxes. The implemented slice accepts the same producer families
@@ -178,7 +179,7 @@ temporary rule; being produced grants no additional member visibility.
 
 The final selected field retains its ordinary type-specific meaning:
 
-| Final field category | Frozen consumption rule |
+| Final field category | Consumption rule |
 |---|---|
 | Primitive | Load one scalar value before the produced root is destroyed. |
 | Exact inline class | Retain a read-only projected subobject for an immediate method, `ref`, checked-view, copy, owning argument, assignment-source, or return-copy consumer; it is not an ordinary scalar value. |
@@ -203,7 +204,7 @@ primitive, optional-container, array, and raw shared-owner expressions do not
 become implicit dot roots; they retain their existing family-specific syntax
 and diagnostics.
 
-This frozen extension adds no grammar form, source binding, reference value,
+This extension adds no grammar form, source binding, reference value,
 backend representation, internal or external calling-convention rule, runtime
 service, or runtime ABI-version change. Resolution retains one eligible
 producer, its canonical base and intermediate field projections, and the final

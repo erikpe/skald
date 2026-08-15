@@ -2,6 +2,5 @@ from model import Box, Item;
 
 fn main() -> i64 {
     var box: Box<Item> = Box<Item>(Item(42));
-    var item: Item = box.get();
-    return item.value;
+    return box.get().value;
 }

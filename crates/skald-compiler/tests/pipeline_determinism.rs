@@ -41,6 +41,9 @@ const PRODUCED_ALIAS_TEST_NAME: &str =
 const PRODUCED_RECEIVER_HELPER_OUTPUT: &str = "SKALD_PRODUCED_RECEIVER_DETERMINISM_OUTPUT";
 const PRODUCED_RECEIVER_TEST_NAME: &str =
     "produced_receiver_phase_products_are_deterministic_across_processes";
+const PRODUCED_FIELD_HELPER_OUTPUT: &str = "SKALD_PRODUCED_FIELD_DETERMINISM_OUTPUT";
+const PRODUCED_FIELD_TEST_NAME: &str =
+    "produced_field_phase_products_are_deterministic_across_processes";
 const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
 const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
 const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
@@ -182,6 +185,16 @@ fn produced_receiver_phase_products_are_deterministic_across_processes() {
         PRODUCED_RECEIVER_HELPER_OUTPUT,
         PRODUCED_RECEIVER_TEST_NAME,
         produced_receiver_phase_dump,
+    );
+}
+
+#[test]
+fn produced_field_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "produced-fields",
+        PRODUCED_FIELD_HELPER_OUTPUT,
+        PRODUCED_FIELD_TEST_NAME,
+        produced_field_phase_dump,
     );
 }
 
@@ -998,6 +1011,12 @@ fn produced_receiver_phase_dump() -> String {
         "fn read() -> i64 { return self.value; } }\n",
         "fn produce(value: i64) -> Item { return Item(value); }\n",
         "fn main() -> i64 { return produce(40).next(2).read(); }\n",
+    ))
+}
+
+fn produced_field_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/produced_fields/primitive_and_inline_consumers.ska"
     ))
 }
 

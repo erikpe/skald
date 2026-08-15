@@ -53,18 +53,15 @@ fn main() -> i64 {
     var assigned: Leaf = Leaf(0);
     assigned = *holder.edge;
     var consumed: i64 = consume(*owner);
-    var returned: Leaf = copy_result(owner);
-    var constructed: Leaf = Leaf(copy *owner);
     var allocated: shared Leaf = new Leaf(copy *holder.edge);
-    var produced: Leaf = Leaf(copy *produce(7));
 
     std::io::println_i64(holder.inline_copy.value);
     std::io::println_i64(copied.value);
     std::io::println_i64(assigned.value);
     std::io::println_i64(consumed);
-    std::io::println_i64(returned.value);
-    std::io::println_i64(constructed.value);
+    std::io::println_i64(copy_result(owner).value);
+    std::io::println_i64(Leaf(copy *owner).value);
     std::io::println_i64(allocated->value);
-    std::io::println_i64(produced.value);
+    std::io::println_i64(Leaf(copy *produce(7)).value);
     return 0;
 }

@@ -575,8 +575,8 @@ tests additionally audit the emitted runtime-call set, unchanged exact-class
 layout, public header version, and compatibility marker for a produced-
 receiver program; no receiver-named symbol or operation is emitted.
 
-The frozen
-[produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+The implemented
+[produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#produced-object-field-reads)
 does not change this boundary. Its hidden root uses compiler-owned exact-class
 temporary storage, and its field consumers use existing loads, generated
 lifecycle calls, shared retain/release, array allocation/copy operations,
@@ -586,7 +586,7 @@ verified MIR responsibilities rather than runtime lifetime services.
 Implementation therefore adds no public C symbol, header field, layout rule,
 panic reason, field descriptor, cleanup callback, or compatibility marker.
 The runtime ABI remains version 9 and `ska_rt_abi_v9` remains unchanged. The
-resolver now retains the frozen source form without changing the runtime
+resolver retains the source form without changing the runtime
 boundary. Compiler, verifier, backend, and native tests own its typed and
 executable implementation evidence, while runtime surface tests only confirm
 that no ABI addition occurred.

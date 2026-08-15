@@ -46,6 +46,12 @@ MIR, a verifier, or a backend. Generic classes add no erased storage, runtime
 dictionary, type descriptor argument, reflective type list, or public runtime
 ABI operation.
 
+After specialization, an exact-class result from a generic method or
+structural getter may directly expose readable fields through the ordinary
+produced-object carrier. Field identity, privacy, access, ownership, and
+lifetime are already concrete at that point; specialization introduces no
+generic produced-field representation or lowering branch.
+
 ## Template and parameter identities
 
 Declaration collection assigns each generic class a stable

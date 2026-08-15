@@ -480,11 +480,11 @@ introduced. Resolved, HIR, and MIR dumps expose provenance deterministically;
 MIR method-call dumps include the receiver's granted access before its exact
 or forwarded origin.
 
-## Frozen produced-object field-read representation
+## Produced-object field-read representation
 
 The source-visible
-[produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
-is frozen, with its complete implemented field-category surface lowered
+[produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#produced-object-field-reads)
+is implemented, with its complete field-category surface lowered
 through existing typed carriers. A selected final field uses ordinary
 `ResolvedFieldAccessExpr`;
 its receiver retains the
@@ -531,8 +531,8 @@ while independent owning results are secured before root cleanup. Control-
 effect discovery must include both production and the final field consumer so
 logical paths and earlier scalar spills retain their current ordering.
 
-Resolved, HIR, and MIR dumps will expose the existing produced-view provenance
-and canonical projection order deterministically. The frozen design adds no
+Resolved, HIR, and MIR dumps expose the existing produced-view provenance and
+canonical projection order deterministically. The implementation adds no
 new HIR receiver variant, MIR storage kind, backend operation, calling-
 convention component, runtime call, or runtime ABI version.
 

@@ -37,6 +37,28 @@ name = "optional_array_and_owner_observations"
 expect = { exit = 42 }
 
 [[test]]
+name = "conformance"
+mode = "run"
+source = "conformance.ska"
+
+[[test.run]]
+name = "producers_dispatch_generics_structural_control_and_abi"
+expect = { exit = 42 }
+
+[[test]]
+name = "runtime_trace"
+mode = "run"
+source = "runtime_trace.ska"
+
+[[test.run]]
+name = "panic_through_produced_field_consumer"
+expect = { exit = "failure", stderr = { inline = """panic: produced field failure
+stacktrace:
+  at runtime_trace::consume (tests/golden/produced_fields/runtime_trace.ska:21:9)
+  at runtime_trace::main (tests/golden/produced_fields/runtime_trace.ska:27:12)
+""" } }
+
+[[test]]
 name = "lifecycle_order"
 mode = "run"
 source = "lifecycle_order.ska"

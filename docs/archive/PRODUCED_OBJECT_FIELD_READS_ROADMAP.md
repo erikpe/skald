@@ -1,6 +1,6 @@
 # Produced-Object Field Reads Roadmap
 
-Status: in progress; PFR5 is next.
+Status: complete.
 
 This roadmap lets an expression that produces one exact inline class expose
 its fields directly without a source-level staging local. It makes
@@ -69,7 +69,7 @@ or immediate consumer has been secured.
 - [x] PFR2 — Type and lower primitive and inline-object field consumers
 - [x] PFR3 — Secure owning and guarded field categories
 - [x] PFR4 — Verify lifetime, control flow, and rejection boundaries
-- [ ] PFR5 — Prove native composition and publish the feature
+- [x] PFR5 — Prove native composition and publish the feature
 
 Every Rust implementation task runs its focused phase and golden tests,
 followed by `make check` and `make msrv-check`. Documentation-only PFR0 runs
@@ -312,30 +312,30 @@ hygiene pass.
 staging locals where clarity improves, and make living documentation describe
 only the implemented boundary.
 
-- [ ] Add native conformance covering construction, literals, all direct and
+- [x] Add native conformance covering construction, literals, all direct and
       dispatched producer families, inherited/private selection, nested inline
       fields, closed generics, structural getters, every supported final-field
       category, ABI pressure, and observable lifecycle order.
-- [ ] Prove that produced-field chains compose with later arguments, checked
+- [x] Prove that produced-field chains compose with later arguments, checked
       casts, interface calls, optionals, arrays, shared owners, loops, logical
       expressions, copying, returns, and panic/runtime traces without backend
       or runtime special cases.
-- [ ] Simplify `Str.join` to read `Vec<Str>` result fields directly where that
+- [x] Simplify `Str.join` to read `Vec<Str>` result fields directly where that
       is clearer, and remove only staging locals whose sole purpose was to turn
       a produced object into a readable place.
-- [ ] Replace the temporary-field compile-failure golden with focused success
+- [x] Replace the temporary-field compile-failure golden with focused success
       and read-only failure coverage; update testing guidance and deterministic
       phase-product coverage.
-- [ ] Publish current behavior in functions/control flow, classes/lifecycle,
+- [x] Publish current behavior in functions/control flow, classes/lifecycle,
       types/values, aliases/ownership, compiler phase/IR, debugging, testing,
       generic/vector/string, and status documentation. Remove stale claims
       that produced exact-class fields always require a source local.
-- [ ] Audit touched modules by responsibility and record non-trivial follow-up
+- [x] Audit touched modules by responsibility and record non-trivial follow-up
       opportunities in an indexed discoveries document rather than expanding
       this roadmap.
-- [ ] Confirm unchanged grammar, internal/external ABI, backend runtime-call
+- [x] Confirm unchanged grammar, internal/external ABI, backend runtime-call
       surface, runtime ABI version, and deterministic assembly.
-- [ ] Run focused deterministic native/runtime gates, `make check`, and
+- [x] Run focused deterministic native/runtime gates, `make check`, and
       `make msrv-check` from an artifact-free snapshot; then archive this
       completed roadmap and update both roadmap indexes.
 
@@ -351,6 +351,20 @@ field surface; standard-library staging is reduced; all exclusions remain
 tested; no target/runtime special case exists; the roadmap is archived with no
 unindexed actionable discovery.
 
+Completed 2026-08-15. Native conformance now covers every eligible producer
+family, field category, dispatch and generic composition, structural getters,
+checked views, ownership, logical and loop paths, copying and returns, ABI
+pressure, lifecycle order, and panic traces. `Str.join` reads the private
+length of each produced `Vec<Str>` result directly, while retaining a local
+where one getter result supplies several copy fields; `Str.to_bool` exercises
+private literal-field reads. Focused success and read-only rejection goldens,
+cross-process phase-product determinism, and backend surface assertions freeze
+ordinary layout, calls, runtime-call inventory, ABI version 9, and
+`ska_rt_abi_v9`. The responsibility audit found no actionable follow-up that
+warrants a discoveries record. Artifact-free focused deterministic gates and
+`make check`, Rust 1.82 `make msrv-check`, documentation validation, and diff
+hygiene pass.
+
 ## Ordering and dependencies
 
 PFR0 freezes ownership and access before source acceptance. PFR1 makes
@@ -365,4 +379,5 @@ source, publishes the implemented contract, and closes the roadmap.
 The completed produced-object alias, produced exact-class method receiver,
 object-cast, optional, array, shared-ownership, generic-class, and structural
 indexing roadmaps are implementation dependencies and baselines, not work to
-repeat. PFR0 is the only next task; later tasks depend on every earlier task.
+repeat. The implementation therefore followed the tasks in order, with every
+later task depending on all earlier tasks.

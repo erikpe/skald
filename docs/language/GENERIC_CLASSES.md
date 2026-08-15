@@ -106,6 +106,11 @@ The compiler does not add a generic receiver representation or require a
 source staging local for either form. Mutable methods still require an
 existing mutable object place.
 
+The same rule applies to fields of an exact-class result. For example,
+`boxes[index].value` and `wrapper.produce().rank` use the specialized field
+identity and ordinary produced-object lifetime; no generic-only field carrier
+or staging local is introduced.
+
 ## Exact specialization and identity
 
 A generic declaration is a compile-time template, not a runtime class. Every

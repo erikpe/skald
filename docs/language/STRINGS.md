@@ -218,6 +218,18 @@ The installed representative public surface is:
 | `fn to_u8() -> u8?` | Parse complete unsigned numeric byte text, returning `none` on failure. |
 | `fn to_f64() -> f64?` | Parse complete decimal or exact special-value text with correct binary64 rounding, returning `none` on failure. |
 
+`join` is ordinary generic and produced-field composition. Its length pass
+reads the private `_length` field directly from each produced
+`Vec<Str>.index_get` result inside the declaring class. Its copy pass keeps one
+named element because several descriptor fields must be consumed from the
+same getter result. This avoids redundant getter evaluation while requiring
+no string-specific compiler path.
+
+`to_bool` likewise reads `_length` from the canonical `"true"` and `"false"`
+literal producers before performing byte comparison. Literal production,
+private declaring-class access, short-circuit lifetime, and optional results
+all remain ordinary language behavior.
+
 Byte indices and slice bounds use the same one-time negative normalization as
 array indices and explicit array slice bounds, relative to the current
 string's length. Thus `index_get(-1)` and `value[-1]` select the final byte,

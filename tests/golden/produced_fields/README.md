@@ -22,6 +22,14 @@ The rejection cases freeze diagnostics for direct and nested writes, class
 field replacement, mutable methods and aliases, private fields, and invalid
 member kinds on produced roots.
 
+The conformance case covers construction, direct/static/instance/interface
+producers, inherited and checked projections, nested fields, closed generics,
+structural getters, copies and returns, later arguments, logical and loop
+paths, register/stack pressure, and `Str.join`. The runtime-trace case proves a
+panic reached through a produced-field alias consumer keeps the ordinary
+source stacktrace and non-unwinding behavior. Together with the owning-field
+and lifecycle cases, this is the complete source-to-native field surface.
+
 Run the group with:
 
 ```text
