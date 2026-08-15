@@ -10,7 +10,12 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+- [Generic static-member dot syntax](GENERIC_STATIC_MEMBER_DOT_SYNTAX_ROADMAP.md)
+  — Status: planned; GSD0 is next. Replace `Class<T>::member` with
+  `Class<T>.member` for reads, writes, calls, and function references while
+  retaining `::` exclusively for module paths. The work depends only on the
+  implemented generic-class, static-member, module, and function-value
+  baselines.
 
 ## Design proposals
 
