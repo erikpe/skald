@@ -13,9 +13,11 @@ address-taken metadata, trivial stored/callable HIR, and complete indirect-call
 argument/result planning are implemented. FVI5 adds deterministic callable-
 address and indirect-call MIR plus target-independent verification. FVI6 adds
 one-word x86-64 code pointers, exact symbol addresses, static slots, and
-receiverless register-indirect calls through the existing ABI. FVI7 is next
-and will integrate indirect candidates with static effects, retention, and
-runtime traces.
+receiverless register-indirect calls through the existing ABI. FVI7 adds
+exact-signature address-taken candidate sets, conservative evidenced static
+effects, verified retention decisions, and exact target/call-site runtime
+traces. FVI8 is next and will harden complete feature composition, publish the
+implemented surface, and close the roadmap.
 
 ## Planned
 

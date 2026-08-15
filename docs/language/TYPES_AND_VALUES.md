@@ -747,9 +747,10 @@ Function values have native x86-64 realization. Exact recursive types,
 eligible ordinary and closed-generic references, specialization-time generic
 composition, stored/callable HIR, completely checked indirect-call HIR,
 verified callable-address and indirect-call MIR, one-word code pointers, and
-register-indirect calls are implemented. Whole-program static-effect,
-retention, and trace integration remains staged. Their non-null trivial-scalar
-design and initial exclusions are frozen in
+register-indirect calls are implemented. Exact-signature candidate expansion,
+static effects, target retention, and source-callable panic traces are part of
+the verified whole-program pipeline. Their non-null trivial-scalar design and
+initial exclusions are frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md). Shared ownership's
 implemented non-null value type, compatible views, and copy/adopt/release
 behavior are defined in

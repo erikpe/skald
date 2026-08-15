@@ -330,10 +330,17 @@ impl Extractor<'_> {
                     );
                 }
             }
-            // Candidate expansion belongs to the function-value static-effect
-            // task. Native target realization is independent of this pending
-            // conservative whole-program edge set.
-            MirCallTarget::Indirect(_) => {}
+            MirCallTarget::Indirect(target) => {
+                for candidate in self.function_value_targets(target.function_type) {
+                    self.add_edge(
+                        source,
+                        StaticEffectNode::Callable(candidate),
+                        StaticEffectEdgeKind::IndirectCall,
+                        phase,
+                        span,
+                    );
+                }
+            }
         }
     }
 }

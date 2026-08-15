@@ -1743,7 +1743,7 @@ fn function_value_specialization_phase_dump() -> String {
     let mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
     let assembly = emit_assembly(
         Target::X86_64SysV,
-        BackendInput::without_runtime_trace(&mir),
+        BackendInput::with_runtime_trace(&mir, &sources),
     )
     .unwrap();
 

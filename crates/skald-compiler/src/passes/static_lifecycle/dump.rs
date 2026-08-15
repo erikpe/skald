@@ -8,6 +8,17 @@ use super::model::{StaticEffectAnalysis, StaticEffectNode};
 
 pub fn dump_static_effects(analysis: &StaticEffectAnalysis) -> String {
     let mut output = String::from("StaticEffectAnalysis\n");
+    if analysis.function_value_candidates().next().is_some() {
+        output.push_str("  FunctionValueCandidates\n");
+        for candidates in analysis.function_value_candidates() {
+            let _ = writeln!(output, "    Type {}", candidates.function_type);
+            for target in &candidates.targets {
+                let _ = write!(output, "      Retain {}", target.callable);
+                write_span(&mut output, target.first_reference_span);
+                output.push('\n');
+            }
+        }
+    }
     let _ = writeln!(
         output,
         "  RecursiveComponents {}",

@@ -3,6 +3,7 @@
 mod access;
 mod control;
 mod edges;
+mod function_values;
 mod instruction;
 mod lifecycle;
 
@@ -27,7 +28,7 @@ use crate::{
 use super::model::{
     edge_key, evidence_key, StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
     StaticClassLifecycleOperation, StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode,
-    StaticEffectPhase,
+    StaticEffectPhase, StaticFunctionValueCandidates,
 };
 
 #[derive(Default)]
@@ -37,6 +38,7 @@ pub(crate) struct NodeDraft {
 }
 
 pub(crate) struct ExtractedGraph {
+    pub(crate) function_value_candidates: Vec<StaticFunctionValueCandidates>,
     pub(crate) nodes: BTreeMap<StaticEffectNode, NodeDraft>,
 }
 
@@ -55,9 +57,11 @@ fn extract_parts(
     program: &MirProgram,
     initializers: &[MirStaticInitializerBody],
 ) -> ExtractedGraph {
+    let function_value_candidates = function_values::collect(program, initializers);
     let mut extractor = Extractor {
         program,
         initializers,
+        function_value_candidates,
         nodes: BTreeMap::new(),
     };
     extractor.seed_nodes();
@@ -69,10 +73,24 @@ fn extract_parts(
 struct Extractor<'mir> {
     program: &'mir MirProgram,
     initializers: &'mir [MirStaticInitializerBody],
+    function_value_candidates: Vec<StaticFunctionValueCandidates>,
     nodes: BTreeMap<StaticEffectNode, NodeDraft>,
 }
 
 impl Extractor<'_> {
+    fn function_value_targets(
+        &self,
+        function_type: crate::identity::FunctionTypeId,
+    ) -> Vec<CallableId> {
+        self.function_value_candidates
+            .binary_search_by_key(&function_type, |candidates| candidates.function_type)
+            .ok()
+            .into_iter()
+            .flat_map(|index| &self.function_value_candidates[index].targets)
+            .map(|target| target.callable)
+            .collect()
+    }
+
     fn finish(mut self) -> ExtractedGraph {
         for draft in self.nodes.values_mut() {
             draft.direct.sort_by_key(evidence_key);
@@ -87,7 +105,10 @@ impl Extractor<'_> {
                     && left.span == right.span
             });
         }
-        ExtractedGraph { nodes: self.nodes }
+        ExtractedGraph {
+            function_value_candidates: self.function_value_candidates,
+            nodes: self.nodes,
+        }
     }
 
     fn seed_nodes(&mut self) {

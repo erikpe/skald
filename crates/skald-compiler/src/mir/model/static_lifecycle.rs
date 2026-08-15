@@ -3,7 +3,9 @@
 use std::fmt;
 
 use crate::{
-    identity::{ArrayTypeId, CallableId, ClassId, StaticFieldId, StaticInitializerId},
+    identity::{
+        ArrayTypeId, CallableId, ClassId, FunctionTypeId, StaticFieldId, StaticInitializerId,
+    },
     source::Span,
 };
 
@@ -79,6 +81,7 @@ pub enum StaticEffectPhase {
 pub enum StaticEffectEdgeKind {
     DirectCall,
     StaticCall,
+    IndirectCall,
     DirectMethodCall,
     VirtualDispatch,
     InterfaceDispatch,
@@ -99,6 +102,21 @@ pub enum StaticEffectEdgeKind {
     ArrayCopy,
     ArrayAssignment,
     ArrayDestruction,
+}
+
+/// One exact internal target retained because a callable-address operation
+/// forms its function value somewhere in the closed program.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StaticFunctionValueTarget {
+    pub callable: CallableId,
+    pub first_reference_span: Span,
+}
+
+/// The deterministic address-taken target set for one exact function type.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StaticFunctionValueCandidates {
+    pub function_type: FunctionTypeId,
+    pub targets: Vec<StaticFunctionValueTarget>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -134,16 +152,38 @@ pub struct StaticEffectSummary {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticEffectAnalysis {
+    function_value_candidates: Vec<StaticFunctionValueCandidates>,
     summaries: Vec<StaticEffectSummary>,
     recursive_components: usize,
 }
 
 impl StaticEffectAnalysis {
-    pub(crate) fn new(summaries: Vec<StaticEffectSummary>, recursive_components: usize) -> Self {
+    pub(crate) fn new(
+        function_value_candidates: Vec<StaticFunctionValueCandidates>,
+        summaries: Vec<StaticEffectSummary>,
+        recursive_components: usize,
+    ) -> Self {
         Self {
+            function_value_candidates,
             summaries,
             recursive_components,
         }
+    }
+
+    pub fn function_value_candidates(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &StaticFunctionValueCandidates> {
+        self.function_value_candidates.iter()
+    }
+
+    pub fn function_value_candidates_for(
+        &self,
+        function_type: FunctionTypeId,
+    ) -> Option<&StaticFunctionValueCandidates> {
+        self.function_value_candidates
+            .binary_search_by_key(&function_type, |candidates| candidates.function_type)
+            .ok()
+            .map(|index| &self.function_value_candidates[index])
     }
 
     pub fn summaries(&self) -> impl ExactSizeIterator<Item = &StaticEffectSummary> {
@@ -164,6 +204,13 @@ impl StaticEffectAnalysis {
     #[cfg(test)]
     pub(crate) fn summaries_mut_for_test(&mut self) -> &mut Vec<StaticEffectSummary> {
         &mut self.summaries
+    }
+
+    #[cfg(test)]
+    pub(crate) fn function_value_candidates_mut_for_test(
+        &mut self,
+    ) -> &mut Vec<StaticFunctionValueCandidates> {
+        &mut self.function_value_candidates
     }
 }
 

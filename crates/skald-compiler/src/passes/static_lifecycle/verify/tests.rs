@@ -186,6 +186,28 @@ fn rejects_missing_call_targets_and_dynamic_targets() {
 }
 
 #[test]
+fn rejects_missing_function_value_candidate_and_retention_inventory() {
+    let mut planned = plan(
+        "fn read() -> i64 { return State.base; }
+         fn invoke(callback: fn() -> i64) -> i64 { return callback(); }
+         class State {
+           static base: i64 = 1;
+           static result: i64 = invoke(read);
+           init() {}
+         }
+         fn main() -> i64 { return State.result; }",
+    );
+    planned
+        .lifecycle_mut_for_test()
+        .certificate_mut_for_test()
+        .effects_mut_for_test()
+        .function_value_candidates_mut_for_test()
+        .clear();
+
+    assert!(errors(&planned).contains("candidate and retention inventory"));
+}
+
+#[test]
 fn rejects_missing_lifetime_edges_and_order_violations() {
     let mut missing_edge = plan(DEPENDENCY_SOURCE);
     missing_edge

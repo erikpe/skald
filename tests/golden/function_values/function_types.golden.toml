@@ -51,6 +51,15 @@ name = "distinct_closed_targets"
 expect = { exit = 42 }
 
 [[test]]
+name = "indirect_static_effect"
+mode = "run"
+source = "static_effects.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "dependency_order"
+expect = { exit = 42 }
+
+[[test]]
 name = "malformed_parameter_mode"
 mode = "compile-fail"
 source = "malformed_function_type.ska"

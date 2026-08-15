@@ -12,7 +12,7 @@ assignment, internal value parameter/result positions, and indirect calls
 through every ordinary argument/result family. Exact internal callable
 addresses and receiverless calls execute natively through the ordinary ABI.
 The active [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md)
-owns the remaining whole-program static-effect, retention, and trace work.
+owns final composition hardening and publication.
 
 This contract adds non-null, capture-free function values to Skald. A function
 value names one exact internal top-level function or static method and carries

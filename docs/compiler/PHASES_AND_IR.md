@@ -190,6 +190,12 @@ operation a compile-time maintenance point. Virtual and interface calls and
 shared-owner finalizers expand to closed-world target sets. Compiler-generated
 copy, complete-finalizer, and array operations have distinct graph nodes, so
 their backend-realized calls do not disappear behind user body identities.
+Callable-address operations are separately inventoried by exact
+`FunctionTypeId` and `CallableId` without adding an effect. Each receiverless
+indirect call expands to every matching address-taken target through an
+`IndirectCall` edge. The inventory retains first reference spans, doubles as
+the explicit body-retention decision set, and remains part of the verified
+static-lifecycle certificate.
 The pass condenses recursive components, propagates field sets over the
 component DAG, and retains minimum-call-edge, deterministically tied witnesses
 for each field in every node summary. Distinct access-kind and root-phase
@@ -1567,6 +1573,12 @@ Generated wrappers, coordinators, lifecycle/array/ownership/finalization
 helpers, and target thunks are not. Before an omitted helper or runtime
 operation can report, its source caller's current location is the initiating
 MIR operation span.
+
+For a function-value call, replacement uses the indirect call expression's
+span before the stabilized target is loaded. The selected target then enters
+its ordinary source activation frame, so a panic reports the exact target's
+semantic top-level, static-method, or closed-generic name followed by the
+indirect caller at its call site.
 
 Location replacement is required before every source or external call, before
 every generated helper call representing a source operation, before a runtime

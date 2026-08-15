@@ -17,7 +17,8 @@ pub use dump::dump_static_effects;
 pub use model::{
     StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
     StaticClassLifecycleOperation, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
-    StaticEffectNode, StaticEffectPhase, StaticEffectSummary,
+    StaticEffectNode, StaticEffectPhase, StaticEffectSummary, StaticFunctionValueCandidates,
+    StaticFunctionValueTarget,
 };
 pub use plan::{
     dump_planned_mir, dump_static_lifetime_plan, plan_static_lifetimes, PlannedMirProgram,

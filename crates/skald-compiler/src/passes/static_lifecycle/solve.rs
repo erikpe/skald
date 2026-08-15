@@ -64,7 +64,11 @@ pub(crate) fn solve(graph: ExtractedGraph) -> StaticEffectAnalysis {
         .collect();
     let recursive_components = recursive_component_count(&adjacency, &components, component_count);
 
-    StaticEffectAnalysis::new(summaries, recursive_components)
+    StaticEffectAnalysis::new(
+        graph.function_value_candidates,
+        summaries,
+        recursive_components,
+    )
 }
 
 fn propagated_component_fields(

@@ -18,6 +18,15 @@ use super::{
 pub(super) fn verify(program: LifecycleMirView<'_>, errors: &mut Vec<MirVerificationError>) {
     let extracted = extract::extract_final(program.program, program.initializers);
     let analysis = program.lifecycle.certificate().effects();
+    if analysis
+        .function_value_candidates()
+        .ne(extracted.function_value_candidates.iter())
+    {
+        program_error(
+            errors,
+            "function-value candidate and retention inventory does not match MIR",
+        );
+    }
     let mut summaries = BTreeMap::new();
     for summary in analysis.summaries() {
         if summaries.insert(summary.node, summary).is_some() {

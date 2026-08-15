@@ -22,7 +22,8 @@ target-independent callable addresses, callee order, provenance, and complete
 call carriers. The x86-64 backend realizes exact position-independent symbol
 addresses and receiverless register-indirect calls through the ordinary
 internal ABI. Conservative whole-program static-effect expansion and related
-retention/trace obligations remain staged for FVI7.
+retention and trace obligations are also implemented; the active roadmap now
+owns final composition hardening and publication.
 
 The target-independent pipeline represents one capture-free function value as
 one exact, non-null internal callable address paired statically with a canonical
@@ -145,11 +146,10 @@ carriers, and arbitrary pointer construction.
 
 ## Whole-program effects and retention
 
-This section remains the frozen FVI7 contract. Current static-lifecycle
-handling records address formation as effect-free but does not yet expand an
-indirect call to its candidate targets. Native indirect execution is present;
-programs whose callback targets carry static effects remain subject to the
-staged FVI7 whole-program integration.
+Static-lifecycle analysis inventories callable-address operations by exact
+`FunctionTypeId`, orders each target set by `CallableId`, and records the first
+deterministic formation span for each retained target. Address formation and
+copying remain effect-free.
 
 Taking or copying an address has no static read, write, initialization, or
 shutdown effect. An indirect call is conservatively expanded to every
@@ -164,13 +164,15 @@ reduce candidates but cannot change semantics or weaken static-lifetime
 safety.
 
 Every address-taken target remains live for emission even when it has no
-direct caller. Separate closed generic static methods remain separate target
-and effect nodes. Dumps expose address-taken sets and their induced effect
-edges deterministically.
+direct caller. MIR verification rejects missing or ineligible target bodies,
+and the static-lifecycle certificate independently verifies its candidate and
+retention inventory against final MIR. Separate closed generic static methods
+remain separate target and effect nodes. Dumps expose candidate sets as
+explicit retention decisions and render their induced `IndirectCall` edges.
 
 ## x86-64 representation and internal ABI
 
-This section describes the implemented FVI6 target contract. X86-64 legality
+X86-64 legality
 verifies the complete MIR program, computes checked function-value layout and
 ABI classification, and accepts verified callable addresses and indirect
 targets.
@@ -213,8 +215,9 @@ contract.
 Syntax, resolved, HIR, preliminary MIR, and final MIR dumps expose canonical
 types, exact targets, callee expressions, callable-address operations, and
 indirect targets in stable identity order. Assembly output exposes exact
-symbol addresses and deterministic register-indirect calls. Later
-static-effect dumps will additionally expose candidates and effect edges.
+symbol addresses and deterministic register-indirect calls. Static-effect
+dumps expose exact-signature candidates, retained targets, induced edges, and
+their transitive witnesses.
 Diagnostics distinguish malformed syntax, signature differences,
 ineligible or inaccessible targets, invalid storage roles, non-callable
 expressions, and excluded compositions.

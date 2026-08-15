@@ -72,8 +72,9 @@ pub use model::{
     PreliminaryMirStaticInitializer, StaticAccessEvidence, StaticAccessKind,
     StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
-    StaticEffectSummary, StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence,
-    StaticLifetimePhase, StorageId, ValueId,
+    StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
+    StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
+    StorageId, ValueId,
 };
 pub(crate) use verify::preliminary::{
     destination_completed_on_every_publication_path, reachable_static_initializer_blocks,

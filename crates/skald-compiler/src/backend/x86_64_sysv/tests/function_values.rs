@@ -179,3 +179,34 @@ fn executes_fields_statics_and_closed_generic_static_targets() {
     assert_system_assembler_accepts(&output);
     assert_eq!(run_native_assembly(&output).code(), Some(42));
 }
+
+#[test]
+fn emits_address_taken_bodies_without_a_direct_or_indirect_call_edge() {
+    let output = assembly(concat!(
+        "fn retained_function() -> i64 { return 1; }\n",
+        "class Utility {\n",
+        "  init() {}\n",
+        "  static fn retained_method() -> i64 { return 2; }\n",
+        "}\n",
+        "class Generic<T> {\n",
+        "  init() {}\n",
+        "  static fn retained_method() -> i64 { return 3; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var first: fn() -> i64 = retained_function;\n",
+        "  var second: fn() -> i64 = Utility.retained_method;\n",
+        "  var third: fn() -> i64 = Generic<i64>::retained_method;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.contains(".type .Lska.fn.main.retained_function.f0, @function"));
+    assert!(
+        output.contains(".type .Lska.class.main.Utility.c0.method.retained_method.m0, @function")
+    );
+    assert!(output.contains(".type .Lska.class.main.Generic"));
+    assert!(output.contains(".method.retained_method.m0, @function"));
+    assert_eq!(output.matches("call r11").count(), 0, "{output}");
+    assert_system_assembler_accepts(&output);
+    assert_eq!(run_native_assembly(&output).code(), Some(0));
+}

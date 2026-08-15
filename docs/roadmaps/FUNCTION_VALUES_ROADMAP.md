@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI6 implemented, FVI7 is next.
+Status: in progress; FVI7 implemented, FVI8 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -53,7 +53,7 @@ below implement those decisions without reopening them.
 - [x] FVI4 — Type indirect calls through the complete internal signature
 - [x] FVI5 — Lower and verify callable addresses and indirect MIR calls
 - [x] FVI6 — Realize code pointers and indirect calls on x86-64
-- [ ] FVI7 — Make indirect calls sound for static effects, retention, and traces
+- [x] FVI7 — Make indirect calls sound for static effects, retention, and traces
 - [ ] FVI8 — Harden composition, publish implementation, and close the roadmap
 
 ## PR-sized implementation sequence
@@ -306,20 +306,20 @@ longer depends on a staging gate.
 **Purpose:** Close whole-program correctness obligations that direct call edges
 previously supplied implicitly.
 
-- [ ] Build deterministic address-taken target sets keyed by exact
+- [x] Build deterministic address-taken target sets keyed by exact
       `FunctionTypeId` and expand each indirect call to every matching eligible
       target during static-effect extraction.
-- [ ] Add evidenced indirect-call edge kinds and reuse transitive static read,
+- [x] Add evidenced indirect-call edge kinds and reuse transitive static read,
       write, initialization, shutdown, cycle, and planning diagnostics.
-- [ ] Retain and emit every address-taken callable body and symbol even when no
+- [x] Retain and emit every address-taken callable body and symbol even when no
       direct call reaches it; reject references to missing or non-emittable
       definitions at the appropriate trust boundary.
-- [ ] Preserve independent static effects for same-signature methods on
+- [x] Preserve independent static effects for same-signature methods on
       different closed generic specializations.
-- [ ] Attribute panic traces to the indirect call site while retaining the
+- [x] Attribute panic traces to the indirect call site while retaining the
       exact selected target's ordinary runtime activation frame and semantic
       callable name.
-- [ ] Dump candidate sets, effect edges, retention decisions, and trace
+- [x] Dump candidate sets, effect edges, retention decisions, and trace
       locations in stable identity order; prove function reference formation
       alone has no static effect.
 

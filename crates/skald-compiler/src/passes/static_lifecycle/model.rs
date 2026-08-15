@@ -3,7 +3,8 @@
 pub use crate::mir::{
     StaticAccessEvidence, StaticAccessKind, StaticArrayLifecycleOperation,
     StaticClassLifecycleOperation, StaticEffectAnalysis, StaticEffectEdge, StaticEffectEdgeKind,
-    StaticEffectNode, StaticEffectPhase, StaticEffectSummary,
+    StaticEffectNode, StaticEffectPhase, StaticEffectSummary, StaticFunctionValueCandidates,
+    StaticFunctionValueTarget,
 };
 
 use crate::{identity::StaticFieldId, source::Span};

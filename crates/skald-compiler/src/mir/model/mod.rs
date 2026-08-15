@@ -106,8 +106,8 @@ pub use static_lifecycle::{
     MirStaticValueCleanup, PlannedMirProgram, StaticAccessEvidence, StaticAccessKind,
     StaticArrayLifecycleOperation, StaticClassLifecycleOperation, StaticEffectAnalysis,
     StaticEffectEdge, StaticEffectEdgeKind, StaticEffectNode, StaticEffectPhase,
-    StaticEffectSummary, StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence,
-    StaticLifetimePhase,
+    StaticEffectSummary, StaticFunctionValueCandidates, StaticFunctionValueTarget,
+    StaticLifecyclePlan, StaticLifetimeDependency, StaticLifetimeEvidence, StaticLifetimePhase,
 };
 pub use strings::{
     MirLiteralData, MirLiteralDataTable, MirStaticAllocationOrigin, MirStaticDataMutability,

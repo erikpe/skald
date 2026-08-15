@@ -106,9 +106,12 @@ reference closure, trivial stored/callable HIR, complete indirect-call HIR
 argument/result planning, callable-address MIR, receiverless indirect MIR
 targets, target-independent verification, and one-word x86-64 realization are
 implemented. Native calls reuse the complete ordinary internal ABI and exact
-identity-derived callable symbols. The active
-[implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns staged
-whole-program static-effect, retention, and trace integration.
+identity-derived callable symbols. Static-lifecycle analysis expands each
+indirect call to its deterministic exact-signature address-taken set, verifies
+that retention inventory in the lifecycle certificate, and preserves exact
+source-callable runtime traces. The active
+[implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns final
+composition hardening and publication.
 
 The implemented [strings compiler contract](STRINGS.md) defines canonical
 `std::str::Str` discovery and validation, intrinsic produced-value lowering,

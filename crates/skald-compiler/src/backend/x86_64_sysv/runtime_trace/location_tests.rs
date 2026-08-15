@@ -313,6 +313,62 @@ fn runtime_trace_location_native_chain_distinguishes_all_skald_dispatch_sites() 
 }
 
 #[test]
+fn runtime_trace_location_native_function_values_keep_target_and_indirect_call_frames() {
+    let cases = [
+        (
+            concat!(
+                "fn fail() -> i64 { var zero: i64 = 0; return 1 / zero; }\n",
+                "fn invoke(callback: fn() -> i64) -> i64 { return callback(); }\n",
+                "fn main() -> i64 { return invoke(fail); }\n",
+            ),
+            "main::fail",
+        ),
+        (
+            concat!(
+                "class Failure {\n",
+                "  init() {}\n",
+                "  static fn fail() -> i64 { var zero: i64 = 0; return 1 / zero; }\n",
+                "}\n",
+                "fn invoke(callback: fn() -> i64) -> i64 { return callback(); }\n",
+                "fn main() -> i64 { return invoke(Failure.fail); }\n",
+            ),
+            "main::Failure.fail",
+        ),
+        (
+            concat!(
+                "class Failure<T> {\n",
+                "  init() {}\n",
+                "  static fn fail() -> i64 { var zero: i64 = 0; return 1 / zero; }\n",
+                "}\n",
+                "fn invoke(callback: fn() -> i64) -> i64 { return callback(); }\n",
+                "fn main() -> i64 { return invoke(Failure<i64>::fail); }\n",
+            ),
+            "main::Failure<i64>.fail",
+        ),
+    ];
+
+    for (source, target_name) in cases {
+        let fixture = lower_source_to_final_mir_with_sources("app/main.ska", source);
+        let target = callable_by_trace_name(&fixture, target_name);
+        let invoke = callable_by_trace_name(&fixture, "main::invoke");
+        let main = callable_by_trace_name(&fixture, "main::main");
+        let expected = format!(
+            "panic: integer division by zero\nstacktrace:\n{}{}{}",
+            trace_row(&fixture, target, first_termination_span(&fixture, target)),
+            trace_row(&fixture, invoke, first_call_span(&fixture, invoke)),
+            trace_row(&fixture, main, first_call_span(&fixture, main)),
+        );
+        let assembly = fixture
+            .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
+            .unwrap();
+        let result = run_native_assembly_with_runtime_trace_probe(&assembly);
+
+        assert_eq!(result.status.code(), Some(1), "{target_name}");
+        assert_eq!(result.stderr, expected.as_bytes(), "{target_name}");
+    }
+}
+
+#[test]
 fn runtime_trace_location_native_external_failure_stays_at_the_call_site() {
     let fixture = lower_source_to_final_mir_with_sources(
         "app/main.ska",
