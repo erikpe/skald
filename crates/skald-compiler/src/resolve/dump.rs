@@ -413,6 +413,20 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if !program.address_taken_callables.is_empty() {
+            dumper.heading("AddressTakenCallables");
+            dumper.indented(|dumper| {
+                for callable in program.address_taken_callables.iter() {
+                    dumper.line(
+                        &format!(
+                            "AddressTaken {} type {}",
+                            callable.target, callable.function_type
+                        ),
+                        callable.first_reference_span,
+                    );
+                }
+            });
+        }
         if !program.optional_types.is_empty() {
             dumper.heading("OptionalTypes");
             dumper.indented(|dumper| {
@@ -1282,6 +1296,15 @@ impl<'program> ResolvedDumper<'program> {
             }
             ResolvedExpression::Binding(binding) => {
                 self.line(&format!("Binding {}", binding.binding), binding.span);
+            }
+            ResolvedExpression::FunctionReference(reference) => {
+                self.line(
+                    &format!(
+                        "FunctionReference {} type {}",
+                        reference.target, reference.function_type
+                    ),
+                    reference.span,
+                );
             }
             ResolvedExpression::StaticFieldAccess(access) => {
                 self.line(&format!("StaticFieldAccess {}", access.field), access.span);

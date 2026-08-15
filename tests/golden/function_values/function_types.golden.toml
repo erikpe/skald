@@ -6,8 +6,44 @@ mode = "compile-fail"
 source = "function_types.ska"
 [test.expect.stderr]
 match = "starts-with"
-inline = """error[RES050]: function values are not executable yet
+inline = """error[TYP044]: function values are not executable yet
  --> tests/golden/function_values/function_types.ska:3:22"""
+
+[[test]]
+name = "module_references"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/supported",
+  "--no-stdlib",
+]
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[TYP044]: function values are not executable yet
+ --> supported/app.ska:5:37"""
+
+[[test]]
+name = "module_exclusions"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/exclusions",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
+matches = [
+  { name = "external", match = "contains", inline = """error[RES050]: external function `foreign` cannot be used as a function value
+ --> exclusions/app.ska:4:33""" },
+  { name = "instance", match = "contains", inline = """error[RES050]: instance method `read` cannot be used as a function value
+ --> exclusions/app.ska:5:39""" },
+  { name = "private static", match = "contains", inline = """error[RES031]: member `hidden` is private to class `Worker`
+ --> exclusions/app.ska:6:49""" },
+  { name = "raw template", match = "contains", inline = """error[RES039]: generic class `dep::Identity` requires type arguments
+ --> exclusions/app.ska:7:31""" },
+  { name = "closed generic", match = "contains", inline = """error[RES051]: generic callable reference `apply` is not resolved yet
+ --> exclusions/app.ska:8:39""" },
+]
 
 [[test]]
 name = "malformed_parameter_mode"

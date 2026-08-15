@@ -88,17 +88,21 @@ fn rejects_non_identifier_and_unknown_call_targets() {
 }
 
 #[test]
-fn function_name_without_a_call_is_not_a_value() {
+fn internal_function_name_in_value_position_forms_an_exact_reference() {
     let output = resolve_text(concat!(
         "fn target() -> i64 { return 1; }\n",
         "fn main() -> i64 { return target; }\n",
     ));
 
-    assert_eq!(output.diagnostics.len(), 1);
-    assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        TOP_LEVEL_USED_AS_VALUE
-    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let main = output.program.definitions.get(FunctionId::new(1)).unwrap();
+    assert!(matches!(
+        return_value(&main.body.statements[0]),
+        ResolvedExpression::FunctionReference(ResolvedFunctionReferenceExpr {
+            target: CallableId::Function(target),
+            ..
+        }) if *target == FunctionId::new(0)
+    ));
 }
 
 #[test]

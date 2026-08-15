@@ -1,0 +1,9 @@
+public fn exported(value: i64) -> i64 {
+    return value;
+}
+
+public class Math {
+    static fn apply(value: i64) -> i64 {
+        return value;
+    }
+}

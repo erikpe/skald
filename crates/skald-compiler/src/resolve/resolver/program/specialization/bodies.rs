@@ -7,6 +7,7 @@ use crate::diagnostics::{Label, LabelStyle};
 pub(super) fn specialize_bodies(
     input: SpecializationBodyInput<'_, '_>,
     type_interner: &mut ResolvedTypeInterner,
+    address_taken_callables: &mut ResolvedAddressTakenCallableTable,
     diagnostics: &mut Diagnostics,
 ) -> SpecializedBodies {
     let mut output = SpecializedBodies {
@@ -55,6 +56,7 @@ pub(super) fn specialize_bodies(
             input.classes,
             environment,
             type_interner,
+            address_taken_callables,
             &mut body_diagnostics,
         );
         let mut definitions = resolve_class_bodies(
@@ -63,6 +65,7 @@ pub(super) fn specialize_bodies(
             input.classes,
             environment,
             type_interner,
+            address_taken_callables,
             &mut body_diagnostics,
         );
 

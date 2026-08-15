@@ -98,7 +98,12 @@ fn diagnoses_wrong_selection_kinds_static_values_and_private_static_access() {
     assert!(messages.contains(&"instance method `instance` requires an object receiver"));
     assert!(messages.contains(&"static method `utility` must be called through a class"));
     assert!(messages.contains(&"field `value` requires an object receiver"));
-    assert!(messages.contains(&"static method `utility` cannot be used as a value"));
+    assert!(!messages.contains(&"static method `utility` cannot be used as a value"));
+    assert!(output
+        .program
+        .address_taken_callables
+        .get(CallableId::Method(MethodId::new(ClassId::new(0), 1)))
+        .is_some());
     assert!(output
         .diagnostics
         .iter()

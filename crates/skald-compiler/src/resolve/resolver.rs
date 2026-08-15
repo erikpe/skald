@@ -74,7 +74,10 @@ pub const AMBIGUOUS_GENERIC_BOUND_MEMBER: &str = "RES046";
 pub const NON_TERMINATING_GENERIC_SPECIALIZATION: &str = "RES047";
 pub const UNSATISFIED_GENERIC_REQUIREMENT: &str = "RES048";
 pub const INVALID_INDEX_PROTOCOL: &str = "RES049";
-pub const FUNCTION_VALUES_NOT_YET_SUPPORTED: &str = "RES050";
+pub const INVALID_FUNCTION_REFERENCE: &str = "RES050";
+pub const GENERIC_FUNCTION_REFERENCE_NOT_YET_SUPPORTED: &str = "RES051";
+pub const INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED: &str = "RES052";
+pub const GENERIC_FUNCTION_TYPE_NOT_YET_SUPPORTED: &str = "RES053";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -119,7 +122,7 @@ fn resolve_type(
     type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedType> {
-    resolve_type_inner(type_syntax, lookup, type_interner, diagnostics, true)
+    resolve_type_inner(type_syntax, lookup, type_interner, diagnostics)
 }
 
 fn resolve_type_inner(
@@ -127,7 +130,6 @@ fn resolve_type_inner(
     lookup: ModuleLookup<'_>,
     type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
-    report_function_gate: bool,
 ) -> Option<ResolvedType> {
     let kind = match &type_syntax.kind {
         syntax::TypeKind::I64 => ResolvedTypeKind::I64,
@@ -139,13 +141,8 @@ fn resolve_type_inner(
         syntax::TypeKind::Function(function) => {
             let mut parameters = Vec::with_capacity(function.parameters.len());
             for parameter in &function.parameters {
-                let type_syntax = resolve_type_inner(
-                    &parameter.type_syntax,
-                    lookup,
-                    type_interner,
-                    diagnostics,
-                    false,
-                )?;
+                let type_syntax =
+                    resolve_type_inner(&parameter.type_syntax, lookup, type_interner, diagnostics)?;
                 let mode = match parameter.mode {
                     syntax::FunctionTypeParameterMode::Value => {
                         ResolvedFunctionTypeParameterMode::Value
@@ -163,12 +160,8 @@ fn resolve_type_inner(
                     span: parameter.span,
                 });
             }
-            let result =
-                resolve_type_inner(&function.result, lookup, type_interner, diagnostics, false)?;
+            let result = resolve_type_inner(&function.result, lookup, type_interner, diagnostics)?;
             let id = type_interner.intern_function(parameters, result, function.span);
-            if report_function_gate {
-                report_function_value_gate(function.span, diagnostics);
-            }
             ResolvedTypeKind::Function(id)
         }
         syntax::TypeKind::Shared {
@@ -179,36 +172,20 @@ fn resolve_type_inner(
             lookup,
             type_interner,
             diagnostics,
-            report_function_gate,
         )?),
-        syntax::TypeKind::Optional { payload, .. } => resolve_optional_type(
-            payload,
-            lookup,
-            type_interner,
-            diagnostics,
-            report_function_gate,
-        )?,
+        syntax::TypeKind::Optional { payload, .. } => {
+            resolve_optional_type(payload, lookup, type_interner, diagnostics)?
+        }
         syntax::TypeKind::Grouped { inner, .. } => {
-            return resolve_type_inner(
-                inner,
-                lookup,
-                type_interner,
-                diagnostics,
-                report_function_gate,
-            )
-            .map(|mut resolved| {
-                resolved.span = type_syntax.span;
-                resolved
-            });
+            return resolve_type_inner(inner, lookup, type_interner, diagnostics).map(
+                |mut resolved| {
+                    resolved.span = type_syntax.span;
+                    resolved
+                },
+            );
         }
         syntax::TypeKind::Array { element, .. } => {
-            let element = resolve_type_inner(
-                element,
-                lookup,
-                type_interner,
-                diagnostics,
-                report_function_gate,
-            )?;
+            let element = resolve_type_inner(element, lookup, type_interner, diagnostics)?;
             ResolvedTypeKind::Array(type_interner.intern_array(element))
         }
         syntax::TypeKind::Named(named) if named.arguments.is_some() => {
@@ -278,20 +255,6 @@ fn resolve_type_inner(
     })
 }
 
-fn report_function_value_gate(span: Span, diagnostics: &mut Diagnostics) {
-    diagnostics.push(
-        Diagnostic::error(
-            FUNCTION_VALUES_NOT_YET_SUPPORTED,
-            "function values are not executable yet",
-        )
-        .with_primary_label(
-            span,
-            "function types are canonicalized, but values ship in a later roadmap task",
-        )
-        .with_note("this stage accepts and resolves closed function-type syntax only"),
-    );
-}
-
 fn report_generic_application(
     named: &syntax::NamedTypeSyntax,
     lookup: ModuleLookup<'_>,
@@ -355,15 +318,8 @@ fn resolve_optional_type(
     lookup: ModuleLookup<'_>,
     type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
-    report_function_gate: bool,
 ) -> Option<ResolvedTypeKind> {
-    let payload = resolve_type_inner(
-        payload_syntax,
-        lookup,
-        type_interner,
-        diagnostics,
-        report_function_gate,
-    )?;
+    let payload = resolve_type_inner(payload_syntax, lookup, type_interner, diagnostics)?;
     let optional = type_interner.intern_optional(payload.clone());
     Some(ResolvedTypeKind::Optional(optional))
 }
@@ -373,18 +329,11 @@ fn resolve_shared_target(
     lookup: ModuleLookup<'_>,
     type_interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
-    report_function_gate: bool,
 ) -> Option<ResolvedSharedTarget> {
     if syntax_type_is_optional(target) {
         let (optional_depth, leaf_syntax) = optional_syntax_leaf(target)
             .expect("an optional shared target must have an optional syntax leaf");
-        let leaf = resolve_type_inner(
-            leaf_syntax,
-            lookup,
-            type_interner,
-            diagnostics,
-            report_function_gate,
-        )?;
+        let leaf = resolve_type_inner(leaf_syntax, lookup, type_interner, diagnostics)?;
         let object_leaf = match leaf.kind {
             ResolvedTypeKind::Obj => Some(ResolvedObjectTarget::Obj),
             ResolvedTypeKind::Class(class) => Some(ResolvedObjectTarget::Class(class)),
@@ -404,13 +353,7 @@ fn resolve_shared_target(
             );
             return Some(ResolvedSharedTarget::OptionalBox(target));
         }
-        let resolved = resolve_type_inner(
-            target,
-            lookup,
-            type_interner,
-            diagnostics,
-            report_function_gate,
-        )?;
+        let resolved = resolve_type_inner(target, lookup, type_interner, diagnostics)?;
         let ResolvedTypeKind::Optional(optional) = resolved.kind else {
             unreachable!("an optional target must resolve to an optional identity")
         };
@@ -418,22 +361,10 @@ fn resolve_shared_target(
         return Some(ResolvedSharedTarget::OptionalBox(target));
     }
     if let syntax::TypeKind::Grouped { inner, .. } = &target.kind {
-        return resolve_shared_target(
-            inner,
-            lookup,
-            type_interner,
-            diagnostics,
-            report_function_gate,
-        );
+        return resolve_shared_target(inner, lookup, type_interner, diagnostics);
     }
     if matches!(target.kind, syntax::TypeKind::Array { .. }) {
-        let resolved = resolve_type_inner(
-            target,
-            lookup,
-            type_interner,
-            diagnostics,
-            report_function_gate,
-        )?;
+        let resolved = resolve_type_inner(target, lookup, type_interner, diagnostics)?;
         let ResolvedTypeKind::Array(array) = resolved.kind else {
             unreachable!("an array target must resolve to an array identity")
         };

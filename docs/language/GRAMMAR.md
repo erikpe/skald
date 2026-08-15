@@ -235,9 +235,11 @@ Function-type parameters are unnamed; their value, `ref`, or `mut ref` mode
 is part of the type. Recursion through `storage-type` permits nested function
 parameters and results. The extension does not alter expression precedence:
 `(f)(argument)` remains an object-cast candidate. The compiler currently
-parses closed function types and assigns canonical resolved identities, then
-reports a resolution diagnostic before value formation, storage, or calls;
-those semantic stages remain unavailable.
+parses closed function types, assigns canonical resolved identities, and
+resolves eligible ordinary top-level and static-method names in value position
+to exact callable references. Type checking then reports the temporary
+lowering diagnostic before storage or execution; generic references and
+indirect calls have earlier explicit staging diagnostics.
 
 Primitive type spellings remain reserved as declaration and binding names,
 but may identify a module namespace inside a module or qualified declaration

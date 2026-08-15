@@ -29,6 +29,7 @@ use super::modules::{
 };
 use super::optional_types::ResolvedOptionalTypeTable;
 use super::GenericSpecializationTable;
+use super::ResolvedAddressTakenCallableTable;
 use super::{ResolvedOptionalBoxTypeTable, ResolvedSharedTarget};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -43,6 +44,7 @@ pub struct ResolvedProgram {
     pub(crate) template_semantics: ResolvedClassTemplateSemanticTable,
     pub(crate) generic_specializations: GenericSpecializationTable,
     pub function_types: ResolvedFunctionTypeTable,
+    pub address_taken_callables: ResolvedAddressTakenCallableTable,
     pub array_types: ResolvedArrayTypeTable,
     pub optional_types: ResolvedOptionalTypeTable,
     pub optional_box_types: ResolvedOptionalBoxTypeTable,

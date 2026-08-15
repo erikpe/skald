@@ -136,7 +136,7 @@ fn diagnoses_invalid_member_kinds_receivers_and_missing_initializers() {
         codes,
         [
             INVALID_CALL_TARGET,
-            INVALID_MEMBER_SELECTION,
+            INVALID_FUNCTION_REFERENCE,
             INVALID_CONSTRUCTION_TARGET,
             INVALID_MEMBER_SELECTION,
         ]

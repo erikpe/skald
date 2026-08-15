@@ -1,10 +1,11 @@
 # Capture-Free Function Values
 
-Status: frozen design; syntax and canonical closed type identity implemented
-behind a resolution gate. The
+Status: frozen design; syntax, canonical closed type identity, and eligible
+ordinary callable-reference resolution implemented behind a type-check gate. The
 [status matrix](STATUS.md) is authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact accepted source shape. Function
-values, references, storage, and calls remain unavailable. The active
+references can be inspected in resolved compiler output, but storage,
+transport, indirect calls, and execution remain unavailable. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns delivery.
 
 This contract adds non-null, capture-free function values to Skald. A function
@@ -64,6 +65,11 @@ var imported: fn(i64) -> bool = util::accept;
 var ordinary: fn(i64) -> i64 = Math.increment;
 var specialized: fn(i64) -> i64 = Identity<i64>::apply;
 ```
+
+The current compiler resolves the first three ordinary forms to an exact
+target and signature, records the target as address-taken, and then stops the
+program at type checking. Closed-specialization references remain at the FVI2
+gate. No resolved reference is executable yet.
 
 The source name selects one exact callable identity and its canonical
 signature. An expected function type validates that selection but does not

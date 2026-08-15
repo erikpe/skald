@@ -32,7 +32,7 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
             syntax::TypeKind::Function(_) => {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        super::super::super::FUNCTION_VALUES_NOT_YET_SUPPORTED,
+                        super::super::super::GENERIC_FUNCTION_TYPE_NOT_YET_SUPPORTED,
                         "function types in generic templates are not supported yet",
                     )
                     .with_primary_label(

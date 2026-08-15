@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI1 is next.
+Status: in progress; FVI2 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -47,7 +47,7 @@ below implement those decisions without reopening them.
 ## Progress
 
 - [x] FVI0 — Parse and intern canonical closed function types
-- [ ] FVI1 — Resolve eligible callable references and frozen exclusions
+- [x] FVI1 — Resolve eligible callable references and frozen exclusions
 - [ ] FVI2 — Close function types and references during generic specialization
 - [ ] FVI3 — Integrate trivial function values with stored and callable HIR
 - [ ] FVI4 — Type indirect calls through the complete internal signature
@@ -99,22 +99,22 @@ public pipeline stops unsupported function-value programs without panic.
 **Purpose:** Introduce one explicit, access-checked value-formation operation
 without conflating it with direct calls or receiver-bearing method selection.
 
-- [ ] Add resolved function-reference IR carrying exact `CallableId`,
+- [x] Add resolved function-reference IR carrying exact `CallableId`,
       `FunctionTypeId`, and span; construct it only for internal top-level
       functions and eligible static methods.
-- [ ] Preserve existing direct function/static calls when their callee is a
+- [x] Preserve existing direct function/static calls when their callee is a
       declaration name, and prefer lexical value bindings or fields when they
       shadow that name in value/callee position.
-- [ ] Reuse module qualification, selective imports, ordinary class/static
+- [x] Reuse module qualification, selective imports, ordinary class/static
       selection, and declaring-class privacy at reference formation; keep raw
       template and closed-specialization references behind an explicit gate
       until FVI2.
-- [ ] Reject instance, virtual, interface, initializer, lifecycle, generated,
+- [x] Reject instance, virtual, interface, initializer, lifecycle, generated,
       external, intrinsic, raw-template, unclosed, inaccessible, and wrong-kind
       targets with distinct deterministic diagnostics.
-- [ ] Record address-taken exact targets in resolved program metadata for later
+- [x] Record address-taken exact targets in resolved program metadata for later
       liveness/effect ownership without assigning effects during formation.
-- [ ] Expose reference targets and address-taken sets in resolved dumps while
+- [x] Expose reference targets and address-taken sets in resolved dumps while
       retaining an explicit lower-phase gate until stored HIR/MIR support is
       complete.
 

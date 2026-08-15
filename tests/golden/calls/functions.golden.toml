@@ -13,8 +13,6 @@ mode = "compile-fail"
 source = "call_resolution_errors.ska"
 [test.expect.stderr]
 matches = [
-  { name = "function used as value", match = "contains", inline = """error[RES005]: function `helper` cannot be used as a value
- --> tests/golden/calls/call_resolution_errors.ska:6:12""" },
   { name = "binding called as function", match = "contains", inline = """error[RES004]: binding `value` is not callable
  --> tests/golden/calls/call_resolution_errors.ska:11:12""" },
   { name = "unknown function", match = "contains", inline = """error[RES003]: unknown function or class `absent`

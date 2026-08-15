@@ -18,11 +18,7 @@ fn interns_exact_function_signatures_bottom_up_in_first_use_order() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert!(output.has_errors());
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == FUNCTION_VALUES_NOT_YET_SUPPORTED));
+    assert!(!output.has_errors());
 
     let signatures = output.program.declarations.get(FunctionId::new(0)).unwrap();
     let kinds = signatures
@@ -152,12 +148,8 @@ fn canonical_identity_is_shared_across_modules_after_name_resolution() {
         ],
     );
     let output = resolve_module_graph(&graph);
-    assert!(output.has_errors());
+    assert!(!output.has_errors());
     assert_eq!(output.program.function_types.len(), 1);
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == FUNCTION_VALUES_NOT_YET_SUPPORTED));
 }
 
 #[test]
@@ -169,7 +161,7 @@ fn generic_function_type_roles_are_diagnosed_before_specialization() {
     ));
     assert!(output.has_errors());
     assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == FUNCTION_VALUES_NOT_YET_SUPPORTED
+        diagnostic.code == GENERIC_FUNCTION_TYPE_NOT_YET_SUPPORTED
             && diagnostic.message.contains("generic arguments")
     }));
 }

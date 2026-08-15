@@ -1,0 +1,17 @@
+public extern fn foreign() -> i64;
+
+public class Worker {
+    fn read() -> i64 {
+        return 1;
+    }
+
+    private static fn hidden() -> i64 {
+        return 2;
+    }
+}
+
+public class Identity<T> {
+    static fn apply(value: T) -> T {
+        return value;
+    }
+}

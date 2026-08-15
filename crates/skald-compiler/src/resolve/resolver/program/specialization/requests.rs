@@ -85,7 +85,7 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
                         Diagnostic::error(
-                            super::super::super::FUNCTION_VALUES_NOT_YET_SUPPORTED,
+                            super::super::super::GENERIC_FUNCTION_TYPE_NOT_YET_SUPPORTED,
                             "function types cannot be generic arguments yet",
                         )
                         .with_primary_label(

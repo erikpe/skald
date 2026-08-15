@@ -306,6 +306,10 @@ impl CallableChecker<'_, '_> {
                     .unwrap_or(Type::Unit)
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
+            // Function values have no HIR type until the program-level FVI1
+            // lowering gate is removed. This helper is unreachable for such
+            // programs, so retain the existing diagnostic sentinel.
+            ResolvedExpression::FunctionReference(_) => Type::Unit,
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
                 NumericLiteralKind::I64(_) => Type::I64,
                 NumericLiteralKind::U64(_) => Type::U64,

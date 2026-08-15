@@ -9,6 +9,7 @@ pub(super) fn resolve_class_bodies(
     classes: &ResolvedClassDeclarationTable,
     environment: BodyResolutionEnvironment<'_>,
     type_interner: &mut ResolvedTypeInterner,
+    address_taken_callables: &mut ResolvedAddressTakenCallableTable,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedClassDefinition> {
     let resolver = ClassBodyResolver {
@@ -16,8 +17,13 @@ pub(super) fn resolve_class_bodies(
         classes,
         environment,
     };
+    let mut state = ClassBodyResolutionState {
+        type_interner,
+        address_taken_callables,
+        diagnostics,
+    };
     work.iter()
-        .map(|item| resolver.resolve_class(item, type_interner, diagnostics))
+        .map(|item| resolver.resolve_class(item, &mut state))
         .collect()
 }
 
@@ -27,12 +33,17 @@ struct ClassBodyResolver<'program> {
     environment: BodyResolutionEnvironment<'program>,
 }
 
+struct ClassBodyResolutionState<'state> {
+    type_interner: &'state mut ResolvedTypeInterner,
+    address_taken_callables: &'state mut ResolvedAddressTakenCallableTable,
+    diagnostics: &'state mut Diagnostics,
+}
+
 impl ClassBodyResolver<'_> {
     fn resolve_class(
         &self,
         item: &ClassWorkItem,
-        type_interner: &mut ResolvedTypeInterner,
-        diagnostics: &mut Diagnostics,
+        state: &mut ClassBodyResolutionState<'_>,
     ) -> ResolvedClassDefinition {
         let declaration = self
             .classes
@@ -67,8 +78,7 @@ impl ClassBodyResolver<'_> {
                     &metadata.parameters,
                     &source.body,
                     source.span,
-                    type_interner,
-                    diagnostics,
+                    state,
                 )
             })
             .collect();
@@ -89,8 +99,7 @@ impl ClassBodyResolver<'_> {
                 &metadata.parameters,
                 &source.body,
                 source.span,
-                type_interner,
-                diagnostics,
+                state,
             )
         });
         let copy_assignment = item.copy_assignment_member.map(|member_index| {
@@ -110,8 +119,7 @@ impl ClassBodyResolver<'_> {
                 std::slice::from_ref(&metadata.parameter),
                 &source.body,
                 source.span,
-                type_interner,
-                diagnostics,
+                state,
             )
         });
         let destructor = item.destructor_member.map(|member_index| {
@@ -131,8 +139,7 @@ impl ClassBodyResolver<'_> {
                 &[],
                 &source.body,
                 source.span,
-                type_interner,
-                diagnostics,
+                state,
             )
         });
         let methods = item
@@ -154,8 +161,7 @@ impl ClassBodyResolver<'_> {
                     &metadata.parameters,
                     &source.body,
                     source.span,
-                    type_interner,
-                    diagnostics,
+                    state,
                 )
             })
             .collect();
@@ -177,8 +183,7 @@ impl ClassBodyResolver<'_> {
         parameters: &[ResolvedParameter],
         body: &syntax::Block,
         span: Span,
-        type_interner: &mut ResolvedTypeInterner,
-        diagnostics: &mut Diagnostics,
+        state: &mut ClassBodyResolutionState<'_>,
     ) -> ResolvedMemberDefinition {
         let callable = context.callable();
         let body = resolve_callable_body(
@@ -186,8 +191,9 @@ impl ClassBodyResolver<'_> {
             parameters,
             body,
             self.environment,
-            type_interner,
-            diagnostics,
+            state.type_interner,
+            state.address_taken_callables,
+            state.diagnostics,
         );
         ResolvedMemberDefinition {
             callable,

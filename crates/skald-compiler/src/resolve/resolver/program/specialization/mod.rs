@@ -48,9 +48,10 @@ pub(super) struct SpecializedBodies {
 pub(super) fn specialize_bodies(
     input: SpecializationBodyInput<'_, '_>,
     type_interner: &mut ResolvedTypeInterner,
+    address_taken_callables: &mut ResolvedAddressTakenCallableTable,
     diagnostics: &mut Diagnostics,
 ) -> SpecializedBodies {
-    bodies::specialize_bodies(input, type_interner, diagnostics)
+    bodies::specialize_bodies(input, type_interner, address_taken_callables, diagnostics)
 }
 
 fn template_source<'unit, 'ast>(

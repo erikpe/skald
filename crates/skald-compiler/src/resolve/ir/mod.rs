@@ -4,6 +4,7 @@ mod array_types;
 mod body;
 mod declarations;
 mod expression;
+mod function_references;
 mod function_types;
 mod generic_requirements;
 mod generic_specializations;
@@ -55,6 +56,9 @@ pub use expression::{
     ResolvedPresentExpr, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedStaticCallExpr,
     ResolvedStaticFieldAccessExpr, ResolvedStringLiteralExpr, ResolvedTypeTestExpr,
     ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+};
+pub use function_references::{
+    ResolvedAddressTakenCallable, ResolvedAddressTakenCallableTable, ResolvedFunctionReferenceExpr,
 };
 pub use function_types::{
     ResolvedFunctionType, ResolvedFunctionTypeParameter, ResolvedFunctionTypeParameterMode,

@@ -143,6 +143,7 @@ pub(super) struct ProgramResolver<'ast> {
     modules: ProgramModuleTable,
     has_module_context: bool,
     type_interner: ResolvedTypeInterner,
+    address_taken_callables: ResolvedAddressTakenCallableTable,
     literal_data: Vec<ResolvedLiteralData>,
     literal_ids: HashMap<Span, LiteralDataId>,
     diagnostics: Diagnostics,
@@ -155,6 +156,7 @@ impl<'ast> ProgramResolver<'ast> {
             modules: ProgramModuleTable::singleton(ast.span.source_id(), source_path),
             has_module_context: false,
             type_interner: ResolvedTypeInterner::default(),
+            address_taken_callables: ResolvedAddressTakenCallableTable::default(),
             literal_data: Vec::new(),
             literal_ids: HashMap::new(),
             diagnostics: Diagnostics::new(),
@@ -172,6 +174,7 @@ impl<'ast> ProgramResolver<'ast> {
             modules: ProgramModuleTable::from_graph(graph),
             has_module_context: true,
             type_interner: ResolvedTypeInterner::default(),
+            address_taken_callables: ResolvedAddressTakenCallableTable::default(),
             literal_data,
             literal_ids,
             diagnostics: Diagnostics::new(),
@@ -377,6 +380,7 @@ impl<'ast> ProgramResolver<'ast> {
                     ),
                 ),
                 &mut self.type_interner,
+                &mut self.address_taken_callables,
                 &mut self.diagnostics,
             ));
         }
@@ -400,6 +404,7 @@ impl<'ast> ProgramResolver<'ast> {
                 ),
             },
             &mut self.type_interner,
+            &mut self.address_taken_callables,
             &mut self.diagnostics,
         );
         if specialized_bodies.valid {
@@ -442,6 +447,7 @@ impl<'ast> ProgramResolver<'ast> {
                     ),
                 ),
                 &mut self.type_interner,
+                &mut self.address_taken_callables,
                 &mut self.diagnostics,
             ));
         }
@@ -475,6 +481,7 @@ impl<'ast> ProgramResolver<'ast> {
                 template_semantics,
                 generic_specializations,
                 function_types,
+                address_taken_callables: self.address_taken_callables,
                 array_types,
                 optional_types,
                 optional_box_types,
@@ -850,6 +857,7 @@ impl<'ast> ProgramResolver<'ast> {
                         ),
                     ),
                     &mut self.type_interner,
+                    &mut self.address_taken_callables,
                     &mut self.diagnostics,
                 );
                 definitions.push(Some(ResolvedFunctionDefinition {

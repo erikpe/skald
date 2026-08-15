@@ -6,8 +6,8 @@ use super::*;
 use crate::{
     diagnostics::Diagnostic,
     identity::{
-        BindingId, CallableId, ClassId, FieldId, InterfaceId, InterfaceRequirementId,
-        LiteralDataId, LoopId, MethodId, StaticFieldId,
+        BindingId, CallableId, ClassId, FieldId, FunctionTypeId, InterfaceId,
+        InterfaceRequirementId, LiteralDataId, LoopId, MethodId, StaticFieldId,
     },
     source::{Span, TextRange},
 };
@@ -157,10 +157,18 @@ pub(super) fn resolve_callable_body(
     body: &syntax::Block,
     environment: BodyResolutionEnvironment<'_>,
     type_interner: &mut ResolvedTypeInterner,
+    address_taken_callables: &mut ResolvedAddressTakenCallableTable,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedCallableBody {
-    CallableResolver::new(context, parameters, environment, type_interner, diagnostics)
-        .resolve(body)
+    CallableResolver::new(
+        context,
+        parameters,
+        environment,
+        type_interner,
+        address_taken_callables,
+        diagnostics,
+    )
+    .resolve(body)
 }
 
 pub(super) fn resolve_static_initializer_expression(
@@ -168,10 +176,18 @@ pub(super) fn resolve_static_initializer_expression(
     expression: &syntax::Expression,
     environment: BodyResolutionEnvironment<'_>,
     type_interner: &mut ResolvedTypeInterner,
+    address_taken_callables: &mut ResolvedAddressTakenCallableTable,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedExpression> {
-    CallableResolver::new(context, &[], environment, type_interner, diagnostics)
-        .resolve_declaration_expression(expression)
+    CallableResolver::new(
+        context,
+        &[],
+        environment,
+        type_interner,
+        address_taken_callables,
+        diagnostics,
+    )
+    .resolve_declaration_expression(expression)
 }
 
 #[derive(Clone, Copy)]
@@ -252,6 +268,7 @@ struct CallableResolver<'program, 'state> {
     receiver_class: Option<ClassId>,
     environment: BodyResolutionEnvironment<'program>,
     type_interner: &'state mut ResolvedTypeInterner,
+    address_taken_callables: &'state mut ResolvedAddressTakenCallableTable,
     diagnostics: &'state mut Diagnostics,
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
@@ -266,6 +283,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         parameters: &[ResolvedParameter],
         environment: BodyResolutionEnvironment<'program>,
         type_interner: &'state mut ResolvedTypeInterner,
+        address_taken_callables: &'state mut ResolvedAddressTakenCallableTable,
         diagnostics: &'state mut Diagnostics,
     ) -> Self {
         let parameters = parameters
@@ -287,6 +305,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             receiver_class: context.receiver_class,
             environment,
             type_interner,
+            address_taken_callables,
             diagnostics,
             base_initialization: context.base_initialization,
             scopes: vec![parameters],
@@ -794,18 +813,9 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             .select(&identifier.name, self.diagnostics)
         {
             TopLevelLookup::Found(TopLevelSymbol {
-                kind: TopLevelSymbolKind::Function(_),
+                kind: TopLevelSymbolKind::Function(function),
                 ..
-            }) => self.diagnostics.push(
-                Diagnostic::error(
-                    TOP_LEVEL_USED_AS_VALUE,
-                    format!(
-                        "function `{}` cannot be used as a value",
-                        identifier.name.text
-                    ),
-                )
-                .with_primary_label(identifier.span, "call the function with `(...)`"),
-            ),
+            }) => return self.resolve_top_level_function_reference(function, identifier.span),
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(_),
                 ..
@@ -832,16 +842,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::ClassTemplate(_),
                 ..
-            }) => self.diagnostics.push(
-                Diagnostic::error(
-                    RAW_GENERIC_TYPE,
-                    format!(
-                        "generic class `{}` requires type arguments",
-                        identifier.name.text
-                    ),
-                )
-                .with_primary_label(identifier.span, "supply the template's type arguments"),
-            ),
+            }) => self.report_raw_generic_type(&identifier.name.text, identifier.span),
             TopLevelLookup::Missing => {
                 self.report_unknown(&identifier.name.text, identifier.span, "unknown name")
             }
@@ -888,6 +889,16 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         self.diagnostics.push(
             Diagnostic::error(UNKNOWN_NAME, format!("{kind} `{name}`"))
                 .with_primary_label(span, "not declared in this scope"),
+        );
+    }
+
+    fn report_raw_generic_type(&mut self, name: &str, span: Span) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                RAW_GENERIC_TYPE,
+                format!("generic class `{name}` requires type arguments"),
+            )
+            .with_primary_label(span, "supply the template's type arguments"),
         );
     }
 }

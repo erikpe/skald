@@ -86,15 +86,26 @@ impl TypeCheckOutput {
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
     if let Some(function) = program.function_types.iter().next() {
+        let (span, label) = program
+            .address_taken_callables
+            .iter()
+            .next()
+            .map(|reference| {
+                (
+                    reference.first_reference_span,
+                    "resolved function references cannot be lowered until stored HIR support ships",
+                )
+            })
+            .unwrap_or((
+                function.span,
+                "resolved function types cannot be lowered until stored HIR support ships",
+            ));
         diagnostics.push(
             Diagnostic::error(
                 FUNCTION_VALUES_NOT_YET_SUPPORTED,
                 "function values are not executable yet",
             )
-            .with_primary_label(
-                function.span,
-                "resolved function types cannot be lowered until stored HIR support ships",
-            ),
+            .with_primary_label(span, label),
         );
         return TypeCheckOutput {
             hir: None,

@@ -191,8 +191,9 @@ makes a result source-observable.
 - [Capture-free function values](FUNCTION_VALUES.md) freezes recursive exact
   function types, eligible internal references, trivial non-null storage,
   indirect-call evaluation and ownership, closed generic composition, and the
-  initial exclusions. The feature is not yet accepted by the compiler; its
-  implementation order is owned by the active roadmap.
+  initial exclusions. Ordinary references are accepted through resolution and
+  exposed as exact target metadata, but the feature remains gated before HIR;
+  its remaining implementation order is owned by the active roadmap.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and

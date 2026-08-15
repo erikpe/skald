@@ -1,15 +1,19 @@
 # Function-Value Compiler Contract
 
-Status: frozen compiler contract; syntax AST and canonical resolved
-`FunctionTypeId` metadata implemented behind a resolution gate. The source-visible
-contract is [Capture-Free Function Values](../language/FUNCTION_VALUES.md),
+Status: frozen compiler contract; syntax AST, canonical resolved
+`FunctionTypeId` metadata, exact ordinary reference nodes, and address-taken
+metadata implemented behind a type-check gate. The source-visible contract is
+[Capture-Free Function Values](../language/FUNCTION_VALUES.md),
 the [status matrix](../language/STATUS.md) owns availability, and the active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns phase
 ordering.
 
-The completed first stage parses recursive closed signatures, interns them
-bottom-up by exact modes and closed child types, and exposes deterministic
-resolved metadata and dumps. Resolution rejects every semantic use before HIR.
+The completed frontend stages parse recursive closed signatures, intern them
+bottom-up by exact modes and closed child types, and resolve accessible
+internal top-level functions and ordinary static methods to exact reference
+nodes. Resolution rejects excluded target families, records deterministic
+address-taken metadata, and exposes both in dumps. Type checking remains the
+phase-owned boundary that rejects all function-value programs before HIR.
 
 The completed pipeline will represent one capture-free function value as one exact,
 non-null internal callable address paired statically with a canonical complete
@@ -66,6 +70,12 @@ top-level functions and ordinary or closed-specialization static methods may
 form this node. Instance/virtual/interface methods, lifecycle and generated
 bodies, externals, intrinsics, raw templates, and inaccessible declarations
 are rejected before HIR.
+
+The implemented boundary currently admits ordinary top-level and ordinary
+class static references. Closed-specialization references remain explicitly
+gated until generic function terms can be substituted in FVI2. Function-valued
+bindings and fields shadow declaration names as callees, but their indirect
+calls also remain explicitly gated until stored HIR support.
 
 Direct syntactic calls remain their existing direct or static call forms.
 Lexically shadowing function-valued bindings and calls through arbitrary

@@ -149,19 +149,7 @@ impl CallableResolver<'_, '_> {
                 kind: TopLevelSymbolKind::ClassTemplate(_),
                 ..
             }) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        RAW_GENERIC_TYPE,
-                        format!(
-                            "generic class `{}` requires type arguments",
-                            allocation.target.name.text
-                        ),
-                    )
-                    .with_primary_label(
-                        allocation.target.span,
-                        "supply the template's type arguments",
-                    ),
-                );
+                self.report_raw_generic_type(&allocation.target.name.text, allocation.target.span);
                 None
             }
             TopLevelLookup::Found(TopLevelSymbol {

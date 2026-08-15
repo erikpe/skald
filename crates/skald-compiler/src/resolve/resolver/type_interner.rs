@@ -11,7 +11,8 @@ use super::{
     ResolvedArrayType, ResolvedArrayTypeTable, ResolvedFunctionType, ResolvedFunctionTypeParameter,
     ResolvedFunctionTypeParameterMode, ResolvedFunctionTypeTable, ResolvedObjectTarget,
     ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable, ResolvedOptionalType,
-    ResolvedOptionalTypeTable, ResolvedType, ResolvedTypeKind,
+    ResolvedOptionalTypeTable, ResolvedParameter, ResolvedParameterBindingMode, ResolvedType,
+    ResolvedTypeKind,
 };
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -44,6 +45,31 @@ pub(super) struct ResolvedTypeInterner {
 }
 
 impl ResolvedTypeInterner {
+    pub(super) fn intern_callable_signature(
+        &mut self,
+        parameters: &[ResolvedParameter],
+        result: &ResolvedType,
+        span: Span,
+    ) -> FunctionTypeId {
+        let parameters = parameters
+            .iter()
+            .map(|parameter| ResolvedFunctionTypeParameter {
+                mode: match parameter.binding_mode {
+                    ResolvedParameterBindingMode::Value => ResolvedFunctionTypeParameterMode::Value,
+                    ResolvedParameterBindingMode::ReadOnlyAlias { .. } => {
+                        ResolvedFunctionTypeParameterMode::ReadOnlyAlias
+                    }
+                    ResolvedParameterBindingMode::MutableAlias { .. } => {
+                        ResolvedFunctionTypeParameterMode::MutableAlias
+                    }
+                },
+                type_syntax: parameter.type_syntax.clone(),
+                span: parameter.span,
+            })
+            .collect();
+        self.intern_function(parameters, result.clone(), span)
+    }
+
     pub(super) fn intern_function(
         &mut self,
         parameters: Vec<ResolvedFunctionTypeParameter>,

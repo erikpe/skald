@@ -17,8 +17,27 @@ impl CallableResolver<'_, '_> {
                 },
             ));
         }
-        self.report_class_member_used_as_value(selected, &selection.member);
-        None
+        match selected {
+            SelectedClassMember::Method(method) => {
+                let declaration = self.method_declaration(method);
+                if declaration.kind == ResolvedMethodKind::Static {
+                    let name = declaration.name.clone();
+                    let name_span = declaration.name_span;
+                    self.report_generic_function_reference_gate(&name, name_span, selection.span);
+                    None
+                } else {
+                    self.report_ineligible_method_reference(method, selection.member.span);
+                    None
+                }
+            }
+            SelectedClassMember::Field(_) => {
+                self.report_class_member_used_as_value(selected, &selection.member);
+                None
+            }
+            SelectedClassMember::StaticField(_) => {
+                unreachable!("specialized static fields returned above")
+            }
+        }
     }
 
     pub(super) fn select_specialized_static_member(
@@ -49,12 +68,26 @@ impl CallableResolver<'_, '_> {
                             },
                         ));
                     }
-                    self.report_class_member_used_as_value(selected, &member.member);
-                    return None;
+                    return match selected {
+                        SelectedClassMember::Method(method) => {
+                            self.resolve_method_reference(method, member.member.span, member.span)
+                        }
+                        SelectedClassMember::Field(_) => {
+                            self.report_class_member_used_as_value(selected, &member.member);
+                            None
+                        }
+                        SelectedClassMember::StaticField(_) => {
+                            unreachable!("class-selected static fields returned above")
+                        }
+                    };
                 }
                 ClassReceiver::Diagnosed => return None,
                 ClassReceiver::NotClass => {}
             }
+        }
+        if let Some((_, interface, _)) = self.interface_receiver(&member.receiver) {
+            self.report_ineligible_interface_reference(interface, &member.member);
+            return None;
         }
         let receiver = self.resolve_member_object_receiver(member)?;
         let selected = self.select_member(receiver.class(), &member.member)?;
@@ -70,20 +103,7 @@ impl CallableResolver<'_, '_> {
                 }))
             }
             SelectedClassMember::Method(method) => {
-                let declaration = self
-                    .environment
-                    .classes
-                    .get(method.class())
-                    .and_then(|class| class.method(method))
-                    .expect("member symbols must reference declaration metadata");
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_MEMBER_SELECTION,
-                        format!("method `{}` cannot be used as a value", declaration.name),
-                    )
-                    .with_primary_label(member.member.span, "call the method with `(...)`")
-                    .with_secondary_label(declaration.name_span, "method declared here"),
-                );
+                self.report_ineligible_method_reference(method, member.member.span);
                 None
             }
             SelectedClassMember::StaticField(field) => {
@@ -96,6 +116,228 @@ impl CallableResolver<'_, '_> {
                 None
             }
         }
+    }
+
+    pub(super) fn resolve_top_level_function_reference(
+        &mut self,
+        function: FunctionId,
+        reference_span: Span,
+    ) -> Option<ResolvedExpression> {
+        let declaration = self
+            .environment
+            .functions
+            .get(function)
+            .expect("top-level symbols must reference declaration metadata");
+        if self.environment.specialization.is_some() {
+            let name = declaration.name.clone();
+            let name_span = declaration.name_span;
+            self.report_generic_function_reference_gate(&name, name_span, reference_span);
+            return None;
+        }
+        match declaration.linkage {
+            ResolvedFunctionLinkage::Internal => {}
+            ResolvedFunctionLinkage::External { .. } => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_FUNCTION_REFERENCE,
+                        format!(
+                            "external function `{}` cannot be used as a function value",
+                            declaration.name
+                        ),
+                    )
+                    .with_primary_label(
+                        reference_span,
+                        "external declarations do not use the internal callable ABI",
+                    )
+                    .with_secondary_label(declaration.name_span, "external function declared here")
+                    .with_note("reference an internal adapter function instead"),
+                );
+                return None;
+            }
+            ResolvedFunctionLinkage::Intrinsic { .. }
+            | ResolvedFunctionLinkage::UnrecognizedIntrinsic => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_FUNCTION_REFERENCE,
+                        format!(
+                            "intrinsic function `{}` cannot be used as a function value",
+                            declaration.name
+                        ),
+                    )
+                    .with_primary_label(
+                        reference_span,
+                        "compiler intrinsics are not addressable callables",
+                    )
+                    .with_secondary_label(declaration.name_span, "intrinsic declared here"),
+                );
+                return None;
+            }
+        }
+
+        let function_type = self.type_interner.intern_callable_signature(
+            &declaration.parameters,
+            &declaration.return_type,
+            declaration.span,
+        );
+        Some(self.record_function_reference(
+            CallableId::Function(function),
+            function_type,
+            reference_span,
+        ))
+    }
+
+    fn resolve_method_reference(
+        &mut self,
+        method: MethodId,
+        member_span: Span,
+        reference_span: Span,
+    ) -> Option<ResolvedExpression> {
+        let declaration = self.method_declaration(method);
+        if declaration.kind != ResolvedMethodKind::Static {
+            self.report_ineligible_method_reference(method, member_span);
+            return None;
+        }
+        if self.environment.specialization.is_some() {
+            let name = declaration.name.clone();
+            let name_span = declaration.name_span;
+            self.report_generic_function_reference_gate(&name, name_span, reference_span);
+            return None;
+        }
+        let parameters = declaration.parameters.clone();
+        let return_type = declaration.return_type.clone();
+        let declaration_span = declaration.span;
+        let function_type = self.type_interner.intern_callable_signature(
+            &parameters,
+            &return_type,
+            declaration_span,
+        );
+        Some(self.record_function_reference(
+            CallableId::Method(method),
+            function_type,
+            reference_span,
+        ))
+    }
+
+    fn record_function_reference(
+        &mut self,
+        target: CallableId,
+        function_type: FunctionTypeId,
+        span: Span,
+    ) -> ResolvedExpression {
+        self.address_taken_callables
+            .record(target, function_type, span);
+        ResolvedExpression::FunctionReference(ResolvedFunctionReferenceExpr {
+            target,
+            function_type,
+            span,
+        })
+    }
+
+    fn method_declaration(&self, method: MethodId) -> &ResolvedMethodDeclaration {
+        self.environment
+            .classes
+            .get(method.class())
+            .and_then(|class| class.method(method))
+            .expect("member symbols must reference declaration metadata")
+    }
+
+    fn report_ineligible_method_reference(&mut self, method: MethodId, reference_span: Span) {
+        let declaration = self.method_declaration(method);
+        let (family, label) = match declaration.kind {
+            ResolvedMethodKind::Static => {
+                unreachable!("static methods are eligible ordinary reference targets")
+            }
+            ResolvedMethodKind::Instance {
+                modifier: ResolvedMethodModifier::Direct,
+                ..
+            } => (
+                "instance method",
+                "instance methods require an object receiver",
+            ),
+            ResolvedMethodKind::Instance {
+                modifier:
+                    ResolvedMethodModifier::Virtual { .. } | ResolvedMethodModifier::Override { .. },
+                ..
+            } => (
+                "virtual method",
+                "virtual and interface-dispatched selections are not function values",
+            ),
+        };
+        self.diagnostics.push(
+            Diagnostic::error(
+                INVALID_FUNCTION_REFERENCE,
+                format!(
+                    "{family} `{}` cannot be used as a function value",
+                    declaration.name
+                ),
+            )
+            .with_primary_label(reference_span, label)
+            .with_secondary_label(declaration.name_span, "method declared here")
+            .with_note("bound method values and receiver capture are not supported"),
+        );
+    }
+
+    fn report_generic_function_reference_gate(
+        &mut self,
+        name: &str,
+        declaration_span: Span,
+        reference_span: Span,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                GENERIC_FUNCTION_REFERENCE_NOT_YET_SUPPORTED,
+                format!("generic callable reference `{name}` is not resolved yet"),
+            )
+            .with_primary_label(
+                reference_span,
+                "generic callable references are closed during specialization in the next stage",
+            )
+            .with_secondary_label(declaration_span, "callable declared here"),
+        );
+    }
+
+    fn report_ineligible_interface_reference(
+        &mut self,
+        interface: InterfaceId,
+        member: &syntax::Name,
+    ) {
+        let declaration = self
+            .environment
+            .interfaces
+            .get(interface)
+            .expect("interface receiver type must reference a declaration");
+        let Some(requirement) = declaration
+            .requirements
+            .iter()
+            .find(|requirement| requirement.name == member.text.as_str())
+        else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    UNKNOWN_MEMBER,
+                    format!(
+                        "interface `{}` has no requirement `{}`",
+                        declaration.name, member.text
+                    ),
+                )
+                .with_primary_label(member.span, "unknown requirement"),
+            );
+            return;
+        };
+        self.diagnostics.push(
+            Diagnostic::error(
+                INVALID_FUNCTION_REFERENCE,
+                format!(
+                    "interface requirement `{}` cannot be used as a function value",
+                    requirement.name
+                ),
+            )
+            .with_primary_label(
+                member.span,
+                "interface-dispatched selections require an object receiver",
+            )
+            .with_secondary_label(requirement.name_span, "requirement declared here")
+            .with_note("bound method values and receiver capture are not supported"),
+        );
     }
 
     pub(super) fn resolve_call(&mut self, call: &syntax::CallExpr) -> Option<ResolvedExpression> {
@@ -413,6 +655,9 @@ impl CallableResolver<'_, '_> {
                 .get(access.field.class())
                 .and_then(|class| class.static_field(access.field))
                 .map(|field| field.type_syntax.kind),
+            ResolvedExpression::FunctionReference(reference) => {
+                Some(ResolvedTypeKind::Function(reference.function_type))
+            }
             ResolvedExpression::DirectCall(call) => self
                 .environment
                 .functions
@@ -458,6 +703,14 @@ impl CallableResolver<'_, '_> {
             syntax::Expression::Identifier(identifier) => {
                 if !identifier.name.is_qualified() {
                     if let Some(binding) = self.lookup_binding(&identifier.name.text) {
+                        if matches!(binding.ty, ResolvedTypeKind::Function(_)) {
+                            self.report_indirect_call_gate(
+                                &identifier.name.text,
+                                identifier.span,
+                                binding.name_span,
+                            );
+                            return None;
+                        }
                         self.diagnostics.push(
                             Diagnostic::error(
                                 INVALID_CALL_TARGET,
@@ -523,19 +776,7 @@ impl CallableResolver<'_, '_> {
                         kind: TopLevelSymbolKind::ClassTemplate(_),
                         ..
                     }) => {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                RAW_GENERIC_TYPE,
-                                format!(
-                                    "generic class `{}` requires type arguments",
-                                    identifier.name.text
-                                ),
-                            )
-                            .with_primary_label(
-                                identifier.span,
-                                "supply the template's type arguments",
-                            ),
-                        );
+                        self.report_raw_generic_type(&identifier.name.text, identifier.span);
                         None
                     }
                     TopLevelLookup::Missing => {
@@ -653,6 +894,14 @@ impl CallableResolver<'_, '_> {
                             .get(field.class())
                             .and_then(|class| class.field(field))
                             .expect("member symbols must reference declaration metadata");
+                        if matches!(declaration.type_syntax.kind, ResolvedTypeKind::Function(_)) {
+                            self.report_indirect_call_gate(
+                                &declaration.name,
+                                member.member.span,
+                                declaration.name_span,
+                            );
+                            return None;
+                        }
                         self.diagnostics.push(
                             Diagnostic::error(
                                 INVALID_CALL_TARGET,
@@ -703,6 +952,13 @@ impl CallableResolver<'_, '_> {
                 kind: TopLevelSymbolKind::Class(class),
                 ..
             }) => ClassReceiver::Class(class),
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::ClassTemplate(_),
+                ..
+            }) => {
+                self.report_raw_generic_type(&identifier.name.text, identifier.span);
+                ClassReceiver::Diagnosed
+            }
             TopLevelLookup::Diagnosed => ClassReceiver::Diagnosed,
             TopLevelLookup::Found(_) | TopLevelLookup::Missing => ClassReceiver::NotClass,
         }
@@ -769,6 +1025,14 @@ impl CallableResolver<'_, '_> {
                     .get(field.class())
                     .and_then(|class| class.static_field(field))
                     .expect("member symbols must reference declaration metadata");
+                if matches!(declaration.type_syntax.kind, ResolvedTypeKind::Function(_)) {
+                    self.report_indirect_call_gate(
+                        &declaration.name,
+                        member.span,
+                        declaration.name_span,
+                    );
+                    return None;
+                }
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_CALL_TARGET,
@@ -832,6 +1096,21 @@ impl CallableResolver<'_, '_> {
                 unreachable!("class-selected static fields are values")
             }
         }
+    }
+
+    fn report_indirect_call_gate(&mut self, name: &str, call_span: Span, declaration_span: Span) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED,
+                format!("indirect call through function value `{name}` is not resolved yet"),
+            )
+            .with_primary_label(
+                call_span,
+                "the function-valued callee is selected here instead of a declaration name",
+            )
+            .with_secondary_label(declaration_span, "function-valued binding declared here")
+            .with_note("indirect calls are enabled after stored function values"),
+        );
     }
 
     fn select_interface_call_target(
