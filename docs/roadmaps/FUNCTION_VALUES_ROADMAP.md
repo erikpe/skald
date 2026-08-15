@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI5 implemented, FVI6 is next.
+Status: in progress; FVI6 implemented, FVI7 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -52,7 +52,7 @@ below implement those decisions without reopening them.
 - [x] FVI3 — Integrate trivial function values with stored and callable HIR
 - [x] FVI4 — Type indirect calls through the complete internal signature
 - [x] FVI5 — Lower and verify callable addresses and indirect MIR calls
-- [ ] FVI6 — Realize code pointers and indirect calls on x86-64
+- [x] FVI6 — Realize code pointers and indirect calls on x86-64
 - [ ] FVI7 — Make indirect calls sound for static effects, retention, and traces
 - [ ] FVI8 — Harden composition, publish implementation, and close the roadmap
 
@@ -271,21 +271,21 @@ remaining execution boundary.
 **Purpose:** Execute the verified target-independent model through the complete
 existing internal ABI without runtime support.
 
-- [ ] Give function values checked eight-byte size/alignment and the SysV
+- [x] Give function values checked eight-byte size/alignment and the SysV
       integer ABI class in locals, fields, statics, parameters, results,
       temporaries, and aggregate layouts.
-- [ ] Materialize exact callable and specialized static-method symbol addresses
+- [x] Materialize exact callable and specialized static-method symbol addresses
       with the existing position-independent address instruction and store/load
       them through neutral scalar machinery.
-- [ ] Extend call planning with a receiverless indirect target that reuses
+- [x] Extend call planning with a receiverless indirect target that reuses
       hidden aggregate results, integer/SSE register classes, stack overflow
       arguments, aliases, owners, optionals, and scalar result normalization.
-- [ ] Preserve the stabilized callee through argument preparation and tracing,
+- [x] Preserve the stabilized callee through argument preparation and tracing,
       load it into a designated scratch register, and emit deterministic
       register-indirect `call` assembly.
-- [ ] Support explicitly initialized function-valued static slots and preserve
+- [x] Support explicitly initialized function-valued static slots and preserve
       distinct symbols for same-signature closed generic targets.
-- [ ] Remove the staged backend/driver gate only when end-to-end verified
+- [x] Remove the staged backend/driver gate only when end-to-end verified
       reference storage and indirect execution are supported; assert unchanged
       runtime symbols and ABI marker.
 

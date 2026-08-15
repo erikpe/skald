@@ -104,11 +104,11 @@ one-word x86-64 realization, and the unchanged runtime boundary to their
 owning phases. Function types, eligible ordinary callable references, generic
 reference closure, trivial stored/callable HIR, complete indirect-call HIR
 argument/result planning, callable-address MIR, receiverless indirect MIR
-targets, and target-independent verification are implemented. The x86-64
-backend still rejects the verified feature structurally, so native indirect
-execution remains unavailable. The active
+targets, target-independent verification, and one-word x86-64 realization are
+implemented. Native calls reuse the complete ordinary internal ABI and exact
+identity-derived callable symbols. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns staged
-delivery and structured gates.
+whole-program static-effect, retention, and trace integration.
 
 The implemented [strings compiler contract](STRINGS.md) defines canonical
 `std::str::Str` discovery and validation, intrinsic produced-value lowering,

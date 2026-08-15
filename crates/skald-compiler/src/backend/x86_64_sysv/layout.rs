@@ -214,8 +214,7 @@ impl DataLayout {
                 "payload-free type `unit` has no storage layout",
             )),
             primitive => {
-                Ok(primitive_layout(primitive)
-                    .expect("every payload primitive has a target layout"))
+                Ok(scalar_layout(primitive).expect("every stored scalar has a target layout"))
             }
         }
     }
@@ -509,7 +508,7 @@ impl<'mir> LayoutBuilder<'mir> {
             },
             MirOptionalRepresentation::TaggedPayload => {
                 let payload = match metadata.storage {
-                    MirOptionalStorage::Scalar => primitive_layout(metadata.payload)
+                    MirOptionalStorage::Scalar => scalar_layout(metadata.payload)
                         .expect("scalar optional metadata must carry a primitive payload"),
                     MirOptionalStorage::InlineClass(class) => self.compute_class(class)?,
                     MirOptionalStorage::InlineArray(_) => {
@@ -589,10 +588,10 @@ impl<'mir> LayoutBuilder<'mir> {
                 .array_type(array)
                 .map(|_| TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT))
                 .ok_or_else(|| layout_error(format!("array {array} is not declared"))),
-            _ => primitive_layout(ty).ok_or_else(|| match ty {
+            _ => scalar_layout(ty).ok_or_else(|| match ty {
                 MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
                 MirType::Unit => layout_error("field type `unit` has no target layout"),
-                _ => unreachable!("every payload primitive has a target layout"),
+                _ => unreachable!("every stored scalar has a target layout"),
             }),
         }
     }
@@ -612,8 +611,8 @@ impl<'mir> LayoutBuilder<'mir> {
                 .map(|_| TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT))
                 .ok_or_else(|| layout_error(format!("array {array} is not declared"))),
             MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
-            primitive => primitive_layout(primitive)
-                .ok_or_else(|| layout_error(format!("type {primitive:?} has no array layout"))),
+            scalar => scalar_layout(scalar)
+                .ok_or_else(|| layout_error(format!("type {scalar:?} has no array layout"))),
         }
     }
 }
@@ -637,9 +636,11 @@ fn array_layout(element: TypeLayout) -> Option<ArrayLayout> {
     })
 }
 
-fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
+fn scalar_layout(ty: MirType) -> Option<TypeLayout> {
     match ty {
-        MirType::I64 | MirType::U64 | MirType::F64 => Some(TypeLayout::new(8, 8)),
+        MirType::I64 | MirType::U64 | MirType::F64 | MirType::Function(_) => {
+            Some(TypeLayout::new(8, 8))
+        }
         MirType::U8 | MirType::Bool => Some(TypeLayout::new(1, 1)),
         MirType::Class(_)
         | MirType::Array(_)
@@ -647,14 +648,13 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
         | MirType::Obj
         | MirType::Shared(_)
         | MirType::Optional(_)
-        | MirType::Function(_)
         | MirType::Unit => None,
     }
 }
 
 #[cfg(test)]
 fn optional_layout(payload: crate::mir::MirPrimitiveType) -> Result<OptionalLayout, BackendError> {
-    let payload = primitive_layout(payload.payload_type())
+    let payload = scalar_layout(payload.payload_type())
         .expect("every primitive optional payload has a target layout");
     optional_layout_for(payload)
 }
@@ -808,7 +808,7 @@ mod tests {
     }
 
     #[test]
-    fn defines_the_primitive_target_layout_contract() {
+    fn defines_the_scalar_target_layout_contract() {
         let data = DataLayout {
             classes: vec![],
             arrays: vec![],
@@ -816,7 +816,12 @@ mod tests {
             exact_optional_boxes: vec![],
             optional_object_boxes: vec![],
         };
-        for ty in [MirType::I64, MirType::U64, MirType::F64] {
+        for ty in [
+            MirType::I64,
+            MirType::U64,
+            MirType::F64,
+            MirType::Function(crate::identity::FunctionTypeId::new(0)),
+        ] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(8, 8));
         }
         for ty in [MirType::U8, MirType::Bool] {

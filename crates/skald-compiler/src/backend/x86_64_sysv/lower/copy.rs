@@ -107,7 +107,7 @@ impl InstructionSelector<'_, '_> {
                             )?;
                         }
                         MirSynthesizedFieldCopy::Primitive { field } => {
-                            self.select_primitive_copy(
+                            self.select_scalar_copy(
                                 destination.clone().project_field(field),
                                 source.clone().project_field(field),
                                 self.program
@@ -253,7 +253,7 @@ impl InstructionSelector<'_, '_> {
                             )?;
                         }
                         MirSynthesizedFieldCopy::Primitive { field } => {
-                            self.select_primitive_copy(
+                            self.select_scalar_copy(
                                 destination.clone().project_field(field),
                                 source.clone().project_field(field),
                                 self.program
@@ -377,7 +377,7 @@ impl InstructionSelector<'_, '_> {
         )
     }
 
-    fn select_primitive_copy(
+    fn select_scalar_copy(
         &mut self,
         destination: MirPlace,
         source: MirPlace,
@@ -408,19 +408,18 @@ impl InstructionSelector<'_, '_> {
                     destination,
                 });
             }
-            MirType::I64 | MirType::U64 => {
+            MirType::I64 | MirType::U64 | MirType::Function(_) => {
                 value::load_rax(source, self.output);
                 value::store_rax(destination, self.output);
             }
-            MirType::Function(_)
-            | MirType::Class(_)
+            MirType::Class(_)
             | MirType::Array(_)
             | MirType::Interface(_)
             | MirType::Obj
             | MirType::Shared(_)
             | MirType::Optional(_)
             | MirType::Unit => {
-                unreachable!("verified primitive copy step must have a payload primitive type")
+                unreachable!("verified scalar copy step must have a stored scalar type")
             }
         }
         Ok(())

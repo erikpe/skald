@@ -138,12 +138,13 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
             | MirType::U64
             | MirType::U8
             | MirType::Bool
+            | MirType::Function(_)
             | MirType::Class(_)
             | MirType::Shared(_)
             | MirType::Optional(_)
             | MirType::Array(_) => Some(ScalarClass::Integer),
             MirType::F64 => Some(ScalarClass::Sse),
-            MirType::Function(_) | MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
+            MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
         },
     }
 }
@@ -372,6 +373,29 @@ mod tests {
             [ArgumentLocation::IntegerRegister(Register::Rdi)]
         );
         assert_eq!(layout.stack_size(), 0);
+    }
+
+    #[test]
+    fn classifies_function_values_as_one_integer_component() {
+        let function = MirType::Function(crate::identity::FunctionTypeId::new(0));
+        let layout = CallLayout::classify(&MirParameter::values([
+            function, function, function, function, function, function, function,
+        ]))
+        .unwrap();
+
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rdi),
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::IntegerRegister(Register::Rdx),
+                ArgumentLocation::IntegerRegister(Register::Rcx),
+                ArgumentLocation::IntegerRegister(Register::R8),
+                ArgumentLocation::IntegerRegister(Register::R9),
+                ArgumentLocation::Stack(0),
+            ]
+        );
+        assert_eq!(layout.stack_size(), 16);
     }
 
     #[test]

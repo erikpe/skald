@@ -2,22 +2,26 @@
 
 use crate::{
     backend::BackendError,
-    identity::{CallableId, InterfaceRequirementId, MethodId, VirtualSlotId},
+    identity::{CallableId, FunctionTypeId, InterfaceRequirementId, MethodId, VirtualSlotId},
     mir::{
         MirCall, MirCallReceiver, MirCallTarget, MirCallableSignature, MirMethodCallTarget,
-        MirProgram,
+        MirProgram, ValueId,
     },
 };
 
-use super::super::super::machine::Register;
+use super::super::super::machine::{Instruction, Register};
 use super::super::{
     object_abi::{ObjectOriginOperand, ReceiverOperand},
-    InstructionSelector,
+    value, InstructionSelector,
 };
 
 #[derive(Clone, Copy)]
 pub(super) enum CallTarget {
     Direct(CallableId),
+    FunctionValue {
+        callee: ValueId,
+        function_type: FunctionTypeId,
+    },
     Virtual {
         selected: MethodId,
         slot: VirtualSlotId,
@@ -30,9 +34,13 @@ impl CallTarget {
         match call.target {
             MirCallTarget::Direct(function) => (Self::Direct(function.into()), None),
             MirCallTarget::Static(method) => (Self::Direct(method.into()), None),
-            MirCallTarget::Indirect(_) => {
-                unreachable!("backend legality rejects indirect calls before selection")
-            }
+            MirCallTarget::Indirect(target) => (
+                Self::FunctionValue {
+                    callee: target.callee,
+                    function_type: target.function_type,
+                },
+                None,
+            ),
             MirCallTarget::Method(method) => {
                 let receiver = call
                     .receiver
@@ -79,6 +87,15 @@ impl CallTarget {
             Self::Direct(target) => program
                 .callable_signature(target)
                 .expect("verified call target must be declared"),
+            Self::FunctionValue { function_type, .. } => {
+                let function = program
+                    .function_type(function_type)
+                    .expect("verified function-value signature must be declared");
+                MirCallableSignature {
+                    parameters: &function.parameters,
+                    return_type: function.result,
+                }
+            }
             Self::Virtual { selected, .. } => program
                 .callable_signature(selected.into())
                 .expect("verified virtual target must be declared"),
@@ -101,7 +118,7 @@ impl CallTarget {
     pub(super) const fn direct_callable(self) -> Option<CallableId> {
         match self {
             Self::Direct(target) => Some(target),
-            Self::Virtual { .. } | Self::Interface(_) => None,
+            Self::FunctionValue { .. } | Self::Virtual { .. } | Self::Interface(_) => None,
         }
     }
 
@@ -119,6 +136,16 @@ impl CallTarget {
             Self::Direct(target) => {
                 selector.output.push(super::direct_instruction(
                     super::super::super::symbol::callable(selector.program, target),
+                    super::TraceAttribution::SourceOperation,
+                ));
+            }
+            Self::FunctionValue { callee, .. } => {
+                selector.output.push(Instruction::Move {
+                    source: value::frame_value(selector.frame, callee),
+                    destination: Register::R11.into(),
+                });
+                selector.output.push(super::indirect_instruction(
+                    Register::R11,
                     super::TraceAttribution::SourceOperation,
                 ));
             }

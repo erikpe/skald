@@ -11,9 +11,11 @@ Recursive function-type syntax, canonical closed `FunctionTypeId` identity,
 exact ordinary and closed-specialization callable references, deterministic
 address-taken metadata, trivial stored/callable HIR, and complete indirect-call
 argument/result planning are implemented. FVI5 adds deterministic callable-
-address and indirect-call MIR plus target-independent verification behind a
-structured x86-64 backend gate. FVI6 is next and will realize code pointers
-and indirect calls on x86-64.
+address and indirect-call MIR plus target-independent verification. FVI6 adds
+one-word x86-64 code pointers, exact symbol addresses, static slots, and
+receiverless register-indirect calls through the existing ABI. FVI7 is next
+and will integrate indirect candidates with static effects, retention, and
+runtime traces.
 
 ## Planned
 

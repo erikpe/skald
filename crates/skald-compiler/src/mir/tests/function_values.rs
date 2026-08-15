@@ -540,15 +540,13 @@ fn preliminary_static_initializers_lower_and_dump_callable_addresses() {
 
     let final_mir = crate::test_support::lower_hir_to_final_mir(&hir);
     verify_mir(&final_mir).expect("synthesized function-valued static MIR must verify");
-    let error = crate::test_support::emit_assembly_without_runtime_trace(
+    let assembly = crate::test_support::emit_assembly_without_runtime_trace(
         crate::backend::Target::X86_64SysV,
         &final_mir,
     )
-    .expect_err("FVI5 must retain the structural backend gate");
-    assert_eq!(
-        error.message(),
-        "verified function-value MIR is not yet supported by this target"
-    );
+    .expect("function-valued static initializer MIR must reach x86-64");
+    assert!(assembly.contains("lea rax, [rip + .Lska.fn.main.identity.f0]"));
+    assert!(assembly.contains("call r11"));
 }
 
 #[test]

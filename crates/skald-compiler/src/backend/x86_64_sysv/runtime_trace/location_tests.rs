@@ -25,8 +25,11 @@ fn runtime_trace_location_precedes_every_explicit_call_target_after_marshalling(
             "  static fn twice(value: i64) -> i64 { return value * 2; }\n",
             "}\n",
             "fn direct(value: i64) -> i64 { return value + 3; }\n",
+            "fn callback(value: i64) -> i64 { return value + 4; }\n",
             "fn exercise(ref base: Base, ref reader: Reader) -> i64 {\n",
-            "  var first: i64 = direct(1);\n",
+            "  var transform: fn(i64) -> i64 = callback;\n",
+            "  var zero: i64 = transform(0);\n",
+            "  var first: i64 = direct(zero);\n",
             "  var second: i64 = Worker.twice(first);\n",
             "  var third: i64 = base.value(second);\n",
             "  var fourth: i64 = reader.read(third);\n",
@@ -51,7 +54,7 @@ fn runtime_trace_location_precedes_every_explicit_call_target_after_marshalling(
             _ => None,
         })
         .collect::<Vec<_>>();
-    assert_eq!(calls.len(), 5);
+    assert_eq!(calls.len(), 6);
 
     let assembly = fixture
         .emit_assembly(Target::X86_64SysV, RuntimeTracePolicy::Enabled)
@@ -101,7 +104,13 @@ fn runtime_trace_location_precedes_every_explicit_call_target_after_marshalling(
                 replacement_end + relative
             }
             MirCallTarget::Indirect(_) => {
-                panic!("function-value calls are rejected before backend trace lowering")
+                let relative = function[replacement_end..]
+                    .find("    call r11\n")
+                    .expect("function-value call must use r11");
+                let target_load = &function[replacement_end..replacement_end + relative];
+                assert!(target_load.starts_with("    mov r11, qword ptr [rbp - "));
+                assert_eq!(target_load.lines().count(), 1);
+                replacement_end + relative
             }
         };
         previous_call = call_position + 1;

@@ -1,24 +1,24 @@
 schema = 2
 
 [[test]]
-name = "staged_backend_gate"
-mode = "compile-fail"
+name = "function_type_abi"
+mode = "run"
 source = "function_types.ska"
-[test.expect.stderr]
-match = "starts-with"
-inline = "skac: internal x86_64-sysv backend error: verified function-value MIR is not yet supported by this target"
+[[test.run]]
+name = "internal_signature"
+expect = { exit = 0 }
 
 [[test]]
 name = "module_references"
-mode = "compile-fail"
+mode = "run"
 compiler_args = [
   "--entry", "app",
   "--module-root", "cases/supported",
   "--no-stdlib",
 ]
-[test.expect.stderr]
-match = "starts-with"
-inline = "skac: internal x86_64-sysv backend error: verified function-value MIR is not yet supported by this target"
+[[test.run]]
+name = "qualified_imported_and_static"
+expect = { exit = 42 }
 
 [[test]]
 name = "module_exclusions"
@@ -43,12 +43,12 @@ matches = [
 
 [[test]]
 name = "generic_specialization"
-mode = "compile-fail"
+mode = "run"
 source = "generic_specialization.ska"
 compiler_args = ["--no-stdlib"]
-[test.expect.stderr]
-match = "starts-with"
-inline = "skac: internal x86_64-sysv backend error: verified function-value MIR is not yet supported by this target"
+[[test.run]]
+name = "distinct_closed_targets"
+expect = { exit = 42 }
 
 [[test]]
 name = "malformed_parameter_mode"

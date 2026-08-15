@@ -13,5 +13,8 @@ class Factory<T> {
 fn main() -> i64 {
     var first: fn(i64) -> i64 = Factory<i64>::identity;
     var second: fn(bool) -> bool = Factory<bool>::identity;
-    return 0;
+    if (second(true)) {
+        return first(42);
+    }
+    return 1;
 }

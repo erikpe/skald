@@ -3,8 +3,8 @@
 Status: frozen compiler contract; syntax AST, canonical resolved, HIR, and MIR
 `FunctionTypeId` metadata, exact ordinary reference nodes, address-taken
 metadata, trivial stored/callable values, completely checked indirect calls,
-and verified callable-address MIR are implemented behind an x86-64 backend
-legality gate. The source-visible contract is
+verified callable-address MIR, and x86-64 code-pointer realization are
+implemented. The source-visible contract is
 [Capture-Free Function Values](../language/FUNCTION_VALUES.md),
 the [status matrix](../language/STATUS.md) owns availability, and the active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns phase
@@ -19,8 +19,10 @@ exact references, scalar storage, copying, assignments, internal callable
 transport, and receiverless indirect calls through the ordinary argument and
 result planners into HIR. MIR lowering and verification then establish
 target-independent callable addresses, callee order, provenance, and complete
-call carriers. The source driver reaches the target boundary, where x86-64
-returns a structured backend error until FVI6 supplies native realization.
+call carriers. The x86-64 backend realizes exact position-independent symbol
+addresses and receiverless register-indirect calls through the ordinary
+internal ABI. Conservative whole-program static-effect expansion and related
+retention/trace obligations remain staged for FVI7.
 
 The target-independent pipeline represents one capture-free function value as
 one exact, non-null internal callable address paired statically with a canonical
@@ -143,10 +145,11 @@ carriers, and arbitrary pointer construction.
 
 ## Whole-program effects and retention
 
-This section remains the frozen FVI7 contract. Current FVI5 static-lifecycle
+This section remains the frozen FVI7 contract. Current static-lifecycle
 handling records address formation as effect-free but does not yet expand an
-indirect call to its candidate targets; the backend gate prevents execution
-until that whole-program obligation is implemented.
+indirect call to its candidate targets. Native indirect execution is present;
+programs whose callback targets carry static effects remain subject to the
+staged FVI7 whole-program integration.
 
 Taking or copying an address has no static read, write, initialization, or
 shutdown effect. An indirect call is conservatively expanded to every
@@ -167,9 +170,10 @@ edges deterministically.
 
 ## x86-64 representation and internal ABI
 
-This section remains the frozen FVI6 contract. Current x86-64 legality first
-verifies the complete MIR program and then rejects any function-value metadata
-with a structured unsupported-feature backend error.
+This section describes the implemented FVI6 target contract. X86-64 legality
+verifies the complete MIR program, computes checked function-value layout and
+ABI classification, and accepts verified callable addresses and indirect
+targets.
 
 The initial target representation is one non-null eight-byte code pointer with
 eight-byte alignment and the System V integer ABI class. Materialization loads
@@ -208,9 +212,10 @@ contract.
 
 Syntax, resolved, HIR, preliminary MIR, and final MIR dumps expose canonical
 types, exact targets, callee expressions, callable-address operations, and
-indirect targets in stable identity order. Later static-effect and assembly
-dumps will additionally expose candidates, effect edges, and register-indirect
-calls. Diagnostics distinguish malformed syntax, signature differences,
+indirect targets in stable identity order. Assembly output exposes exact
+symbol addresses and deterministic register-indirect calls. Later
+static-effect dumps will additionally expose candidates and effect edges.
+Diagnostics distinguish malformed syntax, signature differences,
 ineligible or inaccessible targets, invalid storage roles, non-callable
 expressions, and excluded compositions.
 

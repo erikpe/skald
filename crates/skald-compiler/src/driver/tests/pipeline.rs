@@ -59,8 +59,8 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
-fn function_values_reach_verified_mir_and_stop_at_the_backend_gate() {
-    let error = compile_source_to_assembly(
+fn function_values_compile_through_the_public_driver() {
+    let artifact = compile_source_to_assembly(
         "function-values.ska",
         concat!(
             "fn identity(value: i64) -> i64 { return value; }\n",
@@ -68,15 +68,13 @@ fn function_values_reach_verified_mir_and_stop_at_the_backend_gate() {
         ),
         Target::X86_64SysV,
     )
-    .expect_err("function-value execution remains gated until backend realization");
+    .expect("function-value source must compile through native realization");
 
-    let CompilationError::Backend(error) = error else {
-        panic!("function-value source must pass frontend and MIR verification: {error:?}")
-    };
-    assert_eq!(
-        error.message(),
-        "verified function-value MIR is not yet supported by this target"
-    );
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact
+        .assembly
+        .contains("lea rax, [rip + .Lska.fn.main.identity.f0]"));
+    assert!(artifact.assembly.contains("call r11"));
 }
 
 #[test]

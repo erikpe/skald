@@ -1741,9 +1741,14 @@ fn function_value_specialization_phase_dump() -> String {
     let planned = plan_static_lifetimes(preliminary).unwrap();
     let planned_dump = dump_planned_mir(&planned);
     let mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
+    let assembly = emit_assembly(
+        Target::X86_64SysV,
+        BackendInput::without_runtime_trace(&mir),
+    )
+    .unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}MIR\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}MIR\n{}ASSEMBLY\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
@@ -1751,6 +1756,7 @@ fn function_value_specialization_phase_dump() -> String {
         preliminary_dump,
         planned_dump,
         dump_mir(&mir),
+        assembly,
     )
 }
 

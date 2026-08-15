@@ -192,10 +192,10 @@ makes a result source-observable.
   function types, eligible internal references, trivial non-null storage,
   indirect-call evaluation and ownership, closed generic composition, and the
   initial exclusions. Ordinary references and receiverless indirect calls are
-  exposed in HIR with exact target/signature metadata, trivial
-  storage/transport, and complete ordinary argument/result plans, but the
-  feature remains gated before MIR; its
-  remaining implementation order is owned by the active roadmap.
+  realized from exact target/signature metadata through trivial
+  storage/transport, verified MIR, one-word x86-64 pointers, and the complete
+  ordinary argument/result ABI. Remaining whole-program integration is owned
+  by the active roadmap.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and

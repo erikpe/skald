@@ -20,13 +20,14 @@ The [standard I/O compiler and runtime contract](IO.md) separately owns the
 implemented byte-array operations and runtime-call boundary, including current
 x86-64 backend input.
 
-The frozen [function-value compiler contract](FUNCTION_VALUES.md) selects one
+The implemented [function-value compiler contract](FUNCTION_VALUES.md) selects one
 non-null eight-byte code pointer in the System V integer class, exact
 position-independent symbol addresses, and receiverless register-indirect
 calls through the complete internal ABI. Function values now reach this
-boundary as verified target-independent MIR. The x86-64 legality pass rejects
-any program with function-type metadata using a structured unsupported-feature
-error until the active roadmap implements their target layout and lowering.
+boundary as verified target-independent MIR. The x86-64 backend lays out and
+copies them as neutral scalars, materializes exact callable symbols, and loads
+stabilized callees into `r11` only after hidden results, arguments, and trace
+attribution have been prepared.
 
 Verified eager static lifecycle MIR is current backend input. The x86-64
 target emits one aligned, writable, target-private `.bss` slot per canonical

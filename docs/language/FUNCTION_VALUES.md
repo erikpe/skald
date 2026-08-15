@@ -2,16 +2,17 @@
 
 Status: frozen design; syntax, canonical closed type identity, eligible
 ordinary callable-reference resolution, stored/callable HIR, indirect-call
-type checking, and verified target-independent MIR are implemented behind an
-x86-64 backend gate. The
+type checking, verified target-independent MIR, and x86-64 native realization
+are implemented. The
 [status matrix](STATUS.md) is authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact accepted source shape. Function
 references can be inspected in resolved, HIR, preliminary MIR, and final MIR
 compiler output. The compiler supports the frozen storage, copying,
 assignment, internal value parameter/result positions, and indirect calls
-through every ordinary argument/result family. Native execution remains
-unavailable until the x86-64 realization is implemented. The active
-[implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns delivery.
+through every ordinary argument/result family. Exact internal callable
+addresses and receiverless calls execute natively through the ordinary ABI.
+The active [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md)
+owns the remaining whole-program static-effect, retention, and trace work.
 
 This contract adds non-null, capture-free function values to Skald. A function
 value names one exact internal top-level function or static method and carries
@@ -74,8 +75,8 @@ var specialized: fn(i64) -> i64 = Identity<i64>::apply;
 The current compiler resolves all four forms to an exact target and signature
 and records the target as address-taken. Generic function signatures are closed recursively, so different
 specializations retain different method targets even when they share one
-canonical function type. References and indirect calls are represented in
-HIR but are not executable yet.
+canonical function type. References and indirect calls retain those exact
+identities through verified MIR and native x86-64 execution.
 
 The source name selects one exact callable identity and its canonical
 signature. An expected function type validates that selection but does not

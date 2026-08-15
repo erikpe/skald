@@ -331,8 +331,8 @@ impl Extractor<'_> {
                 }
             }
             // Candidate expansion belongs to the function-value static-effect
-            // task. The backend gate prevents these calls from executing until
-            // that conservative edge set is implemented.
+            // task. Native target realization is independent of this pending
+            // conservative whole-program edge set.
             MirCallTarget::Indirect(_) => {}
         }
     }
