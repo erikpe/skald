@@ -188,6 +188,11 @@ makes a result source-observable.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, evaluation order,
   implemented `while` loops and targeted `break` and `continue` exits.
+- [Capture-free function values](FUNCTION_VALUES.md) freezes recursive exact
+  function types, eligible internal references, trivial non-null storage,
+  indirect-call evaluation and ownership, closed generic composition, and the
+  initial exclusions. The feature is not yet accepted by the compiler; its
+  implementation order is owned by the active roadmap.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and

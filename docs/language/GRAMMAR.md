@@ -225,6 +225,31 @@ storage-type                  = postfix-type | shared-type
 result-type                   = storage-type | "unit"
 ```
 
+### Frozen function-type extension
+
+The compiler does not yet accept function types. The frozen
+[capture-free function-value contract](FUNCTION_VALUES.md) adds the following
+recursive alternative when the first implementation stage ships:
+
+```text
+function-type           = "fn" "(" [function-type-parameter
+                          {"," function-type-parameter}] ")"
+                          "->" storage-type
+function-type-parameter = storage-type
+                        | "ref" storage-type
+                        | "mut" "ref" storage-type
+type-primary            = primitive-type | named-type | "unit"
+                        | "(" storage-type ")" | function-type
+```
+
+Function-type parameters are unnamed; their value, `ref`, or `mut ref` mode
+is part of the type. Recursion through `storage-type` permits nested function
+parameters and results. The extension does not alter expression precedence:
+`(f)(argument)` remains an object-cast candidate, while an ungrouped
+function-typed postfix expression may become callable. Until this section is
+promoted into the implemented production above, programs using the extension
+must be rejected by the existing grammar.
+
 Primitive type spellings remain reserved as declaration and binding names,
 but may identify a module namespace inside a module or qualified declaration
 path. This permits standard-library paths such as `std::f64` and qualified

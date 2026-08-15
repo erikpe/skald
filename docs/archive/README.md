@@ -150,6 +150,10 @@ Resolved generic-class follow-ups:
 - [generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md)
 - [generic array copy lifecycle discovery](GENERIC_ARRAY_COPY_LIFECYCLE_DISCOVERY.md)
 
+Resolved function-value design inputs:
+
+- [capture-free function values design record](FUNCTION_VALUES_DESIGN_PROPOSAL.md)
+
 Resolved shared-optional-box follow-ups:
 
 - [shared optional boxes discoveries](SHARED_OPTIONAL_BOXES_DISCOVERIES.md)

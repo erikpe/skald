@@ -1,9 +1,10 @@
 # Function Values Design Proposal
 
-Status: proposed design under review. The decisions in FV1 through FV16 are
-intended to be confirmed together before living language and compiler contracts
-or an implementation roadmap are created. The implemented grammar and status
-matrix remain authoritative until that promotion occurs.
+Status: frozen design. FV1 through FV15 were confirmed together on 2026-08-15;
+FV16's promotion procedure was then completed by publishing the living
+language and compiler contracts and creating the implementation roadmap. The
+implemented grammar and status matrix remain authoritative for current
+compiler availability.
 
 This proposal adds capture-free function values to Skald. A function value is
 an always-valid, trivially copied reference to one exact internal top-level
@@ -148,22 +149,22 @@ omit alias modes and deterministic ownership.
 
 | ID | Decision | Proposed direction | State |
 |---|---|---|---|
-| [FV1](#fv1--function-type-syntax) | Type syntax | Add recursive `fn(...) -> ...` types with unnamed value, `ref`, and `mut ref` parameters | **Proposed** |
-| [FV2](#fv2--canonical-identity-and-compatibility) | Type identity | Intern exact signatures including parameter modes; use invariant equality and no adaptation | **Proposed** |
-| [FV3](#fv3--value-formation-and-eligibility) | Value sources | Permit accessible internal top-level functions and ordinary or closed-specialization static methods | **Proposed** |
-| [FV4](#fv4--closed-generic-composition) | Generics | Close parameter-bearing function types and static references during class specialization; permit contextual function type arguments | **Proposed** |
-| [FV5](#fv5--storage-initialization-copying-and-lifecycle) | Stored values | Treat function values as non-null trivial scalars; require explicit initialization where zero is not valid | **Proposed** |
-| [FV6](#fv6--internal-callable-boundaries) | Callable composition | Permit function values across every internal direct, static, instance, virtual, and interface boundary | **Proposed** |
-| [FV7](#fv7--indirect-call-semantics-and-evaluation-order) | Calls | Call arbitrary function-typed expressions; evaluate the callee once before left-to-right arguments | **Proposed** |
-| [FV8](#fv8--name-resolution-shadowing-and-access) | Resolution and access | Preserve direct calls, prefer shadowing values where applicable, and check visibility when forming a reference | **Proposed** |
-| [FV9](#fv9--semantic-ir-and-canonical-type-tables) | Frontend IR | Add explicit function references, indirect calls, and canonical function tables to resolved IR and HIR | **Proposed** |
-| [FV10](#fv10--mir-representation-and-verification) | MIR | Add callable-address rvalues and typed indirect call targets with complete verifier checks | **Proposed** |
-| [FV11](#fv11--target-representation-and-internal-abi) | Backend and ABI | Represent one non-null code pointer, classify it as an integer scalar, and reuse the complete internal call ABI | **Proposed** |
-| [FV12](#fv12--static-lifecycle-effects-and-symbol-retention) | Whole-program effects | Expand indirect calls to address-taken exact-signature candidates and retain every referenced symbol | **Proposed** |
-| [FV13](#fv13--modules-linkage-and-interoperability) | Modules and linkage | Preserve ordinary qualification and visibility; exclude external and intrinsic references initially | **Proposed** |
-| [FV14](#fv14--diagnostics-dumps-and-testing) | Quality | Make signatures, target identities, evaluation, ownership, effects, and exclusions observable and deterministic | **Proposed** |
-| [FV15](#fv15--initial-exclusions-and-future-compatibility) | Feature boundary | Exclude closures, bound methods, optional/array function values, casts, equality, FFI pointers, and callback-slot aliases | **Proposed** |
-| [FV16](#fv16--promotion-and-roadmap-boundary) | Delivery | Confirm the register, promote living contracts, then create a PR-sized implementation roadmap | **Proposed** |
+| [FV1](#fv1--function-type-syntax) | Type syntax | Add recursive `fn(...) -> ...` types with unnamed value, `ref`, and `mut ref` parameters | **Confirmed** |
+| [FV2](#fv2--canonical-identity-and-compatibility) | Type identity | Intern exact signatures including parameter modes; use invariant equality and no adaptation | **Confirmed** |
+| [FV3](#fv3--value-formation-and-eligibility) | Value sources | Permit accessible internal top-level functions and ordinary or closed-specialization static methods | **Confirmed** |
+| [FV4](#fv4--closed-generic-composition) | Generics | Close parameter-bearing function types and static references during class specialization; permit contextual function type arguments | **Confirmed** |
+| [FV5](#fv5--storage-initialization-copying-and-lifecycle) | Stored values | Treat function values as non-null trivial scalars; require explicit initialization where zero is not valid | **Confirmed** |
+| [FV6](#fv6--internal-callable-boundaries) | Callable composition | Permit function values across every internal direct, static, instance, virtual, and interface boundary | **Confirmed** |
+| [FV7](#fv7--indirect-call-semantics-and-evaluation-order) | Calls | Call arbitrary function-typed expressions; evaluate the callee once before left-to-right arguments | **Confirmed** |
+| [FV8](#fv8--name-resolution-shadowing-and-access) | Resolution and access | Preserve direct calls, prefer shadowing values where applicable, and check visibility when forming a reference | **Confirmed** |
+| [FV9](#fv9--semantic-ir-and-canonical-type-tables) | Frontend IR | Add explicit function references, indirect calls, and canonical function tables to resolved IR and HIR | **Confirmed** |
+| [FV10](#fv10--mir-representation-and-verification) | MIR | Add callable-address rvalues and typed indirect call targets with complete verifier checks | **Confirmed** |
+| [FV11](#fv11--target-representation-and-internal-abi) | Backend and ABI | Represent one non-null code pointer, classify it as an integer scalar, and reuse the complete internal call ABI | **Confirmed** |
+| [FV12](#fv12--static-lifecycle-effects-and-symbol-retention) | Whole-program effects | Expand indirect calls to address-taken exact-signature candidates and retain every referenced symbol | **Confirmed** |
+| [FV13](#fv13--modules-linkage-and-interoperability) | Modules and linkage | Preserve ordinary qualification and visibility; exclude external and intrinsic references initially | **Confirmed** |
+| [FV14](#fv14--diagnostics-dumps-and-testing) | Quality | Make signatures, target identities, evaluation, ownership, effects, and exclusions observable and deterministic | **Confirmed** |
+| [FV15](#fv15--initial-exclusions-and-future-compatibility) | Feature boundary | Exclude closures, bound methods, optional/array function values, casts, equality, FFI pointers, and callback-slot aliases | **Confirmed** |
+| [FV16](#fv16--promotion-and-roadmap-boundary) | Delivery | Confirm the register, promote living contracts, then create a PR-sized implementation roadmap | **Completed** |
 
 ## FV1 — Function type syntax
 
@@ -796,16 +797,16 @@ required to validate the core representation and call boundary.
 
 ## FV16 — Promotion and roadmap boundary
 
-FV1 through FV15 should be reviewed and confirmed as one coherent contract
-because syntax, canonical signature identity, generic substitution,
-non-nullability, target eligibility, internal ABI, and whole-program effects
-depend on one another.
+FV1 through FV15 were reviewed and confirmed as one coherent contract because
+syntax, canonical signature identity, generic substitution, non-nullability,
+target eligibility, internal ABI, and whole-program effects depend on one
+another.
 
-After confirmation, promotion should:
+Promotion completed the following actions:
 
 - add the frozen source semantics to focused living language documentation;
-- update the grammar with the accepted type production while retaining the
-  `(f)(argument)` cast precedence;
+- publish the frozen grammar extension while retaining the current accepted
+  grammar and `(f)(argument)` cast precedence until implementation;
 - update the status matrix from open question to frozen design;
 - add canonical function-type, IR, verifier, target, static-effect, and
   unchanged runtime ABI boundaries to compiler documentation;
@@ -813,20 +814,23 @@ After confirmation, promotion should:
 - create an active implementation roadmap with PR-sized tasks and objective
   exit criteria.
 
-The eventual roadmap should order work by stable responsibility:
+The implementation roadmap orders work by stable responsibility:
 
 1. source syntax, `FunctionTypeId`, closed ordinary types, dumps, and
    diagnostics;
-2. template function terms, contextual generic capabilities, substitution,
-   and closed-specialization references;
-3. eligible function references, trivial scalar storage, initialization, and
-   lifecycle integration;
-4. indirect-call resolution and full HIR argument/result checking;
-5. MIR lowering, callee-before-argument stabilization, and verification;
-6. x86-64 code-pointer realization, indirect call emission, static-effect
-   expansion, symbol retention, and trace attribution; and
-7. complete documentation promotion, negative coverage, generic composition,
-   ownership/ABI hardening, deterministic goldens, and repository gates.
+2. the eligible ordinary resolved-reference form, access, shadowing, and
+   address-taken metadata;
+3. template function terms, contextual generic capabilities, substitution,
+   and closed-specialization references using that resolved form;
+4. trivial scalar storage, callable transport, initialization, and lifecycle
+   integration;
+5. indirect-call resolution and full HIR argument/result checking;
+6. MIR lowering, callee-before-argument stabilization, and verification;
+7. x86-64 code-pointer realization and indirect call emission;
+8. static-effect expansion, symbol retention, and trace attribution; and
+9. complete documentation publication, negative coverage, generic
+   composition, ownership/ABI hardening, deterministic goldens, and repository
+   gates.
 
 That roadmap may split a responsibility further to keep one reviewable purpose
 per change, but it should not reopen the confirmed language or representation

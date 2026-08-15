@@ -10,18 +10,21 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No additional implementation roadmap is currently planned.
+[Capture-free function values](FUNCTION_VALUES_ROADMAP.md) is planned. FVI0 is
+next: establish recursive function-type syntax and canonical closed
+`FunctionTypeId` identity before references, storage, indirect calls, MIR,
+backend realization, and whole-program effects are enabled. The roadmap
+implements the frozen [language](../language/FUNCTION_VALUES.md) and
+[compiler](../compiler/FUNCTION_VALUES.md) contracts.
 
 ## Design proposals
 
-[Function values](FUNCTION_VALUES_DESIGN_PROPOSAL.md) is under review. It
-proposes canonical capture-free function types and non-null internal function
-references, including closed generic-static specialization, full internal call
-ABI reuse, verified indirect calls, and sound whole-program static effects. No
-implementation roadmap exists until the design register is confirmed.
-
 The confirmed structural indexing and slicing decisions are preserved in the
 [archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).
+
+The confirmed capture-free function-value decisions are preserved in the
+[archive](../archive/FUNCTION_VALUES_DESIGN_PROPOSAL.md) and promoted into the
+focused living contracts linked from the planned roadmap.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).

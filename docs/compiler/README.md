@@ -97,6 +97,14 @@ ordinary direct, virtual, or interface calls before HIR. The implemented
 selection and ownership matrix add no lower IR, backend operation, or runtime
 ABI.
 
+The frozen [function-value compiler contract](FUNCTION_VALUES.md) assigns
+canonical closed function-type identity, exact callable references, explicit
+HIR and MIR indirect calls, verification, conservative address-taken effects,
+one-word x86-64 realization, and the unchanged runtime boundary to their
+owning phases. These forms are not yet compiler input; the active
+[implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns staged
+delivery and structured gates.
+
 The implemented [strings compiler contract](STRINGS.md) defines canonical
 `std::str::Str` discovery and validation, intrinsic produced-value lowering,
 verified immortal shared-array backing, deterministic literal data, and the

@@ -154,7 +154,9 @@ The implemented expression families have these value effects:
 Using a complete class binding, `self`, or class-typed field as an ordinary
 scalar expression is an error. Those forms can still be valid object places in
 the contexts described above. Calls through arbitrary expression values and
-function values are not implemented; calls select named functions or methods.
+function values are not implemented; calls currently select named functions
+or methods. Their recursive type and non-null value behavior is frozen in
+[Capture-Free Function Values](FUNCTION_VALUES.md).
 
 Prefix `*owner` explicitly selects the object place behind a `shared T`
 handle. Postfix `owner->member` selects one member through exactly one shared
@@ -733,9 +735,13 @@ but its type name, literal syntax and encoding, byte/text semantics, copying,
 slicing, storage, and library boundary are not frozen. No representation or
 literal-lowering strategy is a language guarantee.
 
-Function values are not implemented or frozen. Shared ownership's implemented
-non-null value type, compatible views, and copy/adopt/release behavior are
-defined in [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md).
+Function values are not implemented. Their non-null trivial-scalar design,
+exact recursive types, storage roles, indirect calls, generic composition, and
+initial exclusions are frozen in
+[Capture-Free Function Values](FUNCTION_VALUES.md). Shared ownership's
+implemented non-null value type, compatible views, and copy/adopt/release
+behavior are defined in
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md).
 Remaining exclusions are recorded in the
 [status matrix](STATUS.md#not-implemented).
 Implemented polymorphic views, slicing, tests, and checked casts are separated

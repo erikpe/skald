@@ -20,6 +20,13 @@ The [standard I/O compiler and runtime contract](IO.md) separately owns the
 implemented byte-array operations and runtime-call boundary, including current
 x86-64 backend input.
 
+The frozen [function-value compiler contract](FUNCTION_VALUES.md) selects one
+non-null eight-byte code pointer in the System V integer class, exact
+position-independent symbol addresses, and receiverless register-indirect
+calls through the complete internal ABI. Function values are not yet legal
+backend input; the active roadmap introduces them only after typed MIR and its
+verification boundary exist.
+
 Verified eager static lifecycle MIR is current backend input. The x86-64
 target emits one aligned, writable, target-private `.bss` slot per canonical
 declaration and addresses it with identity-derived RIP-relative relocations.
