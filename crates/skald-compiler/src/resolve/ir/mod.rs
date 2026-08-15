@@ -15,6 +15,7 @@ mod optional_box_types;
 mod optional_types;
 mod shared_targets;
 mod strings;
+mod type_names;
 
 pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
 pub use body::{
@@ -93,3 +94,4 @@ pub use shared_targets::{
 pub use strings::{ResolvedLiteralData, ResolvedLiteralDataTable, ResolvedStringLanguageItem};
 
 pub(crate) use hierarchy::ResolvedClassHierarchyEntry;
+pub(crate) use type_names::{ResolvedTypeNameContext, ResolvedTypeNameRenderer};

@@ -29,9 +29,7 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-[Function-value implementation discoveries](FUNCTION_VALUES_DISCOVERIES.md)
-tracks a focused opportunity to centralize recursive resolved-type source
-rendering before later generic function-type work increases duplication.
+No implementation discoveries are currently pending.
 
 ## Implementation baseline
 

@@ -2,6 +2,7 @@
 
 use super::super::resolver::ModuleUnit;
 use super::*;
+use crate::identity::{ArrayTypeId, FunctionTypeId, OptionalBoxTypeId, OptionalTypeId};
 
 pub(super) struct SpecializationNameRenderer<'program, 'ast> {
     units: &'program [ModuleUnit<'ast>],
@@ -37,131 +38,11 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
         source: &syntax::ClassDecl,
         arguments: &[ResolvedTypeKind],
     ) -> String {
-        self.specialization_name(source_module, source, arguments, &mut Vec::new())
-    }
-
-    fn specialization_name(
-        &self,
-        source_module: ModuleId,
-        source: &syntax::ClassDecl,
-        arguments: &[ResolvedTypeKind],
-        visiting: &mut Vec<ClassId>,
-    ) -> String {
-        let arguments = arguments
-            .iter()
-            .map(|argument| self.type_name(*argument, visiting))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let arguments = ResolvedTypeNameRenderer::new(self).render_list(arguments);
         format!(
             "{}<{arguments}>",
             self.declaration_name(source_module, &source.name.text)
         )
-    }
-
-    fn type_name(&self, ty: ResolvedTypeKind, visiting: &mut Vec<ClassId>) -> String {
-        match ty {
-            ResolvedTypeKind::I64 => "i64".to_owned(),
-            ResolvedTypeKind::U64 => "u64".to_owned(),
-            ResolvedTypeKind::U8 => "u8".to_owned(),
-            ResolvedTypeKind::F64 => "f64".to_owned(),
-            ResolvedTypeKind::Bool => "bool".to_owned(),
-            ResolvedTypeKind::Unit => "unit".to_owned(),
-            ResolvedTypeKind::Obj => "Obj".to_owned(),
-            ResolvedTypeKind::Class(class) => self.class_name(class, visiting),
-            ResolvedTypeKind::Interface(interface) => self.interface_name(interface),
-            ResolvedTypeKind::Function(function) => {
-                let Some(function) = self.type_interner.function(function) else {
-                    return function.to_string();
-                };
-                let parameters = function
-                    .parameters
-                    .iter()
-                    .map(|parameter| {
-                        let mode = match parameter.mode {
-                            ResolvedFunctionTypeParameterMode::Value => "",
-                            ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
-                            ResolvedFunctionTypeParameterMode::MutableAlias => "mut ref ",
-                        };
-                        format!(
-                            "{mode}{}",
-                            self.type_name(parameter.type_syntax.kind, visiting)
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!(
-                    "fn({parameters}) -> {}",
-                    self.type_name(function.result.kind, visiting)
-                )
-            }
-            ResolvedTypeKind::Array(array) => {
-                let element = self
-                    .type_interner
-                    .array(array)
-                    .map(|array| self.type_name(array.element.kind, visiting))
-                    .unwrap_or_else(|| array.to_string());
-                let needs_grouping = self.type_interner.array(array).is_some_and(|array| {
-                    matches!(
-                        array.element.kind,
-                        ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
-                    )
-                });
-                if needs_grouping {
-                    format!("({element})[]")
-                } else {
-                    format!("{element}[]")
-                }
-            }
-            ResolvedTypeKind::Shared(target) => {
-                format!("shared {}", self.shared_target_name(target, visiting))
-            }
-            ResolvedTypeKind::Optional(optional) => {
-                let Some(payload) = self.type_interner.optional(optional) else {
-                    return optional.to_string();
-                };
-                let payload_name = self.type_name(payload.payload.kind, visiting);
-                if matches!(
-                    payload.payload.kind,
-                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
-                ) {
-                    format!("({payload_name})?")
-                } else {
-                    format!("{payload_name}?")
-                }
-            }
-        }
-    }
-
-    fn class_name(&self, class: ClassId, visiting: &mut Vec<ClassId>) -> String {
-        if let Some(declaration) = self.ordinary_classes.get(class) {
-            return self.declaration_name(declaration.module, &declaration.name);
-        }
-        if visiting.contains(&class) {
-            return class.to_string();
-        }
-        let Some(specialization) = self
-            .specializations
-            .iter()
-            .find(|specialization| specialization.class() == Some(class))
-        else {
-            return class.to_string();
-        };
-        let Some((unit, source, _)) = template_source(self.units, specialization.key.template)
-        else {
-            return class.to_string();
-        };
-        visiting.push(class);
-        let name =
-            self.specialization_name(unit.module, source, &specialization.key.arguments, visiting);
-        visiting.pop();
-        name
-    }
-
-    fn interface_name(&self, interface: InterfaceId) -> String {
-        self.interfaces
-            .get(interface)
-            .map(|declaration| self.declaration_name(declaration.module, &declaration.name))
-            .unwrap_or_else(|| interface.to_string())
     }
 
     /// Singleton compilation has no possible source-name ambiguity, so retain
@@ -177,37 +58,46 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
             |module| format!("{}::{name}", module.module_path()),
         )
     }
+}
 
-    fn shared_target_name(
-        &self,
-        target: ResolvedSharedTarget,
-        visiting: &mut Vec<ClassId>,
-    ) -> String {
-        match target {
-            ResolvedSharedTarget::Obj => "Obj".to_owned(),
-            ResolvedSharedTarget::Class(class) => self.class_name(class, visiting),
-            ResolvedSharedTarget::Interface(interface) => self.interface_name(interface),
-            ResolvedSharedTarget::Array(array) => {
-                self.type_name(ResolvedTypeKind::Array(array), visiting)
-            }
-            ResolvedSharedTarget::OptionalBox(optional_box) => {
-                let Some(target) = self.type_interner.optional_box(optional_box) else {
-                    return optional_box.to_string();
-                };
-                if let Some(optional) = target.optional {
-                    return self.type_name(ResolvedTypeKind::Optional(optional), visiting);
-                }
-                let mut name = match target.object_leaf {
-                    Some(ResolvedObjectTarget::Obj) => "Obj".to_owned(),
-                    Some(ResolvedObjectTarget::Class(class)) => self.class_name(class, visiting),
-                    Some(ResolvedObjectTarget::Interface(interface)) => {
-                        self.interface_name(interface)
-                    }
-                    None => optional_box.to_string(),
-                };
-                name.extend(std::iter::repeat_n('?', target.optional_depth));
-                name
-            }
-        }
+impl ResolvedTypeNameContext for SpecializationNameRenderer<'_, '_> {
+    fn array(&self, id: ArrayTypeId) -> Option<&ResolvedArrayType> {
+        self.type_interner.array(id)
+    }
+
+    fn function(&self, id: FunctionTypeId) -> Option<&ResolvedFunctionType> {
+        self.type_interner.function(id)
+    }
+
+    fn optional(&self, id: OptionalTypeId) -> Option<&ResolvedOptionalType> {
+        self.type_interner.optional(id)
+    }
+
+    fn optional_box(&self, id: OptionalBoxTypeId) -> Option<&ResolvedOptionalBoxType> {
+        self.type_interner.optional_box(id)
+    }
+
+    fn direct_class_name(&self, id: ClassId) -> Option<String> {
+        self.ordinary_classes
+            .get(id)
+            .map(|declaration| self.declaration_name(declaration.module, &declaration.name))
+    }
+
+    fn class_specialization(&self, id: ClassId) -> Option<&GenericClassInstanceKey> {
+        self.specializations
+            .iter()
+            .find(|specialization| specialization.class() == Some(id))
+            .map(|specialization| &specialization.key)
+    }
+
+    fn template_name(&self, id: ClassTemplateId) -> Option<String> {
+        template_source(self.units, id)
+            .map(|(unit, source, _)| self.declaration_name(unit.module, &source.name.text))
+    }
+
+    fn interface_name(&self, id: InterfaceId) -> Option<String> {
+        self.interfaces
+            .get(id)
+            .map(|declaration| self.declaration_name(declaration.module, &declaration.name))
     }
 }

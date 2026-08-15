@@ -1,6 +1,7 @@
 //! Validation and atomic publication of closed specializations.
 
 use super::*;
+use crate::identity::{ArrayTypeId, FunctionTypeId, OptionalBoxTypeId, OptionalTypeId};
 
 pub(crate) fn validate_specialization_requirements(
     program: &mut ResolvedProgram,
@@ -147,153 +148,62 @@ fn application_name(program: &ResolvedProgram, specialization: &GenericSpecializ
         .class_templates
         .get(specialization.key.template)
         .expect("specialization keys reference collected templates");
-    let arguments = specialization
-        .key
-        .arguments
-        .iter()
-        .map(|argument| semantic_type_name(program, *argument, &mut Vec::new()))
-        .collect::<Vec<_>>()
-        .join(", ");
+    let context = ProgramTypeNameContext(program);
+    let arguments =
+        ResolvedTypeNameRenderer::new(&context).render_list(&specialization.key.arguments);
     format!(
         "{}<{arguments}>",
         qualified_name(program, template.module, &template.name)
     )
 }
 
-fn semantic_type_name(
-    program: &ResolvedProgram,
-    kind: ResolvedTypeKind,
-    visiting: &mut Vec<ClassId>,
-) -> String {
-    match kind {
-        ResolvedTypeKind::I64 => "i64".to_owned(),
-        ResolvedTypeKind::U64 => "u64".to_owned(),
-        ResolvedTypeKind::U8 => "u8".to_owned(),
-        ResolvedTypeKind::F64 => "f64".to_owned(),
-        ResolvedTypeKind::Bool => "bool".to_owned(),
-        ResolvedTypeKind::Unit => "unit".to_owned(),
-        ResolvedTypeKind::Obj => "Obj".to_owned(),
-        ResolvedTypeKind::Class(class) => {
-            if visiting.contains(&class) {
-                return class.to_string();
-            }
-            if let Some(class) = program.class(class) {
-                return qualified_name(program, class.module, &class.name);
-            }
-            let Some(specialization) = program.generic_specializations.for_class(class) else {
-                return class.to_string();
-            };
-            visiting.push(class);
-            let name = application_name(program, specialization);
-            visiting.pop();
-            name
-        }
-        ResolvedTypeKind::Interface(interface) => program.interface(interface).map_or_else(
-            || interface.to_string(),
-            |interface| qualified_name(program, interface.module, &interface.name),
-        ),
-        ResolvedTypeKind::Function(function) => program.function_types.get(function).map_or_else(
-            || function.to_string(),
-            |function| {
-                let parameters = function
-                    .parameters
-                    .iter()
-                    .map(|parameter| {
-                        let mode = match parameter.mode {
-                            ResolvedFunctionTypeParameterMode::Value => "",
-                            ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
-                            ResolvedFunctionTypeParameterMode::MutableAlias => "mut ref ",
-                        };
-                        format!(
-                            "{mode}{}",
-                            semantic_type_name(program, parameter.type_syntax.kind, visiting)
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!(
-                    "fn({parameters}) -> {}",
-                    semantic_type_name(program, function.result.kind, visiting)
-                )
-            },
-        ),
-        ResolvedTypeKind::Array(array) => program.array_types.get(array).map_or_else(
-            || array.to_string(),
-            |array| {
-                let element = semantic_type_name(program, array.element.kind, visiting);
-                if matches!(
-                    array.element.kind,
-                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
-                ) {
-                    format!("({element})[]")
-                } else {
-                    format!("{element}[]")
-                }
-            },
-        ),
-        ResolvedTypeKind::Shared(target) => {
-            format!(
-                "shared {}",
-                semantic_shared_target_name(program, target, visiting)
-            )
-        }
-        ResolvedTypeKind::Optional(optional) => program.optional_types.get(optional).map_or_else(
-            || optional.to_string(),
-            |optional| {
-                let payload = semantic_type_name(program, optional.payload.kind, visiting);
-                if matches!(
-                    optional.payload.kind,
-                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
-                ) {
-                    format!("({payload})?")
-                } else {
-                    format!("{payload}?")
-                }
-            },
-        ),
-    }
-}
+struct ProgramTypeNameContext<'program>(&'program ResolvedProgram);
 
-fn semantic_shared_target_name(
-    program: &ResolvedProgram,
-    target: ResolvedSharedTarget,
-    visiting: &mut Vec<ClassId>,
-) -> String {
-    match target {
-        ResolvedSharedTarget::Obj => "Obj".to_owned(),
-        ResolvedSharedTarget::Class(class) => {
-            semantic_type_name(program, ResolvedTypeKind::Class(class), visiting)
-        }
-        ResolvedSharedTarget::Interface(interface) => {
-            semantic_type_name(program, ResolvedTypeKind::Interface(interface), visiting)
-        }
-        ResolvedSharedTarget::Array(array) => {
-            semantic_type_name(program, ResolvedTypeKind::Array(array), visiting)
-        }
-        ResolvedSharedTarget::OptionalBox(optional_box) => {
-            let Some(optional_box) = program.optional_box_types.get(optional_box) else {
-                return optional_box.to_string();
-            };
-            if let Some(optional) = optional_box.optional {
-                return semantic_type_name(program, ResolvedTypeKind::Optional(optional), visiting);
-            }
-            let mut name = optional_box.object_leaf.map_or_else(
-                || "Obj".to_owned(),
-                |leaf| match leaf {
-                    ResolvedObjectTarget::Obj => "Obj".to_owned(),
-                    ResolvedObjectTarget::Class(class) => {
-                        semantic_type_name(program, ResolvedTypeKind::Class(class), visiting)
-                    }
-                    ResolvedObjectTarget::Interface(interface) => semantic_type_name(
-                        program,
-                        ResolvedTypeKind::Interface(interface),
-                        visiting,
-                    ),
-                },
-            );
-            name.extend(std::iter::repeat_n('?', optional_box.optional_depth));
-            name
-        }
+impl ResolvedTypeNameContext for ProgramTypeNameContext<'_> {
+    fn array(&self, id: ArrayTypeId) -> Option<&ResolvedArrayType> {
+        self.0.array_types.get(id)
+    }
+
+    fn function(&self, id: FunctionTypeId) -> Option<&ResolvedFunctionType> {
+        self.0.function_types.get(id)
+    }
+
+    fn optional(&self, id: OptionalTypeId) -> Option<&ResolvedOptionalType> {
+        self.0.optional_types.get(id)
+    }
+
+    fn optional_box(&self, id: OptionalBoxTypeId) -> Option<&ResolvedOptionalBoxType> {
+        self.0.optional_box_types.get(id)
+    }
+
+    fn direct_class_name(&self, id: ClassId) -> Option<String> {
+        self.0
+            .class(id)
+            .map(|class| qualified_name(self.0, class.module, &class.name))
+    }
+
+    fn class_specialization(&self, id: ClassId) -> Option<&GenericClassInstanceKey> {
+        self.0
+            .generic_specializations
+            .for_class(id)
+            .map(|specialization| &specialization.key)
+    }
+
+    fn template_name(&self, id: ClassTemplateId) -> Option<String> {
+        self.0
+            .class_templates
+            .get(id)
+            .map(|template| qualified_name(self.0, template.module, &template.name))
+    }
+
+    fn interface_name(&self, id: InterfaceId) -> Option<String> {
+        self.0
+            .interface(id)
+            .map(|interface| qualified_name(self.0, interface.module, &interface.name))
+    }
+
+    fn missing_optional_box_leaf_name(&self, _id: OptionalBoxTypeId) -> String {
+        "Obj".to_owned()
     }
 }
 

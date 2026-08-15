@@ -4,7 +4,10 @@ use std::fmt::Write;
 
 use crate::{
     dump_format::{write_indentation, write_quoted, write_span},
-    identity::{ClassId, ClassTemplateId, InterfaceId, ModuleId},
+    identity::{
+        ArrayTypeId, ClassId, ClassTemplateId, FunctionTypeId, InterfaceId, ModuleId,
+        OptionalBoxTypeId, OptionalTypeId,
+    },
     source::Span,
 };
 
@@ -386,10 +389,7 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                         &format!(
                             "FunctionType {} {}",
                             function.id,
-                            dumper.render_semantic_type_kind(
-                                ResolvedTypeKind::Function(function.id),
-                                &mut Vec::new()
-                            )
+                            dumper.render_semantic_type_kind(ResolvedTypeKind::Function(function.id))
                         ),
                         function.span,
                     );
@@ -1089,10 +1089,7 @@ impl<'program> ResolvedDumper<'program> {
                 self.line(
                     &format!(
                         "Type Function {function} {}",
-                        self.render_semantic_type_kind(
-                            ResolvedTypeKind::Function(function),
-                            &mut Vec::new()
-                        )
+                        self.render_semantic_type_kind(ResolvedTypeKind::Function(function))
                     ),
                     type_syntax.span,
                 );
@@ -1901,90 +1898,12 @@ impl<'program> ResolvedDumper<'program> {
         }
     }
 
-    fn render_semantic_type_kind(
-        &self,
-        kind: ResolvedTypeKind,
-        visiting: &mut Vec<ClassId>,
-    ) -> String {
-        match kind {
-            ResolvedTypeKind::I64 => "i64".to_owned(),
-            ResolvedTypeKind::U64 => "u64".to_owned(),
-            ResolvedTypeKind::U8 => "u8".to_owned(),
-            ResolvedTypeKind::F64 => "f64".to_owned(),
-            ResolvedTypeKind::Bool => "bool".to_owned(),
-            ResolvedTypeKind::Unit => "unit".to_owned(),
-            ResolvedTypeKind::Obj => "Obj".to_owned(),
-            ResolvedTypeKind::Class(class) => self.class_name(class, visiting),
-            ResolvedTypeKind::Interface(interface) => self.interface_name(interface),
-            ResolvedTypeKind::Function(function) => {
-                let function = self
-                    .program
-                    .function_types
-                    .get(function)
-                    .expect("resolved function-type identities must name table entries");
-                let parameters = function
-                    .parameters
-                    .iter()
-                    .map(|parameter| {
-                        format!(
-                            "{}{}",
-                            function_parameter_mode_prefix(parameter.mode),
-                            self.render_semantic_type_kind(parameter.type_syntax.kind, visiting)
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!(
-                    "fn({parameters}) -> {}",
-                    self.render_semantic_type_kind(function.result.kind, visiting)
-                )
-            }
-            ResolvedTypeKind::Array(array) => self.program.array_types.get(array).map_or_else(
-                || array.to_string(),
-                |array| {
-                    let element = self.render_semantic_type_kind(array.element.kind, visiting);
-                    if matches!(
-                        array.element.kind,
-                        ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
-                    ) {
-                        format!("({element})[]")
-                    } else {
-                        format!("{element}[]")
-                    }
-                },
-            ),
-            ResolvedTypeKind::Shared(target) => {
-                format!(
-                    "shared {}",
-                    self.render_shared_target_inner(target, visiting)
-                )
-            }
-            ResolvedTypeKind::Optional(optional) => {
-                let payload = self
-                    .program
-                    .optional_types
-                    .get(optional)
-                    .expect("resolved optional identities must name table entries");
-                let name = self.render_semantic_type_kind(payload.payload.kind, visiting);
-                if matches!(
-                    payload.payload.kind,
-                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
-                ) {
-                    format!("({name})?")
-                } else {
-                    format!("{name}?")
-                }
-            }
-        }
+    fn render_semantic_type_kind(&self, kind: ResolvedTypeKind) -> String {
+        ResolvedTypeNameRenderer::new(self).render(kind)
     }
 
     fn render_specialization_key(&self, key: &GenericClassInstanceKey) -> String {
-        let arguments = key
-            .arguments
-            .iter()
-            .map(|argument| self.render_semantic_type_kind(*argument, &mut Vec::new()))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let arguments = ResolvedTypeNameRenderer::new(self).render_list(&key.arguments);
         format!("{}<{arguments}>", self.template_name(key.template))
     }
 
@@ -2015,88 +1934,6 @@ impl<'program> ResolvedDumper<'program> {
         }
     }
 
-    fn render_shared_target_inner(
-        &self,
-        target: ResolvedSharedTarget,
-        visiting: &mut Vec<ClassId>,
-    ) -> String {
-        match target.category() {
-            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Obj) => "Obj".to_owned(),
-            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Class(class)) => {
-                self.class_name(class, visiting)
-            }
-            ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Interface(interface)) => {
-                self.interface_name(interface)
-            }
-            ResolvedSharedTargetCategory::Array(array) => {
-                self.render_semantic_type_kind(ResolvedTypeKind::Array(array), visiting)
-            }
-            ResolvedSharedTargetCategory::OptionalBox(target) => {
-                let metadata = self
-                    .program
-                    .optional_box_types
-                    .get(target)
-                    .expect("resolved optional-box identities must name table entries");
-                if let Some(optional) = metadata.optional {
-                    return self
-                        .render_semantic_type_kind(ResolvedTypeKind::Optional(optional), visiting);
-                }
-                let mut name = metadata.object_leaf.map_or_else(
-                    || target.to_string(),
-                    |leaf| match leaf {
-                        ResolvedObjectTarget::Obj => "Obj".to_owned(),
-                        ResolvedObjectTarget::Class(class) => self.class_name(class, visiting),
-                        ResolvedObjectTarget::Interface(interface) => {
-                            self.interface_name(interface)
-                        }
-                    },
-                );
-                name.extend(std::iter::repeat_n('?', metadata.optional_depth));
-                name
-            }
-        }
-    }
-
-    fn class_name(&self, class: ClassId, visiting: &mut Vec<ClassId>) -> String {
-        if visiting.contains(&class) {
-            return class.to_string();
-        }
-        if let Some(specialization) = self.program.generic_specializations.for_class(class) {
-            if let Some(declaration) = self.program.class(class) {
-                return declaration.name.clone();
-            }
-            visiting.push(class);
-            let name = self.render_specialization_key_inner(&specialization.key, visiting);
-            visiting.pop();
-            return name;
-        }
-        self.program.class(class).map_or_else(
-            || class.to_string(),
-            |declaration| self.qualified_declaration_name(declaration.module, &declaration.name),
-        )
-    }
-
-    fn interface_name(&self, interface: InterfaceId) -> String {
-        self.program.interface(interface).map_or_else(
-            || interface.to_string(),
-            |declaration| self.qualified_declaration_name(declaration.module, &declaration.name),
-        )
-    }
-
-    fn render_specialization_key_inner(
-        &self,
-        key: &GenericClassInstanceKey,
-        visiting: &mut Vec<ClassId>,
-    ) -> String {
-        let arguments = key
-            .arguments
-            .iter()
-            .map(|argument| self.render_semantic_type_kind(*argument, visiting))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("{}<{arguments}>", self.template_name(key.template))
-    }
-
     fn template_name(&self, template: ClassTemplateId) -> String {
         self.program.class_templates.get(template).map_or_else(
             || template.to_string(),
@@ -2112,6 +1949,52 @@ impl<'program> ResolvedDumper<'program> {
             || name.to_owned(),
             |module| format!("{}::{name}", module.module_path()),
         )
+    }
+}
+
+impl ResolvedTypeNameContext for ResolvedDumper<'_> {
+    fn array(&self, id: ArrayTypeId) -> Option<&ResolvedArrayType> {
+        self.program.array_types.get(id)
+    }
+
+    fn function(&self, id: FunctionTypeId) -> Option<&ResolvedFunctionType> {
+        self.program.function_types.get(id)
+    }
+
+    fn optional(&self, id: OptionalTypeId) -> Option<&ResolvedOptionalType> {
+        self.program.optional_types.get(id)
+    }
+
+    fn optional_box(&self, id: OptionalBoxTypeId) -> Option<&ResolvedOptionalBoxType> {
+        self.program.optional_box_types.get(id)
+    }
+
+    fn direct_class_name(&self, id: ClassId) -> Option<String> {
+        let declaration = self.program.class(id)?;
+        if self.program.generic_specializations.for_class(id).is_some() {
+            return Some(declaration.name.clone());
+        }
+        Some(self.qualified_declaration_name(declaration.module, &declaration.name))
+    }
+
+    fn class_specialization(&self, id: ClassId) -> Option<&GenericClassInstanceKey> {
+        self.program
+            .generic_specializations
+            .for_class(id)
+            .map(|specialization| &specialization.key)
+    }
+
+    fn template_name(&self, id: ClassTemplateId) -> Option<String> {
+        self.program
+            .class_templates
+            .get(id)
+            .map(|template| self.qualified_declaration_name(template.module, &template.name))
+    }
+
+    fn interface_name(&self, id: InterfaceId) -> Option<String> {
+        self.program.interface(id).map(|declaration| {
+            self.qualified_declaration_name(declaration.module, &declaration.name)
+        })
     }
 }
 
