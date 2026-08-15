@@ -1,0 +1,10 @@
+schema = 2
+
+[[test]]
+name = "primitive_and_inline_consumers"
+mode = "run"
+source = "primitive_and_inline_consumers.ska"
+
+[[test.run]]
+name = "direct_nested_method_copy_and_alias"
+expect = { exit = 42 }

@@ -484,14 +484,20 @@ or forwarded origin.
 
 The source-visible
 [produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
-is frozen, with its resolution representation implemented. A selected final
-field uses ordinary `ResolvedFieldAccessExpr`; its receiver retains the
+is frozen, with its primitive and exact inline-class vertical slice
+implemented. A selected final field uses ordinary `ResolvedFieldAccessExpr`;
+its receiver retains the
 producer exactly once in `ResolvedObjectReceiver::Produced`, preserves
 `exact_class`, tracks the terminal `class`, and orders canonical inherited-base
-and intermediate `ObjectProjection::Field` entries. Member assignments retain
-the same receiver provenance so type checking rejects mutation through its
-read-only access. Complete typed consumption and MIR lifetime support remain
-staged.
+and intermediate `ObjectProjection::Field` entries. Type checking lowers
+primitive reads to ordinary `HirFieldPlace` reads over one read-only produced
+`View` without an inspection place. Exact inline-class endpoints retain the
+same view for method, alias, checked-view, and copy consumers. MIR materializes
+the producer once, projects the selected field, records that field subobject
+as the exact complete origin, and reuses ordinary load, call, alias, and copy
+operations. Member assignments retain the same receiver provenance so type
+checking rejects mutation through its read-only access. Optional, array, and
+shared-owner typed consumption remains staged.
 
 Implementation is constrained to extend the existing member-receiver pipeline
 rather than create another provenance family:
@@ -501,13 +507,13 @@ rather than create another provenance family:
   `ResolvedObjectReceiver::Produced`, append canonical base and field
   projections, and continue to reject unsupported root families with their
   existing diagnostics;
-- type checking will represent a read as an ordinary `HirFieldPlace` whose
+- type checking represents a read as an ordinary `HirFieldPlace` whose
   receiver is one read-only `HirObjectReceiver::View` backed by
   `HirViewSource::Produced`, with no inspection place or fake binding;
 - class-typed endpoints remain projected object consumers rather than scalar
   expressions, and optional, array, shared-owner, and optional-owner endpoints
   reuse their existing typed source categories;
-- HIR-to-MIR lowering will materialize the producer exactly once through the
+- HIR-to-MIR lowering materializes the producer exactly once through the
   existing full-expression object-temporary helper, then reuse ordinary field
   projection, load, copy, transfer, anchor, guard, and call operations; and
 - verification will prove initialization, read-only access, exact complete

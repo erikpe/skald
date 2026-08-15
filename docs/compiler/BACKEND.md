@@ -691,10 +691,12 @@ exercise this path through exact, inherited, virtual, interface, generic, and
 register/stack-pressure calls, while assembly assertions retain the ordinary
 private method symbols and receiver component sequence.
 
-The frozen, unavailable produced-object field-read extension introduces no
-backend boundary. Verified MIR will contain the same caller-owned temporary
-plus ordinary field projections, scalar loads, copies, owner operations,
-anchors, guards, or calls selected before target lowering. The backend must
+The implemented primitive and exact inline-class produced-object field-read
+slice introduces no backend boundary. Verified MIR contains the same
+caller-owned temporary plus ordinary field projections, scalar loads, copies,
+aliases, or calls selected before target lowering. Later owning and guarded
+endpoint work will likewise use ordinary owner operations, anchors, and
+guards. The backend must
 not classify a produced field source, invent a field-read calling convention,
 delay result securing, or emit a feature-specific symbol or runtime call. Its
 only obligation is to consume the already verified ordinary MIR operations

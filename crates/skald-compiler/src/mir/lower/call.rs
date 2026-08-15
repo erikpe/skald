@@ -577,7 +577,14 @@ impl BodyLowerer<'_> {
 
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
         let produced_class = match &view.source {
-            HirViewSource::Produced { producer, .. } => Some(producer.class()),
+            HirViewSource::Produced { .. } => {
+                let crate::hir::HirObjectOrigin::Produced { dynamic_class, .. } =
+                    view.origin.as_ref()
+                else {
+                    unreachable!("produced HIR view must retain produced exact origin")
+                };
+                Some(*dynamic_class)
+            }
             HirViewSource::ArrayElement(element) => {
                 let Type::Class(class) = element.element else {
                     unreachable!("object view array source must have exact class type")
@@ -651,9 +658,18 @@ impl BodyLowerer<'_> {
                 )
             }
         };
-        let produced_complete = match view.source {
-            HirViewSource::Produced { .. } => {
-                Some(MirPlace::base(source.base.expect_local_storage()))
+        let produced_complete = match &view.source {
+            HirViewSource::Produced { projections, .. } => {
+                let complete_projection_count = projections
+                    .iter()
+                    .rposition(|projection| {
+                        matches!(projection, crate::object_path::ObjectProjection::Field(_))
+                    })
+                    .map_or(0, |index| index + 1);
+                Some(projections[..complete_projection_count].iter().fold(
+                    MirPlace::base(source.base.expect_local_storage()),
+                    lower_projection,
+                ))
             }
             HirViewSource::ArrayElement(_) => Some(source.clone()),
             _ => None,

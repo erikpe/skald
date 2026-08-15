@@ -189,12 +189,13 @@ impl CallableChecker<'_, '_> {
         } = receiver
         {
             let source =
-                self.check_object_source(producer, *exact_class, "produced method receiver")?;
+                self.check_object_source(producer, *exact_class, "produced member receiver")?;
             let crate::hir::HirObjectSource::Produced(producer) = source else {
                 unreachable!("resolved produced receiver must retain one object producer")
             };
+            let dynamic_class = self.produced_projection_dynamic_class(*exact_class, projections);
             let origin = HirObjectOrigin::Produced {
-                dynamic_class: *exact_class,
+                dynamic_class,
                 span: *span,
             };
             let view = HirObjectView {
@@ -426,6 +427,26 @@ impl CallableChecker<'_, '_> {
                 place,
                 view: Box::new(checked),
             },
+        })
+    }
+
+    pub(super) fn produced_projection_dynamic_class(
+        &self,
+        exact_class: crate::identity::ClassId,
+        projections: &[ObjectProjection],
+    ) -> crate::identity::ClassId {
+        projections.iter().fold(exact_class, |dynamic, projection| {
+            let ObjectProjection::Field(field) = projection else {
+                return dynamic;
+            };
+            let declaration = self
+                .program
+                .field(*field)
+                .expect("resolved produced projection must reference a field");
+            let ResolvedTypeKind::Class(class) = declaration.type_syntax.kind else {
+                unreachable!("resolved produced object projection must have a class type")
+            };
+            class
         })
     }
 

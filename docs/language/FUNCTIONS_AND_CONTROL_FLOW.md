@@ -160,8 +160,11 @@ boundary.
 ### Frozen produced-object field reads
 
 The source-visible contract for reading fields from a produced exact-class
-object is frozen but not yet implemented. It accepts the same producer
-families as the implemented method-receiver rule, including a class result
+object is frozen. Primitive endpoints and exact inline-class endpoints are
+implemented through verified MIR and native execution; owning and guarded
+optional, array, and shared-owner endpoints remain staged. The implemented
+slice accepts the same producer families as the method-receiver rule,
+including a class result
 from structural indexing or slicing after that getter has become an ordinary
 exact-class call result. Grouping and closed generic specialization do not
 change eligibility.
@@ -201,11 +204,15 @@ and diagnostics.
 
 This frozen extension adds no grammar form, source binding, reference value,
 backend representation, internal or external calling-convention rule, runtime
-service, or runtime ABI-version change. Resolution now retains one eligible
+service, or runtime ABI-version change. Resolution retains one eligible
 producer, its canonical base and intermediate field projections, and the final
-selected field. Complete typed ownership, lowering, verification, and native
-support remain staged, so a named local remains the published executable
-spelling until those phases are complete.
+selected field. Type checking represents primitive reads as ordinary field
+places over one read-only produced view, with no inspection binding. Exact
+inline-class fields may immediately feed read-only methods, `ref`, checked
+views, explicit copies, owning arguments, assignment sources, and return
+copies. Lowering materializes the root once and reuses ordinary load, alias,
+dispatch, and copy paths before root cleanup. A named local remains required
+for the still-staged optional, array, and shared-owner endpoint categories.
 
 ## Lexical scopes and locals
 

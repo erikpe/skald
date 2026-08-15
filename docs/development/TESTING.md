@@ -597,8 +597,9 @@ runtime harness.
 
 ## Frozen produced-object field-read coverage
 
-Produced-object field reads are frozen, with resolution implemented and later
-phases staged. Resolver tests must admit eligible reads without `RES009`, while
+Produced-object field reads are frozen, with primitive and exact inline-class
+consumers implemented through native execution. Resolver tests must admit
+eligible reads without `RES009`, while
 the produced-receiver compile-failure golden retains only the excluded
 optional, array, and raw shared-owner roots. A write-shaped produced field must
 retain the same receiver and fail through the ordinary read-only type-checking

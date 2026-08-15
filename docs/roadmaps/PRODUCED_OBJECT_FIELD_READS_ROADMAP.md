@@ -1,6 +1,6 @@
 # Produced-Object Field Reads Roadmap
 
-Status: in progress; PFR2 is next.
+Status: in progress; PFR3 is next.
 
 This roadmap lets an expression that produces one exact inline class expose
 its fields directly without a source-level staging local. It makes
@@ -66,7 +66,7 @@ or immediate consumer has been secured.
 
 - [x] PFR0 — Freeze the produced-field read contract
 - [x] PFR1 — Admit produced roots and nested field projections in resolution
-- [ ] PFR2 — Type and lower primitive and inline-object field consumers
+- [x] PFR2 — Type and lower primitive and inline-object field consumers
 - [ ] PFR3 — Secure owning and guarded field categories
 - [ ] PFR4 — Verify lifetime, control flow, and rejection boundaries
 - [ ] PFR5 — Prove native composition and publish the feature
@@ -167,24 +167,24 @@ validation, and diff hygiene pass.
 field reads while reusing the normalized receiver carrier and ordinary object
 place machinery.
 
-- [ ] Type direct primitive field reads as ordinary `HirFieldPlace` reads with
+- [x] Type direct primitive field reads as ordinary `HirFieldPlace` reads with
       one read-only `HirObjectReceiver::View` whose source is produced and whose
       inspection place is absent.
-- [ ] Type nested primitive reads through inherited bases and inline class
+- [x] Type nested primitive reads through inherited bases and inline class
       fields without treating the projected subobject as an ordinary scalar.
-- [ ] Permit a produced-root class field in every already-supported read-only
+- [x] Permit a produced-root class field in every already-supported read-only
       object context: method receiver, `ref` argument, checked view, explicit
       copy, owning value argument, assignment source, and return copy.
-- [ ] Preserve exact complete-object origin and dynamic class for root dispatch
+- [x] Preserve exact complete-object origin and dynamic class for root dispatch
       while retaining the statically selected nested field class for its
       immediate consumer.
-- [ ] Lower the receiver through the common produced-object temporary helper,
+- [x] Lower the receiver through the common produced-object temporary helper,
       project the ordinary MIR field path, load or consume it once, and reuse
       existing direct, virtual, interface, copy, and alias ABI paths.
-- [ ] Include produced field roots and their producer expressions in
+- [x] Include produced field roots and their producer expressions in
       control-effect discovery so earlier scalar state is spilled whenever
       production or consumption can change control flow.
-- [ ] Keep mutable methods, `mut ref`, field assignment, and whole-object
+- [x] Keep mutable methods, `mut ref`, field assignment, and whole-object
       replacement rejected through existing access diagnostics.
 
 **Tests:** Focused type-check, HIR dump, MIR dump, verifier, copy/lifecycle,
@@ -196,6 +196,17 @@ inline-field method/copy consumers; then `make check` and `make msrv-check`.
 through verified MIR and execute natively with one producer temporary, correct
 projection and origin, no receiver copy, no fake binding, and unchanged
 read-only diagnostics.
+
+Completed 2026-08-15. Primitive endpoints now use ordinary field reads over a
+single read-only produced view without an inspection binding. Exact
+inline-class endpoints feed the existing method, alias, checked-view, copy,
+owning-argument, assignment-source, and return-copy paths. MIR reuses the
+common produced temporary, gives nested field subobjects their correct exact
+origin and dynamic class, and retains ordinary direct, virtual, interface,
+copy, and alias operations. Focused HIR/MIR, verifier, lifecycle, diagnostic,
+generic, structural, and dispatch tests plus native produced-field coverage,
+`make check`, `make msrv-check`, documentation validation, and diff hygiene
+pass.
 
 ### PFR3 — Secure owning and guarded field categories
 

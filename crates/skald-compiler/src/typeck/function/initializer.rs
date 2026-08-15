@@ -24,6 +24,11 @@ impl CallableChecker<'_, '_> {
         };
 
         if let (Type::Class(class), MemberBodyKind::MethodOrDestructor) = (target.ty, body_kind) {
+            if !target.valid {
+                let _ =
+                    self.check_object_source(&assignment.value, class, "field assignment source");
+                return CheckedStatement::falls_through(None);
+            }
             return self.check_method_field_copy_assignment(target.place, class, assignment);
         }
 
@@ -267,10 +272,8 @@ impl CallableChecker<'_, '_> {
         let field_type = lower_type(self.program, &field.type_syntax);
         let mut valid = true;
         if place.receiver.access() == HirAccess::ReadOnly
-            && !matches!(
-                (field_type, body_kind),
-                (Type::Class(_), MemberBodyKind::MethodOrDestructor)
-            )
+            && (!matches!(field_type, Type::Class(_))
+                || place.receiver.inspection_place().is_none())
         {
             self.diagnostics.push(
                 Diagnostic::error(

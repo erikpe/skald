@@ -1,0 +1,42 @@
+class Leaf {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Holder {
+    leaf: Leaf;
+    value: i64;
+
+    init(value: i64) {
+        self.leaf = Leaf(value);
+        self.value = value;
+    }
+}
+
+class Outer {
+    holder: Holder;
+
+    init(value: i64) {
+        self.holder = Holder(value);
+    }
+}
+
+fn inspect(ref leaf: Leaf) -> i64 {
+    return leaf.read();
+}
+
+fn main() -> i64 {
+    var copied: Leaf = Leaf(copy Outer(12).holder.leaf);
+
+    return Holder(10).value
+        + Outer(11).holder.leaf.read()
+        + copied.read()
+        + inspect(Outer(9).holder.leaf);
+}

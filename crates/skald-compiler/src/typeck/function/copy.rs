@@ -299,6 +299,52 @@ impl CallableChecker<'_, '_> {
                 )?;
                 return self.finish_checked_object_source(checked, class, context);
             }
+            crate::resolve::ResolvedExpression::FieldAccess(access)
+                if matches!(
+                    access.receiver,
+                    crate::resolve::ResolvedObjectReceiver::Produced { .. }
+                ) =>
+            {
+                let field = self
+                    .program
+                    .field(access.field)
+                    .expect("resolved produced source field must exist");
+                let crate::resolve::ResolvedTypeKind::Class(field_class) = field.type_syntax.kind
+                else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "owning copy source must designate a class object",
+                        )
+                        .with_primary_label(
+                            access.member_span,
+                            "this produced field has a primitive type",
+                        ),
+                    );
+                    return None;
+                };
+                let receiver =
+                    access
+                        .receiver
+                        .clone()
+                        .project_field(access.field, field_class, access.span);
+                let receiver = self.check_object_receiver(&receiver, ObjectPlaceUse::CopySource)?;
+                let super::super::expression::CheckedReceiverCarrier::View { view, .. } =
+                    receiver.carrier
+                else {
+                    unreachable!("produced field copy source must retain its object view")
+                };
+                let checked = crate::hir::HirCheckedObjectView {
+                    view: *view,
+                    consumer_target: crate::hir::HirViewTarget::Class(field_class),
+                    consumer_access: crate::hir::HirAccess::ReadOnly,
+                    kind: crate::hir::HirCheckedObjectViewKind::Static,
+                    projections: Vec::new(),
+                    class: Some(field_class),
+                    span: access.span,
+                };
+                return self.finish_checked_object_source(checked, class, context);
+            }
             crate::resolve::ResolvedExpression::Grouped(grouped)
                 if is_checked_object_source_expression(&grouped.expression) =>
             {
@@ -663,6 +709,7 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
                 || matches!(
                     access.receiver,
                     crate::resolve::ResolvedObjectReceiver::OptionalPayload { .. }
+                        | crate::resolve::ResolvedObjectReceiver::Produced { .. }
                 )
         }
         _ => false,

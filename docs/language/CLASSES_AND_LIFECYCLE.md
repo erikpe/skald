@@ -236,13 +236,14 @@ canonically projected to the declaring base or an implemented interface
 without copying or slicing.
 
 The implemented extension does not turn arbitrary expressions into object
-places. Fields currently cannot be selected from the temporary for direct
-reading or writing, and a mutable method cannot use it as a receiver. The
-compiler accepts read-only method calls through the ordinary produced-object
-temporary path; other temporary member operations remain outside the current
-executable boundary.
+places. The compiler accepts read-only method calls and primitive or exact
+inline-class field reads through the ordinary produced-object temporary path.
+An inline-class field may immediately feed the existing read-only receiver,
+`ref`, checked-view, and owning-copy consumers. Field writes and mutable
+methods remain outside the executable boundary, as do optional, array, and
+shared-owner field endpoints pending their type-specific securing work.
 
-The frozen, unavailable
+The frozen, partially implemented
 [produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
 extends that hidden root to read-only field projection. Canonical base and
 exact inline-class field projections remain subordinate to the same complete
@@ -259,8 +260,10 @@ direct or nested write, mutable method, `mut ref`, whole-object replacement,
 or escaping alias. Declaring-class privacy, inherited lookup, field identity,
 and finite containment are unchanged. Resolution retains this read-only root
 and its canonical projections, including write-shaped paths that later receive
-the ordinary read-only access diagnostic. Typed ownership and executable
-support remain staged, so a named local remains the published spelling.
+the ordinary read-only access diagnostic. Primitive and exact inline-class
+endpoints have typed, verified, executable support. The owning and guarded
+endpoint categories remain staged, so those categories still require a named
+local.
 
 For example, in `root.branch.leaf.value`, `root` is the root place,
 `branch` and `leaf` select complete inline subobjects, and `value` selects the

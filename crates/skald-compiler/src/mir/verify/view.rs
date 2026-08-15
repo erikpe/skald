@@ -40,7 +40,11 @@ impl Verifier<'_> {
         }
         let valid = match origin {
             MirObjectOrigin::Exact { complete, .. } => {
-                complete.projections.is_empty()
+                (complete.projections.is_empty()
+                    || matches!(
+                        complete.projections.last(),
+                        Some(MirPlaceProjection::Field(_))
+                    ))
                     && is_ancestor(complete, source)
                     && complete
                         .base

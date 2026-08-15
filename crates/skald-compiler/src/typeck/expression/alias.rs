@@ -93,6 +93,7 @@ pub(super) enum CheckedObjectViewSource {
     Produced {
         source: crate::hir::HirObjectProducer,
         class: crate::identity::ClassId,
+        projections: Vec<crate::object_path::ObjectProjection>,
         span: Span,
     },
     Optional {
@@ -112,7 +113,7 @@ impl CheckedObjectViewSource {
             Self::Class { place, .. } => place.access,
             Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
             Self::Shared(source) => source.access(),
-            Self::Produced { .. } => HirAccess::Mutable,
+            Self::Produced { .. } => HirAccess::ReadOnly,
             Self::Optional { view, .. } => view.access,
             Self::OptionalBox { view, .. } => view.access,
         }
@@ -219,20 +220,24 @@ impl CheckedObjectViewSource {
             Self::Produced {
                 source,
                 class,
+                mut projections,
                 span,
-            } => HirObjectView {
-                source: HirViewSource::Produced {
-                    producer: Box::new(source),
-                    projections: produced_projections,
-                },
-                origin: Box::new(HirObjectOrigin::Produced {
-                    dynamic_class: class,
+            } => {
+                projections.extend(produced_projections);
+                HirObjectView {
+                    source: HirViewSource::Produced {
+                        producer: Box::new(source),
+                        projections,
+                    },
+                    origin: Box::new(HirObjectOrigin::Produced {
+                        dynamic_class: class,
+                        span,
+                    }),
+                    target,
+                    access,
                     span,
-                }),
-                target,
-                access,
-                span,
-            },
+                }
+            }
             Self::Shared(source) => source.into_view(target, access),
             Self::Optional {
                 view,
@@ -641,6 +646,10 @@ impl CallableChecker<'_, '_> {
                 self.is_produced_alias_source(&grouped.expression)
             }
             ResolvedExpression::ObjectCast(cast) => self.is_produced_alias_source(&cast.source),
+            ResolvedExpression::FieldAccess(access) => matches!(
+                access.receiver,
+                crate::resolve::ResolvedObjectReceiver::Produced { .. }
+            ),
             _ => false,
         }
     }
@@ -783,6 +792,37 @@ impl CallableChecker<'_, '_> {
                     );
                     return None;
                 };
+                if matches!(
+                    access.receiver,
+                    crate::resolve::ResolvedObjectReceiver::Produced { .. }
+                ) {
+                    let receiver =
+                        access
+                            .receiver
+                            .clone()
+                            .project_field(access.field, class, access.span);
+                    let checked = self.check_object_receiver(&receiver, ObjectPlaceUse::Alias)?;
+                    let super::CheckedReceiverCarrier::View { view, .. } = checked.carrier else {
+                        unreachable!("produced field source must retain its object view")
+                    };
+                    let HirViewSource::Produced {
+                        producer,
+                        projections,
+                    } = view.source
+                    else {
+                        unreachable!("produced field source must retain produced provenance")
+                    };
+                    let HirObjectOrigin::Produced { dynamic_class, .. } = *view.origin else {
+                        unreachable!("produced field source must retain exact dynamic class")
+                    };
+                    debug_assert_eq!(dynamic_class, class);
+                    return Some(CheckedObjectViewSource::Produced {
+                        source: *producer,
+                        class,
+                        projections,
+                        span: access.span,
+                    });
+                }
                 let place = access
                     .receiver
                     .clone()
@@ -884,6 +924,7 @@ impl CallableChecker<'_, '_> {
             span: expression.span(),
             source,
             class,
+            projections: Vec::new(),
         })
     }
 

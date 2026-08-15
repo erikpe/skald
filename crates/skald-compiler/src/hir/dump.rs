@@ -1205,13 +1205,9 @@ impl<'types> HirDumper<'types> {
             }
             HirExpressionKind::FieldRead(place) => {
                 self.typed_line(&format!("FieldRead {}", place.field), expression);
-                self.indented(|dumper| {
-                    dumper.object_place(
-                        place
-                            .receiver
-                            .inspection_place()
-                            .expect("current field reads retain an inspection place"),
-                    );
+                self.indented(|dumper| match place.receiver.inspection_place() {
+                    Some(receiver) => dumper.object_place(receiver),
+                    None => dumper.field_place(place),
                 });
             }
             HirExpressionKind::StaticRead(place) => {

@@ -7,11 +7,12 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md) is in
-progress; PFR2 is next. Resolution now retains eligible producers once with
-canonical inherited and nested field projections, deterministic dumps,
-ordinary privacy, stable excluded-root diagnostics, and read-only rejection
-for write-shaped paths. Typed primitive and inline-object consumption is the
-next boundary. The roadmap depends on the completed produced receiver,
+progress; PFR3 is next. Primitive fields and exact inline-class fields now
+type-check, lower through one ordinary produced temporary, verify, and execute
+natively across read-only receiver, alias, checked-view, and copy consumers.
+Canonical projections retain the selected subobject's exact origin while
+writes preserve ordinary read-only diagnostics. Securing optional, array, and
+shared-owner endpoint categories is the next boundary. The roadmap depends on the completed produced receiver,
 object-cast, ownership, optional, array, generic-class, and structural
 indexing foundations.
 

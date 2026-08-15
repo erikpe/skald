@@ -143,17 +143,26 @@ impl CallableChecker<'_, '_> {
     ) -> Vec<crate::object_path::ObjectProjection> {
         match (&view.source, target) {
             (
-                crate::hir::HirViewSource::Produced { producer, .. },
+                crate::hir::HirViewSource::Produced {
+                    producer,
+                    projections,
+                },
                 HirViewTarget::Class(target),
-            ) if producer.class() != target => self
-                .program
-                .hierarchy
-                .base_chain(producer.class())
-                .expect("statically successful produced cast must have valid ancestry")
-                .take_while(|base| *base != target)
-                .chain(std::iter::once(target))
-                .map(crate::object_path::ObjectProjection::Base)
-                .collect(),
+            ) => {
+                let actual = self.produced_projection_dynamic_class(producer.class(), projections);
+                if actual == target {
+                    Vec::new()
+                } else {
+                    self.program
+                        .hierarchy
+                        .base_chain(actual)
+                        .expect("statically successful produced cast must have valid ancestry")
+                        .take_while(|base| *base != target)
+                        .chain(std::iter::once(target))
+                        .map(crate::object_path::ObjectProjection::Base)
+                        .collect()
+                }
+            }
             _ => Vec::new(),
         }
     }
