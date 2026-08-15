@@ -823,6 +823,17 @@ therefore adds no token, precedence rule, AST expression shape, or call
 syntax. Semantic analysis records an eligible producer once as a read-only
 method receiver; grammar remains unchanged.
 
+That same postfix grammar already parses field selection and longer member
+chains on an exact-class construction, class literal, exact-class call result,
+or structural getter result. The
+[frozen produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+therefore adds no token, precedence rule, AST expression shape, assignment
+form, or reference syntax. Its future semantic implementation will classify
+an eligible exact-class producer once as a hidden read-only root and apply the
+existing member chain to that root. The current resolver still rejects direct
+field selection from such a producer; grammar acceptance does not imply the
+frozen semantic feature is executable.
+
 Optional type syntax crosses parsing as a recursive source-shaped node that
 retains grouping, punctuation, and `shared?` shorthand provenance. Resolution
 interns deterministic recursive optional identities for eligible primitive,

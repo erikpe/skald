@@ -595,6 +595,41 @@ surface assertions freeze ordinary receiver marshaling, class layout, the
 runtime-call set, ABI version 9, and `ska_rt_abi_v9` without a receiver-specific
 runtime harness.
 
+## Frozen produced-object field-read coverage
+
+Produced-object field reads are frozen but unavailable. Until implementation,
+the resolver and compile-failure golden must retain `RES009` for a direct
+temporary field read. The staged implementation must replace that blanket
+failure only alongside phase-local and native evidence for the complete
+read-only ownership contract.
+
+Resolver coverage must prove one retained producer, canonical inherited-base
+and nested inline-field projections, declaring-class privacy, structural
+getter and closed-generic composition, deterministic dumps, and unchanged
+diagnostics for primitive, optional, array, raw shared-owner, and `unit` roots.
+Write-shaped forms remain rejection tests rather than success cases.
+
+Type-check and HIR coverage must prove one read-only produced `View` with no
+inspection place or fake binding. Primitive endpoints load values; class
+endpoints feed only existing receiver, `ref`, checked-view, copy, owning
+argument, assignment-source, and return-copy contexts. Optional, inline-array,
+shared-owner, optional-owner, and shared-array endpoints must exercise their
+ordinary type-specific consumers rather than a generic untyped field path.
+
+MIR lowering and verifier tests own exactly-once materialization, completion
+before projection, canonical field paths, complete-object origin, selected-
+path liveness, scalar spilling, subordinate guard and anchor order, result
+securing, and one reverse full-expression cleanup. Mutation tests must reject
+missing, premature, duplicate, wrong-path, and post-cleanup use, plus mutable
+access or an invalid origin/projection.
+
+Native coverage must compare named-place and produced-root behavior for every
+implemented field category, including later argument effects, lifecycle calls,
+logical paths, loops, returns, failure, dispatch, ABI pressure, structural
+getters, and `Vec<Str>`. Backend assertions retain ordinary layouts, receiver
+and alias marshaling, runtime calls, ABI version 9, and `ska_rt_abi_v9`; no
+field-read-specific runtime harness or symbol is permitted.
+
 ## String coverage
 
 String coverage follows the

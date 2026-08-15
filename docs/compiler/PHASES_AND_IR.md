@@ -480,6 +480,49 @@ introduced. Resolved, HIR, and MIR dumps expose provenance deterministically;
 MIR method-call dumps include the receiver's granted access before its exact
 or forwarded origin.
 
+## Frozen produced-object field-read representation
+
+The source-visible
+[produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+is frozen but not implemented. The current resolver rejects a selected field
+whose receiver is `ResolvedObjectReceiver::Produced`, and nested field
+projection retains a deliberate unreachable branch. No produced field reaches
+typed HIR or MIR today.
+
+Implementation is constrained to extend the existing member-receiver pipeline
+rather than create another provenance family:
+
+- syntax retains the existing postfix member nodes and assignment shapes;
+- resolution will retain the eligible producer once in
+  `ResolvedObjectReceiver::Produced`, append canonical base and field
+  projections, and continue to reject unsupported root families with their
+  existing diagnostics;
+- type checking will represent a read as an ordinary `HirFieldPlace` whose
+  receiver is one read-only `HirObjectReceiver::View` backed by
+  `HirViewSource::Produced`, with no inspection place or fake binding;
+- class-typed endpoints remain projected object consumers rather than scalar
+  expressions, and optional, array, shared-owner, and optional-owner endpoints
+  reuse their existing typed source categories;
+- HIR-to-MIR lowering will materialize the producer exactly once through the
+  existing full-expression object-temporary helper, then reuse ordinary field
+  projection, load, copy, transfer, anchor, guard, and call operations; and
+- verification will prove initialization, read-only access, exact complete
+  origin, projection validity, selected-path liveness, result securing before
+  cleanup, and exactly one reverse-ordered destruction.
+
+The produced root is internally writable only for initialization and
+destruction. No source store, mutable receiver, or mutable alias may use it.
+The complete root remains live through its immediate field consumer and the
+enclosing full expression; subordinate checked views and anchors end first,
+while independent owning results are secured before root cleanup. Control-
+effect discovery must include both production and the final field consumer so
+logical paths and earlier scalar spills retain their current ordering.
+
+Resolved, HIR, and MIR dumps will expose the existing produced-view provenance
+and canonical projection order deterministically. The frozen design adds no
+new HIR receiver variant, MIR storage kind, backend operation, calling-
+convention component, runtime call, or runtime ABI version.
+
 ## Primitive binding reassignment boundary
 
 The source contract for

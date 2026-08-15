@@ -235,11 +235,31 @@ producer's exact complete-object origin and dynamic class, and may be
 canonically projected to the declaring base or an implemented interface
 without copying or slicing.
 
-The extension does not turn arbitrary expressions into object places. In
-particular, fields cannot be selected from the temporary for direct reading or
-writing, and a mutable method cannot use it as a receiver. The compiler accepts
-this source form through the ordinary produced-object temporary path; other
-temporary member operations remain outside the current boundary.
+The implemented extension does not turn arbitrary expressions into object
+places. Fields currently cannot be selected from the temporary for direct
+reading or writing, and a mutable method cannot use it as a receiver. The
+compiler accepts read-only method calls through the ordinary produced-object
+temporary path; other temporary member operations remain outside the current
+executable boundary.
+
+The frozen, unavailable
+[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+extends that hidden root to read-only field projection. Canonical base and
+exact inline-class field projections remain subordinate to the same complete
+produced object, preserve its exact dynamic origin, and do not create source
+bindings or independent lifetimes. A primitive endpoint becomes a scalar
+read; a class endpoint remains a non-owning subobject place for an existing
+read-only consumer; optional, array, and shared-owner endpoints retain their
+ordinary securing, guard, anchor, copy, transfer, and explicit-dereference
+rules. Every bounded consumer ends and every owning result is secured before
+the complete produced root is destroyed.
+
+The frozen root has read-only access. Projection therefore cannot authorize a
+direct or nested write, mutable method, `mut ref`, whole-object replacement,
+or escaping alias. Declaring-class privacy, inherited lookup, field identity,
+and finite containment are unchanged. Until the resolver and later phases
+implement this contract, direct field selection still reports the existing
+temporary-field diagnostic and a named local remains the available spelling.
 
 For example, in `root.branch.leaf.value`, `root` is the root place,
 `branch` and `leaf` select complete inline subobjects, and `value` selects the

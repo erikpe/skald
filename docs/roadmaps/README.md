@@ -6,7 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+[Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md) is in
+progress; PFR1 is next. PFR0 froze the read-only producer, projection,
+field-category, lifetime, securing, compiler-phase, and ABI contracts while
+leaving the current `RES009` rejection in place. The roadmap depends on the
+completed produced receiver, object-cast, ownership, optional, array,
+generic-class, and structural indexing foundations.
 
 ## Planned
 

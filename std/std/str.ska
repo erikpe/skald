@@ -138,6 +138,7 @@ public class Str {
         while (index < value_count) {
             var value: Str = values[(i64) index];
             total_length = total_length + value._length;
+            //total_length = total_length + values[(i64) index]._length;
             index = index + 1u;
         }
         total_length = total_length + (value_count - 1u) * self._length;

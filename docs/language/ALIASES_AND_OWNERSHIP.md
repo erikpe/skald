@@ -112,6 +112,18 @@ initializer-body rules permit.
 Alias binding does not copy the object or begin a new object lifetime. The
 callee operates on the same place selected by the caller.
 
+The frozen but unavailable
+[produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
+will allow an exact-class field projected from one accepted produced root to
+serve as a read-only `ref` source. The hidden complete root, rather than the
+projected field, owns cleanup and remains live through the call; the projected
+subobject preserves its static field class and the root's complete-object
+origin. This creates no local or stored alias and does not make the same path
+eligible for `mut ref`. Primitive fields, optional-container fields, and array
+fields retain their existing alias-place restrictions, while shared fields
+still require explicit dereference and any required owner anchor. The current
+compiler continues to require a staging local before such a field projection.
+
 ## Implemented produced read-only alias arguments
 
 An ordinary expression that produces one complete inline object of a known

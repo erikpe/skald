@@ -148,7 +148,7 @@ short-circuit path creates no storage, effect, view, or cleanup. Failure in a
 later argument retains the language's existing abrupt-termination boundary
 for already completed owners.
 
-This contract does not admit temporary field reads or writes, mutable
+The current compiler does not admit temporary field reads or writes, mutable
 temporary receivers, optional or array receiver families, independently
 storable references, or escaping aliases. It adds no grammar form, internal
 or external calling-convention rule, backend representation, runtime service,
@@ -156,6 +156,54 @@ or runtime ABI-version change. The compiler representation is defined
 by [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#produced-exact-class-method-receiver-representation),
 and the [status matrix](STATUS.md#implemented-language) records the implemented
 boundary.
+
+### Frozen produced-object field reads
+
+The source-visible contract for reading fields from a produced exact-class
+object is frozen but not yet implemented. It accepts the same producer
+families as the implemented method-receiver rule, including a class result
+from structural indexing or slicing after that getter has become an ordinary
+exact-class call result. Grouping and closed generic specialization do not
+change eligibility.
+
+An accepted producer establishes one hidden caller-owned, read-only root. Dot
+selection may follow canonical inherited-base projections and exact inline
+class fields without copying or slicing the complete produced object.
+Declaring-class privacy and ordinary nearest-member lookup apply before this
+temporary rule; being produced grants no additional member visibility.
+
+The final selected field retains its ordinary type-specific meaning:
+
+| Final field category | Frozen consumption rule |
+|---|---|
+| Primitive | Load one scalar value before the produced root is destroyed. |
+| Exact inline class | Retain a read-only projected subobject for an immediate method, `ref`, checked-view, copy, owning argument, assignment-source, or return-copy consumer; it is not an ordinary scalar value. |
+| Primitive or exact-class optional | Copy or otherwise secure the optional value before root cleanup; a checked payload view remains bounded by its complete immediate consumer and ends first. |
+| Inline array, including recursively nested arrays | Reuse ordinary indexing, slicing, read-only alias, deep-copy, argument, assignment-source, and result rules while the root keeps the selected backing reachable. |
+| Shared owner or optional shared owner, including shared arrays | Secure the owner or establish its existing bounded anchor before releasing the produced root; crossing the owned edge still requires explicit `*` or `->`. |
+
+The producer evaluates exactly once at its ordinary source position and
+completes directly in the hidden root. Cleanup ownership begins only after
+successful completion. The root remains live through the complete immediate
+field consumer and the enclosing full expression; scalar loads, owning copies
+or transfers, backing anchors, optional guards, and exact-class copies are
+secured before reverse-ordered root cleanup. A skipped logical path creates no
+root, a failed producer exposes no field, and later failure retains the
+existing non-unwinding boundary for completed owners.
+
+The root exposes read-only access regardless of the temporary storage's
+internal initialization capability. Direct or nested field assignment,
+whole-object replacement, mutable methods, and `mut ref` remain invalid.
+Fields cannot escape as aliases or independently storable references. Produced
+primitive, optional-container, array, and raw shared-owner expressions do not
+become implicit dot roots; they retain their existing family-specific syntax
+and diagnostics.
+
+This frozen extension adds no grammar form, source binding, reference value,
+backend representation, internal or external calling-convention rule, runtime
+service, or runtime ABI-version change. Until implementation is published, the
+resolver continues to require a named staging object before direct field
+selection from a producer.
 
 ## Lexical scopes and locals
 
