@@ -47,7 +47,7 @@ pub enum ResolvedObjectReceiver {
         class: ClassId,
         span: Span,
     },
-    /// One exact inline class produced for a read-only method receiver.
+    /// One exact inline class produced for read-only member selection.
     ///
     /// `exact_class` is the complete-object class while `class` follows base
     /// projections used for inherited member selection. The producer is kept
@@ -427,8 +427,26 @@ impl ResolvedObjectReceiver {
                     span,
                 }
             }
-            Self::Produced { .. } => {
-                unreachable!("produced receiver fields are rejected before projection")
+            Self::Produced {
+                producer,
+                exact_class,
+                mut projections,
+                class: receiver_class,
+                ..
+            } => {
+                assert_eq!(
+                    field.class(),
+                    receiver_class,
+                    "produced projection must belong to the current terminal class"
+                );
+                projections.push(ObjectProjection::Field(field));
+                Self::Produced {
+                    producer,
+                    exact_class,
+                    projections,
+                    class,
+                    span,
+                }
             }
         }
     }

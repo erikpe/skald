@@ -484,16 +484,20 @@ or forwarded origin.
 
 The source-visible
 [produced-object field-read contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
-is frozen but not implemented. The current resolver rejects a selected field
-whose receiver is `ResolvedObjectReceiver::Produced`, and nested field
-projection retains a deliberate unreachable branch. No produced field reaches
-typed HIR or MIR today.
+is frozen, with its resolution representation implemented. A selected final
+field uses ordinary `ResolvedFieldAccessExpr`; its receiver retains the
+producer exactly once in `ResolvedObjectReceiver::Produced`, preserves
+`exact_class`, tracks the terminal `class`, and orders canonical inherited-base
+and intermediate `ObjectProjection::Field` entries. Member assignments retain
+the same receiver provenance so type checking rejects mutation through its
+read-only access. Complete typed consumption and MIR lifetime support remain
+staged.
 
 Implementation is constrained to extend the existing member-receiver pipeline
 rather than create another provenance family:
 
 - syntax retains the existing postfix member nodes and assignment shapes;
-- resolution will retain the eligible producer once in
+- resolution retains the eligible producer once in
   `ResolvedObjectReceiver::Produced`, append canonical base and field
   projections, and continue to reject unsupported root families with their
   existing diagnostics;

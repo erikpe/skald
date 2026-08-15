@@ -586,9 +586,10 @@ verified MIR responsibilities rather than runtime lifetime services.
 Implementation therefore adds no public C symbol, header field, layout rule,
 panic reason, field descriptor, cleanup callback, or compatibility marker.
 The runtime ABI remains version 9 and `ska_rt_abi_v9` remains unchanged. The
-current compiler still rejects the frozen source form before MIR; future
-compiler, verifier, backend, and native tests own its implementation evidence,
-while runtime surface tests only confirm that no ABI addition occurred.
+resolver now retains the frozen source form without changing the runtime
+boundary. Later compiler, verifier, backend, and native tests own its typed and
+executable implementation evidence, while runtime surface tests only confirm
+that no ABI addition occurred.
 
 ## Verification
 

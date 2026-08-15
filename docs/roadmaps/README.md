@@ -7,11 +7,13 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md) is in
-progress; PFR1 is next. PFR0 froze the read-only producer, projection,
-field-category, lifetime, securing, compiler-phase, and ABI contracts while
-leaving the current `RES009` rejection in place. The roadmap depends on the
-completed produced receiver, object-cast, ownership, optional, array,
-generic-class, and structural indexing foundations.
+progress; PFR2 is next. Resolution now retains eligible producers once with
+canonical inherited and nested field projections, deterministic dumps,
+ordinary privacy, stable excluded-root diagnostics, and read-only rejection
+for write-shaped paths. Typed primitive and inline-object consumption is the
+next boundary. The roadmap depends on the completed produced receiver,
+object-cast, ownership, optional, array, generic-class, and structural
+indexing foundations.
 
 ## Planned
 

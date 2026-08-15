@@ -1,6 +1,6 @@
 # Produced-Object Field Reads Roadmap
 
-Status: in progress; PFR1 is next.
+Status: in progress; PFR2 is next.
 
 This roadmap lets an expression that produces one exact inline class expose
 its fields directly without a source-level staging local. It makes
@@ -65,7 +65,7 @@ or immediate consumer has been secured.
 ## Progress
 
 - [x] PFR0 — Freeze the produced-field read contract
-- [ ] PFR1 — Admit produced roots and nested field projections in resolution
+- [x] PFR1 — Admit produced roots and nested field projections in resolution
 - [ ] PFR2 — Type and lower primitive and inline-object field consumers
 - [ ] PFR3 — Secure owning and guarded field categories
 - [ ] PFR4 — Verify lifetime, control flow, and rejection boundaries
@@ -122,22 +122,22 @@ the whitespace/error diff check pass.
 **Purpose:** Remove the blanket source rejection and make resolved provenance
 represent every accepted field path exactly once before typing or lowering it.
 
-- [ ] Replace the direct produced-field rejection in ordinary member-value
+- [x] Replace the direct produced-field rejection in ordinary member-value
       resolution with a `ResolvedFieldAccessExpr` carrying the existing
       produced receiver and selected field identity.
-- [ ] Implement `ResolvedObjectReceiver::Produced` field projection by
+- [x] Implement `ResolvedObjectReceiver::Produced` field projection by
       appending the canonical `ObjectProjection::Field`, retaining the complete
       `exact_class`, terminal `class`, source span, and producer once.
-- [ ] Apply inherited declaring-base projection and nested exact-class field
+- [x] Apply inherited declaring-base projection and nested exact-class field
       selection without slicing, duplicated resolution, or fake binding roots.
-- [ ] Preserve ordinary nearest-member lookup, declaring-class privacy,
+- [x] Preserve ordinary nearest-member lookup, declaring-class privacy,
       malformed-member recovery, static-member diagnostics, and source labels.
-- [ ] Keep produced optional, array, shared-owner, primitive, and `unit` roots
+- [x] Keep produced optional, array, shared-owner, primitive, and `unit` roots
       on their current family-specific diagnostics.
-- [ ] Resolve write-shaped paths far enough to preserve the existing read-only
+- [x] Resolve write-shaped paths far enough to preserve the existing read-only
       access diagnostic in type checking; do not accidentally accept mutation
       by sharing the new read projection helper.
-- [ ] Update resolved dumps and focused resolver helpers with semantic
+- [x] Update resolved dumps and focused resolver helpers with semantic
       produced-field vocabulary and deterministic projection order.
 
 **Tests:** Focused resolver tests for construction, literal, every call-result
@@ -150,6 +150,16 @@ root families, and write-shaped sources; then `make check` and
 produced receiver plus canonical projections, every excluded root retains its
 specific diagnostic, writes remain unaccepted, and no source expression is
 resolved twice.
+
+Completed 2026-08-15. Eligible construction, literal, direct, static,
+instance, interface, structural-getter, grouped, inherited, nested, private,
+and closed-generic reads now retain one produced receiver with deterministic
+canonical projections and a separate final field identity. Member assignment
+syntax retains expression receivers for semantic classification, and produced
+writes reach the ordinary read-only receiver diagnostic. Unsupported root
+families retain their existing diagnostics. Focused syntax/resolver tests, the
+produced-receiver golden group, `make check`, `make msrv-check`, documentation
+validation, and diff hygiene pass.
 
 ### PFR2 — Type and lower primitive and inline-object field consumers
 

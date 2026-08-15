@@ -201,9 +201,11 @@ and diagnostics.
 
 This frozen extension adds no grammar form, source binding, reference value,
 backend representation, internal or external calling-convention rule, runtime
-service, or runtime ABI-version change. Until implementation is published, the
-resolver continues to require a named staging object before direct field
-selection from a producer.
+service, or runtime ABI-version change. Resolution now retains one eligible
+producer, its canonical base and intermediate field projections, and the final
+selected field. Complete typed ownership, lowering, verification, and native
+support remain staged, so a named local remains the published executable
+spelling until those phases are complete.
 
 ## Lexical scopes and locals
 

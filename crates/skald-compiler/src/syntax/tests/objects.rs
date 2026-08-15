@@ -899,7 +899,7 @@ fn unit_remains_invalid_as_a_field_type() {
 }
 
 #[test]
-fn unsupported_assignment_shapes_are_diagnosed_without_losing_later_statements() {
+fn assignment_shapes_are_retained_without_guessing_receiver_semantics() {
     let (_, output) = parse_text(concat!(
         "fn main() -> i64 {\n",
         "    value = 1;\n",
@@ -908,15 +908,18 @@ fn unsupported_assignment_shapes_are_diagnosed_without_losing_later_statements()
         "}\n",
     ));
 
-    assert!(output.has_errors());
-    assert_eq!(output.diagnostics.len(), 1);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let main = function(&output.ast, 0);
-    assert_eq!(main.body.statements.len(), 2);
+    assert_eq!(main.body.statements.len(), 3);
     assert!(matches!(
         main.body.statements[0],
         Statement::ObjectAssignment(_)
     ));
-    assert!(matches!(main.body.statements[1], Statement::Return(_)));
+    assert!(matches!(
+        main.body.statements[1],
+        Statement::FieldAssignment(_)
+    ));
+    assert!(matches!(main.body.statements[2], Statement::Return(_)));
 }
 
 #[test]
@@ -959,6 +962,22 @@ fn identifier_and_grouped_identifier_assignments_reach_semantic_classification()
     assert_eq!(source_text(&sources, grouped.place.span()), "(value)");
     assert!(matches!(direct.place, Expression::Identifier(_)));
     assert!(matches!(grouped.place, Expression::Grouped(_)));
+}
+
+#[test]
+fn member_assignment_keeps_an_expression_receiver_for_semantic_access_checks() {
+    let (sources, output) = parse_text("fn main() -> unit { make().branch.value = 1; }");
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let main = function(&output.ast, 0);
+    let Statement::FieldAssignment(assignment) = &main.body.statements[0] else {
+        panic!("expected member assignment syntax");
+    };
+    assert_eq!(
+        source_text(&sources, assignment.place.receiver.span()),
+        "make().branch"
+    );
+    assert_eq!(source_text(&sources, assignment.place.member.span), "value");
 }
 
 #[test]

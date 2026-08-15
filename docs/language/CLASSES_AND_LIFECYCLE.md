@@ -257,9 +257,10 @@ the complete produced root is destroyed.
 The frozen root has read-only access. Projection therefore cannot authorize a
 direct or nested write, mutable method, `mut ref`, whole-object replacement,
 or escaping alias. Declaring-class privacy, inherited lookup, field identity,
-and finite containment are unchanged. Until the resolver and later phases
-implement this contract, direct field selection still reports the existing
-temporary-field diagnostic and a named local remains the available spelling.
+and finite containment are unchanged. Resolution retains this read-only root
+and its canonical projections, including write-shaped paths that later receive
+the ordinary read-only access diagnostic. Typed ownership and executable
+support remain staged, so a named local remains the published spelling.
 
 For example, in `root.branch.leaf.value`, `root` is the root place,
 `branch` and `leaf` select complete inline subobjects, and `value` selects the

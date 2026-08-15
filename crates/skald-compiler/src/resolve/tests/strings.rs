@@ -28,6 +28,45 @@ fn source_with_str(app: &str) -> ResolveOutput {
 }
 
 #[test]
+fn canonical_literals_can_be_produced_field_receivers_inside_their_owner() {
+    let output = resolve_modules(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import std::str;\nfn main() -> i64 { return 0; }\n",
+            ),
+            (
+                "std/str.ska",
+                concat!(
+                    "public class Str {\n",
+                    "  private _storage: shared u8[];\n",
+                    "  private _start: i64;\n",
+                    "  private _length: u64;\n",
+                    "  init() {\n",
+                    "    self._storage = new u8[]();\n",
+                    "    self._start = 0;\n",
+                    "    self._length = 0u;\n",
+                    "  }\n",
+                    "  fn literal_length() -> u64 { return \"field\"._length; }\n",
+                    "}\n",
+                ),
+            ),
+        ],
+    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("FieldAccess c0:field2"), "{dump}");
+    assert!(
+        dump.contains("ProducedReceiver class c0 complete c0"),
+        "{dump}"
+    );
+    assert!(dump.contains("StringLiteral str0 class c0"), "{dump}");
+    assert_eq!(dump, dump_resolved(&output.program));
+}
+
+#[test]
 fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_members() {
     let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",

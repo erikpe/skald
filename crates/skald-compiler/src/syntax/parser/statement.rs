@@ -422,15 +422,6 @@ impl Parser<'_> {
             );
             return None;
         };
-        if !is_receiver_place(&place.receiver) {
-            self.report(
-                EXPECTED_STATEMENT,
-                "invalid field-assignment receiver",
-                place.receiver.span(),
-                "expected an object-place path rooted at a local name or `self`",
-            );
-            return None;
-        }
 
         Some(Statement::FieldAssignment(FieldAssignmentStatement {
             span: self.cover(place.span, end_span),

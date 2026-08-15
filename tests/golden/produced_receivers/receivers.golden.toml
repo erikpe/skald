@@ -35,8 +35,6 @@ source = "produced_receiver_failures.ska"
 
 [test.expect.stderr]
 matches = [
-  { name = "temporary field", match = "contains", inline = """error[RES009]: fields cannot be read from a produced object
- --> tests/golden/produced_receivers/produced_receiver_failures.ska:30:12""" },
   { name = "optional result", match = "contains", inline = """error[RES009]: call result is not an exact inline class
  --> tests/golden/produced_receivers/produced_receiver_failures.ska:31:5""" },
   { name = "array result", match = "contains", inline = """error[RES009]: call result is not an exact inline class

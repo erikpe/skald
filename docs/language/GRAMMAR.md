@@ -828,11 +828,12 @@ chains on an exact-class construction, class literal, exact-class call result,
 or structural getter result. The
 [frozen produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
 therefore adds no token, precedence rule, AST expression shape, assignment
-form, or reference syntax. Its future semantic implementation will classify
-an eligible exact-class producer once as a hidden read-only root and apply the
-existing member chain to that root. The current resolver still rejects direct
-field selection from such a producer; grammar acceptance does not imply the
-frozen semantic feature is executable.
+form, or reference syntax. Resolution classifies an eligible exact-class
+producer once as a hidden read-only root and applies the existing member chain
+to that root. A member assignment retains its expression receiver for semantic
+access checking, where a produced root receives the ordinary read-only
+diagnostic. Grammar and resolution acceptance do not imply that the staged
+typed and executable feature is published.
 
 Optional type syntax crosses parsing as a recursive source-shaped node that
 retains grouping, punctuation, and `shared?` shorthand provenance. Resolution

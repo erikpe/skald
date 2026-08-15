@@ -237,16 +237,20 @@ loses the exact complete root, is used after its `end-full-expression`, or
 cleans on a skipped path, MIR verification must reject it before backend
 lowering.
 
-Direct field selection from a produced exact-class receiver is currently
-expected to stop in resolution with `RES009`. The
+Direct field selection from a produced exact-class receiver now crosses
+resolution as one `ProducedReceiver` plus canonical base and intermediate
+field projections; the final field remains on `FieldAccess`. A produced field
+assignment crosses the same representation and must fail through the ordinary
+read-only access diagnostic. The
 [frozen field-read representation](../compiler/PHASES_AND_IR.md#frozen-produced-object-field-read-representation)
-will reuse the same produced `View`: after implementation, HIR should contain
+will reuse the same produced `View`: after later-phase implementation, HIR should contain
 an ordinary field place with read-only produced provenance and no inspection
 binding, while MIR should materialize one `temporary`, project the field, and
 secure the consumer before `end-full-expression`. A second producer
 evaluation, fake source binding, mutable view, field use after cleanup, or
-field-specific backend instruction indicates a compiler defect. Until that
-feature is published, the staging-local diagnostic is the correct boundary.
+field-specific backend instruction indicates a compiler defect. Until the
+typed and executable feature is published, a staging local remains the
+supported source workaround.
 
 For an explicitly dereferenced shared receiver or alias argument, HIR
 distinguishes a stable `SharedPointee` from an `AnchoredSharedPointee` and

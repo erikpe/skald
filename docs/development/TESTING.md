@@ -597,17 +597,19 @@ runtime harness.
 
 ## Frozen produced-object field-read coverage
 
-Produced-object field reads are frozen but unavailable. Until implementation,
-the resolver and compile-failure golden must retain `RES009` for a direct
-temporary field read. The staged implementation must replace that blanket
-failure only alongside phase-local and native evidence for the complete
-read-only ownership contract.
+Produced-object field reads are frozen, with resolution implemented and later
+phases staged. Resolver tests must admit eligible reads without `RES009`, while
+the produced-receiver compile-failure golden retains only the excluded
+optional, array, and raw shared-owner roots. A write-shaped produced field must
+retain the same receiver and fail through the ordinary read-only type-checking
+diagnostic.
 
 Resolver coverage must prove one retained producer, canonical inherited-base
 and nested inline-field projections, declaring-class privacy, structural
 getter and closed-generic composition, deterministic dumps, and unchanged
 diagnostics for primitive, optional, array, raw shared-owner, and `unit` roots.
-Write-shaped forms remain rejection tests rather than success cases.
+Write-shaped forms remain rejection tests rather than executable success
+cases.
 
 Type-check and HIR coverage must prove one read-only produced `View` with no
 inspection place or fake binding. Primitive endpoints load values; class

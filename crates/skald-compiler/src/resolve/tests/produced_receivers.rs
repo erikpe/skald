@@ -68,7 +68,7 @@ fn exact_class_producers_resolve_once_as_explicit_receivers() {
 }
 
 #[test]
-fn non_exact_call_results_and_produced_fields_remain_invalid_receivers() {
+fn non_exact_call_results_remain_invalid_receivers() {
     let output = resolve_text(concat!(
         "class Item { value: i64; init() { self.value = 1; } fn read() -> i64 { return 1; } }\n",
         "fn primitive() -> i64 { return 1; }\n",
@@ -93,7 +93,7 @@ fn non_exact_call_results_and_produced_fields_remain_invalid_receivers() {
         .iter()
         .filter(|diagnostic| diagnostic.code == INVALID_MEMBER_SELECTION)
         .collect();
-    assert_eq!(diagnostics.len(), 5, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics.len(), 4, "{:?}", output.diagnostics);
     assert_eq!(
         diagnostics
             .iter()
@@ -101,9 +101,6 @@ fn non_exact_call_results_and_produced_fields_remain_invalid_receivers() {
             .count(),
         4
     );
-    assert!(diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.message.contains("cannot be read")));
     assert_eq!(
         output
             .diagnostics
