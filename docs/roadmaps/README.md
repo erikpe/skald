@@ -14,8 +14,13 @@ No additional implementation roadmap is currently planned.
 
 ## Design proposals
 
-No design proposal is currently under review. The confirmed structural
-indexing and slicing decisions are preserved in the
+[Function values](FUNCTION_VALUES_DESIGN_PROPOSAL.md) is under review. It
+proposes canonical capture-free function types and non-null internal function
+references, including closed generic-static specialization, full internal call
+ABI reuse, verified indirect calls, and sound whole-program static effects. No
+implementation roadmap exists until the design register is confirmed.
+
+The confirmed structural indexing and slicing decisions are preserved in the
 [archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).
 
 Frozen design proposals and their completed implementation roadmaps are
