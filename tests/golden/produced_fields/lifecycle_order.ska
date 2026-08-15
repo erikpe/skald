@@ -1,0 +1,49 @@
+import std::io;
+
+class Leaf {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Leaf) {
+        self.value = source.value;
+    }
+
+    destroy {
+        std::io::println_i64(100 + self.value);
+    }
+}
+
+class Holder {
+    leaf: Leaf;
+
+    init(value: i64) {
+        self.leaf = Leaf(value);
+    }
+
+    destroy {
+        std::io::println_i64(200 + self.leaf.value);
+    }
+}
+
+fn make(value: i64) -> Holder {
+    return Holder(value);
+}
+
+fn mark(value: i64) -> i64 {
+    std::io::println_i64(value);
+    return value;
+}
+
+fn inspect(ref first: Leaf, later: i64, ref second: Leaf) -> unit {
+    std::io::println_i64(first.value + later + second.value);
+}
+
+fn main() -> i64 {
+    var copied: Leaf = Leaf(copy make(1).leaf);
+    std::io::println_i64(copied.value);
+    inspect(make(2).leaf, mark(3), make(4).leaf);
+    return copied.value - 1;
+}

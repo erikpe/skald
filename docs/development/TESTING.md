@@ -626,12 +626,27 @@ securing, and one reverse full-expression cleanup. Mutation tests must reject
 missing, premature, duplicate, wrong-path, and post-cleanup use, plus mutable
 access or an invalid origin/projection.
 
+The dedicated produced-field MIR suite also mutates cleanup order, moves a
+consumer before initialization and after cleanup, redirects an exact origin
+to the root or a sibling field, corrupts a projection, and leaks cleanup onto
+a skipped logical path. Its valid control-flow fixture covers `if`/`elif`,
+short-circuit selection, loop epochs, returns, and both producer-side and
+consumer-side abrupt failure. Terminating blocks remain non-unwinding: they
+must not acquire a synthesized `EndFullExpression`.
+
 Native coverage must compare named-place and produced-root behavior for every
 implemented field category, including later argument effects, lifecycle calls,
 logical paths, loops, returns, failure, dispatch, ABI pressure, structural
 getters, and `Vec<Str>`. Backend assertions retain ordinary layouts, receiver
 and alias marshaling, runtime calls, ABI version 9, and `ska_rt_abi_v9`; no
 field-read-specific runtime harness or symbol is permitted.
+
+`produced_fields/fields::lifecycle_order` is the focused generated-code trace
+for PFR4. It observes explicit field copy securing before root destruction,
+later argument effects, call execution, reverse cleanup of multiple produced
+roots, nested field destruction, and exactly-once destruction of the secured
+copy. The two rejection leaves in the same group freeze read-only, mutable-
+alias, privacy, and invalid-member diagnostics across repeated compilation.
 
 ## String coverage
 

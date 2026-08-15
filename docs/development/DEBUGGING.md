@@ -253,6 +253,14 @@ field-specific backend instruction indicates a compiler defect. For owning
 edges, confirm that the ordinary copy, retain, array anchor, optional view, or
 optional-box guard completes before root cleanup.
 
+When diagnosing a control-flow-only failure, inspect the path condition and
+the temporary's lifetime epoch together. Cleanup belongs only to the selected
+logical or conditional path and to each completed loop epoch. A producer-side
+failure occurs before ownership publication; a later consumer failure remains
+non-unwinding, so its terminating block intentionally has no synthesized
+`end-full-expression`. Moving cleanup onto a skipped or terminating path is a
+verifier error, not a recovery strategy.
+
 For an explicitly dereferenced shared receiver or alias argument, HIR
 distinguishes a stable `SharedPointee` from an `AnchoredSharedPointee` and
 retains the copied field or adopted producer source. MIR declares each hidden

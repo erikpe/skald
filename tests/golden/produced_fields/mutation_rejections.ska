@@ -1,0 +1,40 @@
+class Leaf {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    mut fn change() -> unit {
+        self.value = self.value + 1;
+    }
+}
+
+class Holder {
+    leaf: Leaf;
+    value: i64;
+
+    init(value: i64) {
+        self.leaf = Leaf(value);
+        self.value = value;
+    }
+}
+
+fn make(value: i64) -> Holder {
+    return Holder(value);
+}
+
+fn mutate(mut ref leaf: Leaf) -> unit {}
+
+fn invalid() -> unit {
+    make(1).value = 2;
+    make(2).leaf.value = 3;
+    make(3).leaf = Leaf(4);
+    make(5).leaf.change();
+    mutate(make(6).leaf);
+    var escaped: Leaf = make(9).leaf;
+}
+
+fn main() -> i64 {
+    return 0;
+}

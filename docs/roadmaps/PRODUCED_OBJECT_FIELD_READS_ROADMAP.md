@@ -1,6 +1,6 @@
 # Produced-Object Field Reads Roadmap
 
-Status: in progress; PFR4 is next.
+Status: in progress; PFR5 is next.
 
 This roadmap lets an expression that produces one exact inline class expose
 its fields directly without a source-level staging local. It makes
@@ -68,7 +68,7 @@ or immediate consumer has been secured.
 - [x] PFR1 — Admit produced roots and nested field projections in resolution
 - [x] PFR2 — Type and lower primitive and inline-object field consumers
 - [x] PFR3 — Secure owning and guarded field categories
-- [ ] PFR4 — Verify lifetime, control flow, and rejection boundaries
+- [x] PFR4 — Verify lifetime, control flow, and rejection boundaries
 - [ ] PFR5 — Prove native composition and publish the feature
 
 Every Rust implementation task runs its focused phase and golden tests,
@@ -263,22 +263,22 @@ hygiene pass.
 **Purpose:** Mechanically prove the full-expression contract across branches,
 loops, failures, and malformed IR before broad source adoption.
 
-- [ ] Verify that produced storage begins before construction, becomes owned
+- [x] Verify that produced storage begins before construction, becomes owned
       only after complete production, remains live through all field
       projections and consumers, and is cleaned exactly once afterward.
-- [ ] Prove result securing precedes root destruction for scalars, exact-class
+- [x] Prove result securing precedes root destruction for scalars, exact-class
       copies, owners, arrays, and optionals; prove nested temporaries clean in
       reverse completion order.
-- [ ] Cover selected and skipped short-circuit paths, `if`/`elif`, loop epochs,
+- [x] Cover selected and skipped short-circuit paths, `if`/`elif`, loop epochs,
       return expressions, nested produced-field chains, later consumer effects,
       and production or consumer failure.
-- [ ] Add verifier mutations for missing, duplicate, premature, wrong-path, and
+- [x] Add verifier mutations for missing, duplicate, premature, wrong-path, and
       wrong-order cleanup; use-before-initialization; post-cleanup projection;
       invalid complete origin or projection; and mutable access through a
       produced field root.
-- [ ] Preserve abrupt non-unwinding behavior without inventing cleanup on a
+- [x] Preserve abrupt non-unwinding behavior without inventing cleanup on a
       terminating path, and preserve all prior method-receiver verifier tests.
-- [ ] Keep diagnostics deterministic for direct and nested writes, mutable
+- [x] Keep diagnostics deterministic for direct and nested writes, mutable
       methods, `mut ref`, unsupported root families, private fields, invalid
       member kinds, and escape-shaped uses.
 
@@ -291,6 +291,20 @@ then `make check` and `make msrv-check`.
 access, and cleanup corruption; valid selected paths execute with exactly-once
 production and cleanup; invalid source forms fail before MIR with stable
 diagnostics.
+
+Completed 2026-08-15. A dedicated produced-field MIR suite now proves storage
+publication and liveness, projection without copying, exact field origins,
+reverse cleanup, conditional and loop epochs, return expressions, and
+producer- and consumer-side abrupt failure. Mutations reject missing,
+duplicate, premature, wrong-path, and wrong-order cleanup; use before
+initialization and after cleanup; corrupt origins and projections; mutable
+views; and skipped-path leakage. A deterministic native lifecycle trace proves
+copy securing, later-argument ordering, and exactly-once reverse destruction.
+Resolver- and type-check-stage goldens freeze privacy, invalid-member, direct
+and nested write, class replacement, mutable-method, and mutable-alias
+diagnostics. The focused produced-field and produced-receiver deterministic
+goldens, `make check`, `make msrv-check`, documentation validation, and diff
+hygiene pass.
 
 ### PFR5 — Prove native composition and publish the feature
 

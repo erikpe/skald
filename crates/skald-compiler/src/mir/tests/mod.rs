@@ -53,6 +53,7 @@ mod path_conditions;
 mod primitive_binding_assignment;
 mod primitive_casts;
 mod produced_aliases;
+mod produced_fields;
 mod produced_receivers;
 mod robustness;
 mod shared;

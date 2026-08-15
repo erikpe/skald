@@ -1,0 +1,40 @@
+class Leaf {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    mut fn change() -> unit {
+        self.value = self.value + 1;
+    }
+}
+
+class Holder {
+    leaf: Leaf;
+    value: i64;
+    private hidden: i64;
+
+    init(value: i64) {
+        self.leaf = Leaf(value);
+        self.value = value;
+        self.hidden = value;
+    }
+
+    static fn utility() -> i64 {
+        return 0;
+    }
+}
+
+fn make(value: i64) -> Holder {
+    return Holder(value);
+}
+
+fn invalid() -> unit {
+    make(7).hidden;
+    make(8).utility();
+}
+
+fn main() -> i64 {
+    return 0;
+}

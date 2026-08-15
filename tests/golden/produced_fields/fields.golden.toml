@@ -35,3 +35,44 @@ source = "named_equivalence.ska"
 [[test.run]]
 name = "optional_array_and_owner_observations"
 expect = { exit = 42 }
+
+[[test]]
+name = "lifecycle_order"
+mode = "run"
+source = "lifecycle_order.ska"
+
+[[test.run]]
+name = "secure_fields_before_reverse_root_cleanup"
+expect = { stdout = { file = "data/lifecycle_order.stdout" } }
+
+[[test]]
+name = "rejections"
+mode = "compile-fail"
+source = "rejections.ska"
+
+[test.expect.stderr]
+matches = [
+  { name = "private produced field", match = "contains", inline = """error[RES031]: member `hidden` is private to class `Holder`
+ --> tests/golden/produced_fields/rejections.ska:34:13""" },
+  { name = "static method on produced object", match = "contains", inline = """error[RES004]: static method `utility` must be called through a class
+ --> tests/golden/produced_fields/rejections.ska:35:13""" },
+]
+
+[[test]]
+name = "mutation_rejections"
+mode = "compile-fail"
+source = "mutation_rejections.ska"
+
+[test.expect.stderr]
+matches = [
+  { name = "direct field write", match = "contains", inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/produced_fields/mutation_rejections.ska:30:13""" },
+  { name = "nested field write", match = "contains", inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/produced_fields/mutation_rejections.ska:31:18""" },
+  { name = "class field replacement", match = "contains", inline = """error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/produced_fields/mutation_rejections.ska:32:13""" },
+  { name = "mutable method", match = "contains", inline = """error[TYP018]: mutable method `change` requires mutable receiver access
+ --> tests/golden/produced_fields/mutation_rejections.ska:33:18""" },
+  { name = "mutable alias escape", match = "contains", inline = """error[TYP020]: mutable alias argument requires an existing object place
+ --> tests/golden/produced_fields/mutation_rejections.ska:34:12""" },
+]
