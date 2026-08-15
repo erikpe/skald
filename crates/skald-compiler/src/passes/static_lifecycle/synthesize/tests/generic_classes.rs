@@ -13,10 +13,10 @@ const SOURCE: &str = "class Item { init() {} destroy {} }
        init() {}
      }
      fn main() -> i64 {
-       Cache<Item>::current = Item();
-       Cache<Item>::current = Item();
-       Cache<shared Item>::current = new Item();
-       Cache<shared Item>::current = none;
+       Cache<Item>.current = Item();
+       Cache<Item>.current = Item();
+       Cache<shared Item>.current = new Item();
+       Cache<shared Item>.current = none;
        return 42;
      }";
 

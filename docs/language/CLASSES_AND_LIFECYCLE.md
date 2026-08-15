@@ -146,6 +146,11 @@ inherited public static method while retaining the base declaration's
 `MethodId`; inherited private methods remain selected and then fail the
 declaring-class privacy check outside their owner.
 
+A closed generic class uses the same member separator after its complete type
+application: `Factory<i64>.method(arguments)`, or
+`module_binding::Factory<i64>.method(arguments)` when module-qualified. `::`
+separates module-path components; it does not select a generic class member.
+
 A static method has no receiver access mode and no `self`. It may call other
 static methods, including private helpers allowed by declaring-class privacy,
 and it may access private instance members only through an explicit object

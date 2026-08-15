@@ -11,13 +11,13 @@ use super::super::{dump_static_effects, infer_static_effects};
 const CACHE_SOURCE: &str = "class Str { init() {} }
      class Cache<T> {
        static seed: i64 = 1;
-       static direct: i64 = Cache<T>::seed;
-       static transitive: i64 = Cache<T>::read();
+       static direct: i64 = Cache<T>.seed;
+       static transitive: i64 = Cache<T>.read();
        init() {}
-       static fn read() -> i64 { return Cache<T>::direct; }
+       static fn read() -> i64 { return Cache<T>.direct; }
      }
      fn main() -> i64 {
-       return Cache<i64>::transitive + Cache<Str>::transitive;
+       return Cache<i64>.transitive + Cache<Str>.transitive;
      }";
 
 fn field(program: &PreliminaryMirProgram, owner: &str, name: &str) -> StaticFieldId {

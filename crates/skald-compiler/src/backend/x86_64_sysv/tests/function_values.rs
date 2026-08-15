@@ -159,9 +159,9 @@ fn executes_fields_statics_and_closed_generic_static_targets() {
         "fn main() -> i64 {\n",
         "  var original: Holder = Holder(add_one);\n",
         "  var copy: Holder = original;\n",
-        "  var specialized: fn(i64) -> i64 = Identity<i64>::apply;\n",
-        "  var first_marker: fn(i64) -> i64 = Marker<i64>::apply;\n",
-        "  var second_marker: fn(i64) -> i64 = Marker<bool>::apply;\n",
+        "  var specialized: fn(i64) -> i64 = Identity<i64>.apply;\n",
+        "  var first_marker: fn(i64) -> i64 = Marker<i64>.apply;\n",
+        "  var second_marker: fn(i64) -> i64 = Marker<bool>.apply;\n",
         "  return copy.apply(10) + Registry.callback(10) + specialized(20) + first_marker(0) + second_marker(0);\n",
         "}\n",
     ));
@@ -195,7 +195,7 @@ fn emits_address_taken_bodies_without_a_direct_or_indirect_call_edge() {
         "fn main() -> i64 {\n",
         "  var first: fn() -> i64 = retained_function;\n",
         "  var second: fn() -> i64 = Utility.retained_method;\n",
-        "  var third: fn() -> i64 = Generic<i64>::retained_method;\n",
+        "  var third: fn() -> i64 = Generic<i64>.retained_method;\n",
         "  return 0;\n",
         "}\n",
     ));

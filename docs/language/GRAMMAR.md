@@ -589,7 +589,7 @@ array-element-list = "{" [expression {"," expression}] "}"
 generic-application
                  = declaration-path generic-argument-list
 generic-static-selection
-                 = generic-application "::" identifier
+                 = generic-application "." identifier
 ```
 
 A `generic-application` in expression position is accepted only as a class
@@ -597,6 +597,9 @@ construction head immediately followed by a call suffix or as the target of
 `generic-static-selection`. Generic applications are also accepted in object
 casts, type tests, class allocations, optional-box and array construction
 types, and every declaration position that consumes `storage-type`.
+`::` separates components of the `declaration-path`; `.` selects the static
+member after the complete closed generic application. The former
+`generic-application "::" identifier` spelling is invalid.
 
 The `storage-type` in `optional-box-allocation-expression` must have an
 optional outer semantic constructor after grouping is removed. This admits

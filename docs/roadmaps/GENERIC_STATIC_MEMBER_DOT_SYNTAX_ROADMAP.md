@@ -1,6 +1,6 @@
 # Generic Static-Member Dot Syntax Roadmap
 
-Status: planned; GSD0 is next.
+Status: in progress; GSD0 is complete and GSD1 is next.
 
 Replace the generic-class static-member spelling `Class<T>::member` with
 `Class<T>.member`. This makes `::` exclusively a module-path separator and
@@ -57,7 +57,7 @@ var imported: i64 = dep::Cache<i64>.count;
 
 ## Progress
 
-- [ ] GSD0 — Adopt dot selection throughout the source frontend
+- [x] GSD0 — Adopt dot selection throughout the source frontend
 - [ ] GSD1 — Harden composition and close the syntax migration
 
 ## PR-sized implementation sequence
@@ -68,28 +68,28 @@ var imported: i64 = dep::Cache<i64>.count;
 the existing dedicated generic-static-selection representation and all
 downstream semantics.
 
-- [ ] Change generic-expression lookahead and parsing so a closed generic
+- [x] Change generic-expression lookahead and parsing so a closed generic
       application followed by `.identifier` produces
       `GenericStaticSelectionExpr` with the exact dot span.
-- [ ] Keep module qualification in the generic head, accepting forms such as
+- [x] Keep module qualification in the generic head, accepting forms such as
       `dep::Factory<i64>.apply` without treating the final dot as part of the
       declaration path or as an object receiver operation.
-- [ ] Add a recovery-only path for `Class<T>::member` that emits one focused
+- [x] Add a recovery-only path for `Class<T>::member` that emits one focused
       replacement diagnostic and consumes enough input to prevent misleading
       comparison, call, or missing-semicolon cascades. Recovery must not make
       the legacy spelling a valid program.
-- [ ] Preserve the existing generic selection node and resolver entry points
+- [x] Preserve the existing generic selection node and resolver entry points
       for static-field reads, static-field assignments, direct static calls,
       static-method function references, template-dependent selections, and
       specialization requests; avoid duplicating these paths through ordinary
       `MemberAccessExpr` handling.
-- [ ] Migrate Skald standard-library source, benchmarks, golden fixtures, and
+- [x] Migrate Skald standard-library source, benchmarks, golden fixtures, and
       Rust-embedded Skald programs in the same change so every checked source
       uses `.` and the repository remains buildable at the task boundary.
-- [ ] Update focused syntax, recovery, resolution, specialization, type-check,
+- [x] Update focused syntax, recovery, resolution, specialization, type-check,
       static-lifecycle, MIR, backend, and runtime-trace expectations affected
       by the punctuation or its source span without changing semantic output.
-- [ ] Update the implemented grammar and living generic-class, static-member,
+- [x] Update the implemented grammar and living generic-class, static-member,
       function-value, compiler, testing, and debugging documentation wherever
       they specify or demonstrate generic static selection. State explicitly
       that `::` separates module paths and `.` selects class members.

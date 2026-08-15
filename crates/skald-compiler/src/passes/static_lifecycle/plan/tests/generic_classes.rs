@@ -33,13 +33,13 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
         "class Str { init() {} }
          class Cache<T> {
            static seed: i64 = 1;
-           static direct: i64 = Cache<T>::seed;
-           static transitive: i64 = Cache<T>::read();
+           static direct: i64 = Cache<T>.seed;
+           static transitive: i64 = Cache<T>.read();
            init() {}
-           static fn read() -> i64 { return Cache<T>::direct; }
+           static fn read() -> i64 { return Cache<T>.direct; }
          }
          fn main() -> i64 {
-           return Cache<i64>::transitive + Cache<Str>::transitive;
+           return Cache<i64>.transitive + Cache<Str>.transitive;
          }",
     );
     let preliminary = planned.preliminary();
@@ -92,12 +92,12 @@ fn plans_direct_and_transitive_dependencies_across_closed_owners() {
            init() {}
          }
          class Sink<T> {
-           static direct: i64 = Source<T>::base;
-           static transitive: i64 = Sink<T>::read();
+           static direct: i64 = Source<T>.base;
+           static transitive: i64 = Sink<T>.read();
            init() {}
-           static fn read() -> i64 { return Source<T>::base; }
+           static fn read() -> i64 { return Source<T>.base; }
          }
-         fn main() -> i64 { return Sink<i64>::direct + Sink<i64>::transitive; }",
+         fn main() -> i64 { return Sink<i64>.direct + Sink<i64>.transitive; }",
     );
     let preliminary = planned.preliminary();
     let base = field(preliminary, "Source<i64>", "base");
@@ -134,11 +134,11 @@ fn plans_direct_and_transitive_dependencies_across_closed_owners() {
 fn generic_plan_dumps_are_deterministic_readable_and_identity_preserving() {
     const SOURCE: &str = "class Cache<T> {
            static first: i64 = 1;
-           static second: i64 = Cache<T>::first;
+           static second: i64 = Cache<T>.first;
            init() {}
          }
          fn main() -> i64 {
-           return Cache<i64>::second + Cache<bool>::second;
+           return Cache<i64>.second + Cache<bool>.second;
          }";
     let planned = plan(SOURCE);
     let plan_dump = dump_static_lifetime_plan(&planned);
@@ -168,11 +168,11 @@ fn generic_plan_dumps_are_deterministic_readable_and_identity_preserving() {
 fn diagnoses_specialized_self_dependencies_with_the_closed_owner_name() {
     let failure = plan_static_lifetimes(lower_generic_source_to_preliminary_mir(
         "class Loop<T> {
-           static value: i64 = Loop<T>::read();
+           static value: i64 = Loop<T>.read();
            init() {}
-           static fn read() -> i64 { return Loop<T>::value; }
+           static fn read() -> i64 { return Loop<T>.value; }
          }
-         fn main() -> i64 { return Loop<i64>::value; }",
+         fn main() -> i64 { return Loop<i64>.value; }",
     ))
     .expect_err("a generated static initializer must not read itself before publication");
     let diagnostic = failure.diagnostics().next().unwrap();
@@ -185,14 +185,14 @@ fn diagnoses_specialized_self_dependencies_with_the_closed_owner_name() {
 fn diagnoses_cycles_across_closed_generic_owners() {
     let failure = plan_static_lifetimes(lower_generic_source_to_preliminary_mir(
         "class Left<T> {
-           static value: i64 = Right<T>::value;
+           static value: i64 = Right<T>.value;
            init() {}
          }
          class Right<T> {
-           static value: i64 = Left<T>::value;
+           static value: i64 = Left<T>.value;
            init() {}
          }
-         fn main() -> i64 { return Left<i64>::value; }",
+         fn main() -> i64 { return Left<i64>.value; }",
     ))
     .expect_err("cross-owner generic static dependencies must be rejected");
     let diagnostic = failure.diagnostics().next().unwrap();

@@ -454,7 +454,7 @@ fn lifecycle_static_and_remaining_body_type_positions_are_retained() {
            assign(ref source: Complete<T>) {}\n\
            fn inspect(ref value: T) -> Helper<T> {\n\
              var values: T?[] = T?[]();\n\
-             Helper<T>::make();\n\
+             Helper<T>.make();\n\
              return Helper<T>(value);\n\
            }\n\
          }\n\

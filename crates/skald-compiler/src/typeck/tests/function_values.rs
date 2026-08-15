@@ -153,8 +153,8 @@ fn generic_static_specializations_retain_distinct_targets_and_substituted_signat
     let hir = check_generic_source(concat!(
         "class Identity<T> { init() {} static fn apply(value: T) -> T { return value; } }\n",
         "fn main() -> i64 {\n",
-        "  var integer: fn(i64) -> i64 = Identity<i64>::apply;\n",
-        "  var boolean: fn(bool) -> bool = Identity<bool>::apply;\n",
+        "  var integer: fn(i64) -> i64 = Identity<i64>.apply;\n",
+        "  var boolean: fn(bool) -> bool = Identity<bool>.apply;\n",
         "  return 0;\n",
         "}\n",
     ));

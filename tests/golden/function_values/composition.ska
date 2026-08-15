@@ -60,7 +60,7 @@ class Cell<T> {
     init() {}
 
     static fn apply(value: i64) -> i64 {
-        return value + Cell<T>::bias;
+        return value + Cell<T>.bias;
     }
 }
 
@@ -100,10 +100,10 @@ fn main() -> i64 {
     var boxed: Box<fn(i64) -> i64> = Box<fn(i64) -> i64>(increment);
     if (boxed.get()(10) != 11) { return 7; }
 
-    Cell<i64>::bias = 1;
-    Cell<bool>::bias = 2;
-    var integer_target: fn(i64) -> i64 = Cell<i64>::apply;
-    var boolean_target: fn(i64) -> i64 = Cell<bool>::apply;
+    Cell<i64>.bias = 1;
+    Cell<bool>.bias = 2;
+    var integer_target: fn(i64) -> i64 = Cell<i64>.apply;
+    var boolean_target: fn(i64) -> i64 = Cell<bool>.apply;
     if (integer_target(10) != 11) { return 8; }
     if (boolean_target(10) != 12) { return 9; }
     if (recursive(5) != 5) { return 10; }

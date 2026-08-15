@@ -5,7 +5,7 @@ fn reject(ref value: dep::Worker) -> unit {
     var instance: fn() -> i64 = value.read;
     var inaccessible: fn() -> i64 = dep::Worker.hidden;
     var raw: fn(i64) -> i64 = dep::Identity.apply;
-    var specialized: fn(i64) -> i64 = dep::Identity<i64>::apply;
+    var specialized: fn(i64) -> i64 = dep::Identity<i64>.apply;
 }
 
 fn main() -> i64 {

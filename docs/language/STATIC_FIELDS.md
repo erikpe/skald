@@ -139,6 +139,8 @@ A static field is selected explicitly through a class declaration spelling:
 ```ska
 Class.name
 module_binding::Class.name
+GenericClass<T>.name
+module_binding::GenericClass<T>.name
 ```
 
 The qualified module and class lookup rules are the same as for static
@@ -146,6 +148,8 @@ methods. A module binding must be directly imported, the class must be visible
 from the using module, and qualification does not bypass class-member privacy.
 The class spelling is a declaration path, not an expression: selecting a
 static field evaluates no receiver and produces no receiver-side effects.
+`::` separates module-path components, while `.` selects the static field
+after either an ordinary class name or a complete generic application.
 
 Static fields do not participate in bare value lookup. Code uses `Class.name`
 even from a body owned by `Class`. Existing lexical lookup still applies to

@@ -1,7 +1,7 @@
 from std::vec import Vec;
 
 fn main() -> i64 {
-    var values: Vec<i64> = Vec<i64>::with_capacity(0u);
+    var values: Vec<i64> = Vec<i64>.with_capacity(0u);
     var value: i64 = 0;
     while (value < 4096) {
         values.push(value);

@@ -3,7 +3,7 @@ from std::str import Str;
 from std::vec import Vec;
 
 fn one_value() -> Vec<i64> {
-    var values: Vec<i64> = Vec<i64>::with_capacity(8u);
+    var values: Vec<i64> = Vec<i64>.with_capacity(8u);
     values.push(1);
     return values;
 }

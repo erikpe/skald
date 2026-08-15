@@ -77,7 +77,7 @@ class Store<T> {
 
     mut fn put(index: i64, value: T?) -> unit {
         self.values[index] = value;
-        Store<T>::last = value;
+        Store<T>.last = value;
     }
 }
 
@@ -115,7 +115,7 @@ fn main() -> i64 {
     var store: Store<shared Item> = Store<shared Item>(2u);
     store.put(0, owner);
     var missing: (shared Item)? = store.values[1];
-    if (missing is some || Store<shared Item>::last is none) {
+    if (missing is some || Store<shared Item>.last is none) {
         return 2;
     }
 

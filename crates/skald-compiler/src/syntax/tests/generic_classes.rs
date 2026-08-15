@@ -111,12 +111,12 @@ fn nested_type_closers_do_not_change_shift_or_comparison_expressions() {
 
 #[test]
 fn generic_type_applications_parse_in_all_expression_type_positions() {
-    let (_, output) = parse_text(concat!(
+    let (sources, output) = parse_text(concat!(
         "class Use<T> {\n",
         "  fn inspect(ref value: Obj) -> unit {\n",
         "    Vec<T>();\n",
         "    new Vec<T>();\n",
-        "    Vec<T>::size();\n",
+        "    Vec<T>.size();\n",
         "    (Vec<T>) value;\n",
         "    value is Vec<T>;\n",
         "    Vec<T>?[]();\n",
@@ -153,10 +153,10 @@ fn generic_type_applications_parse_in_all_expression_type_positions() {
     let Expression::Call(call) = &static_call.expression else {
         panic!("expected static call");
     };
-    assert!(matches!(
-        call.callee.as_ref(),
-        Expression::GenericStaticSelection(_)
-    ));
+    let Expression::GenericStaticSelection(selection) = call.callee.as_ref() else {
+        panic!("expected generic static selection")
+    };
+    assert_eq!(source_text(&sources, selection.separator_span), ".");
     assert!(matches!(
         statements[3],
         Statement::Expression(ExpressionStatement {
@@ -185,6 +185,48 @@ fn generic_type_applications_parse_in_all_expression_type_positions() {
             ..
         })
     ));
+}
+
+#[test]
+fn module_qualified_nested_generic_static_selection_uses_dot() {
+    let (sources, output) =
+        parse_text("fn use() -> unit { dep::Outer<Inner<i64>>.prepare(); return; }");
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let Statement::Expression(statement) = &function(&output.ast, 0).body.statements[0] else {
+        panic!("expected static call statement");
+    };
+    let Expression::Call(call) = &statement.expression else {
+        panic!("expected static call");
+    };
+    let Expression::GenericStaticSelection(selection) = call.callee.as_ref() else {
+        panic!("expected generic static selection");
+    };
+    assert_eq!(selection.target.name.text, "dep::Outer");
+    assert_eq!(selection.member.text, "prepare");
+    assert_eq!(source_text(&sources, selection.separator_span), ".");
+    assert_eq!(
+        source_text(&sources, selection.span),
+        "dep::Outer<Inner<i64>>.prepare"
+    );
+}
+
+#[test]
+fn legacy_generic_static_separator_reports_once_and_recovers() {
+    let (_, output) = parse_text(concat!(
+        "fn legacy() -> unit { Factory<i64>::prepare(); return; }\n",
+        "fn recovered() -> i64 { return 0; }\n",
+    ));
+
+    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics[0].code, INVALID_GENERIC_SYNTAX);
+    assert_eq!(
+        diagnostics[0].message,
+        "generic static members use `.` after the class application"
+    );
+    assert_eq!(output.ast.declarations.len(), 2);
+    assert_eq!(output.ast.declarations[1].name().text, "recovered");
 }
 
 #[test]

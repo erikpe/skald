@@ -455,9 +455,9 @@ fn specialized_static_defaults_and_explicit_initializers_use_substituted_types()
            init() {}
          }
          fn main() -> i64 {
-           if (Storage<Item>::zero_optional is some) { return 1; }
-           if (Storage<Item?>::zero_optional is some) { return 2; }
-           if (Storage<shared Item>::zero_optional is some) { return 3; }
+           if (Storage<Item>.zero_optional is some) { return 1; }
+           if (Storage<Item?>.zero_optional is some) { return 2; }
+           if (Storage<shared Item>.zero_optional is some) { return 3; }
            return 0;
          }",
     );

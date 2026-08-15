@@ -69,7 +69,7 @@ specialization:
 var parse: fn(Str) -> i64 = parse_value;
 var imported: fn(i64) -> bool = util::accept;
 var ordinary: fn(i64) -> i64 = Math.increment;
-var specialized: fn(i64) -> i64 = Identity<i64>::apply;
+var specialized: fn(i64) -> i64 = Identity<i64>.apply;
 ```
 
 The current compiler resolves all four forms to an exact target and signature

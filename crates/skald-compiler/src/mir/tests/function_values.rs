@@ -554,8 +554,8 @@ fn closed_generic_static_addresses_retain_exact_targets_and_signatures() {
     let program = crate::test_support::lower_generic_source_to_final_mir(concat!(
         "class Identity<T> { init() {} static fn apply(value: T) -> T { return value; } }\n",
         "fn main() -> i64 {\n",
-        "  var integer: fn(i64) -> i64 = Identity<i64>::apply;\n",
-        "  var boolean: fn(bool) -> bool = Identity<bool>::apply;\n",
+        "  var integer: fn(i64) -> i64 = Identity<i64>.apply;\n",
+        "  var boolean: fn(bool) -> bool = Identity<bool>.apply;\n",
         "  if (boolean(true)) { return integer(7); }\n",
         "  return 0;\n",
         "}\n",

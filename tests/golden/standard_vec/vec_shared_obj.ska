@@ -29,7 +29,7 @@ fn item_value(value: shared Obj) -> i64 {
 }
 
 fn check_prompt_release() -> unit {
-    var values: Vec<shared Obj> = Vec<shared Obj>::with_capacity(1u);
+    var values: Vec<shared Obj> = Vec<shared Obj>.with_capacity(1u);
     values.push(new Tracked());
     assert_eq_i64(Tracked.destroyed(), 0);
 
@@ -53,12 +53,12 @@ fn main() -> i64 {
     assert_eq_u64(empty.len(), 0u);
     assert_eq_u64(empty.capacity(), 4u);
 
-    var zero_capacity: Vec<shared Obj> = Vec<shared Obj>::with_capacity(0u);
+    var zero_capacity: Vec<shared Obj> = Vec<shared Obj>.with_capacity(0u);
     assert_eq_u64(zero_capacity.capacity(), 0u);
     zero_capacity.push(new Item(9));
     assert_eq_u64(zero_capacity.capacity(), 4u);
 
-    var values: Vec<shared Obj> = Vec<shared Obj>::with_capacity(1u);
+    var values: Vec<shared Obj> = Vec<shared Obj>.with_capacity(1u);
     values.push(new Item(1));
     values.push(new Item(2));
     values.push(new Item(3));

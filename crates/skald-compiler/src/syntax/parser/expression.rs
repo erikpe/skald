@@ -963,7 +963,7 @@ impl Parser<'_> {
         self.generic_argument_list_end(name_end).is_some_and(|end| {
             matches!(
                 self.peek_ahead(end).kind,
-                TokenKind::LeftParen | TokenKind::DoubleColon
+                TokenKind::LeftParen | TokenKind::Dot | TokenKind::DoubleColon
             )
         })
     }
@@ -971,8 +971,17 @@ impl Parser<'_> {
     fn parse_generic_type_expression(&mut self) -> Option<Expression> {
         let target = self.parse_named_type("expected a generic class application")?;
         debug_assert!(target.arguments.is_some());
-        if let Some(separator) = self.consume(TokenKind::DoubleColon) {
-            let member = self.parse_name("expected a static member after `::`")?;
+        if self.at_any(&[TokenKind::Dot, TokenKind::DoubleColon]) {
+            let separator = self.advance();
+            if separator.kind == TokenKind::DoubleColon {
+                self.report(
+                    INVALID_GENERIC_SYNTAX,
+                    "generic static members use `.` after the class application",
+                    separator.span,
+                    "replace `::` with `.`",
+                );
+            }
+            let member = self.parse_name("expected a static member after `.`")?;
             let span = self.cover(target.span, member.span);
             return Some(Expression::GenericStaticSelection(Box::new(
                 GenericStaticSelectionExpr {

@@ -281,6 +281,12 @@ backend storage treat those fields exactly like statics on hand-written
 classes. A static selection requests specialization even if no value of the
 class is otherwise constructed.
 
+Source parsing retains a dedicated generic-static-selection node for
+`module::Class<T>.member`. The dot is preserved as source punctuation, while
+the module-path `::` remains inside the generic head. Resolution then uses the
+same specialized static-field and receiverless static-method paths as before;
+it does not model the class application as a runtime object receiver.
+
 Preliminary, planned, and final MIR retain identity-selected static fields,
 initializer bodies, effect witnesses, and lifecycle indices while rendering
 closed owners with source-facing argument names. Backend symbols encode that

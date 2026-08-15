@@ -66,8 +66,8 @@ fn closed_generic_static_slots_have_distinct_assembler_safe_symbols() {
     let program = lower_generic_source_to_final_mir(
         "class Cache<T> { static value: T?; init() {} }
          fn main() -> i64 {
-           if (Cache<i64>::value is some) { return 1; }
-           if (Cache<bool>::value is some) { return 2; }
+           if (Cache<i64>.value is some) { return 1; }
+           if (Cache<bool>.value is some) { return 2; }
            return 0;
          }",
     );

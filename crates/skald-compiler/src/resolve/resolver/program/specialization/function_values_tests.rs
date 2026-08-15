@@ -67,7 +67,7 @@ fn specialized_bodies_form_top_level_and_exact_static_method_references() {
            static fn apply(value: T) -> T { return value; }\n\
            fn collect() -> unit {\n\
              var top: fn(i64) -> i64 = passthrough;\n\
-             var specialized: fn(T) -> T = Identity<T>::apply;\n\
+             var specialized: fn(T) -> T = Identity<T>.apply;\n\
            }\n\
          }\n\
          fn use(ref value: Identity<i64>) -> unit {}\n\
@@ -121,10 +121,10 @@ fn specializations_keep_distinct_targets_while_reusing_equal_signatures() {
            static fn identity(value: T) -> T { return value; }\n\
          }\n\
          fn main() -> i64 {\n\
-           var i64_stable: fn(i64) -> i64 = Factory<i64>::stable;\n\
-           var bool_stable: fn(i64) -> i64 = Factory<bool>::stable;\n\
-           var i64_identity: fn(i64) -> i64 = Factory<i64>::identity;\n\
-           var bool_identity: fn(bool) -> bool = Factory<bool>::identity;\n\
+           var i64_stable: fn(i64) -> i64 = Factory<i64>.stable;\n\
+           var bool_stable: fn(i64) -> i64 = Factory<bool>.stable;\n\
+           var i64_identity: fn(i64) -> i64 = Factory<i64>.identity;\n\
+           var bool_identity: fn(bool) -> bool = Factory<bool>.identity;\n\
            return 0;\n\
          }\n",
     );

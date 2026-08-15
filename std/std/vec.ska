@@ -6,7 +6,7 @@ public class Vec<T> {
 
     init() {
         self._length = 0u;
-        self._storage = T?[](Vec<T>::_default_capacity());
+        self._storage = T?[](Vec<T>._default_capacity());
     }
 
     private init(capacity: u64) {
@@ -108,7 +108,7 @@ public class Vec<T> {
         }
         var slice_length: u64 = (u64) (normalized_end - normalized_start);
 
-        var result: Vec<T> = Vec<T>::with_capacity(slice_length);
+        var result: Vec<T> = Vec<T>.with_capacity(slice_length);
         result._storage[0:(i64) slice_length] = self._storage[normalized_start:normalized_end];
         result._length = slice_length;
         return result;
@@ -146,8 +146,8 @@ public class Vec<T> {
         }
 
         var next: u64 = current;
-        if (next < Vec<T>::_default_capacity()) {
-            next = Vec<T>::_default_capacity();
+        if (next < Vec<T>._default_capacity()) {
+            next = Vec<T>._default_capacity();
         }
         while (next < minimum) {
             next = next * 2u;

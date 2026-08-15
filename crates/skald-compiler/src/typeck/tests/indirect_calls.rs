@@ -193,8 +193,8 @@ fn closed_generic_static_method_values_call_through_their_specialized_signatures
     let hir = check_generic_source(concat!(
         "class Identity<T> { init() {} static fn apply(value: T) -> T { return value; } }\n",
         "fn main() -> i64 {\n",
-        "  var integer: fn(i64) -> i64 = Identity<i64>::apply;\n",
-        "  var boolean: fn(bool) -> bool = Identity<bool>::apply;\n",
+        "  var integer: fn(i64) -> i64 = Identity<i64>.apply;\n",
+        "  var boolean: fn(bool) -> bool = Identity<bool>.apply;\n",
         "  var value: i64 = integer(7);\n",
         "  if (boolean(true)) { return value; }\n",
         "  return 0;\n",

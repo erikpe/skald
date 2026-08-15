@@ -19,8 +19,8 @@ fn generated_definitions_close_lifecycle_methods_locals_and_static_members() {
            mut fn replace(value: T) -> T {\n\
              var previous: T = value;\n\
              self.values[0] = some(value);\n\
-             Vec<T>::seed = 2;\n\
-             return Vec<T>::identity(previous);\n\
+             Vec<T>.seed = 2;\n\
+             return Vec<T>.identity(previous);\n\
            }\n\
          }\n\
          fn use(ref value: Vec<i64>) -> unit {}\n\
@@ -82,7 +82,7 @@ fn applications_discovered_only_in_bodies_use_the_same_deterministic_worklist() 
              var owner: shared Vec<T> = new Vec<T>(value);\n\
              var copied_owner: shared Vec<T> = new Vec<T>(copy inline);\n\
              var cast: T = (T) object;\n\
-             Factory<T>::borrow(cast);\n\
+             Factory<T>.borrow(cast);\n\
              return object is T;\n\
            }\n\
          }\n\
@@ -153,7 +153,7 @@ fn an_invalid_unused_generated_member_is_reported_at_the_application_and_templat
         "class Empty<T> { init() {} }\n\
          class Broken<T> {\n\
            init() {}\n\
-           fn unused() -> i64 { return Empty<T>::missing(); }\n\
+           fn unused() -> i64 { return Empty<T>.missing(); }\n\
          }\n\
          fn use(ref value: Broken<i64>) -> unit {}\n\
          fn main() -> i64 { return 0; }\n",

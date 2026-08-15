@@ -341,7 +341,7 @@ fn runtime_trace_location_native_function_values_keep_target_and_indirect_call_f
                 "  static fn fail() -> i64 { var zero: i64 = 0; return 1 / zero; }\n",
                 "}\n",
                 "fn invoke(callback: fn() -> i64) -> i64 { return callback(); }\n",
-                "fn main() -> i64 { return invoke(Failure<i64>::fail); }\n",
+                "fn main() -> i64 { return invoke(Failure<i64>.fail); }\n",
             ),
             "main::Failure<i64>.fail",
         ),

@@ -57,7 +57,7 @@ fn optional_array_shared_bound_inheritance_and_static_behavior_execute_natively(
         "  static last: T?;\n",
         "  values: T?[];\n",
         "  init(length: u64) { self.values = T?[](length); }\n",
-        "  mut fn put(index: i64, value: T?) -> unit { self.values[index] = value; Store<T>::last = value; }\n",
+        "  mut fn put(index: i64, value: T?) -> unit { self.values[index] = value; Store<T>.last = value; }\n",
         "}\n",
         "class Reader<T> where T: Ranked {\n",
         "  value: T;\n",
@@ -75,10 +75,10 @@ fn optional_array_shared_bound_inheritance_and_static_behavior_execute_natively(
         "  store.put(0, owner);\n",
         "  var missing: (shared Item)? = store.values[1];\n",
         "  if (missing is some) { return 1; }\n",
-        "  if (Store<shared Item>::last is none) { return 2; }\n",
+        "  if (Store<shared Item>.last is none) { return 2; }\n",
         "  var item: Item = Item(40);\n",
         "  var reader: LoudReader<Item> = LoudReader<Item>(item);\n",
-        "  return through_base(reader) + Store<shared Item>::last!->rank() - 39;\n",
+        "  return through_base(reader) + Store<shared Item>.last!->rank() - 39;\n",
         "}\n",
     );
     let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();

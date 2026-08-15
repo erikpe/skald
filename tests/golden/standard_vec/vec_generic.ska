@@ -51,7 +51,7 @@ fn exercise_primitives() -> unit {
     assert_eq_i64(values.pop(), 5);
 
     var copy: Vec<i64> = values;
-    var assigned: Vec<i64> = Vec<i64>::with_capacity(0u);
+    var assigned: Vec<i64> = Vec<i64>.with_capacity(0u);
     assigned = values;
     values.index_set(0, 10);
     copy.push(6);

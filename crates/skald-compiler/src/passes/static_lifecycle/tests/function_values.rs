@@ -179,15 +179,15 @@ fn same_signature_generic_targets_keep_independent_effect_nodes() {
         "class Cell<T> {
            static value: i64 = 1;
            init() {}
-           static fn read() -> i64 { return Cell<T>::value; }
+           static fn read() -> i64 { return Cell<T>.value; }
          }
          fn invoke(callback: fn() -> i64) -> i64 { return callback(); }
          fn retain() -> unit {
-           var first: fn() -> i64 = Cell<i64>::read;
-           var second: fn() -> i64 = Cell<bool>::read;
+           var first: fn() -> i64 = Cell<i64>.read;
+           var second: fn() -> i64 = Cell<bool>.read;
          }
          class State {
-           static result: i64 = invoke(Cell<i64>::read);
+           static result: i64 = invoke(Cell<i64>.read);
            init() {}
          }
          fn main() -> i64 { return State.result; }",

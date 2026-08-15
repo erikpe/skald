@@ -319,7 +319,7 @@ fn closed_generic_static_references_use_the_specialized_method_identity() {
         "class Identity<T> { static fn apply(value: T) -> T { return value; } }\n",
         "fn raw() -> unit { var callback: fn(i64) -> i64 = Identity.apply; }\n",
         "fn main() -> i64 {\n",
-        "  var callback: fn(i64) -> i64 = Identity<i64>::apply;\n",
+        "  var callback: fn(i64) -> i64 = Identity<i64>.apply;\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -347,7 +347,7 @@ fn imported_generic_static_references_close_in_the_defining_module() {
                 "app.ska",
                 "import dep;\n\
                  fn main() -> i64 {\n\
-                   var callback: fn(i64) -> i64 = dep::Identity<i64>::apply;\n\
+                   var callback: fn(i64) -> i64 = dep::Identity<i64>.apply;\n\
                    return 0;\n\
                  }\n",
             ),

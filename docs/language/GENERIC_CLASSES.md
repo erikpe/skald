@@ -344,7 +344,7 @@ Vec<Str>()
 Vec<Str>(copy source)
 new Vec<Str>()
 new Vec<Str>(copy source)
-Vec<Str>::factory(arguments)
+Vec<Str>.factory(arguments)
 ```
 
 Initializer overload resolution, access, allocation, publication, adoption,
@@ -354,9 +354,13 @@ or `new T()`, is not supported because the initial constraint model has no
 constructor requirement.
 
 Each closed application has independent class-owned static state. For example,
-`Cache<Str>::count` and `Cache<i64>::count` are distinct static fields with
+`Cache<Str>.count` and `Cache<i64>.count` are distinct static fields with
 independent initialization dependencies, activation, replacement, and
 shutdown.
+
+Static fields and methods use `.` after the complete application for reads,
+writes, calls, and function references. `::` remains the module-path
+separator, so a qualified selection is `storage::Cache<Str>.count`.
 
 A generic class may extend an ordinary class or parameter-bearing generic
 application, and an ordinary class may extend a closed application:
