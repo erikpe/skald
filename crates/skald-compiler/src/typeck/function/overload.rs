@@ -306,10 +306,9 @@ impl CallableChecker<'_, '_> {
                     .unwrap_or(Type::Unit)
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
-            // Function values have no HIR type until the program-level FVI1
-            // lowering gate is removed. This helper is unreachable for such
-            // programs, so retain the existing diagnostic sentinel.
-            ResolvedExpression::FunctionReference(_) => Type::Unit,
+            ResolvedExpression::FunctionReference(reference) => {
+                Type::Function(reference.function_type)
+            }
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
                 NumericLiteralKind::I64(_) => Type::I64,
                 NumericLiteralKind::U64(_) => Type::U64,
@@ -369,6 +368,12 @@ impl CallableChecker<'_, '_> {
                 .get(call.function)
                 .map(|declaration| lower_type(self.program, &declaration.return_type))
                 .expect("resolved direct call must reference a declaration"),
+            ResolvedExpression::IndirectCall(call) => self
+                .program
+                .function_types
+                .get(call.function_type)
+                .map(|signature| lower_type(self.program, &signature.result))
+                .expect("resolved indirect call must reference a canonical function type"),
             ResolvedExpression::StaticCall(call) => self
                 .program
                 .method(call.method)
@@ -490,6 +495,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Construct(_)
             | ResolvedExpression::StringLiteral(_)
             | ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::IndirectCall(_)
             | ResolvedExpression::StaticCall(_)
             | ResolvedExpression::MethodCall(_)
             | ResolvedExpression::InterfaceCall(_) => Some(ObjectArgument {

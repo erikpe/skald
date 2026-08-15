@@ -34,7 +34,7 @@ pub use ir::{
     HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldDeclaration,
     HirFieldPlace, HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
     HirFunctionDefinitionTable, HirFunctionLinkage, HirFunctionReference, HirFunctionType,
-    HirFunctionTypeParameter, HirFunctionTypeParameterMode, HirFunctionTypeTable,
+    HirFunctionTypeParameter, HirFunctionTypeParameterMode, HirFunctionTypeTable, HirIndirectCall,
     HirInitializerDeclaration, HirIntegerBitwiseOperation, HirIntegerDivisionFailure,
     HirIntegerDivisionKind, HirIntegerDivisionOperation, HirIntegerType, HirInterfaceCallTarget,
     HirInterfaceConformance, HirInterfaceDeclaration, HirInterfaceDeclarationTable,

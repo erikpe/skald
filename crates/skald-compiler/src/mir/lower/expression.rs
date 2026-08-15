@@ -13,6 +13,9 @@ impl BodyLowerer<'_> {
             HirExpressionKind::FunctionReference(_) => {
                 unreachable!("the driver rejects function values before MIR lowering")
             }
+            HirExpressionKind::IndirectCall(_) => {
+                unreachable!("the driver rejects indirect calls before MIR lowering")
+            }
             HirExpressionKind::Binding(binding) => Some(self.assign(
                 MirRvalueKind::Load(self.lower_binding_place(*binding)),
                 self.lower_type(expression.ty),

@@ -27,6 +27,7 @@ pub struct HirExpression {
 pub enum HirExpressionKind {
     Binding(BindingId),
     FunctionReference(HirFunctionReference),
+    IndirectCall(Box<HirIndirectCall>),
     I64(i64),
     U64(u64),
     U8(u8),
@@ -99,6 +100,50 @@ pub enum HirExpressionKind {
 pub struct HirFunctionReference {
     pub target: CallableId,
     pub function_type: FunctionTypeId,
+}
+
+/// One completely checked receiverless call through a capture-free function
+/// value. Field order records the semantic callee-before-arguments contract.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirIndirectCall {
+    pub callee: Box<HirExpression>,
+    pub function_type: FunctionTypeId,
+    pub arguments: Vec<HirCallArgument>,
+    pub result: Type,
+    pub span: Span,
+}
+
+impl HirIndirectCall {
+    pub fn new(
+        callee: HirExpression,
+        function_type: FunctionTypeId,
+        arguments: Vec<HirCallArgument>,
+        result: Type,
+        span: Span,
+    ) -> Self {
+        assert_eq!(
+            callee.ty,
+            Type::Function(function_type),
+            "indirect callee must have its declared canonical function type"
+        );
+        Self {
+            callee: Box::new(callee),
+            function_type,
+            arguments,
+            result,
+            span,
+        }
+    }
+
+    pub fn into_expression(self) -> HirExpression {
+        let ty = self.result;
+        let span = self.span;
+        HirExpression {
+            kind: HirExpressionKind::IndirectCall(Box::new(self)),
+            ty,
+            span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

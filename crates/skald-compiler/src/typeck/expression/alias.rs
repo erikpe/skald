@@ -637,6 +637,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Construct(_)
             | ResolvedExpression::StringLiteral(_)
             | ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::IndirectCall(_)
             | ResolvedExpression::StaticCall(_)
             | ResolvedExpression::MethodCall(_)
             | ResolvedExpression::InterfaceCall(_) => {
@@ -850,6 +851,7 @@ impl CallableChecker<'_, '_> {
                         expression,
                         ResolvedExpression::Allocation(_)
                             | ResolvedExpression::DirectCall(_)
+                            | ResolvedExpression::IndirectCall(_)
                             | ResolvedExpression::StaticCall(_)
                             | ResolvedExpression::MethodCall(_)
                             | ResolvedExpression::InterfaceCall(_)

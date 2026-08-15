@@ -26,6 +26,9 @@ impl BodyLowerer<'_> {
                 self.lower_construction(construction, destination);
             }
             HirObjectProducer::Call(call) => self.lower_object_call(call, destination),
+            HirObjectProducer::IndirectCall(_) => {
+                unreachable!("the driver rejects indirect calls before MIR lowering")
+            }
         }
     }
 

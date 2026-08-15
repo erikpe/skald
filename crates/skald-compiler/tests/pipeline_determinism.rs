@@ -1710,11 +1710,14 @@ fn complete_phase_dump(text: &str) -> String {
 fn function_value_specialization_phase_dump() -> String {
     let text = "class Factory<T> {\n\
                   callback: fn(T) -> T;\n\
+                  init(callback: fn(T) -> T) { self.callback = callback; }\n\
                   static fn identity(value: T) -> T { return value; }\n\
                 }\n\
                 fn main() -> i64 {\n\
                   var first: fn(i64) -> i64 = Factory<i64>::identity;\n\
                   var second: fn(bool) -> bool = Factory<bool>::identity;\n\
+                  var value: i64 = first(7);\n\
+                  if (second(true)) { return value; }\n\
                   return 0;\n\
                 }\n";
     let mut sources = SourceDatabase::new();
@@ -1731,14 +1734,15 @@ fn function_value_specialization_phase_dump() -> String {
         resolved.diagnostics
     );
     let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.has_errors());
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}TYPECHECK DIAGNOSTICS\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
-        render_diagnostics(&sources, &checked.diagnostics),
+        dump_hir(&hir),
     )
 }
 

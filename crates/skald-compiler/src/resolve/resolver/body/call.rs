@@ -449,6 +449,15 @@ impl CallableResolver<'_, '_> {
                 arguments,
                 span: call.span,
             }),
+            CallTarget::Indirect {
+                callee,
+                function_type,
+            } => ResolvedExpression::IndirectCall(Box::new(ResolvedIndirectCallExpr {
+                callee: Box::new(callee),
+                function_type,
+                arguments,
+                span: call.span,
+            })),
         })
     }
 
@@ -457,7 +466,7 @@ impl CallableResolver<'_, '_> {
         class: ClassId,
         selection: &syntax::GenericStaticSelectionExpr,
     ) -> Option<CallTarget> {
-        self.select_static_call_target(class, &selection.member)
+        self.select_static_call_target(class, &selection.member, selection.span)
     }
 
     fn resolve_array_length_call(
@@ -624,6 +633,10 @@ impl CallableResolver<'_, '_> {
             ResolvedExpression::FunctionReference(reference) => {
                 Some(ResolvedTypeKind::Function(reference.function_type))
             }
+            ResolvedExpression::IndirectCall(call) => self
+                .type_interner
+                .function(call.function_type)
+                .map(|signature| signature.result.kind),
             ResolvedExpression::DirectCall(call) => self
                 .environment
                 .functions
@@ -669,23 +682,24 @@ impl CallableResolver<'_, '_> {
             syntax::Expression::Identifier(identifier) => {
                 if !identifier.name.is_qualified() {
                     if let Some(binding) = self.lookup_binding(&identifier.name.text) {
-                        if matches!(binding.ty, ResolvedTypeKind::Function(_)) {
-                            self.report_indirect_call_gate(
-                                &identifier.name.text,
-                                identifier.span,
-                                binding.name_span,
+                        let ResolvedTypeKind::Function(function_type) = binding.ty else {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_CALL_TARGET,
+                                    format!("binding `{}` is not callable", identifier.name.text),
+                                )
+                                .with_primary_label(identifier.span, "called here")
+                                .with_secondary_label(binding.name_span, "binding declared here"),
                             );
                             return None;
-                        }
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_CALL_TARGET,
-                                format!("binding `{}` is not callable", identifier.name.text),
-                            )
-                            .with_primary_label(identifier.span, "called here")
-                            .with_secondary_label(binding.name_span, "binding declared here"),
-                        );
-                        return None;
+                        };
+                        return Some(CallTarget::Indirect {
+                            callee: ResolvedExpression::Binding(ResolvedBindingExpr {
+                                binding: binding.id,
+                                span: identifier.span,
+                            }),
+                            function_type,
+                        });
                     }
                 }
                 match self
@@ -774,7 +788,11 @@ impl CallableResolver<'_, '_> {
                 if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
                     match self.class_receiver(&member.receiver) {
                         ClassReceiver::Class(class) => {
-                            return self.select_static_call_target(class, &member.member);
+                            return self.select_static_call_target(
+                                class,
+                                &member.member,
+                                member.span,
+                            );
                         }
                         ClassReceiver::Diagnosed => return None,
                         ClassReceiver::NotClass => {}
@@ -860,13 +878,18 @@ impl CallableResolver<'_, '_> {
                             .get(field.class())
                             .and_then(|class| class.field(field))
                             .expect("member symbols must reference declaration metadata");
-                        if matches!(declaration.type_syntax.kind, ResolvedTypeKind::Function(_)) {
-                            self.report_indirect_call_gate(
-                                &declaration.name,
-                                member.member.span,
-                                declaration.name_span,
-                            );
-                            return None;
+                        if let ResolvedTypeKind::Function(function_type) =
+                            declaration.type_syntax.kind
+                        {
+                            return Some(CallTarget::Indirect {
+                                callee: ResolvedExpression::FieldAccess(ResolvedFieldAccessExpr {
+                                    receiver,
+                                    field,
+                                    member_span: member.member.span,
+                                    span: member.span,
+                                }),
+                                function_type,
+                            });
                         }
                         self.diagnostics.push(
                             Diagnostic::error(
@@ -889,16 +912,16 @@ impl CallableResolver<'_, '_> {
                     }
                 }
             }
-            _ => {
-                self.diagnostics.push(
-                    Diagnostic::error(INVALID_CALL_TARGET, "invalid call target")
-                        .with_primary_label(
-                            callee.span(),
-                            "expected a function, class, or ungrouped method selection",
-                        ),
-                );
+            syntax::Expression::Grouped(_) => {
+                self.report_parenthesized_call_target(callee.span());
                 None
             }
+            _ => self
+                .resolve_indirect_callee(callee)
+                .map(|(callee, function_type)| CallTarget::Indirect {
+                    callee,
+                    function_type,
+                }),
         }
     }
 
@@ -934,6 +957,7 @@ impl CallableResolver<'_, '_> {
         &mut self,
         class: ClassId,
         member: &syntax::Name,
+        selection_span: Span,
     ) -> Option<CallTarget> {
         let selected = self.select_member(class, member)?;
         match selected {
@@ -991,13 +1015,17 @@ impl CallableResolver<'_, '_> {
                     .get(field.class())
                     .and_then(|class| class.static_field(field))
                     .expect("member symbols must reference declaration metadata");
-                if matches!(declaration.type_syntax.kind, ResolvedTypeKind::Function(_)) {
-                    self.report_indirect_call_gate(
-                        &declaration.name,
-                        member.span,
-                        declaration.name_span,
-                    );
-                    return None;
+                if let ResolvedTypeKind::Function(function_type) = declaration.type_syntax.kind {
+                    return Some(CallTarget::Indirect {
+                        callee: ResolvedExpression::StaticFieldAccess(
+                            ResolvedStaticFieldAccessExpr {
+                                field,
+                                member_span: member.span,
+                                span: selection_span,
+                            },
+                        ),
+                        function_type,
+                    });
                 }
                 self.diagnostics.push(
                     Diagnostic::error(
@@ -1062,21 +1090,6 @@ impl CallableResolver<'_, '_> {
                 unreachable!("class-selected static fields are values")
             }
         }
-    }
-
-    fn report_indirect_call_gate(&mut self, name: &str, call_span: Span, declaration_span: Span) {
-        self.diagnostics.push(
-            Diagnostic::error(
-                INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED,
-                format!("indirect call through function value `{name}` is not resolved yet"),
-            )
-            .with_primary_label(
-                call_span,
-                "the function-valued callee is selected here instead of a declaration name",
-            )
-            .with_secondary_label(declaration_span, "function-valued binding declared here")
-            .with_note("indirect calls are enabled after stored function values"),
-        );
     }
 
     fn select_interface_call_target(
@@ -1356,6 +1369,10 @@ enum CallTarget {
         requirement: crate::identity::InterfaceRequirementId,
         receiver_span: Span,
         member_span: Span,
+    },
+    Indirect {
+        callee: ResolvedExpression,
+        function_type: FunctionTypeId,
     },
 }
 

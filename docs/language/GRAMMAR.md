@@ -237,9 +237,10 @@ parameters and results. The extension does not alter expression precedence:
 `(f)(argument)` remains an object-cast candidate. The compiler currently
 parses closed function types, assigns canonical resolved identities, and
 resolves eligible ordinary top-level and static-method names in value position
-to exact callable references. Type checking then reports the temporary
-lowering diagnostic before storage or execution; generic references and
-indirect calls have earlier explicit staging diagnostics.
+to exact callable references. Generic references, trivial storage, callable
+transport, and indirect calls through unambiguous function-typed expressions
+reach completely checked HIR. The driver reports the temporary lowering
+diagnostic before unsupported callable-address MIR or execution.
 
 Primitive type spellings remain reserved as declaration and binding names,
 but may identify a module namespace inside a module or qualified declaration

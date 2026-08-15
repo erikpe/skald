@@ -1254,6 +1254,22 @@ impl<'types> HirDumper<'types> {
                     }
                 });
             }
+            HirExpressionKind::IndirectCall(call) => {
+                self.typed_line(
+                    &format!("IndirectCall type {}", call.function_type),
+                    expression,
+                );
+                self.indented(|dumper| {
+                    dumper.heading("Callee");
+                    dumper.indented(|dumper| dumper.expression(&call.callee));
+                    dumper.heading("Arguments");
+                    dumper.indented(|dumper| {
+                        for argument in &call.arguments {
+                            dumper.call_argument(argument);
+                        }
+                    });
+                });
+            }
             HirExpressionKind::StaticCall { method, arguments } => {
                 self.typed_line(&format!("StaticCall {method}"), expression);
                 self.indented(|dumper| {
@@ -2502,6 +2518,26 @@ impl<'types> HirDumper<'types> {
                 self.construction(construction)
             }
             crate::hir::HirObjectProducer::Call(call) => self.object_call(call),
+            crate::hir::HirObjectProducer::IndirectCall(call) => {
+                self.line(
+                    &format!(
+                        "IndirectObjectCall type {} -> {}",
+                        call.function_type,
+                        call.result.name()
+                    ),
+                    call.span,
+                );
+                self.indented(|dumper| {
+                    dumper.heading("Callee");
+                    dumper.indented(|dumper| dumper.expression(&call.callee));
+                    dumper.heading("Arguments");
+                    dumper.indented(|dumper| {
+                        for argument in &call.arguments {
+                            dumper.call_argument(argument);
+                        }
+                    });
+                });
+            }
         }
     }
 

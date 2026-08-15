@@ -138,6 +138,7 @@ pub struct HirObjectInitialization {
 pub enum HirObjectProducer {
     Construct(HirConstruction),
     Call(HirObjectCall),
+    IndirectCall(Box<super::HirIndirectCall>),
     StringLiteral(super::HirStringLiteral),
 }
 
@@ -146,6 +147,10 @@ impl HirObjectProducer {
         match self {
             Self::Construct(construction) => construction.class,
             Self::Call(call) => call.class,
+            Self::IndirectCall(call) => match call.result {
+                super::Type::Class(class) => class,
+                _ => panic!("object-producing indirect call must have a class result"),
+            },
             Self::StringLiteral(literal) => literal.class,
         }
     }
@@ -154,6 +159,7 @@ impl HirObjectProducer {
         match self {
             Self::Construct(construction) => construction.span,
             Self::Call(call) => call.span,
+            Self::IndirectCall(call) => call.span,
             Self::StringLiteral(literal) => literal.span,
         }
     }

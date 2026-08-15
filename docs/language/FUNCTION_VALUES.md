@@ -1,14 +1,15 @@
 # Capture-Free Function Values
 
 Status: frozen design; syntax, canonical closed type identity, eligible
-ordinary callable-reference resolution, and stored/callable HIR are
-implemented behind a driver pre-MIR gate. The
+ordinary callable-reference resolution, stored/callable HIR, and indirect-call
+type checking are implemented behind a driver pre-MIR gate. The
 [status matrix](STATUS.md) is authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact accepted source shape. Function
 references can be inspected in resolved and HIR compiler output. Type checking
-supports the frozen storage, copying, assignment, and internal value
-parameter/result positions, but source compilation still stops before MIR;
-indirect calls and execution remain unavailable. The active
+supports the frozen storage, copying, assignment, internal value
+parameter/result positions, and indirect calls through every ordinary
+argument/result family, but source compilation still stops before MIR and
+native execution remains unavailable. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns delivery.
 
 This contract adds non-null, capture-free function values to Skald. A function
@@ -69,11 +70,11 @@ var ordinary: fn(i64) -> i64 = Math.increment;
 var specialized: fn(i64) -> i64 = Identity<i64>::apply;
 ```
 
-The current compiler resolves all four forms to an exact target and signature,
-records the target as address-taken, and then stops the program at type
-checking. Generic function signatures are closed recursively, so different
+The current compiler resolves all four forms to an exact target and signature
+and records the target as address-taken. Generic function signatures are closed recursively, so different
 specializations retain different method targets even when they share one
-canonical function type. No resolved reference is executable yet.
+canonical function type. References and indirect calls are represented in
+HIR but are not executable yet.
 
 The source name selects one exact callable identity and its canonical
 signature. An expected function type validates that selection but does not
@@ -149,6 +150,11 @@ Hooks.callback(value)
 choose_callback()(value)
 factory.produce().callback(value)
 ```
+
+The compiler now resolves and completely type-checks these forms. Calls
+through declaration names remain direct; calls through bindings, fields,
+static fields, returned values, and produced-object field chains become
+explicit receiverless indirect-call HIR.
 
 The callee expression evaluates exactly once before explicit arguments. Its
 value is secured in compiler-owned temporary storage; arguments then evaluate

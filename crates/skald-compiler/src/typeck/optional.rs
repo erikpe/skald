@@ -484,8 +484,8 @@ impl CallableChecker<'_, '_> {
             }
             if is_call_through_groups(source) && expression.ty == Type::Class(class) {
                 return Some(HirClassOptionalSource::Present(
-                    crate::hir::HirObjectSource::Produced(crate::hir::HirObjectProducer::Call(
-                        super::function::lower_object_call(expression, class),
+                    crate::hir::HirObjectSource::Produced(super::function::lower_object_call(
+                        expression, class,
                     )),
                 ));
             }
@@ -1022,6 +1022,7 @@ impl CallableChecker<'_, '_> {
 fn is_optional_producer(expression: &ResolvedExpression) -> bool {
     match expression {
         ResolvedExpression::DirectCall(_)
+        | ResolvedExpression::IndirectCall(_)
         | ResolvedExpression::StaticCall(_)
         | ResolvedExpression::MethodCall(_)
         | ResolvedExpression::InterfaceCall(_)

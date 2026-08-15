@@ -34,6 +34,7 @@ pub enum ResolvedExpression {
     ArrayConstruction(Box<ResolvedArrayConstructionExpr>),
     ArrayLength(Box<ResolvedArrayLengthExpr>),
     FunctionReference(super::ResolvedFunctionReferenceExpr),
+    IndirectCall(Box<ResolvedIndirectCallExpr>),
     DirectCall(ResolvedDirectCallExpr),
     StaticCall(ResolvedStaticCallExpr),
     Grouped(ResolvedGroupedExpr),
@@ -69,6 +70,7 @@ impl ResolvedExpression {
             Self::ArrayConstruction(expression) => expression.span,
             Self::ArrayLength(expression) => expression.span,
             Self::FunctionReference(expression) => expression.span,
+            Self::IndirectCall(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
             Self::StaticCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
@@ -80,6 +82,15 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+/// A receiverless call through one function-typed resolved callee.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedIndirectCallExpr {
+    pub callee: Box<ResolvedExpression>,
+    pub function_type: crate::identity::FunctionTypeId,
+    pub arguments: Vec<ResolvedExpression>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

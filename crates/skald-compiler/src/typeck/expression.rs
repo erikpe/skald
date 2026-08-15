@@ -4,8 +4,8 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{HirExpression, HirExpressionKind, Type},
     resolve::{
-        ResolvedExpression, ResolvedInterfaceParameter, ResolvedParameter,
-        ResolvedParameterBindingMode, ResolvedType,
+        ResolvedExpression, ResolvedFunctionTypeParameter, ResolvedFunctionTypeParameterMode,
+        ResolvedInterfaceParameter, ResolvedParameter, ResolvedParameterBindingMode, ResolvedType,
     },
     source::Span,
 };
@@ -21,6 +21,7 @@ mod bitwise;
 mod call;
 mod comparison;
 mod division;
+mod indirect_call;
 mod io;
 mod logical;
 mod object_view_relation;
@@ -68,6 +69,33 @@ impl CallParameter for ResolvedInterfaceParameter {
     }
 }
 
+impl CallParameter for ResolvedFunctionTypeParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode {
+        match self.mode {
+            ResolvedFunctionTypeParameterMode::Value => ResolvedParameterBindingMode::Value,
+            ResolvedFunctionTypeParameterMode::ReadOnlyAlias => {
+                ResolvedParameterBindingMode::ReadOnlyAlias {
+                    ref_span: self.span,
+                }
+            }
+            ResolvedFunctionTypeParameterMode::MutableAlias => {
+                ResolvedParameterBindingMode::MutableAlias {
+                    mut_span: self.span,
+                    ref_span: self.span,
+                }
+            }
+        }
+    }
+
+    fn type_syntax(&self) -> &ResolvedType {
+        &self.type_syntax
+    }
+
+    fn span(&self) -> Span {
+        self.span
+    }
+}
+
 impl CallableChecker<'_, '_> {
     pub(super) fn check_expression(
         &mut self,
@@ -108,6 +136,7 @@ impl CallableChecker<'_, '_> {
                 ty: Type::Function(reference.function_type),
                 span: reference.span,
             }),
+            ResolvedExpression::IndirectCall(call) => self.check_indirect_call(call),
             ResolvedExpression::NumericLiteral(literal) => self.check_numeric_literal(literal),
             ResolvedExpression::ByteLiteral(literal) => Some(HirExpression {
                 kind: HirExpressionKind::U8(literal.value),
@@ -251,6 +280,7 @@ pub(super) fn require_type(
 pub(super) fn is_call_through_groups(expression: &ResolvedExpression) -> bool {
     match expression {
         ResolvedExpression::DirectCall(_)
+        | ResolvedExpression::IndirectCall(_)
         | ResolvedExpression::StaticCall(_)
         | ResolvedExpression::MethodCall(_)
         | ResolvedExpression::InterfaceCall(_) => true,

@@ -43,12 +43,9 @@ impl CallableChecker<'_, '_> {
             ) {
                 return None;
             }
-            let call = lower_object_call(expression, class);
-            let span = call.span;
-            return Some(crate::hir::HirObjectDestinationInitialization::Direct {
-                producer: HirObjectProducer::Call(call),
-                span,
-            });
+            let producer = lower_object_call(expression, class);
+            let span = producer.span();
+            return Some(crate::hir::HirObjectDestinationInitialization::Direct { producer, span });
         }
 
         let source = self.check_object_source(initializer, class, context)?;
@@ -174,11 +171,11 @@ impl CallableChecker<'_, '_> {
             ) {
                 return None;
             }
-            let call = lower_object_call(expression, class);
+            let producer = lower_object_call(expression, class);
             return Some(HirLocalInitializer::Object(HirObjectInitialization {
                 destination,
-                span: call.span,
-                producer: HirObjectProducer::Call(call),
+                span: producer.span(),
+                producer,
                 elided_copy: None,
             }));
         }
@@ -409,9 +406,7 @@ impl CallableChecker<'_, '_> {
                 );
                 return None;
             };
-            let source = HirObjectSource::Produced(HirObjectProducer::Call(lower_object_call(
-                checked, actual,
-            )));
+            let source = HirObjectSource::Produced(lower_object_call(checked, actual));
             return self.convert_object_source(source, class, context);
         }
         let source = self
@@ -535,6 +530,14 @@ impl CallableChecker<'_, '_> {
                 .declarations
                 .get(call.function)
                 .and_then(|declaration| match declaration.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }),
+            crate::resolve::ResolvedExpression::IndirectCall(call) => self
+                .program
+                .function_types
+                .get(call.function_type)
+                .and_then(|signature| match signature.result.kind {
                     crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
                     _ => None,
                 }),
@@ -719,6 +722,7 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
 fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> bool {
     match expression {
         crate::resolve::ResolvedExpression::DirectCall(_)
+        | crate::resolve::ResolvedExpression::IndirectCall(_)
         | crate::resolve::ResolvedExpression::StaticCall(_)
         | crate::resolve::ResolvedExpression::MethodCall(_)
         | crate::resolve::ResolvedExpression::InterfaceCall(_) => true,
@@ -735,6 +739,7 @@ pub(in crate::typeck) fn is_ungrouped_object_call(
     matches!(
         expression,
         crate::resolve::ResolvedExpression::DirectCall(_)
+            | crate::resolve::ResolvedExpression::IndirectCall(_)
             | crate::resolve::ResolvedExpression::StaticCall(_)
             | crate::resolve::ResolvedExpression::MethodCall(_)
             | crate::resolve::ResolvedExpression::InterfaceCall(_)
@@ -756,48 +761,60 @@ fn construction_through_groups(
 pub(in crate::typeck) fn lower_object_call(
     expression: HirExpression,
     class: ClassId,
-) -> HirObjectCall {
+) -> HirObjectProducer {
     let span = expression.span;
     match expression.kind {
         HirExpressionKind::DirectCall {
             function,
             arguments,
-        } => HirObjectCall {
+        } => HirObjectProducer::Call(HirObjectCall {
             target: HirObjectCallTarget::Direct(function),
             arguments,
             class,
             span,
-        },
-        HirExpressionKind::StaticCall { method, arguments } => HirObjectCall {
-            target: HirObjectCallTarget::Static(method),
-            arguments,
-            class,
-            span,
-        },
+        }),
+        HirExpressionKind::StaticCall { method, arguments } => {
+            HirObjectProducer::Call(HirObjectCall {
+                target: HirObjectCallTarget::Static(method),
+                arguments,
+                class,
+                span,
+            })
+        }
         HirExpressionKind::MethodCall {
             receiver,
             target,
             arguments,
-        } => HirObjectCall {
+        } => HirObjectProducer::Call(HirObjectCall {
             target: HirObjectCallTarget::Method { receiver, target },
             arguments,
             class,
             span,
-        },
+        }),
         HirExpressionKind::InterfaceCall {
             receiver,
             target,
             arguments,
-        } => HirObjectCall {
+        } => HirObjectProducer::Call(HirObjectCall {
             target: HirObjectCallTarget::Interface { receiver, target },
             arguments,
             class,
             span,
-        },
+        }),
+        HirExpressionKind::IndirectCall(call) => {
+            debug_assert_eq!(call.result, Type::Class(class));
+            HirObjectProducer::IndirectCall(call)
+        }
         HirExpressionKind::Grouped(inner) => {
-            let mut call = lower_object_call(*inner, class);
-            call.span = span;
-            call
+            let mut producer = lower_object_call(*inner, class);
+            match &mut producer {
+                HirObjectProducer::Call(call) => call.span = span,
+                HirObjectProducer::IndirectCall(call) => call.span = span,
+                HirObjectProducer::Construct(_) | HirObjectProducer::StringLiteral(_) => {
+                    unreachable!("grouped call must remain a call producer")
+                }
+            }
+            producer
         }
         _ => unreachable!("syntactic object call must type-check as a call expression"),
     }

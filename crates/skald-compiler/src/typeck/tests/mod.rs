@@ -76,6 +76,14 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
                 assert_call_argument_is_fully_typed(argument);
             }
         }
+        HirExpressionKind::IndirectCall(call) => {
+            assert_eq!(call.callee.ty, Type::Function(call.function_type));
+            assert_eq!(call.result, expression.ty);
+            assert_eq!(call.span, expression.span);
+            for argument in &call.arguments {
+                assert_call_argument_is_fully_typed(argument);
+            }
+        }
         HirExpressionKind::MethodCall { arguments, .. } => {
             for argument in arguments {
                 assert_call_argument_is_fully_typed(argument);
@@ -187,6 +195,7 @@ mod floating_division;
 mod function_values;
 mod generic_classes;
 mod generic_object_model;
+mod indirect_calls;
 mod inline_fields;
 mod integer_division;
 mod interfaces;

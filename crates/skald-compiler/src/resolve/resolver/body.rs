@@ -15,6 +15,7 @@ use crate::{
 mod allocation;
 mod call;
 mod dereference;
+mod indirect_call;
 mod place;
 mod statement;
 mod structural_bracket;
@@ -663,6 +664,11 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 ))
             }
             syntax::Expression::ObjectCast(cast) => {
+                if self.is_grouped_function_value_cast(cast) {
+                    let _ = self.resolve_expression(&cast.source);
+                    self.report_grouped_function_value_call(cast);
+                    return None;
+                }
                 let source = self.resolve_expression(&cast.source);
                 let target = self.resolve_view_target(&cast.target);
                 match (source, target) {

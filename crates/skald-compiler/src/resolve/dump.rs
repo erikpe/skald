@@ -1322,6 +1322,22 @@ impl<'program> ResolvedDumper<'program> {
                     reference.span,
                 );
             }
+            ResolvedExpression::IndirectCall(call) => {
+                self.line(
+                    &format!("IndirectCall type {}", call.function_type),
+                    call.span,
+                );
+                self.indented(|dumper| {
+                    dumper.heading("Callee");
+                    dumper.indented(|dumper| dumper.expression(&call.callee));
+                    dumper.heading("Arguments");
+                    dumper.indented(|dumper| {
+                        for argument in &call.arguments {
+                            dumper.expression(argument);
+                        }
+                    });
+                });
+            }
             ResolvedExpression::StaticFieldAccess(access) => {
                 self.line(&format!("StaticFieldAccess {}", access.field), access.span);
             }

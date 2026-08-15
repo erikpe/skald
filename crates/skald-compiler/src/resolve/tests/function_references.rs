@@ -209,7 +209,7 @@ fn imported_qualified_and_selective_references_reuse_canonical_identity_and_acce
 }
 
 #[test]
-fn lexical_and_field_callees_shadow_declaration_names_and_hit_the_indirect_call_gate() {
+fn lexical_and_field_callees_shadow_declaration_names_with_explicit_indirect_calls() {
     let output = resolve_text(concat!(
         "fn target() -> i64 { return 1; }\n",
         "class Holder {\n",
@@ -224,25 +224,37 @@ fn lexical_and_field_callees_shadow_declaration_names_and_hit_the_indirect_call_
         "  return target();\n",
         "}\n",
     ));
-    assert_eq!(
-        output
-            .diagnostics
-            .iter()
-            .map(|diagnostic| diagnostic.code)
-            .collect::<Vec<_>>(),
-        [
-            INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED,
-            INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED,
-            INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED,
-            INDIRECT_FUNCTION_CALL_NOT_YET_SUPPORTED,
-        ]
-    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump.matches("IndirectCall type").count(), 4);
     assert_eq!(output.program.address_taken_callables.iter().len(), 1);
     assert!(output
         .program
         .address_taken_callables
         .get(CallableId::Function(FunctionId::new(0)))
         .is_some());
+}
+
+#[test]
+fn returned_non_callable_values_and_grouped_function_values_have_targeted_diagnostics() {
+    let output = resolve_text(concat!(
+        "fn number() -> i64 { return 1; }\n",
+        "fn invalid_expression() -> i64 { return number()(); }\n",
+        "fn invalid_group(callback: fn(i64) -> i64) -> i64 { return (callback)(1); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_CALL_TARGET)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 2, "{:?}", output.diagnostics);
+    assert!(diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.message == "expression is not callable"));
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.message == "parenthesized function-value calls are not supported"
+    }));
 }
 
 #[test]

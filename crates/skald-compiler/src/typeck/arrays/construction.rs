@@ -261,6 +261,7 @@ fn array_provenance(expression: &HirExpression) -> HirArrayProvenance {
         | HirExpressionKind::ArraySlice(_)
         | HirExpressionKind::OptionalArrayUnwrap(_)
         | HirExpressionKind::DirectCall { .. }
+        | HirExpressionKind::IndirectCall(_)
         | HirExpressionKind::StaticCall { .. }
         | HirExpressionKind::MethodCall { .. }
         | HirExpressionKind::InterfaceCall { .. } => HirArrayProvenance::Produced,

@@ -55,7 +55,7 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirComparisonOperand, HirComparisonPredicate,
-    HirCopyArgument, HirExpression, HirExpressionKind, HirFunctionReference,
+    HirCopyArgument, HirExpression, HirExpressionKind, HirFunctionReference, HirIndirectCall,
     HirIntegerBitwiseOperation, HirIntegerType, HirInterfaceCallTarget, HirInterfaceReceiver,
     HirLogicalExpression, HirLogicalOperation, HirMethodCallTarget, HirPrimitiveComparison,
     HirTypeTest, HirTypeTestKind, HirUnaryOperation,

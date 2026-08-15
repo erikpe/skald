@@ -161,6 +161,7 @@ impl CallableChecker<'_, '_> {
                 ))
             }
             ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::IndirectCall(_)
             | ResolvedExpression::StaticCall(_)
             | ResolvedExpression::MethodCall(_)
             | ResolvedExpression::InterfaceCall(_) => {
@@ -547,6 +548,16 @@ impl CallableChecker<'_, '_> {
                     }
                     _ => None,
                 }),
+            ResolvedExpression::IndirectCall(call) => self
+                .program
+                .function_types
+                .get(call.function_type)
+                .and_then(|signature| match signature.result.kind {
+                    crate::resolve::ResolvedTypeKind::Shared(target) => {
+                        Some(lower_shared_target(target))
+                    }
+                    _ => None,
+                }),
             ResolvedExpression::StaticCall(call) => {
                 self.program
                     .method(call.method)
@@ -632,6 +643,25 @@ impl CallableChecker<'_, '_> {
                     .get(call.function)?
                     .return_type
                     .kind
+            }
+            ResolvedExpression::IndirectCall(call) => {
+                return self
+                    .program
+                    .function_types
+                    .get(call.function_type)
+                    .and_then(|signature| match signature.result.kind {
+                        crate::resolve::ResolvedTypeKind::Optional(optional) => self
+                            .program
+                            .optional_types
+                            .get(optional)
+                            .and_then(|optional| match optional.payload.kind {
+                                crate::resolve::ResolvedTypeKind::Shared(target) => {
+                                    Some(lower_shared_target(target))
+                                }
+                                _ => None,
+                            }),
+                        _ => None,
+                    });
             }
             ResolvedExpression::StaticCall(call) => {
                 self.program.method(call.method)?.return_type.kind

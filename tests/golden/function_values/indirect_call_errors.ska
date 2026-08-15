@@ -1,0 +1,9 @@
+class Item { init() {} }
+
+fn invalid(callback: fn(i64, mut ref Item) -> i64, ref item: Item) -> i64 {
+    var wrong_arity: i64 = callback(1);
+    var wrong_type: i64 = callback(true, item);
+    return callback(1, item);
+}
+
+fn main() -> i64 { return 0; }

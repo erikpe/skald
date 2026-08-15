@@ -31,6 +31,13 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         | HirExpressionKind::StaticCall { arguments, .. } => {
             arguments.iter().any(call_argument_contains_control_effect)
         }
+        HirExpressionKind::IndirectCall(call) => {
+            expression_contains_control_effect(&call.callee)
+                || call
+                    .arguments
+                    .iter()
+                    .any(call_argument_contains_control_effect)
+        }
         HirExpressionKind::MethodCall {
             receiver,
             arguments,
@@ -302,6 +309,13 @@ fn producer_contains_control_effect(producer: &HirObjectProducer) -> bool {
                     .iter()
                     .any(call_argument_contains_control_effect)
         }
+        HirObjectProducer::IndirectCall(call) => {
+            expression_contains_control_effect(&call.callee)
+                || call
+                    .arguments
+                    .iter()
+                    .any(call_argument_contains_control_effect)
+        }
     }
 }
 
@@ -338,6 +352,7 @@ mod tests {
             HirIntegerDivisionOperation, HirIntegerType, HirLocalInitializer, HirPrimitiveCast,
             HirPrimitiveType, HirReturnValue, HirStatement, Type,
         },
+        identity::FunctionId,
         test_support::type_check_source,
     };
 
@@ -370,6 +385,36 @@ mod tests {
             )));
 
         assert!(expression_contains_control_effect(expression));
+    }
+
+    #[test]
+    fn indirect_calls_include_callee_then_argument_control_effects() {
+        let hir = type_check_source(concat!(
+            "fn identity(value: i64) -> i64 { return value; }\n",
+            "fn choose(value: i64) -> fn(i64) -> i64 { return identity; }\n",
+            "fn callee_effect(divisor: i64) -> i64 { return choose(8 / divisor)(1); }\n",
+            "fn argument_effect(callback: fn(i64) -> i64, divisor: i64) -> i64 {\n",
+            "  return callback(8 / divisor);\n",
+            "}\n",
+            "fn main() -> i64 { return callee_effect(1); }\n",
+        ))
+        .hir
+        .expect("indirect control-effect source must type check");
+
+        for function in [FunctionId::new(2), FunctionId::new(3)] {
+            let definition = hir.definitions.get(function).unwrap();
+            let HirStatement::Return(returned) = definition.body.statements.last().unwrap() else {
+                panic!("expected return statement");
+            };
+            let HirReturnValue::Scalar(expression) = returned.value.as_ref().unwrap() else {
+                panic!("expected scalar return");
+            };
+            assert!(matches!(
+                expression.kind,
+                HirExpressionKind::IndirectCall(_)
+            ));
+            assert!(expression_contains_control_effect(expression));
+        }
     }
 
     #[test]

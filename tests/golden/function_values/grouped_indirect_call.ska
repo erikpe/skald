@@ -1,0 +1,5 @@
+fn grouped(callback: fn(i64) -> i64) -> i64 {
+    return (callback)(1);
+}
+
+fn main() -> i64 { return 0; }

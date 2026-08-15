@@ -60,3 +60,28 @@ source = "malformed_function_type.ska"
 match = "starts-with"
 inline = """error[PAR002]: expected `ref` after `mut` in a function-type parameter
  --> tests/golden/function_values/malformed_function_type.ska:1:29"""
+
+[[test]]
+name = "indirect_call_diagnostics"
+mode = "compile-fail"
+source = "indirect_call_errors.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+matches = [
+  { name = "arity", match = "contains", inline = """error[TYP004]: function value expects 2 arguments but received 1
+ --> tests/golden/function_values/indirect_call_errors.ska:4:28""" },
+  { name = "type", match = "contains", inline = """error[TYP005]: call argument has type `bool` but `i64` is required
+ --> tests/golden/function_values/indirect_call_errors.ska:5:36""" },
+  { name = "alias mode", match = "contains", inline = """error[TYP021]: read-only access cannot satisfy a mutable alias parameter
+ --> tests/golden/function_values/indirect_call_errors.ska:5:42""" },
+]
+
+[[test]]
+name = "grouped_indirect_call"
+mode = "compile-fail"
+source = "grouped_indirect_call.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES004]: parenthesized function-value calls are not supported
+ --> tests/golden/function_values/grouped_indirect_call.ska:2:13"""

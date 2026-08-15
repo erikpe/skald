@@ -2,8 +2,8 @@
 
 Status: frozen compiler contract; syntax AST, canonical resolved and HIR
 `FunctionTypeId` metadata, exact ordinary reference nodes, address-taken
-metadata, and trivial stored/callable HIR implemented behind a driver
-pre-MIR gate. The source-visible contract is
+metadata, trivial stored/callable HIR, and completely checked indirect-call
+HIR implemented behind a driver pre-MIR gate. The source-visible contract is
 [Capture-Free Function Values](../language/FUNCTION_VALUES.md),
 the [status matrix](../language/STATUS.md) owns availability, and the active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns phase
@@ -14,9 +14,10 @@ bottom-up by exact modes and closed child types, and resolve accessible
 internal top-level functions and ordinary static methods to exact reference
 nodes. Resolution rejects excluded target families and records deterministic
 address-taken metadata. Type checking lowers canonical signature metadata,
-exact references, scalar storage, copying, assignments, and internal callable
-transport into HIR. The source driver then reports a structured diagnostic
-before unsupported MIR lowering.
+exact references, scalar storage, copying, assignments, internal callable
+transport, and receiverless indirect calls through the ordinary argument and
+result planners into HIR. The source driver then reports a structured
+diagnostic before unsupported MIR lowering.
 
 The completed pipeline will represent one capture-free function value as one exact,
 non-null internal callable address paired statically with a canonical complete
@@ -78,8 +79,8 @@ The implemented boundary admits ordinary top-level functions and ordinary or
 closed-specialization static methods. Template signatures close recursively,
 and a specialized static reference records the exact generated `MethodId`
 separately from its canonical signature. Function-valued bindings and fields
-shadow declaration names as callees, but their indirect calls remain
-explicitly gated until indirect-call HIR support.
+shadow declaration names as callees and resolve to explicit indirect-call
+nodes.
 
 Direct syntactic calls remain their existing direct or static call forms.
 Lexically shadowing function-valued bindings and calls through arbitrary
@@ -87,13 +88,18 @@ function-typed expressions resolve to explicit indirect calls. Resolution
 retains the callee expression rather than trying to infer a target from names
 or argument count.
 
-HIR now carries canonical function-type tables and checked references with
+HIR carries canonical function-type tables and checked references with
 their exact `CallableId` and `FunctionTypeId`. Function values use neutral
 scalar initialization, load, store, assignment, field, static, parameter, and
 return operations. Synthesized object copying records function fields as
 scalar fields, and destruction plans add no cleanup step. Primitive aliases,
-casts, comparisons, and diagnostics remain primitive-only. Indirect-call HIR
-is the next staged boundary.
+casts, comparisons, and diagnostics remain primitive-only.
+
+Indirect-call HIR records the checked callee expression first, its exact
+`FunctionTypeId`, ordinary checked arguments, exact result, and complete span.
+It has no receiver carrier. The same node remains an object producer for
+caller-owned class results, while arrays, optionals, shared owners, aliases,
+and function-valued results retain their ordinary plans.
 
 Indirect-call checking uses the canonical signature and the ordinary argument
 and result planners. Alias modes, aggregate destinations, shared-owner

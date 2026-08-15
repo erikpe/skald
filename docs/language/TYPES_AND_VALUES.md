@@ -146,6 +146,7 @@ The implemented expression families have these value effects:
 | grouping | The inner expression's type and value; grouping remains source-significant for the limited object materialization rules. |
 | primitive field selection | The field's stored primitive value, including a read from an eligible hidden exact-class produced root. |
 | direct function call | The declared primitive or `unit` result; an exact-class result is an object producer restricted to object contexts. |
+| indirect function-value call | The exact result of the callee's canonical function type, consumed through the same scalar, object, array, optional, or shared-owner context as a direct call. |
 | method call | The declared primitive or `unit` result; an exact-class result has the same object-context restriction. |
 | shared dereference | A bounded non-owning class, interface, or `Obj` place selected from a `shared T` owner; it does not copy or transfer ownership. |
 | unary or binary arithmetic | A value of the operand type under the rules below. |
@@ -153,16 +154,15 @@ The implemented expression families have these value effects:
 
 Using a complete class binding, `self`, or class-typed field as an ordinary
 scalar expression is an error. Those forms can still be valid object places in
-the contexts described above. Calls through arbitrary expression values are
-not implemented. Resolution recognizes function-valued callees for shadowing
-and diagnoses their staged indirect-call boundary, while ordinary named
-function and static-method calls retain their direct forms. Eligible ordinary
-callable names in value position produce resolved and typed HIR references.
-HIR admits non-null trivial function values in explicitly initialized locals,
-fields and statics, scalar assignment, synthesized object copying, and exact
-internal value parameter/result positions. The source driver still stops
-before MIR, so none of these forms execute yet. Their recursive type and
-non-null value behavior is frozen in
+the contexts described above. Ordinary named function and static-method calls
+retain direct forms; calls through function-typed bindings, fields, returned
+values, and other unambiguous postfix expressions resolve and type as explicit
+receiverless indirect calls. HIR admits non-null trivial function values in
+explicitly initialized locals, fields and statics, scalar assignment,
+synthesized object copying, and exact internal value parameter/result
+positions. Indirect-call HIR reuses every ordinary argument and result plan.
+The source driver still stops before MIR, so none of these forms execute yet.
+Their recursive type and non-null value behavior is frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md).
 
 Prefix `*owner` explicitly selects the object place behind a `shared T`
@@ -744,8 +744,8 @@ literal-lowering strategy is a language guarantee.
 
 Function values are staged behind a driver pre-MIR gate. Exact recursive
 types, eligible ordinary and closed-generic references, specialization-time
-generic composition, and stored/callable HIR are implemented; indirect calls
-and execution remain unavailable. Their non-null trivial-scalar design and
+generic composition, stored/callable HIR, and completely checked indirect-call
+HIR are implemented; MIR lowering and execution remain unavailable. Their non-null trivial-scalar design and
 initial exclusions are frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md). Shared ownership's
 implemented non-null value type, compatible views, and copy/adopt/release

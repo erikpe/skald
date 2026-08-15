@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI3 implemented, FVI4 is next.
+Status: in progress; FVI4 implemented, FVI5 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -50,7 +50,7 @@ below implement those decisions without reopening them.
 - [x] FVI1 — Resolve eligible callable references and frozen exclusions
 - [x] FVI2 — Close function types and references during generic specialization
 - [x] FVI3 — Integrate trivial function values with stored and callable HIR
-- [ ] FVI4 — Type indirect calls through the complete internal signature
+- [x] FVI4 — Type indirect calls through the complete internal signature
 - [ ] FVI5 — Lower and verify callable addresses and indirect MIR calls
 - [ ] FVI6 — Realize code pointers and indirect calls on x86-64
 - [ ] FVI7 — Make indirect calls sound for static effects, retention, and traces
@@ -204,22 +204,22 @@ signature boundaries are exact, and no source reaches unsupported MIR.
 **Purpose:** Select one indirect-call HIR form while reusing the ordinary
 argument/result planners and exact evaluation contract.
 
-- [ ] Resolve and type calls whose arbitrary callee expression has a function
+- [x] Resolve and type calls whose arbitrary callee expression has a function
       type, including bindings, instance/static fields, returned values, and
       produced-object field chains.
-- [ ] Add explicit indirect-call HIR containing the checked callee expression,
+- [x] Add explicit indirect-call HIR containing the checked callee expression,
       canonical signature, ordinary checked arguments, exact result, and
       complete span; it has no receiver carrier.
-- [ ] Evaluate the callee semantically once before explicit left-to-right
+- [x] Evaluate the callee semantically once before explicit left-to-right
       arguments, and preserve direct/static call forms for declaration-name
       callees.
-- [ ] Reuse ordinary value/alias argument checking, object and array
+- [x] Reuse ordinary value/alias argument checking, object and array
       copy/adoption, optional and shared-owner transfer, caller-owned aggregate
       destinations, function-valued results, and result securing.
-- [ ] Diagnose non-callable expressions, exact arity/type/mode failures, and
+- [x] Diagnose non-callable expressions, exact arity/type/mode failures, and
       excluded grouped-call ambiguity without inferring a target or receiver
       from argument count.
-- [ ] Extend control-effect analysis and HIR dumps for effectful callee
+- [x] Extend control-effect analysis and HIR dumps for effectful callee
       expressions, argument failures, nested indirect calls, and results while
       retaining the explicit pre-MIR execution gate.
 
