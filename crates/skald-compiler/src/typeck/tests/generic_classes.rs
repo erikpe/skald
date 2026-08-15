@@ -193,6 +193,49 @@ fn specialized_fields_select_complete_copy_and_destruction_plans() {
 }
 
 #[test]
+fn explicit_generic_copy_bodies_initialize_array_specializations_and_assign_live_fields() {
+    let hir = check_generic_source(
+        "class Box<T> {\n\
+           value: T;\n\
+           init(value: T) { self.value = value; }\n\
+           copy(ref source: Box<T>) { self.value = source.value; }\n\
+           assign(ref source: Box<T>) { self.value = source.value; }\n\
+         }\n\
+         fn inspect(ref value: Box<i64[]>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let boxed_array = hir
+        .classes
+        .iter()
+        .find(|class| class.name.starts_with("Box<"))
+        .expect("the closed generic class must be present");
+    let copy_constructor = boxed_array
+        .copy_constructor_declaration
+        .as_ref()
+        .expect("the explicit copy constructor must be specialized");
+    let copy_assignment = boxed_array
+        .copy_assignment_declaration
+        .as_ref()
+        .expect("the explicit copy assignment must be specialized");
+
+    assert!(matches!(
+        hir.member_definition(copy_constructor.id.into())
+            .expect("the specialized copy constructor must have a body")
+            .body
+            .statements[0],
+        HirStatement::ArrayFieldInitialize(_)
+    ));
+    assert!(matches!(
+        hir.member_definition(copy_assignment.id.into())
+            .expect("the specialized copy assignment must have a body")
+            .body
+            .statements[0],
+        HirStatement::ArrayAssignment(_)
+    ));
+}
+
+#[test]
 fn vector_storage_composes_optional_arrays_with_every_owning_argument_family() {
     let hir = check_generic_source(
         "interface View { fn read() -> i64; }\n\

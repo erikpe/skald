@@ -148,6 +148,7 @@ Resolved generic-class design inputs:
 Resolved generic-class follow-ups:
 
 - [generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md)
+- [generic array copy lifecycle discovery](GENERIC_ARRAY_COPY_LIFECYCLE_DISCOVERY.md)
 
 Resolved shared-optional-box follow-ups:
 

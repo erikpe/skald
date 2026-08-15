@@ -28,11 +28,7 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-[Generic array copy lifecycle](GENERIC_ARRAY_COPY_LIFECYCLE_DISCOVERY.md)
-records an internal MIR failure when an explicit generic copy body initializes
-a type-parameter field specialized to an array. Synthesized lifecycle remains
-the current workaround; the eventual fix belongs to generic-class lifecycle
-lowering rather than structural indexing.
+No implementation discoveries are currently pending.
 
 ## Implementation baseline
 

@@ -1,0 +1,109 @@
+class Item {
+    static destroyed: i64;
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Item) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+
+    destroy {
+        Item.destroyed = Item.destroyed + 1;
+    }
+}
+
+class Box<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    copy(ref source: Box<T>) {
+        self.value = source.value;
+    }
+
+    assign(ref source: Box<T>) {
+        self.value = source.value;
+    }
+}
+
+fn exercise_primitive_arrays() -> bool {
+    var original: Box<i64[]> = Box<i64[]>(i64[]{1, 2});
+    var copied: Box<i64[]> = original;
+    copied.value[0] = 9;
+    if (original.value[0] != 1 || copied.value[0] != 9) {
+        return false;
+    }
+
+    var replacement: Box<i64[]> = Box<i64[]>(i64[]{3, 4});
+    copied = replacement;
+    replacement.value[0] = 8;
+    return copied.value[0] == 3 && replacement.value[0] == 8;
+}
+
+fn exercise_owning_arrays() -> bool {
+    var original: Box<Item[]> = Box<Item[]>(Item[]{Item(10), Item(11)});
+    var copied: Box<Item[]> = original;
+    copied.value[0] = Item(19);
+    if (original.value[0].value != 10 || copied.value[0].value != 19) {
+        return false;
+    }
+
+    var replacement: Box<Item[]> = Box<Item[]>(Item[]{Item(20), Item(21)});
+    copied = replacement;
+    replacement.value[0] = Item(29);
+    return copied.value[0].value == 20 && replacement.value[0].value == 29;
+}
+
+fn exercise_optional_arrays() -> bool {
+    var present: i64[]? = i64[]{30, 31};
+    var original: Box<i64[]?> = Box<i64[]?>(present);
+    var copied: Box<i64[]?> = original;
+    if (copied.value is none || copied.value![1] != 31) {
+        return false;
+    }
+
+    var absent: i64[]? = none;
+    var replacement: Box<i64[]?> = Box<i64[]?>(absent);
+    copied = replacement;
+    return original.value is some && copied.value is none;
+}
+
+fn exercise_nested_generics() -> bool {
+    var original: Box<Box<i64[]>> = Box<Box<i64[]>>(Box<i64[]>(i64[]{40}));
+    var copied: Box<Box<i64[]>> = original;
+    copied.value.value[0] = 49;
+    if (original.value.value[0] != 40 || copied.value.value[0] != 49) {
+        return false;
+    }
+
+    var replacement: Box<Box<i64[]>> = Box<Box<i64[]>>(Box<i64[]>(i64[]{50}));
+    copied = replacement;
+    replacement.value.value[0] = 59;
+    return copied.value.value[0] == 50 && replacement.value.value[0] == 59;
+}
+
+fn main() -> i64 {
+    if (!exercise_primitive_arrays()) {
+        return 1;
+    }
+    var destroyed_before: i64 = Item.destroyed;
+    if (!exercise_owning_arrays() || Item.destroyed <= destroyed_before) {
+        return 2;
+    }
+    if (!exercise_optional_arrays()) {
+        return 3;
+    }
+    if (!exercise_nested_generics()) {
+        return 4;
+    }
+    return 42;
+}

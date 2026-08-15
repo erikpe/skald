@@ -7,4 +7,6 @@ template privacy at their respective source contexts.
 Native cases exercise the public compiler and runtime path for closed
 construction, copy and assignment, cleanup, optional arrays, shared owners,
 per-application statics, bound-selected interface dispatch, checked failure,
-and definition/application module separation.
+and definition/application module separation. Explicit generic copy lifecycle
+additionally covers array-specialized fields across primitive, owning-element,
+optional-array, and recursively nested generic values.

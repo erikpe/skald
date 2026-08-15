@@ -33,7 +33,7 @@ impl CallableChecker<'_, '_> {
         }
 
         let hir = match (target.ty, body_kind) {
-            (Type::Array(array), MemberBodyKind::OrdinaryInitializer) => self
+            (Type::Array(array), body_kind) if body_kind.initializes_receiver() => self
                 .check_array_initialize(array, &assignment.value, "array field initializer")
                 .map(|value| {
                     HirStatement::ArrayFieldInitialize(crate::hir::HirArrayFieldInitialize {

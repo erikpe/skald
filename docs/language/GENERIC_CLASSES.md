@@ -239,6 +239,14 @@ make a closed class invalid. It becomes an error when some declaration or body
 operation requires that capability, following the ordinary
 [class lifecycle contract](CLASSES_AND_LIFECYCLE.md#copy-capabilities).
 
+Explicit generic copy lifecycle is checked after specialization with the same
+destination-state rules as a hand-written closed class. In a `copy` body, an
+assignment to a substituted array, optional, owner, or nested owning field
+initializes that previously uninitialized field. The corresponding statement
+in an `assign` body replaces an already-live value. Array-specialized fields
+therefore deep-copy their backing and element lifecycle during construction,
+then use ordinary secure array replacement during assignment.
+
 ## Explicit interface constraints
 
 Nominal behavior is expressed with a class-level `where` clause:

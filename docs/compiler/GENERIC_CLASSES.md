@@ -294,6 +294,14 @@ computed for every closed class. HIR and MIR dispatch remain class, virtual,
 or interface dispatch over existing identities without runtime generic
 witness dictionaries.
 
+Lifecycle-body typing also consumes only the closed field type and the
+callable's ordinary destination state. A field assignment in an explicit copy
+constructor emits initialization HIR for every owning field family, including
+an array obtained by substituting a type parameter; the same source statement
+in an explicit copy-assignment body emits replacement HIR. MIR lowering and
+verification therefore receive the same live-state transitions as equivalent
+non-generic lifecycle bodies.
+
 ## Phase products and trust boundaries
 
 The target-independent path becomes:

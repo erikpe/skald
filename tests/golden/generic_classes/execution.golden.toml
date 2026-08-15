@@ -11,6 +11,16 @@ name = "construction_copy_assignment_cleanup_optional_array_shared_static_and_di
 expect = { exit = 42 }
 
 [[test]]
+name = "explicit_array_copy_lifecycle"
+mode = "run"
+source = "explicit_array_copy_lifecycle.ska"
+compiler_args = ["--no-stdlib"]
+
+[[test.run]]
+name = "primitive_owning_optional_and_nested_specializations"
+expect = { exit = 42 }
+
+[[test]]
 name = "native_bounds_failure"
 mode = "run"
 source = "native_bounds_failure.ska"
