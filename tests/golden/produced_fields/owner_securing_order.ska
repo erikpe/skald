@@ -1,0 +1,40 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Holder {
+    owner: shared Item;
+
+    init(owner: shared Item) {
+        self.owner = owner;
+    }
+}
+
+fn produce(owner: shared Item) -> Holder {
+    return Holder(owner);
+}
+
+fn replace(mut ref holder: Holder) -> i64 {
+    holder.owner = new Item(20);
+    return holder.owner->read();
+}
+
+fn observe(ref item: Item, later: i64) -> i64 {
+    return item.read() + later;
+}
+
+fn main() -> i64 {
+    var holder: Holder = Holder(new Item(1));
+    var observed: i64 = observe(*produce(holder.owner).owner, replace(holder));
+
+    holder.owner = produce(holder.owner).owner;
+    return observed + holder.owner->read();
+}

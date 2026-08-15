@@ -1,6 +1,6 @@
 # Produced-Object Field Reads Roadmap
 
-Status: in progress; PFR3 is next.
+Status: in progress; PFR4 is next.
 
 This roadmap lets an expression that produces one exact inline class expose
 its fields directly without a source-level staging local. It makes
@@ -67,7 +67,7 @@ or immediate consumer has been secured.
 - [x] PFR0 — Freeze the produced-field read contract
 - [x] PFR1 — Admit produced roots and nested field projections in resolution
 - [x] PFR2 — Type and lower primitive and inline-object field consumers
-- [ ] PFR3 — Secure owning and guarded field categories
+- [x] PFR3 — Secure owning and guarded field categories
 - [ ] PFR4 — Verify lifetime, control flow, and rejection boundaries
 - [ ] PFR5 — Prove native composition and publish the feature
 
@@ -214,22 +214,22 @@ pass.
 field type surface without allowing the produced root to die before an owning
 or guarded field consumer is safe.
 
-- [ ] Route primitive and class optional fields through existing presence,
+- [x] Route primitive and class optional fields through existing presence,
       unwrap, copy, assignment, argument, and result machinery while keeping
       the produced root live through every bounded payload consumer.
-- [ ] Route inline array, shared array, optional shared array, and inline-array
+- [x] Route inline array, shared array, optional shared array, and inline-array
       fields through their existing receiver, anchor, alias, slice, element,
       deep-copy, transfer, and result semantics.
-- [ ] Route shared and optional-shared object fields through ordinary secure
+- [x] Route shared and optional-shared object fields through ordinary secure
       owner copies, produced/replaceable-field anchors, explicit dereference,
       casts, and optional-box guards before releasing the produced root.
-- [ ] Prove that a copied or transferred field result outlives root cleanup,
+- [x] Prove that a copied or transferred field result outlives root cleanup,
       while a borrowed field or payload view remains bounded by its immediate
       consumer and cannot escape.
-- [ ] Preserve source order when field securing itself allocates, retains,
+- [x] Preserve source order when field securing itself allocates, retains,
       copies, checks, calls lifecycle code, or fails; do not reload or
       re-evaluate the producer for sizing, applicability, or lowering.
-- [ ] Reuse existing typed source and MIR owner categories. Factor a helper
+- [x] Reuse existing typed source and MIR owner categories. Factor a helper
       only where produced-view field sources expose a repeated responsibility;
       do not create one helper per field type.
 
@@ -243,6 +243,20 @@ dumps; then `make check` and `make msrv-check`.
 ordinary secured/guarded consumer path from a produced root or retains a
 documented family-specific rejection; no owner, backing, payload view, or
 inline subobject is used after root cleanup.
+
+Completed 2026-08-15. Primitive, class, nested, and array optional fields;
+inline and recursively nested arrays; shared and optional-shared arrays;
+shared and optional-shared objects; and shared optional boxes now retain their
+ordinary typed copy, assignment, argument/result, alias, slice, anchor,
+explicit-dereference, cast, guard, and transfer paths over one produced root.
+Independent results are secured before root cleanup, while payload views and
+anchors remain bounded by their consumer. Optional-box field sources now
+correctly treat an explicitly crossed anchored owning edge as shallow, and HIR
+dumps handle shared fields without fake inspection places. Focused deterministic
+HIR/MIR and native tests cover named equivalence, allocation-capable paths,
+later-argument replacement, legal self-overlap, and reverse guard/anchor
+cleanup. `make check`, `make msrv-check`, documentation validation, and diff
+hygiene pass.
 
 ### PFR4 — Verify lifetime, control flow, and rejection boundaries
 

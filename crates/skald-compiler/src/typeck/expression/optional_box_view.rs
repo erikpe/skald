@@ -57,11 +57,13 @@ impl CallableChecker<'_, '_> {
             HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
                 self.binding_access(*binding, false, unwrap.span)?
             }
-            HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => place.receiver.access(),
-            HirSharedSource::Place(HirSharedPlace::ArrayElement { place, .. }) => {
-                place.receiver.access
-            }
-            HirSharedSource::Place(HirSharedPlace::Static { .. })
+            // Every non-binding source is first secured in an owned anchor.
+            // Access to the containing handle is shallow: after the explicit
+            // owning edge, the published optional wrapper stays immutable but
+            // its present object keeps ordinary mutable pointee access.
+            HirSharedSource::Place(HirSharedPlace::Field { .. })
+            | HirSharedSource::Place(HirSharedPlace::ArrayElement { .. })
+            | HirSharedSource::Place(HirSharedPlace::Static { .. })
             | HirSharedSource::Produced(_) => HirAccess::Mutable,
         };
         Some(HirOptionalBoxObjectView {

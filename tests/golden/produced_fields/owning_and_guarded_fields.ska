@@ -1,0 +1,65 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Bundle {
+    primitive: i64?;
+    item: Item?;
+    values: i64[];
+    maybe_values: i64[]?;
+    matrix: i64[][];
+    shared_values: shared i64[];
+    maybe_shared_values: (shared i64[])?;
+    owner: shared Item;
+    maybe_owner: (shared Item)?;
+    box: shared Item?;
+    items: Item?[];
+
+    init(value: i64) {
+        self.primitive = some(value);
+        self.item = some(Item(value));
+        self.values = i64[]{value};
+        self.maybe_values = some(i64[]{value});
+        self.matrix = i64[][]{i64[]{value}};
+        self.shared_values = new i64[]{value};
+        self.maybe_shared_values = some(new i64[]{value});
+        self.owner = new Item(value);
+        self.maybe_owner = some(new Item(value));
+        self.box = new Item?(Item(value));
+        self.items = Item?[]{some(Item(value))};
+    }
+}
+
+fn main() -> i64 {
+    var primitive: i64? = Bundle(1).primitive;
+    var item: Item? = Bundle(2).item;
+    var values: i64[] = Bundle(3).values;
+    var shared_values: shared i64[] = Bundle(4).shared_values;
+    var maybe_shared_values: (shared i64[])? = Bundle(5).maybe_shared_values;
+    var owner: shared Item = Bundle(6).owner;
+    var maybe_owner: (shared Item)? = Bundle(7).maybe_owner;
+    var box: shared Item? = Bundle(8).box;
+    var items: Item?[] = Bundle(6).items;
+    var maybe_values: i64[]? = Bundle(0).maybe_values;
+    var matrix: i64[][] = Bundle(0).matrix;
+
+    return primitive!
+        + item!.read()
+        + values[0]
+        + shared_values->[0]
+        + maybe_shared_values!->[0]
+        + owner->read()
+        + maybe_owner!->read()
+        + (*box)!.read()
+        + items[0]!.read()
+        + maybe_values![0]
+        + matrix[0][0];
+}

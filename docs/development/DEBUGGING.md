@@ -243,14 +243,15 @@ field projections; the final field remains on `FieldAccess`. A produced field
 assignment crosses the same representation and must fail through the ordinary
 read-only access diagnostic. The
 [frozen field-read representation](../compiler/PHASES_AND_IR.md#frozen-produced-object-field-read-representation)
-reuses the same produced `View`: for primitive and exact inline-class
-endpoints, HIR contains an ordinary field place with read-only produced
-provenance and no inspection binding, while MIR materializes one `temporary`,
-projects the field, and secures the consumer before `end-full-expression`. A second producer
+reuses the same produced `View`: HIR contains an ordinary field place with
+read-only produced provenance and no inspection binding, nested beneath the
+existing optional, array, shared-owner, optional-box, alias, or copy carrier
+when required. MIR materializes one `temporary`, projects the field, and
+secures the consumer before `end-full-expression`. A second producer
 evaluation, fake source binding, mutable view, field use after cleanup, or
-field-specific backend instruction indicates a compiler defect. Optional,
-array, and shared-owner endpoints still require a staging local until their
-type-specific securing phases are implemented.
+field-specific backend instruction indicates a compiler defect. For owning
+edges, confirm that the ordinary copy, retain, array anchor, optional view, or
+optional-box guard completes before root cleanup.
 
 For an explicitly dereferenced shared receiver or alias argument, HIR
 distinguishes a stable `SharedPointee` from an `AnchoredSharedPointee` and

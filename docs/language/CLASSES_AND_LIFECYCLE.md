@@ -239,9 +239,11 @@ The implemented extension does not turn arbitrary expressions into object
 places. The compiler accepts read-only method calls and primitive or exact
 inline-class field reads through the ordinary produced-object temporary path.
 An inline-class field may immediately feed the existing read-only receiver,
-`ref`, checked-view, and owning-copy consumers. Field writes and mutable
-methods remain outside the executable boundary, as do optional, array, and
-shared-owner field endpoints pending their type-specific securing work.
+`ref`, checked-view, and owning-copy consumers. Optional, array, shared-owner,
+optional-owner, and optional-box fields reuse their ordinary guarded or owning
+consumers. Field writes and mutable methods on the inline produced root remain
+outside the executable boundary; explicitly crossing a shared owning edge
+retains the separate pointee's ordinary access.
 
 The frozen, partially implemented
 [produced-object field-read contract](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
@@ -260,10 +262,9 @@ direct or nested write, mutable method, `mut ref`, whole-object replacement,
 or escaping alias. Declaring-class privacy, inherited lookup, field identity,
 and finite containment are unchanged. Resolution retains this read-only root
 and its canonical projections, including write-shaped paths that later receive
-the ordinary read-only access diagnostic. Primitive and exact inline-class
-endpoints have typed, verified, executable support. The owning and guarded
-endpoint categories remain staged, so those categories still require a named
-local.
+the ordinary read-only access diagnostic. Every implemented readable field
+category has typed, verified, executable support through its existing value,
+copy, transfer, anchor, guard, alias, and result machinery.
 
 For example, in `root.branch.leaf.value`, `root` is the root place,
 `branch` and `leaf` select complete inline subobjects, and `value` selects the

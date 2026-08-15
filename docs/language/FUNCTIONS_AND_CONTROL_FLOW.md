@@ -160,10 +160,11 @@ boundary.
 ### Frozen produced-object field reads
 
 The source-visible contract for reading fields from a produced exact-class
-object is frozen. Primitive endpoints and exact inline-class endpoints are
-implemented through verified MIR and native execution; owning and guarded
-optional, array, and shared-owner endpoints remain staged. The implemented
-slice accepts the same producer families as the method-receiver rule,
+object is frozen. Every implemented readable field category is typed through
+verified MIR and native execution: primitives, exact inline classes,
+optionals, inline arrays, shared and optional-shared owners, shared arrays,
+and optional boxes. The implemented slice accepts the same producer families
+as the method-receiver rule,
 including a class result
 from structural indexing or slicing after that getter has become an ordinary
 exact-class call result. Grouping and closed generic specialization do not
@@ -210,9 +211,10 @@ selected field. Type checking represents primitive reads as ordinary field
 places over one read-only produced view, with no inspection binding. Exact
 inline-class fields may immediately feed read-only methods, `ref`, checked
 views, explicit copies, owning arguments, assignment sources, and return
-copies. Lowering materializes the root once and reuses ordinary load, alias,
-dispatch, and copy paths before root cleanup. A named local remains required
-for the still-staged optional, array, and shared-owner endpoint categories.
+copies. Optional, array, shared-owner, and optional-box fields enter their
+ordinary typed copy, transfer, alias, anchor, guard, and result paths.
+Lowering materializes the root once and secures every independent result or
+bounded view before reverse full-expression cleanup.
 
 ## Lexical scopes and locals
 

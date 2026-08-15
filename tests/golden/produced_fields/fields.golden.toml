@@ -8,3 +8,30 @@ source = "primitive_and_inline_consumers.ska"
 [[test.run]]
 name = "direct_nested_method_copy_and_alias"
 expect = { exit = 42 }
+
+[[test]]
+name = "owning_and_guarded_fields"
+mode = "run"
+source = "owning_and_guarded_fields.ska"
+
+[[test.run]]
+name = "optionals_arrays_shared_owners_and_boxes"
+expect = { exit = 42 }
+
+[[test]]
+name = "owner_securing_order"
+mode = "run"
+source = "owner_securing_order.ska"
+
+[[test.run]]
+name = "later_replacement_and_self_overlap"
+expect = { exit = 41 }
+
+[[test]]
+name = "named_equivalence"
+mode = "run"
+source = "named_equivalence.ska"
+
+[[test.run]]
+name = "optional_array_and_owner_observations"
+expect = { exit = 42 }

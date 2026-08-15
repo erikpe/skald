@@ -2034,12 +2034,11 @@ impl<'types> HirDumper<'types> {
                     *span,
                 );
                 self.indented(|dumper| {
-                    dumper.object_place(
-                        place
-                            .receiver
-                            .inspection_place()
-                            .expect("current shared fields retain an inspection place"),
-                    );
+                    if let Some(receiver) = place.receiver.inspection_place() {
+                        dumper.object_place(receiver);
+                    } else {
+                        dumper.field_place(place);
+                    }
                 });
             }
             HirSharedSource::Place(HirSharedPlace::ArrayElement {

@@ -50,7 +50,7 @@ implicitly copy the subobject into an expression value. Construction and calls
 that produce class objects are accepted only in the supported object
 initialization, assignment, argument, and return contexts.
 
-The frozen but unavailable
+The implemented
 [produced-object field-read extension](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-produced-object-field-reads)
 does not change that distinction. It materializes an eligible exact-class
 producer into one hidden read-only place, then applies ordinary field typing to

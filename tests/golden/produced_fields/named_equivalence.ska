@@ -1,0 +1,42 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Bundle {
+    primitive: i64?;
+    item: Item?;
+    values: i64[];
+    owner: shared Item;
+
+    init(value: i64) {
+        self.primitive = some(value);
+        self.item = some(Item(value));
+        self.values = i64[]{value};
+        self.owner = new Item(value);
+    }
+}
+
+fn main() -> i64 {
+    var named: Bundle = Bundle(7);
+    var named_total: i64 = named.primitive!
+        + named.item!.read()
+        + named.values[0]
+        + named.owner->read();
+    var produced_total: i64 = Bundle(7).primitive!
+        + Bundle(7).item!.read()
+        + Bundle(7).values[0]
+        + Bundle(7).owner->read();
+
+    if (named_total == produced_total) {
+        return 42;
+    }
+    return 0;
+}
