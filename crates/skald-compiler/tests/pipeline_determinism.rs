@@ -12,7 +12,7 @@ use skald_compiler::{
     driver::EntrySelector,
     hir::{dump_hir, HirProgram},
     lexer::{dump_tokens, lex},
-    mir::{dump_mir, lower_hir, lower_preliminary_hir, MirProgram},
+    mir::{dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, MirProgram},
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, ProviderRootConfiguration,
     },
@@ -1736,13 +1736,21 @@ fn function_value_specialization_phase_dump() -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let hir = checked.hir.unwrap();
+    let preliminary = lower_preliminary_hir(&hir);
+    let preliminary_dump = dump_preliminary_mir(&preliminary);
+    let planned = plan_static_lifetimes(preliminary).unwrap();
+    let planned_dump = dump_planned_mir(&planned);
+    let mir = run_mir_pipeline(synthesize_static_lifecycle(planned).unwrap()).unwrap();
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}PRELIMINARY MIR\n{}PLANNED MIR\n{}MIR\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
         dump_hir(&hir),
+        preliminary_dump,
+        planned_dump,
+        dump_mir(&mir),
     )
 }
 

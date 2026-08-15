@@ -81,6 +81,16 @@ fn dump_program(program: &MirProgram, heading: &str) -> String {
         }
     }
     let _ = writeln!(output, "  Entry {}", program.entry_function);
+    if !program.function_types.is_empty() {
+        output.push_str("  FunctionTypes\n");
+        for function in program.function_types.iter() {
+            let _ = write!(output, "    FunctionType {} (", function.id);
+            dump_parameters(&mut output, &function.parameters);
+            let _ = write!(output, ") -> {}", function.result);
+            write_span(&mut output, function.span);
+            output.push('\n');
+        }
+    }
     if !program.array_types.is_empty() {
         output.push_str("  ArrayTypes\n");
         for array in program.array_types.iter() {
@@ -751,6 +761,13 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     }
                     MirCallTarget::Static(target) => {
                         let _ = write!(output, "call static {target}");
+                    }
+                    MirCallTarget::Indirect(target) => {
+                        let _ = write!(
+                            output,
+                            "call indirect {} : {}",
+                            target.callee, target.function_type
+                        );
                     }
                     MirCallTarget::Method(MirMethodCallTarget::Direct(target)) => {
                         let _ = write!(output, "call direct {target}");
@@ -1424,6 +1441,13 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         }
         MirRvalueKind::ConstantBool(value) => {
             let _ = write!(output, "const.bool {value}");
+        }
+        MirRvalueKind::CallableAddress(address) => {
+            let _ = write!(
+                output,
+                "callable-address {} : {}",
+                address.target, address.function_type
+            );
         }
         MirRvalueKind::PathCondition(condition) => {
             let _ = write!(

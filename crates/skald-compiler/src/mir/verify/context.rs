@@ -66,8 +66,8 @@ impl<'mir> Verifier<'mir> {
         field: crate::identity::StaticFieldId,
         ty: MirType,
     ) -> bool {
-        let zero_default =
-            ty.is_scalar_value() || matches!(ty, MirType::Optional(_) | MirType::Array(_));
+        let zero_default = (ty.is_scalar_value() && !matches!(ty, MirType::Function(_)))
+            || matches!(ty, MirType::Optional(_) | MirType::Array(_));
         if let Some(fields) = self.preliminary_static_fields {
             return fields
                 .iter()

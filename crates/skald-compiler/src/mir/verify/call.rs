@@ -37,7 +37,8 @@ impl<'mir> Verifier<'mir> {
             defined_values,
             defined_in_block,
         );
-        let Some(signature) = self.verify_call_target(function, block, call) else {
+        let Some(signature) = self.verify_call_target(function, block, call, &arguments_defined)
+        else {
             return;
         };
 
@@ -146,6 +147,7 @@ impl<'mir> Verifier<'mir> {
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         call: &MirCall,
+        defined_before_call: &HashSet<ValueId>,
     ) -> Option<CallSignature<'mir>> {
         match call.target {
             MirCallTarget::Direct(target_id) => {
@@ -206,6 +208,39 @@ impl<'mir> Verifier<'mir> {
                 Some(CallSignature {
                     parameters: &target.parameters,
                     return_type: target.return_type,
+                })
+            }
+            MirCallTarget::Indirect(target) => {
+                if call.receiver.is_some() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "indirect function-value call must not have a receiver",
+                    );
+                }
+                let callee_type =
+                    self.verify_value_use(function, block, target.callee, defined_before_call);
+                if callee_type != Some(MirType::Function(target.function_type)) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "indirect callee value has the wrong canonical function type",
+                    );
+                }
+                let Some(signature) = self.program.function_type(target.function_type) else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!(
+                            "indirect call references undeclared function type {}",
+                            target.function_type
+                        ),
+                    );
+                    return None;
+                };
+                Some(CallSignature {
+                    parameters: &signature.parameters,
+                    return_type: signature.result,
                 })
             }
             MirCallTarget::Method(method_target) => {

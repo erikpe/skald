@@ -1,9 +1,10 @@
 # Function-Value Compiler Contract
 
-Status: frozen compiler contract; syntax AST, canonical resolved and HIR
+Status: frozen compiler contract; syntax AST, canonical resolved, HIR, and MIR
 `FunctionTypeId` metadata, exact ordinary reference nodes, address-taken
-metadata, trivial stored/callable HIR, and completely checked indirect-call
-HIR implemented behind a driver pre-MIR gate. The source-visible contract is
+metadata, trivial stored/callable values, completely checked indirect calls,
+and verified callable-address MIR are implemented behind an x86-64 backend
+legality gate. The source-visible contract is
 [Capture-Free Function Values](../language/FUNCTION_VALUES.md),
 the [status matrix](../language/STATUS.md) owns availability, and the active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns phase
@@ -16,14 +17,16 @@ nodes. Resolution rejects excluded target families and records deterministic
 address-taken metadata. Type checking lowers canonical signature metadata,
 exact references, scalar storage, copying, assignments, internal callable
 transport, and receiverless indirect calls through the ordinary argument and
-result planners into HIR. The source driver then reports a structured
-diagnostic before unsupported MIR lowering.
+result planners into HIR. MIR lowering and verification then establish
+target-independent callable addresses, callee order, provenance, and complete
+call carriers. The source driver reaches the target boundary, where x86-64
+returns a structured backend error until FVI6 supplies native realization.
 
-The completed pipeline will represent one capture-free function value as one exact,
-non-null internal callable address paired statically with a canonical complete
-signature. It adds explicit semantic operations and verified indirect calls
-without an environment, erased signature, runtime allocation, or runtime ABI
-extension.
+The target-independent pipeline represents one capture-free function value as
+one exact, non-null internal callable address paired statically with a canonical
+complete signature. It adds explicit semantic operations and verified indirect
+calls without an environment, erased signature, runtime allocation, or runtime
+ABI extension.
 
 ## Phase ownership
 
@@ -108,24 +111,25 @@ behavior are not duplicated in a reduced callback checker.
 
 ## MIR representation and verification
 
-MIR adds `MirType::Function(FunctionTypeId)`, an eight-byte scalar value, and a
-callable-address rvalue naming one exact eligible `CallableId`. `MirCallTarget`
-adds an indirect form containing the stabilized callee `ValueId` and canonical
-function type. It carries no receiver.
+MIR adds `MirType::Function(FunctionTypeId)`, a target-independent trivial
+scalar value, and a callable-address rvalue naming one exact eligible
+`CallableId`. `MirCallTarget` adds an indirect form containing the stabilized
+callee `ValueId` and canonical function type. It carries no receiver.
 
-Lowering evaluates and stores the callee once before lowering explicit
-arguments. The existing call machinery then prepares arguments and results in
-source order. Keeping the callee in a normal MIR value prevents later
-argument lowering, trace instrumentation, or register allocation from losing
-the selected address.
+Lowering evaluates the callee once into a normal MIR value before lowering
+explicit arguments. When argument lowering introduces control flow, the
+callee is stored in and reloaded from an ordinary scalar spill across the CFG.
+The existing call machinery then prepares arguments and results in source
+order. This makes the callee-before-arguments contract mechanically visible.
 
 Verification proves:
 
 - every function type ID names declared canonical metadata;
 - every callable address names a defined eligible internal function or static
   method whose exact signature matches the function type;
-- each indirect callee is defined before use and has the declared function
-  type;
+- each indirect callee is defined before use, has the declared function type,
+  and came from definitely initialized non-null function storage on every
+  incoming path;
 - indirect targets have no implicit receiver;
 - arguments and results satisfy the existing complete internal signature,
   ownership, cleanup, and ordering contracts; and
@@ -138,6 +142,11 @@ types, missing definitions, receiver injection, corrupt argument/result
 carriers, and arbitrary pointer construction.
 
 ## Whole-program effects and retention
+
+This section remains the frozen FVI7 contract. Current FVI5 static-lifecycle
+handling records address formation as effect-free but does not yet expand an
+indirect call to its candidate targets; the backend gate prevents execution
+until that whole-program obligation is implemented.
 
 Taking or copying an address has no static read, write, initialization, or
 shutdown effect. An indirect call is conservatively expanded to every
@@ -157,6 +166,10 @@ and effect nodes. Dumps expose address-taken sets and their induced effect
 edges deterministically.
 
 ## x86-64 representation and internal ABI
+
+This section remains the frozen FVI6 contract. Current x86-64 legality first
+verifies the complete MIR program and then rejects any function-value metadata
+with a structured unsupported-feature backend error.
 
 The initial target representation is one non-null eight-byte code pointer with
 eight-byte alignment and the System V integer ABI class. Materialization loads
@@ -193,12 +206,13 @@ contract.
 
 ## Determinism and tests
 
-Syntax, resolved, HIR, MIR, static-effect, and assembly dumps expose canonical
-types, exact targets, callee expressions, callable-address operations,
-indirect targets, candidates, effect edges, and register-indirect calls in
-stable identity order. Diagnostics distinguish malformed syntax, signature
-differences, ineligible or inaccessible targets, invalid storage roles,
-non-callable expressions, and excluded compositions.
+Syntax, resolved, HIR, preliminary MIR, and final MIR dumps expose canonical
+types, exact targets, callee expressions, callable-address operations, and
+indirect targets in stable identity order. Later static-effect and assembly
+dumps will additionally expose candidates, effect edges, and register-indirect
+calls. Diagnostics distinguish malformed syntax, signature differences,
+ineligible or inaccessible targets, invalid storage roles, non-callable
+expressions, and excluded compositions.
 
 Phase-private tests stay with syntax, resolution, specialization, type
 checking, MIR, static lifecycle, and backend owners. Cross-phase determinism

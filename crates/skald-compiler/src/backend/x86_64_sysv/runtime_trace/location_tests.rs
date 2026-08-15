@@ -100,6 +100,9 @@ fn runtime_trace_location_precedes_every_explicit_call_target_after_marshalling(
                 assert!(target_selection.contains("r11"));
                 replacement_end + relative
             }
+            MirCallTarget::Indirect(_) => {
+                panic!("function-value calls are rejected before backend trace lowering")
+            }
         };
         previous_call = call_position + 1;
     }

@@ -46,6 +46,34 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
     MirProgram {
         modules: hir.modules.clone(),
         external_links: hir.external_links.clone(),
+        function_types: MirFunctionTypeTable::new(
+            hir.function_types
+                .iter()
+                .map(|function| MirFunctionType {
+                    id: function.id,
+                    parameters: function
+                        .parameters
+                        .iter()
+                        .map(|parameter| MirParameter {
+                            mode: match parameter.mode {
+                                crate::hir::HirFunctionTypeParameterMode::Value => {
+                                    MirParameterMode::Value
+                                }
+                                crate::hir::HirFunctionTypeParameterMode::ReadOnlyAlias => {
+                                    MirParameterMode::ReadOnlyAlias
+                                }
+                                crate::hir::HirFunctionTypeParameterMode::MutableAlias => {
+                                    MirParameterMode::MutableAlias
+                                }
+                            },
+                            ty: optional_types::lower_type(parameter.ty),
+                        })
+                        .collect(),
+                    result: optional_types::lower_type(function.result),
+                    span: function.span,
+                })
+                .collect(),
+        ),
         array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
         optional_types: optional_types::lower_optional_types(&hir.optional_types),
         optional_box_types: optional_box_types::lower(&hir.optional_box_types),

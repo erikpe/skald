@@ -1,13 +1,12 @@
 schema = 2
 
 [[test]]
-name = "staged_semantic_gate"
+name = "staged_backend_gate"
 mode = "compile-fail"
 source = "function_types.ska"
 [test.expect.stderr]
 match = "starts-with"
-inline = """error[TYP044]: function values are not executable yet
- --> tests/golden/function_values/function_types.ska:3:22"""
+inline = "skac: internal x86_64-sysv backend error: verified function-value MIR is not yet supported by this target"
 
 [[test]]
 name = "module_references"
@@ -19,8 +18,7 @@ compiler_args = [
 ]
 [test.expect.stderr]
 match = "starts-with"
-inline = """error[TYP044]: function values are not executable yet
- --> supported/app.ska:5:37"""
+inline = "skac: internal x86_64-sysv backend error: verified function-value MIR is not yet supported by this target"
 
 [[test]]
 name = "module_exclusions"
@@ -50,7 +48,7 @@ source = "generic_specialization.ska"
 compiler_args = ["--no-stdlib"]
 [test.expect.stderr]
 match = "starts-with"
-inline = "error[TYP044]: function values are not executable yet"
+inline = "skac: internal x86_64-sysv backend error: verified function-value MIR is not yet supported by this target"
 
 [[test]]
 name = "malformed_parameter_mode"

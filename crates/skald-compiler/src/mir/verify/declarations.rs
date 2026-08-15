@@ -20,6 +20,7 @@ use super::{
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
         self.verify_module_ownership();
+        self.verify_function_type_declarations();
         self.verify_closed_type_references();
         self.verify_external_links();
         self.verify_optional_declarations();
@@ -79,6 +80,18 @@ impl<'mir> Verifier<'mir> {
                 &format!("function {}", declaration.id),
                 &declaration.parameters,
             );
+            if declaration.linkage != MirFunctionLinkage::Internal
+                && (declaration
+                    .parameters
+                    .iter()
+                    .any(|parameter| matches!(parameter.ty, MirType::Function(_)))
+                    || matches!(declaration.return_type, MirType::Function(_)))
+            {
+                self.function_error(
+                    declaration.id,
+                    "non-internal function cannot transport function values",
+                );
+            }
             if let MirType::Class(class) = declaration.return_type {
                 if self.program.class(class).is_none() {
                     self.function_error(
@@ -115,6 +128,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Obj
                                 | MirType::Shared(_)
                                 | MirType::Optional(_)
+                                | MirType::Function(_)
                         )
                 }) {
                     self.function_error(
@@ -130,6 +144,7 @@ impl<'mir> Verifier<'mir> {
                         | MirType::Obj
                         | MirType::Shared(_)
                         | MirType::Optional(_)
+                        | MirType::Function(_)
                 ) {
                     self.function_error(
                         declaration.id,

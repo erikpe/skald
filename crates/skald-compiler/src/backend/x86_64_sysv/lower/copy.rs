@@ -412,7 +412,8 @@ impl InstructionSelector<'_, '_> {
                 value::load_rax(source, self.output);
                 value::store_rax(destination, self.output);
             }
-            MirType::Class(_)
+            MirType::Function(_)
+            | MirType::Class(_)
             | MirType::Array(_)
             | MirType::Interface(_)
             | MirType::Obj

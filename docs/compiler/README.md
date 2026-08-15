@@ -102,9 +102,11 @@ canonical closed function-type identity, exact callable references, explicit
 HIR and MIR indirect calls, verification, conservative address-taken effects,
 one-word x86-64 realization, and the unchanged runtime boundary to their
 owning phases. Function types, eligible ordinary callable references, generic
-reference closure, trivial stored/callable HIR, and complete indirect-call HIR
-argument/result planning are implemented; MIR callable values and indirect
-execution remain unavailable. The active
+reference closure, trivial stored/callable HIR, complete indirect-call HIR
+argument/result planning, callable-address MIR, receiverless indirect MIR
+targets, and target-independent verification are implemented. The x86-64
+backend still rejects the verified feature structurally, so native indirect
+execution remains unavailable. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns staged
 delivery and structured gates.
 

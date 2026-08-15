@@ -143,6 +143,7 @@ pub(super) fn primitive_cast_program(
             symbol: "validate_primitive_cast".to_owned(),
             declarations: vec![validate_id],
         }]),
+        function_types: Default::default(),
         array_types: Default::default(),
         optional_types: Default::default(),
         optional_box_types: Default::default(),

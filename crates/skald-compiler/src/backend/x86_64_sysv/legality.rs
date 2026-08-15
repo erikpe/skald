@@ -18,6 +18,13 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+    if !program.function_types.is_empty() {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "verified function-value MIR is not yet supported by this target",
+        ));
+    }
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
@@ -67,6 +74,13 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                         }
                         MirCallTarget::Static(method) => {
                             check_member_target(program, function.callable(), method.into())?;
+                        }
+                        MirCallTarget::Indirect(_) => {
+                            return Err(BackendError::new(
+                                Target::X86_64SysV,
+                                Some(function.callable()),
+                                "verified indirect calls are not yet supported by this target",
+                            ));
                         }
                         MirCallTarget::Direct(target) => {
                             let target = program

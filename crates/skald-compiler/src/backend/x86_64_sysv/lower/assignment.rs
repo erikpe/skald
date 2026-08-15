@@ -73,6 +73,13 @@ impl InstructionSelector<'_, '_> {
         destination: Operand,
     ) -> Result<(), BackendError> {
         match kind {
+            MirRvalueKind::CallableAddress(_) => {
+                return Err(BackendError::new(
+                    crate::backend::Target::X86_64SysV,
+                    Some(self.function.callable()),
+                    "callable addresses are not yet supported by this target",
+                ));
+            }
             MirRvalueKind::ConstantI64(value) => {
                 self.select_integer_constant(*value as u64, ty, destination)
             }

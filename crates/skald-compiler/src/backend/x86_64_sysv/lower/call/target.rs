@@ -30,6 +30,9 @@ impl CallTarget {
         match call.target {
             MirCallTarget::Direct(function) => (Self::Direct(function.into()), None),
             MirCallTarget::Static(method) => (Self::Direct(method.into()), None),
+            MirCallTarget::Indirect(_) => {
+                unreachable!("backend legality rejects indirect calls before selection")
+            }
             MirCallTarget::Method(method) => {
                 let receiver = call
                     .receiver

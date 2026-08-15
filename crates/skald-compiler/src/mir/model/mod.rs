@@ -4,6 +4,7 @@ mod array;
 mod control_flow;
 mod declarations;
 mod definition;
+mod function_type;
 mod ids;
 mod instruction;
 mod integer_division;
@@ -42,13 +43,14 @@ pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,
     MirMemberDefinition, MirMemberDefinitionTable, MirStorage, MirStorageKind,
 };
+pub use function_type::{MirFunctionType, MirFunctionTypeTable};
 pub use ids::{BlockId, OptionalGuardId, PathConditionId, StorageId, ValueId};
 pub use instruction::{
-    MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCheckedViewBinding,
-    MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction, MirEndFullExpression,
-    MirInitialize, MirInstruction, MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver,
-    MirObjectOrigin, MirObjectView, MirStorageDead, MirStorageLive, MirStore, MirViewProvenance,
-    MirViewTarget,
+    MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCallableAddress,
+    MirCheckedViewBinding, MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction,
+    MirEndFullExpression, MirIndirectCallTarget, MirInitialize, MirInstruction,
+    MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver, MirObjectOrigin, MirObjectView,
+    MirStorageDead, MirStorageLive, MirStore, MirViewProvenance, MirViewTarget,
 };
 pub use integer_division::{
     MirIntegerDivisionKind, MirIntegerDivisionOperation, MirIntegerDivisorCheck,

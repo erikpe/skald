@@ -441,6 +441,7 @@ impl BodyLowerer<'_> {
             | HirExpressionKind::StaticCall { .. }
             | HirExpressionKind::MethodCall { .. }
             | HirExpressionKind::InterfaceCall { .. }
+            | HirExpressionKind::IndirectCall(_)
             | HirExpressionKind::ArrayConstruction(_)
             | HirExpressionKind::ArraySlice(_)
             | HirExpressionKind::OptionalArrayUnwrap(_) => {
@@ -455,7 +456,8 @@ impl BodyLowerer<'_> {
             HirExpressionKind::DirectCall { .. }
             | HirExpressionKind::StaticCall { .. }
             | HirExpressionKind::MethodCall { .. }
-            | HirExpressionKind::InterfaceCall { .. } => {
+            | HirExpressionKind::InterfaceCall { .. }
+            | HirExpressionKind::IndirectCall(_) => {
                 let Type::Array(array) = expression.ty else {
                     invalid_array_hir()
                 };

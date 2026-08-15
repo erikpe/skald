@@ -59,6 +59,27 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
+fn function_values_reach_verified_mir_and_stop_at_the_backend_gate() {
+    let error = compile_source_to_assembly(
+        "function-values.ska",
+        concat!(
+            "fn identity(value: i64) -> i64 { return value; }\n",
+            "fn main() -> i64 { var callback: fn(i64) -> i64 = identity; return callback(42); }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect_err("function-value execution remains gated until backend realization");
+
+    let CompilationError::Backend(error) = error else {
+        panic!("function-value source must pass frontend and MIR verification: {error:?}")
+    };
+    assert_eq!(
+        error.message(),
+        "verified function-value MIR is not yet supported by this target"
+    );
+}
+
+#[test]
 fn request_pipeline_emits_closed_generic_classes_across_modules() {
     let directory = TemporaryDirectory::new("request-generic-pipeline").unwrap();
     let root = directory.join("modules");

@@ -353,7 +353,12 @@ impl MirStaticValueCleanup {
                 array,
                 span,
             }),
-            MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool => Self::None,
+            MirType::I64
+            | MirType::U64
+            | MirType::U8
+            | MirType::F64
+            | MirType::Bool
+            | MirType::Function(_) => Self::None,
             MirType::Interface(_) | MirType::Obj | MirType::Unit => return None,
         })
     }

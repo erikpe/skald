@@ -669,6 +669,18 @@ impl Verifier<'_> {
         rvalue: &MirRvalue,
         defined: &HashSet<ValueId>,
     ) {
+        if matches!(rvalue.ty, MirType::Function(_))
+            && !matches!(
+                rvalue.kind,
+                MirRvalueKind::CallableAddress(_) | MirRvalueKind::Load(_)
+            )
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "function value must originate from a callable address or typed load",
+            );
+        }
         match &rvalue.kind {
             MirRvalueKind::ConstantI64(_) => {
                 if rvalue.ty != MirType::I64 {
@@ -702,6 +714,9 @@ impl Verifier<'_> {
                         "boolean constant is not `bool`",
                     );
                 }
+            }
+            MirRvalueKind::CallableAddress(address) => {
+                self.verify_callable_address(function, block, *address, rvalue.ty)
             }
             MirRvalueKind::PathCondition(condition) => {
                 if rvalue.ty != MirType::Bool {

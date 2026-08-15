@@ -22,7 +22,8 @@ impl Extractor<'_> {
             | MirRvalueKind::Shift { .. }
             | MirRvalueKind::PrimitiveComparison { .. }
             | MirRvalueKind::PrimitiveCast { .. }
-            | MirRvalueKind::CheckedF64ToInteger { .. } => {}
+            | MirRvalueKind::CheckedF64ToInteger { .. }
+            | MirRvalueKind::CallableAddress(_) => {}
             MirRvalueKind::Load(place)
             | MirRvalueKind::OptionalPresence { source: place, .. }
             | MirRvalueKind::ArrayLength { source: place, .. } => self.add_place(
@@ -329,6 +330,10 @@ impl Extractor<'_> {
                     );
                 }
             }
+            // Candidate expansion belongs to the function-value static-effect
+            // task. The backend gate prevents these calls from executing until
+            // that conservative edge set is implemented.
+            MirCallTarget::Indirect(_) => {}
         }
     }
 }

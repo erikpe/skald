@@ -10,12 +10,15 @@ use crate::hir::{
 impl BodyLowerer<'_> {
     pub(super) fn lower_expression(&mut self, expression: &HirExpression) -> Option<ValueId> {
         match &expression.kind {
-            HirExpressionKind::FunctionReference(_) => {
-                unreachable!("the driver rejects function values before MIR lowering")
-            }
-            HirExpressionKind::IndirectCall(_) => {
-                unreachable!("the driver rejects indirect calls before MIR lowering")
-            }
+            HirExpressionKind::FunctionReference(reference) => Some(self.assign(
+                MirRvalueKind::CallableAddress(MirCallableAddress {
+                    target: reference.target,
+                    function_type: reference.function_type,
+                }),
+                MirType::Function(reference.function_type),
+                expression.span,
+            )),
+            HirExpressionKind::IndirectCall(call) => self.lower_indirect_call(expression, call),
             HirExpressionKind::Binding(binding) => Some(self.assign(
                 MirRvalueKind::Load(self.lower_binding_place(*binding)),
                 self.lower_type(expression.ty),

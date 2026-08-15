@@ -2,9 +2,10 @@
 
 use crate::{
     hir::{
-        HirAccess, HirCallArgument, HirExpression, HirInterfaceCallTarget, HirInterfaceReceiver,
-        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectReceiver, HirObjectView,
-        HirSharedPlace, HirSharedSource, HirViewSource, HirViewTarget,
+        HirAccess, HirCallArgument, HirExpression, HirIndirectCall, HirInterfaceCallTarget,
+        HirInterfaceReceiver, HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin,
+        HirObjectReceiver, HirObjectView, HirSharedPlace, HirSharedSource, HirViewSource,
+        HirViewTarget,
     },
     identity::{FunctionId, MethodId},
 };
@@ -12,6 +13,51 @@ use crate::{
 use super::*;
 
 impl BodyLowerer<'_> {
+    pub(super) fn lower_indirect_call(
+        &mut self,
+        expression: &HirExpression,
+        call: &HirIndirectCall,
+    ) -> Option<ValueId> {
+        let optional_mark = self.optional_view_mark();
+        let (target, arguments) = self.lower_indirect_target_and_arguments(call);
+        let result = self.emit_scalar_call(target, None, arguments, expression);
+        self.end_optional_views_from(optional_mark, expression.span);
+        result
+    }
+
+    /// Selects an indirect callee exactly once before any explicit argument.
+    ///
+    /// MIR values are block-local. When argument lowering may split control
+    /// flow, the selected address is secured in ordinary scalar storage and
+    /// reloaded in the call block without reevaluating the HIR callee.
+    pub(super) fn lower_indirect_target_and_arguments(
+        &mut self,
+        call: &HirIndirectCall,
+    ) -> (MirCallTarget, Vec<MirArgument>) {
+        let callee = self
+            .lower_expression(&call.callee)
+            .expect("typed indirect callee must produce a scalar value");
+        let ty = MirType::Function(call.function_type);
+        let secured = call
+            .arguments
+            .iter()
+            .any(super::control_effect::call_argument_contains_control_effect)
+            .then(|| self.spill_scalar(callee, ty, call.callee.span));
+        let arguments = self.lower_call_arguments(&call.arguments);
+        let callee = secured
+            .map(|(storage, ty)| {
+                self.assign(MirRvalueKind::Load(storage.into()), ty, call.callee.span)
+            })
+            .unwrap_or(callee);
+        (
+            MirCallTarget::Indirect(MirIndirectCallTarget {
+                callee,
+                function_type: call.function_type,
+            }),
+            arguments,
+        )
+    }
+
     pub(super) fn lower_direct_call(
         &mut self,
         expression: &HirExpression,
@@ -111,70 +157,15 @@ impl BodyLowerer<'_> {
         result
     }
 
-    pub(super) fn lower_shared_call(&mut self, expression: &HirExpression, destination: StorageId) {
-        let optional_mark = self.optional_view_mark();
-        let (target, receiver, arguments) = match &expression.kind {
-            crate::hir::HirExpressionKind::DirectCall {
-                function,
-                arguments,
-            } => (
-                MirCallTarget::Direct(*function),
-                None,
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
-                MirCallTarget::Static(*method),
-                None,
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::MethodCall {
-                receiver,
-                target,
-                arguments,
-            } => {
-                let receiver = self.lower_method_receiver(receiver);
-                (
-                    MirCallTarget::Method(lower_method_target(*target)),
-                    Some(receiver.into()),
-                    self.lower_call_arguments(arguments),
-                )
-            }
-            crate::hir::HirExpressionKind::InterfaceCall {
-                receiver,
-                target,
-                arguments,
-            } => {
-                let receiver = match receiver {
-                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
-                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
-                };
-                (
-                    MirCallTarget::Interface(MirInterfaceCallTarget {
-                        interface: target.interface,
-                        requirement: target.requirement,
-                    }),
-                    Some(receiver.into()),
-                    self.lower_call_arguments(arguments),
-                )
-            }
-            _ => unreachable!("shared call producer must contain a call expression"),
-        };
-        self.emit(MirInstruction::Call(MirCall {
-            target,
-            receiver,
-            arguments,
-            result: None,
-            shared_result: Some(destination),
-            destination: None,
-            span: expression.span,
-        }));
-        self.end_optional_views_from(optional_mark, expression.span);
-        self.full_expression.mark_shared_effect();
-    }
-
-    pub(super) fn lower_array_call(&mut self, expression: &HirExpression, destination: StorageId) {
-        let optional_mark = self.optional_view_mark();
-        let (target, receiver, arguments) = match &expression.kind {
+    /// Lowers the common target/receiver/argument prefix shared by every
+    /// ordinary call result carrier. Result ownership remains with the caller
+    /// so scalar, aggregate, optional, and shared destinations keep their
+    /// established specialized completion paths.
+    fn lower_call_parts(
+        &mut self,
+        expression: &HirExpression,
+    ) -> (MirCallTarget, Option<MirCallReceiver>, Vec<MirArgument>) {
+        match &expression.kind {
             crate::hir::HirExpressionKind::DirectCall {
                 function,
                 arguments,
@@ -215,8 +206,33 @@ impl BodyLowerer<'_> {
                     self.lower_call_arguments(arguments),
                 )
             }
-            _ => unreachable!("array call producer must contain a call expression"),
-        };
+            crate::hir::HirExpressionKind::IndirectCall(call) => {
+                let (target, arguments) = self.lower_indirect_target_and_arguments(call);
+                (target, None, arguments)
+            }
+            _ => unreachable!("call producer must contain a call expression"),
+        }
+    }
+
+    pub(super) fn lower_shared_call(&mut self, expression: &HirExpression, destination: StorageId) {
+        let optional_mark = self.optional_view_mark();
+        let (target, receiver, arguments) = self.lower_call_parts(expression);
+        self.emit(MirInstruction::Call(MirCall {
+            target,
+            receiver,
+            arguments,
+            result: None,
+            shared_result: Some(destination),
+            destination: None,
+            span: expression.span,
+        }));
+        self.end_optional_views_from(optional_mark, expression.span);
+        self.full_expression.mark_shared_effect();
+    }
+
+    pub(super) fn lower_array_call(&mut self, expression: &HirExpression, destination: StorageId) {
+        let optional_mark = self.optional_view_mark();
+        let (target, receiver, arguments) = self.lower_call_parts(expression);
         self.emit(MirInstruction::Call(MirCall {
             target,
             receiver,
@@ -240,53 +256,11 @@ impl BodyLowerer<'_> {
             self.end_optional_views_from(optional_mark, expression.span);
             return;
         }
-        let (target, receiver, arguments) = match &expression.kind {
-            crate::hir::HirExpressionKind::DirectCall {
-                function,
-                arguments,
-            } => (
-                MirCallTarget::Direct(*function),
-                None,
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
-                MirCallTarget::Static(*method),
-                None,
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::MethodCall {
-                receiver,
-                target,
-                arguments,
-            } => (
-                MirCallTarget::Method(lower_method_target(*target)),
-                Some(self.lower_method_receiver(receiver).into()),
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::InterfaceCall {
-                receiver,
-                target,
-                arguments,
-            } => {
-                let receiver = match receiver {
-                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
-                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
-                };
-                (
-                    MirCallTarget::Interface(MirInterfaceCallTarget {
-                        interface: target.interface,
-                        requirement: target.requirement,
-                    }),
-                    Some(receiver.into()),
-                    self.lower_call_arguments(arguments),
-                )
-            }
-            crate::hir::HirExpressionKind::Grouped(inner) => {
-                self.lower_optional_call(inner, destination);
-                return;
-            }
-            _ => unreachable!("optional producer must contain a call expression"),
-        };
+        if let crate::hir::HirExpressionKind::Grouped(inner) = &expression.kind {
+            self.lower_optional_call(inner, destination);
+            return;
+        }
+        let (target, receiver, arguments) = self.lower_call_parts(expression);
         self.emit(MirInstruction::Call(MirCall {
             target,
             receiver,
@@ -310,53 +284,11 @@ impl BodyLowerer<'_> {
             self.end_optional_views_from(optional_mark, expression.span);
             return;
         }
-        let (target, receiver, arguments) = match &expression.kind {
-            crate::hir::HirExpressionKind::DirectCall {
-                function,
-                arguments,
-            } => (
-                MirCallTarget::Direct(*function),
-                None,
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
-                MirCallTarget::Static(*method),
-                None,
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::MethodCall {
-                receiver,
-                target,
-                arguments,
-            } => (
-                MirCallTarget::Method(lower_method_target(*target)),
-                Some(self.lower_method_receiver(receiver).into()),
-                self.lower_call_arguments(arguments),
-            ),
-            crate::hir::HirExpressionKind::InterfaceCall {
-                receiver,
-                target,
-                arguments,
-            } => {
-                let receiver = match receiver {
-                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
-                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
-                };
-                (
-                    MirCallTarget::Interface(MirInterfaceCallTarget {
-                        interface: target.interface,
-                        requirement: target.requirement,
-                    }),
-                    Some(receiver.into()),
-                    self.lower_call_arguments(arguments),
-                )
-            }
-            crate::hir::HirExpressionKind::Grouped(inner) => {
-                self.lower_optional_shared_call(inner, destination);
-                return;
-            }
-            _ => unreachable!("optional shared producer must contain a call expression"),
-        };
+        if let crate::hir::HirExpressionKind::Grouped(inner) = &expression.kind {
+            self.lower_optional_shared_call(inner, destination);
+            return;
+        }
+        let (target, receiver, arguments) = self.lower_call_parts(expression);
         self.emit(MirInstruction::Call(MirCall {
             target,
             receiver,

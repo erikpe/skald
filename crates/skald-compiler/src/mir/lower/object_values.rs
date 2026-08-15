@@ -26,8 +26,19 @@ impl BodyLowerer<'_> {
                 self.lower_construction(construction, destination);
             }
             HirObjectProducer::Call(call) => self.lower_object_call(call, destination),
-            HirObjectProducer::IndirectCall(_) => {
-                unreachable!("the driver rejects indirect calls before MIR lowering")
+            HirObjectProducer::IndirectCall(call) => {
+                let optional_mark = self.optional_view_mark();
+                let (target, arguments) = self.lower_indirect_target_and_arguments(call);
+                self.emit(MirInstruction::Call(MirCall {
+                    target,
+                    receiver: None,
+                    arguments,
+                    result: None,
+                    shared_result: None,
+                    destination: Some(destination),
+                    span: call.span,
+                }));
+                self.end_optional_views_from(optional_mark, call.span);
             }
         }
     }

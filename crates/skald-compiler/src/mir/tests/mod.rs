@@ -31,6 +31,7 @@ mod copy;
 mod cycles;
 mod expression_stabilization;
 mod floating_division;
+mod function_values;
 mod integer_division;
 mod interface_dispatch;
 mod interface_fixtures;

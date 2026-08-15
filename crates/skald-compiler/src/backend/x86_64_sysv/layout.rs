@@ -647,6 +647,7 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
         | MirType::Obj
         | MirType::Shared(_)
         | MirType::Optional(_)
+        | MirType::Function(_)
         | MirType::Unit => None,
     }
 }

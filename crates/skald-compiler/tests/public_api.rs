@@ -27,8 +27,9 @@ use skald_compiler::{
     mir::{
         dump_mir, dump_preliminary_mir, lower_hir, lower_preliminary_hir, verify_mir,
         verify_preliminary_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
-        MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirComparisonOperand,
-        MirComparisonPredicate, MirDirectBase, MirIntegerBitwiseOperation, MirIntegerType,
+        MirArrayTypeTable, MirBaseCopy, MirBinaryOperation, MirCallReceiver, MirCallableAddress,
+        MirComparisonOperand, MirComparisonPredicate, MirDirectBase, MirFunctionType,
+        MirFunctionTypeTable, MirIndirectCallTarget, MirIntegerBitwiseOperation, MirIntegerType,
         MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
         MirPlaceProjection, MirPrimitiveCast, MirPrimitiveCastKind, MirPrimitiveComparison,
         MirPrimitiveType, MirProgram, MirType, MirUnaryOperation, MirViewTarget,
@@ -213,6 +214,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let _mir_conformance: Option<MirInterfaceConformance> = None;
     let _mir_interface_call: Option<MirInterfaceCallTarget> = None;
     let _mir_receiver: Option<MirCallReceiver> = None;
+    let _mir_function_type: Option<MirFunctionType> = None;
+    let _mir_function_types: Option<MirFunctionTypeTable> = None;
+    let _mir_callable_address: Option<MirCallableAddress> = None;
+    let _mir_indirect_target: Option<MirIndirectCallTarget> = None;
     let _mir_array_id: Option<ArrayTypeId> = None;
     let _resolved_optional_id: Option<OptionalTypeId> = None;
     let _mir_array_table: Option<MirArrayTypeTable> = None;

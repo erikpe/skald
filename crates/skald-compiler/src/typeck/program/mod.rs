@@ -69,7 +69,6 @@ pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
 pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
-pub const FUNCTION_VALUES_NOT_YET_SUPPORTED: &str = "TYP044";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -489,37 +488,6 @@ pub(super) fn lower_type(_program: &ResolvedProgram, type_syntax: &ResolvedType)
         }
         ResolvedTypeKind::Optional(optional) => Type::Optional(optional),
     }
-}
-
-/// Reports the deliberate source-driver boundary retained until MIR can lower
-/// function values. Type checking itself is complete and produces HIR first.
-pub(crate) fn validate_mir_readiness(program: &ResolvedProgram) -> Diagnostics {
-    let mut diagnostics = Diagnostics::new();
-    let Some(function) = program.function_types.iter().next() else {
-        return diagnostics;
-    };
-    let (span, label) = program
-        .address_taken_callables
-        .iter()
-        .next()
-        .map(|reference| {
-            (
-                reference.first_reference_span,
-                "typed function references cannot be lowered until MIR support ships",
-            )
-        })
-        .unwrap_or((
-            function.span,
-            "typed function values cannot be lowered until MIR support ships",
-        ));
-    diagnostics.push(
-        Diagnostic::error(
-            FUNCTION_VALUES_NOT_YET_SUPPORTED,
-            "function values are not executable yet",
-        )
-        .with_primary_label(span, label),
-    );
-    diagnostics
 }
 
 /// Compares resolved type identities while ignoring source-location metadata

@@ -167,7 +167,7 @@ pub(super) fn lower_copier(
         ],
         MirType::Array(inner) => lower_nested_array_copier(array, inner, source, destination),
         MirType::Shared(_) => lower_shared_copier(array, source, destination, false),
-        MirType::Interface(_) | MirType::Obj | MirType::Unit => {
+        MirType::Function(_) | MirType::Interface(_) | MirType::Obj | MirType::Unit => {
             return Err(helper_error(format!(
                 "array {array} has an unsupported copy element {element}"
             )));

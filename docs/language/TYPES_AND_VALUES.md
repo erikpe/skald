@@ -742,10 +742,11 @@ but its type name, literal syntax and encoding, byte/text semantics, copying,
 slicing, storage, and library boundary are not frozen. No representation or
 literal-lowering strategy is a language guarantee.
 
-Function values are staged behind a driver pre-MIR gate. Exact recursive
+Function values are staged behind an x86-64 backend gate. Exact recursive
 types, eligible ordinary and closed-generic references, specialization-time
-generic composition, stored/callable HIR, and completely checked indirect-call
-HIR are implemented; MIR lowering and execution remain unavailable. Their non-null trivial-scalar design and
+generic composition, stored/callable HIR, completely checked indirect-call
+HIR, and verified callable-address and indirect-call MIR are implemented;
+native execution remains unavailable. Their non-null trivial-scalar design and
 initial exclusions are frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md). Shared ownership's
 implemented non-null value type, compatible views, and copy/adopt/release

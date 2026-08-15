@@ -3,7 +3,9 @@
 use std::fmt;
 
 use crate::{
-    identity::{ArrayTypeId, ClassId, FieldId, InterfaceId, OptionalTypeId, StaticFieldId},
+    identity::{
+        ArrayTypeId, ClassId, FieldId, FunctionTypeId, InterfaceId, OptionalTypeId, StaticFieldId,
+    },
     source::Span,
 };
 
@@ -16,6 +18,9 @@ pub enum MirType {
     U8,
     F64,
     Bool,
+    /// A non-null capture-free internal callable address with an exact
+    /// canonical signature.
+    Function(FunctionTypeId),
     Array(ArrayTypeId),
     Class(ClassId),
     /// A non-owning interface-view target. It is valid only for alias storage
@@ -53,6 +58,7 @@ impl fmt::Display for MirType {
             Self::U8 => formatter.write_str("u8"),
             Self::F64 => formatter.write_str("f64"),
             Self::Bool => formatter.write_str("bool"),
+            Self::Function(function) => write!(formatter, "function {function}"),
             Self::Array(array) => write!(formatter, "array {array}"),
             Self::Class(class) => write!(formatter, "class {class}"),
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
@@ -277,6 +283,8 @@ pub enum MirRvalueKind {
     /// IEEE-754 binary64 payload, stored as raw bits for deterministic IR.
     ConstantF64Bits(u64),
     ConstantBool(bool),
+    /// Forms one non-null address of an exact eligible internal callable.
+    CallableAddress(super::instruction::MirCallableAddress),
     /// Reads one verified canonical path activation from its storage.
     PathCondition(MirPathConditionValue),
     Load(MirPlace),

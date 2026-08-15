@@ -2,8 +2,9 @@
 
 use crate::{
     identity::{
-        ClassId, CopyAssignmentId, CopyConstructorId, FunctionId, InitializerId, InterfaceId,
-        InterfaceRequirementId, MethodId, VirtualFamilyId, VirtualSlotId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, FunctionId, FunctionTypeId,
+        InitializerId, InterfaceId, InterfaceRequirementId, MethodId, VirtualFamilyId,
+        VirtualSlotId,
     },
     source::Span,
 };
@@ -324,8 +325,25 @@ impl MirArgument {
 pub enum MirCallTarget {
     Direct(FunctionId),
     Static(MethodId),
+    Indirect(MirIndirectCallTarget),
     Method(MirMethodCallTarget),
     Interface(MirInterfaceCallTarget),
+}
+
+/// One address-formation operation, retaining target identity separately from
+/// its canonical signature identity.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirCallableAddress {
+    pub target: CallableId,
+    pub function_type: FunctionTypeId,
+}
+
+/// Receiverless call metadata for a callee stabilized in an ordinary MIR
+/// scalar value before explicit argument lowering begins.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirIndirectCallTarget {
+    pub callee: ValueId,
+    pub function_type: FunctionTypeId,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

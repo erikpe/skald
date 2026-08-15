@@ -358,7 +358,7 @@ pub(super) fn lower_destroyer(
                 call::TraceAttribution::InheritedSourceOperation,
             ),
         ],
-        MirType::Interface(_) | MirType::Obj | MirType::Unit => {
+        MirType::Function(_) | MirType::Interface(_) | MirType::Obj | MirType::Unit => {
             return Err(helper_error(format!(
                 "array {array} has unsupported destruction element {element}"
             )));

@@ -29,6 +29,7 @@ use super::{
 pub struct MirProgram {
     pub modules: ProgramModuleTable,
     pub external_links: ExternalLinkTable,
+    pub function_types: super::MirFunctionTypeTable,
     pub array_types: MirArrayTypeTable,
     pub optional_types: super::MirOptionalTypeTable,
     pub optional_box_types: super::MirOptionalBoxTypeTable,
@@ -48,6 +49,13 @@ pub struct MirProgram {
 }
 
 impl MirProgram {
+    pub fn function_type(
+        &self,
+        id: crate::identity::FunctionTypeId,
+    ) -> Option<&super::MirFunctionType> {
+        self.function_types.get(id)
+    }
+
     pub fn array_type(&self, id: crate::identity::ArrayTypeId) -> Option<&MirArrayType> {
         self.array_types.get(id)
     }

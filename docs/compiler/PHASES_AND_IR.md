@@ -1397,6 +1397,9 @@ explicit:
 - canonical virtual-family metadata, explicit receiver-bearing direct/virtual
   method targets, receiverless static method targets, and complete-object
   receiver origins;
+- dense canonical function-type metadata, exact callable-address scalar
+  producers, and receiverless indirect targets carrying a stabilized callee
+  value and exact function type;
 - interface declarations, effective class conformance maps, and explicit
   interface call targets;
 - initialization, copying, assignment, and cleanup operations;
@@ -1435,6 +1438,17 @@ selected inherited identity and enforced declaring-class privacy.
 Static views retain their source place, target, access, and complete-object
 origin; slices are exact target-class copy operations from a verified
 base-projected source.
+
+Function references lower to `MirType::Function(FunctionTypeId)` values formed
+only by an exact `CallableId` address or a typed storage load. Indirect calls
+evaluate their callee once before explicit left-to-right arguments and reuse
+the ordinary argument, aggregate-destination, ownership, cleanup, loop, and
+abrupt-control-flow lowering. A callee that must cross argument-created CFG is
+secured in an ordinary scalar spill. Verification checks dense bottom-up type
+metadata, exact eligible internal targets, definition availability, signatures,
+receiver absence, complete call carriers, use-before-definition, and definite
+non-null initialization of every loaded function slot. The x86-64 backend
+currently rejects this verified MIR structurally before layout or selection.
 
 HIR-to-MIR lowering owns deterministic allocation and emission order,
 including base initialization, full-expression temporaries, view arguments,

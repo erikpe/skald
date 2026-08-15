@@ -23,9 +23,10 @@ x86-64 backend input.
 The frozen [function-value compiler contract](FUNCTION_VALUES.md) selects one
 non-null eight-byte code pointer in the System V integer class, exact
 position-independent symbol addresses, and receiverless register-indirect
-calls through the complete internal ABI. Function values are not yet legal
-backend input; the active roadmap introduces them only after typed MIR and its
-verification boundary exist.
+calls through the complete internal ABI. Function values now reach this
+boundary as verified target-independent MIR. The x86-64 legality pass rejects
+any program with function-type metadata using a structured unsupported-feature
+error until the active roadmap implements their target layout and lowering.
 
 Verified eager static lifecycle MIR is current backend input. The x86-64
 target emits one aligned, writable, target-private `.bss` slot per canonical

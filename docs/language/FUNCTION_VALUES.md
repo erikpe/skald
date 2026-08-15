@@ -1,15 +1,16 @@
 # Capture-Free Function Values
 
 Status: frozen design; syntax, canonical closed type identity, eligible
-ordinary callable-reference resolution, stored/callable HIR, and indirect-call
-type checking are implemented behind a driver pre-MIR gate. The
+ordinary callable-reference resolution, stored/callable HIR, indirect-call
+type checking, and verified target-independent MIR are implemented behind an
+x86-64 backend gate. The
 [status matrix](STATUS.md) is authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact accepted source shape. Function
-references can be inspected in resolved and HIR compiler output. Type checking
-supports the frozen storage, copying, assignment, internal value
-parameter/result positions, and indirect calls through every ordinary
-argument/result family, but source compilation still stops before MIR and
-native execution remains unavailable. The active
+references can be inspected in resolved, HIR, preliminary MIR, and final MIR
+compiler output. The compiler supports the frozen storage, copying,
+assignment, internal value parameter/result positions, and indirect calls
+through every ordinary argument/result family. Native execution remains
+unavailable until the x86-64 realization is implemented. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns delivery.
 
 This contract adds non-null, capture-free function values to Skald. A function

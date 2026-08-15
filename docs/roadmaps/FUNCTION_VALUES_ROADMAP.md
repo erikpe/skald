@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI4 implemented, FVI5 is next.
+Status: in progress; FVI5 implemented, FVI6 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -51,7 +51,7 @@ below implement those decisions without reopening them.
 - [x] FVI2 — Close function types and references during generic specialization
 - [x] FVI3 — Integrate trivial function values with stored and callable HIR
 - [x] FVI4 — Type indirect calls through the complete internal signature
-- [ ] FVI5 — Lower and verify callable addresses and indirect MIR calls
+- [x] FVI5 — Lower and verify callable addresses and indirect MIR calls
 - [ ] FVI6 — Realize code pointers and indirect calls on x86-64
 - [ ] FVI7 — Make indirect calls sound for static effects, retention, and traces
 - [ ] FVI8 — Harden composition, publish implementation, and close the roadmap
@@ -238,21 +238,21 @@ callee-before-arguments semantic shape and no receiver inference.
 **Purpose:** Establish the target-independent executable trust boundary before
 the backend accepts function values.
 
-- [ ] Add explicit MIR function-type tables, `MirType::Function`, callable-
+- [x] Add explicit MIR function-type tables, `MirType::Function`, callable-
       address rvalues, and receiverless indirect `MirCallTarget` metadata.
-- [ ] Lower function references through ordinary scalar storage and stabilize
+- [x] Lower function references through ordinary scalar storage and stabilize
       each indirect callee in a `ValueId` before lowering any argument.
-- [ ] Reuse existing call argument/result, aggregate destination, owner
+- [x] Reuse existing call argument/result, aggregate destination, owner
       transfer, alias, cleanup, conditional-path, loop-epoch, and abrupt-
       termination lowering rather than creating callback-specific variants.
-- [ ] Verify type-table density and recursive references; target eligibility
+- [x] Verify type-table density and recursive references; target eligibility
       and exact signatures; callee definition/type/dataflow; receiver absence;
       complete arguments/results; and non-null callable-address provenance.
-- [ ] Add malicious MIR mutations for unknown or missing targets, mismatched
+- [x] Add malicious MIR mutations for unknown or missing targets, mismatched
       type IDs, arbitrary scalar/pointer construction, wrong callee values,
       implicit receivers, corrupt ownership carriers, lost result securing,
       and call-order violations.
-- [ ] Make preliminary/final MIR dumps, static initializer MIR, public phase
+- [x] Make preliminary/final MIR dumps, static initializer MIR, public phase
       APIs, and backend legality gates deterministic for the new model.
 
 **Tests:** Focused MIR lowering/dump tests for reference storage and indirect

@@ -230,6 +230,7 @@ fn visit_rvalue(rvalue: &MirRvalue, visit: &mut impl FnMut(StorageId)) {
         | MirRvalueKind::ConstantU8(_)
         | MirRvalueKind::ConstantF64Bits(_)
         | MirRvalueKind::ConstantBool(_)
+        | MirRvalueKind::CallableAddress(_)
         | MirRvalueKind::Unary { .. }
         | MirRvalueKind::Binary { .. }
         | MirRvalueKind::IntegerDivision { .. }

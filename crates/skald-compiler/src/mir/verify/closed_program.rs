@@ -13,6 +13,15 @@ impl Verifier<'_> {
     pub(super) fn verify_closed_type_references(&mut self) {
         let mut references = Vec::new();
 
+        for function in self.program.function_types.iter() {
+            collect_signature_types(
+                &mut references,
+                format!("function type {}", function.id),
+                &function.parameters,
+                function.result,
+            );
+        }
+
         for array in self.program.array_types.iter() {
             references.push((format!("array {} element", array.id), array.element));
         }
@@ -97,6 +106,7 @@ impl Verifier<'_> {
     fn type_is_declared(&self, ty: MirType) -> bool {
         match ty {
             MirType::Array(array) => self.program.array_type(array).is_some(),
+            MirType::Function(function) => self.program.function_type(function).is_some(),
             MirType::Class(class) => self.program.class(class).is_some(),
             MirType::Interface(interface) => self.program.interface(interface).is_some(),
             MirType::Shared(target) => self.shared_target_is_declared(target),

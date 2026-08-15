@@ -147,6 +147,7 @@ fn type_name(
         MirType::U8 => Ok("u8".into()),
         MirType::F64 => Ok("f64".into()),
         MirType::Bool => Ok("bool".into()),
+        MirType::Function(function) => Ok(format!("function {function}")),
         MirType::Unit => Ok("unit".into()),
         MirType::Obj => Ok("Obj".into()),
         MirType::Class(class) => class_name(program, class, callable),

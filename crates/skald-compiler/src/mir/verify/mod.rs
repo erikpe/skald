@@ -21,6 +21,7 @@ mod context;
 mod dataflow;
 mod declarations;
 mod dispatch;
+mod function_values;
 mod inheritance;
 mod instructions;
 mod integer_division;

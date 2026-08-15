@@ -10,8 +10,10 @@ progress. Completed roadmaps and resolved discovery records move to
 Recursive function-type syntax, canonical closed `FunctionTypeId` identity,
 exact ordinary and closed-specialization callable references, deterministic
 address-taken metadata, trivial stored/callable HIR, and complete indirect-call
-argument/result planning are implemented behind a driver pre-MIR gate. FVI5
-is next and will lower and verify callable addresses and indirect MIR calls.
+argument/result planning are implemented. FVI5 adds deterministic callable-
+address and indirect-call MIR plus target-independent verification behind a
+structured x86-64 backend gate. FVI6 is next and will realize code pointers
+and indirect calls on x86-64.
 
 ## Planned
 

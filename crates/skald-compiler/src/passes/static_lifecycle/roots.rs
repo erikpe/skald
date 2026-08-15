@@ -29,7 +29,12 @@ pub(crate) fn destruction_roots(program: &MirProgram, ty: MirType) -> Vec<Static
             array,
             StaticArrayLifecycleOperation::Destruction,
         )],
-        MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool => Vec::new(),
+        MirType::I64
+        | MirType::U64
+        | MirType::U8
+        | MirType::F64
+        | MirType::Bool
+        | MirType::Function(_) => Vec::new(),
         MirType::Optional(optional) => match program.optional_type(optional) {
             Some(metadata) => match metadata.storage {
                 crate::mir::MirOptionalStorage::InlineClass(class) => {
