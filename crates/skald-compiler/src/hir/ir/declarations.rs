@@ -23,6 +23,7 @@ use super::{
 pub struct HirProgram {
     pub modules: ProgramModuleTable,
     pub external_links: ExternalLinkTable,
+    pub function_types: super::HirFunctionTypeTable,
     pub array_types: super::HirArrayTypeTable,
     pub optional_types: super::HirOptionalTypeTable,
     pub optional_box_types: super::HirOptionalBoxTypeTable,
@@ -39,6 +40,13 @@ pub struct HirProgram {
 }
 
 impl HirProgram {
+    pub fn function_type(
+        &self,
+        id: crate::identity::FunctionTypeId,
+    ) -> Option<&super::HirFunctionType> {
+        self.function_types.get(id)
+    }
+
     pub fn optional_type(
         &self,
         id: crate::identity::OptionalTypeId,

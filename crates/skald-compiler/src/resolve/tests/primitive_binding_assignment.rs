@@ -26,7 +26,7 @@ fn resolves_primitive_binding_assignments_to_exact_local_identities() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            ResolvedStatement::PrimitiveBindingAssignment(assignment) => Some(assignment),
+            ResolvedStatement::ScalarBindingAssignment(assignment) => Some(assignment),
             _ => None,
         })
         .collect();
@@ -66,7 +66,7 @@ fn assignments_follow_nested_shadowing_and_restore_the_outer_local() {
     assert!(output.diagnostics.is_empty());
     let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
     let destination = |statement: &ResolvedStatement| {
-        let ResolvedStatement::PrimitiveBindingAssignment(assignment) = statement else {
+        let ResolvedStatement::ScalarBindingAssignment(assignment) = statement else {
             panic!("expected primitive binding assignment");
         };
         assignment.destination
@@ -98,7 +98,7 @@ fn resolves_primitive_parameter_assignment_and_recovers_source_diagnostics() {
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].code, UNKNOWN_NAME);
     let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
-    let ResolvedStatement::PrimitiveBindingAssignment(assignment) = &definition.body.statements[0]
+    let ResolvedStatement::ScalarBindingAssignment(assignment) = &definition.body.statements[0]
     else {
         panic!("expected primitive parameter assignment");
     };
@@ -107,7 +107,7 @@ fn resolves_primitive_parameter_assignment_and_recovers_source_diagnostics() {
         BindingId::Parameter(ParameterId::new(FunctionId::new(0), 0))
     );
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("PrimitiveBindingAssignment f0:p0"));
+    assert!(dump.contains("ScalarBindingAssignment f0:p0"));
     assert!(dump.contains("Binding f0:p0"));
 }
 
@@ -118,7 +118,7 @@ fn resolved_dump_uses_only_the_primitive_destination_identity() {
     let dump = dump_resolved(&output.program);
 
     assert_eq!(dump, dump_resolved(&output.program));
-    assert!(dump.contains("PrimitiveBindingAssignment f0:l0"));
+    assert!(dump.contains("ScalarBindingAssignment f0:l0"));
     assert!(dump.contains("Equal @"));
-    assert!(!dump.contains("PrimitiveBindingAssignment \"value\""));
+    assert!(!dump.contains("ScalarBindingAssignment \"value\""));
 }

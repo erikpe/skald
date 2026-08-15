@@ -173,7 +173,7 @@ pub enum ResolvedStatement {
     Conditional(ResolvedConditional),
     While(ResolvedWhile),
     Block(ResolvedBlock),
-    PrimitiveBindingAssignment(ResolvedPrimitiveBindingAssignment),
+    ScalarBindingAssignment(ResolvedScalarBindingAssignment),
     FieldAssignment(ResolvedFieldAssignment),
     StaticFieldAssignment(ResolvedStaticFieldAssignment),
     ObjectAssignment(ResolvedObjectAssignment),
@@ -194,7 +194,7 @@ impl ResolvedStatement {
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
             Self::Block(block) => block.span,
-            Self::PrimitiveBindingAssignment(statement) => statement.span,
+            Self::ScalarBindingAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::StaticFieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
@@ -206,7 +206,7 @@ impl ResolvedStatement {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedPrimitiveBindingAssignment {
+pub struct ResolvedScalarBindingAssignment {
     pub destination: BindingId,
     pub equal_span: Span,
     pub source: ResolvedExpression,

@@ -1282,6 +1282,7 @@ impl CallableChecker<'_, '_> {
                 | Type::F64
                 | Type::Bool
                 | Type::Unit
+                | Type::Function(_)
                 | Type::Optional(_)
                 | Type::Array(_),
             ) => None,

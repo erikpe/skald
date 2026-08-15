@@ -70,7 +70,7 @@ pub struct HirBaseCopy<I> {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirSynthesizedFieldCopy<I> {
-    Primitive {
+    Scalar {
         field: FieldId,
     },
     OptionalPrimitive {
@@ -106,7 +106,7 @@ pub enum HirSynthesizedFieldCopy<I> {
 impl<I> HirSynthesizedFieldCopy<I> {
     pub const fn field(&self) -> FieldId {
         match self {
-            Self::Primitive { field }
+            Self::Scalar { field }
             | Self::OptionalPrimitive { field, .. }
             | Self::OptionalClass { field, .. }
             | Self::Shared { field }

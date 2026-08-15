@@ -192,7 +192,7 @@ pub enum HirStatement {
     Conditional(HirConditional),
     While(HirWhile),
     Block(HirBlock),
-    PrimitiveAssignment(HirPrimitiveAssignment),
+    ScalarAssignment(HirScalarAssignment),
     FieldAssignment(HirFieldAssignment),
     FieldConstruction(HirFieldConstruction),
     FieldCopyConstruction(HirFieldCopyConstruction),
@@ -224,7 +224,7 @@ impl HirStatement {
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
             Self::Block(block) => block.span,
-            Self::PrimitiveAssignment(statement) => statement.span,
+            Self::ScalarAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::FieldConstruction(statement) => statement.span,
             Self::FieldCopyConstruction(statement) => statement.span,
@@ -246,12 +246,32 @@ impl HirStatement {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirPrimitiveAssignment {
-    pub destination: HirPrimitivePlace,
+pub struct HirScalarAssignment {
+    pub destination: HirScalarPlace,
     pub source: HirExpression,
     pub span: Span,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirScalarPlace {
+    pub storage: HirScalarStorage,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirScalarStorage {
+    Binding(BindingId),
+    Static(super::HirStaticPlace),
+}
+
+impl HirScalarPlace {
+    pub const fn span(self) -> Span {
+        self.span
+    }
+}
+
+/// Primitive-only place retained for alias arguments. Function values are
+/// deliberately excluded from callback-slot aliases in the first version.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HirPrimitivePlace {
     pub storage: HirPrimitiveStorage,

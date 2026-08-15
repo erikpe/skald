@@ -30,7 +30,7 @@ impl BodyLowerer<'_> {
     ) {
         use crate::hir::{HirObjectDestinationInitialization, HirStoredValueInitialization};
         match initialization {
-            HirStoredValueInitialization::Primitive(expression) => {
+            HirStoredValueInitialization::Scalar(expression) => {
                 let value = self
                     .lower_expression(expression)
                     .expect("typed primitive initialization must produce a MIR value");

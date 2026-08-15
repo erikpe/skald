@@ -153,13 +153,16 @@ The implemented expression families have these value effects:
 
 Using a complete class binding, `self`, or class-typed field as an ordinary
 scalar expression is an error. Those forms can still be valid object places in
-the contexts described above. Calls through arbitrary expression values and
-function values are not implemented. Resolution recognizes function-valued
-callees for shadowing and diagnoses their staged indirect-call boundary, while
-ordinary named function and static-method calls retain their direct forms.
-Eligible ordinary callable names in value position now produce resolved
-reference metadata, but type checking stops them before storage or execution.
-Their recursive type and non-null value behavior is frozen in
+the contexts described above. Calls through arbitrary expression values are
+not implemented. Resolution recognizes function-valued callees for shadowing
+and diagnoses their staged indirect-call boundary, while ordinary named
+function and static-method calls retain their direct forms. Eligible ordinary
+callable names in value position produce resolved and typed HIR references.
+HIR admits non-null trivial function values in explicitly initialized locals,
+fields and statics, scalar assignment, synthesized object copying, and exact
+internal value parameter/result positions. The source driver still stops
+before MIR, so none of these forms execute yet. Their recursive type and
+non-null value behavior is frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md).
 
 Prefix `*owner` explicitly selects the object place behind a `shared T`
@@ -739,11 +742,11 @@ but its type name, literal syntax and encoding, byte/text semantics, copying,
 slicing, storage, and library boundary are not frozen. No representation or
 literal-lowering strategy is a language guarantee.
 
-Function values are staged behind a type-check gate. Exact recursive types,
-eligible ordinary and closed-generic references, and specialization-time
-generic composition are implemented; storage, indirect calls, and execution
-remain unavailable. Their non-null trivial-scalar design and initial
-exclusions are frozen in
+Function values are staged behind a driver pre-MIR gate. Exact recursive
+types, eligible ordinary and closed-generic references, specialization-time
+generic composition, and stored/callable HIR are implemented; indirect calls
+and execution remain unavailable. Their non-null trivial-scalar design and
+initial exclusions are frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md). Shared ownership's
 implemented non-null value type, compatible views, and copy/adopt/release
 behavior are defined in

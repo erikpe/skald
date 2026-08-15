@@ -10,7 +10,11 @@ use crate::{
 use super::ir::*;
 
 pub fn dump_hir(program: &HirProgram) -> String {
-    let mut dumper = HirDumper::new(&program.optional_types, &program.optional_box_types);
+    let mut dumper = HirDumper::new(
+        &program.function_types,
+        &program.optional_types,
+        &program.optional_box_types,
+    );
     dumper.line("HirProgram", program.span);
     dumper.indented(|dumper| {
         dumper.raw_line(&format!("SelectedModule {}", program.modules.selected()));
@@ -116,6 +120,33 @@ pub fn dump_hir(program: &HirProgram) -> String {
         }
         dumper.write_indentation();
         let _ = writeln!(dumper.output, "Entry {}", program.entry_function);
+        if !program.function_types.is_empty() {
+            dumper.heading("FunctionTypes");
+            dumper.indented(|dumper| {
+                for function in program.function_types.iter() {
+                    dumper.line(
+                        &format!(
+                            "FunctionType {} -> {}",
+                            function.id,
+                            dumper.type_name(function.result)
+                        ),
+                        function.span,
+                    );
+                    dumper.indented(|dumper| {
+                        for parameter in &function.parameters {
+                            dumper.line(
+                                &format!(
+                                    "Parameter {:?} {}",
+                                    parameter.mode,
+                                    dumper.type_name(parameter.ty)
+                                ),
+                                parameter.span,
+                            );
+                        }
+                    });
+                }
+            });
+        }
         if !program.array_types.is_empty() {
             dumper.heading("ArrayTypes");
             dumper.indented(|dumper| {
@@ -176,18 +207,21 @@ pub fn dump_hir(program: &HirProgram) -> String {
 struct HirDumper<'types> {
     output: String,
     indentation: usize,
+    function_types: &'types HirFunctionTypeTable,
     optional_types: &'types HirOptionalTypeTable,
     optional_box_types: &'types HirOptionalBoxTypeTable,
 }
 
 impl<'types> HirDumper<'types> {
     fn new(
+        function_types: &'types HirFunctionTypeTable,
         optional_types: &'types HirOptionalTypeTable,
         optional_box_types: &'types HirOptionalBoxTypeTable,
     ) -> Self {
         Self {
             output: String::new(),
             indentation: 0,
+            function_types,
             optional_types,
             optional_box_types,
         }
@@ -195,6 +229,26 @@ impl<'types> HirDumper<'types> {
 
     fn type_name(&self, ty: Type) -> String {
         match ty {
+            Type::Function(function) => {
+                let function = self
+                    .function_types
+                    .get(function)
+                    .expect("HIR dump function identity must name metadata");
+                let parameters = function
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        let mode = match parameter.mode {
+                            HirFunctionTypeParameterMode::Value => "",
+                            HirFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
+                            HirFunctionTypeParameterMode::MutableAlias => "mut ref ",
+                        };
+                        format!("{mode}{}", self.type_name(parameter.ty))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("fn({parameters}) -> {}", self.type_name(function.result))
+            }
             Type::Optional(optional) => {
                 let payload = self
                     .optional_types
@@ -552,8 +606,8 @@ impl<'types> HirDumper<'types> {
                     }
                     for field in &operation.fields {
                         match field {
-                            HirSynthesizedFieldCopy::Primitive { field } => {
-                                dumper.raw_line(&format!("Primitive {field}"));
+                            HirSynthesizedFieldCopy::Scalar { field } => {
+                                dumper.raw_line(&format!("Scalar {field}"));
                             }
                             HirSynthesizedFieldCopy::OptionalPrimitive { field, payload } => {
                                 dumper.raw_line(&format!(
@@ -805,14 +859,14 @@ impl<'types> HirDumper<'types> {
                 });
             }
             HirStatement::Block(block) => self.block(block),
-            HirStatement::PrimitiveAssignment(assignment) => {
+            HirStatement::ScalarAssignment(assignment) => {
                 match assignment.destination.storage {
-                    crate::hir::HirPrimitiveStorage::Binding(binding) => self.line(
-                        &format!("PrimitiveBindingAssignment {binding}"),
+                    crate::hir::HirScalarStorage::Binding(binding) => self.line(
+                        &format!("ScalarBindingAssignment {binding}"),
                         assignment.span,
                     ),
-                    crate::hir::HirPrimitiveStorage::Static(place) => self.line(
-                        &format!("PrimitiveStaticAssignment {}", place.field),
+                    crate::hir::HirScalarStorage::Static(place) => self.line(
+                        &format!("ScalarStaticAssignment {}", place.field),
                         assignment.span,
                     ),
                 }
@@ -1019,6 +1073,15 @@ impl<'types> HirDumper<'types> {
         match &expression.kind {
             HirExpressionKind::Binding(binding) => {
                 self.typed_line(&format!("Binding {binding}"), expression);
+            }
+            HirExpressionKind::FunctionReference(reference) => {
+                self.typed_line(
+                    &format!(
+                        "FunctionReference {} signature {}",
+                        reference.target, reference.function_type
+                    ),
+                    expression,
+                );
             }
             HirExpressionKind::I64(value) => {
                 self.typed_line(&format!("Integer {value}"), expression);
@@ -1515,8 +1578,8 @@ impl<'types> HirDumper<'types> {
 
     fn stored_value_initialization(&mut self, value: &crate::hir::HirStoredValueInitialization) {
         match value {
-            crate::hir::HirStoredValueInitialization::Primitive(value) => {
-                self.raw_line("PrimitiveInitialization");
+            crate::hir::HirStoredValueInitialization::Scalar(value) => {
+                self.raw_line("ScalarInitialization");
                 self.indented(|dumper| dumper.expression(value));
             }
             crate::hir::HirStoredValueInitialization::Class(value) => {
@@ -2784,7 +2847,8 @@ mod tests {
         };
         let optional_types = HirOptionalTypeTable::default();
         let optional_box_types = HirOptionalBoxTypeTable::default();
-        let mut dumper = HirDumper::new(&optional_types, &optional_box_types);
+        let function_types = HirFunctionTypeTable::default();
+        let mut dumper = HirDumper::new(&function_types, &optional_types, &optional_box_types);
 
         dumper.object_place(&place);
 

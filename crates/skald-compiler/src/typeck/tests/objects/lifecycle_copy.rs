@@ -95,7 +95,7 @@ fn computes_ordered_copy_capabilities_for_empty_primitive_and_forward_nested_cla
     ));
     assert!(matches!(
         construction.fields[1],
-        HirSynthesizedFieldCopy::Primitive { .. }
+        HirSynthesizedFieldCopy::Scalar { .. }
     ));
 
     let HirCopyCapability::Synthesized(assignment) = &outer.copy_assignment else {

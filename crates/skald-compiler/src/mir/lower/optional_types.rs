@@ -137,6 +137,9 @@ pub(super) fn lower_type(ty: Type) -> MirType {
         Type::Array(array) => MirType::Array(array),
         Type::Class(class) => MirType::Class(class),
         Type::Interface(interface) => MirType::Interface(interface),
+        Type::Function(_) => {
+            unreachable!("the driver rejects function values before MIR lowering")
+        }
         Type::Obj => MirType::Obj,
         Type::Shared(target) => MirType::Shared(lower_shared_target(target)),
         Type::Optional(optional) => MirType::Optional(optional),

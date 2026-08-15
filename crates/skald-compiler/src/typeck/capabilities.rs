@@ -413,7 +413,7 @@ fn compute_class<I: Copy>(
                             array,
                         });
                     }
-                    _ => fields.push(HirSynthesizedFieldCopy::Primitive { field: field.id }),
+                    _ => fields.push(HirSynthesizedFieldCopy::Scalar { field: field.id }),
                 }
             }
             match failure {

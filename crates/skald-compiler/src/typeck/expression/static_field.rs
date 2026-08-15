@@ -20,7 +20,13 @@ impl CallableChecker<'_, '_> {
         let (place, ty) = self.check_static_place(access.field, access.span)?;
         if !matches!(
             ty,
-            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Array(_)
+            Type::I64
+                | Type::U64
+                | Type::U8
+                | Type::F64
+                | Type::Bool
+                | Type::Function(_)
+                | Type::Array(_)
         ) {
             return None;
         }

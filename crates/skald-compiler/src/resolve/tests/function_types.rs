@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     identity::{ArrayTypeId, FunctionTypeId, OptionalTypeId},
     test_support::load_module_sources,
-    typeck::{type_check, FUNCTION_VALUES_NOT_YET_SUPPORTED as TYPECK_FUNCTION_GATE},
+    typeck::type_check,
 };
 
 #[test]
@@ -153,7 +153,7 @@ fn canonical_identity_is_shared_across_modules_after_name_resolution() {
 }
 
 #[test]
-fn generic_function_type_arguments_close_before_the_global_type_check_gate() {
+fn generic_function_type_arguments_close_into_hir() {
     let output = resolve_text(concat!(
         "class Holder<T> { value: T; init(value: T) { self.value = value; } }\n",
         "fn use(value: Holder<fn(i64) -> bool>) -> unit {}\n",
@@ -168,22 +168,16 @@ fn generic_function_type_arguments_close_before_the_global_type_check_gate() {
     ));
 
     let checked = type_check(&output.program);
-    assert!(checked.hir.is_none());
-    assert!(checked
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == TYPECK_FUNCTION_GATE));
+    assert!(checked.hir.is_some(), "{:?}", checked.diagnostics);
+    assert!(checked.diagnostics.is_empty());
 }
 
 #[test]
-fn direct_type_check_api_gates_resolved_function_types_without_panicking() {
+fn direct_type_check_api_lowers_resolved_function_types_without_panicking() {
     let output =
         resolve_text("fn use(value: fn(i64) -> bool) -> unit {}\nfn main() -> i64 { return 0; }\n");
     let checked = type_check(&output.program);
-    assert!(checked.hir.is_none());
-    assert_eq!(checked.diagnostics.len(), 1);
-    assert_eq!(
-        checked.diagnostics.iter().next().unwrap().code,
-        TYPECK_FUNCTION_GATE
-    );
+    let hir = checked.hir.expect("valid function types must lower to HIR");
+    assert!(checked.diagnostics.is_empty());
+    assert_eq!(hir.function_types.iter().count(), 1);
 }

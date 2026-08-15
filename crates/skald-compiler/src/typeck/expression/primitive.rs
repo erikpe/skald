@@ -354,6 +354,7 @@ fn select_arithmetic_operation(
             | Type::Obj
             | Type::Class(_)
             | Type::Interface(_)
+            | Type::Function(_)
             | Type::Shared(_)
             | Type::Optional(_)
             | Type::Array(_),

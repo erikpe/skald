@@ -4,7 +4,7 @@ use crate::{
         HirArrayTransfer, HirCallArgument, HirClassOptionalDestinationInitialization,
         HirExpressionKind, HirObjectDestinationInitialization, HirOptionalSharedSource,
         HirOptionalSource, HirOptionalStorage, HirOwnerTransfer, HirPrimitiveStorage,
-        HirStoredValueInitialization,
+        HirScalarStorage, HirStoredValueInitialization,
     },
     identity::{ClassId, MethodId, StaticFieldId, StaticInitializerId},
     resolve::resolve_module_graph,
@@ -132,8 +132,8 @@ fn lowers_primitive_reads_writes_and_aliases_to_identity_based_places() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            HirStatement::PrimitiveAssignment(assignment) => {
-                let HirPrimitiveStorage::Static(place) = assignment.destination.storage else {
+            HirStatement::ScalarAssignment(assignment) => {
+                let HirScalarStorage::Static(place) = assignment.destination.storage else {
                     return None;
                 };
                 Some(place.field)
@@ -167,7 +167,7 @@ fn lowers_primitive_reads_writes_and_aliases_to_identity_based_places() {
 
     let dump = dump_hir(&hir);
     assert!(dump.contains("StaticField c0:static0 \"signed\" : i64"));
-    assert!(dump.contains("PrimitiveStaticAssignment c0:static0"));
+    assert!(dump.contains("ScalarStaticAssignment c0:static0"));
     assert!(dump.contains("StaticRead c0:static0 : i64"));
     assert!(dump.contains("PrimitivePlaceArgument static c0:static0"));
 }
@@ -246,7 +246,7 @@ fn retains_typed_primitive_and_exact_object_static_initializers() {
     let state = hir.class(ClassId::new(1)).unwrap();
     assert!(matches!(
         state.static_fields[0].initializer.as_ref().unwrap().value,
-        HirStoredValueInitialization::Primitive(_)
+        HirStoredValueInitialization::Scalar(_)
     ));
     assert!(matches!(
         state.static_fields[1].initializer.as_ref().unwrap().value,
@@ -277,7 +277,7 @@ fn static_initializer_hir_dump_is_exact_and_retains_one_typed_evaluation() {
             "        StaticField c0:static0 \"value\" : i64 @14..48\n",
             "          DeclarationInitializer c0:static0:initializer destination i64 @32..47\n",
             "            Equal @32..33\n",
-            "            PrimitiveInitialization\n",
+            "            ScalarInitialization\n",
             "              Binary AddI64 : i64 @34..47\n",
             "                Integer 1 : i64 @34..35\n",
             "                DirectCall f0 : i64 @38..47\n",
@@ -362,7 +362,7 @@ fn selects_the_complete_stored_value_initialization_matrix() {
     for field in &state.static_fields[..5] {
         assert!(matches!(
             field.initializer.as_ref().unwrap().value,
-            HirStoredValueInitialization::Primitive(_)
+            HirStoredValueInitialization::Scalar(_)
         ));
     }
     assert!(matches!(
@@ -854,10 +854,7 @@ fn statics_compose_with_initializer_overloads_instance_methods_and_lifecycle_bod
 
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let dump = dump_hir(&output.hir.unwrap());
-    assert_eq!(
-        dump.matches("PrimitiveStaticAssignment c0:static0").count(),
-        2
-    );
+    assert_eq!(dump.matches("ScalarStaticAssignment c0:static0").count(), 2);
     assert!(dump.contains("StaticRead c0:static0 : i64"), "{dump}");
 }
 

@@ -2,8 +2,8 @@
 
 use crate::{
     identity::{
-        BindingId, CopyConstructorId, FunctionId, InterfaceId, InterfaceRequirementId, MethodId,
-        VirtualFamilyId, VirtualSlotId,
+        BindingId, CallableId, CopyConstructorId, FunctionId, FunctionTypeId, InterfaceId,
+        InterfaceRequirementId, MethodId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -26,6 +26,7 @@ pub struct HirExpression {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirExpressionKind {
     Binding(BindingId),
+    FunctionReference(HirFunctionReference),
     I64(i64),
     U64(u64),
     U8(u8),
@@ -90,6 +91,14 @@ pub enum HirExpressionKind {
     ArrayLength(Box<super::HirArrayLength>),
     ArrayElement(Box<super::HirArrayElementPlace>),
     ArraySlice(Box<super::HirArraySlice>),
+}
+
+/// A capture-free function value with its exact callable target and canonical
+/// signature identity.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirFunctionReference {
+    pub target: CallableId,
+    pub function_type: FunctionTypeId,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

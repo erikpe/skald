@@ -5,7 +5,7 @@ use crate::{
         load_module_sources, load_module_sources_with_standard_library_overrides,
         CANONICAL_F64_SOURCE,
     },
-    typeck::{type_check, FUNCTION_VALUES_NOT_YET_SUPPORTED as TYPECK_FUNCTION_GATE},
+    typeck::type_check,
 };
 
 fn reference(expression: &ResolvedExpression) -> &ResolvedFunctionReferenceExpr {
@@ -362,7 +362,7 @@ fn imported_generic_static_references_close_in_the_defining_module() {
 }
 
 #[test]
-fn dumps_expose_reference_nodes_and_target_sorted_address_metadata_before_the_lowering_gate() {
+fn dumps_expose_reference_nodes_and_target_sorted_address_metadata_in_hir() {
     let output = resolve_text(concat!(
         "fn first() -> i64 { return 1; }\n",
         "fn second() -> i64 { return 2; }\n",
@@ -382,16 +382,8 @@ fn dumps_expose_reference_nodes_and_target_sorted_address_metadata_before_the_lo
     assert!(first < second);
 
     let checked = type_check(&output.program);
-    let diagnostic = checked.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, TYPECK_FUNCTION_GATE);
-    assert_eq!(
-        diagnostic.labels[0].span,
-        output
-            .program
-            .address_taken_callables
-            .iter()
-            .next()
-            .unwrap()
-            .first_reference_span
-    );
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir_dump = crate::hir::dump_hir(&checked.hir.unwrap());
+    assert!(hir_dump.contains("FunctionReference f1 signature ft0"));
+    assert!(hir_dump.contains("FunctionReference f0 signature ft0"));
 }

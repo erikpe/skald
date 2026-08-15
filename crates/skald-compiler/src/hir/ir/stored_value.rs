@@ -18,7 +18,7 @@ use super::{
 /// and lifecycle selection without rediscovering source shape below HIR.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirStoredValueInitialization {
-    Primitive(HirExpression),
+    Scalar(HirExpression),
     Class(HirObjectDestinationInitialization),
     OptionalPrimitive {
         source: HirOptionalSource,
@@ -41,7 +41,7 @@ pub enum HirStoredValueInitialization {
 impl HirStoredValueInitialization {
     pub const fn span(&self) -> Span {
         match self {
-            Self::Primitive(value) => value.span,
+            Self::Scalar(value) => value.span,
             Self::Class(value) => value.span(),
             Self::OptionalPrimitive { source, .. } => source.span(),
             Self::OptionalClass(value) => value.span(),

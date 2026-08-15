@@ -3,6 +3,8 @@ public fn exported(value: i64) -> i64 {
 }
 
 public class Math {
+    init() {}
+
     static fn apply(value: i64) -> i64 {
         return value;
     }

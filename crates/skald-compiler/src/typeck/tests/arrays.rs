@@ -48,7 +48,7 @@ fn selects_ordered_primitive_element_plans_and_lowers_them_to_mir() {
     assert!(list
         .elements
         .iter()
-        .all(|element| matches!(element.value, HirStoredValueInitialization::Primitive(_))));
+        .all(|element| matches!(element.value, HirStoredValueInitialization::Scalar(_))));
 
     let mir = crate::mir::lower_hir(&hir);
     crate::mir::verify_mir(&mir).expect("primitive element-list MIR must verify");

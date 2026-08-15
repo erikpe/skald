@@ -7,11 +7,11 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 [Capture-free function values](FUNCTION_VALUES_ROADMAP.md) is in progress.
-Recursive function-type syntax and canonical closed `FunctionTypeId` identity
-plus exact ordinary and closed-specialization callable references and
-deterministic address-taken metadata are implemented behind a type-check gate.
-FVI3 is next and will integrate trivial function values with stored and
-callable HIR.
+Recursive function-type syntax, canonical closed `FunctionTypeId` identity,
+exact ordinary and closed-specialization callable references, deterministic
+address-taken metadata, and trivial stored/callable HIR are implemented behind
+a driver pre-MIR gate. FVI4 is next and will type indirect calls through the
+complete internal signature.
 
 ## Planned
 

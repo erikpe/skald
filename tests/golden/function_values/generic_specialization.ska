@@ -1,6 +1,10 @@
 class Factory<T> {
     callback: fn(T) -> T;
 
+    init(callback: fn(T) -> T) {
+        self.callback = callback;
+    }
+
     static fn identity(value: T) -> T {
         return value;
     }

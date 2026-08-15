@@ -94,6 +94,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         | HirExpressionKind::Unwrap(_)
         | HirExpressionKind::NestedOptionalUnwrap(_) => {}
         HirExpressionKind::Binding(_)
+        | HirExpressionKind::FunctionReference(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
         | HirExpressionKind::U8(_)
@@ -183,6 +184,7 @@ mod dumps;
 mod eager_boolean_operators;
 mod expressions;
 mod floating_division;
+mod function_values;
 mod generic_classes;
 mod generic_object_model;
 mod inline_fields;

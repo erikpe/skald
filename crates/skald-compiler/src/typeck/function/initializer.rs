@@ -233,9 +233,10 @@ impl CallableChecker<'_, '_> {
                 | Type::F64
                 | Type::Unit
                 | Type::Obj
-                | Type::Interface(_),
+                | Type::Interface(_)
+                | Type::Function(_),
                 _,
-            ) => self.check_primitive_field_assignment(
+            ) => self.check_scalar_field_assignment(
                 target.place.clone(),
                 target.ty,
                 &target.name,
@@ -492,7 +493,7 @@ impl CallableChecker<'_, '_> {
         self.finish_copy_assignment(destination, &assignment.value, assignment.span)
     }
 
-    fn check_primitive_field_assignment(
+    fn check_scalar_field_assignment(
         &mut self,
         place: HirFieldPlace,
         field_type: Type,
@@ -501,12 +502,17 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirStatement> {
         if let crate::resolve::ResolvedExpression::Construct(construction) = &assignment.value {
             let _ = self.check_construction_arguments(construction);
+            let kind = if matches!(field_type, Type::Function(_)) {
+                "function"
+            } else {
+                "primitive"
+            };
             self.diagnostics.push(
                 Diagnostic::error(
                     INVALID_CONSTRUCTION,
-                    format!("primitive field `{field_name}` cannot contain a constructed object"),
+                    format!("{kind} field `{field_name}` cannot contain a constructed object"),
                 )
-                .with_primary_label(construction.span, "expected a primitive expression"),
+                .with_primary_label(construction.span, format!("expected a {kind} expression")),
             );
             return None;
         }

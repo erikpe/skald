@@ -100,9 +100,14 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::PresenceTest(test) => self.check_presence_test(test),
             ResolvedExpression::Unwrap(unwrap) => self.check_optional_unwrap(unwrap),
             ResolvedExpression::Binding(binding) => self.check_binding_expression(binding),
-            ResolvedExpression::FunctionReference(_) => {
-                unreachable!("function references are rejected by the program-level type gate")
-            }
+            ResolvedExpression::FunctionReference(reference) => Some(HirExpression {
+                kind: HirExpressionKind::FunctionReference(crate::hir::HirFunctionReference {
+                    target: reference.target,
+                    function_type: reference.function_type,
+                }),
+                ty: Type::Function(reference.function_type),
+                span: reference.span,
+            }),
             ResolvedExpression::NumericLiteral(literal) => self.check_numeric_literal(literal),
             ResolvedExpression::ByteLiteral(literal) => Some(HirExpression {
                 kind: HirExpressionKind::U8(literal.value),

@@ -60,6 +60,7 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
             matches!(presence.source, crate::hir::HirSharedSource::Produced(_))
         }
         HirExpressionKind::Binding(_)
+        | HirExpressionKind::FunctionReference(_)
         | HirExpressionKind::StaticRead(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)

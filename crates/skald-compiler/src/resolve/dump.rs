@@ -1206,9 +1206,9 @@ impl<'program> ResolvedDumper<'program> {
                 });
             }
             ResolvedStatement::Block(block) => self.block(block),
-            ResolvedStatement::PrimitiveBindingAssignment(assignment) => {
+            ResolvedStatement::ScalarBindingAssignment(assignment) => {
                 self.line(
-                    &format!("PrimitiveBindingAssignment {}", assignment.destination),
+                    &format!("ScalarBindingAssignment {}", assignment.destination),
                     assignment.span,
                 );
                 self.indented(|dumper| {

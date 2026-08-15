@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI2 implemented, FVI3 is next.
+Status: in progress; FVI3 implemented, FVI4 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -49,7 +49,7 @@ below implement those decisions without reopening them.
 - [x] FVI0 — Parse and intern canonical closed function types
 - [x] FVI1 — Resolve eligible callable references and frozen exclusions
 - [x] FVI2 — Close function types and references during generic specialization
-- [ ] FVI3 — Integrate trivial function values with stored and callable HIR
+- [x] FVI3 — Integrate trivial function values with stored and callable HIR
 - [ ] FVI4 — Type indirect calls through the complete internal signature
 - [ ] FVI5 — Lower and verify callable addresses and indirect MIR calls
 - [ ] FVI6 — Realize code pointers and indirect calls on x86-64
@@ -170,22 +170,22 @@ contextual compositions fail at their existing requirement owner.
 **Purpose:** Make function references ordinary non-null scalar values across
 all frozen storage and transport boundaries before adding indirect execution.
 
-- [ ] Add the function type and reference expression to HIR with explicit
+- [x] Add the function type and reference expression to HIR with explicit
       canonical metadata and exact eligible target identity.
-- [ ] Generalize implementation vocabulary from primitive-only to neutral
+- [x] Generalize implementation vocabulary from primitive-only to neutral
       scalar operations wherever existing load/store/initialize/assign/return
       machinery already applies to trivial values; keep primitive semantics
       and diagnostics distinct.
-- [ ] Support explicitly initialized locals, reassignment, instance fields,
+- [x] Support explicitly initialized locals, reassignment, instance fields,
       explicit static initializers, direct/synthesized field copy construction
       and assignment, value arguments, and value results with no cleanup step.
-- [ ] Permit function values in internal top-level, static, initializer,
+- [x] Permit function values in internal top-level, static, initializer,
       instance, virtual, and interface signatures; compare exact canonical
       types for override and conformance checks.
-- [ ] Reject initializer-free function-valued statics, callback-slot aliases,
+- [x] Reject initializer-free function-valued statics, callback-slot aliases,
       optionals, arrays, shared targets, casts, comparisons, explicit object
       copy construction, and external signatures at their ordinary owners.
-- [ ] Extend stored-value capability, layout-independent type, callable
+- [x] Extend stored-value capability, layout-independent type, callable
       signature, static-initializer, lifecycle, and HIR dump models while the
       driver retains a structured pre-MIR gate for executable references.
 

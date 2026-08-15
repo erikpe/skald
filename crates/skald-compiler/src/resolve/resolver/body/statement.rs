@@ -496,11 +496,12 @@ impl CallableResolver<'_, '_> {
                         | ResolvedTypeKind::U8
                         | ResolvedTypeKind::F64
                         | ResolvedTypeKind::Bool
+                        | ResolvedTypeKind::Function(_)
                 ) {
                     let source = self.resolve_expression(&assignment.value);
                     return source.map(|source| {
-                        ResolvedStatement::PrimitiveBindingAssignment(
-                            ResolvedPrimitiveBindingAssignment {
+                        ResolvedStatement::ScalarBindingAssignment(
+                            ResolvedScalarBindingAssignment {
                                 destination: binding.id,
                                 equal_span: assignment.equal_span,
                                 source,

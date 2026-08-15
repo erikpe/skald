@@ -57,7 +57,7 @@ impl CallableChecker<'_, '_> {
             _ => {
                 let value = self.check_expression(source)?;
                 self.require_exact_type(value.ty, expected, value.span, context)
-                    .then_some(HirStoredValueInitialization::Primitive(value))
+                    .then_some(HirStoredValueInitialization::Scalar(value))
             }
         }
     }

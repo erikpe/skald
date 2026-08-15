@@ -22,6 +22,7 @@ use super::{
 };
 
 mod class;
+mod function_types;
 mod interfaces;
 mod overrides;
 mod static_fields;
@@ -85,33 +86,6 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    if let Some(function) = program.function_types.iter().next() {
-        let (span, label) = program
-            .address_taken_callables
-            .iter()
-            .next()
-            .map(|reference| {
-                (
-                    reference.first_reference_span,
-                    "resolved function references cannot be lowered until stored HIR support ships",
-                )
-            })
-            .unwrap_or((
-                function.span,
-                "resolved function types cannot be lowered until stored HIR support ships",
-            ));
-        diagnostics.push(
-            Diagnostic::error(
-                FUNCTION_VALUES_NOT_YET_SUPPORTED,
-                "function values are not executable yet",
-            )
-            .with_primary_label(span, label),
-        );
-        return TypeCheckOutput {
-            hir: None,
-            diagnostics,
-        };
-    }
     let optional_types_valid =
         super::optional_validation::validate_optional_types(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
@@ -122,6 +96,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         };
     }
     super::arrays::validate_array_types(program, &mut diagnostics);
+    let function_types = function_types::lower_function_types(program, &mut diagnostics);
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
@@ -165,6 +140,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         Some(HirProgram {
             modules: program.modules.clone(),
             external_links: program.external_links.clone(),
+            function_types,
             array_types: copy_capabilities.array_types(),
             optional_types,
             optional_box_types,
@@ -310,7 +286,7 @@ pub(super) fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bo
                     | super::optional_types::OptionalPayloadKind::Array(_)
             )
         ),
-        Type::Unit | Type::Shared(_) => false,
+        Type::Unit | Type::Shared(_) | Type::Function(_) => false,
     }
 }
 
@@ -506,15 +482,44 @@ pub(super) fn lower_type(_program: &ResolvedProgram, type_syntax: &ResolvedType)
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
-        ResolvedTypeKind::Function(_) => {
-            unreachable!("function types must be gated before HIR lowering")
-        }
+        ResolvedTypeKind::Function(function) => Type::Function(function),
         ResolvedTypeKind::Array(array) => Type::Array(array),
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }
         ResolvedTypeKind::Optional(optional) => Type::Optional(optional),
     }
+}
+
+/// Reports the deliberate source-driver boundary retained until MIR can lower
+/// function values. Type checking itself is complete and produces HIR first.
+pub(crate) fn validate_mir_readiness(program: &ResolvedProgram) -> Diagnostics {
+    let mut diagnostics = Diagnostics::new();
+    let Some(function) = program.function_types.iter().next() else {
+        return diagnostics;
+    };
+    let (span, label) = program
+        .address_taken_callables
+        .iter()
+        .next()
+        .map(|reference| {
+            (
+                reference.first_reference_span,
+                "typed function references cannot be lowered until MIR support ships",
+            )
+        })
+        .unwrap_or((
+            function.span,
+            "typed function values cannot be lowered until MIR support ships",
+        ));
+    diagnostics.push(
+        Diagnostic::error(
+            FUNCTION_VALUES_NOT_YET_SUPPORTED,
+            "function values are not executable yet",
+        )
+        .with_primary_label(span, label),
+    );
+    diagnostics
 }
 
 /// Compares resolved type identities while ignoring source-location metadata

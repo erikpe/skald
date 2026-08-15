@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    hir::HirPrimitiveStorage,
+    hir::HirScalarStorage,
     identity::{BindingId, ParameterId},
 };
 
@@ -32,7 +32,7 @@ fn checks_all_primitive_binding_assignment_types_exactly() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            HirStatement::PrimitiveAssignment(assignment) => Some(assignment),
+            HirStatement::ScalarAssignment(assignment) => Some(assignment),
             _ => None,
         })
         .collect();
@@ -54,7 +54,7 @@ fn checks_all_primitive_binding_assignment_types_exactly() {
         assignments
             .iter()
             .map(|assignment| {
-                let HirPrimitiveStorage::Binding(BindingId::Local(local)) =
+                let HirScalarStorage::Binding(BindingId::Local(local)) =
                     assignment.destination.storage
                 else {
                     panic!("expected local destination");
@@ -67,8 +67,8 @@ fn checks_all_primitive_binding_assignment_types_exactly() {
 
     let dump = dump_hir(&hir);
     assert_eq!(dump, dump_hir(&hir));
-    assert!(dump.contains("PrimitiveBindingAssignment f1:l0"));
-    assert!(!dump.contains("PrimitiveBindingAssignment \"signed\""));
+    assert!(dump.contains("ScalarBindingAssignment f1:l0"));
+    assert!(!dump.contains("ScalarBindingAssignment \"signed\""));
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn checks_all_primitive_parameter_assignment_types_exactly() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            HirStatement::PrimitiveAssignment(assignment) => Some(assignment),
+            HirStatement::ScalarAssignment(assignment) => Some(assignment),
             _ => None,
         })
         .collect();
@@ -106,8 +106,7 @@ fn checks_all_primitive_parameter_assignment_types_exactly() {
     );
     assert!(assignments.iter().enumerate().all(|(index, assignment)| {
         let parameter = ParameterId::new(FunctionId::new(0), index);
-        assignment.destination.storage
-            == HirPrimitiveStorage::Binding(BindingId::Parameter(parameter))
+        assignment.destination.storage == HirScalarStorage::Binding(BindingId::Parameter(parameter))
     }));
 }
 

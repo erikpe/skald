@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use crate::identity::{ClassId, InterfaceId, OptionalTypeId};
+use crate::identity::{ClassId, FunctionTypeId, InterfaceId, OptionalTypeId};
 pub use crate::object_path::ObjectProjection;
 
 mod array;
@@ -10,6 +10,7 @@ mod body;
 mod control_flow;
 mod declarations;
 mod expression;
+mod function_type;
 mod integer_division;
 mod io;
 mod object;
@@ -38,8 +39,8 @@ pub use body::{
     HirBlock, HirBreak, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
     HirConditional, HirConditionalArm, HirContinue, HirFunctionDefinition,
     HirFunctionDefinitionTable, HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
-    HirPrimitiveAssignment, HirPrimitivePlace, HirPrimitiveStorage, HirReturn, HirReturnValue,
-    HirStatement, HirWhile,
+    HirPrimitivePlace, HirPrimitiveStorage, HirReturn, HirReturnValue, HirScalarAssignment,
+    HirScalarPlace, HirScalarStorage, HirStatement, HirWhile,
 };
 pub use control_flow::HirControlEffects;
 pub use declarations::{
@@ -54,9 +55,13 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirComparisonOperand, HirComparisonPredicate,
-    HirCopyArgument, HirExpression, HirExpressionKind, HirIntegerBitwiseOperation, HirIntegerType,
-    HirInterfaceCallTarget, HirInterfaceReceiver, HirLogicalExpression, HirLogicalOperation,
-    HirMethodCallTarget, HirPrimitiveComparison, HirTypeTest, HirTypeTestKind, HirUnaryOperation,
+    HirCopyArgument, HirExpression, HirExpressionKind, HirFunctionReference,
+    HirIntegerBitwiseOperation, HirIntegerType, HirInterfaceCallTarget, HirInterfaceReceiver,
+    HirLogicalExpression, HirLogicalOperation, HirMethodCallTarget, HirPrimitiveComparison,
+    HirTypeTest, HirTypeTestKind, HirUnaryOperation,
+};
+pub use function_type::{
+    HirFunctionType, HirFunctionTypeParameter, HirFunctionTypeParameterMode, HirFunctionTypeTable,
 };
 pub use integer_division::{
     HirCheckedIntegerDivision, HirIntegerDivisionFailure, HirIntegerDivisionKind,
@@ -120,6 +125,7 @@ pub enum Type {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Function(FunctionTypeId),
     Array(crate::identity::ArrayTypeId),
     Shared(HirSharedTarget),
     Optional(OptionalTypeId),
@@ -137,6 +143,7 @@ impl Type {
             Self::Obj => Cow::Borrowed("Obj"),
             Self::Class(class) => Cow::Owned(format!("class {class}")),
             Self::Interface(interface) => Cow::Owned(format!("interface {interface}")),
+            Self::Function(function) => Cow::Owned(format!("function {function}")),
             Self::Array(array) => Cow::Owned(format!("array {array}")),
             Self::Shared(target) => Cow::Owned(match target {
                 HirSharedTarget::Obj => "shared Obj".to_owned(),
@@ -161,6 +168,7 @@ impl Type {
             | Self::Unit
             | Self::Class(_)
             | Self::Interface(_)
+            | Self::Function(_)
             | Self::Array(_)
             | Self::Shared(_)
             | Self::Optional(_) => "a",

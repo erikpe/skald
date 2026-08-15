@@ -101,8 +101,8 @@ The frozen [function-value compiler contract](FUNCTION_VALUES.md) assigns
 canonical closed function-type identity, exact callable references, explicit
 HIR and MIR indirect calls, verification, conservative address-taken effects,
 one-word x86-64 realization, and the unchanged runtime boundary to their
-owning phases. Function types and eligible ordinary callable references are
-now resolved compiler input; stored HIR/MIR values, generic reference closure,
+owning phases. Function types, eligible ordinary callable references, generic
+reference closure, and trivial stored/callable HIR are implemented; MIR values
 and indirect calls remain unavailable. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns staged
 delivery and structured gates.

@@ -6,9 +6,9 @@ use crate::{
         HirAccess, HirBaseInitialization, HirBlock, HirBreak, HirCallArgument, HirCallStatement,
         HirConditional, HirConditionalArm, HirContinue, HirControlEffects, HirLocalDecl,
         HirLocalInitializer, HirObjectReturn, HirOptionalAssignment, HirOptionalPlace,
-        HirOptionalStorage, HirOptionalWriteKind, HirPanic, HirPrimitiveAssignment,
-        HirPrimitivePlace, HirPrimitiveStorage, HirReturn, HirReturnValue, HirSharedAssignment,
-        HirStatement, HirWhile, Type,
+        HirOptionalStorage, HirOptionalWriteKind, HirPanic, HirReturn, HirReturnValue,
+        HirScalarAssignment, HirScalarPlace, HirScalarStorage, HirSharedAssignment, HirStatement,
+        HirWhile, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedContinue, ResolvedExpression,
@@ -78,8 +78,8 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedStatement::While(statement) => self.check_while_statement(statement),
             ResolvedStatement::Block(block) => self.check_nested_block_statement(block),
-            ResolvedStatement::PrimitiveBindingAssignment(assignment) => {
-                self.check_primitive_binding_assignment(assignment)
+            ResolvedStatement::ScalarBindingAssignment(assignment) => {
+                self.check_scalar_binding_assignment(assignment)
             }
             ResolvedStatement::FieldAssignment(assignment) => {
                 self.check_field_assignment(assignment)
@@ -102,9 +102,9 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    fn check_primitive_binding_assignment(
+    fn check_scalar_binding_assignment(
         &mut self,
-        assignment: &crate::resolve::ResolvedPrimitiveBindingAssignment,
+        assignment: &crate::resolve::ResolvedScalarBindingAssignment,
     ) -> CheckedStatement {
         let mutable = self
             .binding_access(assignment.destination, false, assignment.span)
@@ -113,35 +113,31 @@ impl CallableChecker<'_, '_> {
             self.diagnostics.push(
                 Diagnostic::error(
                     READ_ONLY_RECEIVER,
-                    "cannot assign through a read-only primitive alias",
+                    "cannot assign through read-only scalar storage",
                 )
-                .with_primary_label(
-                    assignment.span,
-                    "primitive assignment requires mutable access",
-                ),
+                .with_primary_label(assignment.span, "scalar assignment requires mutable access"),
             );
         }
         let expected = self.binding_type(assignment.destination);
         debug_assert!(matches!(
             expected,
-            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Function(_)
         ));
         let source = self
             .check_expression(&assignment.source)
             .filter(|source| {
-                require_type(
-                    source.ty,
-                    expected,
-                    source.span,
-                    "primitive binding assignment",
-                    self.diagnostics,
-                )
+                let context = if matches!(expected, Type::Function(_)) {
+                    "function binding assignment"
+                } else {
+                    "primitive binding assignment"
+                };
+                require_type(source.ty, expected, source.span, context, self.diagnostics)
             })
             .filter(|_| mutable)
             .map(|source| {
-                HirStatement::PrimitiveAssignment(HirPrimitiveAssignment {
-                    destination: HirPrimitivePlace {
-                        storage: HirPrimitiveStorage::Binding(assignment.destination),
+                HirStatement::ScalarAssignment(HirScalarAssignment {
+                    destination: HirScalarPlace {
+                        storage: HirScalarStorage::Binding(assignment.destination),
                         span: assignment.span,
                     },
                     source,
@@ -159,7 +155,7 @@ impl CallableChecker<'_, '_> {
             return CheckedStatement::falls_through(None);
         };
         let hir = match ty {
-            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool => self
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Function(_) => self
                 .check_expression(&assignment.value)
                 .filter(|source| {
                     require_type(
@@ -171,9 +167,9 @@ impl CallableChecker<'_, '_> {
                     )
                 })
                 .map(|source| {
-                    HirStatement::PrimitiveAssignment(HirPrimitiveAssignment {
-                        destination: HirPrimitivePlace {
-                            storage: HirPrimitiveStorage::Static(place),
+                    HirStatement::ScalarAssignment(HirScalarAssignment {
+                        destination: HirScalarPlace {
+                            storage: HirScalarStorage::Static(place),
                             span: assignment.span,
                         },
                         source,
@@ -515,7 +511,10 @@ impl CallableChecker<'_, '_> {
 
     fn check_return_statement(&mut self, statement: &ResolvedReturn) -> CheckedStatement {
         let hir = match (self.return_type, &statement.value) {
-            (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, Some(value)) => {
+            (
+                Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Function(_),
+                Some(value),
+            ) => {
                 let Some(value) = self.check_expression(value) else {
                     return CheckedStatement::exits_function(None);
                 };
@@ -531,7 +530,10 @@ impl CallableChecker<'_, '_> {
                     span: statement.span,
                 }))
             }
-            (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, None) => {
+            (
+                Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Function(_),
+                None,
+            ) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_RETURN,

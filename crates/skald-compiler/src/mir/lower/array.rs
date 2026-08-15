@@ -645,7 +645,7 @@ impl BodyLowerer<'_> {
         for (position, element) in elements.elements.iter().enumerate() {
             let position = u64::try_from(position).expect("array element position must fit u64");
             match &element.value {
-                HirStoredValueInitialization::Primitive(expression) => {
+                HirStoredValueInitialization::Scalar(expression) => {
                     let value = self
                         .lower_expression(expression)
                         .expect("typed primitive array element must produce a MIR value");

@@ -19,7 +19,7 @@ use crate::{
     resolve::{resolve_module_graph, resolve_with_source_path, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
-    typeck::type_check,
+    typeck::{type_check, validate_mir_readiness},
 };
 
 use super::CompilationRequest;
@@ -142,6 +142,10 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    diagnostics.append(validate_mir_readiness(&resolved));
+    if diagnostics.has_errors() {
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let preliminary = lower_preliminary_hir(&hir);
     verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
     let planned = match plan_static_lifetimes(preliminary) {

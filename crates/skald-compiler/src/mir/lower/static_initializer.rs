@@ -123,7 +123,7 @@ impl BodyLowerer<'_> {
         span: crate::source::Span,
     ) {
         match initialization {
-            HirStoredValueInitialization::Primitive(expression) => {
+            HirStoredValueInitialization::Scalar(expression) => {
                 let value = self
                     .lower_expression(expression)
                     .expect("typed primitive static initializer must produce a MIR value");
