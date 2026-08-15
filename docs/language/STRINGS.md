@@ -204,6 +204,7 @@ The installed representative public surface is:
 | `fn equals(ref other: Obj) -> bool` | Return whether `other` is a `Str` with an identical byte sequence. |
 | `fn slice_get(start: i64?, end: i64?) -> Str` | Return an `O(1)` shared-backing half-open slice; structural entry point for `value[start:end]`, with omitted bounds selecting the logical beginning or end. |
 | `fn splitlines() -> Vec<Str>` | Split at LF, CRLF, or CR line endings without retaining separators or adding a trailing empty result. |
+| `fn split(ref delimiter: Str) -> Vec<Str>` | Split at non-overlapping occurrences of a non-empty string delimiter, preserving every empty result. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 | `static fn from_bool(value: bool) -> Str` | Return canonical lowercase boolean text. |
@@ -252,6 +253,13 @@ string is an `O(1)` descriptor slice retaining the source backing; the result
 vector and its elements remain valid after the receiver is reassigned or
 destroyed.
 
+`split` finds non-overlapping delimiter occurrences from left to right. It
+preserves empty results at every boundary, including after a trailing
+delimiter: `"a--b--".split("--")` contains `"a"`, `"b"`, and `""`, while
+`"".split("--")` contains one empty string. An empty delimiter is rejected
+with `Str.split: empty delimiter`. As with `splitlines`, the returned strings
+are shared-backing descriptor slices rather than byte copies.
+
 Invalid byte and slice bounds call the imported `std::error::panic`
 declaration with `Str.index_get: index out of bounds` or
 `Str.slice_get: index out of bounds` as a standalone non-returning statement.
@@ -283,6 +291,7 @@ The required asymptotic behavior is:
 | Equality | `O(n)` dynamic `Str` check, length check, and byte comparison; no byte copy |
 | Slice, including `value[start:end]` | `O(1)` owner copy plus adjusted bounds; no byte copy |
 | Split lines | `O(n)` scan, `O(k)` vector storage for `k` shared-backing line descriptors, and no byte copy |
+| Split by string | `O(nm)` worst-case delimiter matching for input length `n` and delimiter length `m`, `O(k)` vector storage for `k` shared-backing parts, and no byte copy |
 | Convert from caller-owned bytes | `O(n)` fresh allocation and byte copy |
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |

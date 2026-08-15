@@ -140,6 +140,21 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         splitlines.return_type.kind,
         ResolvedTypeKind::Class(_)
     ));
+    let split = class
+        .methods
+        .iter()
+        .find(|method| method.name == "split")
+        .expect("canonical library must expose delimiter splitting");
+    assert_eq!(split.parameters.len(), 1);
+    assert!(matches!(
+        split.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::Class(_)
+    ));
+    assert!(matches!(
+        split.parameters[0].binding_mode,
+        ResolvedParameterBindingMode::ReadOnlyAlias { .. }
+    ));
+    assert!(matches!(split.return_type.kind, ResolvedTypeKind::Class(_)));
     assert!(!class
         .methods
         .iter()
@@ -169,9 +184,9 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         dump.lines()
             .filter(|line| line.trim_start().starts_with("Panic @"))
             .count(),
-        // Two Str bounds checks plus the seven checks in the Vec<Str>
-        // specialization required by splitlines.
-        9,
+        // Three Str checks plus the seven checks in the Vec<Str>
+        // specialization required by splitlines and split.
+        10,
         "{dump}"
     );
     assert_eq!(

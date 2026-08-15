@@ -1,0 +1,7 @@
+from std::str import Str;
+from std::vec import Vec;
+
+fn main() -> i64 {
+    var parts: Vec<Str> = "value".split("");
+    return (i64) parts.len();
+}

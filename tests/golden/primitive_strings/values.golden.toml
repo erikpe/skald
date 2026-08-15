@@ -17,3 +17,21 @@ source = "string_splitlines.ska"
 [[test.run]]
 name = "linux_windows_mixed_empty_and_retained_lines"
 expect = { exit = 0 }
+
+[[test]]
+name = "split"
+mode = "run"
+source = "string_split.ska"
+
+[[test.run]]
+name = "multi_byte_adjacent_trailing_and_retained_parts"
+expect = { exit = 0 }
+
+[[test]]
+name = "split_empty_delimiter"
+mode = "run"
+source = "string_split_empty_delimiter.ska"
+
+[[test.run]]
+name = "rejects_empty_delimiter"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Str.split: empty delimiter\n" } }

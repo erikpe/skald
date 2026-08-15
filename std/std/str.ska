@@ -87,11 +87,45 @@ public class Str {
             }
             cursor = cursor + 1;
         }
-
         if (start < length) {
             lines.push(self[start:length]);
         }
         return lines;
+    }
+
+    fn split(ref delimiter: Str) -> Vec<Str> {
+        if (delimiter._length == 0u) {
+            panic("Str.split: empty delimiter");
+        }
+
+        var parts: Vec<Str> = Vec<Str>();
+        var length: i64 = (i64) self._length;
+        var delimiter_length: i64 = (i64) delimiter._length;
+        var start: i64 = 0;
+        var cursor: i64 = 0;
+
+        while (cursor <= length - delimiter_length) {
+            var delimiter_cursor: i64 = 0;
+            var matches: bool = true;
+            while (delimiter_cursor < delimiter_length) {
+                if (self._storage->[self._start + cursor + delimiter_cursor]
+                    != delimiter._storage->[delimiter._start + delimiter_cursor]) {
+                    matches = false;
+                    break;
+                }
+                delimiter_cursor = delimiter_cursor + 1;
+            }
+            if (matches) {
+                parts.push(self[start:cursor]);
+                cursor = cursor + delimiter_length;
+                start = cursor;
+            }
+            else {
+                cursor = cursor + 1;
+            }
+        }
+        parts.push(self[start:length]);
+        return parts;
     }
 
     fn equals(ref other: Obj) -> bool {

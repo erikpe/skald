@@ -1,0 +1,62 @@
+from std::str import Str;
+from std::test import assert_eq_str, assert_eq_u64;
+from std::vec import Vec;
+
+fn assert_boundaries() -> unit {
+    var empty: Vec<Str> = "".split("--");
+    assert_eq_u64(empty.len(), 1u);
+    assert_eq_str(empty[0], "");
+
+    var single_byte: Vec<Str> = "a,b,".split(",");
+    assert_eq_u64(single_byte.len(), 3u);
+    assert_eq_str(single_byte[0], "a");
+    assert_eq_str(single_byte[1], "b");
+    assert_eq_str(single_byte[2], "");
+
+    var absent: Vec<Str> = "abc".split("longer");
+    assert_eq_u64(absent.len(), 1u);
+    assert_eq_str(absent[0], "abc");
+
+    var whole: Vec<Str> = "--".split("--");
+    assert_eq_u64(whole.len(), 2u);
+    assert_eq_str(whole[0], "");
+    assert_eq_str(whole[1], "");
+
+    var trailing: Vec<Str> = "a--b--".split("--");
+    assert_eq_u64(trailing.len(), 3u);
+    assert_eq_str(trailing[0], "a");
+    assert_eq_str(trailing[1], "b");
+    assert_eq_str(trailing[2], "");
+}
+
+fn assert_adjacent_and_non_overlapping() -> unit {
+    var adjacent: Vec<Str> = "x----".split("--");
+    assert_eq_u64(adjacent.len(), 3u);
+    assert_eq_str(adjacent[0], "x");
+    assert_eq_str(adjacent[1], "");
+    assert_eq_str(adjacent[2], "");
+
+    var overlapping: Vec<Str> = "aaa".split("aa");
+    assert_eq_u64(overlapping.len(), 2u);
+    assert_eq_str(overlapping[0], "");
+    assert_eq_str(overlapping[1], "a");
+}
+
+fn retained_parts() -> Vec<Str> {
+    var source: Str = "head<>body<>";
+    var parts: Vec<Str> = source[4:].split("<>");
+    source = "replacement";
+    return parts;
+}
+
+fn main() -> i64 {
+    assert_boundaries();
+    assert_adjacent_and_non_overlapping();
+
+    var parts: Vec<Str> = retained_parts();
+    assert_eq_u64(parts.len(), 3u);
+    assert_eq_str(parts[0], "");
+    assert_eq_str(parts[1], "body");
+    assert_eq_str(parts[2], "");
+    return 0;
+}
