@@ -203,6 +203,7 @@ The installed representative public surface is:
 | `fn index_get(index: i64) -> u8` | Return one checked byte; structural entry point for `value[index]`. |
 | `fn equals(ref other: Obj) -> bool` | Return whether `other` is a `Str` with an identical byte sequence. |
 | `fn slice_get(start: i64?, end: i64?) -> Str` | Return an `O(1)` shared-backing half-open slice; structural entry point for `value[start:end]`, with omitted bounds selecting the logical beginning or end. |
+| `fn splitlines() -> Vec<Str>` | Split at LF, CRLF, or CR line endings without retaining separators or adding a trailing empty result. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 | `static fn from_bool(value: bool) -> Str` | Return canonical lowercase boolean text. |
@@ -242,6 +243,15 @@ backing allocation. Reassigning or destroying `text` cannot invalidate them.
 `Str` declares neither `index_set` nor `slice_set`, so both bracket assignment
 forms are rejected by ordinary structural protocol selection.
 
+`splitlines` recognizes Linux LF, Windows CRLF, and lone CR separators in any
+mixture. It preserves leading and interior empty lines, but a separator at the
+end does not append another empty result. Consequently, `"".splitlines()` is
+empty, `"\n".splitlines()` contains one empty string, and
+`"a\n\r\nb".splitlines()` contains `"a"`, `""`, and `"b"`. Each returned
+string is an `O(1)` descriptor slice retaining the source backing; the result
+vector and its elements remain valid after the receiver is reassigned or
+destroyed.
+
 Invalid byte and slice bounds call the imported `std::error::panic`
 declaration with `Str.index_get: index out of bounds` or
 `Str.slice_get: index out of bounds` as a standalone non-returning statement.
@@ -272,6 +282,7 @@ The required asymptotic behavior is:
 | Byte access, including `value[index]` | `O(1)` checked range access |
 | Equality | `O(n)` dynamic `Str` check, length check, and byte comparison; no byte copy |
 | Slice, including `value[start:end]` | `O(1)` owner copy plus adjusted bounds; no byte copy |
+| Split lines | `O(n)` scan, `O(k)` vector storage for `k` shared-backing line descriptors, and no byte copy |
 | Convert from caller-owned bytes | `O(n)` fresh allocation and byte copy |
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |

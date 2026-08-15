@@ -1,4 +1,5 @@
 from std::error import panic;
+from std::vec import Vec;
 import std::str::format_integer as format_integer;
 import std::str::format_f64 as format_f64;
 import std::str::parse_integer as parse_integer;
@@ -35,7 +36,6 @@ public class Str {
         if (normalized_index < 0 || (u64) normalized_index >= self._length) {
             panic("Str.index_get: index out of bounds");
         }
-
         return self._storage->[self._start + normalized_index];
     }
 
@@ -57,8 +57,41 @@ public class Str {
         if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
             panic("Str.slice_get: index out of bounds");
         }
-
         return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
+    }
+
+    fn splitlines() -> Vec<Str> {
+        var lines: Vec<Str> = Vec<Str>();
+        var length: i64 = (i64) self._length;
+        var start: i64 = 0;
+        var cursor: i64 = 0;
+
+        while (cursor < length) {
+            var byte: u8 = self._storage->[self._start + cursor];
+            if (byte == '\n') {
+                lines.push(self[start:cursor]);
+                cursor = cursor + 1;
+                start = cursor;
+                continue;
+            }
+            if (byte == '\r') {
+                lines.push(self[start:cursor]);
+                if (cursor + 1 < length && self._storage->[self._start + cursor + 1] == '\n') {
+                    cursor = cursor + 2;
+                }
+                else {
+                    cursor = cursor + 1;
+                }
+                start = cursor;
+                continue;
+            }
+            cursor = cursor + 1;
+        }
+
+        if (start < length) {
+            lines.push(self[start:length]);
+        }
+        return lines;
     }
 
     fn equals(ref other: Obj) -> bool {

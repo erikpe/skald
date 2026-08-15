@@ -1,0 +1,65 @@
+from std::str import Str;
+from std::test import assert_eq_str, assert_eq_u64;
+from std::vec import Vec;
+
+fn assert_niflheim_examples() -> unit {
+    var mixed: Vec<Str> = "a\nb\r\nc\n".splitlines();
+    assert_eq_u64(mixed.len(), 3u);
+    assert_eq_str(mixed[0], "a");
+    assert_eq_str(mixed[1], "b");
+    assert_eq_str(mixed[2], "c");
+
+    var windows: Vec<Str> = "x\r\ny".splitlines();
+    assert_eq_u64(windows.len(), 2u);
+    assert_eq_str(windows[0], "x");
+    assert_eq_str(windows[1], "y");
+
+    var carriage_return: Vec<Str> = "p\rq".splitlines();
+    assert_eq_u64(carriage_return.len(), 2u);
+    assert_eq_str(carriage_return[0], "p");
+    assert_eq_str(carriage_return[1], "q");
+
+    var empty_lines: Vec<Str> = "\r\na\r\rb\n\n".splitlines();
+    assert_eq_u64(empty_lines.len(), 5u);
+    assert_eq_str(empty_lines[0], "");
+    assert_eq_str(empty_lines[1], "a");
+    assert_eq_str(empty_lines[2], "");
+    assert_eq_str(empty_lines[3], "b");
+    assert_eq_str(empty_lines[4], "");
+}
+
+fn assert_boundaries() -> unit {
+    var empty: Vec<Str> = "".splitlines();
+    assert_eq_u64(empty.len(), 0u);
+
+    var no_separator: Vec<Str> = "single".splitlines();
+    assert_eq_u64(no_separator.len(), 1u);
+    assert_eq_str(no_separator[0], "single");
+
+    var one_separator: Vec<Str> = "\n".splitlines();
+    assert_eq_u64(one_separator.len(), 1u);
+    assert_eq_str(one_separator[0], "");
+
+    var trailing_windows: Vec<Str> = "last\r\n".splitlines();
+    assert_eq_u64(trailing_windows.len(), 1u);
+    assert_eq_str(trailing_windows[0], "last");
+}
+
+fn retained_lines() -> Vec<Str> {
+    var source: Str = "prefix\nbody\r\ntail";
+    var lines: Vec<Str> = source[6:].splitlines();
+    source = "replacement";
+    return lines;
+}
+
+fn main() -> i64 {
+    assert_niflheim_examples();
+    assert_boundaries();
+
+    var lines: Vec<Str> = retained_lines();
+    assert_eq_u64(lines.len(), 3u);
+    assert_eq_str(lines[0], "");
+    assert_eq_str(lines[1], "body");
+    assert_eq_str(lines[2], "tail");
+    return 0;
+}

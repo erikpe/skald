@@ -91,7 +91,7 @@ name = "string_byte_out_of_bounds"
 args = ["string-byte"]
 expect = { exit = "failure", stderr = { inline = """panic: Str.index_get: index out of bounds
 stacktrace:
-  at std::str::Str.index_get (std/str.ska:36:13)
+  at std::str::Str.index_get (std/str.ska:37:13)
   at runtime_bounds_failures::string_byte (tests/golden/runtime/runtime_bounds_failures.ska:62:23)
   at runtime_bounds_failures::main (tests/golden/runtime/runtime_bounds_failures.ska:102:16)
 """ } }
