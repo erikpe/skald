@@ -29,18 +29,32 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
             syntax::TypeKind::F64 => ResolvedTemplateTypeKind::F64,
             syntax::TypeKind::Bool => ResolvedTemplateTypeKind::Bool,
             syntax::TypeKind::Unit => ResolvedTemplateTypeKind::Unit,
-            syntax::TypeKind::Function(_) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        super::super::super::GENERIC_FUNCTION_TYPE_NOT_YET_SUPPORTED,
-                        "function types in generic templates are not supported yet",
-                    )
-                    .with_primary_label(
-                        syntax.span,
-                        "generic function-type substitution ships in a later roadmap task",
-                    ),
-                );
-                return None;
+            syntax::TypeKind::Function(function) => {
+                let parameters = function
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        Some(ResolvedTemplateFunctionTypeParameter {
+                            mode: match parameter.mode {
+                                syntax::FunctionTypeParameterMode::Value => {
+                                    ResolvedFunctionTypeParameterMode::Value
+                                }
+                                syntax::FunctionTypeParameterMode::ReadOnlyAlias { .. } => {
+                                    ResolvedFunctionTypeParameterMode::ReadOnlyAlias
+                                }
+                                syntax::FunctionTypeParameterMode::MutableAlias { .. } => {
+                                    ResolvedFunctionTypeParameterMode::MutableAlias
+                                }
+                            },
+                            type_syntax: self.resolve(&parameter.type_syntax)?,
+                            span: parameter.span,
+                        })
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                ResolvedTemplateTypeKind::Function {
+                    parameters,
+                    result: Box::new(self.resolve(&function.result)?),
+                }
             }
             syntax::TypeKind::Named(named) => return self.resolve_named(named),
             syntax::TypeKind::Shared { target, .. } => {

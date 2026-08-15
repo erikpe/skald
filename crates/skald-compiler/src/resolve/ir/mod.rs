@@ -79,8 +79,8 @@ pub use generic_templates::{
 pub(crate) use generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateSemantics, ResolvedTemplateBound,
     ResolvedTemplateConstructionMode, ResolvedTemplateDependentSelectionKind,
-    ResolvedTemplateSelection, ResolvedTemplateType, ResolvedTemplateTypeKind,
-    ResolvedTemplateTypeUse, ResolvedTemplateTypeUseContext,
+    ResolvedTemplateFunctionTypeParameter, ResolvedTemplateSelection, ResolvedTemplateType,
+    ResolvedTemplateTypeKind, ResolvedTemplateTypeUse, ResolvedTemplateTypeUseContext,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

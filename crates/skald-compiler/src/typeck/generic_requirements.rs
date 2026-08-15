@@ -79,6 +79,18 @@ impl<'program> GenericCapabilityQuery<'program> {
         let ClosedGenericRequirementSubject::Type(kind) = subject else {
             return false;
         };
+        if matches!(kind, ResolvedTypeKind::Function(_)) {
+            return matches!(
+                requirement.capability,
+                GenericCapability::FieldStorage
+                    | GenericCapability::StaticStorage
+                    | GenericCapability::ValueParameter
+                    | GenericCapability::ValueResult
+                    | GenericCapability::CopyConstructible
+                    | GenericCapability::Assignable
+                    | GenericCapability::Destroyable
+            );
+        }
         let ty = self.lower(kind, requirement.origin);
         match requirement.capability {
             GenericCapability::FieldStorage | GenericCapability::StaticStorage => {

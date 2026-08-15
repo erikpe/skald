@@ -47,6 +47,32 @@ impl SpecializationOwner<'_, '_, '_> {
                 )?;
                 ResolvedTypeKind::Class(class)
             }
+            ResolvedTemplateTypeKind::Function { parameters, result } => {
+                let parameters = parameters
+                    .iter()
+                    .map(|parameter| {
+                        Some(ResolvedFunctionTypeParameter {
+                            mode: parameter.mode,
+                            type_syntax: ResolvedType {
+                                kind: self.close_template_type(
+                                    &parameter.type_syntax,
+                                    template,
+                                    arguments,
+                                )?,
+                                span: parameter.type_syntax.span,
+                            },
+                            span: parameter.span,
+                        })
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                let result = ResolvedType {
+                    kind: self.close_template_type(result, template, arguments)?,
+                    span: result.span,
+                };
+                ResolvedTypeKind::Function(
+                    self.interner.intern_function(parameters, result, term.span),
+                )
+            }
             ResolvedTemplateTypeKind::Shared(target) => ResolvedTypeKind::Shared(
                 self.close_template_shared_target(target, template, arguments)?,
             ),

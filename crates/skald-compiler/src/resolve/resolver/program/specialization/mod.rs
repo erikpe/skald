@@ -18,6 +18,8 @@ mod body_tests;
 #[cfg(test)]
 mod declaration_tests;
 #[cfg(test)]
+mod function_values_tests;
+#[cfg(test)]
 mod tests;
 
 use super::*;

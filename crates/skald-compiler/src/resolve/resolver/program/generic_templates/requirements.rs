@@ -139,6 +139,12 @@ pub(super) fn infer_type_construction(
                 infer_type_construction(argument, requirements);
             }
         }
+        ResolvedTemplateTypeKind::Function { parameters, result } => {
+            for parameter in parameters {
+                infer_type_construction(&parameter.type_syntax, requirements);
+            }
+            infer_type_construction(result, requirements);
+        }
         ResolvedTemplateTypeKind::I64
         | ResolvedTemplateTypeKind::U64
         | ResolvedTemplateTypeKind::U8

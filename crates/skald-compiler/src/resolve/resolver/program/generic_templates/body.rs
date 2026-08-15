@@ -535,6 +535,13 @@ impl TemplateBodyResolver<'_, '_, '_> {
             return;
         }
         match self.lookup.select(&identifier.name, self.diagnostics) {
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::Function(function),
+                ..
+            }) => self.selections.push(ResolvedTemplateSelection::TopLevel {
+                declaration: ResolvedTopLevelId::Function(function),
+                span: identifier.span,
+            }),
             TopLevelLookup::Found(symbol) => self.diagnostics.push(
                 Diagnostic::error(
                     super::super::super::TOP_LEVEL_USED_AS_VALUE,

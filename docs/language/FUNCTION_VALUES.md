@@ -66,10 +66,11 @@ var ordinary: fn(i64) -> i64 = Math.increment;
 var specialized: fn(i64) -> i64 = Identity<i64>::apply;
 ```
 
-The current compiler resolves the first three ordinary forms to an exact
-target and signature, records the target as address-taken, and then stops the
-program at type checking. Closed-specialization references remain at the FVI2
-gate. No resolved reference is executable yet.
+The current compiler resolves all four forms to an exact target and signature,
+records the target as address-taken, and then stops the program at type
+checking. Generic function signatures are closed recursively, so different
+specializations retain different method targets even when they share one
+canonical function type. No resolved reference is executable yet.
 
 The source name selects one exact callable identity and its canonical
 signature. An expected function type validates that selection but does not

@@ -620,6 +620,22 @@ fn render_template_type(type_term: &ResolvedTemplateType) -> String {
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
+        ResolvedTemplateTypeKind::Function { parameters, result } => format!(
+            "fn({}) -> {}",
+            parameters
+                .iter()
+                .map(|parameter| {
+                    let mode = match parameter.mode {
+                        ResolvedFunctionTypeParameterMode::Value => "",
+                        ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
+                        ResolvedFunctionTypeParameterMode::MutableAlias => "mut ",
+                    };
+                    format!("{mode}{}", render_template_type(&parameter.type_syntax))
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+            render_template_type(result)
+        ),
         ResolvedTemplateTypeKind::Shared(target) => {
             format!("shared ({})", render_template_type(target))
         }

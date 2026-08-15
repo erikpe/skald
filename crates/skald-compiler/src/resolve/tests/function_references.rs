@@ -302,7 +302,7 @@ fn instance_virtual_and_interface_selections_never_form_bound_references() {
 }
 
 #[test]
-fn generic_static_references_remain_at_the_fvi2_specialization_gate() {
+fn closed_generic_static_references_use_the_specialized_method_identity() {
     let output = resolve_text(concat!(
         "class Identity<T> { static fn apply(value: T) -> T { return value; } }\n",
         "fn raw() -> unit { var callback: fn(i64) -> i64 = Identity.apply; }\n",
@@ -312,14 +312,53 @@ fn generic_static_references_remain_at_the_fvi2_specialization_gate() {
         "}\n",
     ));
     let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].code, RAW_GENERIC_TYPE);
+    let reference = output
+        .program
+        .address_taken_callables
+        .iter()
+        .next()
+        .unwrap();
     assert_eq!(
-        diagnostics[1].code,
-        GENERIC_FUNCTION_REFERENCE_NOT_YET_SUPPORTED
+        reference.target,
+        CallableId::Method(MethodId::new(ClassId::new(0), 0))
     );
-    assert!(diagnostics[1].message.contains("apply"));
-    assert!(output.program.address_taken_callables.is_empty());
+}
+
+#[test]
+fn imported_generic_static_references_close_in_the_defining_module() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep;\n\
+                 fn main() -> i64 {\n\
+                   var callback: fn(i64) -> i64 = dep::Identity<i64>::apply;\n\
+                   return 0;\n\
+                 }\n",
+            ),
+            (
+                "dep.ska",
+                "public class Identity<T> {\n\
+                   static fn apply(value: T) -> T { return value; }\n\
+                 }\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let reference = output
+        .program
+        .address_taken_callables
+        .iter()
+        .next()
+        .unwrap();
+    assert_eq!(
+        reference.target,
+        CallableId::Method(MethodId::new(ClassId::new(0), 0))
+    );
 }
 
 #[test]

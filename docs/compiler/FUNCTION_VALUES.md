@@ -71,11 +71,12 @@ form this node. Instance/virtual/interface methods, lifecycle and generated
 bodies, externals, intrinsics, raw templates, and inaccessible declarations
 are rejected before HIR.
 
-The implemented boundary currently admits ordinary top-level and ordinary
-class static references. Closed-specialization references remain explicitly
-gated until generic function terms can be substituted in FVI2. Function-valued
-bindings and fields shadow declaration names as callees, but their indirect
-calls also remain explicitly gated until stored HIR support.
+The implemented boundary admits ordinary top-level functions and ordinary or
+closed-specialization static methods. Template signatures close recursively,
+and a specialized static reference records the exact generated `MethodId`
+separately from its canonical signature. Function-valued bindings and fields
+shadow declaration names as callees, but their indirect calls remain
+explicitly gated until stored HIR support.
 
 Direct syntactic calls remain their existing direct or static call forms.
 Lexically shadowing function-valued bindings and calls through arbitrary

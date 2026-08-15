@@ -21,10 +21,7 @@ impl CallableResolver<'_, '_> {
             SelectedClassMember::Method(method) => {
                 let declaration = self.method_declaration(method);
                 if declaration.kind == ResolvedMethodKind::Static {
-                    let name = declaration.name.clone();
-                    let name_span = declaration.name_span;
-                    self.report_generic_function_reference_gate(&name, name_span, selection.span);
-                    None
+                    self.resolve_method_reference(method, selection.member.span, selection.span)
                 } else {
                     self.report_ineligible_method_reference(method, selection.member.span);
                     None
@@ -128,12 +125,6 @@ impl CallableResolver<'_, '_> {
             .functions
             .get(function)
             .expect("top-level symbols must reference declaration metadata");
-        if self.environment.specialization.is_some() {
-            let name = declaration.name.clone();
-            let name_span = declaration.name_span;
-            self.report_generic_function_reference_gate(&name, name_span, reference_span);
-            return None;
-        }
         match declaration.linkage {
             ResolvedFunctionLinkage::Internal => {}
             ResolvedFunctionLinkage::External { .. } => {
@@ -195,12 +186,6 @@ impl CallableResolver<'_, '_> {
         let declaration = self.method_declaration(method);
         if declaration.kind != ResolvedMethodKind::Static {
             self.report_ineligible_method_reference(method, member_span);
-            return None;
-        }
-        if self.environment.specialization.is_some() {
-            let name = declaration.name.clone();
-            let name_span = declaration.name_span;
-            self.report_generic_function_reference_gate(&name, name_span, reference_span);
             return None;
         }
         let parameters = declaration.parameters.clone();
@@ -274,25 +259,6 @@ impl CallableResolver<'_, '_> {
             .with_primary_label(reference_span, label)
             .with_secondary_label(declaration.name_span, "method declared here")
             .with_note("bound method values and receiver capture are not supported"),
-        );
-    }
-
-    fn report_generic_function_reference_gate(
-        &mut self,
-        name: &str,
-        declaration_span: Span,
-        reference_span: Span,
-    ) {
-        self.diagnostics.push(
-            Diagnostic::error(
-                GENERIC_FUNCTION_REFERENCE_NOT_YET_SUPPORTED,
-                format!("generic callable reference `{name}` is not resolved yet"),
-            )
-            .with_primary_label(
-                reference_span,
-                "generic callable references are closed during specialization in the next stage",
-            )
-            .with_secondary_label(declaration_span, "callable declared here"),
         );
     }
 

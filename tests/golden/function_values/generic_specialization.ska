@@ -1,0 +1,13 @@
+class Factory<T> {
+    callback: fn(T) -> T;
+
+    static fn identity(value: T) -> T {
+        return value;
+    }
+}
+
+fn main() -> i64 {
+    var first: fn(i64) -> i64 = Factory<i64>::identity;
+    var second: fn(bool) -> bool = Factory<bool>::identity;
+    return 0;
+}

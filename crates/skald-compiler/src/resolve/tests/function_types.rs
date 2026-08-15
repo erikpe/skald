@@ -153,17 +153,26 @@ fn canonical_identity_is_shared_across_modules_after_name_resolution() {
 }
 
 #[test]
-fn generic_function_type_roles_are_diagnosed_before_specialization() {
+fn generic_function_type_arguments_close_before_the_global_type_check_gate() {
     let output = resolve_text(concat!(
         "class Holder<T> { value: T; init(value: T) { self.value = value; } }\n",
         "fn use(value: Holder<fn(i64) -> bool>) -> unit {}\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    assert!(output.has_errors());
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == GENERIC_FUNCTION_TYPE_NOT_YET_SUPPORTED
-            && diagnostic.message.contains("generic arguments")
-    }));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert_eq!(output.program.classes.len(), 1);
+    let holder = output.program.classes.iter().next().unwrap();
+    assert!(matches!(
+        holder.fields[0].type_syntax.kind,
+        ResolvedTypeKind::Function(_)
+    ));
+
+    let checked = type_check(&output.program);
+    assert!(checked.hir.is_none());
+    assert!(checked
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPECK_FUNCTION_GATE));
 }
 
 #[test]

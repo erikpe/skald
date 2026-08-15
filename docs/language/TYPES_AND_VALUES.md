@@ -739,9 +739,11 @@ but its type name, literal syntax and encoding, byte/text semantics, copying,
 slicing, storage, and library boundary are not frozen. No representation or
 literal-lowering strategy is a language guarantee.
 
-Function values are not implemented. Their non-null trivial-scalar design,
-exact recursive types, storage roles, indirect calls, generic composition, and
-initial exclusions are frozen in
+Function values are staged behind a type-check gate. Exact recursive types,
+eligible ordinary and closed-generic references, and specialization-time
+generic composition are implemented; storage, indirect calls, and execution
+remain unavailable. Their non-null trivial-scalar design and initial
+exclusions are frozen in
 [Capture-Free Function Values](FUNCTION_VALUES.md). Shared ownership's
 implemented non-null value type, compatible views, and copy/adopt/release
 behavior are defined in

@@ -8,7 +8,10 @@ use crate::{
     source::Span,
 };
 
-use super::{GenericRequirement, ResolvedInterfaceClaim, ResolvedTopLevelId, ResolvedVisibility};
+use super::{
+    GenericRequirement, ResolvedFunctionTypeParameterMode, ResolvedInterfaceClaim,
+    ResolvedTopLevelId, ResolvedVisibility,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedClassTemplate {
@@ -117,9 +120,20 @@ pub(crate) enum ResolvedTemplateTypeKind {
         template: ClassTemplateId,
         arguments: Vec<ResolvedTemplateType>,
     },
+    Function {
+        parameters: Vec<ResolvedTemplateFunctionTypeParameter>,
+        result: Box<ResolvedTemplateType>,
+    },
     Shared(Box<ResolvedTemplateType>),
     Optional(Box<ResolvedTemplateType>),
     Array(Box<ResolvedTemplateType>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResolvedTemplateFunctionTypeParameter {
+    pub(crate) mode: ResolvedFunctionTypeParameterMode,
+    pub(crate) type_syntax: ResolvedTemplateType,
+    pub(crate) span: Span,
 }
 
 impl ResolvedTemplateType {
@@ -135,6 +149,12 @@ impl ResolvedTemplateType {
             ResolvedTemplateTypeKind::Parameter(_) => true,
             ResolvedTemplateTypeKind::ClassTemplate { arguments, .. } => {
                 arguments.iter().any(Self::depends_on_parameter)
+            }
+            ResolvedTemplateTypeKind::Function { parameters, result } => {
+                parameters
+                    .iter()
+                    .any(|parameter| parameter.type_syntax.depends_on_parameter())
+                    || result.depends_on_parameter()
             }
             ResolvedTemplateTypeKind::Shared(target)
             | ResolvedTemplateTypeKind::Optional(target)

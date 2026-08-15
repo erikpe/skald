@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI2 is next.
+Status: in progress; FVI2 implemented, FVI3 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -48,7 +48,7 @@ below implement those decisions without reopening them.
 
 - [x] FVI0 — Parse and intern canonical closed function types
 - [x] FVI1 — Resolve eligible callable references and frozen exclusions
-- [ ] FVI2 — Close function types and references during generic specialization
+- [x] FVI2 — Close function types and references during generic specialization
 - [ ] FVI3 — Integrate trivial function values with stored and callable HIR
 - [ ] FVI4 — Type indirect calls through the complete internal signature
 - [ ] FVI5 — Lower and verify callable addresses and indirect MIR calls
@@ -133,23 +133,23 @@ ordinary direct calls retain their current resolved shape.
 **Purpose:** Make parameter-bearing signatures and static selections ordinary
 closed semantic inputs before stored HIR is enabled.
 
-- [ ] Add a structural function node to template types and recurse through
+- [x] Add a structural function node to template types and recurse through
       parameters/results for dependency discovery, canonical type uses, dumps,
       and diagnostic provenance.
-- [ ] Substitute nested parameter, array, optional, shared, generic-class, and
+- [x] Substitute nested parameter, array, optional, shared, generic-class, and
       function terms child-first, then intern the complete closed function
       signature.
-- [ ] Retain parameter-bearing top-level and static callable selections in
+- [x] Retain parameter-bearing top-level and static callable selections in
       template bodies and turn eligible selections into the FVI1 resolved
       reference form with an exact specialized `MethodId` during body
       specialization.
-- [ ] Permit function types as contextual closed generic arguments when their
+- [x] Permit function types as contextual closed generic arguments when their
       actual stored/value requirements succeed; reject optional-payload,
       array-element, shared-target, and alias-target requirements at the
       originating template use.
-- [ ] Preserve separate target identities for same-signature static methods on
+- [x] Preserve separate target identities for same-signature static methods on
       different closed specializations while reusing one `FunctionTypeId`.
-- [ ] Extend specialization caching, recursion, failure caching, address-taken
+- [x] Extend specialization caching, recursion, failure caching, address-taken
       metadata, diagnostics, and phase dumps without introducing runtime
       generic callable metadata.
 
