@@ -83,6 +83,7 @@ Archived plans:
 - [Structural indexing and slicing](STRUCTURAL_INDEXING_AND_SLICING_ROADMAP.md)
 - [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md)
 - [Capture-free function values](FUNCTION_VALUES_ROADMAP.md)
+- [Generic static-member dot syntax](GENERIC_STATIC_MEMBER_DOT_SYNTAX_ROADMAP.md)
 
 Resolved string-design inputs:
 

@@ -42,3 +42,16 @@ compiler_args = [
 [[test.run]]
 name = "definition_and_application_modules"
 expect = { exit = 42 }
+
+[[test]]
+name = "dot_selection"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/dot_selection/modules",
+  "--no-stdlib",
+]
+
+[[test.run]]
+name = "fields_methods_references_templates_inheritance_modules_and_angles"
+expect = { exit = 42 }

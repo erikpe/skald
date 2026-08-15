@@ -830,10 +830,16 @@ fn generic_module_phase_dump(variant: usize) -> String {
     let sources = [
         (
             modules.join("app.ska"),
-            "from model import Cache, Item;\n\
+            "import model;\n\
              from wrapper import Envelope;\n\
-             fn accept(ref cache: Cache<Item>, ref envelope: Envelope<Item>) -> unit {}\n\
-             fn main() -> i64 { return 0; }\n",
+             fn accept(\n\
+               ref cache: model::Cache<model::Item>,\n\
+               ref envelope: Envelope<model::Item>\n\
+             ) -> unit {}\n\
+             fn main() -> i64 {\n\
+               model::Cache<model::Item>.count = 42;\n\
+               return model::Cache<model::Item>.count;\n\
+             }\n",
         ),
         (
             modules.join("model.ska"),
@@ -845,6 +851,7 @@ fn generic_module_phase_dump(variant: usize) -> String {
              }\n\
              public class Cache<T> {\n\
                static cached: T?;\n\
+               static count: i64 = 0;\n\
                value: T;\n\
                init(ref value: T) { self.value = value; }\n\
              }\n",

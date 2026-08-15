@@ -1,0 +1,5 @@
+import dep;
+
+fn main() -> i64 {
+    return dep::Secret<i64>.hidden();
+}

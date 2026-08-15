@@ -1,0 +1,23 @@
+import dep;
+
+fn main() -> i64 {
+    dep::Derived<i64>.configure(10);
+    dep::Derived<bool>.configure(20);
+
+    dep::Derived<i64>.value = dep::Derived<i64>.value + 1;
+    if (dep::Derived<i64>.value != 11) { return 1; }
+    if (dep::Derived<bool>.value != 20) { return 2; }
+    if (dep::Derived<i64>.extra != 11) { return 3; }
+    if (dep::Derived<bool>.extra != 21) { return 4; }
+
+    if (dep::Derived<i64>.apply(30) != 42) { return 5; }
+    var callback: fn(i64) -> i64 = dep::Derived<bool>.apply;
+    if (callback(20) != 41) { return 6; }
+
+    if (dep::Nested<dep::Marker<i64>>.value != 3) { return 7; }
+    if (dep::Box<i64>(39).read() != 39) { return 8; }
+
+    var shifted: u64 = 8u >> 1u;
+    if (shifted < 4u || shifted >= 5u) { return 9; }
+    return 42;
+}

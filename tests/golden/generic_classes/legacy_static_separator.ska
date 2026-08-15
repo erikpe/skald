@@ -1,0 +1,16 @@
+class Legacy<T> {
+    static value: i64;
+
+    init() {}
+
+    static fn apply(value: i64) -> i64 {
+        return value;
+    }
+}
+
+fn main() -> i64 {
+    Legacy<i64>::value = 1;
+    Legacy<i64>::apply(2);
+    var callback: fn(i64) -> i64 = Legacy<i64>::apply;
+    return callback(40);
+}

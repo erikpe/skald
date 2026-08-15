@@ -86,3 +86,41 @@ compiler_args = [
 [test.expect.stderr]
 match = "starts-with"
 inline = "error[RES026]: declaration `dep::PrivateBox` is private"
+
+[[test]]
+name = "dot_selection_privacy"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/dot_selection_privacy/modules",
+  "--no-stdlib",
+]
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES031]: member `hidden` is private to class `dep::Secret<i64>`"
+
+[[test]]
+name = "legacy_static_separator"
+mode = "compile-fail"
+source = "legacy_static_separator.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "exact"
+inline = """error[PAR016]: generic static members use `.` after the class application
+ --> tests/golden/generic_classes/legacy_static_separator.ska:12:16
+    |
+12 |     Legacy<i64>::value = 1;
+    |                ^^ replace `::` with `.`
+
+error[PAR016]: generic static members use `.` after the class application
+ --> tests/golden/generic_classes/legacy_static_separator.ska:13:16
+    |
+13 |     Legacy<i64>::apply(2);
+    |                ^^ replace `::` with `.`
+
+error[PAR016]: generic static members use `.` after the class application
+ --> tests/golden/generic_classes/legacy_static_separator.ska:14:47
+    |
+14 |     var callback: fn(i64) -> i64 = Legacy<i64>::apply;
+    |                                               ^^ replace `::` with `.`
+"""

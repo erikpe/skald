@@ -10,3 +10,9 @@ per-application statics, bound-selected interface dispatch, checked failure,
 and definition/application module separation. Explicit generic copy lifecycle
 additionally covers array-specialized fields across primitive, owning-element,
 optional-array, and recursively nested generic values.
+
+The dot-selection module fixture composes generic static-field reads and
+writes, direct and function-valued static methods, template-local selection,
+distinct specializations, inherited members, declaring-class privacy, nested
+generic closers, module qualification, and produced generic receivers. Focused
+failures freeze private selection and the rejected legacy `>::` separator.

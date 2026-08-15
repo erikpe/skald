@@ -1,0 +1,47 @@
+public class Base<T> {
+    static value: i64 = 0;
+
+    init() {}
+
+    private static fn adjust(value: i64) -> i64 {
+        return value + 1;
+    }
+
+    static fn apply(value: i64) -> i64 {
+        return Base<T>.adjust(value) + Base<T>.value;
+    }
+}
+
+public class Derived<T> extends Base<T> {
+    static extra: i64 = 0;
+
+    init() {
+        super();
+    }
+
+    static fn configure(value: i64) -> unit {
+        Derived<T>.value = value;
+        Derived<T>.extra = value + 1;
+    }
+}
+
+public class Marker<T> {
+    init() {}
+}
+
+public class Nested<T> {
+    static value: i64 = 3;
+    init() {}
+}
+
+public class Box<T> {
+    value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn read() -> T {
+        return self.value;
+    }
+}

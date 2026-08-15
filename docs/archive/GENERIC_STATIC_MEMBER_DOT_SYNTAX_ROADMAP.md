@@ -1,6 +1,6 @@
 # Generic Static-Member Dot Syntax Roadmap
 
-Status: in progress; GSD0 is complete and GSD1 is next.
+Status: complete.
 
 Replace the generic-class static-member spelling `Class<T>::member` with
 `Class<T>.member`. This makes `::` exclusively a module-path separator and
@@ -58,7 +58,7 @@ var imported: i64 = dep::Cache<i64>.count;
 ## Progress
 
 - [x] GSD0 — Adopt dot selection throughout the source frontend
-- [ ] GSD1 — Harden composition and close the syntax migration
+- [x] GSD1 — Harden composition and close the syntax migration
 
 ## PR-sized implementation sequence
 
@@ -115,30 +115,30 @@ the complete ordinary repository gate passes.
 syntax boundaries, remove stale current-facing examples, and close the change
 without leaving a second spelling or downstream special case.
 
-- [ ] Add or consolidate an end-to-end golden matrix covering static-field
+- [x] Add or consolidate an end-to-end golden matrix covering static-field
       reads and writes, direct static calls, static-method function references,
       uses inside generic templates, distinct closed specializations, inherited
       members, privacy, and module-qualified generic heads.
-- [ ] Add exact compile-failure coverage for `Class<T>::field` and
+- [x] Add exact compile-failure coverage for `Class<T>::field` and
       `Class<T>::method`, including assignment, call, and value-reference
       positions, and assert the focused `.` replacement diagnostic without
       cascades.
-- [ ] Exercise nested closers such as `Outer<Inner<i64>>.member` beside `<`,
+- [x] Exercise nested closers such as `Outer<Inner<i64>>.member` beside `<`,
       `>`, `>=`, and `>>` expressions; preserve generic construction followed
       by instance selection and existing malformed-angle recovery.
-- [ ] Verify syntax, resolved, HIR, and MIR dumps remain deterministic and that
+- [x] Verify syntax, resolved, HIR, and MIR dumps remain deterministic and that
       closed generic function references still name the exact specialized
       method while equal signatures continue to share canonical function-type
       identity.
-- [ ] Audit `.ska` files and living documentation for legacy `>::identifier`
+- [x] Audit `.ska` files and living documentation for legacy `>::identifier`
       spellings. Exclude archived historical records and avoid mistaking Rust
       turbofish syntax such as `Vec::<T>` for Skald source.
-- [ ] Confirm the standard `Vec<T>` implementation, its native/golden suites,
+- [x] Confirm the standard `Vec<T>` implementation, its native/golden suites,
       and the generic-vector benchmark use and execute the new spelling.
-- [ ] Recheck that no runtime header, archive, compatibility marker, ABI
+- [x] Recheck that no runtime header, archive, compatibility marker, ABI
       version, MIR representation, backend calling convention, or generated
       symbol spelling changed.
-- [ ] Remove roadmap task codes and rollout wording from living code and docs,
+- [x] Remove roadmap task codes and rollout wording from living code and docs,
       complete every checkbox, set the roadmap status to complete, move it to
       `docs/archive/`, update both roadmap indexes, and repair incoming links.
 

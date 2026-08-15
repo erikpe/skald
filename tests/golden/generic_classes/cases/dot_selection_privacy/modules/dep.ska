@@ -1,0 +1,7 @@
+public class Secret<T> {
+    init() {}
+
+    private static fn hidden() -> i64 {
+        return 42;
+    }
+}
