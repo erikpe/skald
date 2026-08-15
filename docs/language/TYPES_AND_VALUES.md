@@ -163,7 +163,7 @@ synthesized object copying, and exact internal value parameter/result
 positions. Indirect-call HIR reuses every ordinary argument and result plan.
 The x86-64 backend stores these values as one-word code pointers and executes
 receiverless indirect calls through the same internal ABI. Their recursive
-type and non-null value behavior is frozen in
+type, non-null value behavior, and exclusions are implemented as defined in
 [Capture-Free Function Values](FUNCTION_VALUES.md).
 
 Prefix `*owner` explicitly selects the object place behind a `shared T`

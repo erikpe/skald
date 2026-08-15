@@ -22,9 +22,9 @@ Optional values add no runtime entry point or ABI-version change. The
 never passed to allocation, deallocation, finalization, or ordinary
 shared-owner machinery.
 
-The frozen [function-value compiler contract](FUNCTION_VALUES.md) likewise
+The implemented [function-value compiler contract](FUNCTION_VALUES.md) likewise
 adds no runtime entry point, environment, allocation, owner operation, public
-symbol, panic reason, or compatibility change. Its planned non-null code
+symbol, panic reason, or compatibility change. Its non-null code
 pointers and indirect calls are entirely compiler/backend-owned; runtime ABI
 version 9 and `ska_rt_abi_v9` remain unchanged.
 

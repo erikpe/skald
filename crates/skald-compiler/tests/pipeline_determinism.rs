@@ -129,10 +129,10 @@ const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_
 const GENERIC_MODULE_HELPER_OUTPUT: &str = "SKALD_GENERIC_MODULE_DETERMINISM_OUTPUT";
 const GENERIC_MODULE_TEST_NAME: &str =
     "generic_module_phase_products_are_deterministic_across_processes";
-const FUNCTION_VALUE_SPECIALIZATION_HELPER_OUTPUT: &str =
-    "SKALD_FUNCTION_VALUE_SPECIALIZATION_DETERMINISM_OUTPUT";
-const FUNCTION_VALUE_SPECIALIZATION_TEST_NAME: &str =
-    "function_value_specialization_products_are_deterministic_across_processes";
+const FUNCTION_VALUE_COMPOSITION_HELPER_OUTPUT: &str =
+    "SKALD_FUNCTION_VALUE_COMPOSITION_DETERMINISM_OUTPUT";
+const FUNCTION_VALUE_COMPOSITION_TEST_NAME: &str =
+    "function_value_composition_products_are_deterministic_across_processes";
 const STATIC_FIELD_HELPER_OUTPUT: &str = "SKALD_STATIC_FIELD_DETERMINISM_OUTPUT";
 const STATIC_FIELD_TEST_NAME: &str =
     "static_field_phase_products_are_deterministic_across_processes";
@@ -603,12 +603,12 @@ fn generic_module_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn function_value_specialization_products_are_deterministic_across_processes() {
+fn function_value_composition_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
-        "function-value-specialization",
-        FUNCTION_VALUE_SPECIALIZATION_HELPER_OUTPUT,
-        FUNCTION_VALUE_SPECIALIZATION_TEST_NAME,
-        function_value_specialization_phase_dump,
+        "function-value-composition",
+        FUNCTION_VALUE_COMPOSITION_HELPER_OUTPUT,
+        FUNCTION_VALUE_COMPOSITION_TEST_NAME,
+        function_value_composition_phase_dump,
     );
 }
 
@@ -1707,21 +1707,10 @@ fn complete_phase_dump(text: &str) -> String {
     )
 }
 
-fn function_value_specialization_phase_dump() -> String {
-    let text = "class Factory<T> {\n\
-                  callback: fn(T) -> T;\n\
-                  init(callback: fn(T) -> T) { self.callback = callback; }\n\
-                  static fn identity(value: T) -> T { return value; }\n\
-                }\n\
-                fn main() -> i64 {\n\
-                  var first: fn(i64) -> i64 = Factory<i64>::identity;\n\
-                  var second: fn(bool) -> bool = Factory<bool>::identity;\n\
-                  var value: i64 = first(7);\n\
-                  if (second(true)) { return value; }\n\
-                  return 0;\n\
-                }\n";
+fn function_value_composition_phase_dump() -> String {
+    let text = include_str!("../../../tests/golden/function_values/composition.ska");
     let mut sources = SourceDatabase::new();
-    let source_id = sources.add("function-value-specialization-determinism.ska", text);
+    let source_id = sources.add("function-value-composition-determinism.ska", text);
     let source = sources.get(source_id).unwrap();
     let lexed = lex(source);
     assert!(lexed.diagnostics.is_empty());

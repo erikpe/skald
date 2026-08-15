@@ -271,7 +271,7 @@ impl HirScalarPlace {
 }
 
 /// Primitive-only place retained for alias arguments. Function values are
-/// deliberately excluded from callback-slot aliases in the first version.
+/// deliberately excluded from callback-slot aliases in the current contract.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HirPrimitivePlace {
     pub storage: HirPrimitiveStorage,

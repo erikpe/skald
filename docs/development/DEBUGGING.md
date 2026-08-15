@@ -302,6 +302,36 @@ with `input MIR failed verification` means malformed MIR reached the final
 trust boundary; another structured backend error means verified MIR violates a
 target-specific legality or lowering contract.
 
+## Inspect function values
+
+Start with resolved output for an incorrect reference. `FunctionTypes` should
+contain one canonical signature, `FunctionReference` should name the exact
+eligible `CallableId`, and `AddressTaken` should contain the target even when
+no direct call reaches it. For a closed generic static method, verify the
+specialized method identity separately from the possibly shared function type.
+
+HIR should show trivial scalar storage and an explicit receiverless indirect
+call. Preliminary and final MIR should then show `callable-address`, a
+function-typed stabilized callee value before argument work, and `call
+indirect`. Planned MIR exposes exact-signature candidate sets, induced
+`IndirectCall` static-effect edges, and retained targets. Assembly should
+materialize the exact symbol with a position-independent address and load the
+stabilized target into `r11` immediately before `call r11`.
+
+Useful focused checks are:
+
+```text
+cargo test --locked -p skald-compiler function_value
+cargo test --locked -p skald-compiler passes::static_lifecycle::tests::function_values
+cargo test --locked -p skald-compiler --test pipeline_determinism function_value_composition
+make golden-filter GOLDEN_FILTER='function_values/**'
+```
+
+If a native panic crosses an indirect call, the newest frame must name the
+selected target and the next frame the indirect caller at the call expression.
+A callee-expression failure must omit argument and target frames; an argument
+failure must omit the target frame.
+
 ## Inspect runtime traces
 
 The version-9 runtime renderer, x86-64 requested metadata planner, inline

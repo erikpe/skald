@@ -1,0 +1,11 @@
+fn target(value: i64) -> i64 {
+    return value;
+}
+
+fn consume(callback: fn(i64) -> i64) -> unit {}
+
+fn main() -> i64 {
+    var callback: fn(i64) -> i64 = target;
+    consume(copy callback);
+    return 0;
+}

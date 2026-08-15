@@ -1,9 +1,9 @@
 # Capture-Free Function Values
 
-Status: frozen design; syntax, canonical closed type identity, eligible
-ordinary callable-reference resolution, stored/callable HIR, indirect-call
-type checking, verified target-independent MIR, and x86-64 native realization
-are implemented. The
+Status: implemented contract. Syntax, canonical closed type identity, eligible
+callable-reference resolution, stored/callable HIR, indirect-call type
+checking, verified target-independent MIR, conservative whole-program effects,
+and x86-64 native realization are implemented. The
 [status matrix](STATUS.md) is authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact accepted source shape. Function
 references can be inspected in resolved, HIR, preliminary MIR, and final MIR
@@ -11,8 +11,8 @@ compiler output. The compiler supports the frozen storage, copying,
 assignment, internal value parameter/result positions, and indirect calls
 through every ordinary argument/result family. Exact internal callable
 addresses and receiverless calls execute natively through the ordinary ABI.
-The active [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md)
-owns final composition hardening and publication.
+The [implementation roadmap](../archive/FUNCTION_VALUES_ROADMAP.md) records
+the completed rollout and conformance work.
 
 This contract adds non-null, capture-free function values to Skald. A function
 value names one exact internal top-level function or static method and carries
@@ -49,14 +49,14 @@ covariance, mode adaptation, currying, argument omission, implicit receiver
 binding, or generated wrapper. Grouping, import spelling, source spans, and
 optional shorthand do not create different identities.
 
-A function may return an array or optional value, but the initial feature does
-not admit a function value as an array element or optional payload:
+A function may return an array or optional value, but the implemented contract
+does not admit a function value as an array element or optional payload:
 
 ```text
-fn() -> i64[]       frozen and supported by the initial design
-fn() -> i64?        frozen and supported by the initial design
-(fn() -> i64)[]     excluded initially
-(fn() -> i64)?      excluded initially
+fn() -> i64[]       supported
+fn() -> i64?        supported
+(fn() -> i64)[]     excluded
+(fn() -> i64)?      excluded
 ```
 
 ## Forming values and access
@@ -125,7 +125,7 @@ class Hooks {
 
 Function-valued fields add no destruction step. Explicit object-copy syntax
 does not apply to function values. `ref` and `mut ref` parameters cannot alias
-the variable slot holding a function value in the initial feature.
+the variable slot holding a function value in the current contract.
 
 ## Internal callable composition
 
@@ -192,9 +192,9 @@ identities even when their substituted signatures share one function type.
 Generic top-level functions, method-level type parameters, and runtime generic
 callable identities remain excluded.
 
-## Initial exclusions
+## Deliberate exclusions
 
-The frozen initial feature excludes:
+The implemented capture-free contract excludes:
 
 - lambdas, nested functions, captures, closures, and capture inference;
 - bound or unbound instance methods and virtual/interface method values;

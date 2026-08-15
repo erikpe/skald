@@ -1,0 +1,29 @@
+fn pressure(
+    a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64,
+    x0: f64, x1: f64, x2: f64, x3: f64, x4: f64, x5: f64, x6: f64,
+    x7: f64, x8: f64
+) -> f64 {
+    return x8 + 0.5;
+}
+
+fn choose() -> fn(i64, i64, i64, i64, i64, i64, i64, f64, f64, f64, f64, f64, f64, f64, f64, f64) -> f64 {
+    return pressure;
+}
+
+fn invoke(callback: fn(i64, i64, i64, i64, i64, i64, i64, f64, f64, f64, f64, f64, f64, f64, f64, f64) -> f64) -> f64 {
+    return callback(1, 2, 3, 4, 5, 6, 7, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
+}
+
+fn primitives(signed: i64, unsigned: u64, byte: u8, flag: bool, float: f64) -> u64 {
+    if (signed == 1 && byte == 2u8 && flag && float == 3.0) {
+        return unsigned;
+    }
+    return 0u;
+}
+
+fn main() -> i64 {
+    var callback: fn(i64, i64, i64, i64, i64, i64, i64, f64, f64, f64, f64, f64, f64, f64, f64, f64) -> f64 = choose();
+    var primitive_callback: fn(i64, u64, u8, bool, f64) -> u64 = primitives;
+    if (invoke(callback) == 9.5 && primitive_callback(1, 42u, 2u8, true, 3.0) == 42u) { return 42; }
+    return 1;
+}

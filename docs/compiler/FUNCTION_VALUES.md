@@ -1,14 +1,14 @@
 # Function-Value Compiler Contract
 
-Status: frozen compiler contract; syntax AST, canonical resolved, HIR, and MIR
+Status: implemented compiler contract. Syntax AST, canonical resolved, HIR, and MIR
 `FunctionTypeId` metadata, exact ordinary reference nodes, address-taken
 metadata, trivial stored/callable values, completely checked indirect calls,
 verified callable-address MIR, and x86-64 code-pointer realization are
 implemented. The source-visible contract is
 [Capture-Free Function Values](../language/FUNCTION_VALUES.md),
-the [status matrix](../language/STATUS.md) owns availability, and the active
-[implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns phase
-ordering.
+the [status matrix](../language/STATUS.md) owns availability. The
+[implementation roadmap](../archive/FUNCTION_VALUES_ROADMAP.md) records phase
+ordering and closure evidence.
 
 The completed frontend stages parse recursive closed signatures, intern them
 bottom-up by exact modes and closed child types, and resolve accessible
@@ -21,9 +21,9 @@ result planners into HIR. MIR lowering and verification then establish
 target-independent callable addresses, callee order, provenance, and complete
 call carriers. The x86-64 backend realizes exact position-independent symbol
 addresses and receiverless register-indirect calls through the ordinary
-internal ABI. Conservative whole-program static-effect expansion and related
-retention and trace obligations are also implemented; the active roadmap now
-owns final composition hardening and publication.
+internal ABI. Conservative whole-program static-effect expansion, retention,
+exact trace attribution, and complete composition conformance are also
+implemented.
 
 The target-independent pipeline represents one capture-free function value as
 one exact, non-null internal callable address paired statically with a canonical
@@ -177,7 +177,7 @@ verifies the complete MIR program, computes checked function-value layout and
 ABI classification, and accepts verified callable addresses and indirect
 targets.
 
-The initial target representation is one non-null eight-byte code pointer with
+The target representation is one non-null eight-byte code pointer with
 eight-byte alignment and the System V integer ABI class. Materialization loads
 the exact internal function or specialized static-method symbol address using
 the backend's position-independent address operation.

@@ -741,6 +741,31 @@ instruction counts, code size, and repeated wall time without turning noisy
 host timing into a correctness gate. The repository gates remain `make check`,
 `make msrv-check`, and `git diff --check`.
 
+## Function-value coverage
+
+Function-value coverage follows the exact owner of each invariant. Parser and
+resolution tests own recursive type shape, canonical identity, access,
+shadowing, exact targets, and excluded callable families. Specialization tests
+own recursive substitution and separate closed-static targets. Type/HIR tests
+own trivial storage, every internal callable family, exact compatibility, and
+excluded containers, aliases, casts, and comparisons. MIR and verifier tests
+own stabilized callee order, every argument/result carrier, path and loop
+lifetimes, non-null provenance, result security, and malicious mutations.
+Static-lifecycle and backend tests own exact-signature candidate expansion,
+retention, effects, layout, ABI classification, symbol addresses, and indirect
+instruction selection.
+
+The `function_values` golden group is the source-facing conformance matrix. It
+covers imported and private references, storage and reassignment,
+virtual/interface transport, closed generic target identity, recursive and
+chained calls, mixed register/stack pressure, every ownership/result family,
+callee-before-argument failure suppression, reverse cleanup, panic traces,
+static effects, exclusions, and exact mismatch families. Full golden
+determinism repeats compilation, linking, execution, diagnostics, streams, and
+status. The cross-process `function_value_composition` test independently
+compares token-through-assembly products including planned static lifecycle
+and runtime-trace metadata.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.

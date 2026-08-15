@@ -1,0 +1,18 @@
+class A { init() {} }
+class B { init() {} }
+
+fn zero() -> i64 { return 0; }
+fn by_value(value: A) -> i64 { return 0; }
+fn by_alias(ref value: A) -> i64 { return 0; }
+fn wrong_parameter(value: B) -> i64 { return 0; }
+fn wrong_result(value: A) -> bool { return true; }
+fn nested(callback: fn(A) -> i64) -> i64 { return 0; }
+
+fn main() -> i64 {
+    var arity: fn(A) -> i64 = zero;
+    var mode: fn(A) -> i64 = by_alias;
+    var parameter: fn(A) -> i64 = wrong_parameter;
+    var result: fn(A) -> i64 = wrong_result;
+    var nesting: fn(fn(B) -> i64) -> i64 = nested;
+    return 0;
+}

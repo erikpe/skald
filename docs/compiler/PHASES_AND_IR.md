@@ -15,6 +15,11 @@ primitive and exact-class optional owning locals, fields, internal
 parameters/results, and temporaries additionally have typed HIR, verified MIR,
 conditional lifecycle operations, dynamically guarded checked payload views,
 and executable backend lowering.
+Capture-free function types, exact callable references, trivial scalar
+storage, receiverless indirect calls, verified address provenance,
+exact-signature static effects, and retention are implemented across these
+same phase products under the
+[function-value compiler contract](FUNCTION_VALUES.md).
 
 ## Pipeline contract
 

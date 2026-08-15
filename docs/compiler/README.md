@@ -97,7 +97,7 @@ ordinary direct, virtual, or interface calls before HIR. The implemented
 selection and ownership matrix add no lower IR, backend operation, or runtime
 ABI.
 
-The frozen [function-value compiler contract](FUNCTION_VALUES.md) assigns
+The implemented [function-value compiler contract](FUNCTION_VALUES.md) assigns
 canonical closed function-type identity, exact callable references, explicit
 HIR and MIR indirect calls, verification, conservative address-taken effects,
 one-word x86-64 realization, and the unchanged runtime boundary to their
@@ -109,9 +109,10 @@ implemented. Native calls reuse the complete ordinary internal ABI and exact
 identity-derived callable symbols. Static-lifecycle analysis expands each
 indirect call to its deterministic exact-signature address-taken set, verifies
 that retention inventory in the lifecycle certificate, and preserves exact
-source-callable runtime traces. The active
-[implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns final
-composition hardening and publication.
+source-callable runtime traces. Complete source-to-native composition and
+negative conformance are covered by the golden suite; the
+[implementation roadmap](../archive/FUNCTION_VALUES_ROADMAP.md) records the
+rollout.
 
 The implemented [strings compiler contract](STRINGS.md) defines canonical
 `std::str::Str` discovery and validation, intrinsic produced-value lowering,

@@ -16,9 +16,10 @@ The [modules and interoperation contract](MODULES_AND_INTEROP.md) defines the
 current single-file compilation unit and top-level namespace. All top-level
 declarations are known before any body is resolved, so a function may call a
 later function and direct recursion is supported. Calls select a named
-function, a named instance method, or a class-selected static method directly;
-functions and methods are not first-class values in the current compiler. The
-settled later capture-free boundary is defined separately in
+function, a named instance method, or a class-selected static method directly.
+Accessible internal top-level functions and static methods may also form
+capture-free values; calls through those values are receiverless and evaluate
+the callee once before explicit arguments. The complete value boundary is in
 [Capture-Free Function Values](FUNCTION_VALUES.md).
 
 The callable rules in this document also apply to instance and static methods
@@ -556,11 +557,9 @@ smaller statements. The exact syntax-budget behavior is documented in
 
 Other loop forms, iteration and iterator protocols, closures, and lambda
 literals are neither implemented nor frozen. Capture-free function values and
-calls through function-typed expressions are frozen but not implemented; their
-complete boundary is defined in
-[Capture-Free Function Values](FUNCTION_VALUES.md). Maturity is recorded in
-the [status matrix](STATUS.md#not-implemented). No semantics for open features
-should be inferred from legacy examples.
+calls through function-typed expressions are implemented under the separate
+[Capture-Free Function Values](FUNCTION_VALUES.md) contract. No semantics for
+open callability features should be inferred from legacy examples.
 
 ## Implementation boundary
 

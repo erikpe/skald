@@ -1,0 +1,6 @@
+fn target(value: i64) -> i64 { return value; }
+
+fn main() -> i64 {
+    var callback: fn(i64) -> i64 = target;
+    return (i64) callback;
+}

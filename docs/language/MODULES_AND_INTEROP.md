@@ -392,6 +392,13 @@ local binding or collision in an importer.
 
 ### Visibility and namespaces
 
+Accessible imported top-level functions and qualified static methods may form
+capture-free function values. Reference formation uses the ordinary module and
+declaring-class visibility check once; a validly formed private static value
+may then cross public internal parameter and result boundaries without
+repeating member-name access. External and intrinsic declarations never form
+function values, and no function value crosses the primitive-only foreign ABI.
+
 Top-level declarations are private to their defining module unless marked
 `public`:
 

@@ -234,13 +234,14 @@ function-type-parameter = storage-type
 Function-type parameters are unnamed; their value, `ref`, or `mut ref` mode
 is part of the type. Recursion through `storage-type` permits nested function
 parameters and results. The extension does not alter expression precedence:
-`(f)(argument)` remains an object-cast candidate. The compiler currently
-parses closed function types, assigns canonical resolved identities, and
-resolves eligible ordinary top-level and static-method names in value position
-to exact callable references. Generic references, trivial storage, callable
-transport, and indirect calls through unambiguous function-typed expressions
-reach completely checked HIR. The driver reports the temporary lowering
-diagnostic before unsupported callable-address MIR or execution.
+`(f)(argument)` remains an object-cast candidate. The compiler parses closed
+function types, assigns canonical resolved identities, resolves eligible
+ordinary top-level and static-method names in value position to exact callable
+references, and executes unambiguous calls through function-typed expressions.
+Generic specialization, trivial storage, internal callable transport, verified
+callable-address MIR, whole-program effects, and x86-64 indirect calls are
+implemented. The exact semantic surface and exclusions are defined by
+[Capture-Free Function Values](FUNCTION_VALUES.md).
 
 Primitive type spellings remain reserved as declaration and binding names,
 but may identify a module namespace inside a module or qualified declaration

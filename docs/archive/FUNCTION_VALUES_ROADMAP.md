@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: in progress; FVI7 implemented, FVI8 is next.
+Status: complete; all tasks are implemented and closure validation passed.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -11,7 +11,7 @@ generic composition, verified whole-program effects, and one-word x86-64
 realization without adding closures or changing runtime ABI version 9.
 
 The confirmed decisions are preserved in the
-[archived design record](../archive/FUNCTION_VALUES_DESIGN_PROPOSAL.md). Tasks
+[archived design record](FUNCTION_VALUES_DESIGN_PROPOSAL.md). Tasks
 below implement those decisions without reopening them.
 
 ## Scope and invariants
@@ -54,7 +54,7 @@ below implement those decisions without reopening them.
 - [x] FVI5 — Lower and verify callable addresses and indirect MIR calls
 - [x] FVI6 — Realize code pointers and indirect calls on x86-64
 - [x] FVI7 — Make indirect calls sound for static effects, retention, and traces
-- [ ] FVI8 — Harden composition, publish implementation, and close the roadmap
+- [x] FVI8 — Harden composition, publish implementation, and close the roadmap
 
 ## PR-sized implementation sequence
 
@@ -338,27 +338,27 @@ or copying an address remains effect-free.
 **Purpose:** Exercise the complete frozen surface together, remove rollout
 gates and stale prose, and leave a durable implemented contract.
 
-- [ ] Add native conformance spanning top-level/imported/private/static/generic
+- [x] Add native conformance spanning top-level/imported/private/static/generic
       references; locals, reassignment, fields, statics, parameters/results;
       virtual/interface transport; returned and chained callees; all supported
       ownership/ABI families; recursion; and same-signature distinct targets.
-- [ ] Freeze callee-before-argument, exactly-once, failure suppression, result
+- [x] Freeze callee-before-argument, exactly-once, failure suppression, result
       securing, conditional and loop paths, reverse cleanup, ABI pressure,
       panic traces, static effects, and symbol retention with deterministic
       source-to-native goldens.
-- [ ] Complete negative coverage for every frozen exclusion and exact mismatch
+- [x] Complete negative coverage for every frozen exclusion and exact mismatch
       family; remove temporary unsupported diagnostics and staging gates.
-- [ ] Publish only implemented behavior across grammar, function values,
+- [x] Publish only implemented behavior across grammar, function values,
       functions/control flow, types/values, generics, modules/interoperation,
       compiler phases/IR, backend, runtime ABI, debugging, testing, and status
       documentation.
-- [ ] Audit touched modules by responsibility; make small clarity fixes in
+- [x] Audit touched modules by responsibility; make small clarity fixes in
       scope and place material follow-ups in a separately indexed function-
       value discoveries record.
-- [ ] Confirm no closure environment, optional/array callback container,
+- [x] Confirm no closure environment, optional/array callback container,
       alias-slot facility, foreign adapter, runtime operation, ABI version, or
       compatibility-marker change entered the implementation.
-- [ ] Run focused full-determinism suites, cross-process phase determinism,
+- [x] Run focused full-determinism suites, cross-process phase determinism,
       `make check`, `make msrv-check`, documentation validation, and diff
       hygiene; then archive this completed roadmap and update both indexes.
 

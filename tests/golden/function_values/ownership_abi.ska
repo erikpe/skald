@@ -1,0 +1,42 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+fn increment(value: i64) -> i64 { return value + 1; }
+
+fn mutate(mut ref item: Item, amount: i64) -> i64 {
+    item.value = item.value + amount;
+    return item.value;
+}
+
+fn make_item() -> Item { return Item(7); }
+fn make_values() -> i64[] { return i64[]{11, 13}; }
+fn make_maybe() -> i64? { return 17; }
+fn make_owner() -> shared Item { return new Item(19); }
+fn choose() -> fn(i64) -> i64 { return increment; }
+fn noop() -> unit {}
+
+fn call_alias(callback: fn(mut ref Item, i64) -> i64, mut ref item: Item) -> i64 {
+    return callback(item, 5);
+}
+
+fn call_item(callback: fn() -> Item) -> Item { return callback(); }
+fn call_values(callback: fn() -> i64[]) -> i64[] { return callback(); }
+fn call_maybe(callback: fn() -> i64?) -> i64? { return callback(); }
+fn call_owner(callback: fn() -> shared Item) -> shared Item { return callback(); }
+fn call_choice(callback: fn() -> fn(i64) -> i64) -> i64 { return callback()(20); }
+fn call_unit(callback: fn() -> unit) -> unit { callback(); }
+
+fn main() -> i64 {
+    var item: Item = Item(1);
+    var made: Item = call_item(make_item);
+    var values: i64[] = call_values(make_values);
+    var maybe: i64? = call_maybe(make_maybe);
+    var owner: shared Item = call_owner(make_owner);
+    call_unit(noop);
+    return call_alias(mutate, item) + made.value + values[1] + maybe! + owner->value + call_choice(choose);
+}

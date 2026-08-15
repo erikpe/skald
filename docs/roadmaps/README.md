@@ -6,18 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-[Capture-free function values](FUNCTION_VALUES_ROADMAP.md) is in progress.
-Recursive function-type syntax, canonical closed `FunctionTypeId` identity,
-exact ordinary and closed-specialization callable references, deterministic
-address-taken metadata, trivial stored/callable HIR, and complete indirect-call
-argument/result planning are implemented. FVI5 adds deterministic callable-
-address and indirect-call MIR plus target-independent verification. FVI6 adds
-one-word x86-64 code pointers, exact symbol addresses, static slots, and
-receiverless register-indirect calls through the existing ABI. FVI7 adds
-exact-signature address-taken candidate sets, conservative evidenced static
-effects, verified retention decisions, and exact target/call-site runtime
-traces. FVI8 is next and will harden complete feature composition, publish the
-implemented surface, and close the roadmap.
+No implementation roadmap is currently in progress.
 
 ## Planned
 
@@ -28,9 +17,10 @@ No implementation roadmap is currently planned but not started.
 The confirmed structural indexing and slicing decisions are preserved in the
 [archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).
 
-The confirmed capture-free function-value decisions are preserved in the
+The confirmed capture-free function-value decisions and completed
+implementation roadmap are preserved in the
 [archive](../archive/FUNCTION_VALUES_DESIGN_PROPOSAL.md) and promoted into the
-focused living contracts linked from the planned roadmap.
+focused living language and compiler contracts.
 
 Frozen design proposals and their completed implementation roadmaps are
 preserved in the [archive](../archive/README.md).

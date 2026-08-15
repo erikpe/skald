@@ -1,0 +1,9 @@
+class InvalidStorage {
+    callbacks: (fn(i64) -> i64)[];
+
+    init(callbacks: (fn(i64) -> i64)[]) {
+        self.callbacks = callbacks;
+    }
+}
+
+fn main() -> i64 { return 0; }

@@ -1,0 +1,57 @@
+class State {
+    static trace: i64 = 0;
+
+    init() {}
+}
+
+class Probe {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        State.trace = State.trace * 10 + self.value;
+    }
+}
+
+fn inspect(ref first: Probe, ref second: Probe) -> i64 {
+    State.trace = State.trace * 10 + 3;
+    return first.value + second.value + 1;
+}
+
+fn choose() -> fn(ref Probe, ref Probe) -> i64 {
+    State.trace = State.trace * 10 + 1;
+    return inspect;
+}
+
+fn make_probe(value: i64) -> Probe {
+    State.trace = State.trace * 10 + value;
+    return Probe(value);
+}
+
+fn exercise() -> bool {
+    State.trace = 0;
+    var result: i64 = choose()(make_probe(2), make_probe(4));
+    return result == 7 && State.trace == 124342;
+}
+
+fn main() -> i64 {
+    State.trace = 0;
+    if (false && choose()(make_probe(2), make_probe(4)) == 7) {
+        return 1;
+    }
+    if (State.trace != 0) { return 2; }
+
+    if (!exercise()) { return 3; }
+
+    var count: i64 = 0;
+    while (count < 2) {
+        if (!exercise()) { return 4; }
+        count = count + 1;
+    }
+    if (count != 2) { return 5; }
+
+    return 42;
+}

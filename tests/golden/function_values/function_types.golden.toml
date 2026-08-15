@@ -51,6 +51,24 @@ name = "distinct_closed_targets"
 expect = { exit = 42 }
 
 [[test]]
+name = "composition"
+mode = "run"
+source = "composition.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "storage_dispatch_generics_and_recursion"
+expect = { exit = 42 }
+
+[[test]]
+name = "evaluation_and_cleanup"
+mode = "run"
+source = "evaluation_and_cleanup.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "callee_arguments_paths_loops_and_reverse_cleanup"
+expect = { exit = 42 }
+
+[[test]]
 name = "indirect_static_effect"
 mode = "run"
 source = "static_effects.ska"
@@ -92,3 +110,155 @@ compiler_args = ["--no-stdlib"]
 match = "starts-with"
 inline = """error[RES004]: parenthesized function-value calls are not supported
  --> tests/golden/function_values/grouped_indirect_call.ska:2:13"""
+
+[[test]]
+name = "optional_function_value_exclusion"
+mode = "compile-fail"
+source = "optional_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP043]: function types cannot be inline optional payloads"
+
+[[test]]
+name = "array_function_value_exclusion"
+mode = "compile-fail"
+source = "array_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP037]: array element type is not copy-constructible"
+
+[[test]]
+name = "shared_function_value_exclusion"
+mode = "compile-fail"
+source = "shared_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[RES007]: shared ownership requires an object target"
+
+[[test]]
+name = "callback_slot_alias_exclusion"
+mode = "compile-fail"
+source = "alias_slot_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP019]: function alias parameter `callback` must name a primitive, class, array, interface, `Obj`, or supported inline optional"
+
+[[test]]
+name = "function_static_initializer_exclusion"
+mode = "compile-fail"
+source = "static_initializer_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP042]: static field `callback` cannot have type `function ft0`"
+
+[[test]]
+name = "external_function_value_signature_exclusion"
+mode = "compile-fail"
+source = "external_signature_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP009]: external function `consume` has an unsupported signature"
+
+[[test]]
+name = "function_value_cast_exclusion"
+mode = "compile-fail"
+source = "cast_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP005]: primitive cast requires a primitive value source"
+
+[[test]]
+name = "function_value_comparison_exclusion"
+mode = "compile-fail"
+source = "comparison_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP005]: binary `==` requires operands of the same supported primitive type"
+
+[[test]]
+name = "explicit_copy_exclusion"
+mode = "compile-fail"
+source = "explicit_copy_exclusion.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+match = "contains"
+inline = "error[RES011]: `copy` construction requires a concrete class"
+
+[[test]]
+name = "exact_signature_mismatches"
+mode = "compile-fail"
+source = "exact_mismatches.ska"
+compiler_args = ["--no-stdlib"]
+[test.expect.stderr]
+matches = [
+  { name = "arity", match = "contains", inline = "local initializer has type `function ft3` but `function ft0` is required" },
+  { name = "parameter mode", match = "contains", inline = "local initializer has type `function ft4` but `function ft0` is required" },
+  { name = "parameter identity", match = "contains", inline = "local initializer has type `function ft1` but `function ft0` is required" },
+  { name = "result", match = "contains", inline = "local initializer has type `function ft5` but `function ft0` is required" },
+  { name = "nested identity", match = "contains", inline = "local initializer has type `function ft6` but `function ft2` is required" },
+]
+
+[[test]]
+name = "indirect_target_panic"
+mode = "run"
+source = "indirect_target_panic.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "selected_target_and_call_site"
+expect = { exit = "failure", stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at indirect_target_panic::fail (tests/golden/function_values/indirect_target_panic.ska:3:12)
+  at indirect_target_panic::main (tests/golden/function_values/indirect_target_panic.ska:15:12)
+""" } }
+
+[[test]]
+name = "callee_failure"
+mode = "run"
+source = "callee_failure.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "arguments_are_suppressed"
+expect = { exit = "failure", stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at callee_failure::choose (tests/golden/function_values/callee_failure.ska:7:28)
+  at callee_failure::main (tests/golden/function_values/callee_failure.ska:17:12)
+""" } }
+
+[[test]]
+name = "argument_failure"
+mode = "run"
+source = "argument_failure.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "target_is_suppressed"
+expect = { exit = "failure", stderr = { inline = """panic: integer division by zero
+stacktrace:
+  at argument_failure::argument (tests/golden/function_values/argument_failure.ska:8:12)
+  at argument_failure::main (tests/golden/function_values/argument_failure.ska:13:21)
+""" } }
+
+[[test]]
+name = "abi_pressure"
+mode = "run"
+source = "abi_pressure.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "mixed_registers_and_stack"
+expect = { exit = 42 }
+
+[[test]]
+name = "ownership_abi"
+mode = "run"
+source = "ownership_abi.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "aliases_aggregates_arrays_optionals_shared_and_function_results"
+expect = { exit = 83 }

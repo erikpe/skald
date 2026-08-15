@@ -1,0 +1,3 @@
+fn consume(ref callback: fn(i64) -> i64) -> unit {}
+
+fn main() -> i64 { return 0; }

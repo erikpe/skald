@@ -8,4 +8,12 @@ public class Math {
     static fn apply(value: i64) -> i64 {
         return value;
     }
+
+    private static fn hidden(value: i64) -> i64 {
+        return value + 1;
+    }
+
+    static fn expose() -> fn(i64) -> i64 {
+        return Math.hidden;
+    }
 }

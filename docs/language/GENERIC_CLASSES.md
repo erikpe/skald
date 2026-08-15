@@ -177,6 +177,15 @@ Substitution applies throughout the complete class: bases, fields, static
 fields, parameter and result types, lifecycle signatures, casts, type tests,
 nested applications, construction heads, and type-bearing body operations.
 
+Function types are structural in this substitution. Their parameter modes,
+parameter types, and result type close recursively before the specialized
+class reaches ordinary type checking. A function type may itself be a closed
+generic argument where ordinary scalar storage is required; it remains
+ineligible for optional payload, array-element, shared-target, and alias-slot
+requirements. Static method references on two closed specializations retain
+distinct callable targets even when substitution gives them the same function
+type.
+
 ## Contextual argument requirements
 
 There is no global set of types permitted as generic arguments. An argument is
