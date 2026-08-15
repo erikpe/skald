@@ -128,6 +128,42 @@ public class Str {
         return parts;
     }
 
+    fn join(ref values: Vec<Str>) -> Str {
+        var value_count: u64 = values.len();
+        if (value_count == 0u) {
+            return Str();
+        }
+        var total_length: u64 = 0u;
+        var index: u64 = 0u;
+        while (index < value_count) {
+            var value: Str = values[(i64) index];
+            total_length = total_length + value._length;
+            index = index + 1u;
+        }
+        total_length = total_length + (value_count - 1u) * self._length;
+
+        var separator_start: i64 = self._start;
+        var separator_end: i64 = separator_start + (i64) self._length;
+        var separator_length: i64 = separator_end - separator_start;
+
+        var result: shared u8[] = new u8[](total_length);
+        var offset: i64 = 0;
+        index = 0u;
+        while (index < value_count) {
+            if (index > 0u) {
+                result->[offset:offset + separator_length] = self._storage->[separator_start:separator_end];
+                offset = offset + separator_length;
+            }
+            var value: Str = values[(i64) index];
+            var value_start: i64 = value._start;
+            var value_length: i64 = (i64) value._length;
+            result->[offset:offset + value_length] = value._storage->[value_start:value_start + value_length];
+            offset = offset + value_length;
+            index = index + 1u;
+        }
+        return Str(result, 0, total_length);
+    }
+
     fn equals(ref other: Obj) -> bool {
         if (!(other is Str)) {
             return false;

@@ -155,6 +155,21 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         ResolvedParameterBindingMode::ReadOnlyAlias { .. }
     ));
     assert!(matches!(split.return_type.kind, ResolvedTypeKind::Class(_)));
+    let join = class
+        .methods
+        .iter()
+        .find(|method| method.name == "join")
+        .expect("canonical library must expose string joining");
+    assert_eq!(join.parameters.len(), 1);
+    assert!(matches!(
+        join.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::Class(_)
+    ));
+    assert!(matches!(
+        join.parameters[0].binding_mode,
+        ResolvedParameterBindingMode::ReadOnlyAlias { .. }
+    ));
+    assert!(matches!(join.return_type.kind, ResolvedTypeKind::Class(_)));
     assert!(!class
         .methods
         .iter()
@@ -195,9 +210,10 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
             class.id
         ))
         .count(),
-        // from_bytes, slice_get, the three integer facades, from_f64, and concat
-        // each install a trusted descriptor through the private initializer.
-        7,
+        // from_bytes, slice_get, join, the three integer facades, from_f64,
+        // and concat each install a trusted descriptor through the private
+        // initializer.
+        8,
         "{dump}"
     );
 }

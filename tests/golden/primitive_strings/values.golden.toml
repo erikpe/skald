@@ -35,3 +35,12 @@ source = "string_split_empty_delimiter.ska"
 [[test.run]]
 name = "rejects_empty_delimiter"
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Str.split: empty delimiter\n" } }
+
+[[test]]
+name = "join"
+mode = "run"
+source = "string_join.ska"
+
+[[test.run]]
+name = "empty_singleton_sparse_slices_and_split_round_trip"
+expect = { exit = 0 }

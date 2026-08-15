@@ -205,6 +205,7 @@ The installed representative public surface is:
 | `fn slice_get(start: i64?, end: i64?) -> Str` | Return an `O(1)` shared-backing half-open slice; structural entry point for `value[start:end]`, with omitted bounds selecting the logical beginning or end. |
 | `fn splitlines() -> Vec<Str>` | Split at LF, CRLF, or CR line endings without retaining separators or adding a trailing empty result. |
 | `fn split(ref delimiter: Str) -> Vec<Str>` | Split at non-overlapping occurrences of a non-empty string delimiter, preserving every empty result. |
+| `fn join(ref values: Vec<Str>) -> Str` | Join strings with the receiver between adjacent elements, producing one fresh backing allocation for a non-empty vector. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 | `static fn from_bool(value: bool) -> Str` | Return canonical lowercase boolean text. |
@@ -260,6 +261,13 @@ delimiter: `"a--b--".split("--")` contains `"a"`, `"b"`, and `""`, while
 with `Str.split: empty delimiter`. As with `splitlines`, the returned strings
 are shared-backing descriptor slices rather than byte copies.
 
+`join` uses the receiver as its separator. An empty vector produces `""`; a
+singleton produces its sole contents without a separator; empty separators
+concatenate; and empty elements remain observable through adjacent or boundary
+separators. The method first computes the exact result length, then allocates
+and fills one fresh backing array. For example, `"|".join(values)` for
+`["", "middle", ""]` produces `"|middle|"`.
+
 Invalid byte and slice bounds call the imported `std::error::panic`
 declaration with `Str.index_get: index out of bounds` or
 `Str.slice_get: index out of bounds` as a standalone non-returning statement.
@@ -292,6 +300,7 @@ The required asymptotic behavior is:
 | Slice, including `value[start:end]` | `O(1)` owner copy plus adjusted bounds; no byte copy |
 | Split lines | `O(n)` scan, `O(k)` vector storage for `k` shared-backing line descriptors, and no byte copy |
 | Split by string | `O(nm)` worst-case delimiter matching for input length `n` and delimiter length `m`, `O(k)` vector storage for `k` shared-backing parts, and no byte copy |
+| Join strings | `O(n + ks)` sizing and copying for `n` total value bytes, `k` values, and separator length `s`; one exact-size backing allocation for a non-empty vector |
 | Convert from caller-owned bytes | `O(n)` fresh allocation and byte copy |
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |

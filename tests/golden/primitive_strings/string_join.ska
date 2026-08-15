@@ -1,0 +1,46 @@
+from std::str import Str;
+from std::test import assert_eq_str;
+from std::vec import Vec;
+
+fn assert_niflheim_examples() -> unit {
+    var empty: Vec<Str> = Vec<Str>();
+    assert_eq_str(", ".join(empty), "");
+
+    var singleton: Vec<Str> = Vec<Str>();
+    singleton.push("alpha");
+    assert_eq_str(", ".join(singleton), "alpha");
+
+    var words: Vec<Str> = Vec<Str>();
+    words.push("alpha");
+    words.push("beta");
+    words.push("gamma");
+    assert_eq_str(", ".join(words), "alpha, beta, gamma");
+    assert_eq_str("".join(words), "alphabetagamma");
+
+    var sparse: Vec<Str> = Vec<Str>();
+    sparse.push("");
+    sparse.push("middle");
+    sparse.push("");
+    assert_eq_str("|".join(sparse), "|middle|");
+}
+
+fn join_slices() -> Str {
+    var source: Str = "prefix/body/tail/suffix";
+    var values: Vec<Str> = Vec<Str>();
+    values.push(source[7:11]);
+    values.push(source[12:16]);
+    source = "replacement";
+
+    var result: Str = "<>".join(values);
+    values.clear();
+    return result;
+}
+
+fn main() -> i64 {
+    assert_niflheim_examples();
+    assert_eq_str(join_slices(), "body<>tail");
+
+    var original: Str = "left<>middle<><>right<>";
+    assert_eq_str("<>".join(original.split("<>")), original);
+    return 0;
+}
