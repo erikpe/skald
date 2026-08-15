@@ -484,6 +484,7 @@ pub enum TypeKind {
     F64,
     Bool,
     Unit,
+    Function(FunctionTypeSyntax),
     Named(NamedTypeSyntax),
     Shared {
         shared_span: Span,
@@ -504,6 +505,37 @@ pub enum TypeKind {
         left_bracket_span: Span,
         right_bracket_span: Span,
     },
+}
+
+/// An unnamed parameter in a function type.
+///
+/// Function-type parameters deliberately contain no binding name: names are a
+/// property of declarations, while function-type identity consists only of
+/// parameter modes and types.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FunctionTypeParameterSyntax {
+    pub mode: FunctionTypeParameterMode,
+    pub type_syntax: TypeSyntax,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FunctionTypeParameterMode {
+    Value,
+    ReadOnlyAlias { ref_span: Span },
+    MutableAlias { mut_span: Span, ref_span: Span },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FunctionTypeSyntax {
+    pub fn_span: Span,
+    pub left_paren_span: Span,
+    pub parameters: Vec<FunctionTypeParameterSyntax>,
+    pub comma_spans: Vec<Span>,
+    pub right_paren_span: Span,
+    pub arrow_span: Span,
+    pub result: Box<TypeSyntax>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

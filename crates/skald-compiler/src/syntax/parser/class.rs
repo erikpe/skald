@@ -764,11 +764,17 @@ impl Parser<'_> {
         self.expect(TokenKind::Fn, expectation)?;
         let name = self.parse_name("expected a method name after `fn`");
         let parameters = self.parse_parameter_list();
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         self.expect(TokenKind::Arrow, "`->` after the method parameter list");
         let return_type = self.parse_type(
             TypeContext::Result,
             "expected a method return type after `->`",
         );
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         let body = self.parse_block();
         let (name, parameters, return_type, body) = match (name, parameters, return_type, body) {
             (Some(name), Some(parameters), Some(return_type), Some(body)) => {

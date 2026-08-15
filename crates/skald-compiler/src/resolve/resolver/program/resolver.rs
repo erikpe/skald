@@ -461,7 +461,8 @@ impl<'ast> ProgramResolver<'ast> {
                 });
 
         let span = entry_unit.ast.span;
-        let (array_types, optional_types, optional_box_types) = self.type_interner.finish();
+        let (array_types, function_types, optional_types, optional_box_types) =
+            self.type_interner.finish();
         let mut output = ResolveOutput {
             program: ResolvedProgram {
                 modules: self.modules,
@@ -473,6 +474,7 @@ impl<'ast> ProgramResolver<'ast> {
                 type_parameters,
                 template_semantics,
                 generic_specializations,
+                function_types,
                 array_types,
                 optional_types,
                 optional_box_types,

@@ -218,37 +218,26 @@ primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
 generic-argument-list         = "<" storage-type {"," storage-type} ">"
 named-type                    = declaration-path [generic-argument-list]
 type-primary                  = primitive-type | named-type | "unit"
-                              | "(" storage-type ")"
+                              | "(" storage-type ")" | function-type
 postfix-type                  = type-primary {"?" | "[" "]"}
 shared-type                   = "shared" ["?"] storage-type
 storage-type                  = postfix-type | shared-type
 result-type                   = storage-type | "unit"
-```
-
-### Frozen function-type extension
-
-The compiler does not yet accept function types. The frozen
-[capture-free function-value contract](FUNCTION_VALUES.md) adds the following
-recursive alternative when the first implementation stage ships:
-
-```text
 function-type           = "fn" "(" [function-type-parameter
                           {"," function-type-parameter}] ")"
                           "->" storage-type
 function-type-parameter = storage-type
                         | "ref" storage-type
                         | "mut" "ref" storage-type
-type-primary            = primitive-type | named-type | "unit"
-                        | "(" storage-type ")" | function-type
 ```
 
 Function-type parameters are unnamed; their value, `ref`, or `mut ref` mode
 is part of the type. Recursion through `storage-type` permits nested function
 parameters and results. The extension does not alter expression precedence:
-`(f)(argument)` remains an object-cast candidate, while an ungrouped
-function-typed postfix expression may become callable. Until this section is
-promoted into the implemented production above, programs using the extension
-must be rejected by the existing grammar.
+`(f)(argument)` remains an object-cast candidate. The compiler currently
+parses closed function types and assigns canonical resolved identities, then
+reports a resolution diagnostic before value formation, storage, or calls;
+those semantic stages remain unavailable.
 
 Primitive type spellings remain reserved as declaration and binding names,
 but may identify a module namespace inside a module or qualified declaration

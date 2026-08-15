@@ -69,13 +69,48 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
             ResolvedTypeKind::Obj => "Obj".to_owned(),
             ResolvedTypeKind::Class(class) => self.class_name(class, visiting),
             ResolvedTypeKind::Interface(interface) => self.interface_name(interface),
+            ResolvedTypeKind::Function(function) => {
+                let Some(function) = self.type_interner.function(function) else {
+                    return function.to_string();
+                };
+                let parameters = function
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        let mode = match parameter.mode {
+                            ResolvedFunctionTypeParameterMode::Value => "",
+                            ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
+                            ResolvedFunctionTypeParameterMode::MutableAlias => "mut ref ",
+                        };
+                        format!(
+                            "{mode}{}",
+                            self.type_name(parameter.type_syntax.kind, visiting)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    "fn({parameters}) -> {}",
+                    self.type_name(function.result.kind, visiting)
+                )
+            }
             ResolvedTypeKind::Array(array) => {
                 let element = self
                     .type_interner
                     .array(array)
                     .map(|array| self.type_name(array.element.kind, visiting))
                     .unwrap_or_else(|| array.to_string());
-                format!("{element}[]")
+                let needs_grouping = self.type_interner.array(array).is_some_and(|array| {
+                    matches!(
+                        array.element.kind,
+                        ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                    )
+                });
+                if needs_grouping {
+                    format!("({element})[]")
+                } else {
+                    format!("{element}[]")
+                }
             }
             ResolvedTypeKind::Shared(target) => {
                 format!("shared {}", self.shared_target_name(target, visiting))
@@ -85,7 +120,10 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
                     return optional.to_string();
                 };
                 let payload_name = self.type_name(payload.payload.kind, visiting);
-                if matches!(payload.payload.kind, ResolvedTypeKind::Shared(_)) {
+                if matches!(
+                    payload.payload.kind,
+                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                ) {
                     format!("({payload_name})?")
                 } else {
                     format!("{payload_name}?")

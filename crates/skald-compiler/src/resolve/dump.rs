@@ -10,6 +10,22 @@ use crate::{
 
 use super::ir::*;
 
+const fn function_parameter_mode_name(mode: ResolvedFunctionTypeParameterMode) -> &'static str {
+    match mode {
+        ResolvedFunctionTypeParameterMode::Value => "Value",
+        ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ReadOnlyAlias",
+        ResolvedFunctionTypeParameterMode::MutableAlias => "MutableAlias",
+    }
+}
+
+const fn function_parameter_mode_prefix(mode: ResolvedFunctionTypeParameterMode) -> &'static str {
+    match mode {
+        ResolvedFunctionTypeParameterMode::Value => "",
+        ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
+        ResolvedFunctionTypeParameterMode::MutableAlias => "mut ref ",
+    }
+}
+
 pub fn dump_resolved(program: &ResolvedProgram) -> String {
     let mut dumper = ResolvedDumper::new(program);
     dumper.line("ResolvedProgram", program.span);
@@ -361,6 +377,41 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 let _ = writeln!(dumper.output, "Entry {function}");
             }
             None => dumper.output.push_str("Entry <none>\n"),
+        }
+        if !program.function_types.is_empty() {
+            dumper.heading("FunctionTypes");
+            dumper.indented(|dumper| {
+                for function in program.function_types.iter() {
+                    dumper.line(
+                        &format!(
+                            "FunctionType {} {}",
+                            function.id,
+                            dumper.render_semantic_type_kind(
+                                ResolvedTypeKind::Function(function.id),
+                                &mut Vec::new()
+                            )
+                        ),
+                        function.span,
+                    );
+                    dumper.indented(|dumper| {
+                        dumper.heading("Parameters");
+                        dumper.indented(|dumper| {
+                            for parameter in &function.parameters {
+                                dumper.line(
+                                    &format!(
+                                        "{} {}",
+                                        function_parameter_mode_name(parameter.mode),
+                                        dumper.render_type_kind(parameter.type_syntax.kind)
+                                    ),
+                                    parameter.span,
+                                );
+                            }
+                        });
+                        dumper.heading("Result");
+                        dumper.indented(|dumper| dumper.type_syntax(&function.result));
+                    });
+                }
+            });
         }
         if !program.optional_types.is_empty() {
             dumper.heading("OptionalTypes");
@@ -1032,6 +1083,19 @@ impl<'program> ResolvedDumper<'program> {
             }
             ResolvedTypeKind::Interface(interface) => {
                 self.line(&format!("Type Interface {interface}"), type_syntax.span);
+                return;
+            }
+            ResolvedTypeKind::Function(function) => {
+                self.line(
+                    &format!(
+                        "Type Function {function} {}",
+                        self.render_semantic_type_kind(
+                            ResolvedTypeKind::Function(function),
+                            &mut Vec::new()
+                        )
+                    ),
+                    type_syntax.span,
+                );
                 return;
             }
             ResolvedTypeKind::Array(array) => {
@@ -1791,6 +1855,29 @@ impl<'program> ResolvedDumper<'program> {
             ResolvedTypeKind::Obj => "Obj".to_owned(),
             ResolvedTypeKind::Class(class) => format!("class {class}"),
             ResolvedTypeKind::Interface(interface) => format!("interface {interface}"),
+            ResolvedTypeKind::Function(function) => {
+                let function = self
+                    .program
+                    .function_types
+                    .get(function)
+                    .expect("resolved function-type identities must name table entries");
+                let parameters = function
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        format!(
+                            "{}{}",
+                            function_parameter_mode_prefix(parameter.mode),
+                            self.render_type_kind(parameter.type_syntax.kind)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    "fn({parameters}) -> {}",
+                    self.render_type_kind(function.result.kind)
+                )
+            }
             ResolvedTypeKind::Array(array) => format!("array {array}"),
             ResolvedTypeKind::Shared(target) => {
                 format!("shared {}", self.render_shared_target(target))
@@ -1802,7 +1889,10 @@ impl<'program> ResolvedDumper<'program> {
                     .get(optional)
                     .expect("resolved optional identities must name table entries");
                 let name = self.render_type_kind(payload.payload.kind);
-                if matches!(payload.payload.kind, ResolvedTypeKind::Shared(_)) {
+                if matches!(
+                    payload.payload.kind,
+                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                ) {
                     format!("({name})?")
                 } else {
                     format!("{name}?")
@@ -1826,13 +1916,41 @@ impl<'program> ResolvedDumper<'program> {
             ResolvedTypeKind::Obj => "Obj".to_owned(),
             ResolvedTypeKind::Class(class) => self.class_name(class, visiting),
             ResolvedTypeKind::Interface(interface) => self.interface_name(interface),
+            ResolvedTypeKind::Function(function) => {
+                let function = self
+                    .program
+                    .function_types
+                    .get(function)
+                    .expect("resolved function-type identities must name table entries");
+                let parameters = function
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        format!(
+                            "{}{}",
+                            function_parameter_mode_prefix(parameter.mode),
+                            self.render_semantic_type_kind(parameter.type_syntax.kind, visiting)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    "fn({parameters}) -> {}",
+                    self.render_semantic_type_kind(function.result.kind, visiting)
+                )
+            }
             ResolvedTypeKind::Array(array) => self.program.array_types.get(array).map_or_else(
                 || array.to_string(),
                 |array| {
-                    format!(
-                        "{}[]",
-                        self.render_semantic_type_kind(array.element.kind, visiting)
-                    )
+                    let element = self.render_semantic_type_kind(array.element.kind, visiting);
+                    if matches!(
+                        array.element.kind,
+                        ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                    ) {
+                        format!("({element})[]")
+                    } else {
+                        format!("{element}[]")
+                    }
                 },
             ),
             ResolvedTypeKind::Shared(target) => {
@@ -1848,7 +1966,10 @@ impl<'program> ResolvedDumper<'program> {
                     .get(optional)
                     .expect("resolved optional identities must name table entries");
                 let name = self.render_semantic_type_kind(payload.payload.kind, visiting);
-                if matches!(payload.payload.kind, ResolvedTypeKind::Shared(_)) {
+                if matches!(
+                    payload.payload.kind,
+                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                ) {
                     format!("({name})?")
                 } else {
                     format!("{name}?")

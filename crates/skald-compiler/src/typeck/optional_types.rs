@@ -83,7 +83,10 @@ pub(super) fn selected_copy_plan(
         ResolvedTypeKind::Shared(target) => Some(HirOptionalCopyPlan::Shared(lower_shared(target))),
         ResolvedTypeKind::Optional(nested) => selected_copy_plan(program, capabilities, nested)
             .map(|_| HirOptionalCopyPlan::Optional(nested)),
-        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_) => None,
     }
 }
 
@@ -121,7 +124,10 @@ pub(super) fn selected_assignment_plan(
             selected_assignment_plan(program, capabilities, nested)
                 .map(|_| HirOptionalAssignmentPlan::Optional(nested))
         }
-        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_) => None,
     }
 }
 
@@ -236,7 +242,10 @@ fn lower_optional_type(
                     HirOptionalCheckedAccess::GuardedInline,
                 )
             }
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
+            ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_)
+            | ResolvedTypeKind::Function(_) => {
                 unreachable!("invalid optional payload must be rejected before HIR planning")
             }
         };

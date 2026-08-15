@@ -67,8 +67,14 @@ impl Parser<'_> {
         let fn_token = self.advance();
         let name = self.parse_name("expected a function name after `fn`");
         let parameters = self.parse_parameter_list();
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         self.expect(TokenKind::Arrow, "`->` after the parameter list");
         let return_type = self.parse_type(TypeContext::Result, "expected a return type after `->`");
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         let body = self.parse_block();
 
         let (name, parameters, return_type, body) = match (name, parameters, return_type, body) {
@@ -97,8 +103,14 @@ impl Parser<'_> {
         self.expect(TokenKind::Fn, "`fn` after `extern`")?;
         let name = self.parse_name("expected a function name after `extern fn`");
         let parameters = self.parse_parameter_list();
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         self.expect(TokenKind::Arrow, "`->` after the parameter list");
         let return_type = self.parse_type(TypeContext::Result, "expected a return type after `->`");
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         let semicolon = self.expect(
             TokenKind::Semicolon,
             "`;` after the external function declaration",
@@ -128,8 +140,14 @@ impl Parser<'_> {
         self.expect(TokenKind::Fn, "`fn` after `intrinsic`")?;
         let name = self.parse_name("expected a function name after `intrinsic fn`");
         let parameters = self.parse_parameter_list();
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         self.expect(TokenKind::Arrow, "`->` after the parameter list");
         let return_type = self.parse_type(TypeContext::Result, "expected a return type after `->`");
+        if self.recovering_from_excessive_nesting {
+            return None;
+        }
         let semicolon = self.expect(
             TokenKind::Semicolon,
             "`;` after the intrinsic function declaration",
@@ -385,6 +403,8 @@ impl Parser<'_> {
             } else {
                 shared_type
             }
+        } else if token.kind == TokenKind::Fn {
+            self.parse_function_type()?
         } else if let Some(kind) = token_type_kind(token.kind) {
             if context.accepts_primitive()
                 && (kind != TypeKind::Unit
@@ -487,6 +507,112 @@ impl Parser<'_> {
         Some(type_syntax)
     }
 
+    fn parse_function_type(&mut self) -> Option<TypeSyntax> {
+        let fn_token = self.advance();
+        let left_paren = self.expect(TokenKind::LeftParen, "`(` after `fn` in a function type")?;
+        let mut parameters = Vec::new();
+        let mut comma_spans = Vec::new();
+
+        if !self.at(TokenKind::RightParen) {
+            loop {
+                let parameter = self.with_syntax_nesting(fn_token.span, |parser| {
+                    parser.parse_function_type_parameter()
+                })?;
+                parameters.push(parameter);
+
+                let Some(comma) = self.consume(TokenKind::Comma) else {
+                    break;
+                };
+                comma_spans.push(comma.span);
+                if self.at(TokenKind::RightParen) {
+                    self.report(
+                        EXPECTED_TOKEN,
+                        "expected a function-type parameter after `,`",
+                        self.peek().span,
+                        "trailing commas are not supported",
+                    );
+                    return None;
+                }
+            }
+        }
+
+        let right_paren = self.expect(
+            TokenKind::RightParen,
+            "`)` after the function-type parameters",
+        )?;
+        let arrow = self.expect(TokenKind::Arrow, "`->` after the function-type parameters")?;
+        let result = self.with_syntax_nesting(fn_token.span, |parser| {
+            parser.parse_type_inner(
+                TypeContext::Result,
+                "expected a function-type result after `->`".to_owned(),
+            )
+        })?;
+        let span = self.cover(fn_token.span, result.span);
+
+        Some(TypeSyntax {
+            kind: TypeKind::Function(FunctionTypeSyntax {
+                fn_span: fn_token.span,
+                left_paren_span: left_paren.span,
+                parameters,
+                comma_spans,
+                right_paren_span: right_paren.span,
+                arrow_span: arrow.span,
+                result: Box::new(result),
+                span,
+            }),
+            span,
+        })
+    }
+
+    fn parse_function_type_parameter(&mut self) -> Option<FunctionTypeParameterSyntax> {
+        let start = self.peek().span;
+        let mode = if let Some(mut_token) = self.consume(TokenKind::Mut) {
+            let ref_token = self.expect(
+                TokenKind::Ref,
+                "`ref` after `mut` in a function-type parameter",
+            )?;
+            FunctionTypeParameterMode::MutableAlias {
+                mut_span: mut_token.span,
+                ref_span: ref_token.span,
+            }
+        } else if let Some(ref_token) = self.consume(TokenKind::Ref) {
+            if self.at(TokenKind::Mut) {
+                self.report(
+                    EXPECTED_TOKEN,
+                    "`mut` must precede `ref` in a mutable function-type parameter",
+                    self.peek().span,
+                    "use `mut ref T`",
+                );
+                return None;
+            }
+            FunctionTypeParameterMode::ReadOnlyAlias {
+                ref_span: ref_token.span,
+            }
+        } else {
+            FunctionTypeParameterMode::Value
+        };
+
+        if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
+            self.report(
+                EXPECTED_TOKEN,
+                "repeated function-type parameter mode",
+                self.peek().span,
+                "use exactly `T`, `ref T`, or `mut ref T`",
+            );
+            return None;
+        }
+
+        let type_syntax = self.parse_type_inner(
+            TypeContext::ArrayElement,
+            "expected a type in the function-type parameter list".to_owned(),
+        )?;
+        Some(FunctionTypeParameterSyntax {
+            mode,
+            span: self.cover(start, type_syntax.span),
+            type_syntax,
+        })
+    }
+
     fn at_any_ahead(&self, distance: usize, kinds: &[TokenKind]) -> bool {
         kinds
             .iter()
@@ -521,5 +647,6 @@ pub(super) const fn token_starts_type(kind: TokenKind) -> bool {
             | TokenKind::F64
             | TokenKind::Bool
             | TokenKind::Unit
+            | TokenKind::Fn
     )
 }

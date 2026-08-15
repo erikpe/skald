@@ -396,7 +396,8 @@ fn compute_class<I: Copy>(
                             }
                             ResolvedTypeKind::Unit
                             | ResolvedTypeKind::Obj
-                            | ResolvedTypeKind::Interface(_) => {
+                            | ResolvedTypeKind::Interface(_)
+                            | ResolvedTypeKind::Function(_) => {
                                 failure = Some(vec![CopyPathElement::Field(field.id)]);
                                 break;
                             }

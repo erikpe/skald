@@ -192,13 +192,43 @@ fn semantic_type_name(
             || interface.to_string(),
             |interface| qualified_name(program, interface.module, &interface.name),
         ),
+        ResolvedTypeKind::Function(function) => program.function_types.get(function).map_or_else(
+            || function.to_string(),
+            |function| {
+                let parameters = function
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        let mode = match parameter.mode {
+                            ResolvedFunctionTypeParameterMode::Value => "",
+                            ResolvedFunctionTypeParameterMode::ReadOnlyAlias => "ref ",
+                            ResolvedFunctionTypeParameterMode::MutableAlias => "mut ref ",
+                        };
+                        format!(
+                            "{mode}{}",
+                            semantic_type_name(program, parameter.type_syntax.kind, visiting)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    "fn({parameters}) -> {}",
+                    semantic_type_name(program, function.result.kind, visiting)
+                )
+            },
+        ),
         ResolvedTypeKind::Array(array) => program.array_types.get(array).map_or_else(
             || array.to_string(),
             |array| {
-                format!(
-                    "{}[]",
-                    semantic_type_name(program, array.element.kind, visiting)
-                )
+                let element = semantic_type_name(program, array.element.kind, visiting);
+                if matches!(
+                    array.element.kind,
+                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                ) {
+                    format!("({element})[]")
+                } else {
+                    format!("{element}[]")
+                }
             },
         ),
         ResolvedTypeKind::Shared(target) => {
@@ -211,7 +241,10 @@ fn semantic_type_name(
             || optional.to_string(),
             |optional| {
                 let payload = semantic_type_name(program, optional.payload.kind, visiting);
-                if matches!(optional.payload.kind, ResolvedTypeKind::Shared(_)) {
+                if matches!(
+                    optional.payload.kind,
+                    ResolvedTypeKind::Shared(_) | ResolvedTypeKind::Function(_)
+                ) {
                     format!("({payload})?")
                 } else {
                     format!("{payload}?")
@@ -350,6 +383,7 @@ fn failed_nominal_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
                 | ResolvedTypeKind::Bool
                 | ResolvedTypeKind::Unit
                 | ResolvedTypeKind::Obj
+                | ResolvedTypeKind::Function(_)
                 | ResolvedTypeKind::Interface(_)
                 | ResolvedTypeKind::Shared(_)
                 | ResolvedTypeKind::Optional(_)
@@ -387,6 +421,7 @@ const fn argument_kind_name(argument: ResolvedTypeKind) -> &'static str {
         ResolvedTypeKind::Shared(_) => "the shared-owner argument",
         ResolvedTypeKind::Optional(_) => "the optional argument",
         ResolvedTypeKind::Array(_) => "the array argument",
+        ResolvedTypeKind::Function(_) => "the function-type argument",
         ResolvedTypeKind::Obj => "the universal object-view argument",
         ResolvedTypeKind::I64
         | ResolvedTypeKind::U64

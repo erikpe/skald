@@ -49,6 +49,7 @@ impl ResolvedSharedTarget {
             | ResolvedTypeKind::F64
             | ResolvedTypeKind::Bool
             | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Function(_)
             | ResolvedTypeKind::Shared(_)
             | ResolvedTypeKind::Optional(_) => None,
         }

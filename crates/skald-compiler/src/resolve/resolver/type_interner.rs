@@ -3,15 +3,22 @@
 use std::collections::HashMap;
 
 use crate::{
-    identity::{ArrayTypeId, OptionalBoxTypeId, OptionalTypeId},
+    identity::{ArrayTypeId, FunctionTypeId, OptionalBoxTypeId, OptionalTypeId},
     source::Span,
 };
 
 use super::{
-    ResolvedArrayType, ResolvedArrayTypeTable, ResolvedObjectTarget, ResolvedOptionalBoxType,
-    ResolvedOptionalBoxTypeTable, ResolvedOptionalType, ResolvedOptionalTypeTable, ResolvedType,
-    ResolvedTypeKind,
+    ResolvedArrayType, ResolvedArrayTypeTable, ResolvedFunctionType, ResolvedFunctionTypeParameter,
+    ResolvedFunctionTypeParameterMode, ResolvedFunctionTypeTable, ResolvedObjectTarget,
+    ResolvedOptionalBoxType, ResolvedOptionalBoxTypeTable, ResolvedOptionalType,
+    ResolvedOptionalTypeTable, ResolvedType, ResolvedTypeKind,
 };
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct FunctionTypeKey {
+    parameters: Vec<(ResolvedFunctionTypeParameterMode, ResolvedTypeKind)>,
+    result: ResolvedTypeKind,
+}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct OptionalBoxKey {
@@ -26,6 +33,8 @@ struct OptionalBoxKey {
 /// only semantic identities, so source spans never affect equality or keys.
 #[derive(Default)]
 pub(super) struct ResolvedTypeInterner {
+    function_ids: HashMap<FunctionTypeKey, FunctionTypeId>,
+    functions: Vec<ResolvedFunctionType>,
     array_ids: HashMap<ResolvedTypeKind, ArrayTypeId>,
     arrays: Vec<ResolvedArrayType>,
     optional_ids: HashMap<ResolvedTypeKind, OptionalTypeId>,
@@ -35,6 +44,40 @@ pub(super) struct ResolvedTypeInterner {
 }
 
 impl ResolvedTypeInterner {
+    pub(super) fn intern_function(
+        &mut self,
+        parameters: Vec<ResolvedFunctionTypeParameter>,
+        result: ResolvedType,
+        span: Span,
+    ) -> FunctionTypeId {
+        let key = FunctionTypeKey {
+            parameters: parameters
+                .iter()
+                .map(|parameter| (parameter.mode, parameter.type_syntax.kind))
+                .collect(),
+            result: result.kind,
+        };
+        if let Some(id) = self.function_ids.get(&key) {
+            return *id;
+        }
+
+        let id = FunctionTypeId::new(self.functions.len());
+        self.function_ids.insert(key, id);
+        self.functions.push(ResolvedFunctionType {
+            id,
+            parameters,
+            result,
+            span,
+        });
+        id
+    }
+
+    pub(super) fn function(&self, id: FunctionTypeId) -> Option<&ResolvedFunctionType> {
+        self.functions
+            .get(id.index())
+            .filter(|entry| entry.id == id)
+    }
+
     pub(super) fn intern_array(&mut self, element: ResolvedType) -> ArrayTypeId {
         if let Some(id) = self.array_ids.get(&element.kind) {
             return *id;
@@ -177,6 +220,7 @@ impl ResolvedTypeInterner {
             | ResolvedTypeKind::F64
             | ResolvedTypeKind::Bool
             | ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Function(_)
             | ResolvedTypeKind::Array(_)
             | ResolvedTypeKind::Shared(_) => None,
             ResolvedTypeKind::Optional(_) => unreachable!("optional leaf traversal is complete"),
@@ -188,11 +232,13 @@ impl ResolvedTypeInterner {
         self,
     ) -> (
         ResolvedArrayTypeTable,
+        ResolvedFunctionTypeTable,
         ResolvedOptionalTypeTable,
         ResolvedOptionalBoxTypeTable,
     ) {
         (
             ResolvedArrayTypeTable::new(self.arrays),
+            ResolvedFunctionTypeTable::new(self.functions),
             ResolvedOptionalTypeTable::new(self.optionals),
             ResolvedOptionalBoxTypeTable::new(self.optional_boxes),
         )

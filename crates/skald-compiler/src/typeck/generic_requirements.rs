@@ -128,9 +128,10 @@ impl<'program> GenericCapabilityQuery<'program> {
                 super::optional_types::selected_copy_plan(self.program, self.copy(), optional)
                     .is_some()
             }
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
-                false
-            }
+            ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_)
+            | ResolvedTypeKind::Function(_) => false,
         }
     }
 
@@ -150,9 +151,10 @@ impl<'program> GenericCapabilityQuery<'program> {
                 super::optional_types::selected_assignment_plan(self.program, self.copy(), optional)
                     .is_some()
             }
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => {
-                false
-            }
+            ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_)
+            | ResolvedTypeKind::Function(_) => false,
         }
     }
 

@@ -29,6 +29,19 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
             syntax::TypeKind::F64 => ResolvedTemplateTypeKind::F64,
             syntax::TypeKind::Bool => ResolvedTemplateTypeKind::Bool,
             syntax::TypeKind::Unit => ResolvedTemplateTypeKind::Unit,
+            syntax::TypeKind::Function(_) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        super::super::super::FUNCTION_VALUES_NOT_YET_SUPPORTED,
+                        "function types in generic templates are not supported yet",
+                    )
+                    .with_primary_label(
+                        syntax.span,
+                        "generic function-type substitution ships in a later roadmap task",
+                    ),
+                );
+                return None;
+            }
             syntax::TypeKind::Named(named) => return self.resolve_named(named),
             syntax::TypeKind::Shared { target, .. } => {
                 ResolvedTemplateTypeKind::Shared(Box::new(self.resolve(target)?))

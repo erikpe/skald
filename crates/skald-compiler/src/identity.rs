@@ -151,6 +151,7 @@ global_id!(
     "package"
 );
 global_id!(FunctionId, "f");
+global_id!(FunctionTypeId, "ft");
 global_id!(ExternalLinkId, "ext");
 global_id!(ClassId, "c");
 global_id!(ClassTemplateId, "template");

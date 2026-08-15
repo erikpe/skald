@@ -29,6 +29,10 @@ pub(super) fn validate_optional_types(
                 "`unit?` is not a valid optional type",
                 "`unit` has no value payload to make optional",
             ),
+            ResolvedTypeKind::Function(_) => (
+                "function types cannot be inline optional payloads yet",
+                "optional function storage ships after the function-value core",
+            ),
             ResolvedTypeKind::I64
             | ResolvedTypeKind::U64
             | ResolvedTypeKind::U8

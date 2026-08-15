@@ -17,12 +17,12 @@ impl Parser<'_> {
     }
 
     /// Discards the rest of an over-deep declaration without recursively
-    /// rebuilding its syntax. Inside a class, brace accounting first skips the
-    /// complete class because `fn` can introduce either a method or the next
-    /// top-level declaration. File-scope keywords are then reliable restart
+    /// rebuilding its syntax. A nested `fn` token may belong to a function
+    /// type, so recovery first crosses the current declaration's body (or its
+    /// terminating semicolon) before treating declaration keywords as restart
     /// points.
     pub(super) fn recover_from_excessive_nesting(&mut self) {
-        if self.class_depth > 0 {
+        if self.brace_depth > 0 {
             let mut braces_to_close = self.brace_depth;
             while braces_to_close > 0 && !self.at(TokenKind::Eof) {
                 match self.advance().kind {
@@ -30,6 +30,22 @@ impl Parser<'_> {
                     TokenKind::RightBrace => braces_to_close -= 1,
                     _ => {}
                 }
+            }
+        } else {
+            while !self.at_any(&[TokenKind::LeftBrace, TokenKind::Semicolon, TokenKind::Eof]) {
+                self.advance();
+            }
+            if self.consume(TokenKind::LeftBrace).is_some() {
+                let mut braces_to_close = 1usize;
+                while braces_to_close > 0 && !self.at(TokenKind::Eof) {
+                    match self.advance().kind {
+                        TokenKind::LeftBrace => braces_to_close += 1,
+                        TokenKind::RightBrace => braces_to_close -= 1,
+                        _ => {}
+                    }
+                }
+            } else {
+                self.consume(TokenKind::Semicolon);
             }
         }
         while !self.at_any(&[

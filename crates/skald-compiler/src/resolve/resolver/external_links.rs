@@ -176,6 +176,7 @@ fn external_abi_type(kind: ResolvedTypeKind) -> Option<ExternalAbiType> {
         ResolvedTypeKind::Obj
         | ResolvedTypeKind::Class(_)
         | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_)
         | ResolvedTypeKind::Array(_)
         | ResolvedTypeKind::Shared(_)
         | ResolvedTypeKind::Optional(_) => None,

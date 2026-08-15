@@ -1,12 +1,17 @@
 # Function-Value Compiler Contract
 
-Status: frozen compiler contract; not yet implemented. The source-visible
+Status: frozen compiler contract; syntax AST and canonical resolved
+`FunctionTypeId` metadata implemented behind a resolution gate. The source-visible
 contract is [Capture-Free Function Values](../language/FUNCTION_VALUES.md),
 the [status matrix](../language/STATUS.md) owns availability, and the active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns phase
 ordering.
 
-The compiler will represent one capture-free function value as one exact,
+The completed first stage parses recursive closed signatures, interns them
+bottom-up by exact modes and closed child types, and exposes deterministic
+resolved metadata and dumps. Resolution rejects every semantic use before HIR.
+
+The completed pipeline will represent one capture-free function value as one exact,
 non-null internal callable address paired statically with a canonical complete
 signature. It adds explicit semantic operations and verified indirect calls
 without an environment, erased signature, runtime allocation, or runtime ABI

@@ -81,6 +81,58 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
             syntax::TypeKind::F64 => ResolvedTypeKind::F64,
             syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
             syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
+            syntax::TypeKind::Function(function) => {
+                if report_lookup_errors {
+                    self.owner.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::FUNCTION_VALUES_NOT_YET_SUPPORTED,
+                            "function types cannot be generic arguments yet",
+                        )
+                        .with_primary_label(
+                            function.span,
+                            "generic function-type substitution ships in a later roadmap task",
+                        ),
+                    );
+                }
+                let mut parameters = Vec::with_capacity(function.parameters.len());
+                for parameter in &function.parameters {
+                    let mode = match parameter.mode {
+                        syntax::FunctionTypeParameterMode::Value => {
+                            ResolvedFunctionTypeParameterMode::Value
+                        }
+                        syntax::FunctionTypeParameterMode::ReadOnlyAlias { .. } => {
+                            ResolvedFunctionTypeParameterMode::ReadOnlyAlias
+                        }
+                        syntax::FunctionTypeParameterMode::MutableAlias { .. } => {
+                            ResolvedFunctionTypeParameterMode::MutableAlias
+                        }
+                    };
+                    parameters.push(ResolvedFunctionTypeParameter {
+                        mode,
+                        type_syntax: ResolvedType {
+                            kind: self.close_with_lookup_diagnostics(
+                                &parameter.type_syntax,
+                                report_lookup_errors,
+                            )?,
+                            span: parameter.type_syntax.span,
+                        },
+                        span: parameter.span,
+                    });
+                }
+                let result = ResolvedType {
+                    kind: self
+                        .close_with_lookup_diagnostics(&function.result, report_lookup_errors)?,
+                    span: function.result.span,
+                };
+                let id = self
+                    .owner
+                    .interner
+                    .intern_function(parameters, result, function.span);
+                if report_lookup_errors {
+                    return None;
+                }
+                ResolvedTypeKind::Function(id)
+            }
             syntax::TypeKind::Named(named) => return self.close_named(named, report_lookup_errors),
             syntax::TypeKind::Shared { target, .. } => {
                 ResolvedTypeKind::Shared(self.close_shared_target(target, report_lookup_errors)?)

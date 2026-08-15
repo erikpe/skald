@@ -1,0 +1,5 @@
+fn install(callback: fn(mut i64) -> bool) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

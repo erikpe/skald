@@ -67,6 +67,7 @@ pub(super) fn default_element(
             ResolvedSharedTarget::Obj | ResolvedSharedTarget::Interface(_),
         )
         | ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Function(_)
         | ResolvedTypeKind::Obj
         | ResolvedTypeKind::Interface(_) => None,
     }
@@ -133,9 +134,15 @@ fn copy_element(
                 .lifecycle
                 .copy
                 .map(|_| HirArrayCopyElement::Optional(optional)),
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+            ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_)
+            | ResolvedTypeKind::Function(_) => None,
         },
-        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_) => None,
     }
 }
 
@@ -194,9 +201,15 @@ fn assignment_element(
                 .lifecycle
                 .assignment
                 .map(|_| HirArrayAssignElement::Optional(optional)),
-            ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+            ResolvedTypeKind::Unit
+            | ResolvedTypeKind::Obj
+            | ResolvedTypeKind::Interface(_)
+            | ResolvedTypeKind::Function(_) => None,
         },
-        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => None,
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_) => None,
     }
 }
 
@@ -220,7 +233,10 @@ fn optional_copy_available(
         ResolvedTypeKind::Array(array) => arrays
             .get(array.index())
             .is_some_and(|array| array.lifecycle.copy.is_some()),
-        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => false,
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_) => false,
     }
 }
 
@@ -247,7 +263,10 @@ fn optional_assignment_available(
         ResolvedTypeKind::Array(array) => arrays
             .get(array.index())
             .is_some_and(|array| array.lifecycle.assignment.is_some()),
-        ResolvedTypeKind::Unit | ResolvedTypeKind::Obj | ResolvedTypeKind::Interface(_) => false,
+        ResolvedTypeKind::Unit
+        | ResolvedTypeKind::Obj
+        | ResolvedTypeKind::Interface(_)
+        | ResolvedTypeKind::Function(_) => false,
     }
 }
 

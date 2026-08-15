@@ -376,6 +376,43 @@ impl AstDumper {
             TypeKind::F64 => "F64",
             TypeKind::Bool => "Bool",
             TypeKind::Unit => "Unit",
+            TypeKind::Function(function) => {
+                self.line("Type Function", type_syntax.span);
+                self.indented(|dumper| {
+                    dumper.line("Fn", function.fn_span);
+                    dumper.line("LeftParen", function.left_paren_span);
+                    for (index, parameter) in function.parameters.iter().enumerate() {
+                        dumper.line("Parameter", parameter.span);
+                        dumper.indented(|dumper| {
+                            match parameter.mode {
+                                FunctionTypeParameterMode::Value => {
+                                    dumper.heading("Mode Value");
+                                }
+                                FunctionTypeParameterMode::ReadOnlyAlias { ref_span } => {
+                                    dumper.heading("Mode ReadOnlyAlias");
+                                    dumper.indented(|dumper| dumper.line("Ref", ref_span));
+                                }
+                                FunctionTypeParameterMode::MutableAlias { mut_span, ref_span } => {
+                                    dumper.heading("Mode MutableAlias");
+                                    dumper.indented(|dumper| {
+                                        dumper.line("Mut", mut_span);
+                                        dumper.line("Ref", ref_span);
+                                    });
+                                }
+                            }
+                            dumper.type_syntax(&parameter.type_syntax);
+                        });
+                        if let Some(comma) = function.comma_spans.get(index) {
+                            dumper.line("Comma", *comma);
+                        }
+                    }
+                    dumper.line("RightParen", function.right_paren_span);
+                    dumper.line("Arrow", function.arrow_span);
+                    dumper.heading("Result");
+                    dumper.indented(|dumper| dumper.type_syntax(&function.result));
+                });
+                return;
+            }
             TypeKind::Shared { target, .. } => {
                 self.line("Type Shared", type_syntax.span);
                 self.indented(|dumper| {

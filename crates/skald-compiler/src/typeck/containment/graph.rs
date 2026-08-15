@@ -208,7 +208,9 @@ fn inline_class_target(program: &ResolvedProgram, mut kind: ResolvedTypeKind) ->
             ResolvedTypeKind::Optional(optional) => {
                 kind = program.optional_types.get(optional)?.payload.kind;
             }
-            ResolvedTypeKind::Array(_) | ResolvedTypeKind::Shared(_) => return None,
+            ResolvedTypeKind::Array(_)
+            | ResolvedTypeKind::Shared(_)
+            | ResolvedTypeKind::Function(_) => return None,
             ResolvedTypeKind::I64
             | ResolvedTypeKind::U64
             | ResolvedTypeKind::U8

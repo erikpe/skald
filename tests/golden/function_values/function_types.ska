@@ -1,0 +1,7 @@
+class Item { init() {} }
+
+fn install(callback: fn(i64, ref Item, mut ref Item) -> bool) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

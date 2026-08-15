@@ -68,6 +68,7 @@ pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
 pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
+pub const FUNCTION_VALUES_NOT_YET_SUPPORTED: &str = "TYP044";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -84,6 +85,22 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    if let Some(function) = program.function_types.iter().next() {
+        diagnostics.push(
+            Diagnostic::error(
+                FUNCTION_VALUES_NOT_YET_SUPPORTED,
+                "function values are not executable yet",
+            )
+            .with_primary_label(
+                function.span,
+                "resolved function types cannot be lowered until stored HIR support ships",
+            ),
+        );
+        return TypeCheckOutput {
+            hir: None,
+            diagnostics,
+        };
+    }
     let optional_types_valid =
         super::optional_validation::validate_optional_types(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
@@ -478,6 +495,9 @@ pub(super) fn lower_type(_program: &ResolvedProgram, type_syntax: &ResolvedType)
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
+        ResolvedTypeKind::Function(_) => {
+            unreachable!("function types must be gated before HIR lowering")
+        }
         ResolvedTypeKind::Array(array) => Type::Array(array),
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))

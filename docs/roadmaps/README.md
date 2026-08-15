@@ -6,16 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+[Capture-free function values](FUNCTION_VALUES_ROADMAP.md) is in progress.
+Recursive function-type syntax and canonical closed `FunctionTypeId` identity
+are implemented behind a resolution gate; FVI1 is next and will resolve
+eligible callable references while retaining the lower-phase gate.
 
 ## Planned
 
-[Capture-free function values](FUNCTION_VALUES_ROADMAP.md) is planned. FVI0 is
-next: establish recursive function-type syntax and canonical closed
-`FunctionTypeId` identity before references, storage, indirect calls, MIR,
-backend realization, and whole-program effects are enabled. The roadmap
-implements the frozen [language](../language/FUNCTION_VALUES.md) and
-[compiler](../compiler/FUNCTION_VALUES.md) contracts.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
@@ -31,7 +29,9 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-No implementation discoveries are currently pending.
+[Function-value implementation discoveries](FUNCTION_VALUES_DISCOVERIES.md)
+tracks a focused opportunity to centralize recursive resolved-type source
+rendering before later generic function-type work increases duplication.
 
 ## Implementation baseline
 

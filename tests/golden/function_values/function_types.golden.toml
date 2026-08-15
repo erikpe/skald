@@ -1,0 +1,19 @@
+schema = 2
+
+[[test]]
+name = "staged_semantic_gate"
+mode = "compile-fail"
+source = "function_types.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[RES050]: function values are not executable yet
+ --> tests/golden/function_values/function_types.ska:3:22"""
+
+[[test]]
+name = "malformed_parameter_mode"
+mode = "compile-fail"
+source = "malformed_function_type.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = """error[PAR002]: expected `ref` after `mut` in a function-type parameter
+ --> tests/golden/function_values/malformed_function_type.ska:1:29"""

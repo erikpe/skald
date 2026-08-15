@@ -1,6 +1,6 @@
 # Capture-Free Function Values Roadmap
 
-Status: planned; FVI0 is next.
+Status: in progress; FVI1 is next.
 
 This roadmap implements the frozen
 [capture-free function-value language contract](../language/FUNCTION_VALUES.md)
@@ -46,7 +46,7 @@ below implement those decisions without reopening them.
 
 ## Progress
 
-- [ ] FVI0 — Parse and intern canonical closed function types
+- [x] FVI0 — Parse and intern canonical closed function types
 - [ ] FVI1 — Resolve eligible callable references and frozen exclusions
 - [ ] FVI2 — Close function types and references during generic specialization
 - [ ] FVI3 — Integrate trivial function values with stored and callable HIR
@@ -63,23 +63,23 @@ below implement those decisions without reopening them.
 **Purpose:** Establish the recursive source shape and one name-independent
 signature identity before any value or call semantics depend on it.
 
-- [ ] Add source AST nodes for function types and unnamed value, read-only
+- [x] Add source AST nodes for function types and unnamed value, read-only
       alias, and mutable-alias parameter modes with exact punctuation and
       complete spans.
-- [ ] Parse zero-parameter, multi-parameter, alias-mode, nested-parameter, and
+- [x] Parse zero-parameter, multi-parameter, alias-mode, nested-parameter, and
       nested-result signatures in every ordinary type context while preserving
       declaration parsing and `(f)(argument)` cast precedence.
-- [ ] Add `FunctionTypeId`, canonical resolved signature records and tables,
+- [x] Add `FunctionTypeId`, canonical resolved signature records and tables,
       and bottom-up interning keyed by exact ordered modes, closed child types,
       and result type.
-- [ ] Extend recursive type rendering, syntax/resolved dumps, depth limits,
+- [x] Extend recursive type rendering, syntax/resolved dumps, depth limits,
       equality, and declaration validation without treating a function type as
       a primitive, object, optional payload, array element, or shared target.
-- [ ] Diagnose malformed modes, missing delimiters/arrows/results, unsupported
+- [x] Diagnose malformed modes, missing delimiters/arrows/results, unsupported
       function-valued roles, and any temporarily gated semantic use with exact
       phase-owned spans; no accepted source may reach an unsupported lower
       phase.
-- [ ] Update the implemented grammar and status wording only for the syntax and
+- [x] Update the implemented grammar and status wording only for the syntax and
       semantic boundary that actually ships in this task.
 
 **Tests:** Parser success/recovery and nesting-budget tests; resolved interner

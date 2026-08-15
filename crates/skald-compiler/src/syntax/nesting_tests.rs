@@ -226,6 +226,18 @@ fn recursive_optional_type_syntax_uses_the_common_nesting_budget() {
 }
 
 #[test]
+fn recursive_function_types_use_the_common_nesting_budget_and_recover() {
+    let nested =
+        (0..=MAX_SYNTAX_NESTING).fold("i64".to_owned(), |result, _| format!("fn() -> {result}"));
+    let output = parse_text(format!(
+        "fn excessive(value: {nested}) -> i64 {{ return 0; }} \
+         fn recovered() -> i64 {{ return 0; }}"
+    ));
+    assert_single_nesting_error(&output);
+    assert_eq!(output.ast.declarations.len(), 1);
+}
+
+#[test]
 fn recursive_array_element_lists_parse_at_representative_depth() {
     let allowed = nested_array_element_lists(24);
     let output = parse_text(source_with_return(&allowed));

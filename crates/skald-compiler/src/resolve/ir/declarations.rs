@@ -5,9 +5,9 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
-        FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ModuleId, OptionalTypeId, ParameterId, StaticFieldId, StaticInitializerId, VirtualFamilyId,
-        VirtualSlotId,
+        FieldId, FunctionId, FunctionTypeId, InitializerId, InterfaceId, InterfaceRequirementId,
+        LocalId, MethodId, ModuleId, OptionalTypeId, ParameterId, StaticFieldId,
+        StaticInitializerId, VirtualFamilyId, VirtualSlotId,
     },
     intrinsic::Intrinsic,
     module::ProgramModuleTable,
@@ -18,6 +18,7 @@ use super::array_types::ResolvedArrayTypeTable;
 use super::body::{
     ResolvedClassDefinitionTable, ResolvedFunctionDefinitionTable, ResolvedMemberDefinition,
 };
+use super::function_types::ResolvedFunctionTypeTable;
 use super::generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateTable, ResolvedTypeParameterTable,
 };
@@ -41,6 +42,7 @@ pub struct ResolvedProgram {
     pub type_parameters: ResolvedTypeParameterTable,
     pub(crate) template_semantics: ResolvedClassTemplateSemanticTable,
     pub(crate) generic_specializations: GenericSpecializationTable,
+    pub function_types: ResolvedFunctionTypeTable,
     pub array_types: ResolvedArrayTypeTable,
     pub optional_types: ResolvedOptionalTypeTable,
     pub optional_box_types: ResolvedOptionalBoxTypeTable,
@@ -642,6 +644,7 @@ pub enum ResolvedTypeKind {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Function(FunctionTypeId),
     Array(crate::identity::ArrayTypeId),
     Shared(ResolvedSharedTarget),
     Optional(OptionalTypeId),

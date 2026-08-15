@@ -1,9 +1,10 @@
 # Capture-Free Function Values
 
-Status: frozen design; not yet implemented. The
+Status: frozen design; syntax and canonical closed type identity implemented
+behind a resolution gate. The
 [status matrix](STATUS.md) is authoritative for availability, and the
-[implemented grammar](GRAMMAR.md) remains the exact syntax accepted by the
-current compiler. The active
+[implemented grammar](GRAMMAR.md) is the exact accepted source shape. Function
+values, references, storage, and calls remain unavailable. The active
 [implementation roadmap](../roadmaps/FUNCTION_VALUES_ROADMAP.md) owns delivery.
 
 This contract adds non-null, capture-free function values to Skald. A function
