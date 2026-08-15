@@ -128,8 +128,7 @@ rather than compiler language items for this feature.
 capacity. `slice_get` returns an independent vector. `slice_set` preserves
 destination length, requires equal logical lengths, assigns in increasing
 order, and secures or copies the complete replacement before the first write
-so self-aliasing and overlap have snapshot behavior. Existing `get` and `set`
-remain compatibility wrappers over the same checked index implementation.
+so self-aliasing and overlap have snapshot behavior.
 
 `Str` provides only `index_get` and `slice_get`, sharing its checked byte lookup
 and constant-time descriptor slicing. Omitted slice bounds map to the logical

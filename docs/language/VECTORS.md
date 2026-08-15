@@ -24,8 +24,6 @@ public class Vec<T> {
     mut fn push(value: T) -> unit;
     mut fn pop() -> T;
     fn last() -> T;
-    fn get(index: i64) -> T;
-    mut fn set(index: i64, value: T) -> unit;
     fn index_get(index: i64) -> T;
     mut fn index_set(index: i64, value: T) -> unit;
     fn slice_get(start: i64?, end: i64?) -> Vec<T>;
@@ -81,16 +79,14 @@ starts at capacity four when the old capacity is smaller, then doubles until
 the requested length fits. Allocation limits and failures inherit the built-in
 array contract.
 
-`get`, `set`, and bracket indexing accept non-negative indices from the
-beginning and negative indices relative to the current logical length. `get`
-and `set` are compatibility wrappers over `index_get` and `index_set`, so both
-spellings share one normalization and bounds implementation. `last` selects
-the final logical element. Capacity slots outside `0..len()` are never
-elements and cannot be observed through the public API.
+`index_get`, `index_set`, and bracket indexing accept non-negative indices
+from the beginning and negative indices relative to the current logical
+length. `last` selects the final logical element. Capacity slots outside
+`0..len()` are never elements and cannot be observed through the public API.
 
-Invalid `get` or `set` indices terminate through `std::error::panic` with
-`Vec.get: index out of bounds` or `Vec.set: index out of bounds`. `pop` and
-`last` on an empty vector use `Vec.pop: empty vector` and
+Invalid indices terminate through `std::error::panic` with
+`Vec.index_get: index out of bounds` or `Vec.index_set: index out of bounds`.
+`pop` and `last` on an empty vector use `Vec.pop: empty vector` and
 `Vec.last: empty vector`.
 
 ## Slices
@@ -118,27 +114,27 @@ exists before the first destination write, including `values[:] = values` and
 overlapping forms such as `values[1:4] = values[0:3]`. The parameter and its
 temporary element copies are cleaned promptly when the call returns.
 
-Invalid slice bounds terminate with `Vec.slice: invalid bounds`; a replacement
-length mismatch terminates with `Vec.slice_set: length mismatch`. Bounds are
-validated before replacement length and both are validated before any
-destination element changes. Under ordinary call evaluation, however, the
-replacement expression and any required argument copy complete before the
-method body performs those checks.
+Invalid slice bounds terminate with `Vec.slice_get: invalid bounds` or
+`Vec.slice_set: invalid bounds`; a replacement length mismatch terminates with
+`Vec.slice_set: length mismatch`. Bounds are validated before replacement
+length and both are validated before any destination element changes. Under
+ordinary call evaluation, however, the replacement expression and any
+required argument copy complete before the method body performs those checks.
 
 ## Ownership and lifetime
 
 Arguments and results follow the ordinary value rules for the substituted
-`T`. `push`, `set`, `index_set`, and slice replacement secure the new value
-before their parameters or element temporaries are cleaned. `get`, `index_get`,
-`last`, `pop`, and slice reads return independent inline copies or secured
-shared owners as appropriate. `pop` clears the removed slot before returning,
-and `clear` clears all logical slots in reverse order. Removed exact values are
+`T`. `push`, `index_set`, and slice replacement secure the new value before
+their parameters or element temporaries are cleaned. `index_get`, `last`,
+`pop`, and slice reads return independent inline copies or secured shared
+owners as appropriate. `pop` clears the removed slot before returning, and
+`clear` clears all logical slots in reverse order. Removed exact values are
 destroyed and removed last shared owners are finalized promptly; spare
 capacity retains no removed value.
 
-When `T` is an exact inline class, the result of `get`, `last`, or `pop` may
+When `T` is an exact inline class, the result of `index_get`, `last`, or `pop` may
 directly receive a read-only method call. For example, a string vector can use
-`snapshot.last().byte(index)` without a receiver-only `Str` local. The result
+`snapshot.last()[index]` without a receiver-only `Str` local. The result
 is secured in the ordinary caller-owned temporary, remains live through the
 method call, and is then cleaned at the full-expression boundary. A mutable
 method on that unnamed result remains invalid.

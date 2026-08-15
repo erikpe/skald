@@ -27,21 +27,38 @@ public class Str {
         return self._length;
     }
 
-    fn byte(index: i64) -> u8 {
+    fn index_get(index: i64) -> u8 {
         var normalized_index: i64 = index;
         if (normalized_index < 0) {
             normalized_index = (i64) self._length + normalized_index;
         }
-
         if (normalized_index < 0 || (u64) normalized_index >= self._length) {
-            panic("array index out of bounds");
+            panic("Str.index_get: index out of bounds");
         }
 
         return self._storage->[self._start + normalized_index];
     }
 
-    fn index_get(index: i64) -> u8 {
-        return self.byte(index);
+    fn slice_get(start: i64?, end: i64?) -> Str {
+        var normalized_start: i64 = 0;
+        if (start is some) {
+            normalized_start = start!;
+        }
+        if (normalized_start < 0) {
+            normalized_start = normalized_start + (i64) self._length;
+        }
+        var normalized_end: i64 = (i64) self._length;
+        if (end is some) {
+            normalized_end = end!;
+        }
+        if (normalized_end < 0) {
+            normalized_end = normalized_end + (i64) self._length;
+        }
+        if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
+            panic("Str.slice_get: index out of bounds");
+        }
+
+        return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
     }
 
     fn equals(ref other: Obj) -> bool {
@@ -67,38 +84,6 @@ public class Str {
             index = index + 1u;
         }
         return true;
-    }
-
-    fn slice(start: i64, end: i64) -> Str {
-        var normalized_start: i64 = start;
-        if (normalized_start < 0) {
-            normalized_start = normalized_start + (i64) self._length;
-        }
-
-        var normalized_end: i64 = end;
-        if (normalized_end < 0) {
-            normalized_end = normalized_end + (i64) self._length;
-        }
-
-        if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
-            panic("array index out of bounds");
-        }
-
-        return Str(self._storage, self._start + normalized_start, (u64) (normalized_end - normalized_start));
-    }
-
-    fn slice_get(start: i64?, end: i64?) -> Str {
-        var concrete_start: i64 = 0;
-        if (start is some) {
-            concrete_start = start!;
-        }
-
-        var concrete_end: i64 = (i64) self._length;
-        if (end is some) {
-            concrete_end = end!;
-        }
-
-        return self.slice(concrete_start, concrete_end);
     }
 
     fn concat(ref other: Str) -> Str {

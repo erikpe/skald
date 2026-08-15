@@ -158,11 +158,11 @@ fn string_and_closed_generic_results_are_ordinary_produced_receivers() {
             concat!(
                 "from std::str import Str;\n",
                 "from std::vec import Vec;\n",
-                "fn literal() -> u8 { return \"abc\".byte(1); }\n",
+                "fn literal() -> u8 { return \"abc\".index_get(1); }\n",
                 "fn vector() -> u8 {\n",
                 "  var values: Vec<Str> = Vec<Str>();\n",
                 "  values.push(\"tail\");\n",
-                "  return values.last().byte(0);\n",
+                "  return values.last().index_get(0);\n",
                 "}\n",
                 "fn main() -> i64 { return 0; }\n",
             ),

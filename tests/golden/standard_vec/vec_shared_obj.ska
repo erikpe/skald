@@ -69,12 +69,12 @@ fn main() -> i64 {
     assert_false(values.is_empty());
     assert_eq_u64(values.len(), 6u);
     assert_eq_u64(values.capacity(), 8u);
-    assert_eq_i64(item_value(values.get(0)), 1);
-    assert_eq_i64(item_value(values.get(-1)), 6);
+    assert_eq_i64(item_value(values.index_get(0)), 1);
+    assert_eq_i64(item_value(values.index_get(-1)), 6);
     assert_eq_i64(item_value(values.last()), 6);
 
-    values.set(-2, new Item(50));
-    assert_eq_i64(item_value(values.get(4)), 50);
+    values.index_set(-2, new Item(50));
+    assert_eq_i64(item_value(values.index_get(4)), 50);
 
     var popped: shared Obj = values.pop();
     assert_eq_i64(item_value(popped), 6);
@@ -84,18 +84,18 @@ fn main() -> i64 {
     var copy: Vec<shared Obj> = values;
     var assigned: Vec<shared Obj> = Vec<shared Obj>();
     assigned = values;
-    values.set(0, new Item(10));
-    values.set(1, new Item(20));
+    values.index_set(0, new Item(10));
+    values.index_set(1, new Item(20));
     copy.push(new Item(7));
-    assert_eq_i64(item_value(values.get(0)), 10);
-    assert_eq_i64(item_value(copy.get(0)), 1);
-    assert_eq_i64(item_value(assigned.get(1)), 2);
+    assert_eq_i64(item_value(values.index_get(0)), 10);
+    assert_eq_i64(item_value(copy.index_get(0)), 1);
+    assert_eq_i64(item_value(assigned.index_get(1)), 2);
     assert_eq_u64(values.len(), 5u);
     assert_eq_u64(copy.len(), 6u);
 
     values.clear();
     assert_true(values.is_empty());
     assert_eq_u64(values.capacity(), 8u);
-    assert_eq_i64(item_value(copy.get(-1)), 7);
+    assert_eq_i64(item_value(copy.index_get(-1)), 7);
     return 0;
 }

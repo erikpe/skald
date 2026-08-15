@@ -151,7 +151,7 @@ call result to invoke a read-only method directly:
 
 ```ska
 var generated: Str = "item-".concat(Str.from_i64(index));
-var byte_value: u8 = values.last().byte(byte_index);
+var byte_value: u8 = values.last()[byte_index];
 ```
 
 Both receivers are exact produced `Str` values. Each is completed once
@@ -200,11 +200,9 @@ The installed representative public surface is:
 | `init()` | Construct an empty dynamic string. |
 | `static fn from_bytes(ref bytes: u8[]) -> Str` | Copy caller bytes into fresh shared storage. |
 | `fn len() -> u64` | Return the descriptor length. |
-| `fn byte(index: i64) -> u8` | Return one checked byte using array index semantics. |
-| `fn index_get(index: i64) -> u8` | Structural read entry point for `value[index]`; delegates to `byte`. |
+| `fn index_get(index: i64) -> u8` | Return one checked byte; structural entry point for `value[index]`. |
 | `fn equals(ref other: Obj) -> bool` | Return whether `other` is a `Str` with an identical byte sequence. |
-| `fn slice(start: i64, end: i64) -> Str` | Return an `O(1)` shared-backing half-open slice using array bound semantics. |
-| `fn slice_get(start: i64?, end: i64?) -> Str` | Structural read entry point for `value[start:end]`; omitted bounds select the logical beginning or end before delegating to `slice`. |
+| `fn slice_get(start: i64?, end: i64?) -> Str` | Return an `O(1)` shared-backing half-open slice; structural entry point for `value[start:end]`, with omitted bounds selecting the logical beginning or end. |
 | `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 | `static fn from_bool(value: bool) -> Str` | Return canonical lowercase boolean text. |
@@ -219,14 +217,14 @@ The installed representative public surface is:
 
 Byte indices and slice bounds use the same one-time negative normalization as
 array indices and explicit array slice bounds, relative to the current
-string's length. Thus `byte(-1)` and `value[-1]` select the final byte, while
-`slice(1, -1)` and `value[1:-1]` exclude the first and final bytes. Slice
-ranges are half-open: the normalized start is included and the normalized end
-is excluded. The explicit `slice` method requires both bounds. Structural
-brackets pass optional bounds to `slice_get`: `value[:end]` supplies only the
-end, `value[start:]` supplies only the start, and `value[:]` selects the full
-logical range. A valid byte position satisfies `0 <= index < len`; a valid
-slice satisfies `0 <= start <= end <= len` after normalization. See
+string's length. Thus `index_get(-1)` and `value[-1]` select the final byte,
+while `slice_get(1, -1)` and `value[1:-1]` exclude the first and final bytes.
+Slice ranges are half-open: the normalized start is included and the
+normalized end is excluded. Structural brackets pass optional bounds to
+`slice_get`: `value[:end]` supplies only the end, `value[start:]` supplies only
+the start, and `value[:]` selects the full logical range. A valid byte position
+satisfies `0 <= index < len`; a valid slice satisfies
+`0 <= start <= end <= len` after normalization. See
 [array length, indices, and bounds](ARRAYS.md#length-indices-and-bounds) and
 [array slices](ARRAYS.md#slices).
 
@@ -244,14 +242,15 @@ backing allocation. Reassigning or destroying `text` cannot invalidate them.
 `Str` declares neither `index_set` nor `slice_set`, so both bracket assignment
 forms are rejected by ordinary structural protocol selection.
 
-Invalid byte and slice bounds call the imported
-`std::error::panic("array index out of bounds")` declaration as a standalone
-non-returning statement. `std::str` therefore has an ordinary explicit import
-of `std::error`, while the panic signature gives `std::error` its ordinary
-explicit import of `std::str`. This two-module cycle grants no implicit
-bindings or visibility exceptions. The library's dynamic factories and
-slicing method call a private ordinary initializer to install a trusted
-backing owner and range. The initializer is not a compiler convention.
+Invalid byte and slice bounds call the imported `std::error::panic`
+declaration with `Str.index_get: index out of bounds` or
+`Str.slice_get: index out of bounds` as a standalone non-returning statement.
+`std::str` therefore has an ordinary explicit import of `std::error`, while
+the panic signature gives `std::error` its ordinary explicit import of
+`std::str`. This two-module cycle grants no implicit bindings or visibility
+exceptions. The library's dynamic factories and slicing method call a private
+ordinary initializer to install a trusted backing owner and range. The
+initializer is not a compiler convention.
 
 The implemented panic API accepts the exact `std::str::Str` value described here.
 Generated code passes only its logical backing-byte address and length to the
@@ -498,9 +497,9 @@ valid absolute position representable as `i64`. The compiler adds neither a
 checked cast nor string-only numeric rules.
 
 The implemented [structural bracket design](INDEXING_AND_SLICING.md) selects
-the ordinary read-only `index_get` and `slice_get` methods. These methods share
-the existing checked byte and constant-time descriptor-slice implementations;
-omitted bounds select the logical beginning or end. `Str` adds neither setter,
+the ordinary read-only `index_get` and `slice_get` methods. These methods own
+the checked byte and constant-time descriptor-slice implementations; omitted
+bounds select the logical beginning or end. `Str` adds neither setter,
 and the compiler does not recognize `Str` specially when selecting the
 ordinary methods.
 

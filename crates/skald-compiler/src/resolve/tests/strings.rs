@@ -38,7 +38,8 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
                 "fn main() -> i64 {\n",
                 "  var bytes: u8[] = u8[](2u);\n",
                 "  var value: Str = Str.from_bytes(bytes);\n",
-                "  var part: Str = value.slice(0, 2);\n",
+                "  var observed: u8 = value.index_get(0);\n",
+                "  var part: Str = value.slice_get(0, 2);\n",
                 "  var copy: u8[] = part.to_bytes();\n",
                 "  var combined: Str = value.concat(part);\n",
                 "  var flag: Str = Str.from_bool(true);\n",
@@ -95,13 +96,17 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         .iter()
         .filter(|method| method.visibility.private_span().is_some())
         .all(|method| method.name.starts_with('_')));
-    let byte = class
+    let index_get = class
         .methods
         .iter()
-        .find(|method| method.name == "byte")
-        .expect("canonical library must expose byte access");
-    assert_eq!(byte.parameters.len(), 1);
-    assert_eq!(byte.parameters[0].type_syntax.kind, ResolvedTypeKind::I64);
+        .find(|method| method.name == "index_get")
+        .expect("canonical library must expose structural byte access");
+    assert_eq!(index_get.parameters.len(), 1);
+    assert_eq!(
+        index_get.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::I64
+    );
+    assert!(!class.methods.iter().any(|method| method.name == "byte"));
     let equals = class
         .methods
         .iter()
@@ -114,19 +119,17 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         equals.parameters[0].binding_mode,
         ResolvedParameterBindingMode::ReadOnlyAlias { .. }
     ));
-    let slice = class
+    let slice_get = class
         .methods
         .iter()
-        .find(|method| method.name == "slice")
-        .expect("canonical library must expose slicing");
-    assert_eq!(
-        slice
-            .parameters
-            .iter()
-            .map(|parameter| parameter.type_syntax.kind)
-            .collect::<Vec<_>>(),
-        [ResolvedTypeKind::I64, ResolvedTypeKind::I64]
-    );
+        .find(|method| method.name == "slice_get")
+        .expect("canonical library must expose structural slicing");
+    assert_eq!(slice_get.parameters.len(), 2);
+    assert!(slice_get
+        .parameters
+        .iter()
+        .all(|parameter| matches!(parameter.type_syntax.kind, ResolvedTypeKind::Optional(_))));
+    assert!(!class.methods.iter().any(|method| method.name == "slice"));
     assert!(!class
         .methods
         .iter()
@@ -165,7 +168,7 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
             class.id
         ))
         .count(),
-        // from_bytes, slice, the three integer facades, from_f64, and concat
+        // from_bytes, slice_get, the three integer facades, from_f64, and concat
         // each install a trusted descriptor through the private initializer.
         7,
         "{dump}"

@@ -38,7 +38,7 @@ class Matrix<T> {
     }
 
     fn get(index: i64) -> Vec<T> {
-        return self.rows.get(index);
+        return self.rows.index_get(index);
     }
 
     fn capacity() -> u64 {
@@ -55,7 +55,7 @@ fn exercise_primitive() -> unit {
     }
 
     assert_eq_u64(values.capacity(), 8u);
-    assert_eq_i64(values.get(5), 50);
+    assert_eq_i64(values.index_get(5), 50);
 }
 
 fn exercise_primitive_optional() -> unit {
@@ -67,10 +67,10 @@ fn exercise_primitive_optional() -> unit {
         index = index + 1;
     }
 
-    values.set(0, none);
+    values.index_set(0, none);
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
-    assert_eq_i64(values.get(5)!, 50);
+    assert_true(values.index_get(0) is none);
+    assert_eq_i64(values.index_get(5)!, 50);
 }
 
 fn exercise_strings() -> unit {
@@ -87,28 +87,28 @@ fn exercise_strings() -> unit {
 
     assert_eq_u64(values.len(), 12u);
     assert_eq_u64(values.capacity(), 16u);
-    assert_eq_str(values.get(0), "literal-head");
-    assert_eq_str(values.get(1), "");
+    assert_eq_str(values.index_get(0), "literal-head");
+    assert_eq_str(values.index_get(1), "");
 
     index = 0;
     while (index < 10) {
         var expected: Str = "item-".concat(Str.from_i64(index));
-        assert_eq_str(values.get(index + 2), expected);
+        assert_eq_str(values.index_get(index + 2), expected);
         index = index + 1;
     }
 
-    values.set(-1, "tail-".concat("literal"));
+    values.index_set(-1, "tail-".concat("literal"));
     var snapshot: Vec<Str> = values;
-    values.set(0, "changed");
+    values.index_set(0, "changed");
     values.clear();
     assert_true(values.is_empty());
-    assert_eq_str(snapshot.get(0), "literal-head");
+    assert_eq_str(snapshot.index_get(0), "literal-head");
     assert_eq_str(snapshot.last(), "tail-literal");
 
     var expected_tail: Str = "tail-literal";
     var byte_index: i64 = 0;
     while ((u64) byte_index < expected_tail.len()) {
-        assert_eq_u8(snapshot.last().byte(byte_index), expected_tail.byte(byte_index));
+        assert_eq_u8(snapshot.last()[byte_index], expected_tail[byte_index]);
         byte_index = byte_index + 1;
     }
 
@@ -129,7 +129,7 @@ fn exercise_complex() -> unit {
         index = index + 1;
     }
 
-    var recovered: Item = values.get(5);
+    var recovered: Item = values.index_get(5);
     assert_eq_u64(values.capacity(), 8u);
     assert_eq_i64(recovered.value, 50);
 }
@@ -141,13 +141,13 @@ fn exercise_complex_generic() -> unit {
         var row: Vec<i64> = Vec<i64>();
         row.push(index * 10);
         rows.push(row);
-        row.set(0, -1);
+        row.index_set(0, -1);
         index = index + 1;
     }
 
-    var recovered: Vec<i64> = rows.get(5);
+    var recovered: Vec<i64> = rows.index_get(5);
     assert_eq_u64(rows.capacity(), 8u);
-    assert_eq_i64(recovered.get(0), 50);
+    assert_eq_i64(recovered.index_get(0), 50);
 }
 
 fn exercise_shared() -> unit {
@@ -160,7 +160,7 @@ fn exercise_shared() -> unit {
     }
 
     assert_eq_u64(values.capacity(), 8u);
-    assert_eq_i64(values.get(5)->value, 50);
+    assert_eq_i64(values.index_get(5)->value, 50);
 }
 
 fn exercise_optional_shared() -> unit {
@@ -172,10 +172,10 @@ fn exercise_optional_shared() -> unit {
         index = index + 1;
     }
 
-    values.set(0, none);
-    var recovered: shared Item = values.get(5)!;
+    values.index_set(0, none);
+    var recovered: shared Item = values.index_get(5)!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
+    assert_true(values.index_get(0) is none);
     assert_eq_i64(recovered->value, 50);
 }
 
@@ -188,7 +188,7 @@ fn exercise_shared_optional_box() -> unit {
         index = index + 1;
     }
 
-    var recovered: shared Item? = values.get(5);
+    var recovered: shared Item? = values.index_get(5);
     assert_eq_u64(values.capacity(), 8u);
     assert_true(*recovered is some);
     assert_eq_i64((*recovered)!.value, 50);
@@ -204,12 +204,12 @@ fn exercise_optional_shared_optional_box() -> unit {
     }
 
     var absent_box: shared Item? = new Item?();
-    values.set(0, none);
-    values.set(1, absent_box);
-    var recovered_absent_box: shared Item? = values.get(1)!;
-    var recovered_present_box: shared Item? = values.get(5)!;
+    values.index_set(0, none);
+    values.index_set(1, absent_box);
+    var recovered_absent_box: shared Item? = values.index_get(1)!;
+    var recovered_present_box: shared Item? = values.index_get(5)!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
+    assert_true(values.index_get(0) is none);
     assert_true(*recovered_absent_box is none);
     assert_eq_i64((*recovered_present_box)!.value, 50);
 }
@@ -223,13 +223,13 @@ fn exercise_recursive_optional() -> unit {
         index = index + 1;
     }
 
-    values.set(0, none);
-    values.set(1, some(none));
-    var recovered: i64?? = values.get(5);
+    values.index_set(0, none);
+    values.index_set(1, some(none));
+    var recovered: i64?? = values.index_get(5);
     var recovered_inner: i64? = recovered!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
-    assert_true(values.get(1)! is none);
+    assert_true(values.index_get(0) is none);
+    assert_true(values.index_get(1)! is none);
     assert_eq_i64(recovered_inner!, 50);
 }
 
@@ -242,11 +242,11 @@ fn exercise_optional_inline_array() -> unit {
         index = index + 1;
     }
 
-    values.set(0, none);
-    var recovered_optional: i64[]? = values.get(5);
+    values.index_set(0, none);
+    var recovered_optional: i64[]? = values.index_get(5);
     var recovered: i64[] = recovered_optional!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
+    assert_true(values.index_get(0) is none);
     assert_eq_i64(recovered[0], 50);
     assert_eq_i64(recovered[1], 51);
 }
@@ -260,10 +260,10 @@ fn exercise_optional_shared_array() -> unit {
         index = index + 1;
     }
 
-    values.set(0, none);
-    var recovered: shared i64[] = values.get(5)!;
+    values.index_set(0, none);
+    var recovered: shared i64[] = values.index_get(5)!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
+    assert_true(values.index_get(0) is none);
     assert_eq_i64(recovered->[0], 50);
     assert_eq_i64(recovered->[1], 51);
 }
@@ -277,7 +277,7 @@ fn exercise_shared_optional_array_box() -> unit {
         index = index + 1;
     }
 
-    var recovered_box: shared i64[]? = values.get(5);
+    var recovered_box: shared i64[]? = values.index_get(5);
     var recovered_optional: i64[]? = *recovered_box;
     var recovered: i64[] = recovered_optional!;
     assert_eq_u64(values.capacity(), 8u);
@@ -295,14 +295,14 @@ fn exercise_optional_shared_optional_array_box() -> unit {
     }
 
     var absent_box: shared i64[]? = new i64[]?();
-    values.set(0, none);
-    values.set(1, absent_box);
-    var recovered_absent_box: shared i64[]? = values.get(1)!;
-    var recovered_present_box: shared i64[]? = values.get(5)!;
+    values.index_set(0, none);
+    values.index_set(1, absent_box);
+    var recovered_absent_box: shared i64[]? = values.index_get(1)!;
+    var recovered_present_box: shared i64[]? = values.index_get(5)!;
     var recovered_optional: i64[]? = *recovered_present_box;
     var recovered: i64[] = recovered_optional!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
+    assert_true(values.index_get(0) is none);
     assert_true(*recovered_absent_box is none);
     assert_eq_i64(recovered[0], 50);
     assert_eq_i64(recovered[1], 51);
@@ -323,9 +323,9 @@ fn exercise_shared_generic_optional_box() -> unit {
         outer = outer + 1;
     }
 
-    var recovered_box: shared Vec<Item?>? = values.get(5);
+    var recovered_box: shared Vec<Item?>? = values.index_get(5);
     var recovered_inner: Vec<Item?> = (*recovered_box)!;
-    var recovered_optional: Item? = recovered_inner.get(5);
+    var recovered_optional: Item? = recovered_inner.index_get(5);
     var recovered: Item = recovered_optional!;
     assert_eq_u64(values.capacity(), 8u);
     assert_eq_u64(recovered_inner.capacity(), 8u);
@@ -342,7 +342,7 @@ fn exercise_shared_interface_optional_box() -> unit {
         index = index + 1;
     }
 
-    var recovered: shared Readable? = values.get(5);
+    var recovered: shared Readable? = values.index_get(5);
     assert_eq_u64(values.capacity(), 8u);
     assert_eq_i64((*recovered)!.read(), 50);
 }
@@ -357,10 +357,10 @@ fn exercise_optional_shared_interface_optional_box() -> unit {
         index = index + 1;
     }
 
-    values.set(0, none);
-    var recovered: shared Readable? = values.get(5)!;
+    values.index_set(0, none);
+    var recovered: shared Readable? = values.index_get(5)!;
     assert_eq_u64(values.capacity(), 8u);
-    assert_true(values.get(0) is none);
+    assert_true(values.index_get(0) is none);
     assert_eq_i64((*recovered)!.read(), 50);
 }
 
@@ -380,7 +380,7 @@ fn exercise_cascading_specialization() -> unit {
     }
 
     var recovered_row: Vec<shared? Item?> = matrix.get(5);
-    var recovered_box: shared Item? = recovered_row.get(5)!;
+    var recovered_box: shared Item? = recovered_row.index_get(5)!;
     assert_eq_u64(matrix.capacity(), 8u);
     assert_eq_u64(recovered_row.capacity(), 8u);
     assert_eq_i64((*recovered_box)!.value, 55);

@@ -9,13 +9,13 @@ class Other {
 
 fn observe(value: Str) -> unit {
     std::io::println_u64(value.len());
-    std::io::println_u8(value.byte(0));
+    std::io::println_u8(value[0]);
     return;
 }
 
 fn concatenated_byte(left: Str, right: Str, index: i64) -> u8 {
     var combined: Str = left.concat(right);
-    return combined.byte(index);
+    return combined[index];
 }
 
 fn main() -> i64 {
@@ -23,23 +23,23 @@ fn main() -> i64 {
     var second_empty: Str = Str();
     std::io::println_u64(first_empty.len());
     std::io::println_bool(first_empty.equals(second_empty));
-    std::io::println_u8(first_empty.concat("Q").byte(0));
+    std::io::println_u8(first_empty.concat("Q")[0]);
 
     var literal: Str = "a\0\x80\xff";
     observe(literal);
-    std::io::println_u8(literal.byte(1));
-    std::io::println_u8(literal.byte(2));
-    std::io::println_u8(literal.byte(-1));
+    std::io::println_u8(literal[1]);
+    std::io::println_u8(literal[2]);
+    std::io::println_u8(literal[-1]);
 
     var copied: Str = literal;
     var reassigned: Str = "";
     reassigned = copied;
     observe(reassigned);
 
-    var middle: Str = literal.slice(1, -1);
+    var middle: Str = literal[1:-1];
     std::io::println_u64(middle.len());
-    std::io::println_u8(middle.byte(0));
-    std::io::println_u8(middle.byte(-1));
+    std::io::println_u8(middle[0]);
+    std::io::println_u8(middle[-1]);
 
     var caller: u8[] = u8[](2u);
     caller[0] = 'A';
@@ -50,19 +50,19 @@ fn main() -> i64 {
 
     var independent: u8[] = middle.to_bytes();
     independent[0] = '!';
-    std::io::println_u8(middle.byte(0));
+    std::io::println_u8(middle[0]);
     std::io::println_u8(independent[0]);
 
     var combined: Str = frozen.concat(middle);
     std::io::println_u64(combined.len());
-    std::io::println_u8(combined.byte(0));
-    std::io::println_u8(combined.byte(1));
-    std::io::println_u8(combined.byte(-2));
-    std::io::println_u8(combined.byte(-1));
+    std::io::println_u8(combined[0]);
+    std::io::println_u8(combined[1]);
+    std::io::println_u8(combined[-2]);
+    std::io::println_u8(combined[-1]);
 
     var temporary: u8 = concatenated_byte(
         Str.from_bytes(caller),
-        literal.slice(-2, -1),
+        literal[-2:-1],
         -1
     );
     std::io::println_u8(temporary);

@@ -43,10 +43,10 @@ fn exercise_primitive_slices() -> unit {
 
     assert_eq_u64(values.len(), 6u);
     assert_eq_u64(values.capacity(), 8u);
-    assert_eq_i64(values[0], values.get(0));
+    assert_eq_i64(values[0], values.index_get(0));
     assert_eq_i64(values[-1], 5);
     values[-1] = 50;
-    assert_eq_i64(values.get(5), 50);
+    assert_eq_i64(values.index_get(5), 50);
 
     var full: Vec<i64> = values[:];
     var prefix: Vec<i64> = values[:2];

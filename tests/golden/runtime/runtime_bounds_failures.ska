@@ -59,13 +59,13 @@ fn array_slice_length_mismatch() -> i64 {
 
 fn string_byte() -> i64 {
     var value: Str = "x";
-    var invalid: u8 = value.byte(-9223372036854775808);
+    var invalid: u8 = value.index_get(-9223372036854775808);
     return (i64) invalid;
 }
 
 fn string_slice() -> i64 {
     var value: Str = "x";
-    var invalid: Str = value.slice(1, 0);
+    var invalid: Str = value.slice_get(1, 0);
     return (i64) invalid.len();
 }
 

@@ -51,6 +51,18 @@ fn canonical_vector_brackets_select_specialized_ordinary_methods() {
     let ResolvedStatement::Local(read) = &definition.body.statements[2] else {
         panic!("expected indexed read local");
     };
+    let ResolvedExpression::MethodCall(read_call) = &read.initializer else {
+        panic!("indexed read must normalize to an ordinary method call");
+    };
+    let vector = resolved
+        .program
+        .classes
+        .get(read_call.method.class())
+        .expect("selected vector specialization must retain its class declaration");
+    assert!(!vector
+        .methods
+        .iter()
+        .any(|method| method.name == "get" || method.name == "set"));
     assert_eq!(selected_name(&read.initializer), "index_get");
     let ResolvedStatement::Expression(index_write) = &definition.body.statements[3] else {
         panic!("expected indexed write call statement");

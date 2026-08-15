@@ -35,10 +35,10 @@ fn main() -> i64 {
     std::io::println_u8(box.plus('\x01'));
     std::io::println_u8(bytes[2]);
     std::io::println_i64((i64) '\'');
-    std::io::println_bool(text.byte(1) == 'B');
+    std::io::println_bool(text[1] == 'B');
 
     assert_eq_u8(bytes[0], 65u8);
     assert_eq_u8(bytes[1], 0x42u8);
-    assert_eq_u8(text.byte(2), 'C');
+    assert_eq_u8(text[2], 'C');
     return 0;
 }

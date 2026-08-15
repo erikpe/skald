@@ -98,7 +98,7 @@ an ordinary exact value and may directly receive a read-only method call. A
 bound requirement authorizes the same form through interface selection:
 
 ```ska
-var byte: u8 = values.last().byte(0);       // Vec<Str>.last() -> Str
+var byte: u8 = values.last()[0];            // Vec<Str>.last() -> Str
 var rank: i64 = wrapper.produce().rank();   // T: Ranked
 ```
 

@@ -43,20 +43,20 @@ fn exercise_primitives() -> unit {
     values.push(5);
     assert_eq_u64(values.len(), 5u);
     assert_eq_u64(values.capacity(), 8u);
-    assert_eq_i64(values.get(-1), 5);
+    assert_eq_i64(values.index_get(-1), 5);
 
-    values.set(-2, 40);
-    assert_eq_i64(values.get(3), 40);
+    values.index_set(-2, 40);
+    assert_eq_i64(values.index_get(3), 40);
     assert_eq_i64(values.last(), 5);
     assert_eq_i64(values.pop(), 5);
 
     var copy: Vec<i64> = values;
     var assigned: Vec<i64> = Vec<i64>::with_capacity(0u);
     assigned = values;
-    values.set(0, 10);
+    values.index_set(0, 10);
     copy.push(6);
-    assert_eq_i64(copy.get(0), 1);
-    assert_eq_i64(assigned.get(0), 1);
+    assert_eq_i64(copy.index_get(0), 1);
+    assert_eq_i64(assigned.index_get(0), 1);
     assert_eq_u64(copy.len(), 5u);
 
     values.clear();
@@ -68,15 +68,15 @@ fn exercise_strings_and_optionals() -> unit {
     var strings: Vec<Str> = Vec<Str>();
     strings.push("first");
     strings.push("second");
-    assert_eq_str(strings.get(0), "first");
+    assert_eq_str(strings.index_get(0), "first");
     assert_eq_str(strings.last(), "second");
 
     var optional_strings: Vec<Str?> = Vec<Str?>();
     optional_strings.push(none);
     optional_strings.push("present");
-    assert_true(optional_strings.get(0) is none);
-    assert_true(optional_strings.get(1) is some);
-    assert_eq_str(optional_strings.get(1)!, "present");
+    assert_true(optional_strings.index_get(0) is none);
+    assert_true(optional_strings.index_get(1) is some);
+    assert_eq_str(optional_strings.index_get(1)!, "present");
 }
 
 fn exercise_inline_values_and_nested_arrays() -> unit {
@@ -92,9 +92,9 @@ fn exercise_inline_values_and_nested_arrays() -> unit {
 
     var rows: Vec<i64[]> = Vec<i64[]>();
     rows.push(i64[]{1, 2});
-    var row: i64[] = rows.get(0);
+    var row: i64[] = rows.index_get(0);
     row[0] = 9;
-    assert_eq_i64(rows.get(0)[0], 1);
+    assert_eq_i64(rows.index_get(0)[0], 1);
 }
 
 fn exercise_shared_values() -> unit {
@@ -107,13 +107,13 @@ fn exercise_shared_values() -> unit {
     var strings: Vec<shared Str> = Vec<shared Str>();
     var text: shared Str = new Str(copy "owned");
     strings.push(text);
-    assert_eq_str(*strings.get(0), "owned");
+    assert_eq_str(*strings.index_get(0), "owned");
 
     var owner: shared Item = new Item(42);
     var readable: shared Readable = owner;
     var interfaces: Vec<shared Readable> = Vec<shared Readable>();
     interfaces.push(readable);
-    assert_eq_i64(interfaces.get(0)->read(), 42);
+    assert_eq_i64(interfaces.index_get(0)->read(), 42);
     interfaces.clear();
     assert_eq_i64(owner->read(), 42);
 }

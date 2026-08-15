@@ -76,8 +76,8 @@ fn motivating_string_literal_and_vec_result_receivers_execute_natively() {
         "  var values: Vec<Str> = Vec<Str>();\n",
         "  values.push(\"tail\");\n",
         "  var generated: Str = \"item-\".concat(Str.from_i64(7));\n",
-        "  return (i64) generated.byte(5) - 55\n",
-        "    + (i64) \"abc\".byte(1) + (i64) values.last().byte(0);\n",
+        "  return (i64) generated.index_get(5) - 55\n",
+        "    + (i64) \"abc\".index_get(1) + (i64) values.last().index_get(0);\n",
         "}\n",
     ));
 
@@ -279,12 +279,12 @@ fn canonical_string_producers_cover_raw_bytes_composition_slicing_and_parsing() 
     let assembly = standard_library_assembly(concat!(
         "from std::str import Str;\n",
         "fn main() -> i64 {\n",
-        "  if (\"A\\0\\x80\\xff\".byte(1) != 0u8) { return 1; }\n",
-        "  if (\"A\\0\\x80\\xff\".slice(1, -1).byte(-1) != 128u8) { return 2; }\n",
-        "  if (\"A\".concat(\"\\xff\").byte(1) != 255u8) { return 3; }\n",
+        "  if (\"A\\0\\x80\\xff\".index_get(1) != 0u8) { return 1; }\n",
+        "  if (\"A\\0\\x80\\xff\".slice_get(1, -1).index_get(-1) != 128u8) { return 2; }\n",
+        "  if (\"A\".concat(\"\\xff\").index_get(1) != 255u8) { return 3; }\n",
         "  if (Str.from_i64(-42).to_i64()! != -42) { return 4; }\n",
         "  var bytes: u8[] = u8[]{65u8, 0u8, 255u8};\n",
-        "  if (Str.from_bytes(bytes).byte(-1) != 255u8) { return 5; }\n",
+        "  if (Str.from_bytes(bytes).index_get(-1) != 255u8) { return 5; }\n",
         "  return 42;\n",
         "}\n",
     ));
@@ -329,8 +329,8 @@ fn closed_generic_exact_results_execute_for_vec_nested_results_and_bounds() {
         "  values.push(\"tail\");\n",
         "  var outer: Outer<Str> = Outer<Str>(\"A\");\n",
         "  var invoke: Invoke<Item> = Invoke<Item>(Item(42));\n",
-        "  return (i64) values.last().byte(0) - 116\n",
-        "    + (i64) outer.produce().get().byte(0) - 65\n",
+        "  return (i64) values.last().index_get(0) - 116\n",
+        "    + (i64) outer.produce().get().index_get(0) - 65\n",
         "    + invoke.run();\n",
         "}\n",
     ));

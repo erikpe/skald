@@ -65,85 +65,78 @@ public class Vec<T> {
         return value;
     }
 
-    fn get(index: i64) -> T {
-        return self.index_get(index);
-    }
-
     fn index_get(index: i64) -> T {
-        var normalized_index: i64 = self._normalize_index(index);
+        var normalized_index: i64 = index;
+        if (normalized_index < 0) {
+            normalized_index = (i64) self._length + normalized_index;
+        }
         if (normalized_index < 0 || (u64) normalized_index >= self._length) {
-            panic("Vec.get: index out of bounds");
+            panic("Vec.index_get: index out of bounds");
         }
         var value: T = self._storage[normalized_index]!;
         return value;
     }
 
-    mut fn set(index: i64, value: T) -> unit {
-        self.index_set(index, value);
-    }
-
     mut fn index_set(index: i64, value: T) -> unit {
-        var normalized_index: i64 = self._normalize_index(index);
+        var normalized_index: i64 = index;
+        if (normalized_index < 0) {
+            normalized_index = (i64) self._length + normalized_index;
+        }
         if (normalized_index < 0 || (u64) normalized_index >= self._length) {
-            panic("Vec.set: index out of bounds");
+            panic("Vec.index_set: index out of bounds");
         }
         self._storage[normalized_index] = value;
     }
 
     fn slice_get(start: i64?, end: i64?) -> Vec<T> {
-        var normalized_start: i64 = self._normalize_slice_bound(start, 0);
-        var normalized_end: i64 = self._normalize_slice_bound(end, (i64) self._length);
-        var slice_length: u64 = self._checked_slice_length(normalized_start, normalized_end);
+        var normalized_start: i64 = 0;
+        if (start is some) {
+            normalized_start = start!;
+        }
+        if (normalized_start < 0) {
+            normalized_start = normalized_start + (i64) self._length;
+        }
+        var normalized_end: i64 = (i64) self._length;
+        if (end is some) {
+            normalized_end = end!;
+        }
+        if (normalized_end < 0) {
+            normalized_end = normalized_end + (i64) self._length;
+        }
+        if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
+            panic("Vec.slice_get: invalid bounds");
+        }
+        var slice_length: u64 = (u64) (normalized_end - normalized_start);
 
         var result: Vec<T> = Vec<T>::with_capacity(slice_length);
-        var offset: u64 = 0u;
-        while (offset < slice_length) {
-            result.push(self._storage[normalized_start + (i64) offset]!);
-            offset = offset + 1u;
-        }
+        result._storage[0:(i64) slice_length] = self._storage[normalized_start:normalized_end];
+        result._length = slice_length;
         return result;
     }
 
     mut fn slice_set(start: i64?, end: i64?, replacement: Vec<T>) -> unit {
-        var normalized_start: i64 = self._normalize_slice_bound(start, 0);
-        var normalized_end: i64 = self._normalize_slice_bound(end, (i64) self._length);
-        var slice_length: u64 = self._checked_slice_length(normalized_start, normalized_end);
+        var normalized_start: i64 = 0;
+        if (start is some) {
+            normalized_start = start!;
+        }
+        if (normalized_start < 0) {
+            normalized_start = normalized_start + (i64) self._length;
+        }
+        var normalized_end: i64 = (i64) self._length;
+        if (end is some) {
+            normalized_end = end!;
+        }
+        if (normalized_end < 0) {
+            normalized_end = normalized_end + (i64) self._length;
+        }
+        if (normalized_start < 0 || normalized_end < normalized_start || (u64) normalized_end > self._length) {
+            panic("Vec.slice_set: invalid bounds");
+        }
+        var slice_length: u64 = (u64) (normalized_end - normalized_start);
         if (replacement._length != slice_length) {
             panic("Vec.slice_set: length mismatch");
         }
-
-        var offset: u64 = 0u;
-        while (offset < slice_length) {
-            var value: T = replacement._storage[(i64) offset]!;
-            self._storage[normalized_start + (i64) offset] = value;
-            offset = offset + 1u;
-        }
-    }
-
-    private fn _normalize_index(index: i64) -> i64 {
-        if (index < 0) {
-            return (i64) self._length + index;
-        }
-        return index;
-    }
-
-    private fn _normalize_slice_bound(bound: i64?, omitted: i64) -> i64 {
-        if (bound is none) {
-            return omitted;
-        }
-
-        var normalized: i64 = bound!;
-        if (normalized < 0) {
-            normalized = (i64) self._length + normalized;
-        }
-        return normalized;
-    }
-
-    private fn _checked_slice_length(start: i64, end: i64) -> u64 {
-        if (start < 0 || end < start || (u64) end > self._length) {
-            panic("Vec.slice: invalid bounds");
-        }
-        return (u64) (end - start);
+        self._storage[normalized_start:normalized_end] = replacement._storage[0:(i64) slice_length];
     }
 
     private mut fn _ensure_capacity(minimum: u64) -> unit {

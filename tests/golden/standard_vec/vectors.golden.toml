@@ -35,7 +35,7 @@ source = "vec_generic_get_bounds.ska"
 
 [[test.run]]
 name = "logical_tail"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.get: index out of bounds\n" } }
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.index_get: index out of bounds\n" } }
 
 [[test]]
 name = "generic_set_bounds"
@@ -44,7 +44,7 @@ source = "vec_generic_set_bounds.ska"
 
 [[test.run]]
 name = "empty"
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.set: index out of bounds\n" } }
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.index_set: index out of bounds\n" } }
 
 [[test]]
 name = "generic_pop_empty"
@@ -89,22 +89,22 @@ source = "vec_structural_failures.ska"
 [[test.run]]
 name = "logical_index_excludes_spare_capacity"
 args = ["index-capacity"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.get: index out of bounds\n" } }
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.index_get: index out of bounds\n" } }
 
 [[test.run]]
 name = "slice_below_range"
 args = ["slice-low"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice: invalid bounds\n" } }
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice_get: invalid bounds\n" } }
 
 [[test.run]]
 name = "slice_reversed_range"
 args = ["slice-reversed"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice: invalid bounds\n" } }
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice_get: invalid bounds\n" } }
 
 [[test.run]]
 name = "slice_above_range"
 args = ["slice-high"]
-expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice: invalid bounds\n" } }
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Vec.slice_get: invalid bounds\n" } }
 
 [[test.run]]
 name = "slice_replacement_length_mismatch"

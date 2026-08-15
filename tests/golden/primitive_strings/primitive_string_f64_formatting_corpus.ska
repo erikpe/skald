@@ -25,14 +25,14 @@ fn main() -> i64 {
     var start: u64 = 0u;
     var index: u64 = 0u;
     while (index < corpus.len()) {
-        if (corpus.byte((i64) index) == '\n') {
-            observe(corpus.slice((i64) start, (i64) index));
+        if (corpus[(i64) index] == '\n') {
+            observe(corpus[(i64) start:(i64) index]);
             start = index + 1u;
         }
         index = index + 1u;
     }
     if (start < corpus.len()) {
-        observe(corpus.slice((i64) start, (i64) corpus.len()));
+        observe(corpus[(i64) start:(i64) corpus.len()]);
     }
     return 0;
 }

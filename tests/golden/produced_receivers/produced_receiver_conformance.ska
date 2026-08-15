@@ -205,17 +205,17 @@ fn main() -> i64 {
         + factory.produce(15).pressured(true, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 3.0)
     );
 
-    std::io::println_u8("A\0\x80\xff".byte(1));
-    std::io::println_u8("A\0\x80\xff".slice(1, -1).byte(-1));
-    std::io::println_u8("A".concat("\xff").byte(1));
+    std::io::println_u8("A\0\x80\xff".index_get(1));
+    std::io::println_u8("A\0\x80\xff".slice_get(1, -1).index_get(-1));
+    std::io::println_u8("A".concat("\xff").index_get(1));
     std::io::println_i64(Str.from_i64(-42).to_i64()!);
 
     var values: Vec<Str> = Vec<Str>();
     values.push("tail");
-    std::io::println_u8(values.last().byte(0));
+    std::io::println_u8(values.last().index_get(0));
 
     var outer: Outer<Str> = Outer<Str>("A");
-    std::io::println_u8(outer.produce().get().byte(0));
+    std::io::println_u8(outer.produce().get().index_get(0));
 
     var invoke: Invoke<Leaf> = Invoke<Leaf>(Leaf(34, 5));
     std::io::println_i64(invoke.run());
