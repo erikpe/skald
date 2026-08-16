@@ -2,20 +2,20 @@ from std::hash import mix_u64;
 from std::lang import Equatable, Hashable;
 
 public class BoxI64 implements Equatable, Hashable {
-    private _value: i64;
+    final value: i64;
 
     init(value: i64) {
-        self._value = value;
+        self.value = value;
     }
 
     fn equals(ref other: Obj) -> bool {
         if (!(other is BoxI64)) {
             return false;
         }
-        return self._value == ((BoxI64) other)._value;
+        return self.value == ((BoxI64) other).value;
     }
 
     fn hash_code() -> u64 {
-        return mix_u64(((u64) self._value) ^ 0x6936345f626f7801u);
+        return mix_u64(((u64) self.value) ^ 0x6936345f626f7801u);
     }
 }

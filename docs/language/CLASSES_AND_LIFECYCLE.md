@@ -5,7 +5,7 @@ overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
 how implemented produced read-only aliases compose with initializer selection
 and owning full-expression temporaries, and owns the implemented private cell
-field contract plus the frozen planned final-field direction. The
+and final-field contracts. The
 [status matrix](STATUS.md) records the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
@@ -328,9 +328,9 @@ The compiler-known `std::str::Str` descriptor uses this permission for its
 implemented optional hash cache. Compiler-created literals initialize that
 fourth field to absence before ordinary string methods may populate it.
 
-## Frozen final field direction
+## Final fields
 
-Status: **frozen semantics; cross-feature contract implemented**. The
+Status: **implemented contract**. The
 compiler accepts canonical final instance and static
 declarations and retains their exact evidence through verified MIR. Final
 instance construction, copy construction, reads, shallow nested mutation, and
@@ -338,19 +338,17 @@ destruction execute normally. Independent slot replacement is rejected during
 type checking, while exact selected user and synthesized complete-value
 assignment executes normally. Final statics are explicitly initialized once by
 the eager lifecycle, reject later root replacement, and retain ordinary reverse
-shutdown. The active [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md)
-owns the remaining standard-library adoption and closure stage.
+shutdown. The standard-library primitive boxes use this contract to expose
+their payloads directly without getters.
 
 A final instance field has one of these canonical forms:
 
 ```ska
 class BoxF64 {
     final value: f64;
-    private final tag: u64;
 
-    init(value: f64, tag: u64) {
+    init(value: f64) {
         self.value = value;
-        self.tag = tag;
     }
 }
 ```
@@ -373,7 +371,7 @@ including from a mutable method, destructor, helper, derived class, unrelated
 code, or ordinary body owned by the declaring class:
 
 ```ska
-var box: BoxF64 = BoxF64(1.0, 7u);
+var box: BoxF64 = BoxF64(1.0);
 box.value = 2.0; // invalid: independent final-field replacement
 ```
 
@@ -381,8 +379,8 @@ A mutable complete class value remains replaceable when the class supports
 copy assignment:
 
 ```ska
-var left: BoxF64 = BoxF64(1.0, 7u);
-var right: BoxF64 = BoxF64(2.0, 8u);
+var left: BoxF64 = BoxF64(1.0);
+var right: BoxF64 = BoxF64(2.0);
 left = right; // valid: invokes the selected whole-value assignment
 ```
 
@@ -421,11 +419,11 @@ It is mutually exclusive with `cell`: a cell grants one narrow independent
 replacement capability, while finality forbids independent replacement after
 construction.
 
-This direction deliberately excludes immutable locals or `let`, final
+This contract deliberately excludes immutable locals or `let`, final
 parameters/results/elements, immutable classes, deep constness, final methods
 or lifecycle members, instance declaration initializers, and optimizer
 guarantees. The confirmed decisions are preserved in the
-[final fields design record](../roadmaps/FINAL_FIELDS_DESIGN_PROPOSAL.md).
+[final fields design record](../archive/FINAL_FIELDS_DESIGN_PROPOSAL.md).
 
 ## Object places and projections
 

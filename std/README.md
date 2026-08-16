@@ -17,12 +17,14 @@ APIs are implemented in Skald, with no scalar runtime observation surface.
 
 The type-named `std::i64`, `std::u64`, `std::u8`, `std::f64`, and `std::bool`
 modules provide explicit `BoxI64`, `BoxU64`, `BoxU8`, `BoxF64`, and `BoxBool`
-classes. Every box implements ordinary `Equatable` and `Hashable` interfaces.
-Integer and boolean boxes use exact primitive equality; `BoxF64` uses exact
-binary representation. Each class XORs its `u64` representation with a
-distinct fixed domain before `std::hash::mix_u64`, so same-looking values in
-different primitive domains do not start from the same mixer input. Boxing is
-explicit and adds no compiler or runtime machinery.
+classes. Every box exposes its exact primitive payload as one public final
+`value` field and implements ordinary `Equatable` and `Hashable` interfaces.
+The field is directly readable without a getter; replacing a complete mutable
+box value remains valid. Integer and boolean boxes use exact primitive
+equality; `BoxF64` uses exact binary representation. Each class XORs its `u64`
+representation with a distinct fixed domain before `std::hash::mix_u64`, so
+same-looking values in different primitive domains do not start from the same
+mixer input. Boxing is explicit and adds no compiler or runtime machinery.
 
 The `std::f64` module additionally provides exact `to_bits(f64) -> u64` and
 `from_bits(u64) -> f64` value reinterpretation. Its public functions are

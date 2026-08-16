@@ -1,4 +1,4 @@
-schema = 1
+schema = 2
 
 [[test]]
 name = "integer_casts"
@@ -73,4 +73,17 @@ name = "primitive_boxes"
 mode = "run"
 source = "primitive_boxes.ska"
 [[test.run]]
-name = "equality_hashing_and_interfaces"
+name = "payloads_copy_assignment_equality_hashing_and_interfaces"
+
+[[test]]
+name = "primitive_box_final_write"
+mode = "compile-fail"
+source = "primitive_box_final_write.ska"
+[test.expect.stderr]
+matches = [
+  { name = "bool payload", match = "contains", inline = "truth.value = true;" },
+  { name = "f64 payload", match = "contains", inline = "floating.value = 2.0;" },
+  { name = "i64 payload", match = "contains", inline = "signed.value = 2;" },
+  { name = "u64 payload", match = "contains", inline = "unsigned.value = 2u;" },
+  { name = "u8 payload", match = "contains", inline = "byte.value = 2u8;" },
+]

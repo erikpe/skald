@@ -28,6 +28,8 @@ fn main() -> i64 {
 
     var positive_zero: BoxF64 = BoxF64(std::f64::from_bits(0u));
     var negative_zero: BoxF64 = BoxF64(std::f64::from_bits(9223372036854775808u));
+    assert_eq_u64(std::f64::to_bits(positive_zero.value), 0u);
+    assert_eq_u64(std::f64::to_bits(negative_zero.value), 9223372036854775808u);
     assert_false(positive_zero.equals(negative_zero));
 
     var first_nan: BoxF64 = BoxF64(std::f64::from_bits(9221120237041090561u));

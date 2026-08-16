@@ -1,8 +1,8 @@
 # Final Fields Design Proposal
 
-Status: frozen design. FF1 through FF14 were confirmed together on 2026-08-16
-and promoted into the living language and compiler contracts before the
-implementation roadmap was created. The implemented
+Status: frozen, implemented, and archived. FF1 through FF14 were confirmed
+together on 2026-08-16 and promoted into the living language and compiler
+contracts before the implementation roadmap was created. The implemented
 [grammar](../language/GRAMMAR.md) and
 [status matrix](../language/STATUS.md) remain authoritative for current
 compiler behavior.

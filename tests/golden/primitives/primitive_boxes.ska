@@ -1,7 +1,9 @@
 from std::bool import BoxBool;
+from std::f64 import BoxF64;
 from std::i64 import BoxI64;
 from std::lang import Equatable, Hashable;
-from std::test import assert_eq_u64, assert_false, assert_true;
+from std::test import assert_eq_f64, assert_eq_i64, assert_eq_u64, assert_eq_u8,
+    assert_false, assert_true;
 from std::u64 import BoxU64;
 from std::u8 import BoxU8;
 
@@ -31,6 +33,7 @@ fn main() -> i64 {
     var signed: BoxI64 = BoxI64(43);
     var same_signed: BoxI64 = BoxI64(43);
     var other_signed: BoxI64 = BoxI64(-1);
+    assert_eq_i64(signed.value, 43);
     assert_true(signed.equals(same_signed));
     assert_false(signed.equals(other_signed));
     assert_eq_u64(signed.hash_code(), 17015498714937279731u);
@@ -38,16 +41,22 @@ fn main() -> i64 {
 
     var unsigned: BoxU64 = BoxU64(43u);
     var maximum_unsigned: BoxU64 = BoxU64(18446744073709551615u);
+    assert_eq_u64(unsigned.value, 43u);
+    assert_eq_u64(maximum_unsigned.value, 18446744073709551615u);
     assert_eq_u64(unsigned.hash_code(), 6637161059449595575u);
     assert_eq_u64(maximum_unsigned.hash_code(), 13156342061947695543u);
 
     var byte: BoxU8 = BoxU8(43u8);
     var maximum_byte: BoxU8 = BoxU8(255u8);
+    assert_eq_u8(byte.value, 43u8);
+    assert_eq_u8(maximum_byte.value, 255u8);
     assert_eq_u64(byte.hash_code(), 6520876180507905935u);
     assert_eq_u64(maximum_byte.hash_code(), 14217571731394082708u);
 
     var false_box: BoxBool = BoxBool(false);
     var true_box: BoxBool = BoxBool(true);
+    assert_false(false_box.value);
+    assert_true(true_box.value);
     assert_false(false_box.equals(true_box));
     assert_eq_u64(false_box.hash_code(), 5795998789313038223u);
     assert_eq_u64(true_box.hash_code(), 6729225292995698703u);
@@ -58,6 +67,14 @@ fn main() -> i64 {
     assert_false(unsigned.equals(byte));
     assert_false(signed.hash_code() == unsigned.hash_code());
     assert_false(unsigned.hash_code() == byte.hash_code());
+
+    var floating: BoxF64 = BoxF64(3.5);
+    assert_eq_f64(floating.value, 3.5);
+
+    var copied: BoxI64 = signed;
+    assert_eq_i64(copied.value, 43);
+    copied = other_signed;
+    assert_eq_i64(copied.value, -1);
 
     var operations: Operations<BoxI64> = Operations<BoxI64>();
     assert_true(operations.equal(signed, same_signed));

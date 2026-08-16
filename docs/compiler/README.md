@@ -283,7 +283,7 @@ closed specialization, inheritance, virtual/interface dispatch, and eligible
 capture-free function values.
 
 The implemented
-[final field representation](PHASES_AND_IR.md#frozen-final-field-representation)
+[final field representation](PHASES_AND_IR.md#final-field-representation)
 preserves contextual declaration evidence through resolved IR, closed
 specialization, typed HIR, and verified MIR without changing ordinary
 declaration or layout identity. Final instance fields use ordinary construction,
@@ -292,11 +292,9 @@ backend paths. Type checking rejects independent slot replacement; exact user
 assignment writes and synthesized assignment plans carry independently verified
 final-update evidence. Final statics retain explicit publication evidence
 through the certified eager lifecycle, reject source root replacement, and use
-ordinary backend slots and reverse shutdown. Its
-[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) has completed
-contextual metadata, instance write rules, user and synthesized assignment,
-final-static lifecycle integration, and composition; standard-library adoption
-and closure remain.
+ordinary backend slots and reverse shutdown. Standard-library primitive boxes
+use the same representation for public payload fields without a compiler
+exception.
 
 ## Compiler crate API policy
 

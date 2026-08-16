@@ -15,20 +15,20 @@ public fn from_bits(bits: u64) -> f64 {
 }
 
 public class BoxF64 implements Equatable, Hashable {
-    private _value: f64;
+    final value: f64;
 
     init(value: f64) {
-        self._value = value;
+        self.value = value;
     }
 
     fn equals(ref other: Obj) -> bool {
         if (!(other is BoxF64)) {
             return false;
         }
-        return _to_bits(self._value) == _to_bits(((BoxF64) other)._value);
+        return _to_bits(self.value) == _to_bits(((BoxF64) other).value);
     }
 
     fn hash_code() -> u64 {
-        return mix_u64(_to_bits(self._value) ^ 0x6636345f626f7801u);
+        return mix_u64(_to_bits(self.value) ^ 0x6636345f626f7801u);
     }
 }

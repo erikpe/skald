@@ -1013,9 +1013,9 @@ repeated, conditional, and loop-carried writes; and compose inheritance,
 generics, aliases, produced reads, dispatch, optionals, arrays, shared owners,
 function values, and static initialization. Backend tests retain ordinary
 layout, addressing, calling conventions, symbols, deterministic assembly, and
-runtime ABI version 9. The FFI5 standard-library migration tests will expose
-each primitive box payload as a public final field while preserving exact
-equality and domain-separated hashing.
+runtime ABI version 9. Standard-library migration tests expose each primitive
+box payload as a public final field while preserving direct reads, whole-box
+assignment, exact equality, and domain-separated hashing.
 
 ## Static-field coverage
 

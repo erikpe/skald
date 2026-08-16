@@ -1318,13 +1318,11 @@ permission with intrinsic literal construction: its fourth exact field is a
 private-cell `u64?` hash cache, and `StringInitialize` publishes it absent
 without adding a runtime or target-level cell operation.
 
-## Frozen final field representation
+## Final field representation
 
-Status: **cross-feature instance and static semantics implemented**. The active
-[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns the remaining
-standard-library adoption and closure work. Source semantics are defined by
-[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction)
-and [Static Fields](../language/STATIC_FIELDS.md#frozen-final-static-field-direction).
+Status: **implemented contract**. Source semantics are defined by
+[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#final-fields)
+and [Static Fields](../language/STATIC_FIELDS.md#final-static-fields).
 
 Syntax retains one exact `final` modifier span on an ordinary instance or
 static field declaration. Resolution preserves the declaration's existing
@@ -1413,14 +1411,11 @@ metadata changes no size, alignment, offset, register classification, symbol
 family, runtime call, public C API, or runtime ABI version. Backend code must
 not infer authorization from source names or reconstruct it after verification.
 
-The rollout established contextual declaration metadata, instance construction
-and direct-write rules, exact user and synthesized copy-assignment
-authorization, final-static eager lifecycle integration, and cross-feature
-composition. Rebinding-capable field/static aliases are checked at a shared
+Rebinding-capable field/static aliases are checked at a shared
 type-checking boundary and independently rejected by MIR verification when
 forged; shallow class, array, optional-payload, and shared-pointee mutation
-continues through existing access and anchor rules. Standard-library box
-adoption is next and receives no compiler exception.
+continues through existing access and anchor rules. Standard-library primitive
+boxes use ordinary public final fields and receive no compiler exception.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,

@@ -415,6 +415,12 @@ absent outer `(shared P?)?` is branched around before any ordinary owner or
 allocator operation. Runtime ABI version 9 and `ska_rt_abi_v9` remain
 unchanged.
 
+Final instance and static fields add no runtime state, write barrier, public
+symbol, or service. Construction, verified complete-value assignment, eager
+static publication, destruction, and primitive-box payload reads use existing
+compiler-generated code and ordinary storage. Runtime ABI version 9 remains
+unchanged.
+
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,
 descriptor materialization, and immortal retain/release behavior are generated

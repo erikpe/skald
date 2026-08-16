@@ -901,6 +901,18 @@ uses the existing zero niche. Allocation failure, optional unwrap failure,
 guard overflow, and layout overflow retain their current boundaries; there is
 no checked box-store failure and no public runtime ABI change.
 
+## Final fields
+
+Final instance and static fields reach target lowering only after independent
+MIR verification of their declaration metadata and any exceptional
+complete-value-assignment authorization. The backend uses ordinary field and
+static addresses, lifecycle calls, copies, ownership transitions, publication,
+and cleanup. Finality changes no layout, alignment, calling convention, symbol
+family, target instruction, runtime call, or ABI version. The five
+standard-library primitive boxes therefore expose public final payloads with
+the same one-field layouts and calling conventions as their former private
+ordinary payloads.
+
 ## Implemented generic-class specialization target boundary
 
 The frozen [generic-class compiler contract](GENERIC_CLASSES.md) reaches the

@@ -673,11 +673,22 @@ Each value-bearing primitive has one explicit standard-library object wrapper:
 | `f64` | `std::f64` | `BoxF64` |
 | `bool` | `std::bool` | `BoxBool` |
 
-Every box is an ordinary inline class with an initializer accepting its exact
-primitive type and implementations of `std::lang::Equatable` and
-`std::lang::Hashable`. Equality first requires the same exact box class. The
-integer and boolean boxes then compare their primitive values; `BoxF64`
-compares the complete binary64 representation, as detailed below.
+Every box is an ordinary inline class with one public final `value` field, an
+initializer accepting its exact primitive type, and implementations of
+`std::lang::Equatable` and `std::lang::Hashable`:
+
+```ska
+var boxed: BoxI64 = BoxI64(42);
+var answer: i64 = boxed.value;
+// boxed.value = 43; // invalid: the payload field is final
+
+var replacement: BoxI64 = BoxI64(43);
+boxed = replacement; // valid: replaces the complete mutable box value
+```
+
+Equality first requires the same exact box class. The integer and boolean
+boxes then compare their primitive values; `BoxF64` compares the complete
+binary64 representation, as detailed below.
 
 Hashing converts the primitive datum to one `u64`, XORs a distinct fixed box
 domain, and passes the result through `std::hash::mix_u64`. Signed integers use
@@ -686,10 +697,11 @@ or one. Hash domains differ even when values have the same numeric spelling,
 so `BoxI64(43)`, `BoxU64(43u)`, and `BoxU8(43u8)` do not merely mix the same
 input. Hash collisions remain valid under the ordinary `Hashable` contract.
 
-Boxing is explicit construction. Primitive types do not implement interfaces,
-and there is no implicit boxing, unboxing, primitive-method lookup, prelude
-binding, compiler intrinsic, or runtime support. `unit` carries no value and
-has no box class.
+Boxing is explicit construction. Reading `value` is an ordinary public field
+read without a getter or unboxing operation. Primitive types do not implement
+interfaces, and there is no implicit boxing, unboxing, primitive-method
+lookup, prelude binding, compiler intrinsic, or runtime support. `unit` carries
+no value and has no box class.
 
 ## Exact binary64 bit representation
 

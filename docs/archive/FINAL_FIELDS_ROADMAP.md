@@ -1,12 +1,12 @@
 # Final Fields Roadmap
 
-Status: in progress; FFI5 is next.
+Status: complete and archived.
 
 This roadmap implements the frozen
-[final field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
-its [final static contract](../language/STATIC_FIELDS.md#frozen-final-static-field-direction),
+[final field language contract](../language/CLASSES_AND_LIFECYCLE.md#final-fields),
+its [final static contract](../language/STATIC_FIELDS.md#final-static-fields),
 and the
-[compiler representation contract](../compiler/PHASES_AND_IR.md#frozen-final-field-representation).
+[compiler representation contract](../compiler/PHASES_AND_IR.md#final-field-representation).
 It adds shallow final instance and class-owned static fields while preserving
 ordinary construction, mutable complete-value replacement, lifecycle,
 ownership, aliases, layout, calling conventions, and runtime ABI.
@@ -77,7 +77,7 @@ decisions without reopening them.
 - [x] FFI2 — Authorize exact complete-value assignment
 - [x] FFI3 — Integrate final statics with eager lifecycle
 - [x] FFI4 — Prove shallow cross-feature composition
-- [ ] FFI5 — Adopt public final primitive-box payloads and close
+- [x] FFI5 — Adopt public final primitive-box payloads and close
 
 Every Rust implementation task runs focused owner tests followed by
 `make check`, `make msrv-check`, and `git diff --check`. The closing task also
@@ -372,30 +372,30 @@ gates passed.
 **Purpose:** Deliver the motivating zero-getter standard-library surface and
 publish final fields as one complete supported language feature.
 
-- [ ] Change `BoxF64`, `BoxI64`, `BoxU64`, `BoxU8`, and `BoxBool` from private
+- [x] Change `BoxF64`, `BoxI64`, `BoxU64`, `BoxU8`, and `BoxBool` from private
       payload fields to public final `value` fields. Update their constructors,
       exact equality, and domain-separated mixed hashes without adding getters,
       compiler exceptions, implicit boxing, or runtime support.
-- [ ] Add native standard-library coverage for direct payload reads, rejected
+- [x] Add native standard-library coverage for direct payload reads, rejected
       writes, construction, copies, mutable complete box assignment, interface
       dispatch, generic `Equatable`/`Hashable` use, exact boundary equality,
       and unchanged per-class hash domains.
-- [ ] Complete modifier diagnostics, dump determinism, layout/ABI regressions,
+- [x] Complete modifier diagnostics, dump determinism, layout/ABI regressions,
       standard-library resolution, and source-to-native documentation examples.
-- [ ] Promote grammar, class lifecycle, static fields, compiler phases,
+- [x] Promote grammar, class lifecycle, static fields, compiler phases,
       compiler overview, testing, debugging, backend/runtime boundary, standard
       library, and status documentation from frozen planned behavior to the
       implemented contract. Remove rollout language and task codes from living
       code, tests, and documentation.
-- [ ] Confirm the exclusions remain explicit: no local `let`, final
+- [x] Confirm the exclusions remain explicit: no local `let`, final
       parameters/results/elements/classes/methods, deep constness, combined
       final cells, runtime immutability service, concurrency semantics,
       optimizer promise, public runtime symbol, or ABI revision.
-- [ ] Run closure review from an artifact-free snapshot, resolve high-priority
+- [x] Run closure review from an artifact-free snapshot, resolve high-priority
       maintainability findings within the feature boundary, and place any
       lower-priority actionable findings in the separately indexed discoveries
       document.
-- [ ] Mark the roadmap complete, move it and the frozen proposal to the
+- [x] Mark the roadmap complete, move it and the frozen proposal to the
       archive, update both indexes and every incoming link, and retain only
       current behavior in living documentation.
 
@@ -409,6 +409,18 @@ clean-snapshot workflow.
 unchanged equality and hashing, final instance and static fields are a complete
 documented source-to-native contract, all exclusions remain enforced, all
 repository gates pass, and the roadmap and design record are archived.
+
+Completed 2026-08-16. All five primitive boxes now expose one ordinary public
+final `value` field while retaining exact equality, fixed hash domains, mixed
+hash results, layout, calling conventions, and complete-value assignment.
+Focused resolution, final-field, native success, and five-box compile-failure
+tests passed with deterministic diagnostics and assembly. The closure review
+made the compiler test fixture's canonical standard-library closure genuinely
+complete by adding the four previously omitted primitive modules; no deferred
+discovery remained. From an artifact-free build state, `make check-long`
+passed the complete repository, full golden determinism, Rust 1.82.0 MSRV,
+10,000-case robustness, runtime-trace benchmark, and generic-vector benchmark
+gates. Documentation validation and diff hygiene passed before archival.
 
 ## Ordering and dependencies
 

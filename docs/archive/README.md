@@ -87,6 +87,7 @@ Archived plans:
 - [Private cell fields](PRIVATE_CELL_FIELDS_ROADMAP.md)
 - [`Str` cached-hash migration](STR_CACHED_HASH_MIGRATION_ROADMAP.md)
 - [Primitive box classes](PRIMITIVE_BOX_CLASSES_ROADMAP.md)
+- [Final fields](FINAL_FIELDS_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -162,6 +163,10 @@ Resolved function-value design inputs:
 Resolved private-cell design inputs:
 
 - [private cell fields design record](PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md)
+
+Resolved final-field design inputs:
+
+- [final fields design record](FINAL_FIELDS_DESIGN_PROPOSAL.md)
 
 Resolved string cached-hash follow-ups:
 

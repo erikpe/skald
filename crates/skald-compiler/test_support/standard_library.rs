@@ -8,16 +8,20 @@ pub const CANONICAL_STR_FORMAT_F64_SOURCE: &str =
 pub const CANONICAL_STR_PARSE_INTEGER_SOURCE: &str =
     include_str!("../../../std/std/str/parse_integer.ska");
 pub const CANONICAL_STR_PARSE_F64_SOURCE: &str = include_str!("../../../std/std/str/parse_f64.ska");
+pub const CANONICAL_BOOL_SOURCE: &str = include_str!("../../../std/std/bool.ska");
 pub const CANONICAL_ERROR_SOURCE: &str = include_str!("../../../std/std/error.ska");
 pub const CANONICAL_F64_SOURCE: &str = include_str!("../../../std/std/f64.ska");
 pub const CANONICAL_HASH_SOURCE: &str = include_str!("../../../std/std/hash.ska");
+pub const CANONICAL_I64_SOURCE: &str = include_str!("../../../std/std/i64.ska");
 pub const CANONICAL_IO_SOURCE: &str = include_str!("../../../std/std/io.ska");
 pub const CANONICAL_LANG_SOURCE: &str = include_str!("../../../std/std/lang.ska");
 pub const CANONICAL_PROCESS_SOURCE: &str = include_str!("../../../std/std/process.ska");
 pub const CANONICAL_TEST_SOURCE: &str = include_str!("../../../std/std/test.ska");
+pub const CANONICAL_U64_SOURCE: &str = include_str!("../../../std/std/u64.ska");
+pub const CANONICAL_U8_SOURCE: &str = include_str!("../../../std/std/u8.ska");
 pub const CANONICAL_VEC_SOURCE: &str = include_str!("../../../std/std/vec.ska");
 
-const CANONICAL_SOURCES: [(&str, &str); 13] = [
+const CANONICAL_SOURCES: [(&str, &str); 17] = [
     ("std/str.ska", CANONICAL_STR_SOURCE),
     (
         "std/str/format_integer.ska",
@@ -29,13 +33,17 @@ const CANONICAL_SOURCES: [(&str, &str); 13] = [
         CANONICAL_STR_PARSE_INTEGER_SOURCE,
     ),
     ("std/str/parse_f64.ska", CANONICAL_STR_PARSE_F64_SOURCE),
+    ("std/bool.ska", CANONICAL_BOOL_SOURCE),
     ("std/error.ska", CANONICAL_ERROR_SOURCE),
     ("std/f64.ska", CANONICAL_F64_SOURCE),
     ("std/hash.ska", CANONICAL_HASH_SOURCE),
+    ("std/i64.ska", CANONICAL_I64_SOURCE),
     ("std/io.ska", CANONICAL_IO_SOURCE),
     ("std/lang.ska", CANONICAL_LANG_SOURCE),
     ("std/process.ska", CANONICAL_PROCESS_SOURCE),
     ("std/test.ska", CANONICAL_TEST_SOURCE),
+    ("std/u64.ska", CANONICAL_U64_SOURCE),
+    ("std/u8.ska", CANONICAL_U8_SOURCE),
     ("std/vec.ska", CANONICAL_VEC_SOURCE),
 ];
 

@@ -1,5 +1,8 @@
 use super::*;
-use crate::identity::{ClassId, FieldId, StaticFieldId};
+use crate::{
+    identity::{ClassId, FieldId, StaticFieldId},
+    test_support::load_module_sources_with_standard_library,
+};
 
 #[test]
 fn preserves_final_metadata_on_existing_field_identities() {
@@ -56,4 +59,46 @@ fn specialization_carries_final_metadata_without_replacing_field_ids() {
         assert!(class.static_fields[0].final_span.is_some());
     }
     assert!(dump_resolved(&program).contains("final \"value\""));
+}
+
+#[test]
+fn canonical_primitive_boxes_expose_one_public_final_payload() {
+    let (_workspace, graph) = load_module_sources_with_standard_library(
+        "app",
+        &[(
+            "app.ska",
+            concat!(
+                "from std::bool import BoxBool;\n",
+                "from std::f64 import BoxF64;\n",
+                "from std::i64 import BoxI64;\n",
+                "from std::u64 import BoxU64;\n",
+                "from std::u8 import BoxU8;\n",
+                "fn main() -> i64 {\n",
+                "  var truth: BoxBool = BoxBool(true);\n",
+                "  var floating: BoxF64 = BoxF64(1.0);\n",
+                "  var signed: BoxI64 = BoxI64(2);\n",
+                "  var unsigned: BoxU64 = BoxU64(3u);\n",
+                "  var byte: BoxU8 = BoxU8(4u8);\n",
+                "  return signed.value + (i64) unsigned.value + (i64) byte.value;\n",
+                "}\n",
+            ),
+        )],
+    );
+    let output = crate::resolve::resolve_module_graph(&graph);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    for name in ["BoxBool", "BoxF64", "BoxI64", "BoxU64", "BoxU8"] {
+        let class = output
+            .program
+            .classes
+            .iter()
+            .find(|class| class.name == name)
+            .unwrap_or_else(|| panic!("canonical standard library must declare {name}"));
+        assert_eq!(class.fields.len(), 1, "{name}");
+        let field = &class.fields[0];
+        assert_eq!(field.name, "value", "{name}");
+        assert_eq!(field.visibility, ResolvedMemberVisibility::Public, "{name}");
+        assert!(field.final_span.is_some(), "{name}");
+        assert!(field.cell_span.is_none(), "{name}");
+    }
 }

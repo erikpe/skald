@@ -1,0 +1,20 @@
+from std::bool import BoxBool;
+from std::f64 import BoxF64;
+from std::i64 import BoxI64;
+from std::u64 import BoxU64;
+from std::u8 import BoxU8;
+
+fn main() -> i64 {
+    var truth: BoxBool = BoxBool(false);
+    var floating: BoxF64 = BoxF64(1.0);
+    var signed: BoxI64 = BoxI64(1);
+    var unsigned: BoxU64 = BoxU64(1u);
+    var byte: BoxU8 = BoxU8(1u8);
+
+    truth.value = true;
+    floating.value = 2.0;
+    signed.value = 2;
+    unsigned.value = 2u;
+    byte.value = 2u8;
+    return 0;
+}

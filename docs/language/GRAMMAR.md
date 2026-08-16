@@ -417,7 +417,7 @@ and the compiler representation is owned by
 
 ### Final-field declarations
 
-The compiler accepts the frozen final-field declaration alternatives:
+The compiler accepts these final-field declaration alternatives:
 
 ```text
 final-field-declaration = ["private"] "final" identifier ":"
@@ -455,13 +455,13 @@ private final cell: i64;
 A final instance field has no declaration initializer. A final static field
 requires exactly one explicit initializer. Finality is invalid on methods,
 ordinary initializers, copy operations, destructors, interfaces, locals,
-parameters, results, and every other declaration category in the frozen
+parameters, results, and every other declaration category in the implemented
 profile. The source-visible meaning is owned by
-[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
+[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#final-fields),
 static lifecycle is owned by
-[Static Fields](STATIC_FIELDS.md#frozen-final-static-field-direction), and the
+[Static Fields](STATIC_FIELDS.md#final-static-fields), and the
 compiler representation is owned by
-[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-final-field-representation).
+[Phases and IR](../compiler/PHASES_AND_IR.md#final-field-representation).
 
 ### Construction-selection syntax
 
