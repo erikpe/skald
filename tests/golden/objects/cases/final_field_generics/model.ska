@@ -1,0 +1,50 @@
+public class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+public class Slot<T> {
+    final value: T;
+    final static empty: T? = none;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}
+
+public class Base<T> {
+    final value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}
+
+public class Value<T> {
+    final value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}
+
+public class Derived<T> extends Base<T> {
+    init(value: T) {
+        super(value);
+    }
+}

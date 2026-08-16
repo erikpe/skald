@@ -100,28 +100,6 @@ impl CallableChecker<'_, '_> {
         None
     }
 
-    /// Access granted when the complete static storage is passed as an alias.
-    ///
-    /// Finality is shallow: operations reached through the stored value may
-    /// still mutate nested state, but an alias to the storage root must not
-    /// make replacement possible.
-    pub(in crate::typeck) fn static_field_alias_access(
-        &self,
-        field: StaticFieldId,
-    ) -> crate::hir::HirAccess {
-        if self
-            .program
-            .static_field(field)
-            .expect("resolved static-field use must reference a declaration")
-            .final_span
-            .is_some()
-        {
-            crate::hir::HirAccess::ReadOnly
-        } else {
-            crate::hir::HirAccess::Mutable
-        }
-    }
-
     pub(super) fn primitive_static_alias_place(
         &mut self,
         access: &ResolvedStaticFieldAccessExpr,

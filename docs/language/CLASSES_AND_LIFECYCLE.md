@@ -330,7 +330,7 @@ fourth field to absence before ordinary string methods may populate it.
 
 ## Frozen final field direction
 
-Status: **frozen semantics; instance and static core rules implemented**. The
+Status: **frozen semantics; cross-feature contract implemented**. The
 compiler accepts canonical final instance and static
 declarations and retains their exact evidence through verified MIR. Final
 instance construction, copy construction, reads, shallow nested mutation, and
@@ -339,7 +339,7 @@ type checking, while exact selected user and synthesized complete-value
 assignment executes normally. Final statics are explicitly initialized once by
 the eager lifecycle, reject later root replacement, and retain ordinary reverse
 shutdown. The active [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md)
-owns the remaining cross-feature proof and standard-library adoption stages.
+owns the remaining standard-library adoption and closure stage.
 
 A final instance field has one of these canonical forms:
 
@@ -405,11 +405,15 @@ through a final shared owner. Replacing an enclosing mutable complete value
 may change its final representation. Finality supplies no deep immutability,
 stable snapshot, exclusivity, concurrency, or data-race guarantee.
 
-Existing read and alias rules remain authoritative. Finality grants no mutable
-root and no alias capable of replacing the selected slot. Produced objects
-remain read-only roots. Existing optional guards, shared-owner anchors,
-detached-array backing anchors, ownership operations, evaluation order,
-failure behavior, and cleanup continue to govern the stored type.
+Existing read and alias rules remain authoritative. Finality grants no alias
+capable of replacing the selected slot: rebinding-capable aliases to final
+scalar or optional storage are read-only. Class and array aliases cannot
+rebind their root, so they retain mutable access to nested fields or elements;
+shared-owner aliases likewise govern the separately allocated pointee rather
+than the final owner slot. Produced objects remain read-only roots. Existing
+optional guards, shared-owner anchors, detached-array backing anchors,
+ownership operations, evaluation order, failure behavior, and cleanup
+continue to govern the stored type.
 
 The modifier changes no field offset, object size, alignment, calling
 convention, runtime state, target instruction, public symbol, or runtime ABI.

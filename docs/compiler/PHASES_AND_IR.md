@@ -1320,9 +1320,9 @@ without adding a runtime or target-level cell operation.
 
 ## Frozen final field representation
 
-Status: **instance construction, direct-write, and complete-assignment semantics
-implemented**. The active [final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md)
-owns the remaining static-lifecycle and composition work. Source semantics are defined by
+Status: **cross-feature instance and static semantics implemented**. The active
+[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns the remaining
+standard-library adoption and closure work. Source semantics are defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction)
 and [Static Fields](../language/STATIC_FIELDS.md#frozen-final-static-field-direction).
 
@@ -1415,9 +1415,12 @@ not infer authorization from source names or reconstruct it after verification.
 
 The rollout established contextual declaration metadata, instance construction
 and direct-write rules, exact user and synthesized copy-assignment
-authorization, and final-static eager lifecycle integration. It next adds
-cross-feature native composition and standard-library box adoption. The
-standard library receives no compiler exception.
+authorization, final-static eager lifecycle integration, and cross-feature
+composition. Rebinding-capable field/static aliases are checked at a shared
+type-checking boundary and independently rejected by MIR verification when
+forged; shallow class, array, optional-payload, and shared-pointee mutation
+continues through existing access and anchor rules. Standard-library box
+adoption is next and receives no compiler exception.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,

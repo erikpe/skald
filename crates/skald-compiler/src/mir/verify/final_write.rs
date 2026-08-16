@@ -11,6 +11,20 @@ use super::{
 use crate::identity::CallableId;
 
 impl Verifier<'_> {
+    pub(super) fn place_is_final_root(&self, place: &MirPlace) -> bool {
+        match (place.base, place.projections.last()) {
+            (MirPlaceBase::StaticField(field), None) => self
+                .program
+                .static_field(field)
+                .is_some_and(|field| field.final_span.is_some()),
+            (_, Some(MirPlaceProjection::Field(field))) => self
+                .program
+                .field(*field)
+                .is_some_and(|field| field.final_span.is_some()),
+            _ => false,
+        }
+    }
+
     /// Verifies both exceptional field-write capabilities without conflating
     /// them. Only cell evidence can relax destination access; final evidence
     /// proves lifecycle ownership of an otherwise mutable direct `self` field.
@@ -44,18 +58,13 @@ impl Verifier<'_> {
         destination: &MirPlace,
     ) {
         let MirPlace {
-            base: MirPlaceBase::StaticField(field),
+            base: MirPlaceBase::StaticField(_),
             projections,
         } = destination
         else {
             return;
         };
-        if projections.is_empty()
-            && self
-                .program
-                .static_field(*field)
-                .is_some_and(|field| field.final_span.is_some())
-        {
+        if projections.is_empty() && self.place_is_final_root(destination) {
             self.block_error(
                 function.callable(),
                 block.id,

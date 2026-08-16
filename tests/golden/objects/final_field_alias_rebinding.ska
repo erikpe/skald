@@ -1,0 +1,23 @@
+fn clear(mut ref value: i64?) -> unit {
+    value = none;
+}
+
+fn replace(mut ref value: i64) -> unit {
+    value = 0;
+}
+
+class Holder {
+    final maybe: i64?;
+    final static scalar: i64 = 1;
+
+    init() {
+        self.maybe = 2;
+    }
+}
+
+fn main() -> i64 {
+    var holder: Holder = Holder();
+    clear(holder.maybe);
+    replace(Holder.scalar);
+    return 0;
+}

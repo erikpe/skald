@@ -6,10 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [final fields roadmap](FINAL_FIELDS_ROADMAP.md) is in progress. FFI0
-implemented contextual declaration metadata through verified MIR behind an
-explicit executable gate; FFI1, instance construction and direct-write
-semantics, is next.
+The [final fields roadmap](FINAL_FIELDS_ROADMAP.md) is in progress. FFI0–FFI4
+implemented contextual declaration evidence, exact instance and static write
+semantics, complete-value assignment authorization, eager static lifecycle,
+and cross-feature composition. FFI5, primitive-box adoption and closure, is
+next.
 
 ## Planned
 
@@ -22,7 +23,7 @@ and promoted into the planned language and compiler contracts. It
 defines shallow final instance and class-owned static fields, preserves
 replacement of mutable complete values through synthesized or user-defined
 copy assignment, and explicitly excludes immutable local storage. Its
-implementation is owned by the planned roadmap above.
+implementation is owned by the active roadmap above.
 
 The completed private cell fields design and implementation roadmap are
 preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).

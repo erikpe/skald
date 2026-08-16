@@ -233,7 +233,10 @@ impl CallableChecker<'_, '_> {
             contextual_optional: None,
             object,
             optional_place_access: matches!(ty, Type::Optional(_))
-                .then(|| self.static_place_access(expression))
+                .then(|| {
+                    self.static_place_access(expression)
+                        .map(|access| self.rebinding_storage_alias_access(expression, access))
+                })
                 .flatten(),
         }
     }
@@ -279,9 +282,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => {
                 Some(self.static_receiver_access(&access.receiver))
             }
-            ResolvedExpression::StaticFieldAccess(access) => {
-                Some(self.static_field_alias_access(access.field))
-            }
+            ResolvedExpression::StaticFieldAccess(_) => Some(HirAccess::Mutable),
             ResolvedExpression::ArrayProjection(projection) => {
                 self.static_place_access(&projection.receiver)
             }

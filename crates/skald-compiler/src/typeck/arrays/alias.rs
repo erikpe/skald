@@ -67,9 +67,6 @@ impl CallableChecker<'_, '_> {
                 HirArrayReceiverSource::Inline(_) => HirArrayAnchor::InlineBacking,
                 HirArrayReceiverSource::Shared(_) => receiver.anchor,
             };
-            if let Some(field) = direct_static_field_through_groups(expression) {
-                receiver.access = self.static_field_alias_access(field);
-            }
             let actual = Type::Array(receiver.array);
             let access = receiver.access;
             let span = receiver.span;
@@ -135,7 +132,7 @@ impl CallableChecker<'_, '_> {
     ) -> Option<crate::hir::HirAccess> {
         match storage {
             HirOptionalStorage::Binding(binding) => self.binding_access(*binding, false, span),
-            HirOptionalStorage::Static(place) => Some(self.static_field_alias_access(place.field)),
+            HirOptionalStorage::Static(_) => Some(crate::hir::HirAccess::Mutable),
             HirOptionalStorage::Field(field) => Some(field.receiver.access()),
             HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
             HirOptionalStorage::SharedPointee(_) => Some(crate::hir::HirAccess::ReadOnly),
@@ -196,18 +193,6 @@ fn is_aliasable_receiver(source: &HirArrayReceiverSource) -> bool {
             }
             _ => false,
         },
-    }
-}
-
-fn direct_static_field_through_groups(
-    expression: &ResolvedExpression,
-) -> Option<crate::identity::StaticFieldId> {
-    match expression {
-        ResolvedExpression::StaticFieldAccess(access) => Some(access.field),
-        ResolvedExpression::Grouped(grouped) => {
-            direct_static_field_through_groups(&grouped.expression)
-        }
-        _ => None,
     }
 }
 

@@ -1,6 +1,6 @@
 # Final Fields Roadmap
 
-Status: in progress; FFI4 is next.
+Status: in progress; FFI5 is next.
 
 This roadmap implements the frozen
 [final field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
@@ -76,7 +76,7 @@ decisions without reopening them.
 - [x] FFI1 — Enforce instance construction and direct-write semantics
 - [x] FFI2 — Authorize exact complete-value assignment
 - [x] FFI3 — Integrate final statics with eager lifecycle
-- [ ] FFI4 — Prove shallow cross-feature composition
+- [x] FFI4 — Prove shallow cross-feature composition
 - [ ] FFI5 — Adopt public final primitive-box payloads and close
 
 Every Rust implementation task runs focused owner tests followed by
@@ -316,30 +316,30 @@ Rust-task gates passed.
 static contracts execute, with particular attention to alias safety and exact
 ownership of exceptional writes.
 
-- [ ] Cover final fields across direct bases, inherited reads, derived write
+- [x] Cover final fields across direct bases, inherited reads, derived write
       rejection, base lifecycle delegation, checked class views, produced
       read-only roots, virtual/interface calls, and eligible capture-free
       function values.
-- [ ] Cover generic final instance/static fields, contextual requirements,
+- [x] Cover generic final instance/static fields, contextual requirements,
       repeated specialization, generic bases, optional/array/shared/function
       substitutions, module qualification, imports, and deterministic IDs and
       symbols.
-- [ ] Prove shallow behavior for final inline classes, arrays, optionals,
+- [x] Prove shallow behavior for final inline classes, arrays, optionals,
       shared owners, function values, and nested final-bearing values. Preserve
       every ordinary nested mutation and reject every slot-rebinding alias or
       projection not already authorized.
-- [ ] Exercise active optional guards, shared-owner anchors, detached-array
+- [x] Exercise active optional guards, shared-owner anchors, detached-array
       anchors, overlapping paths, produced sources, self-assignment, last-owner
       destruction, displacement, failure, and full-expression cleanup during
       enclosing complete-value replacement.
-- [ ] Audit all field/static assignment carriers, lifecycle capability
+- [x] Audit all field/static assignment carriers, lifecycle capability
       builders, specialization copies, access-propagating consumers, static
       effect walkers, MIR verifiers, and backend inputs for missing final
       evidence or accidental permission widening.
-- [ ] Complete syntax/resolved/HIR/preliminary-MIR/planned-MIR/final-MIR dumps,
+- [x] Complete syntax/resolved/HIR/preliminary-MIR/planned-MIR/final-MIR dumps,
       malformed-product tests, diagnostics, native success/failure matrices,
       cross-process determinism, and frontend robustness.
-- [ ] Promote only behavior that is fully implemented at this stage. Record
+- [x] Promote only behavior that is fully implemented at this stage. Record
       lower-priority actionable findings in a separately indexed final-fields
       discoveries document rather than expanding this task.
 
@@ -353,6 +353,19 @@ Rust-task gates.
 field/static storage and object-access family, aliases and owning state remain
 lifetime-safe, all permission boundaries are explicit and independently
 verified, and no scalar-only or raw-store shortcut remains.
+
+Completed 2026-08-16. Rebinding-capable aliases to final optional and scalar
+slots now lose mutable access at one centralized type-checking boundary, while
+inline-object and array aliases retain the shallow nested mutation supported
+by their existing non-rebinding models. MIR call verification independently
+rejects forged mutable aliases to final roots. Expanded carrier, lifecycle,
+backend, inheritance, checked-view, produced-read, dispatch, function-value,
+generic, generic-base, module, and static-specialization matrices cover the
+complete current composition surface. Native goldens exercise shallow aliases
+and ownership alongside deterministic compile failures; cross-process tests
+compare complete phase products and diagnostics. No lower-priority actionable
+finding remained for a discoveries record. Focused tests and full repository
+gates passed.
 
 ### FFI5 — Adopt public final primitive-box payloads and close
 

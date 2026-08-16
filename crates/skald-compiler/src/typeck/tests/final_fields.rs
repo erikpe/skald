@@ -200,9 +200,11 @@ fn synthesized_copy_construction_preserves_every_final_storage_family() {
         "fn identity(value: i64) -> i64 { return value; }\n",
         "class Values {\n",
         "  final primitive: i64; final object: Item; final maybe: i64?;\n",
-        "  final owner: shared Item; final values: i64[]; final callback: fn(i64) -> i64;\n",
+        "  final owner: shared Item; final maybe_owner: shared? Item; final nested: i64??;\n",
+        "  final values: i64[]; final callback: fn(i64) -> i64;\n",
         "  init() { self.primitive = 1; self.object = Item(2); self.maybe = 3;\n",
-        "    self.owner = new Item(4); self.values = i64[]{5}; self.callback = identity; }\n",
+        "    self.owner = new Item(4); self.maybe_owner = new Item(5); self.nested = none;\n",
+        "    self.values = i64[]{6}; self.callback = identity; }\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     ));
@@ -217,7 +219,7 @@ fn synthesized_copy_construction_preserves_every_final_storage_family() {
         values.copy_assignment,
         HirCopyCapability::Synthesized(_)
     ));
-    assert_eq!(copy.fields.len(), 6);
+    assert_eq!(copy.fields.len(), 8);
     assert!(matches!(
         copy.fields[0],
         HirSynthesizedFieldCopy::Scalar { .. }
@@ -236,10 +238,18 @@ fn synthesized_copy_construction_preserves_every_final_storage_family() {
     ));
     assert!(matches!(
         copy.fields[4],
-        HirSynthesizedFieldCopy::Array { .. }
+        HirSynthesizedFieldCopy::OptionalShared { .. }
     ));
     assert!(matches!(
         copy.fields[5],
+        HirSynthesizedFieldCopy::Optional { .. }
+    ));
+    assert!(matches!(
+        copy.fields[6],
+        HirSynthesizedFieldCopy::Array { .. }
+    ));
+    assert!(matches!(
+        copy.fields[7],
         HirSynthesizedFieldCopy::Scalar { .. }
     ));
     verify_mir(&lower_hir_to_final_mir(&hir)).unwrap();
@@ -357,12 +367,13 @@ fn rejects_final_static_root_assignment_for_every_stored_family_and_owner() {
         "  final static maybe_object: Item? = Item(4);\n",
         "  final static owner: shared Item = new Item(5);\n",
         "  final static maybe_owner: shared? Item = new Item(6);\n",
+        "  final static nested: i64?? = none;\n",
         "  final static values: i64[] = i64[]{7};\n",
         "  init() {}\n",
         "  static fn replace_all() -> unit {\n",
         "    State.scalar = 10; State.callback = identity; State.object = Item(11);\n",
         "    State.maybe = none; State.maybe_object = none;\n",
-        "    State.owner = new Item(12); State.maybe_owner = none;\n",
+        "    State.owner = new Item(12); State.maybe_owner = none; State.nested = none;\n",
         "    State.values = i64[]{13};\n",
         "  }\n",
         "}\n",
@@ -377,7 +388,7 @@ fn rejects_final_static_root_assignment_for_every_stored_family_and_owner() {
         .iter()
         .filter(|diagnostic| diagnostic.code == crate::typeck::FINAL_STATIC_REPLACEMENT)
         .collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 10, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics.len(), 11, "{:?}", output.diagnostics);
     assert!(diagnostics.iter().all(|diagnostic| {
         diagnostic
             .labels
@@ -418,7 +429,7 @@ fn final_static_roots_are_read_only_alias_sources() {
     let output = check_text(concat!(
         "fn replace_scalar(mut ref value: i64) -> unit { value = 0; }\n",
         "fn replace_optional(mut ref value: i64?) -> unit { value = none; }\n",
-        "fn replace_array(mut ref value: i64[]) -> unit { value = i64[]{}; }\n",
+        "fn mutate_array(mut ref value: i64[]) -> unit { value[0] = value[0] + 1; }\n",
         "class State {\n",
         "  final static scalar: i64 = 1;\n",
         "  final static optional: i64? = 2;\n",
@@ -426,7 +437,7 @@ fn final_static_roots_are_read_only_alias_sources() {
         "  init() {}\n",
         "}\n",
         "fn main() -> i64 { replace_scalar(State.scalar); ",
-        "replace_optional(State.optional); replace_array(State.values); return 0; }\n",
+        "replace_optional(State.optional); mutate_array(State.values); return 0; }\n",
     ));
 
     assert!(output.hir.is_none());
@@ -436,8 +447,49 @@ fn final_static_roots_are_read_only_alias_sources() {
             .iter()
             .filter(|diagnostic| diagnostic.code == INSUFFICIENT_ALIAS_ACCESS)
             .count(),
-        3,
+        2,
         "{:?}",
         output.diagnostics
     );
+}
+
+#[test]
+fn rebinding_capable_final_field_roots_are_read_only_alias_sources() {
+    let output = check_text(concat!(
+        "fn clear(mut ref value: i64?) -> unit { value = none; }\n",
+        "class Holder { final maybe: i64?; final values: i64[];\n",
+        "  init() { self.maybe = 1; self.values = i64[]{2}; } }\n",
+        "fn main() -> i64 { var holder: Holder = Holder();\n",
+        "  clear(holder.maybe); return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INSUFFICIENT_ALIAS_ACCESS)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+}
+
+#[test]
+fn final_inline_objects_and_array_elements_keep_shallow_mutable_aliases() {
+    let output = check_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn touch(mut ref item: Item) -> unit { item.value = item.value + 1; }\n",
+        "fn increment(mut ref value: i64) -> unit { value = value + 1; }\n",
+        "fn mutate(mut ref values: i64[]) -> unit { values[0] = values[0] + 1; }\n",
+        "class Holder { final item: Item; final values: i64[];\n",
+        "  init() { self.item = Item(20); self.values = i64[]{20}; } }\n",
+        "fn main() -> i64 { var holder: Holder = Holder();\n",
+        "  touch(holder.item); increment(holder.values[0]); mutate(holder.values);\n",
+        "  return holder.item.value + holder.values[0] - 1; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    verify_mir(&lower_hir_to_final_mir(&output.hir.unwrap())).unwrap();
 }

@@ -128,6 +128,12 @@ const PRIVATE_CELL_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_PRIVATE_CELL_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const PRIVATE_CELL_DIAGNOSTIC_TEST_NAME: &str =
     "private_cell_diagnostics_are_deterministic_across_processes";
+const FINAL_FIELD_HELPER_OUTPUT: &str = "SKALD_FINAL_FIELD_DETERMINISM_OUTPUT";
+const FINAL_FIELD_TEST_NAME: &str = "final_field_phase_products_are_deterministic_across_processes";
+const FINAL_FIELD_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_FINAL_FIELD_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const FINAL_FIELD_DIAGNOSTIC_TEST_NAME: &str =
+    "final_field_diagnostics_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
 const PERMUTATION_HELPER_VARIANT: &str = "SKALD_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
@@ -569,6 +575,26 @@ fn private_cell_diagnostics_are_deterministic_across_processes() {
         PRIVATE_CELL_DIAGNOSTIC_HELPER_OUTPUT,
         PRIVATE_CELL_DIAGNOSTIC_TEST_NAME,
         private_cell_diagnostic_dump,
+    );
+}
+
+#[test]
+fn final_field_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "final-fields",
+        FINAL_FIELD_HELPER_OUTPUT,
+        FINAL_FIELD_TEST_NAME,
+        final_field_phase_dump,
+    );
+}
+
+#[test]
+fn final_field_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "final-field-diagnostics",
+        FINAL_FIELD_DIAGNOSTIC_HELPER_OUTPUT,
+        FINAL_FIELD_DIAGNOSTIC_TEST_NAME,
+        final_field_diagnostic_dump,
     );
 }
 
@@ -1475,6 +1501,19 @@ fn private_cell_diagnostic_dump() -> String {
     type_error_phase_dump(
         "private-cell-diagnostics.ska",
         include_str!("../../../tests/golden/objects/private_cell_exclusions.ska"),
+    )
+}
+
+fn final_field_phase_dump() -> String {
+    complete_golden_phase_dump(include_str!(
+        "../../../tests/golden/objects/final_field_composition.ska"
+    ))
+}
+
+fn final_field_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "final-field-diagnostics.ska",
+        include_str!("../../../tests/golden/objects/final_field_alias_rebinding.ska"),
     )
 }
 

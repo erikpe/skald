@@ -39,3 +39,34 @@ source = "final_field_direct_write.ska"
 [test.expect.stderr]
 match = "contains"
 inline = "error[TYP043]: final field `value` cannot be replaced"
+
+[[test]]
+name = "composition"
+mode = "run"
+source = "final_field_composition.ska"
+compiler_args = ["--no-stdlib"]
+[[test.run]]
+name = "inheritance_checked_produced_dispatch_aliases_ownership_and_function_values"
+expect = { exit = 42 }
+
+[[test]]
+name = "generic_modules"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/final_field_generics",
+  "--no-stdlib",
+]
+[[test.run]]
+name = "substitutions_repeated_specialization_generic_bases_and_statics"
+expect = { exit = 42 }
+
+[[test]]
+name = "alias_rebinding"
+mode = "compile-fail"
+source = "final_field_alias_rebinding.ska"
+[test.expect.stderr]
+matches = [
+  { name = "optional field", match = "contains", inline = "read-only optional access cannot satisfy a mutable alias parameter" },
+  { name = "static scalar", match = "contains", inline = "read-only primitive access cannot satisfy a mutable alias parameter" },
+]

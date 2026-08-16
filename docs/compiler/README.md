@@ -282,7 +282,7 @@ same representation composes with ordinary lifecycle and alias protections,
 closed specialization, inheritance, virtual/interface dispatch, and eligible
 capture-free function values.
 
-The staged
+The implemented
 [final field representation](PHASES_AND_IR.md#frozen-final-field-representation)
 preserves contextual declaration evidence through resolved IR, closed
 specialization, typed HIR, and verified MIR without changing ordinary
@@ -293,9 +293,10 @@ assignment writes and synthesized assignment plans carry independently verified
 final-update evidence. Final statics retain explicit publication evidence
 through the certified eager lifecycle, reject source root replacement, and use
 ordinary backend slots and reverse shutdown. Its
-[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) stages
+[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) has completed
 contextual metadata, instance write rules, user and synthesized assignment,
-final-static lifecycle integration, composition, and standard-library adoption.
+final-static lifecycle integration, and composition; standard-library adoption
+and closure remain.
 
 ## Compiler crate API policy
 

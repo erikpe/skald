@@ -1,0 +1,33 @@
+import model;
+
+fn identity(value: i64) -> i64 {
+    return value;
+}
+
+fn main() -> i64 {
+    var first: model::Slot<i64> = model::Slot<i64>(1);
+    var repeated: model::Slot<i64> = model::Slot<i64>(2);
+    first = repeated;
+
+    var maybe_value: i64? = 3;
+    var maybe: model::Slot<i64?> = model::Slot<i64?>(maybe_value);
+
+    var values: model::Slot<i64[]> = model::Slot<i64[]>(i64[]{4, 5});
+    values.get()[0] = 6;
+
+    var owner: shared model::Item = new model::Item(7);
+    var owners: model::Slot<shared model::Item> =
+        model::Slot<shared model::Item>(owner);
+    owners.get()->value = 8;
+
+    var derived: model::Derived<i64> = model::Derived<i64>(9);
+    var callback: model::Value<fn(i64) -> i64> =
+        model::Value<fn(i64) -> i64>(identity);
+    var selected: fn(i64) -> i64 = callback.get();
+    if (model::Slot<i64>.empty is some || model::Slot<i64?>.empty is some) {
+        return 1;
+    }
+
+    return first.get() + maybe.get()! + values.get()[0]
+        + owners.get()->value + derived.get() + selected(1) + 15;
+}

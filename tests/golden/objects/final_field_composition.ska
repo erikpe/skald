@@ -1,0 +1,92 @@
+interface Reader {
+    fn read() -> i64;
+}
+
+class Child {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    mut fn bump() -> unit {
+        self.value = self.value + 1;
+    }
+}
+
+fn identity(value: i64) -> i64 {
+    return value;
+}
+
+fn touch(mut ref child: Child) -> unit {
+    child.bump();
+}
+
+fn touch_all(mut ref children: Child[]) -> unit {
+    children[0].bump();
+}
+
+class Base implements Reader {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Derived extends Base {
+    final extra: i64;
+    final child: Child;
+    final maybe: Child?;
+    final owner: shared Child;
+    final children: Child[];
+    final callback: fn(i64) -> i64;
+
+    init() {
+        super(5);
+        self.extra = 6;
+        self.child = Child(7);
+        self.maybe = Child(8);
+        self.owner = new Child(9);
+        self.children = Child[]{Child(1)};
+        self.callback = identity;
+    }
+
+    override fn read() -> i64 {
+        return self.value + self.extra;
+    }
+
+    mut fn exercise_shallow_state() -> unit {
+        touch(self.child);
+        self.maybe!.bump();
+        self.owner->bump();
+        touch_all(self.children);
+    }
+}
+
+fn produce() -> Derived {
+    return Derived();
+}
+
+fn through_interface(ref value: Reader) -> i64 {
+    return value.read();
+}
+
+fn through_base(ref value: Base) -> i64 {
+    return value.read();
+}
+
+fn through_checked(ref value: Obj) -> i64 {
+    return ((Derived) value).extra;
+}
+
+fn main() -> i64 {
+    var value: Derived = Derived();
+    value.exercise_shallow_state();
+    return through_interface(value) + through_base(value) + through_checked(value)
+        + produce().extra + value.callback(3) + value.child.value - 3;
+}

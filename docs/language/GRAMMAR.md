@@ -415,7 +415,7 @@ meaning is owned by
 and the compiler representation is owned by
 [Phases and IR](../compiler/PHASES_AND_IR.md#private-cell-field-representation).
 
-### Staged final-field declarations
+### Final-field declarations
 
 The compiler accepts the frozen final-field declaration alternatives:
 

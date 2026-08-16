@@ -22,6 +22,23 @@ fn forge_first_static_as_final(program: &mut MirProgram) {
         .final_span = Some(final_span);
 }
 
+fn forge_field_as_final(program: &mut MirProgram, field: FieldId) {
+    let declaration =
+        &mut program.classes.entries_mut_for_test()[field.class().index()].fields[field.index()];
+    let start = declaration.span.range().start();
+    declaration.final_span = Some(Span::new(
+        declaration.span.source_id(),
+        TextRange::new(start, start + 1).unwrap(),
+    ));
+    let MirCopyCapability::Synthesized(copy) =
+        &mut program.classes.entries_mut_for_test()[field.class().index()].copy_assignment
+    else {
+        panic!("test class must use synthesized copy assignment");
+    };
+    copy.final_fields.push(field);
+    copy.final_fields.sort_by_key(|field| field.index());
+}
+
 const SOURCE: &str = concat!(
     "class Values {\n",
     "  final value: i64;\n",
@@ -37,13 +54,16 @@ const ASSIGNMENT_FAMILIES: &str = concat!(
     "class Values {\n",
     "  final scalar: i64; final object: Item; final maybe: i64?;\n",
     "  final optional_object: Item?; final owner: shared Item;\n",
+    "  final optional_owner: shared? Item; final nested: i64??;\n",
     "  final values: i64[]; final callback: fn(i64) -> i64;\n",
     "  init(value: i64) { self.scalar = value; self.object = Item(value);\n",
     "    self.maybe = value; self.optional_object = Item(value);\n",
-    "    self.owner = new Item(value); self.values = i64[]{value}; self.callback = identity; }\n",
+    "    self.owner = new Item(value); self.optional_owner = new Item(value); self.nested = none;\n",
+    "    self.values = i64[]{value}; self.callback = identity; }\n",
     "  assign(ref other: Values) { self.scalar = other.scalar; self.object = other.object;\n",
     "    self.maybe = other.maybe; self.optional_object = other.optional_object;\n",
-    "    self.owner = other.owner; self.values = other.values; self.callback = other.callback; }\n",
+    "    self.owner = other.owner; self.optional_owner = other.optional_owner;\n",
+    "    self.nested = other.nested; self.values = other.values; self.callback = other.callback; }\n",
     "}\n",
     "fn main() -> i64 { return 0; }\n",
 );
@@ -181,7 +201,32 @@ fn verifier_rejects_forged_final_static_root_writes_and_mutable_aliases() {
     assert!(verify_mir(&alias)
         .unwrap_err()
         .to_string()
-        .contains("cannot mutably alias a final static root"));
+        .contains("cannot mutably alias a final field or static root"));
+}
+
+#[test]
+fn verifier_rejects_forged_mutable_aliases_to_rebinding_capable_final_fields() {
+    let source = concat!(
+        "fn clear(mut ref value: i64?) -> unit { value = none; }\n",
+        "fn mutate(mut ref value: i64[]) -> unit { value[0] = value[0] + 1; }\n",
+        "class Holder { maybe: i64?; values: i64[];\n",
+        "  init() { self.maybe = 1; self.values = i64[]{2}; } }\n",
+        "fn main() -> i64 { var holder: Holder = Holder();\n",
+        "  clear(holder.maybe); mutate(holder.values); return 0; }\n",
+    );
+    let program = lower_source_to_final_mir(source);
+
+    let mut optional = program.clone();
+    forge_field_as_final(&mut optional, FieldId::new(ClassId::new(0), 0));
+    let errors = verify_mir(&optional).unwrap_err().to_string();
+    assert!(
+        errors.contains("cannot mutably alias a final field or static root"),
+        "{errors}"
+    );
+
+    let mut array = program;
+    forge_field_as_final(&mut array, FieldId::new(ClassId::new(0), 1));
+    verify_mir(&array).unwrap();
 }
 
 #[test]
@@ -200,14 +245,14 @@ fn lowers_and_verifies_exact_user_assignment_evidence_for_every_storage_family()
             .iter()
             .map(|authorization| authorization.field.index())
             .collect::<Vec<_>>(),
-        vec![0, 1, 2, 3, 4, 5, 6]
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8]
     );
     assert!(authorizations.iter().all(|authorization| {
         authorization.operation == crate::identity::CopyAssignmentId::new(ClassId::new(1), 0)
     }));
 
     let dump = dump_mir(&program);
-    assert_eq!(dump.matches("final-write c1:field").count(), 7, "{dump}");
+    assert_eq!(dump.matches("final-write c1:field").count(), 9, "{dump}");
     assert_eq!(dump, dump_mir(&program));
 }
 
@@ -271,7 +316,7 @@ fn verifier_rejects_missing_forged_nested_or_wrong_operation_final_evidence() {
 #[test]
 fn synthesized_assignment_plan_carries_an_exact_ordered_final_field_set() {
     let source = ASSIGNMENT_FAMILIES.replace(
-        "  assign(ref other: Values) { self.scalar = other.scalar; self.object = other.object;\n    self.maybe = other.maybe; self.optional_object = other.optional_object;\n    self.owner = other.owner; self.values = other.values; self.callback = other.callback; }\n",
+        "  assign(ref other: Values) { self.scalar = other.scalar; self.object = other.object;\n    self.maybe = other.maybe; self.optional_object = other.optional_object;\n    self.owner = other.owner; self.optional_owner = other.optional_owner;\n    self.nested = other.nested; self.values = other.values; self.callback = other.callback; }\n",
         "",
     );
     let program = lower_source_to_final_mir(&source);
@@ -286,7 +331,7 @@ fn synthesized_assignment_plan_carries_an_exact_ordered_final_field_set() {
             .iter()
             .map(|field| field.index())
             .collect::<Vec<_>>(),
-        vec![0, 1, 2, 3, 4, 5, 6]
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8]
     );
     let MirCopyCapability::Synthesized(constructor) = &values.copy_constructor else {
         panic!("expected synthesized copy constructor");

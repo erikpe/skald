@@ -176,7 +176,7 @@ fn models_constructor_copy_temporary_optional_and_array_lifecycle_effects() {
            init() {}
          }
          class Item {
-           value: i64;
+           final value: i64;
            init() { self.value = State.constructed; }
            copy(ref other: Item) { self.value = State.copied; }
            assign(ref other: Item) { self.value = State.copied; }

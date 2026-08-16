@@ -988,7 +988,7 @@ value, closed-generic, and cross-module composition. Compile-failure goldens
 preserve privacy, modifier, and nested-mutation exclusions. Independent
 process tests compare complete phase products and diagnostics.
 
-## Staged final-field coverage direction
+## Final-field coverage
 
 Implemented declaration tests follow final evidence through each phase owner.
 Syntax and resolution cover contextual canonical modifier order, recovery,
@@ -1007,15 +1007,15 @@ products. Static-lifecycle tests require explicit initialization, prohibit the
 zero-default route and later root writes, and retain dependency, publication,
 failure, and reverse-shutdown certificates.
 
-Native and compile-failure goldens will distinguish direct final-field writes
+Native and compile-failure goldens distinguish direct final-field writes
 from mutable complete-value replacement; cover user assignment with zero,
 repeated, conditional, and loop-carried writes; and compose inheritance,
 generics, aliases, produced reads, dispatch, optionals, arrays, shared owners,
 function values, and static initialization. Backend tests retain ordinary
 layout, addressing, calling conventions, symbols, deterministic assembly, and
-runtime ABI version 9. Standard-library migration tests expose each primitive
-box payload as a public final field while preserving exact equality and
-domain-separated hashing.
+runtime ABI version 9. The FFI5 standard-library migration tests will expose
+each primitive box payload as a public final field while preserving exact
+equality and domain-separated hashing.
 
 ## Static-field coverage
 
