@@ -676,6 +676,14 @@ The functions preserve every bit, including the sign of zero, infinities, and
 NaN sign, payload, and signaling state. Consequently,
 `std::f64::to_bits(std::f64::from_bits(bits)) == bits` for every `u64` value.
 
+The installed module also exposes the inline `BoxF64` class. Its `Equatable`
+implementation compares exact `to_bits` results, and its `Hashable`
+implementation XORs that representation with a fixed `BoxF64` domain and
+passes it through `std::hash::mix_u64`. Consequently, positive and negative
+zero are distinct keys, identical NaN representations compare equal, and
+distinct NaN payloads remain distinct while structured bit patterns receive
+well-distributed hash codes.
+
 These operations reinterpret one complete primitive value; they do not
 perform a numeric cast, inspect memory, depend on host endianness, allocate,
 fail, or call the runtime. The existing `(u64) value` and `(f64) bits` casts

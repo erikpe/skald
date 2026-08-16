@@ -1,3 +1,6 @@
+from std::hash import mix_u64;
+from std::lang import Equatable, Hashable;
+
 intrinsic fn _to_bits(value: f64) -> u64;
 intrinsic fn _from_bits(bits: u64) -> f64;
 
@@ -9,4 +12,23 @@ public fn to_bits(value: f64) -> u64 {
 // Construct an f64 with exactly the supplied IEEE-754 binary64 representation.
 public fn from_bits(bits: u64) -> f64 {
     return _from_bits(bits);
+}
+
+public class BoxF64 implements Equatable, Hashable {
+    private _value: f64;
+
+    init(value: f64) {
+        self._value = value;
+    }
+
+    fn equals(ref other: Obj) -> bool {
+        if (!(other is BoxF64)) {
+            return false;
+        }
+        return _to_bits(self._value) == _to_bits(((BoxF64) other)._value);
+    }
+
+    fn hash_code() -> u64 {
+        return mix_u64(_to_bits(self._value) ^ 0x6636345f626f7801u);
+    }
 }

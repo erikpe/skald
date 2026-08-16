@@ -308,15 +308,15 @@ fn io_dump_exposes_exact_semantic_inputs_and_checked_offsets() {
     assert_eq!(
         relevant,
         vec![
-            "f11:v1 = io standard-handle stream f11:v0 @407..434",
-            "f12:v1 = io open path indirect(f12:s0) : a0 readonly anchor f12:s2 mode f12:v0 @495..515",
-            "array-range-offset f13:s5 = f13:v1 in indirect(f13:s1) : a0 @635..641",
-            "array-position-check f13:s5 RangeOffset -> f13:b1 else f13:b2 @635..641",
-            "f13:v3 = io read handle f13:v2 destination indirect(f13:s1) : a0 mutable anchor f13:s4 offset f13:s5 @605..642",
-            "array-range-offset f14:s5 = f14:v1 in indirect(f14:s1) : a0 @750..756",
-            "array-position-check f14:s5 RangeOffset -> f14:b1 else f14:b2 @750..756",
-            "f14:v3 = io write handle f14:v2 source indirect(f14:s1) : a0 readonly anchor f14:s4 offset f14:s5 @724..757",
-            "f15:v1 = io close handle f15:v0 @806..823",
+            "f12:v1 = io standard-handle stream f12:v0 @407..434",
+            "f13:v1 = io open path indirect(f13:s0) : a0 readonly anchor f13:s2 mode f13:v0 @495..515",
+            "array-range-offset f14:s5 = f14:v1 in indirect(f14:s1) : a0 @635..641",
+            "array-position-check f14:s5 RangeOffset -> f14:b1 else f14:b2 @635..641",
+            "f14:v3 = io read handle f14:v2 destination indirect(f14:s1) : a0 mutable anchor f14:s4 offset f14:s5 @605..642",
+            "array-range-offset f15:s5 = f15:v1 in indirect(f15:s1) : a0 @750..756",
+            "array-position-check f15:s5 RangeOffset -> f15:b1 else f15:b2 @750..756",
+            "f15:v3 = io write handle f15:v2 source indirect(f15:s1) : a0 readonly anchor f15:s4 offset f15:s5 @724..757",
+            "f16:v1 = io close handle f16:v0 @806..823",
         ]
     );
 }

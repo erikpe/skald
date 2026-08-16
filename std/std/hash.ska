@@ -1,0 +1,7 @@
+// Mix all input bits through the SplitMix64 finalizer.
+public fn mix_u64(value: u64) -> u64 {
+    var mixed: u64 = value + 0x9e3779b97f4a7c15u;
+    mixed = (mixed ^ (mixed >> 30u)) * 0xbf58476d1ce4e5b9u;
+    mixed = (mixed ^ (mixed >> 27u)) * 0x94d049bb133111ebu;
+    return mixed ^ (mixed >> 31u);
+}

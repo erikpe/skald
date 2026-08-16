@@ -19,7 +19,16 @@ The `std::f64` module provides exact `to_bits(f64) -> u64` and
 `from_bits(u64) -> f64` value reinterpretation. Its public functions are
 ordinary Skald wrappers over two private compiler intrinsics. Typed HIR,
 verified MIR, and x86-64 lowering preserve every binary64 bit inline; the
-module adds no allocation, foreign call, or runtime ABI surface.
+module adds no foreign call or runtime ABI surface. Its inline `BoxF64` class
+implements `Equatable` and `Hashable` using the exact binary representation:
+signed zeroes and distinct NaN payloads remain distinct, while identical bit
+patterns compare equal. Its hash code domain-separates those bits and passes
+them through `std::hash::mix_u64` for well-distributed output.
+
+The `std::hash` module provides `mix_u64`, a deterministic SplitMix64 finalizer
+over one complete `u64`. Primitive box classes apply their own fixed domain
+separation before calling this shared mixer. It is an ordinary non-cryptographic
+library function and introduces no runtime or compiler support.
 
 The `std::io` module has an implemented
 [whole-stream source contract](../docs/language/IO.md) and a separate

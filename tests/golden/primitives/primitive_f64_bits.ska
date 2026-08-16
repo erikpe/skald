@@ -1,6 +1,11 @@
 import std::f64;
 import std::io as io;
-from std::test import assert_eq_f64;
+from std::f64 import BoxF64;
+from std::test import assert_eq_f64, assert_eq_u64, assert_false, assert_true;
+
+class Other {
+    init() {}
+}
 
 fn observe(bits: u64) -> unit {
     io::println_u64(std::f64::to_bits(std::f64::from_bits(bits)));
@@ -20,5 +25,17 @@ fn main() -> i64 {
     observe(9221120237041090626u);
 
     assert_eq_f64(std::f64::from_bits(4607182418800017408u), 1.0);
+
+    var positive_zero: BoxF64 = BoxF64(std::f64::from_bits(0u));
+    var negative_zero: BoxF64 = BoxF64(std::f64::from_bits(9223372036854775808u));
+    assert_false(positive_zero.equals(negative_zero));
+
+    var first_nan: BoxF64 = BoxF64(std::f64::from_bits(9221120237041090561u));
+    var same_nan: BoxF64 = BoxF64(std::f64::from_bits(9221120237041090561u));
+    var other_nan: BoxF64 = BoxF64(std::f64::from_bits(9221120237041090562u));
+    assert_true(first_nan.equals(same_nan));
+    assert_false(first_nan.equals(other_nan));
+    assert_false(first_nan.equals(Other()));
+    assert_eq_u64(first_nan.hash_code(), 17228384300066241109u);
     return 0;
 }
