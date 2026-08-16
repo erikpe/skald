@@ -446,6 +446,20 @@ impl<'mir> Verifier<'mir> {
                         ));
                     }
                 }
+                if let Some(final_span) = field.final_span {
+                    if final_span.range().is_empty() || !span_contains(field.span, final_span) {
+                        self.program_error(format!(
+                            "field {} final modifier span must be nonempty and contained by its declaration span",
+                            field.id
+                        ));
+                    }
+                }
+                if field.cell_span.is_some() && field.final_span.is_some() {
+                    self.program_error(format!(
+                        "field {} cannot carry both cell and final metadata",
+                        field.id
+                    ));
+                }
                 match field.ty {
                     MirType::Interface(_) | MirType::Obj => self.program_error(format!(
                         "field {} cannot have a non-owning interface or `Obj` type",
@@ -470,6 +484,23 @@ impl<'mir> Verifier<'mir> {
                         "class {} static-field table index {index} contains {}",
                         class.id, field.id
                     ));
+                }
+                if let Some(final_span) = field.final_span {
+                    if final_span.range().is_empty() || !span_contains(field.span, final_span) {
+                        self.program_error(format!(
+                            "static field {} final modifier span must be nonempty and contained by its declaration span",
+                            field.id
+                        ));
+                    }
+                    if !matches!(
+                        field.initialization,
+                        super::super::model::MirStaticFieldInitialization::Explicit(_)
+                    ) {
+                        self.program_error(format!(
+                            "final static field {} must have explicit initialization",
+                            field.id
+                        ));
+                    }
                 }
                 if !self.static_field_type_is_supported(field.id, field.ty) {
                     self.program_error(format!(

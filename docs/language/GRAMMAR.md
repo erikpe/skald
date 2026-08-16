@@ -310,8 +310,12 @@ class-member                = field-declaration
 field-declaration           = ["private"] identifier ":" storage-type ";"
                             | "private" "cell" identifier ":"
                               storage-type ";"
+                            | ["private"] "final" identifier ":"
+                              storage-type ";"
 static-field-declaration    = ["private"] "static" identifier ":"
                               storage-type ["=" expression] ";"
+                            | ["private"] "final" "static" identifier ":"
+                              storage-type "=" expression ";"
 initializer-declaration     = ["private"] "init" parameter-list block
 copy-constructor-declaration = "copy" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
@@ -411,9 +415,9 @@ meaning is owned by
 and the compiler representation is owned by
 [Phases and IR](../compiler/PHASES_AND_IR.md#private-cell-field-representation).
 
-### Frozen planned final-field extension
+### Staged final-field declarations
 
-The frozen final-field design adds these alternatives:
+The compiler accepts the frozen final-field declaration alternatives:
 
 ```text
 final-field-declaration = ["private"] "final" identifier ":"
@@ -423,16 +427,16 @@ final-static-field-declaration = ["private"] "final" "static"
                                  "=" expression ";"
 ```
 
-They are deliberately absent from the implemented `class-member` production
-above until the active
-[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) reaches the
-corresponding compiler stages. The current compiler therefore does not yet
-accept either modifier form.
+Syntax, resolution, closed specialization, typed HIR, and verified MIR retain
+the exact modifier evidence on each ordinary field or static identity. Complete
+source-to-assembly compilation currently stops after verified MIR with
+`MIR002`; final write semantics remain staged in the active
+[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md).
 
 `private`, `final`, and `static` are contextual in these declarations. The
 modifier form is recognized only when the complete declaration lookahead
 matches, so the spellings remain available as ordinary identifiers elsewhere.
-The frozen canonical order is `private final static`: reordered, duplicated,
+The canonical order is `private final static`: reordered, duplicated,
 incomplete, or cross-category modifier forms are invalid. In particular,
 `static final name`, `final private name`, and `private final cell name` do not
 declare final storage. Existing declarations such as these keep their current

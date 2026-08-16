@@ -65,6 +65,7 @@ mod calls;
 mod control_flow;
 mod copy;
 mod destruction;
+mod final_fields;
 mod floating_comparisons;
 mod floating_division;
 mod function_values;

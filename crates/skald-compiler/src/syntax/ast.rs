@@ -209,6 +209,7 @@ impl ClassMember {
 pub struct FieldDecl {
     pub visibility: MemberVisibility,
     pub cell_span: Option<Span>,
+    pub final_span: Option<Span>,
     pub name: Name,
     pub type_syntax: TypeSyntax,
     pub span: Span,
@@ -218,6 +219,7 @@ pub struct FieldDecl {
 pub struct StaticFieldDecl {
     pub visibility: MemberVisibility,
     pub static_span: Span,
+    pub final_span: Option<Span>,
     pub name: Name,
     pub type_syntax: TypeSyntax,
     pub initializer: Option<StaticFieldInitializer>,

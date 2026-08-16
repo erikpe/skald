@@ -389,6 +389,9 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         if field.cell_span.is_some() {
             output.push_str("cell ");
         }
+        if field.final_span.is_some() {
+            output.push_str("final ");
+        }
         write_quoted(output, &field.name);
         let _ = write!(output, " : {}", field.ty);
         write_span(output, field.span);
@@ -401,9 +404,20 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
                 span.range().end()
             );
         }
+        if let Some(span) = field.final_span {
+            let _ = writeln!(
+                output,
+                "        Final @{}..{}",
+                span.range().start(),
+                span.range().end()
+            );
+        }
     }
     for field in &class.static_fields {
         let _ = write!(output, "      StaticField {} ", field.id);
+        if field.final_span.is_some() {
+            output.push_str("final ");
+        }
         write_quoted(output, &field.name);
         let _ = write!(output, " : {} {}", field.ty, field.initialization);
         if let Some(indices) = field.lifecycle {
@@ -415,6 +429,14 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         }
         write_span(output, field.span);
         output.push('\n');
+        if let Some(span) = field.final_span {
+            let _ = writeln!(
+                output,
+                "        Final @{}..{}",
+                span.range().start(),
+                span.range().end()
+            );
+        }
     }
     for initializer in &class.initializers {
         let _ = write!(output, "      Initializer {}(", initializer.id);

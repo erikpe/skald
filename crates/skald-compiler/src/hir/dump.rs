@@ -404,12 +404,18 @@ impl<'types> HirDumper<'types> {
                     if field.cell_span.is_some() {
                         dumper.output.push_str("cell ");
                     }
+                    if field.final_span.is_some() {
+                        dumper.output.push_str("final ");
+                    }
                     write_quoted(&mut dumper.output, &field.name);
                     let _ = write!(dumper.output, " : {}", dumper.type_name(field.ty));
                     write_span(&mut dumper.output, field.span);
                     dumper.output.push('\n');
                     if let Some(span) = field.cell_span {
                         dumper.indented(|dumper| dumper.line("Cell", span));
+                    }
+                    if let Some(span) = field.final_span {
+                        dumper.indented(|dumper| dumper.line("Final", span));
                     }
                 }
             });
@@ -419,26 +425,34 @@ impl<'types> HirDumper<'types> {
                     for field in &class.static_fields {
                         dumper.write_indentation();
                         let _ = write!(dumper.output, "StaticField {} ", field.id);
+                        if field.final_span.is_some() {
+                            dumper.output.push_str("final ");
+                        }
                         write_quoted(&mut dumper.output, &field.name);
                         let _ = write!(dumper.output, " : {}", dumper.type_name(field.ty));
                         write_span(&mut dumper.output, field.span);
                         dumper.output.push('\n');
-                        dumper.indented(|dumper| match &field.initializer {
-                            Some(initializer) => {
-                                dumper.line(
-                                    &format!(
-                                        "DeclarationInitializer {} destination {}",
-                                        initializer.id,
-                                        dumper.type_name(field.ty)
-                                    ),
-                                    initializer.span,
-                                );
-                                dumper.indented(|dumper| {
-                                    dumper.line("Equal", initializer.equal_span);
-                                    dumper.stored_value_initialization(&initializer.value);
-                                });
+                        dumper.indented(|dumper| {
+                            if let Some(span) = field.final_span {
+                                dumper.line("Final", span);
                             }
-                            None => dumper.raw_line("ZeroDefaultInitialization"),
+                            match &field.initializer {
+                                Some(initializer) => {
+                                    dumper.line(
+                                        &format!(
+                                            "DeclarationInitializer {} destination {}",
+                                            initializer.id,
+                                            dumper.type_name(field.ty)
+                                        ),
+                                        initializer.span,
+                                    );
+                                    dumper.indented(|dumper| {
+                                        dumper.line("Equal", initializer.equal_span);
+                                        dumper.stored_value_initialization(&initializer.value);
+                                    });
+                                }
+                                None => dumper.raw_line("ZeroDefaultInitialization"),
+                            }
                         });
                     }
                 });

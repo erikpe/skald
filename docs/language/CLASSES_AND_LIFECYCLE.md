@@ -330,12 +330,14 @@ fourth field to absence before ordinary string methods may populate it.
 
 ## Frozen final field direction
 
-Status: **frozen design; not yet implemented**. The active
-[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns delivery.
-Until its relevant stages complete, the implemented grammar continues to
-treat instance and static fields as mutable after initialization.
+Status: **frozen semantics; declaration representation implemented**. The
+compiler accepts canonical final instance and static declarations and retains
+their exact evidence through verified MIR. Complete compilation stops at the
+post-MIR `MIR002` executable gate until the active
+[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) implements the
+write semantics below.
 
-A final instance field has one of these planned forms:
+A final instance field has one of these canonical forms:
 
 ```ska
 class BoxF64 {

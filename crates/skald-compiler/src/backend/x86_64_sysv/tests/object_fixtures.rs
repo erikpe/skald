@@ -713,6 +713,7 @@ pub(super) fn field(
     MirFieldDeclaration {
         id,
         cell_span: None,
+        final_span: None,
         name: name.to_owned(),
         ty,
         span,

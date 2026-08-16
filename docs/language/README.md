@@ -82,8 +82,10 @@ The frozen final-field direction keeps those lifecycle rules while making one
 selected field slot independently non-replaceable after construction. Mutable
 complete class values remain assignable, and the exact class's selected user
 or synthesized copy assignment may update its own direct final representation.
-This shallow field modifier is planned but not yet accepted by the compiler;
-it does not introduce immutable local storage or deep constness.
+The compiler accepts and represents this shallow field modifier through
+verified MIR, then stops at the `MIR002` executable gate while the frozen write
+semantics are implemented. It does not introduce immutable local storage or
+deep constness.
 
 ## Lifetimes and safety direction
 

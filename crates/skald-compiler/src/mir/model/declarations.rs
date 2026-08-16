@@ -471,6 +471,7 @@ pub struct MirDirectBase {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStaticFieldDeclaration {
     pub id: StaticFieldId,
+    pub final_span: Option<Span>,
     pub name: String,
     pub ty: MirType,
     pub initialization: super::MirStaticFieldInitialization,
@@ -547,6 +548,7 @@ impl MirClassDeclaration {
 pub struct MirFieldDeclaration {
     pub id: FieldId,
     pub cell_span: Option<Span>,
+    pub final_span: Option<Span>,
     pub name: String,
     pub ty: MirType,
     pub span: Span,

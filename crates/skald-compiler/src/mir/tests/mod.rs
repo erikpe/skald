@@ -30,6 +30,7 @@ mod conditional_cleanup;
 mod copy;
 mod cycles;
 mod expression_stabilization;
+mod final_fields;
 mod floating_division;
 mod function_values;
 mod integer_division;

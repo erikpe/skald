@@ -44,6 +44,7 @@ mod diagnostics;
 mod dumps;
 mod expressions;
 mod external_links;
+mod final_fields;
 mod function_references;
 mod function_types;
 mod generic_classes;

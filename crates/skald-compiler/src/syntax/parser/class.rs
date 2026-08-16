@@ -1,5 +1,7 @@
 //! Class and instance-member declaration grammar.
 
+mod field_modifiers;
+
 use super::{declaration::TypeContext, *};
 
 #[derive(Clone, Copy)]
@@ -191,6 +193,7 @@ impl Parser<'_> {
                 && (self.starts_member_visibility()
                     || self.starts_static_member()
                     || self.starts_cell_field_modifier()
+                    || self.starts_final_field_modifier()
                     || self.starts_method_modifier()
                     || self.peek_ahead(1).kind == TokenKind::Colon
                     || self.lexeme(self.peek()) == "destroy"
@@ -203,26 +206,13 @@ impl Parser<'_> {
     fn parse_class_member(&mut self) -> Option<ClassMember> {
         let visibility = self.parse_member_visibility();
 
-        if self.starts_cell_field_modifier() {
-            return self.parse_cell_field(visibility);
+        let parsed_field = self.parse_class_field(visibility);
+        if parsed_field.recognized {
+            return parsed_field.member;
         }
 
         if self.at_contextual("static") && self.peek_ahead(1).kind != TokenKind::Colon {
             let static_token = self.advance();
-            if self.starts_cell_field_modifier()
-                && self.peek_ahead(1).kind == TokenKind::Identifier
-                && self.peek_ahead(2).kind == TokenKind::Colon
-            {
-                let cell_span = self.advance().span;
-                self.report(
-                    INVALID_CLASS_MEMBER,
-                    "cell fields cannot be static",
-                    cell_span,
-                    "declare an instance field as `private cell name: type;`",
-                );
-                let _ = self.parse_field(visibility, Some(cell_span));
-                return None;
-            }
             if self.at_contextual("private")
                 && self.peek_ahead(1).kind == TokenKind::Identifier
                 && self.lexeme(self.peek_ahead(1)) == "init"
@@ -237,11 +227,6 @@ impl Parser<'_> {
                 );
                 self.parse_initializer(MemberVisibility::Private { span: private_span });
                 return None;
-            }
-            if self.at(TokenKind::Identifier) && self.peek_ahead(1).kind == TokenKind::Colon {
-                return self
-                    .parse_static_field(visibility, static_token.span)
-                    .map(ClassMember::StaticField);
             }
             if self.at(TokenKind::Identifier)
                 && matches!(
@@ -372,9 +357,6 @@ impl Parser<'_> {
                     .parse_copy_constructor()
                     .map(ClassMember::CopyConstructor);
             }
-            if self.peek_ahead(1).kind == TokenKind::Colon {
-                return self.parse_field(visibility, None).map(ClassMember::Field);
-            }
             if text == "assign" && self.peek_ahead(1).kind == TokenKind::LeftParen {
                 if let MemberVisibility::Private { span } = visibility {
                     self.report_private_lifecycle(span, "copy assignments");
@@ -452,6 +434,7 @@ impl Parser<'_> {
                     self.lexeme(next),
                     "private"
                         | "cell"
+                        | "final"
                         | "static"
                         | "virtual"
                         | "override"
@@ -473,6 +456,7 @@ impl Parser<'_> {
                     self.lexeme(next),
                     "private"
                         | "cell"
+                        | "final"
                         | "static"
                         | "virtual"
                         | "override"
@@ -492,101 +476,57 @@ impl Parser<'_> {
         );
     }
 
-    fn starts_cell_field_modifier(&self) -> bool {
-        self.at_contextual("cell") && self.peek_ahead(1).kind != TokenKind::Colon
-    }
-
-    fn parse_cell_field(&mut self, visibility: MemberVisibility) -> Option<ClassMember> {
-        let cell_span = self.advance().span;
-        let mut valid = matches!(visibility, MemberVisibility::Private { .. });
-
-        if self.at_contextual("private")
-            && self.peek_ahead(1).kind == TokenKind::Identifier
-            && self.peek_ahead(2).kind == TokenKind::Colon
-        {
-            let private_span = self.advance().span;
-            self.report(
-                INVALID_CLASS_MEMBER,
-                "`private` must precede `cell`",
-                private_span,
-                "write `private cell name: type;`",
-            );
-            valid = false;
-        } else if !valid {
-            self.report(
-                INVALID_CLASS_MEMBER,
-                "cell fields must be private",
-                cell_span,
-                "write `private cell name: type;`",
-            );
-        }
-
-        while self.starts_cell_field_modifier() {
-            let duplicate = self.advance();
-            self.report(
-                INVALID_CLASS_MEMBER,
-                "a field cannot repeat `cell`",
-                duplicate.span,
-                "remove this duplicate cell modifier",
-            );
-            valid = false;
-        }
-
-        if self.at_contextual("static")
-            && self.peek_ahead(1).kind == TokenKind::Identifier
-            && self.peek_ahead(2).kind == TokenKind::Colon
-        {
-            let static_span = self.advance().span;
-            self.report(
-                INVALID_CLASS_MEMBER,
-                "cell fields cannot be static",
-                static_span,
-                "remove `static` or declare an ordinary static field",
-            );
-            let _ = self.parse_field(visibility, Some(cell_span));
-            return None;
-        }
-
-        if !self.at(TokenKind::Identifier) || self.peek_ahead(1).kind != TokenKind::Colon {
-            self.report(
-                INVALID_CLASS_MEMBER,
-                "`cell` modifies only an instance field",
-                cell_span,
-                "expected `private cell name: type;`",
-            );
-            return None;
-        }
-
-        let field = self.parse_field(visibility, Some(cell_span))?;
-        valid.then_some(ClassMember::Field(field))
-    }
-
     fn parse_field(
         &mut self,
         visibility: MemberVisibility,
         cell_span: Option<Span>,
+        final_span: Option<Span>,
     ) -> Option<FieldDecl> {
         let (name, type_syntax) = self.parse_field_parts(FieldDeclarationKind::Instance)?;
+        let mut valid = true;
+        let initializer_end = if final_span.is_some() {
+            self.consume(TokenKind::Equal).and_then(|equal| {
+                self.report(
+                    INVALID_CLASS_MEMBER,
+                    "instance fields cannot have declaration initializers",
+                    equal.span,
+                    "initialize final instance fields in constructors",
+                );
+                valid = false;
+                self.parse_expression().map(|expression| expression.span())
+            })
+        } else {
+            None
+        };
         let semicolon = self.expect(
             TokenKind::Semicolon,
             FieldDeclarationKind::Instance.semicolon_expectation(),
         );
-        let end_span = semicolon.map_or(type_syntax.span, |token| token.span);
-        Some(FieldDecl {
-            span: self.cover(visibility.start_span(name.span), end_span),
+        let end_span = semicolon.map_or(initializer_end.unwrap_or(type_syntax.span), |token| {
+            token.span
+        });
+        let field = FieldDecl {
+            span: self.cover(
+                visibility.start_span(final_span.unwrap_or(name.span)),
+                end_span,
+            ),
             visibility,
             cell_span,
+            final_span,
             name,
             type_syntax,
-        })
+        };
+        valid.then_some(field)
     }
 
     fn parse_static_field(
         &mut self,
         visibility: MemberVisibility,
         static_span: Span,
+        final_span: Option<Span>,
     ) -> Option<StaticFieldDecl> {
         let (name, type_syntax) = self.parse_field_parts(FieldDeclarationKind::Static)?;
+        let mut valid = true;
         let initializer = if let Some(equal) = self.consume(TokenKind::Equal) {
             let expression = self.parse_expression()?;
             Some(StaticFieldInitializer {
@@ -595,6 +535,15 @@ impl Parser<'_> {
                 expression,
             })
         } else {
+            if let Some(final_span) = final_span {
+                self.report(
+                    INVALID_CLASS_MEMBER,
+                    "final static fields require an initializer",
+                    final_span,
+                    "add `= expression` before the terminating `;`",
+                );
+                valid = false;
+            }
             None
         };
         let semicolon = self.expect(
@@ -611,14 +560,19 @@ impl Parser<'_> {
             },
             |token| token.span,
         );
-        Some(StaticFieldDecl {
-            span: self.cover(visibility.start_span(static_span), end_span),
+        let field = StaticFieldDecl {
+            span: self.cover(
+                visibility.start_span(final_span.unwrap_or(static_span)),
+                end_span,
+            ),
             visibility,
             static_span,
+            final_span,
             name,
             type_syntax,
             initializer,
-        })
+        };
+        valid.then_some(field)
     }
 
     fn parse_field_parts(&mut self, kind: FieldDeclarationKind) -> Option<(Name, TypeSyntax)> {

@@ -76,6 +76,7 @@ fn lower_class_declaration(
             HirFieldDeclaration {
                 id: field.id,
                 cell_span: field.cell_span,
+                final_span: field.final_span,
                 name: field.name.clone(),
                 name_span: field.name_span,
                 ty,

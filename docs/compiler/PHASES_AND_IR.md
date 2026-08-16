@@ -1320,14 +1320,14 @@ without adding a runtime or target-level cell operation.
 
 ## Frozen final field representation
 
-Status: **frozen design; not yet implemented**. The active
-[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns staged
-compiler work. Source semantics are defined by
+Status: **declaration metadata implemented; executable semantics frozen**. The
+active [final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns the
+remaining staged compiler work. Source semantics are defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction)
 and [Static Fields](../language/STATIC_FIELDS.md#frozen-final-static-field-direction).
 
-Syntax will retain one exact `final` modifier span on an ordinary instance or
-static field declaration. Resolution will preserve the declaration's existing
+Syntax retains one exact `final` modifier span on an ordinary instance or
+static field declaration. Resolution preserves the declaration's existing
 dense `FieldId` or `StaticFieldId`, declaring class, visibility, name, type,
 order, initializer identity where applicable, and source span plus one final
 marker. Generic template collection and closed specialization preserve that
@@ -1335,11 +1335,20 @@ property while allocating ordinary specialized identities. Finality creates
 no wrapper type, member category, containment edge, layout slot, virtual
 family, lifecycle slot, or runtime state.
 
-The canonical source order is `private final static`. Parser lookahead must
-keep `private`, `final`, `static`, and `cell` contextual while diagnosing
+The canonical source order is `private final static`. Parser lookahead keeps
+`private`, `final`, `static`, and `cell` contextual while diagnosing
 reordered, duplicated, incomplete, and cross-category combinations. A final
 instance field has no declaration initializer. A final static requires an
-explicit initializer and cannot use the zero-default static path.
+explicit initializer and cannot use the zero-default static path. AST,
+resolved IR, HIR, preliminary MIR, and final MIR dumps expose the marker;
+declaration verification rejects malformed spans, incompatible cell metadata,
+and zero-default final statics.
+
+After the ordinary final MIR pipeline verifies a final-bearing program, the
+driver reports `MIR002` before backend lowering. This phase-owned gate ensures
+that declaration support cannot silently execute as mutable storage. It is
+removed only as the later roadmap tasks establish and verify the write and
+lifecycle semantics below; non-final programs use the unchanged backend path.
 
 Construction remains direct initialization of incomplete storage. Ordinary
 and copy constructors use the current exact-once direct-field analysis, and

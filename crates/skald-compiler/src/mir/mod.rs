@@ -6,6 +6,7 @@
 
 mod build;
 mod dump;
+mod execution_support;
 mod lower;
 mod model;
 mod verify;
@@ -14,6 +15,7 @@ mod verify;
 pub(crate) mod test_fixtures;
 
 pub use dump::{dump_mir, dump_preliminary_mir};
+pub(crate) use execution_support::validate_final_field_execution_support;
 pub use lower::{lower_hir, lower_preliminary_hir};
 pub use model::{
     BlockId, MirAggregateOptionalAssign, MirAggregateOptionalCleanup,

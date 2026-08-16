@@ -255,6 +255,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
         .map(|field| MirFieldDeclaration {
             id: field.id,
             cell_span: field.cell_span,
+            final_span: field.final_span,
             name: field.name.clone(),
             ty: optional_types::lower_type(field.ty),
             span: field.span,
@@ -326,6 +327,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             .iter()
             .map(|field| MirStaticFieldDeclaration {
                 id: field.id,
+                final_span: field.final_span,
                 name: field.name.clone(),
                 ty: optional_types::lower_type(field.ty),
                 initialization: field

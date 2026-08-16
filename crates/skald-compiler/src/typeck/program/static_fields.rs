@@ -53,6 +53,7 @@ pub(super) fn lower_static_fields(
             HirStaticFieldDeclaration {
                 id: field.id,
                 static_span: field.static_span,
+                final_span: field.final_span,
                 name: field.name.clone(),
                 name_span: field.name_span,
                 ty,

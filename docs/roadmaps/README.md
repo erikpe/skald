@@ -6,18 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The [final fields roadmap](FINAL_FIELDS_ROADMAP.md) is in progress. FFI0
+implemented contextual declaration metadata through verified MIR behind an
+explicit executable gate; FFI1, instance construction and direct-write
+semantics, is next.
 
 ## Planned
 
-The [final fields roadmap](FINAL_FIELDS_ROADMAP.md) is planned to implement
-shallow final instance and class-owned static fields while preserving mutable
-complete-value replacement through exact user or synthesized copy assignment.
-FFI0, contextual declaration metadata behind an executable gate, is next. It
-depends on the implemented field/static parser, privacy, construction, copy
-capabilities, generic specialization, aliases and ownership protections,
-verified MIR, certified static lifecycle, backend, and primitive-box
-contracts; no active roadmap blocks it.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

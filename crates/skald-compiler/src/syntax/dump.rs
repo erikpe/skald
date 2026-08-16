@@ -216,6 +216,9 @@ impl AstDumper {
                     if let Some(span) = field.cell_span {
                         dumper.line("Cell", span);
                     }
+                    if let Some(span) = field.final_span {
+                        dumper.line("Final", span);
+                    }
                     dumper.named("Name", &field.name.text, field.name.span);
                     dumper.type_syntax(&field.type_syntax);
                 });
@@ -224,6 +227,9 @@ impl AstDumper {
                 self.line("StaticField", field.span);
                 self.indented(|dumper| {
                     dumper.member_visibility(field.visibility);
+                    if let Some(span) = field.final_span {
+                        dumper.line("Final", span);
+                    }
                     dumper.line("Static", field.static_span);
                     dumper.named("Name", &field.name.text, field.name.span);
                     dumper.type_syntax(&field.type_syntax);

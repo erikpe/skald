@@ -234,6 +234,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             id,
             visibility: member_visibility(source.visibility),
             cell_span: source.cell_span,
+            final_span: source.final_span,
             name: source.name.text.to_string(),
             name_span: source.name.span,
             type_syntax: ResolvedType {
@@ -256,6 +257,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
             id,
             visibility: member_visibility(source.visibility),
             static_span: source.static_span,
+            final_span: source.final_span,
             name: source.name.text.to_string(),
             name_span: source.name.span,
             type_syntax: ResolvedType {

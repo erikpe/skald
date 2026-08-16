@@ -668,6 +668,36 @@ fn verified_cell_writes_reach_backend_lowering() {
 }
 
 #[test]
+fn stops_final_fields_after_verified_mir_and_before_backend_emission() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "final-fields.ska",
+        concat!(
+            "class Values {\n",
+            "  final value: i64;\n",
+            "  final static version: u64 = 1u;\n",
+            "  init(value: i64) { self.value = value; }\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err() else {
+        panic!("expected the final-field execution gate");
+    };
+
+    let diagnostics = report.diagnostics.iter().collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 2);
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == "MIR002"));
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.message == "final fields cannot be emitted yet"));
+    let rendered = render_diagnostics(&report.sources, &report.diagnostics);
+    assert!(rendered.contains("metadata is preserved through verified MIR"));
+}
+
+#[test]
 fn typed_alias_syntax_reaches_the_backend_pipeline() {
     let artifact = compile_source_to_assembly(
         "alias-syntax.ska",

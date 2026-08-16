@@ -6,7 +6,8 @@ authoritative for the current source-visible static-field profile and the
 frozen planned final-static extension. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
-the current compiler.
+the current compiler. Canonical final-static declarations are represented but
+remain behind the executable gate described below.
 
 Currently accepted static fields are mutable class-owned places.
 Initializer-free declarations
@@ -76,10 +77,14 @@ named `static`; `private static name:` is a private static field.
 
 ## Frozen final static field direction
 
-Status: **frozen design; not yet implemented**. The active
-[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns delivery.
+Status: **frozen semantics; declaration representation implemented**. Canonical
+final statics require an explicit initializer and retain their ordinary static
+and initializer identities plus exact final evidence through verified MIR.
+Complete compilation stops at `MIR002`; the active
+[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns executable
+write and lifecycle semantics.
 
-A final static field has one of these planned canonical forms:
+A final static field has one of these canonical forms:
 
 ```ska
 class Limits {

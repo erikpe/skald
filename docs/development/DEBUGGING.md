@@ -536,12 +536,12 @@ make golden-filter GOLDEN_FILTER='**private_cell**'
 cargo test --locked -p skald-compiler --test pipeline_determinism private_cell
 ```
 
-## Frozen final field inspection direction
+## Staged final field inspection direction
 
-The planned final-field rollout should be inspected from declaration evidence
-to write reason. Syntax and resolved dumps must retain the exact `final` span
+The final-field rollout is inspected from declaration evidence to write reason.
+Syntax, resolved, HIR, and MIR dumps now retain the exact `final` span
 without changing ordinary `FieldId` or `StaticFieldId` identity. HIR and MIR
-must distinguish constructor initialization, ordinary mutable assignment,
+will additionally distinguish constructor initialization, ordinary mutable assignment,
 private-cell replacement, and exact declaring-class copy-assignment
 authorization; clearing final metadata or broadly upgrading receiver access is
 a bug.
@@ -555,9 +555,10 @@ initializer through preliminary lifecycle MIR, effect analysis, plan,
 certificate, generated publication, and reverse shutdown; any zero-default or
 later source root write is invalid.
 
-Until the roadmap lands focused commands, use the existing nearest owners:
+Use the implemented declaration suite and the nearest write owners:
 
 ```text
+cargo test --locked -p skald-compiler final_fields
 cargo test --locked -p skald-compiler private_cell
 cargo test --locked -p skald-compiler capabilities
 cargo test --locked -p skald-compiler static_fields

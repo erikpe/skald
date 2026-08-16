@@ -191,6 +191,7 @@ mod diagnostics;
 mod dumps;
 mod eager_boolean_operators;
 mod expressions;
+mod final_fields;
 mod floating_division;
 mod function_values;
 mod generic_classes;

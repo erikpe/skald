@@ -827,6 +827,9 @@ impl<'program> ResolvedDumper<'program> {
                     if field.cell_span.is_some() {
                         dumper.output.push_str("cell ");
                     }
+                    if field.final_span.is_some() {
+                        dumper.output.push_str("final ");
+                    }
                     write_quoted(&mut dumper.output, &field.name);
                     write_span(&mut dumper.output, field.span);
                     dumper.output.push('\n');
@@ -836,6 +839,9 @@ impl<'program> ResolvedDumper<'program> {
                         }
                         if let Some(span) = field.cell_span {
                             dumper.line("Cell", span);
+                        }
+                        if let Some(span) = field.final_span {
+                            dumper.line("Final", span);
                         }
                         dumper.type_syntax(&field.type_syntax);
                     });
@@ -850,12 +856,18 @@ impl<'program> ResolvedDumper<'program> {
                         if field.visibility.private_span().is_some() {
                             dumper.output.push_str("private ");
                         }
+                        if field.final_span.is_some() {
+                            dumper.output.push_str("final ");
+                        }
                         write_quoted(&mut dumper.output, &field.name);
                         write_span(&mut dumper.output, field.span);
                         dumper.output.push('\n');
                         dumper.indented(|dumper| {
                             if let Some(span) = field.visibility.private_span() {
                                 dumper.line("Private", span);
+                            }
+                            if let Some(span) = field.final_span {
+                                dumper.line("Final", span);
                             }
                             dumper.line("Static", field.static_span);
                             dumper.type_syntax(&field.type_syntax);

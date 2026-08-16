@@ -11,6 +11,7 @@ use super::{HirStoredValueInitialization, Type};
 pub struct HirStaticFieldDeclaration {
     pub id: StaticFieldId,
     pub static_span: Span,
+    pub final_span: Option<Span>,
     pub name: String,
     pub name_span: Span,
     pub ty: Type,

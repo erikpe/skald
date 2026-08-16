@@ -1,6 +1,6 @@
 # Final Fields Roadmap
 
-Status: planned; FFI0 is next.
+Status: in progress; FFI1 is next.
 
 This roadmap implements the frozen
 [final field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
@@ -72,7 +72,7 @@ decisions without reopening them.
 
 ## Progress
 
-- [ ] FFI0 — Represent contextual final declarations
+- [x] FFI0 — Represent contextual final declarations
 - [ ] FFI1 — Enforce instance construction and direct-write semantics
 - [ ] FFI2 — Authorize exact complete-value assignment
 - [ ] FFI3 — Integrate final statics with eager lifecycle
@@ -93,30 +93,30 @@ repository CI.
 any final write restriction or exceptional assignment authorization can depend
 on it.
 
-- [ ] Extend class-member parsing with one cohesive modifier classifier for
+- [x] Extend class-member parsing with one cohesive modifier classifier for
       ordinary, private-cell, final instance, static, and final-static fields.
       Keep the parser facade concise; if modifier lookahead and recovery become
       a substantial independent responsibility, give them a descriptive
       private submodule rather than growing one monolithic class parser.
-- [ ] Accept only the four canonical final forms and preserve contextual
+- [x] Accept only the four canonical final forms and preserve contextual
       declarations named `final`, `static`, `private`, and `cell`. Diagnose
       reordering, duplicates, missing names/types/punctuation, final/cell
       combinations, unsupported declaration categories, instance
       initializers, and initializer-free final statics at exact spans.
-- [ ] Add final marker and modifier-span metadata to instance and static AST,
+- [x] Add final marker and modifier-span metadata to instance and static AST,
       resolved, HIR, and MIR declarations without changing ordinary IDs,
       visibility, stored types, declaration order, initializer identity, or
       class layout inputs.
-- [ ] Preserve the marker through generic template analysis and closed
+- [x] Preserve the marker through generic template analysis and closed
       specialization, including per-application static identities and
       deterministic source/resolved/HIR/MIR dumps.
-- [ ] Extend declaration consistency and MIR verification to reject missing,
+- [x] Extend declaration consistency and MIR verification to reject missing,
       mismatched, empty, out-of-declaration, or cross-kind final metadata.
       Do not infer finality from names or visibility.
-- [ ] Put complete compilation of final-bearing programs behind one explicit
+- [x] Put complete compilation of final-bearing programs behind one explicit
       phase-owned executable gate. Parsing and metadata alone must never make
       ignored finality executable; all non-final programs remain unchanged.
-- [ ] Update living documentation only for declaration and representation
+- [x] Update living documentation only for declaration and representation
       portions that actually ship in this task, retaining frozen or staged
       status for executable semantics.
 
@@ -132,6 +132,10 @@ identity plus exact final evidence through verified declaration products,
 malformed forms stop with focused diagnostics, non-final behavior is
 unchanged, and no final-bearing program can execute before write semantics
 exist.
+
+Completed 2026-08-16. Focused syntax, resolution, specialization, HIR/MIR,
+verification, layout, and driver-gate tests, `make check`, `make msrv-check`,
+documentation validation, and `git diff --check` passed.
 
 ### FFI1 — Enforce instance construction and direct-write semantics
 
