@@ -1,3 +1,4 @@
+use super::DEFAULT_TIMEOUT;
 use std::{collections::BTreeMap, ffi::OsString, path::PathBuf, time::Duration};
 
 /// The complete, explicit environment supplied to a child process.
@@ -45,7 +46,7 @@ impl ProcessCommand {
             stdin: Vec::new(),
             working_directory: working_directory.into(),
             environment: ProcessEnvironment::new(),
-            timeout: Duration::from_secs(10),
+            timeout: DEFAULT_TIMEOUT,
         }
     }
 

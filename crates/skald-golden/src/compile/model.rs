@@ -1,3 +1,4 @@
+use crate::process::DEFAULT_TIMEOUT;
 use crate::{
     MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCommand, ProcessEnvironment,
     ProcessObservation, ProcessTermination, StreamComparison,
@@ -59,7 +60,7 @@ impl CompilerConfig {
             executable: executable.into(),
             working_directory: working_directory.into(),
             environment: ProcessEnvironment::new(),
-            default_timeout: Duration::from_secs(10),
+            default_timeout: DEFAULT_TIMEOUT,
         }
     }
 

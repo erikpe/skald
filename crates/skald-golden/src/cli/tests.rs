@@ -1,8 +1,9 @@
-use super::{options::Options, run_cli_with_context, HELP};
-use crate::{Determinism, ReportFormat};
+use super::{options::Options, run_cli_with_context, stage_options, HELP};
+use crate::{Determinism, ReportFormat, SandboxRetention};
 use std::{
     fs,
     io::{self, Write},
+    path::Path,
     path::PathBuf,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -72,6 +73,22 @@ fn parses_compiler_and_determinism_execution_options() {
     assert_eq!(options.slowest.unwrap().get(), 4);
     assert_eq!(options.format, ReportFormat::Json);
     assert!(options.keep_all_artifacts);
+}
+
+#[test]
+fn defaults_compiler_linker_and_execution_stages_to_thirty_seconds() {
+    let options = stage_options(
+        PathBuf::from("skac"),
+        Path::new("."),
+        Determinism::Off,
+        None,
+        SandboxRetention::Failures,
+    );
+
+    assert_eq!(options.compiler().default_timeout().as_secs(), 30);
+    assert_eq!(options.linker_timeout().as_secs(), 30);
+    assert_eq!(options.execution().default_timeout().as_secs(), 30);
+    assert_eq!(options.runtime().command().timeout().as_secs(), 120);
 }
 
 #[test]

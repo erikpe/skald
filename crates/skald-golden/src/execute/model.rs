@@ -1,3 +1,4 @@
+use crate::process::DEFAULT_TIMEOUT;
 use crate::{
     ExitExpectation, MatcherLoadFailure, MatcherMismatch, PipeFailure, ProcessCommand,
     ProcessEnvironment, ProcessObservation, ProcessTermination, StreamComparison,
@@ -25,7 +26,7 @@ impl ExecutionOptions {
     pub fn new(temporary_root: impl Into<PathBuf>) -> Self {
         Self {
             temporary_root: temporary_root.into(),
-            default_timeout: Duration::from_secs(10),
+            default_timeout: DEFAULT_TIMEOUT,
             inherited_environment: ProcessEnvironment::new(),
             retention: SandboxRetention::Failures,
         }

@@ -182,9 +182,10 @@ populates it.
 
 Child environments are rebuilt from the toolchain allowlist plus declared
 values and a private `TMPDIR`. Stdin writing and output capture proceed
-concurrently. Each process has a timeout, and Linux timeouts terminate the
-complete child process group. `serial = true` requests exclusive execution;
-equal names in `resources = ["..."]` prevent only those nodes from overlapping.
+concurrently. Each process has a 30-second default timeout, and Linux timeouts
+terminate the complete child process group. `serial = true` requests exclusive
+execution; equal names in `resources = ["..."]` prevent only those nodes from
+overlapping.
 
 The runtime is prepared once when a selection contains native tests.
 Independent compiler, linker, and run nodes share the bounded worker pool.

@@ -208,9 +208,10 @@ the runtime. The scheduler defaults to host available parallelism under one
 process budget. Use `--jobs 1` for single-worker diagnosis, `--fail-fast` to
 stop starting unrelated work after an observed failure, and spec `serial` or
 named `resources` for explicit exclusion. Results remain in canonical ID order.
-`--timeout SECONDS` changes the default bound for compiler, linker, and native
-processes; an explicit per-test timeout remains authoritative. Human output is
-the default, while `--format json` and `--format junit` emit single
+Compiler, linker, and native processes default to a 30-second timeout.
+`--timeout SECONDS` changes that bound; an explicit per-test timeout remains
+authoritative. Human output is the default, while `--format json` and
+`--format junit` emit single
 machine-readable documents with the same canonical leaf IDs, stages, statuses,
 durations, and failures. `--show-output` includes passing streams in human
 reports, `--slowest N` ranks completed leaves with stable ID tie-breaking, and

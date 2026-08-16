@@ -2,6 +2,7 @@
 
 mod options;
 
+use crate::process::DEFAULT_TIMEOUT;
 use crate::{
     allowlisted_environment, build_plan, execute_parallel, locate_compiler, render_report, select,
     CompilerConfig, ExecutionOptions, PlannedLeafKind, ProcessCommand, Report, ReportFormat,
@@ -32,7 +33,7 @@ Execution and read-only inspection:
   --compiler-arg ARG     Append a compiler argument; repeatable
   --determinism MODE     Use off (default), compile, or full
   --jobs N               Bound active processes; defaults to host parallelism
-  --timeout SECONDS      Override the default timeout for each process
+  --timeout SECONDS      Override the 30-second timeout for each process
   --fail-fast            Stop starting unrelated work after a failure
   --show-output          Show captured output for passing cases too
   --slowest N            Report the N slowest completed leaf IDs
@@ -162,7 +163,7 @@ fn stage_options(
     let runtime_archive = std::env::var_os(RUNTIME_ARCHIVE_ENV)
         .map(PathBuf::from)
         .unwrap_or_else(|| repository_root.join("build/runtime/libskald_runtime.a"));
-    let default_timeout = timeout.unwrap_or(Duration::from_secs(10));
+    let default_timeout = timeout.unwrap_or(DEFAULT_TIMEOUT);
     let compiler_config = CompilerConfig::new(compiler, repository_root)
         .with_environment(environment.clone())
         .with_default_timeout(default_timeout);
