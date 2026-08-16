@@ -30,9 +30,7 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-The [`Str` cached-hash migration discovery](STR_CACHED_HASH_MIGRATION_DISCOVERY.md)
-records the coordinated compiler language-item and standard-library work
-needed before `std::str::Str` can add a private-cell hash cache.
+No implementation discoveries are currently pending.
 
 ## Implementation baseline
 

@@ -1313,12 +1313,10 @@ alignment, calling convention, dispatch table, symbol family, runtime call,
 public C API, or runtime ABI version. It carries no atomic, volatile,
 synchronization, thread-local, or runtime borrow semantics.
 
-Declaration metadata, typed authorization, verified MIR, and minimal native
-execution are established. The remaining rollout hardens lifecycle/alias
-composition, then inheritance, dispatch, generics, determinism, and
-publication. The compiler-known
-`std::str::Str` descriptor remains a separate follow-up and retains its exact
-current literal-materialization contract during this roadmap.
+The compiler-known `std::str::Str` descriptor composes the implemented cell
+permission with intrinsic literal construction: its fourth exact field is a
+private-cell `u64?` hash cache, and `StringInitialize` publishes it absent
+without adding a runtime or target-level cell operation.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,

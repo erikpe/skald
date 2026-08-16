@@ -265,8 +265,8 @@ fn resolves_imported_string_call_and_inherited_static_initializer_uses_determini
     assert_eq!(first_dump, dump_resolved(&second.program));
     assert_eq!(
         first_dump.matches("DeclarationInitializer").count(),
-        7,
-        "inherited aliases must not create work beyond the three application, three canonical table, and one empty-string backing initializers: {first_dump}"
+        8,
+        "inherited aliases must not create work beyond the three application, three canonical table, and two empty-string backing/hash initializers: {first_dump}"
     );
 }
 
@@ -519,11 +519,13 @@ fn static_fields_do_not_participate_in_string_instance_shape_matching() {
                     "  private _storage: shared u8[];\n",
                     "  private _start: i64;\n",
                     "  private _length: u64;\n",
+                    "  private cell _hash_code: u64?;\n",
                     "  static instances: u64;\n",
                     "  init() {\n",
                     "    self._storage = new u8[]();\n",
                     "    self._start = 0;\n",
                     "    self._length = 0u;\n",
+                    "    self._hash_code = none;\n",
                     "  }\n",
                     "}\n",
                 ),
@@ -537,9 +539,9 @@ fn static_fields_do_not_participate_in_string_instance_shape_matching() {
         .program
         .string_language_item
         .as_ref()
-        .expect("the three instance fields must retain canonical string matching");
+        .expect("the four instance fields must retain canonical string matching");
     assert_eq!(item.class, ClassId::new(0));
-    assert_eq!(output.program.class(item.class).unwrap().fields.len(), 3);
+    assert_eq!(output.program.class(item.class).unwrap().fields.len(), 4);
     assert_eq!(
         output
             .program

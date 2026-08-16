@@ -14,6 +14,7 @@ pub struct MirStringLanguageItem {
     pub storage_field: FieldId,
     pub start_field: FieldId,
     pub length_field: FieldId,
+    pub hash_code_field: FieldId,
     pub storage_array: ArrayTypeId,
 }
 
@@ -83,6 +84,7 @@ pub struct MirStringInitialize {
     pub storage_field: FieldId,
     pub start_field: FieldId,
     pub length_field: FieldId,
+    pub hash_code_field: FieldId,
     pub start: i64,
     pub length: u64,
     pub span: Span,

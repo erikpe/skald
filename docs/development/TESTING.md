@@ -661,7 +661,8 @@ String coverage follows the
   providers, cyclic dependencies, replacement roots, and disabled
   standard-library lookup;
 - resolver and type-check tests own exact language-item identity, the complete
-  descriptor/privacy/lifecycle rejection matrix, produced-value contexts,
+  four-field descriptor/private-cell/privacy/lifecycle rejection matrix,
+  `Equatable`/`Hashable` conformance, produced-value contexts,
   canonical private descriptor construction, the canonical
   `std::str`/`std::error` cycle and panic statements, and the rule that
   ordinary initializer and method names have no compiler meaning;
@@ -669,12 +670,14 @@ String coverage follows the
   descriptor-publication, and ownership invariant independently;
 - backend tests own immutable bytes, pooling, alignment, relocations,
   sentinel-aware retain/release, dynamic reclamation, malformed-input
-  rejection, and the unchanged runtime ABI;
+  rejection, absent literal-cache publication, and the unchanged runtime ABI;
 - native goldens own copying, assignment, arguments, results, temporaries,
   repeated default construction over one private static empty backing, signed
   and negative byte positions, half-open and negative slice bounds, checked
   failures, factory isolation, conversion, concatenation, embedded zero/high
-  bytes, canonical boolean and integer formatting through
+  bytes, byte equality and equal-hash consistency across literals, dynamic
+  strings, slices, copies, interfaces, and generic bounds, canonical boolean
+  and integer formatting through
   `std::io`, every integer width boundary, powers of ten, exact optional
   boolean and integer parsing, exhaustive `u8` round trips, malformed and
   arbitrary-length input, correctly rounded binary64 parsing against a

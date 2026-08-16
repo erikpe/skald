@@ -479,12 +479,13 @@ graph must contain one synthetic edge to `std::str` for each requiring module;
 an explicit import coalesces with that edge but remains distinguishable in the
 graph dump.
 
-The resolved dump names one exact `StringLanguageItem` class and its three
-field identities, followed by source-ordered literal-data identities. HIR
+The resolved dump names one exact `StringLanguageItem` class and its four
+field identities, including the private-cell optional hash cache, followed by
+source-ordered literal-data identities. HIR
 retains those identities on produced exact-class values and contains no
 initializer, factory, or method-name lookup. MIR then shows immutable literal
-data, `shared-static`, and `string-initialize` before ordinary copy,
-assignment, argument/result, and cleanup operations.
+data, `shared-static`, and `string-initialize` with `hash-code absent` before
+ordinary copy, assignment, argument/result, and cleanup operations.
 
 In assembly, literal backing appears in immutable or relocation-read-only data
 with the shared `u8[]` metadata relocation, `u64::MAX` strong-count sentinel,

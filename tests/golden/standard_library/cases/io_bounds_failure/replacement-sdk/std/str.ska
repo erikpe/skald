@@ -4,16 +4,19 @@ public class Str {
     private _storage: shared u8[];
     private _start: i64;
     private _length: u64;
+    private cell _hash_code: u64?;
 
     init() {
         self._storage = new u8[]();
         self._start = 0;
         self._length = 0u;
+        self._hash_code = none;
     }
 
     private init(storage: shared u8[], start: i64, length: u64) {
         self._storage = storage;
         self._start = start;
         self._length = length;
+        self._hash_code = none;
     }
 }

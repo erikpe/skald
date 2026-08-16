@@ -1,27 +1,33 @@
 from std::error import panic;
+from std::hash import mix_u64;
+from std::lang import Equatable, Hashable;
 from std::vec import Vec;
 import std::str::format_integer as format_integer;
 import std::str::format_f64 as format_f64;
 import std::str::parse_integer as parse_integer;
 import std::str::parse_f64 as parse_f64;
 
-public class Str {
+public class Str implements Equatable, Hashable {
     private static _EMPTY_STORAGE: shared u8[] = new u8[]();
+    private static _EMPTY_HASH_CODE: u64 = 0x7374725f656d7074u;
 
     private _storage: shared u8[];
     private _start: i64;
     private _length: u64;
+    private cell _hash_code: u64?;
 
     init() {
         self._storage = Str._EMPTY_STORAGE;
         self._start = 0;
         self._length = 0u;
+        self._hash_code = none;
     }
 
     private init(storage: shared u8[], start: i64, length: u64) {
         self._storage = storage;
         self._start = start;
         self._length = length;
+        self._hash_code = none;
     }
 
     fn len() -> u64 {
@@ -174,18 +180,46 @@ public class Str {
         if (self._length != other._length) {
             return false;
         }
-
+        if (self._hash_code is some && other._hash_code is some && self._hash_code! != other._hash_code!) {
+            return false;
+        }
         var self_storage: shared u8[] = self._storage;
         var other_storage: shared u8[] = other._storage;
-        var index: u64 = 0u;
-        while (index < self._length) {
-            var offset: i64 = (i64) index;
-            if (self_storage->[self._start + offset] != other_storage->[other._start + offset]) {
+        var self_index: i64 = self._start;
+        var self_stop: i64 = self_index + (i64) self._length;
+        var other_index: i64 = other._start;
+        while (self_index < self_stop) {
+            if (self_storage->[self_index] != other_storage->[other_index]) {
                 return false;
             }
-            index = index + 1u;
+            self_index = self_index + 1;
+            other_index = other_index + 1;
         }
         return true;
+    }
+
+    fn hash_code() -> u64 {
+        if (self._hash_code is some) {
+            return self._hash_code!;
+        }
+        // Empty descriptors intentionally begin uncached so construction
+        // stays cheap; pay the static lookup only on their first hash.
+        if (self._length == 0u) {
+            self._hash_code = Str._EMPTY_HASH_CODE;
+            return Str._EMPTY_HASH_CODE;
+        }
+        var hash: u64 = 0xcbf29ce484222325u;
+        var index: i64 = self._start;
+        var stop: i64 = index + (i64) self._length;
+        var self_storage: shared u8[] = self._storage;
+        // Fold exact bytes with FNV-1a, then domain-separate and avalanche.
+        while (index < stop) {
+            hash = (hash ^ (u64) self_storage->[index]) * 0x100000001b3u;
+            index = index + 1;
+        }
+        hash = mix_u64(hash ^ 0x7374725f68617368u);
+        self._hash_code = hash;
+        return hash;
     }
 
     fn concat(ref other: Str) -> Str {

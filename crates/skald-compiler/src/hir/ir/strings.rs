@@ -12,6 +12,7 @@ pub struct HirStringLanguageItem {
     pub storage_field: FieldId,
     pub start_field: FieldId,
     pub length_field: FieldId,
+    pub hash_code_field: FieldId,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

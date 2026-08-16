@@ -324,10 +324,9 @@ and concurrency semantics are outside the frozen profile.
 
 The confirmed decision record is preserved in the
 [private cell fields design proposal](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
-Adding a cached hash field to the compiler-known `std::str::Str` descriptor is
-a [separate follow-up](../roadmaps/STR_CACHED_HASH_MIGRATION_DISCOVERY.md)
-because literal materialization currently initializes exactly the three
-frozen descriptor fields.
+The compiler-known `std::str::Str` descriptor uses this permission for its
+implemented optional hash cache. Compiler-created literals initialize that
+fourth field to absence before ordinary string methods may populate it.
 
 ## Object places and projections
 

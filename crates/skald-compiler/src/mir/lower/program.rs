@@ -163,6 +163,7 @@ fn lower_string_language_item(
         storage_field: item.storage_field,
         start_field: item.start_field,
         length_field: item.length_field,
+        hash_code_field: item.hash_code_field,
         storage_array,
     }
 }

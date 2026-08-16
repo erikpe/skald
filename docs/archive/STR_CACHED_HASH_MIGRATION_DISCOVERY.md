@@ -1,7 +1,6 @@
 # `Str` Cached-Hash Migration Discovery
 
-Status: pending follow-up; intentionally outside the completed private cell
-fields roadmap.
+Status: resolved and archived by the completed cached-hash migration roadmap.
 
 ## Problem
 

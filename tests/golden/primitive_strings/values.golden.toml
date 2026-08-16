@@ -19,6 +19,15 @@ name = "linux_windows_mixed_empty_and_retained_lines"
 expect = { exit = 0 }
 
 [[test]]
+name = "hashing"
+mode = "run"
+source = "string_hashing.ska"
+
+[[test.run]]
+name = "interfaces_content_slices_lifecycle_and_cache"
+expect = { exit = 0 }
+
+[[test]]
 name = "split"
 mode = "run"
 source = "string_split.ska"

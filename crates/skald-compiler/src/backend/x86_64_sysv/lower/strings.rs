@@ -42,6 +42,12 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         self.store_descriptor_word(initialize.length_field, Register::Rax);
+
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 0,
+            destination: Register::Rax,
+        });
+        self.store_descriptor_word(initialize.hash_code_field, Register::Rax);
         Ok(())
     }
 

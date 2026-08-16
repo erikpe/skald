@@ -33,8 +33,12 @@ pub fn dump_hir(program: &HirProgram) -> String {
         });
         if let Some(item) = &program.string_language_item {
             dumper.raw_line(&format!(
-                "StringLanguageItem class {} fields {} {} {}",
-                item.class, item.storage_field, item.start_field, item.length_field
+                "StringLanguageItem class {} fields {} {} {} {}",
+                item.class,
+                item.storage_field,
+                item.start_field,
+                item.length_field,
+                item.hash_code_field
             ));
         }
         if !program.optional_types.is_empty() {

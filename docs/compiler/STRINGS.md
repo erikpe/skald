@@ -27,8 +27,9 @@ The selected declaration must be:
 
 - a public concrete class declared directly as `Str` in module `std::str`;
 - without a direct base;
-- composed of exactly three direct private fields, in order:
-  `_storage: shared u8[]`, `_start: i64`, and `_length: u64`;
+- composed of exactly four direct private fields, in order:
+  `_storage: shared u8[]`, `_start: i64`, `_length: u64`, and
+  `private cell _hash_code: u64?`;
 - without an explicit copy constructor, copy assignment, or destructor; and
 - eligible for ordinary synthesized field-wise lifecycle.
 
@@ -121,13 +122,15 @@ MIR gives decoded byte blocks deterministic program-local identities distinct
 from dynamic allocations. Literal materialization:
 
 1. obtains one verified immortal `shared u8[]` handle for the decoded block;
-2. initializes the selected private `_storage`, `_start`, and `_length` fields;
+2. initializes the selected private `_storage`, `_start`, and `_length` fields
+   and sets the selected private-cell `_hash_code` field absent;
 3. publishes one complete exact `Str` result; and
 4. continues through ordinary synthesized lifecycle and owner operations.
 
 The verifier checks literal-data identity and density, exact array element
 type and length, immutable byte payload, one valid metadata identity,
-language-item/field identity, complete descriptor initialization, static
+all four language-item field identities, absent initial hash state, complete
+descriptor initialization, static
 publication, and every later ownership use. Dynamic allocation publication
 cannot manufacture immortality, and malformed literal descriptors or leaked
 unpublished states fail verification.

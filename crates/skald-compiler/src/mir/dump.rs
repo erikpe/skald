@@ -156,8 +156,13 @@ fn dump_program(program: &MirProgram, heading: &str) -> String {
     if let Some(item) = program.string_language_item {
         let _ = writeln!(
             output,
-            "  StringLanguageItem class {} storage {} start {} length {} storage-array {}",
-            item.class, item.storage_field, item.start_field, item.length_field, item.storage_array
+            "  StringLanguageItem class {} storage {} start {} length {} hash-code {} storage-array {}",
+            item.class,
+            item.storage_field,
+            item.start_field,
+            item.length_field,
+            item.hash_code_field,
+            item.storage_array
         );
     }
     if !program.literal_data.is_empty() {
@@ -1009,13 +1014,14 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &initialize.destination);
                 let _ = write!(
                     output,
-                    " from {} backing {} : class {} fields [{}, {}, {}] start {} length {}",
+                    " from {} backing {} : class {} fields [{}, {}, {}, {}] start {} length {} hash-code absent",
                     initialize.data,
                     initialize.backing,
                     initialize.class,
                     initialize.storage_field,
                     initialize.start_field,
                     initialize.length_field,
+                    initialize.hash_code_field,
                     initialize.start,
                     initialize.length
                 );

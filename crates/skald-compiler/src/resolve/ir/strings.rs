@@ -12,6 +12,7 @@ pub struct ResolvedStringLanguageItem {
     pub storage_field: FieldId,
     pub start_field: FieldId,
     pub length_field: FieldId,
+    pub hash_code_field: FieldId,
     pub declaration_span: Span,
     pub requiring_literal_spans: Vec<Span>,
 }

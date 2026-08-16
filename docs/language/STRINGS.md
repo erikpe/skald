@@ -5,8 +5,8 @@ string-literal syntax, conditionally discovers and validates
 `std::str::Str`, and represents literals as exact typed produced values
 through verified MIR descriptor materialization and deterministic x86-64
 execution. The installed standard library provides copying construction,
-observation, read-only structural indexing and slicing, conversion, and
-concatenation behavior.
+observation, read-only structural indexing and slicing, conversion,
+concatenation, byte equality, and cached byte-content hashing behavior.
 This document is authoritative for the source-visible string contract, while
 the [status matrix](STATUS.md) remains authoritative for compiler availability.
 
@@ -33,14 +33,15 @@ The path is case-sensitive. No local, imported, or unrelated declaration named
 an ordinary distinct class; only the exact language-item identity is the type
 of a literal.
 
-A `Str` is a logically immutable inline descriptor with exactly these first
-three direct fields, in order, and no additional direct fields:
+A `Str` is a logically immutable inline descriptor with exactly these four
+direct fields, in order, and no additional direct fields:
 
 ```ska
 public class Str {
     private _storage: shared u8[];
     private _start: i64;
     private _length: u64;
+    private cell _hash_code: u64?;
 
     // At least one safe ordinary initializer and the library's methods.
 }
@@ -48,9 +49,12 @@ public class Str {
 
 The class has no direct base and declares no explicit copy constructor, copy
 assignment, or destructor. Ordinary synthesized field-wise lifecycle applies:
-copying retains the shared array owner and copies the bounds, assignment
-securely replaces that owner and copies the bounds, and destruction releases
-the owner.
+copying retains the shared array owner and copies the bounds and cache,
+assignment securely replaces that owner and copies the bounds and cache, and
+destruction releases the owner. Every newly constructed descriptor begins
+with an absent cache. A zero-length descriptor installs its fixed hash on its
+first `hash_code` call. Because observable bytes never change, copying a
+present cache is valid.
 
 Every valid descriptor satisfies:
 
@@ -63,8 +67,14 @@ length <= storage.len() - (u64) start
 The signed start uses the same position type as array and string indices while
 the length remains an unsigned count. The standard library is trusted to
 preserve the non-negative, in-bounds descriptor invariant. Public source cannot
-select the private fields. Interfaces and ordinary instance or static methods
-do not alter the representation and remain permitted.
+select the private fields. The canonical class implements
+`std::lang::Equatable` and `std::lang::Hashable`. `equals` accepts `Obj`,
+returns false for every non-`Str`, and otherwise compares exact bytes.
+`hash_code` hashes the same visible byte sequence independent of backing and
+slice range, then caches the result through `_hash_code`. A zero-length string
+uses one fixed, mixer-independent hash regardless of its construction path.
+Equal strings always have equal hashes. Other interfaces and ordinary instance
+or static methods remain permitted.
 
 The source contract does not freeze physical size, alignment, field offsets,
 shared-header layout, or literal-data placement.
@@ -135,9 +145,10 @@ unterminated literals are syntax errors. Recovery does not manufacture a
 valid string expression from malformed content.
 
 Literal evaluation produces one exact inline `Str` descriptor whose storage
-owns immutable program-lifetime bytes, whose start is zero, and whose length
-is the decoded byte count. It does not allocate dynamic byte storage, copy
-literal bytes, call an initializer or method, or expose its backing owner.
+owns immutable program-lifetime bytes, whose start is zero, whose length is
+the decoded byte count, and whose hash cache is absent. It does not allocate
+dynamic byte storage, copy literal bytes, call an initializer or method, or
+expose its backing owner.
 Ordinary destination, copy, assignment, result, argument, temporary, and
 cleanup rules apply to the produced descriptor. Ownership operations on its
 immortal backing have no observable effect.

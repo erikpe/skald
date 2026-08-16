@@ -1,0 +1,61 @@
+from std::lang import Equatable, Hashable;
+from std::str import Str;
+from std::test import assert_eq_u64, assert_false, assert_true;
+
+class Operations<T>
+where T: Equatable, T: Hashable
+{
+    init() {}
+
+    fn equal(ref left: T, ref right: T) -> bool {
+        return left.equals(right);
+    }
+
+    fn hash(ref value: T) -> u64 {
+        return value.hash_code();
+    }
+}
+
+fn interface_hash(ref value: Hashable) -> u64 {
+    return value.hash_code();
+}
+
+fn interface_equal(ref left: Equatable, ref right: Obj) -> bool {
+    return left.equals(right);
+}
+
+fn main() -> i64 {
+    var literal: Str = "abc";
+    var repeated: u64 = literal.hash_code();
+    assert_eq_u64(repeated, 9495296198418495759u);
+    assert_eq_u64(literal.hash_code(), repeated);
+
+    var bytes: u8[] = u8[]{'a', 'b', 'c'};
+    var dynamic: Str = Str.from_bytes(bytes);
+    var sliced: Str = "zabcx"[1:-1];
+    var copied: Str = literal;
+    assert_true(literal.equals(dynamic));
+    assert_true(literal.equals(sliced));
+    assert_true(literal.equals(copied));
+    assert_eq_u64(dynamic.hash_code(), repeated);
+    assert_eq_u64(sliced.hash_code(), repeated);
+    assert_eq_u64(copied.hash_code(), repeated);
+
+    var operations: Operations<Str> = Operations<Str>();
+    assert_true(operations.equal(literal, sliced));
+    assert_eq_u64(operations.hash(dynamic), repeated);
+    assert_true(interface_equal(literal, dynamic));
+    assert_eq_u64(interface_hash(sliced), repeated);
+
+    var different: Str = "abd";
+    assert_false(literal.equals(different));
+    assert_false(interface_equal(literal, different));
+
+    var empty_hash: u64 = Str().hash_code();
+    assert_eq_u64(empty_hash, 8319400165709279348u);
+    assert_eq_u64("".hash_code(), empty_hash);
+    var empty_bytes: u8[] = u8[]{};
+    assert_eq_u64(Str.from_bytes(empty_bytes).hash_code(), empty_hash);
+    assert_eq_u64("abc"[1:1].hash_code(), empty_hash);
+    return 0;
+}

@@ -49,8 +49,12 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
         });
         if let Some(item) = &program.string_language_item {
             dumper.raw_line(&format!(
-                "StringLanguageItem class {} fields {} {} {}",
-                item.class, item.storage_field, item.start_field, item.length_field
+                "StringLanguageItem class {} fields {} {} {} {}",
+                item.class,
+                item.storage_field,
+                item.start_field,
+                item.length_field,
+                item.hash_code_field
             ));
         }
         if !program.literal_data.is_empty() {

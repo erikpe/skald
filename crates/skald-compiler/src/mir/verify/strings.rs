@@ -26,7 +26,7 @@ impl Verifier<'_> {
         if class.direct_base.is_some() {
             self.program_error("string language-item class must be a root class");
         }
-        let expected = [
+        let fixed_fields = [
             (
                 item.storage_field,
                 MirType::Shared(MirSharedTarget::Array(item.storage_array)),
@@ -34,15 +34,26 @@ impl Verifier<'_> {
             (item.start_field, MirType::I64),
             (item.length_field, MirType::U64),
         ];
-        if class.fields.len() != expected.len()
-            || class
-                .fields
-                .iter()
-                .zip(expected)
-                .any(|(field, (id, ty))| field.id != id || field.ty != ty)
-        {
+        let fixed_fields_are_exact = class
+            .fields
+            .iter()
+            .take(3)
+            .zip(fixed_fields)
+            .all(|(field, (id, ty))| field.id == id && field.ty == ty && field.cell_span.is_none());
+        let hash_field_is_exact = class.fields.get(3).is_some_and(|field| {
+            field.id == item.hash_code_field
+                && field.cell_span.is_some()
+                && match field.ty {
+                    MirType::Optional(optional) => self
+                        .program
+                        .optional_type(optional)
+                        .is_some_and(|optional| optional.payload == MirType::U64),
+                    _ => false,
+                }
+        });
+        if class.fields.len() != 4 || !fixed_fields_are_exact || !hash_field_is_exact {
             self.program_error(
-                "string language-item fields must be the exact shared u8[]/i64/u64 descriptor",
+                "string language-item fields must be the exact shared u8[]/i64/u64/private cell u64? descriptor",
             );
         }
         if self
@@ -176,6 +187,7 @@ impl Verifier<'_> {
             || initialize.storage_field != item.storage_field
             || initialize.start_field != item.start_field
             || initialize.length_field != item.length_field
+            || initialize.hash_code_field != item.hash_code_field
         {
             self.block_error(
                 function.callable(),

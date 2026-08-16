@@ -11,10 +11,12 @@ const VALID_STR: &str = concat!(
     "  private _storage: shared u8[];\n",
     "  private _start: i64;\n",
     "  private _length: u64;\n",
+    "  private cell _hash_code: u64?;\n",
     "  init() {\n",
     "    self._storage = new u8[]();\n",
     "    self._start = 0;\n",
     "    self._length = 0u;\n",
+    "    self._hash_code = none;\n",
     "  }\n",
     "}\n",
 );
@@ -43,10 +45,12 @@ fn canonical_literals_can_be_produced_field_receivers_inside_their_owner() {
                     "  private _storage: shared u8[];\n",
                     "  private _start: i64;\n",
                     "  private _length: u64;\n",
+                    "  private cell _hash_code: u64?;\n",
                     "  init() {\n",
                     "    self._storage = new u8[]();\n",
                     "    self._start = 0;\n",
                     "    self._length = 0u;\n",
+                    "    self._hash_code = none;\n",
                     "  }\n",
                     "  fn literal_length() -> u64 { return \"field\"._length; }\n",
                     "}\n",
@@ -130,6 +134,11 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
     assert!(class.fields.iter().all(|field| field.name.starts_with('_')));
     assert_eq!(class.fields[1].type_syntax.kind, ResolvedTypeKind::I64);
     assert_eq!(class.fields[2].type_syntax.kind, ResolvedTypeKind::U64);
+    assert!(matches!(
+        class.fields[3].type_syntax.kind,
+        ResolvedTypeKind::Optional(_)
+    ));
+    assert!(class.fields[3].cell_span.is_some());
     assert!(class
         .methods
         .iter()
@@ -158,6 +167,13 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         equals.parameters[0].binding_mode,
         ResolvedParameterBindingMode::ReadOnlyAlias { .. }
     ));
+    let hash_code = class
+        .methods
+        .iter()
+        .find(|method| method.name == "hash_code")
+        .expect("canonical library must expose cached byte-content hashing");
+    assert!(hash_code.parameters.is_empty());
+    assert_eq!(hash_code.return_type.kind, ResolvedTypeKind::U64);
     let slice_get = class
         .methods
         .iter()
@@ -235,6 +251,12 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
     );
     let dump = dump_hir(checked.hir.as_ref().unwrap());
     assert_eq!(
+        dump.matches("WriteAuthorization DeclaringClassCell")
+            .count(),
+        2,
+        "{dump}"
+    );
+    assert_eq!(
         dump.lines()
             .filter(|line| line.trim_start().starts_with("Panic @"))
             .count(),
@@ -264,7 +286,8 @@ fn literal_materialization_does_not_select_private_initializers_or_method_names(
         "  private _storage: shared u8[];\n",
         "  private _start: i64;\n",
         "  private _length: u64;\n",
-        "  private init() { self._storage = new u8[](); self._start = 0; self._length = 0u; }\n",
+        "  private cell _hash_code: u64?;\n",
+        "  private init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; }\n",
         "  fn renamed_observer() -> u64 { return self._length; }\n",
         "  private static fn _renamed_helper(ref source: Str) -> Str { return Str(copy source); }\n",
         "}\n",
@@ -348,8 +371,18 @@ fn validates_the_exact_language_item_and_allocates_source_ordered_literal_data()
     let class = program.class(item.class).unwrap();
     assert_eq!(class.name, "Str");
     assert_eq!(
-        [item.storage_field, item.start_field, item.length_field],
-        [class.fields[0].id, class.fields[1].id, class.fields[2].id]
+        [
+            item.storage_field,
+            item.start_field,
+            item.length_field,
+            item.hash_code_field,
+        ],
+        [
+            class.fields[0].id,
+            class.fields[1].id,
+            class.fields[2].id,
+            class.fields[3].id,
+        ]
     );
     assert_eq!(item.requiring_literal_spans.len(), 3);
     assert_eq!(
@@ -367,7 +400,9 @@ fn validates_the_exact_language_item_and_allocates_source_ordered_literal_data()
 
     let dump = dump_resolved(&program);
     assert!(dump.contains("StringLanguageItem"));
-    assert!(dump.contains("StringLanguageItem class c0 fields c0:field0 c0:field1 c0:field2"));
+    assert!(
+        dump.contains("StringLanguageItem class c0 fields c0:field0 c0:field1 c0:field2 c0:field3")
+    );
     assert!(dump.contains("str0 bytes=6100"));
     assert!(dump.contains("str1 bytes=62"));
     assert!(dump.contains("StringLiteral str2 class c0"));
@@ -381,59 +416,71 @@ fn rejects_every_structural_language_item_mismatch_before_hir() {
         ("wrong kind", "public fn Str() -> unit {}\n"),
         (
             "private class",
-            "class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
+            "class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "base class",
-            "class Base { init() {} }\npublic class Str extends Base { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { super(); self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
+            "class Base { init() {} }\npublic class Str extends Base { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { super(); self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "missing field",
-            "public class Str { private _storage: shared u8[]; private _start: i64; init() { self._storage = new u8[](); self._start = 0; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "extra field",
-            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private _extra: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._extra = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; private _extra: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; self._extra = 0u; } }\n",
         ),
         (
             "reordered field",
-            "public class Str { private _start: i64; private _storage: shared u8[]; private _length: u64; init() { self._start = 0; self._storage = new u8[](); self._length = 0u; } }\n",
+            "public class Str { private _start: i64; private _storage: shared u8[]; private _length: u64; private cell _hash_code: u64?; init() { self._start = 0; self._storage = new u8[](); self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "public storage field",
-            "public class Str { _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
+            "public class Str { _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "public start field",
-            "public class Str { private _storage: shared u8[]; _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "public length field",
-            "public class Str { private _storage: shared u8[]; private _start: i64; _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "wrong storage type",
-            "public class Str { private _storage: shared u64[]; private _start: i64; private _length: u64; init() { self._storage = new u64[](); self._start = 0; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u64[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u64[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "wrong start type",
-            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "wrong length type",
-            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u8; init() { self._storage = new u8[](); self._start = 0; self._length = 0u8; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u8; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u8; self._hash_code = none; } }\n",
+        ),
+        (
+            "public hash field",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
+        ),
+        (
+            "non-cell hash field",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
+        ),
+        (
+            "wrong hash field type",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u8?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } }\n",
         ),
         (
             "copy constructor",
-            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } copy(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } copy(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; self._hash_code = other._hash_code; } }\n",
         ),
         (
             "copy assignment",
-            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } assign(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } assign(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; self._hash_code = other._hash_code; } }\n",
         ),
         (
             "destructor",
-            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } destroy {} }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private cell _hash_code: u64?; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._hash_code = none; } destroy {} }\n",
         ),
     ];
 

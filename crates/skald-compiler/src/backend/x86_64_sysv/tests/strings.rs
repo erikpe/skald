@@ -13,10 +13,12 @@ const VALID_STR: &str = concat!(
     "  private _storage: shared u8[];\n",
     "  private _start: i64;\n",
     "  private _length: u64;\n",
+    "  private cell _hash_code: u64?;\n",
     "  init() {\n",
     "    self._storage = new u8[]();\n",
     "    self._start = 0;\n",
     "    self._length = 0u;\n",
+    "    self._hash_code = none;\n",
     "  }\n",
     "}\n",
 );
@@ -96,6 +98,7 @@ fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
     assert!(ascii.contains("mov qword ptr [rdx], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 8], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 16], rax"));
+    assert!(ascii.contains("mov qword ptr [rdx + 24], rax"));
     assert!(!ascii.contains("call .Lska_array_0_copy_element"));
     for (function, name) in ["empty", "ascii", "duplicate", "binary", "escaped"]
         .into_iter()

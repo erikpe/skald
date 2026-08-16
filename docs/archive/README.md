@@ -85,6 +85,7 @@ Archived plans:
 - [Capture-free function values](FUNCTION_VALUES_ROADMAP.md)
 - [Generic static-member dot syntax](GENERIC_STATIC_MEMBER_DOT_SYNTAX_ROADMAP.md)
 - [Private cell fields](PRIVATE_CELL_FIELDS_ROADMAP.md)
+- [`Str` cached-hash migration](STR_CACHED_HASH_MIGRATION_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -160,6 +161,10 @@ Resolved function-value design inputs:
 Resolved private-cell design inputs:
 
 - [private cell fields design record](PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md)
+
+Resolved string cached-hash follow-ups:
+
+- [`Str` cached-hash migration discovery](STR_CACHED_HASH_MIGRATION_DISCOVERY.md)
 
 Resolved shared-optional-box follow-ups:
 

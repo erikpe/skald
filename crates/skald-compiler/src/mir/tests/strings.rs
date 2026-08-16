@@ -13,10 +13,12 @@ const VALID_STR: &str = concat!(
     "  private _storage: shared u8[];\n",
     "  private _start: i64;\n",
     "  private _length: u64;\n",
+    "  private cell _hash_code: u64?;\n",
     "  init() {\n",
     "    self._storage = new u8[]();\n",
     "    self._start = 0;\n",
     "    self._length = 0u;\n",
+    "    self._hash_code = none;\n",
     "  }\n",
     "}\n",
 );
@@ -135,6 +137,7 @@ fn lowers_exact_literal_data_static_backing_and_ordinary_string_lifecycle() {
     assert!(dump.contains("shared-static"));
     assert!(dump.contains("string-initialize"));
     assert!(dump.contains("start 0 length 3"));
+    assert!(dump.contains("hash-code absent"));
     assert!(dump.contains("copy-construct"));
     assert!(dump.contains("copy-assign"));
     assert!(dump.contains("cleanup"));
@@ -193,7 +196,22 @@ fn rejects_malformed_literal_declarations_one_invariant_at_a_time() {
         let item = program.string_language_item.as_mut().unwrap();
         std::mem::swap(&mut item.start_field, &mut item.length_field);
     });
-    assert!(wrong_fields.contains("fields must be the exact shared u8[]/i64/u64 descriptor"));
+    assert!(wrong_fields
+        .contains("fields must be the exact shared u8[]/i64/u64/private cell u64? descriptor"));
+
+    let wrong_hash_identity = errors_after(|program| {
+        let item = program.string_language_item.as_mut().unwrap();
+        item.hash_code_field = item.length_field;
+    });
+    assert!(wrong_hash_identity
+        .contains("fields must be the exact shared u8[]/i64/u64/private cell u64? descriptor"));
+
+    let missing_hash_cell = errors_after(|program| {
+        let item = program.string_language_item.unwrap();
+        program.classes.entries_mut_for_test()[item.class.index()].fields[3].cell_span = None;
+    });
+    assert!(missing_hash_cell
+        .contains("fields must be the exact shared u8[]/i64/u64/private cell u64? descriptor"));
 
     let wrong_element = errors_after(|program| {
         let array = program.string_language_item.unwrap().storage_array;
@@ -259,6 +277,13 @@ fn rejects_malformed_string_publication_one_invariant_at_a_time() {
         string_initialize_mut(program).class = ClassId::new(99);
     });
     assert!(wrong_identity
+        .contains("string initialization does not use the exact language-item identities"));
+
+    let wrong_hash_identity = errors_after(|program| {
+        let length = string_initialize_mut(program).length_field;
+        string_initialize_mut(program).hash_code_field = length;
+    });
+    assert!(wrong_hash_identity
         .contains("string initialization does not use the exact language-item identities"));
 
     let wrong_descriptor = errors_after(|program| {

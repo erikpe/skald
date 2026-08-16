@@ -98,11 +98,11 @@ pub(super) fn validate_string_language_item(
         );
         valid = false;
     }
-    if class.fields.len() != 3 {
+    if class.fields.len() != 4 {
         diagnostics.push(
             Diagnostic::error(
                 INVALID_STRING_LANGUAGE_ITEM,
-                "`std::str::Str` must declare exactly three direct fields",
+                "`std::str::Str` must declare exactly four direct fields",
             )
             .with_primary_label(
                 class.name_span,
@@ -117,6 +117,7 @@ pub(super) fn validate_string_language_item(
         ("_storage", ExpectedFieldType::SharedU8Array),
         ("_start", ExpectedFieldType::I64),
         ("_length", ExpectedFieldType::U64),
+        ("_hash_code", ExpectedFieldType::OptionalU64Cell),
     ];
     for (index, (name, expected_type)) in expected.into_iter().enumerate() {
         let Some(field) = class.fields.get(index) else {
@@ -143,6 +144,22 @@ pub(super) fn validate_string_language_item(
                     format!("string descriptor field `{name}` must be private"),
                 )
                 .with_primary_label(field.name_span, "public descriptor field")
+                .with_secondary_label(first_literal, "string language item required here"),
+            );
+            valid = false;
+        }
+        let expected_cell = index == 3;
+        if field.cell_span.is_some() != expected_cell {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_STRING_LANGUAGE_ITEM,
+                    if expected_cell {
+                        "string descriptor field `_hash_code` must be a cell"
+                    } else {
+                        "only string descriptor field `_hash_code` may be a cell"
+                    },
+                )
+                .with_primary_label(field.name_span, "field has the wrong cell capability")
                 .with_secondary_label(first_literal, "string language item required here"),
             );
             valid = false;
@@ -219,6 +236,7 @@ pub(super) fn validate_string_language_item(
         storage_field: class.fields[0].id,
         start_field: class.fields[1].id,
         length_field: class.fields[2].id,
+        hash_code_field: class.fields[3].id,
         declaration_span: class.span,
         requiring_literal_spans: literal_data.iter().map(|literal| literal.span).collect(),
     })
@@ -229,6 +247,7 @@ enum ExpectedFieldType {
     SharedU8Array,
     I64,
     U64,
+    OptionalU64Cell,
 }
 
 impl ExpectedFieldType {
@@ -236,6 +255,14 @@ impl ExpectedFieldType {
         match self {
             Self::I64 => actual == ResolvedTypeKind::I64,
             Self::U64 => actual == ResolvedTypeKind::U64,
+            Self::OptionalU64Cell => {
+                let ResolvedTypeKind::Optional(optional) = actual else {
+                    return false;
+                };
+                arrays
+                    .optional(optional)
+                    .is_some_and(|optional| optional.payload.kind == ResolvedTypeKind::U64)
+            }
             Self::SharedU8Array => {
                 let ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(array)) = actual else {
                     return false;
@@ -252,6 +279,7 @@ impl ExpectedFieldType {
             Self::SharedU8Array => "shared u8[]",
             Self::I64 => "i64",
             Self::U64 => "u64",
+            Self::OptionalU64Cell => "u64?",
         }
     }
 }
