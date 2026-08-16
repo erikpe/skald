@@ -282,6 +282,16 @@ same representation composes with ordinary lifecycle and alias protections,
 closed specialization, inheritance, virtual/interface dispatch, and eligible
 capture-free function values.
 
+The frozen planned
+[final field representation](PHASES_AND_IR.md#frozen-final-field-representation)
+preserves ordinary declaration and layout identity while distinguishing
+construction, independent mutable writes, and exact declaring-class
+copy-assignment authorization. Its
+[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) stages
+contextual metadata, instance write rules, user and synthesized assignment,
+final-static lifecycle, composition, and standard-library adoption; the
+current compiler does not yet accept `final` field modifiers.
+
 ## Compiler crate API policy
 
 `skald-compiler` is unpublished and repository-internal. Its public Rust API

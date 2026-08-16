@@ -1,7 +1,11 @@
 # Final Fields Design Proposal
 
-Status: proposed design; not frozen, promoted into the living language
-contract, scheduled, or implemented.
+Status: frozen design. FF1 through FF14 were confirmed together on 2026-08-16
+and promoted into the living language and compiler contracts before the
+implementation roadmap was created. The implemented
+[grammar](../language/GRAMMAR.md) and
+[status matrix](../language/STATUS.md) remain authoritative for current
+compiler behavior.
 
 This proposal adds shallow `final` instance and class-owned static fields.
 The immediate motivation is a primitive box that exposes its payload as a
@@ -127,7 +131,7 @@ when `T` supports its ordinary complete-value assignment operation.
 
 ## Decision register
 
-| ID | Decision | Proposed direction |
+| ID | Decision | Frozen direction |
 |---|---|---|
 | [FF1](#ff1--source-syntax-and-contextual-spelling) | Source syntax | Add contextual final instance and final static field forms in one canonical modifier order |
 | [FF2](#ff2--field-identity-visibility-and-type) | Declaration identity | Preserve the ordinary field/static identity and stored type plus one final marker and span |
@@ -146,14 +150,14 @@ when `T` supports its ordinary complete-value assignment operation.
 
 ## FF1 — Source syntax and contextual spelling
 
-The proposed instance forms are:
+The frozen instance forms are:
 
 ```ska
 final value: f64;
 private final token: u64;
 ```
 
-The proposed static forms are:
+The frozen static forms are:
 
 ```ska
 final static EMPTY_HASH: u64 = 0x7374725f656d7074u;
@@ -612,12 +616,12 @@ equality and domain-separated hashing contracts are defined. Standard-library
 adoption must follow the general feature rather than introducing a compiler
 exception for boxes.
 
-Promotion should update the authoritative class lifecycle, grammar, static
-field, compiler phase, debugging, testing, and status documents before an
-implementation roadmap begins. That roadmap should divide syntax/metadata,
-instance write semantics, copy-assignment authorization, static lifecycle,
-native composition, and standard-library migration by stable compiler
-boundaries rather than restating this design.
+Promotion updated the authoritative class lifecycle, grammar, static field,
+compiler phase, debugging, testing, and status documents before implementation
+began. The [implementation roadmap](FINAL_FIELDS_ROADMAP.md) divides
+syntax/metadata, instance write semantics, copy-assignment authorization,
+static lifecycle, native composition, and standard-library migration by
+stable compiler boundaries rather than restating this design.
 
 ## Initial exclusions
 
@@ -641,15 +645,14 @@ The initial final-field feature does not define:
   or
 - optimizer guarantees beyond ordinary direct field access.
 
-## Review and freezing boundary
+## Frozen delivery boundary
 
-This proposal is ready for semantic review but remains non-authoritative until
-explicitly frozen. Freezing should confirm FF1 through FF14 together because
-syntax, complete-value replacement, explicit copy-assignment freedom, shallow
-state, and verified write authorization depend on one another.
+FF1 through FF14 are frozen together because syntax, complete-value
+replacement, explicit copy-assignment freedom, shallow state, and verified
+write authorization depend on one another. Changes to those decisions require
+an explicit design revision rather than an implementation-task shortcut.
 
-Freezing the design should not itself make the syntax executable. The frozen
-contract should first be promoted into focused living documentation, followed
-by a separate PR-sized implementation roadmap. Until that promotion and
-implementation complete, current mutable instance and static field behavior
-remains authoritative.
+Freezing and promotion do not make the syntax executable. The planned
+[implementation roadmap](FINAL_FIELDS_ROADMAP.md) owns staged delivery. Until
+its relevant tasks complete, the implemented grammar and current mutable
+instance and static field behavior remain authoritative.

@@ -988,6 +988,35 @@ value, closed-generic, and cross-module composition. Compile-failure goldens
 preserve privacy, modifier, and nested-mutation exclusions. Independent
 process tests compare complete phase products and diagnostics.
 
+## Frozen final-field coverage direction
+
+Final-field tests will follow separate declaration and write capabilities
+through each owner. Syntax and resolution own contextual canonical modifier
+order, recovery, exact spans, ordinary identities, privacy, inheritance, and
+closed specialization for both instance and static declarations. Type
+checking owns exact-once construction, rejection of independent writes, and
+the exact declaring-class user-assignment exception without weakening ordinary
+receiver or place access.
+
+Capability, HIR, and MIR tests must cover synthesized base-first and direct-
+field assignment plans plus explicit authorization on every scalar, class,
+optional, shared-owner, and array carrier. Verifier mutation tests independently
+forge marker, endpoint, lifecycle owner, directness, family, initialization,
+liveness, guard, anchor, ownership, and cleanup facts in preliminary and final
+products. Static-lifecycle tests require explicit initialization, prohibit the
+zero-default route and later root writes, and retain dependency, publication,
+failure, and reverse-shutdown certificates.
+
+Native and compile-failure goldens will distinguish direct final-field writes
+from mutable complete-value replacement; cover user assignment with zero,
+repeated, conditional, and loop-carried writes; and compose inheritance,
+generics, aliases, produced reads, dispatch, optionals, arrays, shared owners,
+function values, and static initialization. Backend tests retain ordinary
+layout, addressing, calling conventions, symbols, deterministic assembly, and
+runtime ABI version 9. Standard-library migration tests expose each primitive
+box payload as a public final field while preserving exact equality and
+domain-separated hashing.
+
 ## Static-field coverage
 
 Static-field tests are divided by responsibility: syntax recovery owns

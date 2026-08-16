@@ -1318,6 +1318,89 @@ permission with intrinsic literal construction: its fourth exact field is a
 private-cell `u64?` hash cache, and `StringInitialize` publishes it absent
 without adding a runtime or target-level cell operation.
 
+## Frozen final field representation
+
+Status: **frozen design; not yet implemented**. The active
+[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns staged
+compiler work. Source semantics are defined by
+[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction)
+and [Static Fields](../language/STATIC_FIELDS.md#frozen-final-static-field-direction).
+
+Syntax will retain one exact `final` modifier span on an ordinary instance or
+static field declaration. Resolution will preserve the declaration's existing
+dense `FieldId` or `StaticFieldId`, declaring class, visibility, name, type,
+order, initializer identity where applicable, and source span plus one final
+marker. Generic template collection and closed specialization preserve that
+property while allocating ordinary specialized identities. Finality creates
+no wrapper type, member category, containment edge, layout slot, virtual
+family, lifecycle slot, or runtime state.
+
+The canonical source order is `private final static`. Parser lookahead must
+keep `private`, `final`, `static`, and `cell` contextual while diagnosing
+reordered, duplicated, incomplete, and cross-category combinations. A final
+instance field has no declaration initializer. A final static requires an
+explicit initializer and cannot use the zero-default static path.
+
+Construction remains direct initialization of incomplete storage. Ordinary
+and copy constructors use the current exact-once direct-field analysis, and
+synthesized copy construction retains final fields in declaration order.
+Those operations do not require post-construction write authorization.
+
+For complete objects, typed HIR must distinguish at least these write reasons:
+
+```text
+FieldWriteAuthorization = Mutable
+                        | DeclaringClassCell
+                        | DeclaringClassFinalAssignment
+```
+
+The concrete Rust representation remains implementation-private. An ordinary
+mutable field write uses `Mutable`; an exact private-cell write retains its
+existing authorization; and a final-field write is accepted only when the
+current callable is the exact declaring class's copy-assignment lifecycle and
+the endpoint is one of that class's direct fields. The final authorization
+does not flow through helper calls, base projections, or nested projections.
+It must not be represented by clearing declaration metadata or broadly
+upgrading a receiver, object place, or class body to mutable access.
+
+Synthesized copy assignment needs equivalent exact evidence on every final
+field step in its selected capability plan. User-defined assignment remains a
+general mutable body and may contain control flow, calls, zero or repeated
+final writes, and arbitrary supported source expressions. Whole-object
+assignment keeps its existing destination, source evaluation, operation
+selection, self-assignment, and live-lifetime rules whether or not the class
+contains final fields.
+
+HIR-to-MIR lowering will preserve final-assignment evidence on every affected
+scalar, exact-class, optional, shared-owner, and array replacement carrier.
+Preliminary and final MIR verification will independently prove the declared
+marker, direct endpoint, exact lifecycle owner, assignment family, field type,
+place liveness, initialization state, optional guards, ownership transitions,
+anchors, and cleanup. Forged evidence in a method, destructor, helper, derived
+assignment, nested field, inherited field, construction operation, ordinary
+mutable write, or mismatched lifecycle is invalid MIR. Synthesized plans must
+prove the same ownership and field-order facts rather than relying on source
+absence.
+
+A final static declaration retains its explicit initializer through the
+existing preliminary lifecycle definition, effect analysis, deterministic
+plan, certificate, coordinator synthesis, and final verification. The planned
+schema must distinguish explicit final publication from an ordinary mutable
+static and reject zero-default initialization or any later source root write.
+Normal reverse shutdown remains a lifecycle cleanup, not an assignment.
+
+After final verification, target lowering uses existing field/static address,
+copy, ownership, optional, array, publication, and cleanup machinery. Final
+metadata changes no size, alignment, offset, register classification, symbol
+family, runtime call, public C API, or runtime ABI version. Backend code must
+not infer authorization from source names or reconstruct it after verification.
+
+The rollout establishes contextual declaration metadata behind an explicit
+executable gate, then instance construction and direct-write rules, exact user
+and synthesized copy-assignment authorization, final-static lifecycle,
+cross-feature native composition, and standard-library box adoption. The
+standard library receives no compiler exception.
+
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.

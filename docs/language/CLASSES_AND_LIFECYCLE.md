@@ -5,8 +5,8 @@ overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
 how implemented produced read-only aliases compose with initializer selection
 and owning full-expression temporaries, and owns the implemented private cell
-field contract. The [status matrix](STATUS.md) records the current
-compiler boundary.
+field contract plus the frozen planned final-field direction. The
+[status matrix](STATUS.md) records the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -328,6 +328,95 @@ The compiler-known `std::str::Str` descriptor uses this permission for its
 implemented optional hash cache. Compiler-created literals initialize that
 fourth field to absence before ordinary string methods may populate it.
 
+## Frozen final field direction
+
+Status: **frozen design; not yet implemented**. The active
+[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns delivery.
+Until its relevant stages complete, the implemented grammar continues to
+treat instance and static fields as mutable after initialization.
+
+A final instance field has one of these planned forms:
+
+```ska
+class BoxF64 {
+    final value: f64;
+    private final tag: u64;
+
+    init(value: f64, tag: u64) {
+        self.value = value;
+        self.tag = tag;
+    }
+}
+```
+
+Fields remain public by default. `private` and `final` are orthogonal:
+visibility controls who may select a field, while finality controls which
+writes may replace its slot. A final field retains its ordinary stored type,
+identity, declaration order, containment, layout, ownership, and lifecycle.
+It does not introduce a `final T` or `const T` type.
+
+Every ordinary initializer and copy constructor initializes each direct final
+field exactly once under the existing incomplete-object rules. Synthesized
+copy construction includes final fields in declaration order. A derived
+lifecycle delegates inherited final state to the selected base lifecycle;
+derived bodies receive no direct write permission for base-declared final
+fields.
+
+Once construction completes, ordinary direct field replacement is invalid,
+including from a mutable method, destructor, helper, derived class, unrelated
+code, or ordinary body owned by the declaring class:
+
+```ska
+var box: BoxF64 = BoxF64(1.0, 7u);
+box.value = 2.0; // invalid: independent final-field replacement
+```
+
+A mutable complete class value remains replaceable when the class supports
+copy assignment:
+
+```ska
+var left: BoxF64 = BoxF64(1.0, 7u);
+var right: BoxF64 = BoxF64(2.0, 8u);
+left = right; // planned: valid complete-value assignment
+```
+
+This distinction is source semantics. The selected whole-value operation may
+be implemented field by field without turning its representation steps into
+ordinary source assignments. Both synthesized assignment and an exact
+class's user-defined `assign(ref source: T)` may update that class's own
+direct final fields. An explicit assignment body retains its ordinary locals,
+control flow, calls, repeated writes, and freedom to update any supported
+subset of state. The permission is lexical and exact: it does not flow into a
+called helper or authorize inherited or nested final fields. Complete base and
+nested assignment instead invoke those classes' own selected lifecycle
+operations.
+
+Finality is shallow. It pins only the selected field slot. Given access that
+would ordinarily permit it, code may still mutate non-final state inside a
+final inline object, array elements behind a final array descriptor, a present
+payload reached through an existing supported view, or a pointee reached
+through a final shared owner. Replacing an enclosing mutable complete value
+may change its final representation. Finality supplies no deep immutability,
+stable snapshot, exclusivity, concurrency, or data-race guarantee.
+
+Existing read and alias rules remain authoritative. Finality grants no mutable
+root and no alias capable of replacing the selected slot. Produced objects
+remain read-only roots. Existing optional guards, shared-owner anchors,
+detached-array backing anchors, ownership operations, evaluation order,
+failure behavior, and cleanup continue to govern the stored type.
+
+The modifier changes no field offset, object size, alignment, calling
+convention, runtime state, target instruction, public symbol, or runtime ABI.
+It is mutually exclusive with `cell`: a cell grants one narrow independent
+replacement capability, while finality forbids independent replacement after
+construction.
+
+This direction deliberately excludes immutable locals or `let`, final
+parameters/results/elements, immutable classes, deep constness, final methods
+or lifecycle members, instance declaration initializers, and optimizer
+guarantees. The confirmed decisions are preserved in the
+[final fields design record](../roadmaps/FINAL_FIELDS_DESIGN_PROPOSAL.md).
+
 ## Object places and projections
 
 An object place identifies existing class storage. It consists of a root and
@@ -339,7 +428,7 @@ Each intermediate projection selects either a direct base identity or a
 class-typed field. A class-typed endpoint remains an object place and may be
 used in a supported copy, assignment, receiver, or alias context. It is not an
 ordinary scalar value.
-Selecting a final primitive field reads or writes that field according to the
+Selecting a terminal primitive field reads or writes that field according to the
 surrounding expression or statement and the root's access.
 
 ### Produced receiver places
@@ -386,7 +475,7 @@ copy, transfer, anchor, guard, alias, and result machinery.
 
 For example, in `root.branch.leaf.value`, `root` is the root place,
 `branch` and `leaf` select complete inline subobjects, and `value` selects the
-final primitive field. In `root.branch.leaf.read()`, the `leaf` endpoint is the
+terminal primitive field. In `root.branch.leaf.read()`, the `leaf` endpoint is the
 method receiver. In `inspect(root.branch.leaf)`, it may be an alias argument
 when the parameter expects that exact class.
 
@@ -922,8 +1011,9 @@ presence owns one strong handle, synthesized copy retains conditionally, and
 assignment/destruction conditionally release in the ordinary reverse field
 order. The model executes dependency-ordered eager static initialization for
 ordinary stored class values and complete-object destruction during exact-
-reverse normal-return static shutdown. It does not include lifecycle-member
-visibility, protected access, `final`, abstract members,
+reverse normal-return static shutdown. It does not yet include
+lifecycle-member visibility, protected access, executable `final` fields,
+abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
 follow the ordinary target layout, copy lifecycle, and derived-to-base

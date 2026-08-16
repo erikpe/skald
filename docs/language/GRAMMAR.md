@@ -411,6 +411,52 @@ meaning is owned by
 and the compiler representation is owned by
 [Phases and IR](../compiler/PHASES_AND_IR.md#private-cell-field-representation).
 
+### Frozen planned final-field extension
+
+The frozen final-field design adds these alternatives:
+
+```text
+final-field-declaration = ["private"] "final" identifier ":"
+                          storage-type ";"
+final-static-field-declaration = ["private"] "final" "static"
+                                 identifier ":" storage-type
+                                 "=" expression ";"
+```
+
+They are deliberately absent from the implemented `class-member` production
+above until the active
+[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) reaches the
+corresponding compiler stages. The current compiler therefore does not yet
+accept either modifier form.
+
+`private`, `final`, and `static` are contextual in these declarations. The
+modifier form is recognized only when the complete declaration lookahead
+matches, so the spellings remain available as ordinary identifiers elsewhere.
+The frozen canonical order is `private final static`: reordered, duplicated,
+incomplete, or cross-category modifier forms are invalid. In particular,
+`static final name`, `final private name`, and `private final cell name` do not
+declare final storage. Existing declarations such as these keep their current
+meaning:
+
+```ska
+final: i64;
+private final: i64;
+final static: i64;
+static final: i64;
+private final cell: i64;
+```
+
+A final instance field has no declaration initializer. A final static field
+requires exactly one explicit initializer. Finality is invalid on methods,
+ordinary initializers, copy operations, destructors, interfaces, locals,
+parameters, results, and every other declaration category in the frozen
+profile. The source-visible meaning is owned by
+[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
+static lifecycle is owned by
+[Static Fields](STATIC_FIELDS.md#frozen-final-static-field-direction), and the
+compiler representation is owned by
+[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-final-field-representation).
+
 ### Construction-selection syntax
 
 The implemented `copy` declaration occupies a separate lifecycle slot. Its

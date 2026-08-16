@@ -78,6 +78,13 @@ Construction begins a lifetime, and destruction ends it. Class fields are
 constructed as part of their containing object and are destroyed in the
 language-defined order.
 
+The frozen final-field direction keeps those lifecycle rules while making one
+selected field slot independently non-replaceable after construction. Mutable
+complete class values remain assignable, and the exact class's selected user
+or synthesized copy assignment may update its own direct final representation.
+This shallow field modifier is planned but not yet accepted by the compiler;
+it does not introduce immutable local storage or deep constness.
+
 ## Lifetimes and safety direction
 
 Skald is designed around deterministic lifetimes rather than tracing garbage
@@ -204,7 +211,9 @@ makes a result source-observable.
   also owns the implemented `private cell` whole-field replacement contract,
   including declaring-class authorization, lifecycle and alias safety,
   generic specialization, dispatch composition, independently verified MIR,
-  and native execution.
+  and native execution. The same document owns the frozen planned shallow
+  final-field contract, including construction, whole-value replacement, and
+  exact copy-assignment authorization.
 - [Generic classes](GENERIC_CLASSES.md) defines implemented explicit closed generic class
   applications, structural substitution, inferred contextual requirements,
   nominal interface bounds, invariance, complete-class validation, and native

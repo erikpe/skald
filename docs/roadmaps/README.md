@@ -10,14 +10,23 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+The [final fields roadmap](FINAL_FIELDS_ROADMAP.md) is planned to implement
+shallow final instance and class-owned static fields while preserving mutable
+complete-value replacement through exact user or synthesized copy assignment.
+FFI0, contextual declaration metadata behind an executable gate, is next. It
+depends on the implemented field/static parser, privacy, construction, copy
+capabilities, generic specialization, aliases and ownership protections,
+verified MIR, certified static lifecycle, backend, and primitive-box
+contracts; no active roadmap blocks it.
 
 ## Design proposals
 
-The [final fields design proposal](FINAL_FIELDS_DESIGN_PROPOSAL.md) is ready
-for review. It defines shallow final instance and class-owned static fields,
-preserves replacement of mutable complete values through synthesized or
-user-defined copy assignment, and explicitly excludes immutable local storage.
+The [final fields design proposal](FINAL_FIELDS_DESIGN_PROPOSAL.md) is frozen
+and promoted into the planned language and compiler contracts. It
+defines shallow final instance and class-owned static fields, preserves
+replacement of mutable complete values through synthesized or user-defined
+copy assignment, and explicitly excludes immutable local storage. Its
+implementation is owned by the planned roadmap above.
 
 The completed private cell fields design and implementation roadmap are
 preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).

@@ -2,12 +2,14 @@
 
 Status: **eager static initialization and reverse normal-return shutdown
 implemented**. This document is
-authoritative for the current source-visible static-field profile. The
+authoritative for the current source-visible static-field profile and the
+frozen planned final-static extension. The
 [status matrix](STATUS.md) remains authoritative for compiler availability,
 and the [implemented grammar](GRAMMAR.md) remains the exact syntax accepted by
 the current compiler.
 
-Static fields are mutable class-owned places. Initializer-free declarations
+Currently accepted static fields are mutable class-owned places.
+Initializer-free declarations
 use the implemented zero-default profile: their initial live value is
 established without running Skald code and their type must admit one complete
 all-zero value. Declaration initializer expressions are accepted, resolved,
@@ -61,8 +63,9 @@ static name: T = expression;
 private static name: T = expression;
 ```
 
-Every static field is mutable; `final`, constant, lazy, thread-local, and
-externally supplied variants are not part of this profile.
+Every currently accepted static field is mutable. Constant, lazy,
+thread-local, and externally supplied variants are not part of this profile;
+the frozen final-static direction below is not yet executable.
 
 `static` remains contextual. In a class member, `static` followed by an
 identifier and `:` begins a static-field declaration, while `static:` begins
@@ -70,6 +73,56 @@ an ordinary instance field whose name is `static`. The same spelling remains
 available for methods, functions, parameters, locals, and other existing
 identifier positions. `private static:` is likewise a private instance field
 named `static`; `private static name:` is a private static field.
+
+## Frozen final static field direction
+
+Status: **frozen design; not yet implemented**. The active
+[final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns delivery.
+
+A final static field has one of these planned canonical forms:
+
+```ska
+class Limits {
+    final static MAXIMUM: u64 = 100u;
+    private final static DOMAIN: u64 = 0x1234u;
+
+    init() {}
+}
+```
+
+It is one ordinary class-owned static identity with unchanged stored type,
+visibility, generic-application identity, eager initializer identity, target
+slot, ownership, and reverse-shutdown behavior plus one final marker and exact
+modifier span. It changes no instance layout, runtime representation, symbol
+visibility, calling convention, public runtime service, or ABI version.
+
+Every final static requires exactly one explicit declaration initializer.
+Initializer-free final statics are invalid rather than treating zero-filled
+storage as an implicit write-once value. The existing initializer expression,
+declaring-class privacy, effect discovery, dependency ordering, publication,
+failure, ownership, and cleanup rules remain authoritative. Generated eager
+startup publication is the sole root write.
+
+After publication, assignment to the static root is invalid in every source
+context, including a callable owned by its declaring class. Unlike an instance
+field inside a mutable complete object, a static has no enclosing value whose
+copy assignment can replace it. Normal reverse shutdown may still destroy or
+release the stored value; lifetime cleanup is not source assignment.
+
+Finality remains shallow. Existing access may mutate nested non-final state in
+a final inline object, elements behind a final array descriptor, or the
+separately allocated pointee of a final shared owner. Conversely, a mutable
+static class field remains assignable when its stored class contains final
+instance fields; the selected complete-value assignment owns those internal
+updates.
+
+The canonical modifier order is `private final static`. Reordered, duplicated,
+missing-initializer, and combined `cell`/`final` forms receive focused
+diagnostics while all modifier spellings remain contextual. The complete
+source and instance-field contract is defined by
+[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
+and the compiler representation is defined by
+[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-final-field-representation).
 
 ## Declaration initializer resolution
 
@@ -170,10 +223,13 @@ initializers, copy constructor, copy assignment, and destructor. A derived
 class, unrelated class, top-level function, same-module caller, or importer
 receives no additional access.
 
-Every static field is mutable program-owned storage. Mutation requires no
-instance receiver and no `mut` receiver capability. Existing compatible `ref`
-and `mut ref` parameters may borrow a static place for one call; aliases remain
-non-owning, call-scoped, and unable to escape or become stored values.
+Every currently accepted static field is mutable program-owned storage.
+Mutation requires no instance receiver and no `mut` receiver capability.
+Existing compatible `ref` and `mut ref` parameters may borrow a current
+mutable static place for one call; aliases remain non-owning, call-scoped, and
+unable to escape or become stored values. The frozen final-static direction
+above removes root mutation and replacement-capable borrowing from those
+declarations only.
 
 ## Initializer-free storage types and initial values
 
@@ -370,8 +426,8 @@ The executable profile does not yet include:
 - source-defined module initialization or shutdown blocks;
 - top-level or module-owned global variables;
 - interface-owned static fields;
-- external, exported, thread-local, atomic, synchronized, `final`, or constant
-  static storage;
+- external, exported, thread-local, atomic, synchronized, executable `final`,
+  or constant static storage;
 - reflection or source-visible static symbol identity;
 - garbage collection or runtime root registration.
 
