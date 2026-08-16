@@ -8,7 +8,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 The [private cell fields roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) is in
 progress. CFI0 established contextual declaration syntax and durable field
-metadata; CFI1 is next, while read-only cell assignment remains rejected.
+metadata; CFI1 established typed whole-field write authorization behind a
+lower-phase executable gate. CFI2 is next and will preserve and verify that
+authorization in MIR.
 
 ## Planned
 

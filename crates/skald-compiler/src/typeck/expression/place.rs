@@ -171,6 +171,7 @@ impl CallableChecker<'_, '_> {
         Some(HirFieldPlace {
             receiver: checked.into_hir(),
             field,
+            write_authorization: None,
             span,
         })
     }

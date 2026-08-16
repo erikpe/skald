@@ -649,6 +649,33 @@ fn stops_before_semantic_phases_after_a_source_error() {
 }
 
 #[test]
+fn typed_cell_writes_stop_at_the_explicit_mir_support_gate() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "cell-write-gate.ska",
+        concat!(
+            "class Cache {\n",
+            "  private cell value: i64;\n",
+            "  init() { self.value = 0; }\n",
+            "  fn remember(value: i64) -> unit { self.value = value; }\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err() else {
+        panic!("typed cell write must stop before unsupported MIR lowering");
+    };
+
+    let rendered = render_diagnostics(&report.sources, &report.diagnostics);
+    assert!(
+        rendered.contains("error[MIR001]: cell field write cannot be lowered yet"),
+        "{rendered}"
+    );
+    assert!(rendered.contains("typed cell writes require explicit MIR authorization support"));
+    assert!(rendered.contains("cell field declared here"));
+}
+
+#[test]
 fn typed_alias_syntax_reaches_the_backend_pipeline() {
     let artifact = compile_source_to_assembly(
         "alias-syntax.ska",

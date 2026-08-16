@@ -386,8 +386,10 @@ cell-field-declaration = "private" "cell" identifier ":"
 ```
 
 The compiler accepts this form and preserves its modifier through resolved,
-typed, and MIR field declarations. The modifier does not yet authorize writes
-through a read-only receiver; that executable behavior remains staged by the
+typed, and MIR field declarations. Type checking recognizes its narrow
+whole-field write permission, but compilation currently stops at an explicit
+MIR-support diagnostic before such a write is lowered or executed. That
+lower-phase behavior remains staged by the
 [implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md).
 
 Both words remain contextual. The modifier form is selected only when

@@ -2,12 +2,39 @@
 
 use super::{build::MirBodyBuilder, model::*};
 use crate::{
+    diagnostics::{Diagnostic, Diagnostics},
     hir::{
         HirBlock, HirExpression, HirLocal, HirParameter, HirParameterMode, HirProgram,
         HirSelectedCopyOperation, Type,
     },
     identity::{BindingId, CallableId, ClassId, OptionalTypeId},
 };
+
+pub(crate) const CELL_WRITE_LOWERING_UNAVAILABLE: &str = "MIR001";
+
+/// Rejects typed capabilities that the current MIR contract cannot yet
+/// preserve and verify independently.
+pub(crate) fn validate_hir_lowering_support(hir: &HirProgram) -> Diagnostics {
+    let mut diagnostics = Diagnostics::new();
+    for write in crate::hir::collect_cell_writes(hir) {
+        let declaration = hir
+            .field(write.field)
+            .expect("typed cell write must reference a declared field");
+        let mut diagnostic = Diagnostic::error(
+            CELL_WRITE_LOWERING_UNAVAILABLE,
+            "cell field write cannot be lowered yet",
+        )
+        .with_primary_label(
+            write.span,
+            "typed cell writes require explicit MIR authorization support",
+        );
+        if let Some(cell_span) = declaration.cell_span {
+            diagnostic = diagnostic.with_secondary_label(cell_span, "cell field declared here");
+        }
+        diagnostics.push(diagnostic);
+    }
+    diagnostics
+}
 
 mod array;
 mod call;
@@ -57,6 +84,10 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
 /// Lowers complete typed HIR into the closed-world product consumed by static
 /// lifecycle analysis. This product cannot be passed directly to a backend.
 pub fn lower_preliminary_hir(hir: &HirProgram) -> PreliminaryMirProgram {
+    assert!(
+        !validate_hir_lowering_support(hir).has_errors(),
+        "typed cell writes must not reach MIR before authorization lowering is implemented"
+    );
     let program = program::lower_program(hir);
     let (static_fields, static_initializers) =
         static_initializer::lower_static_initializers(hir, program.string_language_item);

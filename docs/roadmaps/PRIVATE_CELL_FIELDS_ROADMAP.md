@@ -1,6 +1,6 @@
 # Private Cell Fields Roadmap
 
-Status: in progress; CFI0 is complete and CFI1 is next.
+Status: in progress; CFI1 is complete and CFI2 is next.
 
 This roadmap implements the frozen
 [private cell field language contract](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction)
@@ -61,7 +61,7 @@ implement those decisions without reopening them.
 ## Progress
 
 - [x] CFI0 — Represent contextual private cell declarations
-- [ ] CFI1 — Authorize typed whole-field replacement
+- [x] CFI1 — Authorize typed whole-field replacement
 - [ ] CFI2 — Preserve and verify cell writes in MIR
 - [ ] CFI3 — Prove lifecycle-bearing and alias-safe assignment families
 - [ ] CFI4 — Harden composition and publish the implemented contract
@@ -123,28 +123,28 @@ Completed 2026-08-16. Focused cross-phase tests, `make check`,
 **Purpose:** Define one centralized type-checking decision for the new
 permission without widening receiver or nested-place access.
 
-- [ ] Add one explicit typed field-write authorization that distinguishes an
+- [x] Add one explicit typed field-write authorization that distinguishes an
       ordinary mutable place from an exact declaring-class cell write. Keep
       the concrete representation cohesive across the existing assignment
       families rather than duplicating access predicates per type.
-- [ ] Authorize a read-only destination only when it ends at one selected cell
+- [x] Authorize a read-only destination only when it ends at one selected cell
       field and the current callable's lexical class owner equals that field's
       declaring class. Preserve existing privacy diagnostic precedence.
-- [ ] Admit complete scalar, exact-class, optional, shared-owner, and array
+- [x] Admit complete scalar, exact-class, optional, shared-owner, and array
       field replacements through that decision, selecting precisely the same
       type compatibility, generic requirement, assignment capability, source
       evaluation, and HIR operation as an ordinary mutable field assignment.
-- [ ] Keep initializer writes and synthesized lifecycle on their existing
+- [x] Keep initializer writes and synthesized lifecycle on their existing
       trusted initialization/mutation paths. Do not classify uninitialized
       construction as interior mutation.
-- [ ] Reject cell-derived nested field or element assignment, mutable method
+- [x] Reject cell-derived nested field or element assignment, mutable method
       receivers, optional payload mutation, and `mut ref` arguments while
       retaining all such operations through a genuinely mutable root.
-- [ ] Cover `self`, `ref` parameters, authorized checked views, grouping,
+- [x] Cover `self`, `ref` parameters, authorized checked views, grouping,
       canonical base projection, static methods with explicit object aliases,
       and other existing read-only field-place roots without introducing an
       escaping place category.
-- [ ] Expose the narrow authorization in HIR dumps and diagnostics. Until MIR
+- [x] Expose the narrow authorization in HIR dumps and diagnostics. Until MIR
       independently verifies it in the next task, keep complete compilation
       behind an explicit phase-owned gate rather than emitting unsupported
       lower IR.
@@ -160,6 +160,10 @@ Rust-task gates.
 whole selected cell replacement and emits typed authorization without changing
 the receiver's access, every neighboring mutation remains correctly accepted
 or rejected, and no authorized write reaches unverifiable MIR.
+
+Completed 2026-08-16. Focused type-checking, HIR, and driver tests,
+`make check`, `make msrv-check`, documentation validation, and
+`git diff --check` passed.
 
 ### CFI2 — Preserve and verify cell writes in MIR
 

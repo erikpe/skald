@@ -2549,25 +2549,33 @@ impl<'types> HirDumper<'types> {
 
     fn field_place(&mut self, place: &HirFieldPlace) {
         self.line(&format!("FieldPlace {}", place.field), place.span);
-        self.indented(|dumper| match &place.receiver {
-            HirObjectReceiver::ArrayElement {
-                element,
-                place: receiver,
-                ..
-            } => {
-                dumper.array_element(element);
-                dumper.object_place(receiver);
+        self.indented(|dumper| {
+            if place.write_authorization == Some(HirFieldWriteAuthorization::DeclaringClassCell) {
+                dumper.raw_line(&format!(
+                    "WriteAuthorization DeclaringClassCell {}",
+                    place.field
+                ));
             }
-            HirObjectReceiver::View { view, .. } => {
-                let label = receiver_view_label(view, "FieldReceiver");
-                dumper.object_view(&label, view);
+            match &place.receiver {
+                HirObjectReceiver::ArrayElement {
+                    element,
+                    place: receiver,
+                    ..
+                } => {
+                    dumper.array_element(element);
+                    dumper.object_place(receiver);
+                }
+                HirObjectReceiver::View { view, .. } => {
+                    let label = receiver_view_label(view, "FieldReceiver");
+                    dumper.object_view(&label, view);
+                }
+                HirObjectReceiver::Place {
+                    place: receiver, ..
+                }
+                | HirObjectReceiver::Checked {
+                    place: receiver, ..
+                } => dumper.object_place(receiver),
             }
-            HirObjectReceiver::Place {
-                place: receiver, ..
-            }
-            | HirObjectReceiver::Checked {
-                place: receiver, ..
-            } => dumper.object_place(receiver),
         });
     }
 

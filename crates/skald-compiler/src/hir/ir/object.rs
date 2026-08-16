@@ -578,5 +578,15 @@ pub enum HirViewSource {
 pub struct HirFieldPlace {
     pub receiver: HirObjectReceiver,
     pub field: FieldId,
+    /// Present only when this place is the complete destination of a checked
+    /// field replacement. Reads and initialization destinations carry no
+    /// replacement authorization.
+    pub write_authorization: Option<HirFieldWriteAuthorization>,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirFieldWriteAuthorization {
+    Mutable,
+    DeclaringClassCell,
 }

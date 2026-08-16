@@ -3,12 +3,14 @@
 //! HIR retains source spans useful to diagnostics while replacing resolved
 //! syntax with explicit typed operations and exact call targets.
 
+mod cell_writes;
 mod dump;
 mod ir;
 
 #[cfg(test)]
 mod tests;
 
+pub(crate) use cell_writes::collect_cell_writes;
 pub use dump::dump_hir;
 pub use ir::{
     HirAccess, HirAggregateOptionalAssignment, HirArrayAliasArgument, HirArrayAliasSource,
@@ -32,17 +34,17 @@ pub use ir::{
     HirCopyConstructorDeclaration, HirDestructionPlan, HirDestructionStep,
     HirDestructorDeclaration, HirDirectBase, HirExpression, HirExpressionKind, HirFieldAssignment,
     HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldDeclaration,
-    HirFieldPlace, HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
-    HirFunctionDefinitionTable, HirFunctionLinkage, HirFunctionReference, HirFunctionType,
-    HirFunctionTypeParameter, HirFunctionTypeParameterMode, HirFunctionTypeTable, HirIndirectCall,
-    HirInitializerDeclaration, HirIntegerBitwiseOperation, HirIntegerDivisionFailure,
-    HirIntegerDivisionKind, HirIntegerDivisionOperation, HirIntegerType, HirInterfaceCallTarget,
-    HirInterfaceConformance, HirInterfaceDeclaration, HirInterfaceDeclarationTable,
-    HirInterfaceParameter, HirInterfaceReceiver, HirInterfaceRequirement, HirIoOperation,
-    HirLiteralData, HirLiteralDataTable, HirLocal, HirLocalDecl, HirLocalInitializer,
-    HirLogicalExpression, HirLogicalOperation, HirMemberDefinition, HirMethodCallTarget,
-    HirMethodDeclaration, HirMethodDispatch, HirMethodKind, HirMethodReceiver,
-    HirNestedOptionalUnwrap, HirObjectCall, HirObjectCallTarget,
+    HirFieldPlace, HirFieldWriteAuthorization, HirFunctionDeclaration, HirFunctionDeclarationTable,
+    HirFunctionDefinition, HirFunctionDefinitionTable, HirFunctionLinkage, HirFunctionReference,
+    HirFunctionType, HirFunctionTypeParameter, HirFunctionTypeParameterMode, HirFunctionTypeTable,
+    HirIndirectCall, HirInitializerDeclaration, HirIntegerBitwiseOperation,
+    HirIntegerDivisionFailure, HirIntegerDivisionKind, HirIntegerDivisionOperation, HirIntegerType,
+    HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration,
+    HirInterfaceDeclarationTable, HirInterfaceParameter, HirInterfaceReceiver,
+    HirInterfaceRequirement, HirIoOperation, HirLiteralData, HirLiteralDataTable, HirLocal,
+    HirLocalDecl, HirLocalInitializer, HirLogicalExpression, HirLogicalOperation,
+    HirMemberDefinition, HirMethodCallTarget, HirMethodDeclaration, HirMethodDispatch,
+    HirMethodKind, HirMethodReceiver, HirNestedOptionalUnwrap, HirObjectCall, HirObjectCallTarget,
     HirObjectDestinationInitialization, HirObjectInitialization, HirObjectOrigin, HirObjectPath,
     HirObjectPlace, HirObjectProducer, HirObjectReceiver, HirObjectReturn, HirObjectSlice,
     HirObjectSource, HirObjectView, HirOptionalAliasPlace, HirOptionalArrayUnwrap,

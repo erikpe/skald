@@ -14,6 +14,7 @@ mod verify;
 pub(crate) mod test_fixtures;
 
 pub use dump::{dump_mir, dump_preliminary_mir};
+pub(crate) use lower::validate_hir_lowering_support;
 pub use lower::{lower_hir, lower_preliminary_hir};
 pub use model::{
     BlockId, MirAggregateOptionalAssign, MirAggregateOptionalCleanup,

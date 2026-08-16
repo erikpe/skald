@@ -73,11 +73,11 @@ pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,
     HirConstruction, HirConstructionMode, HirCopyAssignment, HirCopyCapability,
     HirCopyConstruction, HirFieldAssignment, HirFieldConstruction, HirFieldCopyAssignment,
-    HirFieldCopyConstruction, HirFieldPlace, HirMethodReceiver, HirObjectCall, HirObjectCallTarget,
-    HirObjectInitialization, HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer,
-    HirObjectReceiver, HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView,
-    HirSelectedCopyOperation, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy,
-    HirViewSource, HirViewTarget,
+    HirFieldCopyConstruction, HirFieldPlace, HirFieldWriteAuthorization, HirMethodReceiver,
+    HirObjectCall, HirObjectCallTarget, HirObjectInitialization, HirObjectOrigin, HirObjectPath,
+    HirObjectPlace, HirObjectProducer, HirObjectReceiver, HirObjectReturn, HirObjectSlice,
+    HirObjectSource, HirObjectView, HirSelectedCopyOperation, HirSynthesizedCopy,
+    HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 pub use optional::{
     HirAggregateOptionalAssignment, HirCheckedOptionalView, HirClassOptionalAssignment,

@@ -1,7 +1,11 @@
 //! Field initialization, construction destinations, and liveness transitions.
 
 use super::*;
-use crate::hir::{HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace, HirObjectPlace};
+use crate::hir::{
+    HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace, HirFieldWriteAuthorization,
+    HirObjectPlace,
+};
+use crate::source::Span;
 
 struct FieldAssignmentTarget {
     place: HirFieldPlace,
@@ -9,6 +13,12 @@ struct FieldAssignmentTarget {
     ty: Type,
     direct_self_field: bool,
     valid: bool,
+}
+
+enum FieldWriteAuthorizationResult {
+    Authorized(HirFieldWriteAuthorization),
+    DeferredObjectAssignment,
+    Rejected,
 }
 
 impl CallableChecker<'_, '_> {
@@ -28,6 +38,13 @@ impl CallableChecker<'_, '_> {
                 let _ =
                     self.check_object_source(&assignment.value, class, "field assignment source");
                 return CheckedStatement::falls_through(None);
+            }
+            if matches!(
+                target.place.write_authorization,
+                Some(HirFieldWriteAuthorization::DeclaringClassCell)
+            ) {
+                let hir = self.check_field_copy_assignment(target.place.clone(), class, assignment);
+                return self.finish_field_assignment(target, body_kind, hir);
             }
             return self.check_method_field_copy_assignment(target.place, class, assignment);
         }
@@ -255,7 +272,7 @@ impl CallableChecker<'_, '_> {
         body_kind: MemberBodyKind,
     ) -> Option<FieldAssignmentTarget> {
         let in_initializer = body_kind.initializes_receiver();
-        let place = self.check_field_place(
+        let mut place = self.check_field_place(
             &assignment.receiver,
             assignment.field,
             assignment.span,
@@ -271,22 +288,23 @@ impl CallableChecker<'_, '_> {
             .expect("selected field must exist");
         let field_name = field.name.clone();
         let field_type = lower_type(self.program, &field.type_syntax);
+        let cell_span = field.cell_span;
         let mut valid = true;
-        if place.receiver.access() == HirAccess::ReadOnly
-            && (!matches!(field_type, Type::Class(_))
-                || place.receiver.inspection_place().is_none())
-        {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    READ_ONLY_RECEIVER,
-                    "cannot assign through a read-only receiver",
-                )
-                .with_primary_label(
-                    assignment.member_span,
-                    "field assignment requires mutable receiver access",
-                ),
-            );
-            valid = false;
+        if !in_initializer {
+            match self.check_field_write_authorization(
+                place.receiver.access(),
+                place.receiver.inspection_place().is_some(),
+                place.field,
+                field_type,
+                cell_span,
+                assignment.member_span,
+            ) {
+                FieldWriteAuthorizationResult::Authorized(authorization) => {
+                    place.write_authorization = Some(authorization);
+                }
+                FieldWriteAuthorizationResult::DeferredObjectAssignment => {}
+                FieldWriteAuthorizationResult::Rejected => valid = false,
+            }
         }
         let direct_self_field = place.receiver.inspection_place().is_some_and(|receiver| {
             receiver.root() == BindingId::Receiver(self.callable) && receiver.path.is_root()
@@ -332,6 +350,40 @@ impl CallableChecker<'_, '_> {
             direct_self_field,
             valid,
         })
+    }
+
+    fn check_field_write_authorization(
+        &mut self,
+        access: HirAccess,
+        has_inspection_place: bool,
+        field: FieldId,
+        field_type: Type,
+        cell_span: Option<Span>,
+        member_span: Span,
+    ) -> FieldWriteAuthorizationResult {
+        if access == HirAccess::Mutable {
+            return FieldWriteAuthorizationResult::Authorized(HirFieldWriteAuthorization::Mutable);
+        }
+        if cell_span.is_some() && self.class_owner == Some(field.class()) {
+            return FieldWriteAuthorizationResult::Authorized(
+                HirFieldWriteAuthorization::DeclaringClassCell,
+            );
+        }
+        if cell_span.is_none() && matches!(field_type, Type::Class(_)) && has_inspection_place {
+            return FieldWriteAuthorizationResult::DeferredObjectAssignment;
+        }
+
+        self.diagnostics.push(
+            Diagnostic::error(
+                READ_ONLY_RECEIVER,
+                "cannot assign through a read-only receiver",
+            )
+            .with_primary_label(
+                member_span,
+                "field assignment requires mutable receiver access",
+            ),
+        );
+        FieldWriteAuthorizationResult::Rejected
     }
 
     fn finish_field_assignment(

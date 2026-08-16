@@ -1212,7 +1212,7 @@ and method visibility.
 
 ## Private cell field representation
 
-Status: **declaration metadata implemented; write authorization staged**. The active
+Status: **typed write authorization implemented; MIR support staged**. The active
 [private cell fields roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
 the staged compiler work. The source meaning is defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction).
@@ -1231,9 +1231,10 @@ Unlike ordinary visibility, the durable cell capability must remain available
 after source access is authorized because typed and MIR trust boundaries need
 to verify the exceptional write. HIR and MIR field declarations therefore
 retain cell metadata while continuing to erase private visibility after
-resolution. Deterministic syntax and resolved dumps show `private cell`;
-typed and MIR dumps expose the narrow write authorization without changing the
-receiver's read-only access.
+resolution. Deterministic syntax and resolved dumps show `private cell`; HIR
+dumps expose a selected cell-write authorization without changing the
+receiver's read-only access, while MIR dumps currently expose declaration
+metadata only.
 
 Type checking authorizes assignment through a read-only object place only
 when all of these facts hold:
@@ -1251,22 +1252,29 @@ their existing incomplete-receiver rules. A genuinely mutable root retains
 ordinary access independently of the marker.
 
 Typed HIR represents a cell write as an ordinary type-directed assignment plus
-an explicit field-write authorization such as conceptually:
+this explicit field-write authorization:
 
 ```text
-FieldWriteAuthorization = MutablePlace | DeclaringClassCell
+HirFieldWriteAuthorization = Mutable | DeclaringClassCell
 ```
 
-The concrete Rust representation is implementation-private. It must remain
-cohesive across scalar stores, exact-class copy assignment, optional writes,
-shared-owner replacement, and array replacement. It must not upgrade
+Complete replacement destinations carry this authorization on their
+`HirFieldPlace`, whose existing `field` member is the exact authorized
+endpoint. Reads and initialization destinations carry none. The same
+typed field place is nested in scalar stores, exact-class copy assignment,
+optional writes, shared-owner replacement, and array replacement, keeping the
+access decision centralized. It does not upgrade
 `HirObjectReceiver`, `HirObjectPlace`, or a complete projection path to
 mutable, because that would incorrectly authorize mutable methods, nested
 fields or elements, optional payload mutation, shared-pointee mutation granted
 only by cell, and `mut ref` arguments.
 
-MIR retains corresponding authorization on every instruction family that can
-replace a cell field. Independent verification checks the declared marker,
+MIR will retain corresponding authorization on every instruction family that
+can replace a cell field. Until that representation and its independent
+verification ship, the driver reports `MIR001` for each typed cell write and
+stops before preliminary MIR lowering. The lowering entry point independently
+asserts the same boundary so internal callers cannot silently emit
+unauthorized lower IR. Future independent verification checks the declared marker,
 exact endpoint, enclosing callable owner, receiver access, field type,
 assignment family, place liveness, optional guards, shared and array anchors,
 ownership transitions, and cleanup. Forged authorization on an ordinary
@@ -1288,8 +1296,8 @@ alignment, calling convention, dispatch table, symbol family, runtime call,
 public C API, or runtime ABI version. It carries no atomic, volatile,
 synchronization, thread-local, or runtime borrow semantics.
 
-Declaration metadata is established. The remaining rollout adds typed
-authorization behind an executable gate, then write-aware verified MIR and
+Declaration metadata and typed authorization are established behind an
+executable gate. The remaining rollout adds write-aware verified MIR and
 minimal native execution, then lifecycle/alias composition, and finally
 inheritance, dispatch, generics, determinism, and publication. The compiler-known
 `std::str::Str` descriptor remains a separate follow-up and retains its exact

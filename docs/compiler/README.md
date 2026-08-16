@@ -275,11 +275,11 @@ behavior.
 
 The staged
 [private cell field representation](PHASES_AND_IR.md#private-cell-field-representation)
-now carries one declaration capability through verified MIR. Its deferred
-whole-field write authorization does not upgrade receiver access. The
+now carries declaration metadata through verified MIR and typed whole-field
+write authorization without upgrading receiver access. The
 [implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) stages
-typed authorization, write-aware MIR verification, alias/lifecycle
-composition, and publication; declaration metadata is already implemented.
+write-aware MIR verification and execution, alias/lifecycle composition, and
+publication; an explicit lower-phase gate protects the current boundary.
 
 ## Compiler crate API policy
 
