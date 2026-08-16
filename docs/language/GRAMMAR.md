@@ -374,6 +374,41 @@ Type checking lowers all supported stored static types—including primitives,
 exact classes, optionals, shared owners, strings, and inline arrays—through
 typed HIR and verified lifecycle MIR.
 
+### Frozen planned private-cell field extension
+
+The frozen private-cell design adds this instance-field alternative:
+
+```text
+cell-field-declaration = "private" "cell" identifier ":"
+                         storage-type ";"
+```
+
+It is deliberately absent from the implemented `class-member` production
+above until the active
+[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) reaches
+the corresponding compiler stage. The current compiler therefore does not
+yet accept the modifier form.
+
+Both words remain contextual. The modifier form is selected only when
+`private cell` is followed by a field name and `:`. An ordinary field may
+still be named `cell` or `private`, a private ordinary field may be named
+`cell`, and a static field may be named `cell`:
+
+```ska
+cell: i64;
+private: i64;
+private cell: i64;
+private static cell: u64?;
+```
+
+The frozen form is restricted to private instance fields. `cell name: T;`
+without `private`, a cell static field, and the modifier applied to a method,
+initializer, copy operation, or destructor are invalid. The source-visible
+meaning is owned by
+[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#frozen-private-cell-field-direction),
+and the compiler representation is owned by
+[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-private-cell-field-representation).
+
 ### Construction-selection syntax
 
 The implemented `copy` declaration occupies a separate lifecycle slot. Its

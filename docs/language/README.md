@@ -200,7 +200,10 @@ makes a result source-observable.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and
-  object places, plus assignment, temporaries, and deterministic lifetime.
+  object places, plus assignment, temporaries, and deterministic lifetime. It
+  also owns the frozen planned `private cell` whole-field replacement contract;
+  the status matrix and active roadmap distinguish it from current compiler
+  support.
 - [Generic classes](GENERIC_CLASSES.md) defines implemented explicit closed generic class
   applications, structural substitution, inferred contextual requirements,
   nominal interface bounds, invariance, complete-class validation, and native

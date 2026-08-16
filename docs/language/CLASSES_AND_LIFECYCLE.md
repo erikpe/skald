@@ -4,8 +4,9 @@ Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
 how implemented produced read-only aliases compose with initializer selection
-and owning full-expression temporaries. The [status matrix](STATUS.md) records
-the current compiler boundary.
+and owning full-expression temporaries, and owns the frozen planned private
+cell field direction. The [status matrix](STATUS.md) records the current
+compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -214,6 +215,117 @@ Every class-field projection preserves that access. Projection does not create
 a new const-qualified type or perform a runtime conversion. Detailed alias
 forwarding, overlap, and non-escape rules are defined by
 [aliases and ownership](ALIASES_AND_OWNERSHIP.md).
+
+## Frozen private cell field direction
+
+Status: **frozen design; not yet implemented**. The active
+[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
+delivery. Until its relevant stages complete, the implemented grammar and
+ordinary read-only field-assignment diagnostic remain unchanged.
+
+A private cell field has this planned form:
+
+```ska
+class Cache {
+    private cell _value: u64?;
+
+    fn remember(value: u64) -> unit {
+        self._value = value;
+    }
+}
+```
+
+It is an ordinary private instance field with one additional permission. A
+callable lexically owned by the field's exact declaring class may replace the
+complete field through an otherwise read-only object place. The method in the
+example remains an ordinary read-only `fn`; callers need no mutable receiver.
+The same rule applies to an explicit read-only object place in a static method
+or another declaring-class body:
+
+```ska
+static fn clear(ref target: Cache) -> unit {
+    target._value = none;
+}
+```
+
+The permission ends at the selected field. It does not make the receiver,
+containing object, field contents, or later projection mutable:
+
+```ska
+class Holder {
+    private cell _item: Item;
+    private cell _values: i64[];
+
+    fn replace(ref item: Item) -> unit {
+        self._item = item;               // planned: valid whole replacement
+        self._values = i64[]{1, 2, 3};   // planned: valid whole replacement
+
+        self._item.change();             // invalid mutable nested receiver
+        mutate(self._item);               // invalid `mut ref` through read-only access
+        self._values[0] = 4;             // invalid nested element mutation
+    }
+}
+```
+
+Through a genuinely mutable root, the field retains every operation available
+to the equivalent ordinary private field. `cell` does not make stored state
+opaque or permanently non-borrowable; it adds only the complete-replacement
+exception to read-only access.
+
+The declared type is unchanged. `_value` above has type `u64?`, not a wrapper
+type such as `Cell<u64?>`. Every type already legal in an instance field is
+eligible, and complete replacement uses its ordinary assignment contract:
+scalar copying, exact-class copy assignment, optional state transition,
+shared-owner transfer/retention/release, or array replacement. Destination and
+source evaluation, assignment capability, displaced-value destruction,
+failure, temporaries, and cleanup remain identical to assignment through a
+mutable receiver.
+
+Cell state is ordinary lifecycle state. Every initializer initializes it
+exactly once. Synthesized and explicit copying, assignment, and destruction
+copy or destroy its current value in ordinary field order. A populated cache
+is copied as populated and an empty cache as empty; the modifier does not mean
+transient, derived, lazily initialized by the compiler, or excluded from
+containment and layout.
+
+Declaring-class privacy remains authoritative. A derived class cannot select
+a base's private cell, though an inherited base method may update the base
+cell. Closed generic specialization substitutes the field type and preserves
+the marker without adding a type capability or runtime generic state.
+Read-only virtual/interface methods retain their signatures when their
+implementation writes a cell. `fn` governs receiver access and call
+compatibility; it is not a promise of purity, stable observation, or absence
+of other effects.
+
+Aliases remain non-owning, call-scoped, non-exclusive, and non-escaping. A
+cell replacement must use ordinary type-directed assignment and the existing
+lifetime protections:
+
+- an alias to inline scalar or class field storage remains valid and may
+  observe the assigned state;
+- an alias into detached array backing retains the old backing through its
+  existing hidden anchor;
+- an alias to a pointee reached through a replaced shared owner retains the
+  old allocation through its existing owner anchor; and
+- an active checked optional payload guard terminates a clearing or replacing
+  write before presence can change.
+
+This is lifetime and ownership safety under Skald's existing non-exclusive
+alias model, not snapshot stability or exclusivity. A `ref` prevents mutation
+through that binding but never promises that another overlapping path cannot
+mutate the same storage.
+
+The modifier adds no distinct layout, wrapper allocation, getter/setter,
+runtime borrow state, synchronization, atomicity, volatility, callable effect,
+runtime service, or ABI surface. Public cells, static cells, a library
+`Cell<T>`, escaping references, nested mutable access through read-only roots,
+and concurrency semantics are outside the frozen profile.
+
+The confirmed decision record is preserved in the
+[private cell fields design proposal](../roadmaps/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
+Adding a cached hash field to the compiler-known `std::str::Str` descriptor is
+a separate follow-up because literal materialization currently initializes
+exactly the three frozen descriptor fields.
 
 ## Object places and projections
 

@@ -10,16 +10,20 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+The [private cell fields roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) is planned to
+implement narrow verified whole-field interior mutation for ordinary private
+instance fields. CFI0, contextual declaration metadata, is next. It depends
+on the implemented privacy, receiver-access, field-assignment, lifecycle,
+alias-anchor, optional-guard, generic-specialization, and verified-MIR
+contracts; no active roadmap blocks it. The separate `Str` cached-hash
+migration depends on its completion and remains outside this roadmap.
 
 ## Design proposals
 
 The [private cell fields design proposal](PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md)
-is a draft for narrow whole-field interior mutability through read-only object
-places. Its next step is confirmation of PC1 through PC13; it depends on the
-implemented declaring-class privacy, receiver-access, lifecycle, alias, and
-verified field-assignment contracts. Compiler implementation and the separate
-`Str` cached-hash language-item migration have not started.
+is frozen and promoted into the planned language and compiler contracts. Its
+implementation is owned by the planned roadmap above; the separate `Str`
+cached-hash language-item migration has not started.
 
 The confirmed structural indexing and slicing decisions are preserved in the
 [archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).

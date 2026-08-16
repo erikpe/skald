@@ -1,8 +1,8 @@
 # Private Cell Fields Design Proposal
 
-Status: draft design. The `private cell` direction and whole-field replacement
-boundary were selected on 2026-08-16. The detailed decisions below remain
-proposed until they are reviewed and confirmed together. The implemented
+Status: frozen design. PC1 through PC13 were confirmed together on 2026-08-16
+and promoted into the living language and compiler contracts before the
+implementation roadmap was created. The implemented
 [grammar](../language/GRAMMAR.md) and
 [status matrix](../language/STATUS.md) remain authoritative for current
 compiler behavior.
@@ -58,9 +58,9 @@ The initial feature should provide:
 - focused diagnostics and deterministic phase dumps for syntax, access, and
   invalid attempts to extend the permission into nested mutation.
 
-Freezing this design would not by itself make the syntax executable. Living
-language and compiler contracts must be promoted and an implementation
-roadmap created before compiler work begins.
+Freezing this design did not by itself make the syntax executable. The planned
+language and compiler contracts are now promoted, and the separate
+implementation roadmap owns compiler work.
 
 ## Current boundary and architectural evidence
 
@@ -100,7 +100,7 @@ anchoring.
 The present type checker rejects a field assignment when its receiver has
 read-only access. HIR and MIR then rely on typed field identities, receiver
 origins, and access metadata, while verification proves that writes target a
-legal live destination. The proposed feature therefore fits as a narrow
+legal live destination. The frozen feature therefore fits as a narrow
 authorization on a complete selected field assignment. It does not require a
 new source-visible reference kind or runtime container.
 
@@ -140,25 +140,25 @@ modifier integrated with Skald's own value, ownership, and lifecycle rules.
 
 ## Decision register
 
-| ID | Decision | Proposed direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [PC1](#pc1--source-syntax-and-contextual-spelling) | Source syntax | Add contextual `private cell name: T;` only for instance fields | **Proposed** |
-| [PC2](#pc2--field-identity-type-and-visibility) | Declaration meaning | Keep an ordinary private `FieldId` and stored type plus one cell capability bit and modifier span | **Proposed** |
-| [PC3](#pc3--authorized-whole-field-replacement) | Interior write | Permit complete replacement through read-only access from the exact declaring class | **Proposed** |
-| [PC4](#pc4--permission-does-not-propagate) | Nested mutation | Preserve the root's read-only access for every operation other than complete replacement of the selected cell | **Proposed** |
-| [PC5](#pc5--assignment-evaluation-and-lifecycle) | Write behavior | Reuse the field type's ordinary assignment, ownership, evaluation, failure, and cleanup rules | **Proposed** |
-| [PC6](#pc6--reads-aliases-and-overlap) | Borrowing | Keep ordinary reads and non-exclusive call-scoped aliases; reuse all existing anchors and guards | **Proposed** |
-| [PC7](#pc7--initialization-copying-and-destruction) | Object lifecycle | Treat cell state exactly like ordinary field state in every initializer and lifecycle plan | **Proposed** |
-| [PC8](#pc8--methods-dispatch-and-logical-state) | Callable contract | Keep `fn` read-only at the call boundary; cell writes add no signature or dispatch effect | **Proposed** |
-| [PC9](#pc9--inheritance-generics-and-polymorphic-views) | Composition | Preserve declaring-class privacy and specialize the cell marker with ordinary closed generic fields | **Proposed** |
-| [PC10](#pc10--compiler-representation-and-verification) | Compiler boundary | Carry explicit cell metadata and cell-write authorization through typed and verified phases | **Proposed** |
-| [PC11](#pc11--target-runtime-and-concurrency-boundary) | Realization | Use ordinary field layout and stores; add no ABI, runtime, atomicity, or synchronization contract | **Proposed** |
-| [PC12](#pc12--diagnostics-dumps-and-testing) | Quality | Diagnose malformed or over-broad uses precisely and make the capability deterministic in dumps and tests | **Proposed** |
-| [PC13](#pc13--standard-library-adoption-and-delivery) | Delivery | Freeze and promote the general feature before separately extending `Str` and its literal language-item contract | **Proposed** |
+| [PC1](#pc1--source-syntax-and-contextual-spelling) | Source syntax | Add contextual `private cell name: T;` only for instance fields | **Confirmed** |
+| [PC2](#pc2--field-identity-type-and-visibility) | Declaration meaning | Keep an ordinary private `FieldId` and stored type plus one cell capability bit and modifier span | **Confirmed** |
+| [PC3](#pc3--authorized-whole-field-replacement) | Interior write | Permit complete replacement through read-only access from the exact declaring class | **Confirmed** |
+| [PC4](#pc4--permission-does-not-propagate) | Nested mutation | Preserve the root's read-only access for every operation other than complete replacement of the selected cell | **Confirmed** |
+| [PC5](#pc5--assignment-evaluation-and-lifecycle) | Write behavior | Reuse the field type's ordinary assignment, ownership, evaluation, failure, and cleanup rules | **Confirmed** |
+| [PC6](#pc6--reads-aliases-and-overlap) | Borrowing | Keep ordinary reads and non-exclusive call-scoped aliases; reuse all existing anchors and guards | **Confirmed** |
+| [PC7](#pc7--initialization-copying-and-destruction) | Object lifecycle | Treat cell state exactly like ordinary field state in every initializer and lifecycle plan | **Confirmed** |
+| [PC8](#pc8--methods-dispatch-and-logical-state) | Callable contract | Keep `fn` read-only at the call boundary; cell writes add no signature or dispatch effect | **Confirmed** |
+| [PC9](#pc9--inheritance-generics-and-polymorphic-views) | Composition | Preserve declaring-class privacy and specialize the cell marker with ordinary closed generic fields | **Confirmed** |
+| [PC10](#pc10--compiler-representation-and-verification) | Compiler boundary | Carry explicit cell metadata and cell-write authorization through typed and verified phases | **Confirmed** |
+| [PC11](#pc11--target-runtime-and-concurrency-boundary) | Realization | Use ordinary field layout and stores; add no ABI, runtime, atomicity, or synchronization contract | **Confirmed** |
+| [PC12](#pc12--diagnostics-dumps-and-testing) | Quality | Diagnose malformed or over-broad uses precisely and make the capability deterministic in dumps and tests | **Confirmed** |
+| [PC13](#pc13--standard-library-adoption-and-delivery) | Delivery | Freeze and promote the general feature before separately extending `Str` and its literal language-item contract | **Confirmed** |
 
 ## PC1 — Source syntax and contextual spelling
 
-The proposed declaration is:
+The frozen declaration is:
 
 ```ska
 class Cache {
@@ -566,18 +566,15 @@ This proposal does not add:
 - any promise that an ordinary `fn` is pure, deterministic, const-evaluable,
   re-entrant, or safe for concurrent invocation.
 
-## Promotion boundary
+## Promotion and implementation boundary
 
-Before this proposal is frozen, PC1 through PC13 should be reviewed as one
-contract. Confirmation should then:
+PC1 through PC13 were confirmed as one contract on 2026-08-16. The frozen
+planned behavior is promoted into the focused class/access, grammar, compiler
+phase, and status documentation. The separate
+[implementation roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) owns delivery without
+reopening these decisions.
 
-1. change the decision register and status to confirmed;
-2. publish the planned language behavior in the focused class/access and
-   grammar documentation without claiming implementation;
-3. publish the compiler phase and verification contract;
-4. update the status matrix with a frozen planned direction; and
-5. create and index a separate PR-sized implementation roadmap.
-
-The implementation roadmap must not reopen these decisions or combine the
-general language feature with the `Str` language-item migration unless that
-broader scope is explicitly approved.
+That roadmap does not combine the general language feature with the `Str`
+language-item migration. Extending the exact string descriptor and literal
+materialization remains a separately approved follow-up after private cell
+fields execute through the complete compiler.

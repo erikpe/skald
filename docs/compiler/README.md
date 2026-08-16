@@ -273,6 +273,14 @@ verification, dumps, and trust boundaries, and
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) for orchestration and output
 behavior.
 
+The frozen planned
+[private cell field representation](PHASES_AND_IR.md#frozen-private-cell-field-representation)
+adds one declaration capability and explicit whole-field write authorization
+without upgrading receiver access. Its
+[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) stages
+metadata, typed authorization, MIR verification, alias/lifecycle composition,
+and publication; the current compiler does not yet accept the modifier.
+
 ## Compiler crate API policy
 
 `skald-compiler` is unpublished and repository-internal. Its public Rust API

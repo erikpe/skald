@@ -1210,6 +1210,89 @@ that centralized check. No-match and ambiguity stop before access checking.
 Authorized HIR deliberately erases initializer visibility along with field
 and method visibility.
 
+## Frozen private cell field representation
+
+Status: **frozen design; not yet implemented**. The active
+[private cell fields roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
+the staged compiler work. The source meaning is defined by
+[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-private-cell-field-direction).
+
+Syntax will retain one explicit `cell` modifier and exact span on an ordinary
+private instance field. Resolution will preserve the field's existing dense
+`FieldId`, declaring `ClassId`, visibility, name, type, declaration order, and
+span plus one cell marker. Generic template collection and closed
+specialization preserve and substitute that same declaration property. The
+marker does not create another field identity, wrapper type, member category,
+layout edge, or lifecycle slot.
+
+Unlike ordinary visibility, the durable cell capability must remain available
+after source access is authorized because typed and MIR trust boundaries need
+to verify the exceptional write. HIR and MIR field declarations therefore
+retain cell metadata while continuing to erase private visibility after
+resolution. Deterministic syntax and resolved dumps show `private cell`;
+typed and MIR dumps expose the narrow write authorization without changing the
+receiver's read-only access.
+
+Type checking authorizes assignment through a read-only object place only
+when all of these facts hold:
+
+1. the destination ends at one selected field identity;
+2. that field carries the cell marker;
+3. the current callable's lexical class owner is the field's exact declaring
+   class; and
+4. the operation replaces that complete field rather than mutating a nested
+   projection or forwarding it as mutable.
+
+Existing name selection and declaring-class privacy run first and retain their
+diagnostic precedence. Initializer writes remain direct initialization through
+their existing incomplete-receiver rules. A genuinely mutable root retains
+ordinary access independently of the marker.
+
+Typed HIR represents a cell write as an ordinary type-directed assignment plus
+an explicit field-write authorization such as conceptually:
+
+```text
+FieldWriteAuthorization = MutablePlace | DeclaringClassCell
+```
+
+The concrete Rust representation is implementation-private. It must remain
+cohesive across scalar stores, exact-class copy assignment, optional writes,
+shared-owner replacement, and array replacement. It must not upgrade
+`HirObjectReceiver`, `HirObjectPlace`, or a complete projection path to
+mutable, because that would incorrectly authorize mutable methods, nested
+fields or elements, optional payload mutation, shared-pointee mutation granted
+only by cell, and `mut ref` arguments.
+
+MIR retains corresponding authorization on every instruction family that can
+replace a cell field. Independent verification checks the declared marker,
+exact endpoint, enclosing callable owner, receiver access, field type,
+assignment family, place liveness, optional guards, shared and array anchors,
+ownership transitions, and cleanup. Forged authorization on an ordinary
+field, static field, nested destination, wrong class body, initialization
+operation, or mismatched assignment family is invalid MIR.
+
+The operation otherwise reuses ordinary assignment lowering. Existing scalar,
+copy-assignment, optional, shared-owner, and array instructions continue to
+own evaluation order, self-assignment, retain/adopt/release, displaced-value
+destruction, detached backing, presence transitions, failure, and
+full-expression cleanup. An active optional payload guard prevents cell
+replacement before invalidation; shared-owner and array-backing anchors keep
+old aliased storage alive exactly as they do for replacement through another
+mutable path. No raw store may bypass these plans.
+
+After final verification, target lowering uses the ordinary field address and
+assignment machinery. Cell metadata changes no field offset, object size,
+alignment, calling convention, dispatch table, symbol family, runtime call,
+public C API, or runtime ABI version. It carries no atomic, volatile,
+synchronization, thread-local, or runtime borrow semantics.
+
+The planned rollout first establishes declaration metadata, then typed
+authorization behind an executable gate, then verified MIR and minimal native
+execution, then lifecycle/alias composition, and finally inheritance,
+dispatch, generics, determinism, and publication. The compiler-known
+`std::str::Str` descriptor remains a separate follow-up and retains its exact
+current literal-materialization contract during this roadmap.
+
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
