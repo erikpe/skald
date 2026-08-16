@@ -1,6 +1,6 @@
 # Private Cell Fields Roadmap
 
-Status: in progress; CFI1 is complete and CFI2 is next.
+Status: in progress; CFI2 is complete and CFI3 is next.
 
 This roadmap implements the frozen
 [private cell field language contract](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction)
@@ -62,7 +62,7 @@ implement those decisions without reopening them.
 
 - [x] CFI0 — Represent contextual private cell declarations
 - [x] CFI1 — Authorize typed whole-field replacement
-- [ ] CFI2 — Preserve and verify cell writes in MIR
+- [x] CFI2 — Preserve and verify cell writes in MIR
 - [ ] CFI3 — Prove lifecycle-bearing and alias-safe assignment families
 - [ ] CFI4 — Harden composition and publish the implemented contract
 
@@ -170,29 +170,29 @@ Completed 2026-08-16. Focused type-checking, HIR, and driver tests,
 **Purpose:** Make cell authorization an independently verified target-
 independent fact before native execution relies on it.
 
-- [ ] Lower typed cell authorization into an explicit MIR write capability
+- [x] Lower typed cell authorization into an explicit MIR write capability
       carried by every applicable store, copy assignment, optional operation,
       shared-owner replacement, and array replacement path. Do not encode the
       permission by changing a receiver or source place to mutable.
-- [ ] Extend preliminary and final MIR verification to prove the selected
+- [x] Extend preliminary and final MIR verification to prove the selected
       endpoint is the declared cell field, the enclosing definition is owned
       by its exact declaring class, the receiver access is compatible, and the
       operation's type and assignment family match the field.
-- [ ] Reject forged authorization on ordinary fields, nested projections,
+- [x] Reject forged authorization on ordinary fields, nested projections,
       different declaring classes, initialization operations, static fields,
       mismatched assignment families, dead places, or malformed receiver
       origins.
-- [ ] Preserve existing optional presence, shared ownership, array backing,
+- [x] Preserve existing optional presence, shared ownership, array backing,
       lifetime, cleanup, and view verification rather than creating a bypass
       around their path-state analyses.
-- [ ] Lower verified operations through ordinary backend place addressing and
+- [x] Lower verified operations through ordinary backend place addressing and
       assignment machinery. Erase only the authorization evidence no longer
       needed after the final verifier; add no target instruction or runtime
       call.
-- [ ] Remove the temporary executable gate and add a minimal source-to-native
+- [x] Remove the temporary executable gate and add a minimal source-to-native
       primitive-optional cache that proves a read-only method can populate and
       reuse one cell.
-- [ ] Make MIR and assembly dumps deterministic and prove no field offset,
+- [x] Make MIR and assembly dumps deterministic and prove no field offset,
       class size, callable ABI, symbol, or runtime ABI change beyond ordinary
       program code for the assignment.
 
@@ -206,6 +206,10 @@ Rust-task gates.
 through explicit verified MIR evidence, forged or over-broad permissions fail
 independently, the minimal cache behaves observably, and runtime/layout/ABI
 contracts remain unchanged.
+
+Completed 2026-08-16. Focused HIR-to-MIR, verifier mutation, backend layout and
+ABI tests, the native primitive-optional cache golden, `make check`,
+`make msrv-check`, documentation validation, and `git diff --check` passed.
 
 ### CFI3 — Prove lifecycle-bearing and alias-safe assignment families
 

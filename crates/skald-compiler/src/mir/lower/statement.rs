@@ -50,6 +50,7 @@ impl BodyLowerer<'_> {
                         }
                     },
                     value,
+                    authorization: None,
                     span: assignment.span,
                 }));
                 self.finish_full_expression(assignment.span);
@@ -98,7 +99,11 @@ impl BodyLowerer<'_> {
             }
             HirStatement::ArrayAssignment(assignment) => {
                 let destination = self.lower_array_place(&assignment.destination);
-                self.lower_array_initialize(destination, &assignment.value, true);
+                self.lower_array_replace(
+                    destination,
+                    &assignment.value,
+                    super::lower_array_cell_write_authorization(&assignment.destination),
+                );
                 self.finish_full_expression(assignment.span);
             }
             HirStatement::ArrayElementAssignment(assignment) => {
@@ -152,6 +157,7 @@ impl BodyLowerer<'_> {
                 self.emit(MirInstruction::Store(MirStore {
                     destination: storage.into(),
                     value,
+                    authorization: None,
                     span: local.span,
                 }));
                 self.finish_full_expression(local.span);
@@ -365,6 +371,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::Store(MirStore {
             destination,
             value,
+            authorization: super::lower_cell_write_authorization(&assignment.place),
             span: assignment.span,
         }));
         self.finish_full_expression(assignment.span);
@@ -400,6 +407,7 @@ impl BodyLowerer<'_> {
             source,
             class: statement.source.class(),
             operation: lower_selected_copy_operation(statement.operation),
+            authorization: super::lower_cell_write_authorization(&statement.place),
             span: statement.span,
         }));
         self.end_optional_views_from(optional_mark, statement.span);
@@ -414,6 +422,7 @@ impl BodyLowerer<'_> {
             source,
             class: statement.destination.class(),
             operation: lower_selected_copy_operation(statement.operation),
+            authorization: None,
             span: statement.span,
         }));
         self.end_optional_views_from(optional_mark, statement.span);

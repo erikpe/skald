@@ -8,6 +8,7 @@ use super::{
         MirCopyConstruction, MirDefinitionRef, MirEndFullExpression, MirInstruction, MirPlace,
         MirPlaceBase, MirRvalue, MirRvalueKind, MirStorageKind, MirStore, MirType, ValueId,
     },
+    cell_write::{CellWriteFamily, VerifiedWriteAccess},
     context::Verifier,
     place::places_overlap,
 };
@@ -15,7 +16,7 @@ use super::{
 #[derive(Clone, Copy)]
 enum CopyOperationKind {
     Construction,
-    Assignment,
+    Assignment(VerifiedWriteAccess),
 }
 
 impl Verifier<'_> {
@@ -127,13 +128,23 @@ impl Verifier<'_> {
                 &initialize.source,
                 defined_in_block,
             ),
-            MirInstruction::OptionalAssign(assignment) => self.verify_optional_assign(
-                function,
-                block,
-                &assignment.destination,
-                &assignment.source,
-                defined_in_block,
-            ),
+            MirInstruction::OptionalAssign(assignment) => {
+                let cell_authorized = self.verify_cell_write_authorization(
+                    function,
+                    block,
+                    &assignment.destination,
+                    assignment.authorization,
+                    CellWriteFamily::Optional,
+                );
+                self.verify_optional_assign(
+                    function,
+                    block,
+                    &assignment.destination,
+                    &assignment.source,
+                    defined_in_block,
+                    cell_authorized,
+                );
+            }
             MirInstruction::AggregateOptionalInitialize(initialize) => {
                 self.verify_aggregate_optional_operation(
                     function,
@@ -141,10 +152,17 @@ impl Verifier<'_> {
                     initialize.optional,
                     &initialize.destination,
                     Some(&initialize.source),
-                    false,
+                    None,
                 );
             }
             MirInstruction::AggregateOptionalAssign(assignment) => {
+                let cell_authorized = self.verify_cell_write_authorization(
+                    function,
+                    block,
+                    &assignment.destination,
+                    assignment.authorization,
+                    CellWriteFamily::Optional,
+                );
                 if matches!(
                     assignment.source,
                     crate::mir::MirAggregateOptionalSource::Unpublished
@@ -161,7 +179,7 @@ impl Verifier<'_> {
                     assignment.optional,
                     &assignment.destination,
                     Some(&assignment.source),
-                    true,
+                    Some(VerifiedWriteAccess::from_cell_authorized(cell_authorized)),
                 );
             }
             MirInstruction::AggregateOptionalPublish(publish) => {
@@ -171,7 +189,7 @@ impl Verifier<'_> {
                     publish.optional,
                     &publish.destination,
                     None,
-                    false,
+                    None,
                 );
             }
             MirInstruction::AggregateOptionalCleanup(cleanup) => {
@@ -181,7 +199,7 @@ impl Verifier<'_> {
                     cleanup.optional,
                     &cleanup.destination,
                     None,
-                    true,
+                    Some(VerifiedWriteAccess::Ordinary),
                 );
             }
             MirInstruction::OptionalSharedInitialize(initialize) => self
@@ -191,17 +209,25 @@ impl Verifier<'_> {
                     &initialize.destination,
                     &initialize.source,
                     (initialize.optional, initialize.target),
-                    true,
+                    None,
                 ),
-            MirInstruction::OptionalSharedAssign(assignment) => self
-                .verify_optional_shared_operation(
+            MirInstruction::OptionalSharedAssign(assignment) => {
+                let cell_authorized = self.verify_cell_write_authorization(
+                    function,
+                    block,
+                    &assignment.destination,
+                    assignment.authorization,
+                    CellWriteFamily::Optional,
+                );
+                self.verify_optional_shared_operation(
                     function,
                     block,
                     &assignment.destination,
                     &assignment.source,
                     (assignment.optional, assignment.target),
-                    false,
-                ),
+                    Some(VerifiedWriteAccess::from_cell_authorized(cell_authorized)),
+                );
+            }
             MirInstruction::OptionalSharedCleanup(cleanup) => {
                 self.verify_optional_shared_cleanup(function, block, cleanup)
             }
@@ -233,6 +259,13 @@ impl Verifier<'_> {
                 }
             }
             MirInstruction::ClassOptionalAssign(assignment) => {
+                let cell_authorized = self.verify_cell_write_authorization(
+                    function,
+                    block,
+                    &assignment.destination,
+                    assignment.authorization,
+                    CellWriteFamily::Optional,
+                );
                 self.verify_class_optional_places(
                     function,
                     block,
@@ -244,6 +277,7 @@ impl Verifier<'_> {
                 if self
                     .verify_place(function, block, &assignment.destination)
                     .is_some_and(|place| place.access != crate::mir::MirAliasAccess::Mutable)
+                    && !cell_authorized
                 {
                     self.block_error(
                         function.callable(),
@@ -491,13 +525,22 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         copy: &MirCopyAssignment,
     ) {
+        let cell_authorized = self.verify_cell_write_authorization(
+            function,
+            block,
+            &copy.destination,
+            copy.authorization,
+            CellWriteFamily::Class,
+        );
         self.verify_copy_places(
             function,
             block,
             &copy.destination,
             &copy.source,
             copy.class,
-            CopyOperationKind::Assignment,
+            CopyOperationKind::Assignment(VerifiedWriteAccess::from_cell_authorized(
+                cell_authorized,
+            )),
         );
         let selected = self
             .program
@@ -550,6 +593,13 @@ impl Verifier<'_> {
         store: &MirStore,
         defined_in_block: &HashSet<ValueId>,
     ) {
+        let cell_authorized = self.verify_cell_write_authorization(
+            function,
+            block,
+            &store.destination,
+            store.authorization,
+            CellWriteFamily::Scalar,
+        );
         let destination = self.verify_place(function, block, &store.destination);
         let storage_ty = destination.map(|place| place.ty);
         let value_ty = self.verify_value_use(function, block, store.value, defined_in_block);
@@ -563,7 +613,9 @@ impl Verifier<'_> {
         if storage_ty.is_some() && value_ty.is_some() && storage_ty != value_ty {
             self.block_error(function.callable(), block.id, "store operand type mismatch");
         }
-        if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+        if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable)
+            && !cell_authorized
+        {
             self.block_error(
                 function.callable(),
                 block.id,
@@ -608,7 +660,13 @@ impl Verifier<'_> {
                 "copy source and destination must have the exact operation class",
             );
         }
-        if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+        let allows_read_only = matches!(
+            operation,
+            CopyOperationKind::Assignment(access) if access.allows_read_only()
+        );
+        if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable)
+            && !allows_read_only
+        {
             self.block_error(
                 function.callable(),
                 block.id,
@@ -1060,8 +1118,9 @@ impl Verifier<'_> {
         optional: crate::identity::OptionalTypeId,
         destination: &MirPlace,
         source: Option<&crate::mir::MirAggregateOptionalSource>,
-        mutable: bool,
+        write_access: Option<VerifiedWriteAccess>,
     ) {
+        let mutable = write_access.is_some();
         let valid_metadata = self
             .program
             .optional_type(optional)
@@ -1090,6 +1149,7 @@ impl Verifier<'_> {
             && destination
                 .as_ref()
                 .is_some_and(|place| place.access != MirAliasAccess::Mutable)
+            && !write_access.is_some_and(VerifiedWriteAccess::allows_read_only)
         {
             self.block_error(
                 function.callable(),

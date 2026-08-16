@@ -280,6 +280,7 @@ impl InstructionSelector<'_, '_> {
                 self.select_optional_assign(&MirOptionalAssign {
                     destination,
                     source: MirOptionalSource::Copy(source),
+                    authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 })
             }
@@ -302,6 +303,7 @@ impl InstructionSelector<'_, '_> {
                     class,
                     copy_constructor: Some(copy_constructor),
                     copy_assignment: Some(copy_assignment),
+                    authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 })
             }
@@ -311,6 +313,7 @@ impl InstructionSelector<'_, '_> {
                     destination,
                     source: MirOptionalSharedSource::Copy(source),
                     target,
+                    authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_)
@@ -319,6 +322,7 @@ impl InstructionSelector<'_, '_> {
                     optional,
                     destination,
                     source: MirAggregateOptionalSource::Copy(source),
+                    authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
         }

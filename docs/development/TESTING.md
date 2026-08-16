@@ -964,6 +964,19 @@ Complete implementation evidence includes:
   `make robustness-long` at the roadmap tasks that alter Rust syntax or
   frontend recovery.
 
+## Private cell field coverage
+
+Private cell tests follow the authorization across its trust boundaries.
+Syntax and resolution tests own contextual spelling, exact spans, identities,
+privacy, and specialization. Type-checking tests own the exact declaring-class
+whole-field decision and neighboring read-only exclusions. MIR tests require
+explicit evidence on every assignment carrier and mutate its field, endpoint,
+owner, access, family, origin, and liveness independently in preliminary and
+final products. Backend tests retain ordinary place addressing, layout,
+callable ABI, deterministic assembly, and runtime ABI version 9. The focused
+native golden populates and reuses a primitive-optional cache through a
+read-only method.
+
 ## Static-field coverage
 
 Static-field tests are divided by responsibility: syntax recovery owns

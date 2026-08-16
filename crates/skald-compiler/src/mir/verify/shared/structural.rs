@@ -14,6 +14,7 @@ use super::super::{
         MirStorageKind, MirTerminationReason, MirTerminator, MirType, MirViewTarget, StorageId,
         ValueId,
     },
+    cell_write::CellWriteFamily,
     context::Verifier,
     type_operations::TypeRelation,
 };
@@ -563,6 +564,7 @@ impl<'mir> Verifier<'mir> {
             &initialize.destination,
             initialize.source,
             true,
+            false,
         );
     }
 
@@ -572,12 +574,20 @@ impl<'mir> Verifier<'mir> {
         block: &MirBasicBlock,
         replace: &MirSharedFieldReplace,
     ) {
+        let cell_authorized = self.verify_cell_write_authorization(
+            function,
+            block,
+            &replace.destination,
+            replace.authorization,
+            CellWriteFamily::Shared,
+        );
         self.verify_shared_field_destination(
             function,
             block,
             &replace.destination,
             replace.source,
             false,
+            cell_authorized,
         );
     }
 
@@ -588,6 +598,7 @@ impl<'mir> Verifier<'mir> {
         destination: &MirPlace,
         source: StorageId,
         initialization: bool,
+        cell_authorized: bool,
     ) {
         let field = self.verify_place(function, block, destination);
         let source = function.storage(source);
@@ -622,7 +633,7 @@ impl<'mir> Verifier<'mir> {
         let valid = matches!(
             (field, source),
             (Some(field), Some(source))
-                if field.access == MirAliasAccess::Mutable
+                if (field.access == MirAliasAccess::Mutable || cell_authorized)
                     && matches!(field.ty, MirType::Shared(_))
                     && field.ty == source.ty
                     && source.kind == MirStorageKind::Temporary

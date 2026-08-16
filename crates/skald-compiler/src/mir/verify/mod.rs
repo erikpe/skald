@@ -14,6 +14,7 @@ mod arguments;
 mod array;
 mod body;
 mod call;
+mod cell_write;
 mod checked_scalar;
 mod cleanup;
 mod closed_program;

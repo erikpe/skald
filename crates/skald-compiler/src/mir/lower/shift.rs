@@ -77,6 +77,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::Store(MirStore {
             destination: MirPlace::base(result),
             value: shifted,
+            authorization: None,
             span: expression.span,
         }));
         self.terminate(MirTerminator::Goto {

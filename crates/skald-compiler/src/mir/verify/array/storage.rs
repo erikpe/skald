@@ -2,8 +2,10 @@ use std::collections::HashSet;
 
 use super::super::{
     super::model::{
-        MirArrayInstruction, MirBasicBlock, MirDefinitionRef, MirStorageKind, MirType, ValueId,
+        MirAliasAccess, MirArrayInstruction, MirBasicBlock, MirDefinitionRef, MirStorageKind,
+        MirType, ValueId,
     },
+    cell_write::CellWriteFamily,
     context::Verifier,
 };
 
@@ -15,6 +17,31 @@ impl Verifier<'_> {
         instruction: &MirArrayInstruction,
         defined: &HashSet<ValueId>,
     ) {
+        if let MirArrayInstruction::Replace {
+            destination,
+            authorization,
+            ..
+        } = instruction
+        {
+            let cell_authorized = self.verify_cell_write_authorization(
+                function,
+                block,
+                destination,
+                *authorization,
+                CellWriteFamily::Array,
+            );
+            if self
+                .verify_place(function, block, destination)
+                .is_some_and(|place| place.access != MirAliasAccess::Mutable)
+                && !cell_authorized
+            {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "array replacement destination requires mutable access",
+                );
+            }
+        }
         match instruction {
             MirArrayInstruction::Allocate {
                 backing,

@@ -3,6 +3,7 @@
 //! HIR retains source spans useful to diagnostics while replacing resolved
 //! syntax with explicit typed operations and exact call targets.
 
+#[cfg(test)]
 mod cell_writes;
 mod dump;
 mod ir;
@@ -10,6 +11,7 @@ mod ir;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
 pub(crate) use cell_writes::collect_cell_writes;
 pub use dump::dump_hir;
 pub use ir::{

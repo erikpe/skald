@@ -422,6 +422,7 @@ impl InstructionSelector<'_, '_> {
                 class,
                 copy_constructor: Some(copy_constructor),
                 copy_assignment: Some(copy_assignment),
+                authorization: None,
                 span,
             }),
             MirArrayAssignElement::Array(inner) => {
@@ -439,6 +440,7 @@ impl InstructionSelector<'_, '_> {
                     destination,
                     source: MirOptionalSharedSource::Copy(source),
                     target,
+                    authorization: None,
                     span,
                 })
             }
@@ -447,6 +449,7 @@ impl InstructionSelector<'_, '_> {
                     optional,
                     destination,
                     source: crate::mir::MirAggregateOptionalSource::Copy(source),
+                    authorization: None,
                     span,
                 })
             }

@@ -1,0 +1,23 @@
+import std::io;
+
+class Cache {
+    private cell value: i64?;
+
+    init() {
+        self.value = none;
+    }
+
+    fn remember(value: i64) -> i64 {
+        if (self.value is none) {
+            self.value = value;
+        }
+        return self.value!;
+    }
+}
+
+fn main() -> i64 {
+    var cache: Cache = Cache();
+    std::io::println_i64(cache.remember(41));
+    std::io::println_i64(cache.remember(99));
+    return 0;
+}

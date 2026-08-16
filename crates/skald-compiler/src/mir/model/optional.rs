@@ -6,7 +6,8 @@ use crate::{
 };
 
 use super::{
-    MirPlace, MirSelectedCopyOperation, MirSharedTarget, OptionalGuardId, StorageId, ValueId,
+    MirCellWriteAuthorization, MirPlace, MirSelectedCopyOperation, MirSharedTarget,
+    OptionalGuardId, StorageId, ValueId,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -27,6 +28,7 @@ pub struct MirOptionalInitialize {
 pub struct MirOptionalAssign {
     pub destination: MirPlace,
     pub source: MirOptionalSource,
+    pub authorization: Option<MirCellWriteAuthorization>,
     pub span: Span,
 }
 
@@ -56,6 +58,7 @@ pub struct MirAggregateOptionalAssign {
     pub optional: OptionalTypeId,
     pub destination: MirPlace,
     pub source: MirAggregateOptionalSource,
+    pub authorization: Option<MirCellWriteAuthorization>,
     pub span: Span,
 }
 
@@ -104,6 +107,7 @@ pub struct MirClassOptionalAssign {
     pub class: ClassId,
     pub copy_constructor: Option<MirSelectedCopyOperation<CopyConstructorId>>,
     pub copy_assignment: Option<MirSelectedCopyOperation<CopyAssignmentId>>,
+    pub authorization: Option<MirCellWriteAuthorization>,
     pub span: Span,
 }
 
@@ -183,6 +187,7 @@ pub struct MirOptionalSharedAssign {
     pub destination: MirPlace,
     pub source: MirOptionalSharedSource,
     pub target: MirSharedTarget,
+    pub authorization: Option<MirCellWriteAuthorization>,
     pub span: Span,
 }
 

@@ -6,7 +6,7 @@ use crate::{
     backend::{emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target},
     diagnostics::Diagnostics,
     lexer::lex,
-    mir::{lower_preliminary_hir, validate_hir_lowering_support, verify_preliminary_mir},
+    mir::{lower_preliminary_hir, verify_preliminary_mir},
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
@@ -142,10 +142,6 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    diagnostics.append(validate_hir_lowering_support(&hir));
-    if diagnostics.has_errors() {
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
     let preliminary = lower_preliminary_hir(&hir);
     verify_preliminary_mir(&preliminary).map_err(CompilationError::MirVerification)?;
     let planned = match plan_static_lifetimes(preliminary) {

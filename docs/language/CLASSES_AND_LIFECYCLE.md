@@ -218,13 +218,13 @@ forwarding, overlap, and non-escape rules are defined by
 
 ## Private cell field direction
 
-Status: **typed semantics implemented; execution staged**. Contextual
-declarations, durable field metadata, and the exact type-checking permission
-below are implemented. The active
-[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns MIR
-authorization and execution. A valid typed cell write currently stops
-compilation with `MIR001` before MIR lowering; neighboring read-only mutations
-retain their ordinary diagnostics.
+Status: **verified core execution implemented; composition hardening staged**.
+Contextual declarations, durable field metadata, the exact type-checking
+permission below, independently verified MIR authorization, and ordinary
+native assignment lowering are implemented. The active
+[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns the
+remaining lifecycle, alias, inheritance, dispatch, and generic composition
+matrix. Neighboring read-only mutations retain their ordinary diagnostics.
 
 A private cell field has this accepted form:
 
@@ -233,7 +233,7 @@ class Cache {
     private cell _value: u64?;
 
     fn remember(value: u64) -> unit {
-        self._value = value; // typed as a cell write; execution remains staged
+        self._value = value; // verified whole-field interior replacement
     }
 }
 ```
@@ -260,8 +260,8 @@ class Holder {
     private cell _values: i64[];
 
     fn replace(ref item: Item) -> unit {
-        self._item = item;               // typed: valid whole replacement
-        self._values = i64[]{1, 2, 3};   // typed: valid whole replacement
+        self._item = item;               // valid whole replacement
+        self._values = i64[]{1, 2, 3};   // valid whole replacement
 
         self._item.change();             // invalid mutable nested receiver
         mutate(self._item);               // invalid `mut ref` through read-only access

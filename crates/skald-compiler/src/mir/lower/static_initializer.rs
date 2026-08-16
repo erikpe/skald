@@ -130,6 +130,7 @@ impl BodyLowerer<'_> {
                 self.emit(MirInstruction::Store(MirStore {
                     destination,
                     value,
+                    authorization: None,
                     span,
                 }));
             }

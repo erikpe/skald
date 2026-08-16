@@ -649,9 +649,9 @@ fn stops_before_semantic_phases_after_a_source_error() {
 }
 
 #[test]
-fn typed_cell_writes_stop_at_the_explicit_mir_support_gate() {
-    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
-        "cell-write-gate.ska",
+fn verified_cell_writes_reach_backend_lowering() {
+    let artifact = compile_source_to_assembly(
+        "cell-write.ska",
         concat!(
             "class Cache {\n",
             "  private cell value: i64;\n",
@@ -662,17 +662,8 @@ fn typed_cell_writes_stop_at_the_explicit_mir_support_gate() {
         ),
         Target::X86_64SysV,
     )
-    .unwrap_err() else {
-        panic!("typed cell write must stop before unsupported MIR lowering");
-    };
-
-    let rendered = render_diagnostics(&report.sources, &report.diagnostics);
-    assert!(
-        rendered.contains("error[MIR001]: cell field write cannot be lowered yet"),
-        "{rendered}"
-    );
-    assert!(rendered.contains("typed cell writes require explicit MIR authorization support"));
-    assert!(rendered.contains("cell field declared here"));
+    .unwrap();
+    assert!(artifact.assembly.contains(".globl main"));
 }
 
 #[test]

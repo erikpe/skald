@@ -66,6 +66,7 @@ impl BodyLowerer<'_> {
                 MirInstruction::SharedFieldReplace(MirSharedFieldReplace {
                     destination,
                     source: secured,
+                    authorization: super::lower_cell_write_authorization(&write.place),
                     span: write.span,
                 })
             }
@@ -83,6 +84,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::SharedFieldReplace(MirSharedFieldReplace {
             destination: MirPlace::static_field(assignment.destination.field),
             source: secured,
+            authorization: None,
             span: assignment.span,
         }));
         self.full_expression.mark_shared_effect();

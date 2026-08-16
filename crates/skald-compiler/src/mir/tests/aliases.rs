@@ -162,6 +162,7 @@ fn rejects_direct_alias_homes_readonly_writes_and_mutable_receiver_calls() {
             destination: MirPlace::alias_parameter(function.parameters[0])
                 .project_field(FieldId::new(ids.class, 0)),
             value: ValueId::new(ids.observe, 0),
+            authorization: None,
             span: function.span,
         }));
     assert!(messages(&readonly_store)

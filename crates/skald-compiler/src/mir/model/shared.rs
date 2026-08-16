@@ -240,5 +240,6 @@ pub struct MirSharedFieldInitialize {
 pub struct MirSharedFieldReplace {
     pub destination: MirPlace,
     pub source: StorageId,
+    pub authorization: Option<super::MirCellWriteAuthorization>,
     pub span: Span,
 }

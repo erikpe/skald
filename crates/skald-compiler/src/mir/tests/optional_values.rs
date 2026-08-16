@@ -220,6 +220,7 @@ fn verifier_rejects_uninitialized_use_and_mismatched_failure_edges() {
         MirInstruction::OptionalAssign(MirOptionalAssign {
             destination: initialize.destination,
             source: initialize.source,
+            authorization: None,
             span: initialize.span,
         }),
     );

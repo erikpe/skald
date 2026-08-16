@@ -116,6 +116,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::Store(MirStore {
             destination: MirPlace::base(result),
             value: right,
+            authorization: None,
             span: logical.right.span,
         }));
         self.terminate(MirTerminator::Goto {
@@ -135,6 +136,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::Store(MirStore {
             destination: MirPlace::base(result),
             value: fixed,
+            authorization: None,
             span: expression.span,
         }));
         self.terminate(MirTerminator::Goto {
@@ -195,6 +197,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::Store(MirStore {
             destination: MirPlace::base(activation),
             value: selected,
+            authorization: None,
             span: expression.span,
         }));
         self.terminate(MirTerminator::Goto {

@@ -8,6 +8,7 @@ use super::super::{
         MirOptionalSource, MirPlace, MirPrimitiveType, MirSharedTarget, MirStorageKind,
         MirTerminationReason, MirTerminator, MirType, StorageId, ValueId,
     },
+    cell_write::VerifiedWriteAccess,
     context::Verifier,
 };
 
@@ -19,8 +20,9 @@ impl Verifier<'_> {
         destination: &MirPlace,
         source: &MirOptionalSharedSource,
         expected: (crate::identity::OptionalTypeId, MirSharedTarget),
-        initialization: bool,
+        write_access: Option<VerifiedWriteAccess>,
     ) {
+        let initialization = write_access.is_none();
         let (optional, target) = expected;
         self.verify_shared_target_declared(function.callable(), target);
         let destination = if initialization {
@@ -28,6 +30,16 @@ impl Verifier<'_> {
         } else {
             self.verify_place(function, block, destination)
         };
+        if !initialization
+            && destination.is_some_and(|place| place.access != MirAliasAccess::Mutable)
+            && !write_access.is_some_and(VerifiedWriteAccess::allows_read_only)
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional shared assignment destination requires mutable access",
+            );
+        }
         if destination.map(|place| place.ty) != Some(MirType::Optional(optional))
             || self
                 .program
@@ -387,9 +399,11 @@ impl Verifier<'_> {
         destination: &MirPlace,
         source: &MirOptionalSource,
         defined: &HashSet<ValueId>,
+        cell_authorized: bool,
     ) {
         let checked = self.verify_place(function, block, destination);
-        if checked.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+        if checked.is_some_and(|place| place.access != MirAliasAccess::Mutable) && !cell_authorized
+        {
             self.block_error(
                 function.callable(),
                 block.id,

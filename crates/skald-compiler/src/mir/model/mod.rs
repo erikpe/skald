@@ -1,6 +1,7 @@
 //! Data model for target-independent MIR.
 
 mod array;
+mod cell_write;
 mod control_flow;
 mod declarations;
 mod definition;
@@ -28,6 +29,7 @@ pub use array::{
     MirArrayDefaultElement, MirArrayDestroyElement, MirArrayFailure, MirArrayInstruction,
     MirArrayLifecycle, MirArrayOwnership, MirArrayPositionKind, MirArrayType, MirArrayTypeTable,
 };
+pub use cell_write::MirCellWriteAuthorization;
 pub use control_flow::{MirBasicBlock, MirBody, MirTerminationReason, MirTerminator};
 pub use declarations::{
     MirBaseCopy, MirCallableSignature, MirClassDeclaration, MirClassDeclarationTable,

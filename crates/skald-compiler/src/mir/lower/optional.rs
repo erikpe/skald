@@ -37,6 +37,7 @@ impl BodyLowerer<'_> {
                 self.emit(MirInstruction::Store(crate::mir::MirStore {
                     destination,
                     value,
+                    authorization: None,
                     span,
                 }));
             }
@@ -210,6 +211,9 @@ impl BodyLowerer<'_> {
                 optional: assignment.value.optional,
                 destination,
                 source,
+                authorization: super::lower_optional_cell_write_authorization(
+                    &assignment.destination.storage,
+                ),
                 span: assignment.span,
             },
         ));
@@ -580,6 +584,9 @@ impl BodyLowerer<'_> {
                 copy_assignment: assignment
                     .copy_assignment
                     .map(super::lower_selected_copy_operation),
+                authorization: super::lower_optional_cell_write_authorization(
+                    &assignment.destination.storage,
+                ),
                 span: assignment.span,
             },
         ));
@@ -722,6 +729,9 @@ impl BodyLowerer<'_> {
                 MirInstruction::OptionalAssign(MirOptionalAssign {
                     destination,
                     source,
+                    authorization: super::lower_optional_cell_write_authorization(
+                        &assignment.destination.storage,
+                    ),
                     span: assignment.span,
                 })
             }
@@ -897,6 +907,9 @@ impl BodyLowerer<'_> {
             destination,
             source,
             target: super::lower_shared_target(assignment.destination.target),
+            authorization: super::lower_optional_cell_write_authorization(
+                &assignment.destination.storage,
+            ),
             span: assignment.span,
         };
         match assignment.kind {

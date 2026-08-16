@@ -3,6 +3,44 @@ use super::*;
 use crate::test_support::INLINE_FIELD_SOURCE;
 
 #[test]
+fn private_cell_authorization_preserves_layout_abi_and_deterministic_emission() {
+    let program = lower_text(concat!(
+        "class Ordinary {\n",
+        "  first: u8; private value: i64; last: bool;\n",
+        "  init() { self.first = 0u8; self.value = 0; self.last = false; }\n",
+        "  fn replace(value: i64) -> unit {}\n",
+        "}\n",
+        "class Cellular {\n",
+        "  first: u8; private cell value: i64; last: bool;\n",
+        "  init() { self.first = 0u8; self.value = 0; self.last = false; }\n",
+        "  fn replace(value: i64) -> unit { self.value = value; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    verify_mir(&program).unwrap();
+    let data = layout::DataLayout::compute(&program).unwrap();
+    for class in [ClassId::new(0), ClassId::new(1)] {
+        assert_eq!(data.ty(MirType::Class(class)).unwrap().size(), 24);
+        assert_eq!(data.field(FieldId::new(class, 0)).unwrap().offset, 0);
+        assert_eq!(data.field(FieldId::new(class, 1)).unwrap().offset, 8);
+        assert_eq!(data.field(FieldId::new(class, 2)).unwrap().offset, 16);
+    }
+
+    let ordinary = program.method(MethodId::new(ClassId::new(0), 0)).unwrap();
+    let cellular = program.method(MethodId::new(ClassId::new(1), 0)).unwrap();
+    assert_eq!(ordinary.parameters, cellular.parameters);
+    assert_eq!(ordinary.return_type, cellular.return_type);
+    assert_eq!(ordinary.kind, cellular.kind);
+
+    let assembly = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert_eq!(
+        assembly,
+        emit_assembly(Target::X86_64SysV, &program).unwrap()
+    );
+    assert!(assembly.contains("call ska_rt_abi_v9"));
+}
+
+#[test]
 fn lays_out_and_addresses_deep_source_subobjects_from_every_storage_base() {
     let program = lower_text(INLINE_FIELD_SOURCE);
     let data = layout::DataLayout::compute(&program).unwrap();

@@ -10,6 +10,7 @@ use crate::{
 };
 
 use super::{
+    cell_write::MirCellWriteAuthorization,
     declarations::MirSelectedCopyOperation,
     definition::MirAliasAccess,
     ids::{StorageId, ValueId},
@@ -156,6 +157,7 @@ pub struct MirAssignment {
 pub struct MirStore {
     pub destination: MirPlace,
     pub value: ValueId,
+    pub authorization: Option<MirCellWriteAuthorization>,
     pub span: Span,
 }
 
@@ -182,6 +184,7 @@ pub struct MirCopyAssignment {
     pub source: MirPlace,
     pub class: ClassId,
     pub operation: MirSelectedCopyOperation<CopyAssignmentId>,
+    pub authorization: Option<MirCellWriteAuthorization>,
     pub span: Span,
 }
 

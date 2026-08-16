@@ -560,6 +560,15 @@ fn dump_copy_operation<I: std::fmt::Display>(
     }
 }
 
+fn dump_cell_write_authorization(
+    output: &mut String,
+    authorization: Option<MirCellWriteAuthorization>,
+) {
+    if let Some(authorization) = authorization {
+        let _ = write!(output, " cell-write {}", authorization.field);
+    }
+}
+
 fn dump_parameters(output: &mut String, parameters: &[MirParameter]) {
     for (index, parameter) in parameters.iter().enumerate() {
         if index != 0 {
@@ -851,6 +860,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output.push_str("store ");
                 dump_place(output, &store.destination);
                 let _ = write!(output, ", {}", store.value);
+                dump_cell_write_authorization(output, store.authorization);
                 write_span(output, store.span);
             }
             MirInstruction::CopyConstruct(copy) => {
@@ -869,6 +879,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &copy.source);
                 let _ = write!(output, " as {} via ", copy.class);
                 dump_copy_operation(output, copy.operation);
+                dump_cell_write_authorization(output, copy.authorization);
                 write_span(output, copy.span);
             }
             MirInstruction::EndFullExpression(end) => {
@@ -990,6 +1001,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output.push_str("shared-field-replace ");
                 dump_place(output, &replace.destination);
                 let _ = write!(output, " from {}", replace.source);
+                dump_cell_write_authorization(output, replace.authorization);
                 write_span(output, replace.span);
             }
             MirInstruction::StringInitialize(initialize) => {
@@ -1021,6 +1033,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &assignment.destination);
                 output.push_str(" from ");
                 dump_optional_source(output, &assignment.source);
+                dump_cell_write_authorization(output, assignment.authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::AggregateOptionalInitialize(initialize) => {
@@ -1039,6 +1052,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &assignment.destination);
                 output.push_str(" from ");
                 dump_aggregate_optional_source(output, &assignment.source);
+                dump_cell_write_authorization(output, assignment.authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::AggregateOptionalPublish(publish) => {
@@ -1067,6 +1081,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &assignment.destination);
                 output.push_str(" from ");
                 dump_optional_shared_source(output, &assignment.source);
+                dump_cell_write_authorization(output, assignment.authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::OptionalSharedCleanup(cleanup) => {
@@ -1084,6 +1099,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 let _ = write!(output, "class-optional-assign {} ", assignment.optional);
                 dump_place(output, &assignment.destination);
                 let _ = write!(output, " : class {}?", assignment.class);
+                dump_cell_write_authorization(output, assignment.authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::ClassOptionalPublish(publish) => {
@@ -1787,12 +1803,14 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             source,
             array,
             span,
+            ..
         }
         | MirArrayInstruction::Replace {
             destination,
             source,
             array,
             span,
+            ..
         } => {
             let verb = if matches!(instruction, MirArrayInstruction::Adopt { .. }) {
                 "array-adopt"
@@ -1803,6 +1821,9 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             output.push(' ');
             dump_place(output, destination);
             let _ = write!(output, " from {source} as {array}");
+            if let MirArrayInstruction::Replace { authorization, .. } = instruction {
+                dump_cell_write_authorization(output, *authorization);
+            }
             write_span(output, *span);
         }
         MirArrayInstruction::Offset {

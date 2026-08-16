@@ -273,13 +273,13 @@ verification, dumps, and trust boundaries, and
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) for orchestration and output
 behavior.
 
-The staged
+The
 [private cell field representation](PHASES_AND_IR.md#private-cell-field-representation)
-now carries declaration metadata through verified MIR and typed whole-field
-write authorization without upgrading receiver access. The
+carries declaration metadata, typed whole-field write authorization, and
+independently verified per-instruction MIR evidence without upgrading receiver
+access. Ordinary backend assignment machinery executes verified writes. The
 [implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) stages
-write-aware MIR verification and execution, alias/lifecycle composition, and
-publication; an explicit lower-phase gate protects the current boundary.
+alias/lifecycle composition and broader publication coverage.
 
 ## Compiler crate API policy
 

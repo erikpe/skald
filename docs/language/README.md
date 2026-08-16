@@ -202,9 +202,9 @@ makes a result source-observable.
   per-overload private factory boundaries, explicit copy construction, and
   object places, plus assignment, temporaries, and deterministic lifetime. It
   also owns the staged `private cell` whole-field replacement contract. The
-  compiler accepts declarations and typed whole-field authorization; the
-  status matrix and active roadmap distinguish that support from deferred MIR
-  verification and execution.
+  compiler implements declarations, typed whole-field authorization,
+  independently verified MIR evidence, and core native execution; the status
+  matrix and active roadmap identify the remaining composition hardening.
 - [Generic classes](GENERIC_CLASSES.md) defines implemented explicit closed generic class
   applications, structural substitution, inferred contextual requirements,
   nominal interface bounds, invariance, complete-class validation, and native

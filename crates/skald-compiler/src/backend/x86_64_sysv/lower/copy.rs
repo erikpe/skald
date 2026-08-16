@@ -304,6 +304,7 @@ impl InstructionSelector<'_, '_> {
                                     class,
                                     copy_constructor: Some(constructor),
                                     copy_assignment: Some(operation),
+                                    authorization: None,
                                     span: self.function.span(),
                                 },
                             )?;
@@ -326,6 +327,7 @@ impl InstructionSelector<'_, '_> {
                                         source.clone().project_field(field),
                                     ),
                                     target,
+                                    authorization: None,
                                     span: self.function.span(),
                                 },
                             )?;
@@ -338,6 +340,7 @@ impl InstructionSelector<'_, '_> {
                                     source: crate::mir::MirAggregateOptionalSource::Copy(
                                         source.clone().project_field(field),
                                     ),
+                                    authorization: None,
                                     span: self.function.span(),
                                 },
                             )?;

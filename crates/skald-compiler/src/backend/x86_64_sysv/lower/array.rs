@@ -130,6 +130,7 @@ impl InstructionSelector<'_, '_> {
                 self.select_store(&MirStore {
                     destination,
                     value: *value,
+                    authorization: None,
                     span: *span,
                 })?;
                 self.advance_array_index(*prefix);

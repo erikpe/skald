@@ -500,6 +500,7 @@ pub(crate) fn store(destination: MirPlace, value: ValueId, span: Span) -> MirIns
     MirInstruction::Store(MirStore {
         destination,
         value,
+        authorization: None,
         span,
     })
 }

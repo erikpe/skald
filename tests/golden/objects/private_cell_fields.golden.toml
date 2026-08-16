@@ -1,0 +1,9 @@
+schema = 2
+
+[[test]]
+name = "primitive_optional_cache"
+mode = "run"
+source = "private_cell_primitive_optional_cache.ska"
+[[test.run]]
+name = "populate_and_reuse"
+expect = { stdout = { file = "data/private_cell_primitive_optional_cache.stdout" } }

@@ -433,6 +433,7 @@ fn array_fields_distinguish_initialization_from_replacement() {
         destination,
         source,
         array,
+        authorization: None,
         span,
     };
     assert!(messages(&replacement_before_initialization)
@@ -461,6 +462,7 @@ fn array_fields_distinguish_initialization_from_replacement() {
         source,
         array,
         span,
+        ..
     } = operation.clone()
     else {
         unreachable!();
