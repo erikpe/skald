@@ -1,0 +1,211 @@
+from std::error import panic;
+from std::lang import Equatable, Hashable;
+
+public class Map<K, V> where K: Equatable, K: Hashable
+{
+    private _length: u64;
+    private _used: u64;
+    private _hashes: u64[];
+    private _keys: K?[];
+    private _values: V?[];
+    private _states: u8[];
+
+    init() {
+        self._length = 0u;
+        self._used = 0u;
+        self._hashes = u64[](Map<K, V>._default_capacity());
+        self._keys = K?[](Map<K, V>._default_capacity());
+        self._values = V?[](Map<K, V>._default_capacity());
+        self._states = u8[](Map<K, V>._default_capacity());
+    }
+
+    private init(capacity: u64) {
+        self._length = 0u;
+        self._used = 0u;
+        self._hashes = u64[](Map<K, V>._normalized_capacity(capacity));
+        self._keys = K?[](Map<K, V>._normalized_capacity(capacity));
+        self._values = V?[](Map<K, V>._normalized_capacity(capacity));
+        self._states = u8[](Map<K, V>._normalized_capacity(capacity));
+    }
+
+    static fn with_capacity(capacity: u64) -> Map<K, V> {
+        return Map<K, V>(capacity);
+    }
+
+    fn len() -> u64 {
+        return self._length;
+    }
+
+    fn capacity() -> u64 {
+        return self._states.len();
+    }
+
+    fn is_empty() -> bool {
+        return self._length == 0u;
+    }
+
+    mut fn clear() -> unit {
+        var index: u64 = 0u;
+        while (index < self._states.len()) {
+            if (self._states[(i64) index] == 1u8) {
+                self._keys[(i64) index] = none;
+                self._values[(i64) index] = none;
+            }
+            self._states[(i64) index] = 0u8;
+            index = index + 1u;
+        }
+        self._length = 0u;
+        self._used = 0u;
+    }
+
+    fn contains(ref key: K) -> bool {
+        return self._find_index(key, key.hash_code()) >= 0;
+    }
+
+    fn index_get(ref key: K) -> V {
+        var index: i64 = self._find_index(key, key.hash_code());
+        if (index < 0) {
+            panic("Map.index_get: key not found");
+        }
+        var value: V = self._values[index]!;
+        return value;
+    }
+
+    mut fn index_set(ref key: K, value: V) -> unit {
+        var hash: u64 = key.hash_code();
+        var capacity: u64 = self._states.len();
+        var mask: u64 = capacity - 1u;
+        var index: u64 = hash & mask;
+        var first_deleted: i64 = -1;
+
+        while (true) {
+            var state: u8 = self._states[(i64) index];
+            if (state == 0u8) {
+                var destination: u64 = index;
+                var added_used: u64 = 1u;
+                if (first_deleted >= 0) {
+                    destination = (u64) first_deleted;
+                    added_used = 0u;
+                }
+
+                if ((self._used + added_used) * 4u >= capacity * 3u) {
+                    self._prepare_insert();
+                    self._insert_new(key, value, hash);
+                    return;
+                }
+
+                self._hashes[(i64) destination] = hash;
+                self._keys[(i64) destination] = key;
+                self._values[(i64) destination] = value;
+                self._states[(i64) destination] = 1u8;
+                self._length = self._length + 1u;
+                self._used = self._used + added_used;
+                return;
+            }
+            if (state == 2u8) {
+                if (first_deleted < 0) {
+                    first_deleted = (i64) index;
+                }
+            }
+            else {
+                if (self._hashes[(i64) index] == hash && key.equals(self._keys[(i64) index]!)) {
+                    self._values[(i64) index] = value;
+                    return;
+                }
+            }
+            index = (index + 1u) & mask;
+        }
+    }
+
+    mut fn remove(ref key: K) -> bool {
+        var index: i64 = self._find_index(key, key.hash_code());
+        if (index < 0) {
+            return false;
+        }
+        self._keys[index] = none;
+        self._values[index] = none;
+        self._states[index] = 2u8;
+        self._length = self._length - 1u;
+        if (self._length == 0u) {
+            self.clear();
+        }
+        return true;
+    }
+
+    private fn _find_index(ref key: K, hash: u64) -> i64 {
+        var capacity: u64 = self._states.len();
+        var mask: u64 = capacity - 1u;
+        var index: u64 = hash & mask;
+        while (true) {
+            var state: u8 = self._states[(i64) index];
+            if (state == 0u8) {
+                return -1;
+            }
+            if (state == 1u8 && self._hashes[(i64) index] == hash && key.equals(self._keys[(i64) index]!)) {
+                return (i64) index;
+            }
+            index = (index + 1u) & mask;
+        }
+        return -1;
+    }
+
+    private mut fn _prepare_insert() -> unit {
+        var capacity: u64 = self._states.len();
+        if ((self._length + 1u) * 2u < capacity) {
+            self._rehash(capacity);
+        }
+        else {
+            self._rehash(capacity * 2u);
+        }
+    }
+
+    private mut fn _rehash(capacity: u64) -> unit {
+        var old_hashes: u64[] = self._hashes;
+        var old_keys: K?[] = self._keys;
+        var old_values: V?[] = self._values;
+        var old_states: u8[] = self._states;
+
+        self._hashes = u64[](capacity);
+        self._keys = K?[](capacity);
+        self._values = V?[](capacity);
+        self._states = u8[](capacity);
+        self._length = 0u;
+        self._used = 0u;
+
+        var index: u64 = 0u;
+        while (index < old_states.len()) {
+            if (old_states[(i64) index] == 1u8) {
+                var key: K = old_keys[(i64) index]!;
+                var value: V = old_values[(i64) index]!;
+                self._insert_new(key, value, old_hashes[(i64) index]);
+            }
+            index = index + 1u;
+        }
+    }
+
+    private mut fn _insert_new(key: K, value: V, hash: u64) -> unit {
+        var mask: u64 = self._states.len() - 1u;
+        var index: u64 = hash & mask;
+        while (self._states[(i64) index] == 1u8) {
+            index = (index + 1u) & mask;
+        }
+        self._hashes[(i64) index] = hash;
+        self._keys[(i64) index] = key;
+        self._values[(i64) index] = value;
+        self._states[(i64) index] = 1u8;
+        self._length = self._length + 1u;
+        self._used = self._used + 1u;
+    }
+
+    private static fn _normalized_capacity(capacity: u64) -> u64 {
+        var normalized: u64 = Map<K, V>._default_capacity();
+        while (normalized < capacity) {
+            normalized = normalized * 2u;
+        }
+        return normalized;
+    }
+
+    private static fn _default_capacity() -> u64 {
+        return 8u;
+    }
+}

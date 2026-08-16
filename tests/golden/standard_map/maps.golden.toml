@@ -1,0 +1,26 @@
+schema = 1
+
+[[test]]
+name = "generic_values"
+mode = "run"
+source = "map_generic.ska"
+
+[[test.run]]
+name = "collisions_growth_replacement_removal_and_structural_indexing"
+
+[[test]]
+name = "missing_key"
+mode = "run"
+source = "map_missing_key.ska"
+
+[[test.run]]
+name = "checked_structural_lookup"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: Map.index_get: key not found\n" } }
+
+[[test]]
+name = "key_bounds"
+mode = "compile-fail"
+source = "map_key_bounds_failure.ska"
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[RES048]: type argument for `std::map::Map<map_key_bounds_failure::Key, i64>` does not satisfy `K`'s bound"

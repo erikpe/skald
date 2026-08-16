@@ -1,0 +1,7 @@
+from std::map import Map;
+from std::u64 import BoxU64;
+
+fn main() -> i64 {
+    var values: Map<BoxU64, i64> = Map<BoxU64, i64>();
+    return values[BoxU64(1u)];
+}

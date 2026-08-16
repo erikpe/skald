@@ -1,0 +1,10 @@
+from std::map import Map;
+
+class Key {
+    init() {}
+}
+
+fn main() -> i64 {
+    var values: Map<Key, i64> = Map<Key, i64>();
+    return 0;
+}

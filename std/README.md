@@ -77,6 +77,13 @@ indexing through compatibility methods and structural brackets, independent
 logical-length slices, equal-length snapshot slice replacement, push, pop,
 last, replacement, and clear without compiler or runtime machinery.
 
+The `std::map` module provides a generic `Map<K, V>` whose keys implement both
+`Equatable` and `Hashable`. It uses power-of-two open-addressed storage, cached
+hashes, linear probing, tombstones, and geometric growth. The map supports
+membership testing, checked lookup, insertion and replacement, removal,
+clearing, requested capacity, and structural bracket reads and writes without
+compiler or runtime machinery.
+
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`
 explicitly. Call statements execute through the compiler's non-returning panic

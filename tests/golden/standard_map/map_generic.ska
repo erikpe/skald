@@ -1,0 +1,80 @@
+from std::lang import Equatable, Hashable;
+from std::map import Map;
+from std::str import Str;
+from std::test import assert_eq_str, assert_eq_u64, assert_false, assert_true;
+
+class Key implements Equatable, Hashable {
+    value: u64;
+
+    init(value: u64) {
+        self.value = value;
+    }
+
+    fn equals(ref other: Obj) -> bool {
+        if (!(other is Key)) {
+            return false;
+        }
+        return self.value == ((Key) other).value;
+    }
+
+    fn hash_code() -> u64 {
+        return self.value & 3u;
+    }
+}
+
+fn main() -> i64 {
+    var values: Map<Key, Str> = Map<Key, Str>();
+    assert_true(values.is_empty());
+    assert_eq_u64(values.capacity(), 8u);
+
+    var index: u64 = 0u;
+    while (index < 40u) {
+        values[Key(index)] = Str.from_u64(index);
+        index = index + 1u;
+    }
+    assert_eq_u64(values.len(), 40u);
+    assert_true(values.capacity() >= 64u);
+
+    var equal_key: Key = Key(17u);
+    assert_true(values.contains(equal_key));
+    assert_eq_str(values[equal_key], "17");
+
+    values[equal_key] = "updated";
+    assert_eq_u64(values.len(), 40u);
+    assert_eq_str(values[equal_key], "updated");
+
+    index = 0u;
+    while (index < 40u) {
+        if ((index & 1u) == 0u) {
+            assert_true(values.remove(Key(index)));
+        }
+        index = index + 1u;
+    }
+    assert_eq_u64(values.len(), 20u);
+    assert_false(values.contains(Key(18u)));
+    assert_false(values.remove(Key(18u)));
+
+    index = 40u;
+    while (index < 60u) {
+        values[Key(index)] = Str.from_u64(index);
+        index = index + 1u;
+    }
+    assert_eq_u64(values.len(), 40u);
+    assert_eq_str(values[Key(59u)], "59");
+
+    values.clear();
+    assert_true(values.is_empty());
+    assert_false(values.contains(equal_key));
+
+    var reserved: Map<Key, u64> = Map<Key, u64>.with_capacity(17u);
+    assert_eq_u64(reserved.capacity(), 32u);
+    reserved[Key(1u)] = 42u;
+    assert_eq_u64(reserved[Key(1u)], 42u);
+
+    var optional_values: Map<Key, Str?> = Map<Key, Str?>();
+    optional_values[Key(2u)] = none;
+    assert_true(optional_values.contains(Key(2u)));
+    assert_true(optional_values.remove(Key(2u)));
+    assert_false(optional_values.remove(Key(2u)));
+    return 0;
+}

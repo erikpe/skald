@@ -8,8 +8,8 @@ import std::str::parse_integer as parse_integer;
 import std::str::parse_f64 as parse_f64;
 
 public class Str implements Equatable, Hashable {
-    private static _EMPTY_STORAGE: shared u8[] = new u8[]();
-    private static _EMPTY_HASH_CODE: u64 = 0x7374725f656d7074u;
+    private final static _EMPTY_STORAGE: shared u8[] = new u8[]();
+    private final static _EMPTY_HASH_CODE: u64 = 0x7374725f656d7074u;
 
     private _storage: shared u8[];
     private _start: i64;
