@@ -14,6 +14,13 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
+The [private cell fields design proposal](PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md)
+is a draft for narrow whole-field interior mutability through read-only object
+places. Its next step is confirmation of PC1 through PC13; it depends on the
+implemented declaring-class privacy, receiver-access, lifecycle, alias, and
+verified field-assignment contracts. Compiler implementation and the separate
+`Str` cached-hash language-item migration have not started.
+
 The confirmed structural indexing and slicing decisions are preserved in the
 [archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).
 
