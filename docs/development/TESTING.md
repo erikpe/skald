@@ -144,6 +144,11 @@ Exact binary64 bit-representation coverage separately checks the canonical
 distinct HIR/MIR bit-reinterpretation semantics, verifier type relation,
 inline cross-register-class moves, arbitrary `u64` round trips including NaN
 payloads, both zero signs, infinities, and absence of runtime helpers.
+Primitive-box native coverage imports every type-named module and pins exact
+equality, representative and boundary hashes, cross-class rejection,
+per-class domain separation, interface dispatch, and generic
+`Equatable`/`Hashable` constraints. These are ordinary library composition
+tests and require no compiler-specific box fixture.
 
 ## Focused commands
 

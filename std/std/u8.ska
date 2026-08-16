@@ -1,0 +1,21 @@
+from std::hash import mix_u64;
+from std::lang import Equatable, Hashable;
+
+public class BoxU8 implements Equatable, Hashable {
+    private _value: u8;
+
+    init(value: u8) {
+        self._value = value;
+    }
+
+    fn equals(ref other: Obj) -> bool {
+        if (!(other is BoxU8)) {
+            return false;
+        }
+        return self._value == ((BoxU8) other)._value;
+    }
+
+    fn hash_code() -> u64 {
+        return mix_u64(((u64) self._value) ^ 0x75385f5f626f7801u);
+    }
+}

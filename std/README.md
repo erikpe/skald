@@ -15,7 +15,16 @@ keeps special spellings in the facade and delegates finite formatting to
 `std::str::format_f64`. The exact standard-stream and primitive-line-output
 APIs are implemented in Skald, with no scalar runtime observation surface.
 
-The `std::f64` module provides exact `to_bits(f64) -> u64` and
+The type-named `std::i64`, `std::u64`, `std::u8`, `std::f64`, and `std::bool`
+modules provide explicit `BoxI64`, `BoxU64`, `BoxU8`, `BoxF64`, and `BoxBool`
+classes. Every box implements ordinary `Equatable` and `Hashable` interfaces.
+Integer and boolean boxes use exact primitive equality; `BoxF64` uses exact
+binary representation. Each class XORs its `u64` representation with a
+distinct fixed domain before `std::hash::mix_u64`, so same-looking values in
+different primitive domains do not start from the same mixer input. Boxing is
+explicit and adds no compiler or runtime machinery.
+
+The `std::f64` module additionally provides exact `to_bits(f64) -> u64` and
 `from_bits(u64) -> f64` value reinterpretation. Its public functions are
 ordinary Skald wrappers over two private compiler intrinsics. Typed HIR,
 verified MIR, and x86-64 lowering preserve every binary64 bit inline; the
@@ -27,8 +36,9 @@ them through `std::hash::mix_u64` for well-distributed output.
 
 The `std::hash` module provides `mix_u64`, a deterministic SplitMix64 finalizer
 over one complete `u64`. Primitive box classes apply their own fixed domain
-separation before calling this shared mixer. It is an ordinary non-cryptographic
-library function and introduces no runtime or compiler support.
+separation before calling this shared mixer. It is an ordinary
+non-cryptographic library function and introduces no runtime or compiler
+support.
 
 The `std::io` module has an implemented
 [whole-stream source contract](../docs/language/IO.md) and a separate

@@ -86,6 +86,7 @@ Archived plans:
 - [Generic static-member dot syntax](GENERIC_STATIC_MEMBER_DOT_SYNTAX_ROADMAP.md)
 - [Private cell fields](PRIVATE_CELL_FIELDS_ROADMAP.md)
 - [`Str` cached-hash migration](STR_CACHED_HASH_MIGRATION_ROADMAP.md)
+- [Primitive box classes](PRIMITIVE_BOX_CLASSES_ROADMAP.md)
 
 Resolved string-design inputs:
 

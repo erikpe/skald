@@ -67,3 +67,10 @@ source = "primitive_f64_bits.ska"
 [[test.run]]
 name = "bit_patterns"
 expect = { stdout = { file = "data/primitive_f64_bits.stdout" } }
+
+[[test]]
+name = "primitive_boxes"
+mode = "run"
+source = "primitive_boxes.ska"
+[[test.run]]
+name = "equality_hashing_and_interfaces"

@@ -661,6 +661,36 @@ cast completes before a surrounding operator is selected, and the operator
 observes only the cast's exact result type. No cast allocates, changes
 ownership, or creates a runtime-managed value.
 
+## Primitive box classes
+
+Each value-bearing primitive has one explicit standard-library object wrapper:
+
+| Primitive | Module | Box class |
+|---|---|---|
+| `i64` | `std::i64` | `BoxI64` |
+| `u64` | `std::u64` | `BoxU64` |
+| `u8` | `std::u8` | `BoxU8` |
+| `f64` | `std::f64` | `BoxF64` |
+| `bool` | `std::bool` | `BoxBool` |
+
+Every box is an ordinary inline class with an initializer accepting its exact
+primitive type and implementations of `std::lang::Equatable` and
+`std::lang::Hashable`. Equality first requires the same exact box class. The
+integer and boolean boxes then compare their primitive values; `BoxF64`
+compares the complete binary64 representation, as detailed below.
+
+Hashing converts the primitive datum to one `u64`, XORs a distinct fixed box
+domain, and passes the result through `std::hash::mix_u64`. Signed integers use
+their exact two's-complement bits, `u8` is zero-extended, and `bool` uses zero
+or one. Hash domains differ even when values have the same numeric spelling,
+so `BoxI64(43)`, `BoxU64(43u)`, and `BoxU8(43u8)` do not merely mix the same
+input. Hash collisions remain valid under the ordinary `Hashable` contract.
+
+Boxing is explicit construction. Primitive types do not implement interfaces,
+and there is no implicit boxing, unboxing, primitive-method lookup, prelude
+binding, compiler intrinsic, or runtime support. `unit` carries no value and
+has no box class.
+
 ## Exact binary64 bit representation
 
 The installed `std::f64` module exposes two ordinary public functions:
@@ -676,12 +706,10 @@ The functions preserve every bit, including the sign of zero, infinities, and
 NaN sign, payload, and signaling state. Consequently,
 `std::f64::to_bits(std::f64::from_bits(bits)) == bits` for every `u64` value.
 
-The installed module also exposes the inline `BoxF64` class. Its `Equatable`
-implementation compares exact `to_bits` results, and its `Hashable`
-implementation XORs that representation with a fixed `BoxF64` domain and
-passes it through `std::hash::mix_u64`. Consequently, positive and negative
-zero are distinct keys, identical NaN representations compare equal, and
-distinct NaN payloads remain distinct while structured bit patterns receive
+The module's `BoxF64` class follows the general primitive-box contract using
+the exact `to_bits` result. Consequently, positive and negative zero are
+distinct keys, identical NaN representations compare equal, and distinct NaN
+payloads remain distinct while structured bit patterns receive
 well-distributed hash codes.
 
 These operations reinterpret one complete primitive value; they do not
