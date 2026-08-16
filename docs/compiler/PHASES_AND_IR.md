@@ -1212,7 +1212,8 @@ and method visibility.
 
 ## Private cell field representation
 
-Status: **verified MIR write authorization implemented; hardening staged**. The active
+Status: **verified MIR write authorization and lifecycle/alias composition
+implemented; composition hardening staged**. The active
 [private cell fields roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
 the staged compiler work. The source meaning is defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction).
@@ -1235,6 +1236,14 @@ resolution. Deterministic syntax and resolved dumps show `private cell`; HIR
 dumps expose a selected cell-write authorization without changing the
 receiver's read-only access. MIR dumps expose the exact authorization beside
 the ordinary assignment instruction as `cell-write <FieldId>`.
+
+Verified cell assignments retain the ordinary path-state protocols around
+them. Exact-class and optional replacement uses the current field lifecycle
+plan, shared-pointee calls keep their hidden owner anchors, inline-array
+element calls keep detached-backing anchors, and checked optional payload
+views remain guarded until the call ends. Read-only methods seed initialized
+receiver optionals for both checked views and guarded mutation checks; cell
+authorization does not stand in for, weaken, or bypass those proofs.
 
 Type checking authorizes assignment through a read-only object place only
 when all of these facts hold:

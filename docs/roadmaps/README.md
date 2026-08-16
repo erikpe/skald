@@ -10,8 +10,10 @@ The [private cell fields roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) is in
 progress. CFI0 established contextual declaration syntax and durable field
 metadata; CFI1 established typed whole-field write authorization behind a
 lower-phase executable gate. CFI2 established explicit, independently verified
-MIR authorization and core native execution. CFI3 is next and will prove
-lifecycle-bearing and alias-safe assignment families.
+MIR authorization and core native execution. CFI3 proved lifecycle-bearing
+assignment and existing optional, shared-owner, and detached-array alias
+protections. CFI4 is next and will harden inheritance, dispatch, generic, and
+determinism composition before publishing the complete contract.
 
 ## Planned
 

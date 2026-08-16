@@ -1,0 +1,62 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn observe(ignored: i64) -> i64 {
+        return self.value + ignored;
+    }
+}
+
+class Holder {
+    private cell items: Item[];
+    private cell rows: Item[][];
+
+    init(value: i64) {
+        self.items = Item[]{Item(value)};
+        self.rows = Item[][]{Item[]{Item(value + 1)}};
+    }
+
+    fn replace(value: i64) -> i64 {
+        self.items = Item[]{Item(value)};
+        return 0;
+    }
+
+    fn adopt(ref values: Item[]) -> unit {
+        self.items = values;
+    }
+
+    fn replace_rows(value: i64) -> unit {
+        self.rows = Item[][]{Item[]{Item(value)}};
+    }
+
+    fn exercise() -> i64 {
+        var detached: i64 = self.items[0].observe(self.replace(8));
+        var overlapped: i64 = observe(
+            self.items[0], self.items[0], self.replace(11));
+        return detached + overlapped;
+    }
+
+    fn first() -> i64 {
+        return self.items[0].value;
+    }
+
+    fn first_nested() -> i64 {
+        return self.rows[0][0].value;
+    }
+}
+
+fn observe(ref left: Item, ref right: Item, ignored: i64) -> i64 {
+    return left.value + right.value + ignored;
+}
+
+fn main() -> i64 {
+    var holder: Holder = Holder(20);
+    var observed: i64 = holder.exercise();
+    var produced: Item[] = Item[]{Item(3)};
+    holder.adopt(produced);
+    holder.replace_rows(2);
+    return observed + holder.first() + holder.first_nested() + 1;
+}

@@ -1,0 +1,59 @@
+import std::io;
+from std::test import assert_eq_i64;
+
+class Trace {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref other: Trace) {
+        self.value = other.value + 100;
+    }
+
+    assign(ref other: Trace) {
+        std::io::println_i64(other.value);
+        self.value = other.value + 200;
+    }
+
+    destroy {
+        std::io::println_i64(self.value + 1000);
+    }
+}
+
+class Holder {
+    private cell item: Trace;
+
+    init(value: i64) {
+        self.item = Trace(value);
+    }
+
+    fn replace(ref value: Trace) -> unit {
+        self.item = value;
+    }
+
+    fn replace_with_self() -> unit {
+        self.item = self.item;
+    }
+
+    fn read() -> i64 {
+        return self.item.value;
+    }
+}
+
+fn main() -> i64 {
+    var source: Trace = Trace(1);
+    var holder: Holder = Holder(10);
+    holder.replace(source);
+    holder.replace_with_self();
+    assert_eq_i64(holder.read(), 401);
+
+    var copied: Holder = holder;
+    assert_eq_i64(copied.read(), 501);
+
+    var assigned: Holder = Holder(5);
+    assigned = holder;
+    assert_eq_i64(assigned.read(), 601);
+    return 0;
+}

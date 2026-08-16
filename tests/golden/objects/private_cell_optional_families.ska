@@ -1,0 +1,70 @@
+from std::test import assert_eq_i64, assert_true;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Holder {
+    private cell primitive: i64?;
+    private cell object: Item?;
+    private cell nested: i64??;
+    private cell values: i64[]?;
+    private cell owner: shared? Item;
+    private cell box: shared Item?;
+
+    init() {
+        self.primitive = none;
+        self.object = none;
+        self.nested = none;
+        self.values = none;
+        self.owner = none;
+        self.box = new Item?();
+    }
+
+    fn populate(owner: shared Item) -> unit {
+        self.primitive = 1;
+        self.object = Item(2);
+        self.nested = some(some(3));
+        self.values = i64[]{4, 5};
+        self.owner = owner;
+        self.box = new Item?(Item(6));
+    }
+
+    fn clear() -> unit {
+        self.primitive = none;
+        self.object = none;
+        self.nested = none;
+        self.values = none;
+        self.owner = none;
+        self.box = new Item?();
+    }
+
+    fn total() -> i64 {
+        return self.primitive! + self.object!.value + self.nested!!
+            + self.values![1] + self.owner!->value + (*self.box)!.value;
+    }
+
+    fn is_empty() -> bool {
+        return self.primitive is none;
+    }
+}
+
+fn main() -> i64 {
+    var owner: shared Item = new Item(20);
+    var holder: Holder = Holder();
+    holder.populate(owner);
+    assert_eq_i64(holder.total(), 37);
+
+    var copied: Holder = holder;
+    var assigned: Holder = Holder();
+    assigned = holder;
+    holder.clear();
+    assert_eq_i64(copied.total(), 37);
+    assert_eq_i64(assigned.total(), 37);
+    assert_true(holder.is_empty());
+    return 0;
+}

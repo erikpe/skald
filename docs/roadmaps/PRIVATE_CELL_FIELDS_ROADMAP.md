@@ -1,6 +1,6 @@
 # Private Cell Fields Roadmap
 
-Status: in progress; CFI2 is complete and CFI3 is next.
+Status: in progress; CFI3 is complete and CFI4 is next.
 
 This roadmap implements the frozen
 [private cell field language contract](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction)
@@ -63,7 +63,7 @@ implement those decisions without reopening them.
 - [x] CFI0 — Represent contextual private cell declarations
 - [x] CFI1 — Authorize typed whole-field replacement
 - [x] CFI2 — Preserve and verify cell writes in MIR
-- [ ] CFI3 — Prove lifecycle-bearing and alias-safe assignment families
+- [x] CFI3 — Prove lifecycle-bearing and alias-safe assignment families
 - [ ] CFI4 — Harden composition and publish the implemented contract
 
 Every Rust implementation task runs focused owner tests followed by
@@ -216,27 +216,27 @@ ABI tests, the native primitive-optional cache golden, `make check`,
 **Purpose:** Validate that interior replacement composes with displaced
 owning state and active aliases instead of being safe only for scalar caches.
 
-- [ ] Exercise exact-class cell replacement through synthesized and user copy
+- [x] Exercise exact-class cell replacement through synthesized and user copy
       assignment, including unavailable capability, self-assignment,
       lifecycle-visible source order, old-state displacement, and failures.
-- [ ] Exercise primitive, class, nested, array, shared-owner, optional-owner,
+- [x] Exercise primitive, class, nested, array, shared-owner, optional-owner,
       and optional-box cell optionals through ordinary injection, presence
       changes, copy/transfer, cleanup, and recursive lifecycle plans.
-- [ ] Exercise shared-owner cell replacement with stable, replaceable, and
+- [x] Exercise shared-owner cell replacement with stable, replaceable, and
       produced sources, last-owner destruction, polymorphic views, and hidden
       anchors that keep an aliased old pointee alive.
-- [ ] Exercise inline-array cell replacement, nested and lifecycle-bearing
+- [x] Exercise inline-array cell replacement, nested and lifecycle-bearing
       elements, produced-backing adoption, overlapping aliases, and detached-
       backing anchors that preserve old element storage through the call.
-- [ ] Prove active optional payload guards terminate before a re-entrant cell
+- [x] Prove active optional payload guards terminate before a re-entrant cell
       replacement can clear, replace, or destroy the guarded container; prove
       ordinary still-present payload mutation remains governed by existing
       access rules.
-- [ ] Prove ordinary initialization, object copy construction, object copy
+- [x] Prove ordinary initialization, object copy construction, object copy
       assignment, and destruction copy or destroy current cell state exactly
       like an ordinary field, with no implicit reset, omission, or transient
       behavior.
-- [ ] Harden every affected path-state verifier and full-expression cleanup
+- [x] Harden every affected path-state verifier and full-expression cleanup
       edge with mutation tests and native failure/success observations.
 
 **Tests:** Focused type, HIR, MIR, ownership, optional-guard, array-anchor,
@@ -248,6 +248,11 @@ observations; then the complete Rust-task gates.
 its ordinary assignment and lifecycle contract through cell authorization,
 active aliases remain lifetime-safe under existing anchors and guards, and no
 raw-store or scalar-only shortcut remains.
+
+Completed 2026-08-16. Focused MIR and full-determinism native tests,
+`make check`, `make msrv-check`, documentation validation, and
+`git diff --check` passed. The proof matrix exposed and fixed projected
+receiver optional initialization for checked views and mutation guards.
 
 ### CFI4 — Harden composition and publish the implemented contract
 

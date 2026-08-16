@@ -236,3 +236,22 @@ fn verifier_rejects_nested_or_mutable_destinations_and_retains_lifetime_checks()
     );
     assert!(verification_errors(&dead).contains("outside a live lifetime epoch"));
 }
+
+#[test]
+fn initialized_cell_optional_fields_support_checked_views_in_read_only_methods() {
+    let program = lower_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Holder {\n",
+        "  private cell item: Item?;\n",
+        "  init() { self.item = Item(42); }\n",
+        "  fn replace() -> i64 { self.item = Item(0); return 0; }\n",
+        "  fn read() -> i64 { return self.item!.value; }\n",
+        "}\n",
+        "fn main() -> i64 { var holder: Holder = Holder(); return holder.read(); }\n",
+    ));
+
+    verify_mir(&program).expect("initialized receiver fields must seed checked optional views");
+    let dump = dump_mir(&program);
+    assert!(dump.contains("begin-optional-view"), "{dump}");
+    assert!(dump.contains("cell-write c1:field0"), "{dump}");
+}

@@ -7,3 +7,57 @@ source = "private_cell_primitive_optional_cache.ska"
 [[test.run]]
 name = "populate_and_reuse"
 expect = { stdout = { file = "data/private_cell_primitive_optional_cache.stdout" } }
+
+[[test]]
+name = "lifecycle"
+mode = "run"
+source = "private_cell_lifecycle.ska"
+[[test.run]]
+name = "copy_assignment_and_current_state"
+expect = { stdout = { file = "data/private_cell_lifecycle.stdout" } }
+
+[[test]]
+name = "optional_families"
+mode = "run"
+source = "private_cell_optional_families.ska"
+[[test.run]]
+name = "presence_copy_transfer_and_cleanup"
+
+[[test]]
+name = "shared_aliases"
+mode = "run"
+source = "private_cell_shared_aliases.ska"
+[[test.run]]
+name = "old_pointee_anchor_and_sources"
+expect = { exit = 42 }
+
+[[test]]
+name = "array_aliases"
+mode = "run"
+source = "private_cell_array_aliases.ska"
+[[test.run]]
+name = "detached_backing_anchor_and_adoption"
+expect = { exit = 42 }
+
+[[test]]
+name = "optional_guard"
+mode = "run"
+source = "private_cell_optional_guard.ska"
+[[test.run]]
+name = "clear"
+args = ["clear"]
+expect = { exit = "failure", stderr = { inline = """panic: cannot mutate a guarded optional value
+stacktrace:
+  at private_cell_optional_guard::Holder.clear (tests/golden/objects/private_cell_optional_guard.ska:20:21)
+  at private_cell_optional_guard::Holder.exercise_clear (tests/golden/objects/private_cell_optional_guard.ska:31:36)
+  at private_cell_optional_guard::main (tests/golden/objects/private_cell_optional_guard.ska:47:16)
+""" } }
+[[test.run]]
+name = "replace"
+args = ["replace"]
+expect = { exit = "failure", stderr = { inline = """panic: cannot mutate a guarded optional value
+stacktrace:
+  at private_cell_optional_guard::Holder.replace (tests/golden/objects/private_cell_optional_guard.ska:25:21)
+  at private_cell_optional_guard::Holder.exercise_replace (tests/golden/objects/private_cell_optional_guard.ska:35:36)
+  at private_cell_optional_guard::main (tests/golden/objects/private_cell_optional_guard.ska:49:12)
+""" } }

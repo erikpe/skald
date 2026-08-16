@@ -1,0 +1,55 @@
+interface Readable {
+    fn read() -> i64;
+    fn observe(ignored: i64) -> i64;
+}
+
+class Item implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn observe(ignored: i64) -> i64 {
+        return self.value + ignored;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Holder {
+    private cell owner: shared Readable;
+
+    init(value: i64) {
+        self.owner = new Item(value);
+    }
+
+    fn replace(value: shared Readable) -> unit {
+        self.owner = value;
+    }
+
+    fn replace_produced(value: i64) -> i64 {
+        self.owner = new Item(value);
+        return 0;
+    }
+
+    fn read() -> i64 {
+        return self.owner->read();
+    }
+
+    fn exercise() -> i64 {
+        var alias: shared Readable = self.owner;
+        self.replace(alias);
+        return self.owner->observe(self.replace_produced(9));
+    }
+}
+
+fn main() -> i64 {
+    var holder: Holder = Holder(42);
+    var old: i64 = holder.exercise();
+    var replacement: shared Readable = new Item(11);
+    holder.replace(replacement);
+    return old + holder.read() - 11;
+}

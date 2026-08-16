@@ -362,11 +362,20 @@ impl InitializationState {
                     _ => {}
                 }
             }
-            if let Some(MirTerminator::OptionalUnwrap { source, .. }) = &block.terminator {
-                self.seed_projected(source);
-            }
-            if let Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) = &block.terminator {
-                self.seed_projected(&unwrap.source);
+            match &block.terminator {
+                Some(MirTerminator::OptionalUnwrap { source, .. }) => {
+                    self.seed_projected(source);
+                }
+                Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) => {
+                    self.seed_projected(&unwrap.source);
+                }
+                Some(MirTerminator::BeginOptionalView { begin, .. }) => {
+                    self.seed_projected(&begin.source);
+                }
+                Some(MirTerminator::CheckOptionalMutation { source, .. }) => {
+                    self.seed_projected(source);
+                }
+                _ => {}
             }
         }
     }

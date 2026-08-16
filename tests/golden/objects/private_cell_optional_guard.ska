@@ -1,0 +1,50 @@
+import std::process;
+from std::str import Str;
+
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Holder {
+    private cell item: Item?;
+
+    init(item: Item?) {
+        self.item = item;
+    }
+
+    fn clear() -> i64 {
+        self.item = none;
+        return 0;
+    }
+
+    fn replace() -> i64 {
+        self.item = Item(0);
+        return 0;
+    }
+
+
+    fn exercise_clear() -> i64 {
+        return consume(self.item!, self.clear());
+    }
+
+    fn exercise_replace() -> i64 {
+        return consume(self.item!, self.replace());
+    }
+}
+
+fn consume(ref item: Item, ignored: i64) -> i64 {
+    return item.value + ignored;
+}
+
+fn main() -> i64 {
+    var arguments: Str[] = std::process::args();
+    var holder: Holder = Holder(Item(42));
+    if (arguments[1].equals("clear")) {
+        return holder.exercise_clear();
+    }
+    return holder.exercise_replace();
+}
