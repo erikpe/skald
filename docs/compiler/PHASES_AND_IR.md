@@ -1212,10 +1212,10 @@ and method visibility.
 
 ## Private cell field representation
 
-Status: **verified MIR write authorization and lifecycle/alias composition
-implemented; composition hardening staged**. The active
-[private cell fields roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
-the staged compiler work. The source meaning is defined by
+Status: **implemented contract**. Declaration metadata, typed write
+authorization, lifecycle and alias composition, specialization, dispatch,
+independent MIR verification, and target lowering are implemented. The source
+meaning is defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction).
 
 Syntax retains one explicit `cell` modifier and exact span on an ordinary

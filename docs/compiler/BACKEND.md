@@ -984,3 +984,9 @@ instruction selection, assembler acceptance, call pressure, virtual and
 interface dispatch, runtime type operations, and native execution. Golden
 execution additionally covers deep base chains, static and polymorphic views,
 slicing, object results, temporaries, and complete lifecycle order.
+
+Private cell assignment adds no target operation or representation. After MIR
+verification, it uses the same place address, load/store, type-directed copy or
+assignment, cleanup, dispatch, and generic symbol machinery as assignment
+through a mutable root. The cell evidence is a compiler trust-boundary fact;
+it is not emitted metadata and does not alter field layout or callable ABI.

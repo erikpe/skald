@@ -1,0 +1,29 @@
+import model;
+
+fn main() -> i64 {
+    var one: i64 = 1;
+    var first: model::Slot<i64> = model::Slot<i64>(0);
+    var repeated: model::Slot<i64> = model::Slot<i64>(0);
+    first.replace(one);
+    repeated.replace(one);
+
+    var maybe_value: i64? = 2;
+    var maybe: model::Slot<i64?> = model::Slot<i64?>(none);
+    maybe.replace(maybe_value);
+
+    var next: i64[] = i64[]{3, 4};
+    var values: model::Slot<i64[]> = model::Slot<i64[]>(i64[]{0});
+    values.replace(next);
+
+    var owner: shared model::Item = new model::Item(5);
+    var owners: model::Slot<shared model::Item> =
+        model::Slot<shared model::Item>(owner);
+    owners.replace(owner);
+
+    var replacement: i64 = 6;
+    var derived: model::Derived<i64> = model::Derived<i64>(0);
+    derived.replace(replacement);
+
+    return first.get() + repeated.get() + maybe.get()! + values.get()[1]
+        + owners.get()->value + derived.get() + 23;
+}

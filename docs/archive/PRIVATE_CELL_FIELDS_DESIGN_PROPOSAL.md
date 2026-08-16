@@ -1,9 +1,9 @@
 # Private Cell Fields Design Proposal
 
-Status: frozen design. PC1 through PC13 were confirmed together on 2026-08-16
-and promoted into the living language and compiler contracts before the
-implementation roadmap was created. The implemented
-[grammar](../language/GRAMMAR.md) and
+Status: frozen design, implemented and archived. PC1 through PC13 were
+confirmed together on 2026-08-16 and promoted into the living language and
+compiler contracts before the implementation roadmap was created. The
+implemented [grammar](../language/GRAMMAR.md) and
 [status matrix](../language/STATUS.md) remain authoritative for current
 compiler behavior.
 

@@ -6,14 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [private cell fields roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) is in
-progress. CFI0 established contextual declaration syntax and durable field
-metadata; CFI1 established typed whole-field write authorization behind a
-lower-phase executable gate. CFI2 established explicit, independently verified
-MIR authorization and core native execution. CFI3 proved lifecycle-bearing
-assignment and existing optional, shared-owner, and detached-array alias
-protections. CFI4 is next and will harden inheritance, dispatch, generic, and
-determinism composition before publishing the complete contract.
+No implementation roadmap is currently in progress.
 
 ## Planned
 
@@ -21,10 +14,8 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
-The [private cell fields design proposal](PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md)
-is frozen and promoted into the planned language and compiler contracts. Its
-implementation is owned by the planned roadmap above; the separate `Str`
-cached-hash language-item migration has not started.
+The completed private cell fields design and implementation roadmap are
+preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
 
 The confirmed structural indexing and slicing decisions are preserved in the
 [archive](../archive/STRUCTURAL_INDEXING_AND_SLICING_DESIGN_PROPOSAL.md).
@@ -39,7 +30,9 @@ preserved in the [archive](../archive/README.md).
 
 ## Pending discoveries
 
-No implementation discoveries are currently pending.
+The [`Str` cached-hash migration discovery](STR_CACHED_HASH_MIGRATION_DISCOVERY.md)
+records the coordinated compiler language-item and standard-library work
+needed before `std::str::Str` can add a private-cell hash cache.
 
 ## Implementation baseline
 

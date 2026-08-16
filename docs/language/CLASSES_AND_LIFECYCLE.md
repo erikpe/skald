@@ -4,8 +4,8 @@ Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
 how implemented produced read-only aliases compose with initializer selection
-and owning full-expression temporaries, and owns the staged private cell field
-direction. The [status matrix](STATUS.md) records the current
+and owning full-expression temporaries, and owns the implemented private cell
+field contract. The [status matrix](STATUS.md) records the current
 compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
@@ -218,13 +218,11 @@ forwarding, overlap, and non-escape rules are defined by
 
 ## Private cell field direction
 
-Status: **verified core execution implemented; composition hardening staged**.
-Contextual declarations, durable field metadata, the exact type-checking
-permission below, independently verified MIR authorization, and ordinary
-native assignment lowering are implemented. The active
-[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns the
-remaining lifecycle, alias, inheritance, dispatch, and generic composition
-matrix. Neighboring read-only mutations retain their ordinary diagnostics.
+Status: **implemented contract**. Contextual declarations, durable field
+metadata, exact type-checking authorization, independently verified MIR
+evidence, ordinary lifecycle and alias protections, generic specialization,
+dispatch composition, and native assignment lowering are implemented.
+Neighboring read-only mutations retain their ordinary diagnostics.
 
 A private cell field has this accepted form:
 
@@ -325,10 +323,11 @@ runtime service, or ABI surface. Public cells, static cells, a library
 and concurrency semantics are outside the frozen profile.
 
 The confirmed decision record is preserved in the
-[private cell fields design proposal](../roadmaps/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
+[private cell fields design proposal](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
 Adding a cached hash field to the compiler-known `std::str::Str` descriptor is
-a separate follow-up because literal materialization currently initializes
-exactly the three frozen descriptor fields.
+a [separate follow-up](../roadmaps/STR_CACHED_HASH_MIGRATION_DISCOVERY.md)
+because literal materialization currently initializes exactly the three
+frozen descriptor fields.
 
 ## Object places and projections
 

@@ -510,6 +510,31 @@ cargo test --locked -p skald-compiler --test pipeline_determinism string
 make golden-filter GOLDEN_FILTER='**string**'
 ```
 
+## Private cell field inspection
+
+Start with syntax and resolved dumps to confirm one ordinary private field
+identity plus its `cell` marker and exact modifier span. The HIR assignment
+must retain a read-only receiver and name an explicit cell-write authorization;
+it must not rewrite the receiver or an intermediate projection as mutable. MIR
+must carry `cell-write <FieldId>` on the ordinary assignment operation, and
+both preliminary and final verification must independently match that evidence
+to the endpoint field and lexical class owner.
+
+For ownership-sensitive failures, inspect the ordinary optional guard,
+shared-owner anchor, or detached-array backing anchor around the assignment.
+Cell authorization never replaces those protocols. For dispatch or generic
+failures, compare the canonical declaring field identity through specialization
+and the selected direct, virtual, interface, or indirect call; authorization
+belongs to the method body rather than the call site.
+
+Use the focused tests for the nearest reproduction:
+
+```text
+cargo test --locked -p skald-compiler private_cell
+make golden-filter GOLDEN_FILTER='**private_cell**'
+cargo test --locked -p skald-compiler --test pipeline_determinism private_cell
+```
+
 ## Optional-value frontend inspection
 
 Inspect optional frontend behavior at the narrowest owner defined by the

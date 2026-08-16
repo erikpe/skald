@@ -389,8 +389,7 @@ The compiler accepts this form and preserves its modifier through resolved,
 typed, and MIR field declarations. Type checking recognizes its narrow
 whole-field write permission. MIR carries and independently verifies the exact
 field authorization without upgrading receiver access, then ordinary target
-assignment machinery executes it. Broader lifecycle and alias composition is
-staged by the [implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md).
+assignment machinery executes it with existing lifecycle and alias safety.
 
 Both words remain contextual. The modifier form is selected only when
 `private cell` is followed by a field name and `:`. An ordinary field may

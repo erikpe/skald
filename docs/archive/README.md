@@ -84,6 +84,7 @@ Archived plans:
 - [Produced-object field reads](PRODUCED_OBJECT_FIELD_READS_ROADMAP.md)
 - [Capture-free function values](FUNCTION_VALUES_ROADMAP.md)
 - [Generic static-member dot syntax](GENERIC_STATIC_MEMBER_DOT_SYNTAX_ROADMAP.md)
+- [Private cell fields](PRIVATE_CELL_FIELDS_ROADMAP.md)
 
 Resolved string-design inputs:
 
@@ -155,6 +156,10 @@ Resolved generic-class follow-ups:
 Resolved function-value design inputs:
 
 - [capture-free function values design record](FUNCTION_VALUES_DESIGN_PROPOSAL.md)
+
+Resolved private-cell design inputs:
+
+- [private cell fields design record](PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md)
 
 Resolved shared-optional-box follow-ups:
 

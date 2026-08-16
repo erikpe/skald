@@ -201,10 +201,10 @@ makes a result source-observable.
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and
   object places, plus assignment, temporaries, and deterministic lifetime. It
-  also owns the staged `private cell` whole-field replacement contract. The
-  compiler implements declarations, typed whole-field authorization,
-  independently verified MIR evidence, and core native execution; the status
-  matrix and active roadmap identify the remaining composition hardening.
+  also owns the implemented `private cell` whole-field replacement contract,
+  including declaring-class authorization, lifecycle and alias safety,
+  generic specialization, dispatch composition, independently verified MIR,
+  and native execution.
 - [Generic classes](GENERIC_CLASSES.md) defines implemented explicit closed generic class
   applications, structural substitution, inferred contextual requirements,
   nominal interface bounds, invariance, complete-class validation, and native

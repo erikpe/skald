@@ -1,0 +1,76 @@
+interface Writer {
+    fn write(value: i64) -> i64;
+}
+
+class Base implements Writer {
+    private cell value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn inherited_write(value: i64) -> i64 {
+        self.value = value;
+        return self.value;
+    }
+
+    virtual fn write(value: i64) -> i64 {
+        self.value = value;
+        return self.value;
+    }
+
+    static fn write_alias(ref target: Base, value: i64) -> unit {
+        target.value = value;
+    }
+
+    static fn write_checked(ref target: Obj, value: i64) -> unit {
+        ((Base) target).value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Derived extends Base {
+    private cell extra: i64;
+
+    init() {
+        super(0);
+        self.extra = 0;
+    }
+
+    override fn write(value: i64) -> i64 {
+        self.extra = value + 1;
+        return self.inherited_write(value) + self.extra;
+    }
+
+    fn read_extra() -> i64 {
+        return self.extra;
+    }
+}
+
+fn produce() -> Derived {
+    return Derived();
+}
+
+fn through_interface(ref writer: Writer, value: i64) -> i64 {
+    return writer.write(value);
+}
+
+fn through_base(ref value: Base, amount: i64) -> i64 {
+    return value.write(amount);
+}
+
+fn main() -> i64 {
+    var value: Derived = Derived();
+    var callback: fn(ref Base, i64) -> unit = Base.write_alias;
+    var dispatched: i64 = through_interface(value, 2);
+    var virtual_value: i64 = through_base(value, 4);
+    callback(value, 5);
+    Base.write_checked(value, 6);
+    var produced: i64 = produce().write(7);
+    var inherited: i64 = value.inherited_write(8);
+    return dispatched + virtual_value + produced + inherited
+        + value.read() + value.read_extra() - 8;
+}

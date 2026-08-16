@@ -61,3 +61,51 @@ stacktrace:
   at private_cell_optional_guard::Holder.exercise_replace (tests/golden/objects/private_cell_optional_guard.ska:35:36)
   at private_cell_optional_guard::main (tests/golden/objects/private_cell_optional_guard.ska:49:12)
 """ } }
+
+[[test]]
+name = "dispatch_composition"
+mode = "run"
+source = "private_cell_dispatch_composition.ska"
+[[test.run]]
+name = "inheritance_checked_produced_virtual_interface_and_function_value"
+expect = { exit = 42 }
+
+[[test]]
+name = "generic_modules"
+mode = "run"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/private_cell_generics",
+  "--no-stdlib",
+]
+[[test.run]]
+name = "specialization_substitution_inheritance_and_qualification"
+expect = { exit = 42 }
+
+[[test]]
+name = "modifier_exclusions"
+mode = "compile-fail"
+source = "private_cell_modifier_exclusions.ska"
+[test.expect.stderr]
+matches = [
+  { name = "public cell", match = "contains", inline = "cell fields must be private" },
+  { name = "static cell", match = "contains", inline = "cell fields cannot be static" },
+]
+
+[[test]]
+name = "privacy_exclusion"
+mode = "compile-fail"
+source = "private_cell_privacy_exclusion.ska"
+[test.expect.stderr]
+match = "contains"
+inline = "member `value` is private to class `Base`"
+
+[[test]]
+name = "nested_access_exclusions"
+mode = "compile-fail"
+source = "private_cell_exclusions.ska"
+[test.expect.stderr]
+matches = [
+  { name = "nested object mutation", match = "contains", inline = "cannot assign through a read-only receiver" },
+  { name = "nested array mutation", match = "contains", inline = "cannot mutate a read-only array" },
+]

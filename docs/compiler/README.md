@@ -278,8 +278,9 @@ The
 carries declaration metadata, typed whole-field write authorization, and
 independently verified per-instruction MIR evidence without upgrading receiver
 access. Ordinary backend assignment machinery executes verified writes. The
-[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) stages
-alias/lifecycle composition and broader publication coverage.
+same representation composes with ordinary lifecycle and alias protections,
+closed specialization, inheritance, virtual/interface dispatch, and eligible
+capture-free function values.
 
 ## Compiler crate API policy
 

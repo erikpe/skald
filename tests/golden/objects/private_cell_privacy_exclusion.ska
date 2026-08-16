@@ -1,0 +1,11 @@
+class Base {
+    private cell value: i64;
+    init() { self.value = 0; }
+}
+
+class Derived extends Base {
+    init() { super(); }
+    fn replace() -> unit { self.value = 1; }
+}
+
+fn main() -> i64 { return 0; }

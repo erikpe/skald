@@ -1,0 +1,42 @@
+public class Item {
+    value: i64;
+    init(value: i64) { self.value = value; }
+}
+
+public class Slot<T> {
+    private cell value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn replace(value: T) -> unit {
+        self.value = value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}
+
+public class Base<T> {
+    private cell value: T;
+
+    init(value: T) {
+        self.value = value;
+    }
+
+    fn replace(value: T) -> unit {
+        self.value = value;
+    }
+
+    fn get() -> T {
+        return self.value;
+    }
+}
+
+public class Derived<T> extends Base<T> {
+    init(value: T) {
+        super(value);
+    }
+}

@@ -1,0 +1,16 @@
+class Item {
+    value: i64;
+    init() { self.value = 0; }
+}
+
+class Holder {
+    private cell item: Item;
+    private cell values: i64[];
+    init() { self.item = Item(); self.values = i64[]{0}; }
+    fn invalid() -> unit {
+        self.item.value = 1;
+        self.values[0] = 2;
+    }
+}
+
+fn main() -> i64 { return 0; }

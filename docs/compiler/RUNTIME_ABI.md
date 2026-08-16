@@ -597,6 +597,12 @@ boundary. Compiler, verifier, backend, and native tests own its typed and
 executable implementation evidence, while runtime surface tests only confirm
 that no ABI addition occurred.
 
+Implemented private cell fields likewise use no runtime service. Whole-field
+replacement reuses ordinary generated assignment and the existing optional,
+shared-owner, and array lifetime protocols. There is no runtime cell wrapper,
+borrow state, atomic or synchronization operation, descriptor flag, public
+symbol, header change, or ABI-version change.
+
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds

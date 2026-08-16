@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     hir::{HirFieldWriteAuthorization, HirStatement},
     identity::{ClassId, FieldId},
-    mir::{lower_hir, verify_mir},
+    mir::{dump_mir, lower_hir, verify_mir},
     resolve::ResolvedCopyOperation,
     typeck::{COPY_OPERATION_UNAVAILABLE, READ_ONLY_RECEIVER, TYPE_MISMATCH},
 };
@@ -237,4 +237,85 @@ fn cell_replacement_preserves_ordinary_type_mismatch_diagnostics() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == READ_ONLY_RECEIVER));
+}
+
+#[test]
+fn composes_with_inheritance_dispatch_produced_receivers_and_function_values() {
+    let output = check_text(concat!(
+        "interface Writer { fn write(value: i64) -> i64; }\n",
+        "class Base implements Writer {\n",
+        "  private cell value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn inherited_write(value: i64) -> i64 { self.value = value; return self.value; }\n",
+        "  virtual fn write(value: i64) -> i64 { self.value = value; return self.value; }\n",
+        "  static fn write_alias(ref target: Base, value: i64) -> unit { target.value = value; }\n",
+        "  static fn write_checked(ref target: Obj, value: i64) -> unit { ((Base) target).value = value; }\n",
+        "}\n",
+        "class Derived extends Base {\n",
+        "  private cell extra: i64;\n",
+        "  init() { super(0); self.extra = 0; }\n",
+        "  override fn write(value: i64) -> i64 {\n",
+        "    self.extra = value + 1; return self.inherited_write(value) + self.extra;\n",
+        "  }\n",
+        "}\n",
+        "fn produce() -> Derived { return Derived(); }\n",
+        "fn through(ref writer: Writer) -> i64 { return writer.write(2); }\n",
+        "fn through_base(ref value: Base) -> i64 { return value.write(4); }\n",
+        "fn main() -> i64 {\n",
+        "  var value: Derived = Derived();\n",
+        "  var callback: fn(ref Base, i64) -> unit = Base.write_alias;\n",
+        "  callback(value, 3); Base.write_checked(value, 4);\n",
+        "  return through(value) + through_base(value) + produce().write(5);\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+
+    let writes = crate::hir::collect_cell_writes(&hir);
+    assert_eq!(writes.len(), 5, "{}", dump_hir(&hir));
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("MethodCall Virtual"), "{dump}");
+    assert!(dump.contains("InterfaceCall"), "{dump}");
+    assert!(dump.contains("IndirectCall"), "{dump}");
+    verify_mir(&lower_hir(&hir)).unwrap();
+}
+
+#[test]
+fn generic_cells_preserve_specialized_identity_across_storage_substitutions() {
+    let hir = check_generic_source(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Slot<T> {\n",
+        "  private cell value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "  fn replace(value: T) -> unit { self.value = value; }\n",
+        "}\n",
+        "class Base<T> {\n",
+        "  private cell value: T;\n",
+        "  init(value: T) { self.value = value; }\n",
+        "  fn replace(value: T) -> unit { self.value = value; }\n",
+        "}\n",
+        "class Derived<T> extends Base<T> { init(value: T) { super(value); } }\n",
+        "fn main() -> i64 {\n",
+        "  var first: Slot<i64> = Slot<i64>(1); var one: i64 = 2; first.replace(one);\n",
+        "  var second: Slot<i64> = Slot<i64>(3); second.replace(one);\n",
+        "  var maybe: Slot<i64?> = Slot<i64?>(none); var some: i64? = 4; maybe.replace(some);\n",
+        "  var values: Slot<i64[]> = Slot<i64[]>(i64[]{5}); var next: i64[] = i64[]{6}; values.replace(next);\n",
+        "  var owner: shared Item = new Item(7);\n",
+        "  var shared_value: Slot<shared Item> = Slot<shared Item>(owner); shared_value.replace(owner);\n",
+        "  var derived: Derived<i64> = Derived<i64>(8); derived.replace(one);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    let dump = dump_hir(&hir);
+    let writes = crate::hir::collect_cell_writes(&hir);
+    assert_eq!(writes.len(), 5, "{dump}");
+    let mut fields = writes.iter().map(|write| write.field).collect::<Vec<_>>();
+    fields.sort();
+    fields.dedup();
+    assert_eq!(fields.len(), 5, "{dump}");
+    assert!(dump.matches("cell \"value\"").count() >= 5, "{dump}");
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    assert_eq!(dump_mir(&mir), dump_mir(&mir));
 }

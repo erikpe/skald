@@ -121,6 +121,13 @@ const PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT: &str =
     "SKALD_PRIVATE_INITIALIZER_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME: &str =
     "private_initializer_diagnostics_are_deterministic_across_processes";
+const PRIVATE_CELL_HELPER_OUTPUT: &str = "SKALD_PRIVATE_CELL_DETERMINISM_OUTPUT";
+const PRIVATE_CELL_TEST_NAME: &str =
+    "private_cell_phase_products_are_deterministic_across_processes";
+const PRIVATE_CELL_DIAGNOSTIC_HELPER_OUTPUT: &str =
+    "SKALD_PRIVATE_CELL_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const PRIVATE_CELL_DIAGNOSTIC_TEST_NAME: &str =
+    "private_cell_diagnostics_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
 const PERMUTATION_HELPER_VARIANT: &str = "SKALD_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
@@ -542,6 +549,26 @@ fn private_initializer_diagnostics_are_deterministic_across_processes() {
         PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT,
         PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME,
         private_initializer_diagnostic_dump,
+    );
+}
+
+#[test]
+fn private_cell_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "private-cells",
+        PRIVATE_CELL_HELPER_OUTPUT,
+        PRIVATE_CELL_TEST_NAME,
+        private_cell_phase_dump,
+    );
+}
+
+#[test]
+fn private_cell_diagnostics_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "private-cell-diagnostics",
+        PRIVATE_CELL_DIAGNOSTIC_HELPER_OUTPUT,
+        PRIVATE_CELL_DIAGNOSTIC_TEST_NAME,
+        private_cell_diagnostic_dump,
     );
 }
 
@@ -1436,6 +1463,19 @@ fn private_initializer_diagnostic_dump() -> String {
         "var choice: Choice = Choice(key); return 0; }\n",
     );
     type_error_phase_dump("private-initializer-diagnostic.ska", text)
+}
+
+fn private_cell_phase_dump() -> String {
+    complete_golden_phase_dump(include_str!(
+        "../../../tests/golden/objects/private_cell_dispatch_composition.ska"
+    ))
+}
+
+fn private_cell_diagnostic_dump() -> String {
+    type_error_phase_dump(
+        "private-cell-diagnostics.ska",
+        include_str!("../../../tests/golden/objects/private_cell_exclusions.ska"),
+    )
 }
 
 fn type_error_phase_dump(name: &str, text: &str) -> String {

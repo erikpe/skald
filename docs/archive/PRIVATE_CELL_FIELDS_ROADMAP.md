@@ -1,6 +1,6 @@
 # Private Cell Fields Roadmap
 
-Status: in progress; CFI3 is complete and CFI4 is next.
+Status: complete and archived.
 
 This roadmap implements the frozen
 [private cell field language contract](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction)
@@ -64,7 +64,7 @@ implement those decisions without reopening them.
 - [x] CFI1 — Authorize typed whole-field replacement
 - [x] CFI2 — Preserve and verify cell writes in MIR
 - [x] CFI3 — Prove lifecycle-bearing and alias-safe assignment families
-- [ ] CFI4 — Harden composition and publish the implemented contract
+- [x] CFI4 — Harden composition and publish the implemented contract
 
 Every Rust implementation task runs focused owner tests followed by
 `make check`, `make msrv-check`, and `git diff --check`. The closing task also
@@ -259,30 +259,30 @@ receiver optional initialization for checked views and mutation guards.
 **Purpose:** Close cross-feature gaps, publish only verified behavior, and
 leave the general feature ready for later standard-library adoption.
 
-- [ ] Cover base-declared private cells, inherited method calls, derived
+- [x] Cover base-declared private cells, inherited method calls, derived
       privacy rejection, exact declaring-class ownership, checked class views,
       produced read-only method receivers, virtual overrides, interface
       witnesses, and function-value calls to cell-writing read-only methods
       where existing callable eligibility permits them.
-- [ ] Cover generic cell fields, closed specialization identity, contextual
+- [x] Cover generic cell fields, closed specialization identity, contextual
       assignment requirements, repeated specializations, generic bases,
       optional/array/shared substitutions, module qualification, and
       deterministic IDs and symbols.
-- [ ] Complete syntax/resolved/HIR/MIR dump, diagnostics, malformed-source,
+- [x] Complete syntax/resolved/HIR/MIR dump, diagnostics, malformed-source,
       pipeline determinism, native success/failure, and regression matrices;
       audit all field assignment families and all access-propagating consumers
       for accidental permission widening.
-- [ ] Promote grammar, class/access, compiler phase, testing, debugging,
+- [x] Promote grammar, class/access, compiler phase, testing, debugging,
       backend, and status documentation from frozen planned behavior to the
       implemented contract. Remove rollout vocabulary and roadmap codes from
       living code, tests, and documentation.
-- [ ] Confirm there is no atomicity, synchronization, volatile access,
+- [x] Confirm there is no atomicity, synchronization, volatile access,
       `Cell<T>` library abstraction, public/static cell, callable effect,
       purity guarantee, runtime service, or ABI revision.
-- [ ] Keep `std::str::Str` at its exact current descriptor contract. Record its
+- [x] Keep `std::str::Str` at its exact current descriptor contract. Record its
       cached-hash migration as separate follow-up work rather than expanding
       this closing task.
-- [ ] Run closure review from an artifact-free snapshot, resolve high-priority
+- [x] Run closure review from an artifact-free snapshot, resolve high-priority
       maintainability findings within the feature boundary, and place any
       lower-priority actionable findings in a separately indexed discoveries
       document.
@@ -297,6 +297,15 @@ contract across all frozen compositions, every exclusion retains a focused
 diagnostic or explicit status boundary, living documentation contains no
 stale rollout language, all repository gates pass, and the roadmap is ready to
 archive.
+
+Completed 2026-08-16. Focused type-checking, MIR/backend, diagnostic,
+cross-process determinism, and native golden matrices passed. Living language,
+compiler, testing, debugging, backend, runtime, and status documentation now
+publish the implemented contract. The separate `Str` cached-hash migration is
+indexed as pending discovery. An artifact-free `make check-long` passed the
+full repository, full golden determinism, Rust 1.82.0 MSRV, 10,000-case
+robustness, and benchmark gates; documentation validation and
+`git diff --check` also passed.
 
 ## Ordering and dependencies
 

@@ -37,7 +37,12 @@ fn private_cell_authorization_preserves_layout_abi_and_deterministic_emission() 
         assembly,
         emit_assembly(Target::X86_64SysV, &program).unwrap()
     );
-    assert!(assembly.contains("call ska_rt_abi_v9"));
+    let runtime_calls = assembly
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("call ska_rt"))
+        .collect::<Vec<_>>();
+    assert_eq!(runtime_calls, ["call ska_rt_abi_v9"]);
 }
 
 #[test]

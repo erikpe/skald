@@ -974,8 +974,11 @@ explicit evidence on every assignment carrier and mutate its field, endpoint,
 owner, access, family, origin, and liveness independently in preliminary and
 final products. Backend tests retain ordinary place addressing, layout,
 callable ABI, deterministic assembly, and runtime ABI version 9. The focused
-native golden populates and reuses a primitive-optional cache through a
-read-only method.
+native matrix covers scalar, class, optional, shared-owner, array, lifecycle,
+alias-anchor, inheritance, checked-view, virtual/interface, eligible function-
+value, closed-generic, and cross-module composition. Compile-failure goldens
+preserve privacy, modifier, and nested-mutation exclusions. Independent
+process tests compare complete phase products and diagnostics.
 
 ## Static-field coverage
 
