@@ -1,0 +1,9 @@
+schema = 1
+
+[[test]]
+name = "interfaces"
+mode = "run"
+source = "lang_interfaces.ska"
+
+[[test.run]]
+name = "imports_conformance_and_generic_bounds"

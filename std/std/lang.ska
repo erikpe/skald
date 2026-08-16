@@ -1,0 +1,7 @@
+public interface Equatable {
+    fn equals(ref other: Obj) -> bool;
+}
+
+public interface Hashable {
+    fn hash_code() -> u64;
+}

@@ -41,6 +41,12 @@ composes existing `std::io`, raw-byte strings, arrays, loops, and modules to
 read the Linux invocation vector. It introduces no compiler intrinsic,
 entry-function parameter, static cache, or runtime ABI addition.
 
+The dependency-free `std::lang` module provides the foundational `Equatable`
+and `Hashable` interfaces. Equality accepts a read-only `Obj` view so an
+implementation can return `false` for values outside its equality domain;
+hashing returns one `u64`. Both declarations are ordinary explicitly imported
+library interfaces without implicit prelude behavior or compiler machinery.
+
 The `std::vec` module provides the implemented generic
 [`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`
 capacity storage and infers its element lifecycle requirements from ordinary

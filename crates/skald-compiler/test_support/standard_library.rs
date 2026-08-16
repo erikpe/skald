@@ -11,11 +11,12 @@ pub const CANONICAL_STR_PARSE_F64_SOURCE: &str = include_str!("../../../std/std/
 pub const CANONICAL_ERROR_SOURCE: &str = include_str!("../../../std/std/error.ska");
 pub const CANONICAL_F64_SOURCE: &str = include_str!("../../../std/std/f64.ska");
 pub const CANONICAL_IO_SOURCE: &str = include_str!("../../../std/std/io.ska");
+pub const CANONICAL_LANG_SOURCE: &str = include_str!("../../../std/std/lang.ska");
 pub const CANONICAL_PROCESS_SOURCE: &str = include_str!("../../../std/std/process.ska");
 pub const CANONICAL_TEST_SOURCE: &str = include_str!("../../../std/std/test.ska");
 pub const CANONICAL_VEC_SOURCE: &str = include_str!("../../../std/std/vec.ska");
 
-const CANONICAL_SOURCES: [(&str, &str); 11] = [
+const CANONICAL_SOURCES: [(&str, &str); 12] = [
     ("std/str.ska", CANONICAL_STR_SOURCE),
     (
         "std/str/format_integer.ska",
@@ -30,6 +31,7 @@ const CANONICAL_SOURCES: [(&str, &str); 11] = [
     ("std/error.ska", CANONICAL_ERROR_SOURCE),
     ("std/f64.ska", CANONICAL_F64_SOURCE),
     ("std/io.ska", CANONICAL_IO_SOURCE),
+    ("std/lang.ska", CANONICAL_LANG_SOURCE),
     ("std/process.ska", CANONICAL_PROCESS_SOURCE),
     ("std/test.ska", CANONICAL_TEST_SOURCE),
     ("std/vec.ska", CANONICAL_VEC_SOURCE),

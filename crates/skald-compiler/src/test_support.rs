@@ -572,10 +572,11 @@ mod tests {
     #[test]
     fn canonical_standard_library_closure_is_complete_and_overridable() {
         let canonical = canonical_standard_library_sources(&[]);
-        assert_eq!(canonical.len(), 11);
+        assert_eq!(canonical.len(), 12);
         assert_eq!(canonical[0].0, "std/str.ska");
-        assert_eq!(canonical[9].0, "std/test.ska");
-        assert_eq!(canonical[10].0, "std/vec.ska");
+        assert_eq!(canonical[8].0, "std/lang.ska");
+        assert_eq!(canonical[10].0, "std/test.ska");
+        assert_eq!(canonical[11].0, "std/vec.ska");
         assert_eq!(
             canonical
                 .iter()

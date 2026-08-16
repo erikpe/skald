@@ -1,0 +1,53 @@
+from std::lang import Equatable, Hashable;
+from std::test import assert_eq_u64, assert_false, assert_true;
+
+class Key implements Equatable, Hashable {
+    private _value: i64;
+
+    init(value: i64) {
+        self._value = value;
+    }
+
+    fn equals(ref other: Obj) -> bool {
+        if (!(other is Key)) {
+            return false;
+        }
+        return self._value == ((Key) other)._value;
+    }
+
+    fn hash_code() -> u64 {
+        return (u64) self._value;
+    }
+}
+
+class Other {
+    init() {}
+}
+
+class KeyOperations<T>
+where T: Equatable, T: Hashable
+{
+    init() {}
+
+    fn equal(ref left: T, ref right: T) -> bool {
+        return left.equals(right);
+    }
+
+    fn hash_code(ref value: T) -> u64 {
+        return value.hash_code();
+    }
+}
+
+fn main() -> i64 {
+    var first: Key = Key(42);
+    var same: Key = Key(42);
+    var different: Key = Key(7);
+    var other: Other = Other();
+    var operations: KeyOperations<Key> = KeyOperations<Key>();
+
+    assert_true(operations.equal(first, same));
+    assert_false(operations.equal(first, different));
+    assert_false(first.equals(other));
+    assert_eq_u64(operations.hash_code(first), 42u);
+    return 0;
+}
