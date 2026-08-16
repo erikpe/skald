@@ -151,7 +151,9 @@ impl CallableChecker<'_, '_> {
         &mut self,
         assignment: &crate::resolve::ResolvedStaticFieldAssignment,
     ) -> CheckedStatement {
-        let Some((place, ty)) = self.check_static_place(assignment.field, assignment.span) else {
+        let Some((place, ty)) =
+            self.check_static_assignment_place(assignment.field, assignment.span)
+        else {
             return CheckedStatement::falls_through(None);
         };
         let hir = match ty {

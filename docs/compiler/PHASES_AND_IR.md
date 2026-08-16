@@ -1344,11 +1344,12 @@ resolved IR, HIR, preliminary MIR, and final MIR dumps expose the marker;
 declaration verification rejects malformed spans, incompatible cell metadata,
 and zero-default final statics.
 
-After the ordinary final MIR pipeline verifies a program, the driver reports
-`MIR002` for final statics. Final-bearing complete values use the ordinary
-assignment backend path after exact user or synthesized evidence crosses both
-MIR verification boundaries. Construction, copy construction, assignment,
-reads, destruction, and shallow mutation otherwise require no feature gate.
+Final statics pass through preliminary inventory, effect-certified lifecycle
+planning, coordinator synthesis, and final MIR verification before reaching
+the backend. Final-bearing complete values use the ordinary assignment backend
+path after exact user or synthesized evidence crosses both MIR verification
+boundaries. Construction, copy construction, assignment, reads, destruction,
+and shallow mutation require no feature gate.
 
 Construction is direct initialization of incomplete storage. Ordinary
 and copy constructors use the current exact-once direct-field analysis, and
@@ -1413,9 +1414,9 @@ family, runtime call, public C API, or runtime ABI version. Backend code must
 not infer authorization from source names or reconstruct it after verification.
 
 The rollout established contextual declaration metadata, instance construction
-and direct-write rules, and exact user and synthesized copy-assignment
-authorization. It next adds final-static lifecycle,
-cross-feature native composition, and standard-library box adoption. The
+and direct-write rules, exact user and synthesized copy-assignment
+authorization, and final-static eager lifecycle integration. It next adds
+cross-feature native composition and standard-library box adoption. The
 standard library receives no compiler exception.
 
 Resolved IR remains source-oriented: it records selected declarations and

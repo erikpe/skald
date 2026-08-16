@@ -24,7 +24,7 @@ impl Verifier<'_> {
             ..
         } = instruction
         {
-            let write_access = self.verify_field_write_authorizations(
+            let write_access = self.verify_replacement_authorizations(
                 function,
                 block,
                 destination,

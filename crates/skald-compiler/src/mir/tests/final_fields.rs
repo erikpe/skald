@@ -1,8 +1,26 @@
 use super::*;
 use crate::{
+    identity::FunctionId,
     source::{Span, TextRange},
     test_support::lower_source_to_final_mir,
 };
+
+fn forge_first_static_as_final(program: &mut MirProgram) {
+    let declaration = &mut program.classes.entries_mut_for_test()[0].static_fields[0];
+    let start = declaration.span.range().start();
+    let final_span = Span::new(
+        declaration.span.source_id(),
+        TextRange::new(start, start + 1).unwrap(),
+    );
+    declaration.final_span = Some(final_span);
+    program
+        .static_lifecycle
+        .as_mut()
+        .expect("explicit static initializer must have a lifecycle coordinator")
+        .lifecycle_mut_for_test()
+        .definitions_mut_for_test()[0]
+        .final_span = Some(final_span);
+}
 
 const SOURCE: &str = concat!(
     "class Values {\n",
@@ -132,6 +150,38 @@ fn verifier_rejects_malformed_final_declaration_metadata() {
         errors.contains("must have explicit initialization"),
         "{errors}"
     );
+}
+
+#[test]
+fn verifier_rejects_forged_final_static_root_writes_and_mutable_aliases() {
+    let mut direct = lower_source_to_final_mir(concat!(
+        "class State { static value: i64 = 1; init() {} }\n",
+        "fn main() -> i64 { State.value = 2; return State.value; }\n",
+    ));
+    forge_first_static_as_final(&mut direct);
+    assert!(verify_mir(&direct)
+        .unwrap_err()
+        .to_string()
+        .contains("final static root cannot be replaced"));
+
+    let mut alias = lower_source_to_final_mir(concat!(
+        "fn replace(mut ref value: i64) -> unit { value = 2; }\n",
+        "class State { static value: i64 = 1; init() {} }\n",
+        "fn main() -> i64 { replace(State.value); return State.value; }\n",
+    ));
+    forge_first_static_as_final(&mut alias);
+    let main = alias
+        .definitions
+        .get(FunctionId::new(1))
+        .expect("main definition");
+    assert!(main.body.blocks.iter().any(|block| block
+        .instructions
+        .iter()
+        .any(|instruction| matches!(instruction, MirInstruction::Call(_)))));
+    assert!(verify_mir(&alias)
+        .unwrap_err()
+        .to_string()
+        .contains("cannot mutably alias a final static root"));
 }
 
 #[test]

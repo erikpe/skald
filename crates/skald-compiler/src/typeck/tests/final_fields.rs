@@ -343,3 +343,101 @@ fn user_copy_assignment_keeps_ordinary_control_flow_and_subset_freedom() {
     crate::mir::verify_preliminary_mir(&preliminary).unwrap();
     verify_mir(&lower_hir_to_final_mir(&hir)).unwrap();
 }
+
+#[test]
+fn rejects_final_static_root_assignment_for_every_stored_family_and_owner() {
+    let output = check_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn identity(value: i64) -> i64 { return value; }\n",
+        "class State {\n",
+        "  final static scalar: i64 = 1;\n",
+        "  final static callback: fn(i64) -> i64 = identity;\n",
+        "  final static object: Item = Item(2);\n",
+        "  final static maybe: i64? = 3;\n",
+        "  final static maybe_object: Item? = Item(4);\n",
+        "  final static owner: shared Item = new Item(5);\n",
+        "  final static maybe_owner: shared? Item = new Item(6);\n",
+        "  final static values: i64[] = i64[]{7};\n",
+        "  init() {}\n",
+        "  static fn replace_all() -> unit {\n",
+        "    State.scalar = 10; State.callback = identity; State.object = Item(11);\n",
+        "    State.maybe = none; State.maybe_object = none;\n",
+        "    State.owner = new Item(12); State.maybe_owner = none;\n",
+        "    State.values = i64[]{13};\n",
+        "  }\n",
+        "}\n",
+        "class Derived extends State { init() { super(); }\n",
+        "  static fn replace_inherited() -> unit { Derived.scalar = 14; } }\n",
+        "fn main() -> i64 { State.scalar = 15; return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == crate::typeck::FINAL_STATIC_REPLACEMENT)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 10, "{:?}", output.diagnostics);
+    assert!(diagnostics.iter().all(|diagnostic| {
+        diagnostic
+            .labels
+            .iter()
+            .any(|label| label.message == "field declared final here")
+    }));
+}
+
+#[test]
+fn final_static_reads_and_shallow_nested_mutation_remain_available() {
+    let output = check_text(concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; }\n",
+        "  mut fn increment() -> unit { self.value = self.value + 1; } }\n",
+        "class State {\n",
+        "  final static scalar: i64 = 1;\n",
+        "  final static object: Item = Item(10);\n",
+        "  final static values: i64[] = i64[]{20};\n",
+        "  final static owner: shared Item = new Item(11);\n",
+        "  init() {}\n",
+        "}\n",
+        "fn inspect(ref value: i64) -> i64 { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  State.object.increment(); State.values[0] = State.values[0] + 1;\n",
+        "  State.owner->increment();\n",
+        "  return inspect(State.scalar) + State.object.value + State.values[0] + State.owner->value;\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let preliminary = crate::mir::lower_preliminary_hir(&hir);
+    crate::mir::verify_preliminary_mir(&preliminary).unwrap();
+    verify_mir(&lower_hir_to_final_mir(&hir)).unwrap();
+}
+
+#[test]
+fn final_static_roots_are_read_only_alias_sources() {
+    let output = check_text(concat!(
+        "fn replace_scalar(mut ref value: i64) -> unit { value = 0; }\n",
+        "fn replace_optional(mut ref value: i64?) -> unit { value = none; }\n",
+        "fn replace_array(mut ref value: i64[]) -> unit { value = i64[]{}; }\n",
+        "class State {\n",
+        "  final static scalar: i64 = 1;\n",
+        "  final static optional: i64? = 2;\n",
+        "  final static values: i64[] = i64[]{3};\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 { replace_scalar(State.scalar); ",
+        "replace_optional(State.optional); replace_array(State.values); return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INSUFFICIENT_ALIAS_ACCESS)
+            .count(),
+        3,
+        "{:?}",
+        output.diagnostics
+    );
+}

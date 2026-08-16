@@ -574,7 +574,7 @@ impl<'mir> Verifier<'mir> {
         block: &MirBasicBlock,
         replace: &MirSharedFieldReplace,
     ) {
-        let write_access = self.verify_field_write_authorizations(
+        let write_access = self.verify_replacement_authorizations(
             function,
             block,
             &replace.destination,

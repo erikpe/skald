@@ -688,8 +688,8 @@ fn executes_final_instance_construction_and_reads() {
 }
 
 #[test]
-fn stops_final_static_fields_after_verified_mir_and_before_backend_emission() {
-    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+fn emits_final_static_fields_through_verified_lifecycle_and_backend_paths() {
+    let artifact = compile_source_to_assembly(
         "final-fields.ska",
         concat!(
             "class Values {\n",
@@ -700,20 +700,10 @@ fn stops_final_static_fields_after_verified_mir_and_before_backend_emission() {
         ),
         Target::X86_64SysV,
     )
-    .unwrap_err() else {
-        panic!("expected the final-field execution gate");
-    };
+    .unwrap();
 
-    let diagnostics = report.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 1);
-    assert!(diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == "MIR002"));
-    assert!(diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.message == "final static fields cannot be emitted yet"));
-    let rendered = render_diagnostics(&report.sources, &report.diagnostics);
-    assert!(rendered.contains("final instance construction and reads are supported independently"));
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains(".globl main"));
 }
 
 #[test]

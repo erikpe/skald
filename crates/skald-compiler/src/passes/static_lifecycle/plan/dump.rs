@@ -43,6 +43,9 @@ pub fn dump_static_lifetime_plan(program: &PlannedMirProgram) -> String {
     for definition in program.lifecycle_mir().definitions() {
         output.push_str("  Field ");
         write_field_reference(&mut output, program, definition.field);
+        if definition.final_span.is_some() {
+            output.push_str(" final");
+        }
         let _ = write!(
             output,
             " {} {} activation={} shutdown={}",

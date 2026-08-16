@@ -48,6 +48,7 @@ pub(super) fn build_planned_program(
                 MirStaticFieldInitialization::ZeroDefault,
                 MirStaticFieldInitialization::Explicit,
             ),
+            final_span: field.final_span,
             indices: indices[&field.field],
             span: field.span,
         })

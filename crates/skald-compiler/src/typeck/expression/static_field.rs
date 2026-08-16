@@ -1,6 +1,7 @@
 //! Primitive static-place checking shared by reads, writes, and aliases.
 
 use crate::{
+    diagnostics::Diagnostic,
     hir::{
         HirExpression, HirExpressionKind, HirPrimitivePlace, HirPrimitiveStorage, HirStaticPlace,
         Type,
@@ -10,7 +11,10 @@ use crate::{
     source::Span,
 };
 
-use super::super::{function::CallableChecker, program::lower_type};
+use super::super::{
+    function::CallableChecker,
+    program::{lower_type, FINAL_STATIC_REPLACEMENT},
+};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_static_field_read(
@@ -63,6 +67,59 @@ impl CallableChecker<'_, '_> {
             .expect("resolved static-field use must reference a declaration");
         let ty = lower_type(self.program, &declaration.type_syntax);
         Some((HirStaticPlace { field, span }, ty))
+    }
+
+    pub(in crate::typeck) fn check_static_assignment_place(
+        &mut self,
+        field: StaticFieldId,
+        span: Span,
+    ) -> Option<(HirStaticPlace, Type)> {
+        let checked = self.check_static_place(field, span)?;
+        let declaration = self
+            .program
+            .static_field(field)
+            .expect("checked static place must retain its declaration");
+        let Some(final_span) = declaration.final_span else {
+            return Some(checked);
+        };
+        self.diagnostics.push(
+            Diagnostic::error(
+                FINAL_STATIC_REPLACEMENT,
+                format!(
+                    "final static field `{}` cannot be replaced",
+                    declaration.name
+                ),
+            )
+            .with_primary_label(
+                span,
+                "final static storage cannot be assigned after publication",
+            )
+            .with_secondary_label(final_span, "field declared final here")
+            .with_note("generated eager initialization is the field's sole root write"),
+        );
+        None
+    }
+
+    /// Access granted when the complete static storage is passed as an alias.
+    ///
+    /// Finality is shallow: operations reached through the stored value may
+    /// still mutate nested state, but an alias to the storage root must not
+    /// make replacement possible.
+    pub(in crate::typeck) fn static_field_alias_access(
+        &self,
+        field: StaticFieldId,
+    ) -> crate::hir::HirAccess {
+        if self
+            .program
+            .static_field(field)
+            .expect("resolved static-field use must reference a declaration")
+            .final_span
+            .is_some()
+        {
+            crate::hir::HirAccess::ReadOnly
+        } else {
+            crate::hir::HirAccess::Mutable
+        }
     }
 
     pub(super) fn primitive_static_alias_place(

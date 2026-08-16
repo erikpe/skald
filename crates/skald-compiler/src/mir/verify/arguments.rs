@@ -272,6 +272,20 @@ impl Verifier<'_> {
         parameter: &MirParameter,
     ) {
         let argument = self.verify_place(site.function, site.block, place);
+        if parameter.mode == MirParameterMode::MutableAlias
+            && matches!(place.base, MirPlaceBase::StaticField(field)
+                if place.projections.is_empty()
+                    && self.program.static_field(field).is_some_and(|field| field.final_span.is_some()))
+        {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} cannot mutably alias a final static root",
+                    site.kind
+                ),
+            );
+        }
         if matches!(parameter.ty, MirType::Interface(_) | MirType::Obj) {
             self.block_error(
                 site.function.callable(),

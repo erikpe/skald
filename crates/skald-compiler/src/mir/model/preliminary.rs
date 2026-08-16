@@ -45,6 +45,7 @@ pub struct PreliminaryMirStaticField {
     pub field: StaticFieldId,
     pub ty: MirType,
     pub initializer: Option<StaticInitializerId>,
+    pub final_span: Option<Span>,
     pub span: Span,
 }
 

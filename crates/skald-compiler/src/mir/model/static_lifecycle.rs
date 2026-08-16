@@ -432,6 +432,7 @@ pub struct MirStaticLifecycleDefinition {
     pub field: StaticFieldId,
     pub ty: MirType,
     pub initialization: MirStaticFieldInitialization,
+    pub final_span: Option<Span>,
     pub indices: MirStaticLifecycleIndices,
     pub span: Span,
 }

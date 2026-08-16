@@ -6,7 +6,7 @@ use crate::{
     backend::{emit_assembly, BackendError, BackendInput, RuntimeTracePolicy, Target},
     diagnostics::Diagnostics,
     lexer::lex,
-    mir::{lower_preliminary_hir, validate_final_field_execution_support, verify_preliminary_mir},
+    mir::{lower_preliminary_hir, verify_preliminary_mir},
     module::{
         load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
     },
@@ -154,10 +154,6 @@ fn finish_compilation(
     verify_planned_mir(&planned).map_err(CompilationError::MirVerification)?;
     let mir = synthesize_static_lifecycle(planned).map_err(CompilationError::MirVerification)?;
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
-    diagnostics.append(validate_final_field_execution_support(&mir));
-    if diagnostics.has_errors() {
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
     let input = match runtime_trace {
         RuntimeTracePolicy::Enabled => BackendInput::with_runtime_trace(&mir, &sources),
         RuntimeTracePolicy::Omitted => BackendInput::without_runtime_trace(&mir),

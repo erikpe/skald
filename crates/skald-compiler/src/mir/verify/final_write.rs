@@ -14,7 +14,7 @@ impl Verifier<'_> {
     /// Verifies both exceptional field-write capabilities without conflating
     /// them. Only cell evidence can relax destination access; final evidence
     /// proves lifecycle ownership of an otherwise mutable direct `self` field.
-    pub(super) fn verify_field_write_authorizations(
+    pub(super) fn verify_replacement_authorizations(
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
@@ -26,6 +26,7 @@ impl Verifier<'_> {
         let cell_authorized =
             self.verify_cell_write_authorization(function, block, destination, cell, family);
         self.verify_final_write_authorization(function, block, destination, final_update, family);
+        self.verify_final_static_replacement(function, block, destination);
         if cell.is_some() && final_update.is_some() {
             self.block_error(
                 function.callable(),
@@ -34,6 +35,33 @@ impl Verifier<'_> {
             );
         }
         VerifiedWriteAccess::from_cell_authorized(cell_authorized)
+    }
+
+    fn verify_final_static_replacement(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        destination: &MirPlace,
+    ) {
+        let MirPlace {
+            base: MirPlaceBase::StaticField(field),
+            projections,
+        } = destination
+        else {
+            return;
+        };
+        if projections.is_empty()
+            && self
+                .program
+                .static_field(*field)
+                .is_some_and(|field| field.final_span.is_some())
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "final static root cannot be replaced after lifecycle publication",
+            );
+        }
     }
 
     fn verify_final_write_authorization(

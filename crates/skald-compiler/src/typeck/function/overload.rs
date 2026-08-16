@@ -279,7 +279,9 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => {
                 Some(self.static_receiver_access(&access.receiver))
             }
-            ResolvedExpression::StaticFieldAccess(_) => Some(HirAccess::Mutable),
+            ResolvedExpression::StaticFieldAccess(access) => {
+                Some(self.static_field_alias_access(access.field))
+            }
             ResolvedExpression::ArrayProjection(projection) => {
                 self.static_place_access(&projection.receiver)
             }

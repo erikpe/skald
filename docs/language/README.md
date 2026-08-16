@@ -84,7 +84,8 @@ instance construction, copy construction, reads, destruction, and shallow
 nested mutation execute; type checking rejects independent replacement.
 Mutable complete class values remain assignable through exact selected user or
 synthesized copy-assignment evidence verified in preliminary and final MIR.
-Final statics remain behind `MIR002`.
+Final statics require explicit eager initialization and reject later root
+replacement while preserving shallow nested mutation and reverse shutdown.
 Finality does not introduce immutable local storage or deep constness.
 
 ## Lifetimes and safety direction

@@ -424,7 +424,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::StaticFieldAccess(access) => self
                 .primitive_static_alias_place(access)
-                .map(|(place, ty)| (place, ty, HirAccess::Mutable)),
+                .map(|(place, ty)| (place, ty, self.static_field_alias_access(access.field))),
             ResolvedExpression::Grouped(grouped) => {
                 let (mut place, ty, access) = self.primitive_alias_place(&grouped.expression)?;
                 place.span = grouped.span;
@@ -536,7 +536,9 @@ impl CallableChecker<'_, '_> {
             crate::hir::HirOptionalStorage::Binding(binding) => {
                 self.binding_access(*binding, false, span)
             }
-            crate::hir::HirOptionalStorage::Static(_) => Some(HirAccess::Mutable),
+            crate::hir::HirOptionalStorage::Static(place) => {
+                Some(self.static_field_alias_access(place.field))
+            }
             crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access()),
             crate::hir::HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
             crate::hir::HirOptionalStorage::SharedPointee(_) => Some(HirAccess::ReadOnly),

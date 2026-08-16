@@ -129,7 +129,7 @@ impl Verifier<'_> {
                 defined_in_block,
             ),
             MirInstruction::OptionalAssign(assignment) => {
-                let write_access = self.verify_field_write_authorizations(
+                let write_access = self.verify_replacement_authorizations(
                     function,
                     block,
                     &assignment.destination,
@@ -157,7 +157,7 @@ impl Verifier<'_> {
                 );
             }
             MirInstruction::AggregateOptionalAssign(assignment) => {
-                let write_access = self.verify_field_write_authorizations(
+                let write_access = self.verify_replacement_authorizations(
                     function,
                     block,
                     &assignment.destination,
@@ -214,7 +214,7 @@ impl Verifier<'_> {
                     None,
                 ),
             MirInstruction::OptionalSharedAssign(assignment) => {
-                let write_access = self.verify_field_write_authorizations(
+                let write_access = self.verify_replacement_authorizations(
                     function,
                     block,
                     &assignment.destination,
@@ -262,7 +262,7 @@ impl Verifier<'_> {
                 }
             }
             MirInstruction::ClassOptionalAssign(assignment) => {
-                let write_access = self.verify_field_write_authorizations(
+                let write_access = self.verify_replacement_authorizations(
                     function,
                     block,
                     &assignment.destination,
@@ -529,7 +529,7 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         copy: &MirCopyAssignment,
     ) {
-        let write_access = self.verify_field_write_authorizations(
+        let write_access = self.verify_replacement_authorizations(
             function,
             block,
             &copy.destination,
@@ -596,7 +596,7 @@ impl Verifier<'_> {
         store: &MirStore,
         defined_in_block: &HashSet<ValueId>,
     ) {
-        let write_access = self.verify_field_write_authorizations(
+        let write_access = self.verify_replacement_authorizations(
             function,
             block,
             &store.destination,

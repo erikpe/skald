@@ -76,6 +76,7 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
         };
         if declaration.ty != definition.ty
             || declaration.initialization != definition.initialization
+            || declaration.final_span != definition.final_span
             || declaration.lifecycle != Some(definition.indices)
             || declaration.span != definition.span
         {
@@ -83,6 +84,20 @@ fn verify_definitions(view: LifecycleMirView<'_>, errors: &mut Vec<MirVerificati
                 errors,
                 format!(
                     "final lifecycle definition for {} disagrees with its declaration",
+                    definition.field
+                ),
+            );
+        }
+        if definition.final_span.is_some()
+            && !matches!(
+                definition.initialization,
+                MirStaticFieldInitialization::Explicit(_)
+            )
+        {
+            program_error(
+                errors,
+                format!(
+                    "final lifecycle definition for {} must publish one explicit initializer",
                     definition.field
                 ),
             );

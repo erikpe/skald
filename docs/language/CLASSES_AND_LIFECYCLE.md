@@ -330,14 +330,16 @@ fourth field to absence before ordinary string methods may populate it.
 
 ## Frozen final field direction
 
-Status: **frozen semantics; instance construction, direct-write, and
-complete-assignment rules implemented**. The compiler accepts canonical final instance and static
+Status: **frozen semantics; instance and static core rules implemented**. The
+compiler accepts canonical final instance and static
 declarations and retains their exact evidence through verified MIR. Final
 instance construction, copy construction, reads, shallow nested mutation, and
 destruction execute normally. Independent slot replacement is rejected during
 type checking, while exact selected user and synthesized complete-value
-assignment executes normally. Final statics remain behind `MIR002`; the active
-[implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns those stages.
+assignment executes normally. Final statics are explicitly initialized once by
+the eager lifecycle, reject later root replacement, and retain ordinary reverse
+shutdown. The active [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md)
+owns the remaining cross-feature proof and standard-library adoption stages.
 
 A final instance field has one of these canonical forms:
 

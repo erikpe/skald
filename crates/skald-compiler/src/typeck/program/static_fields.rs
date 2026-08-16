@@ -7,7 +7,7 @@ use crate::{
     typeck::{capabilities::CopyCapabilities, function::CallableChecker},
 };
 
-use super::{lower_type, INVALID_STATIC_FIELD_TYPE};
+use super::{lower_type, FINAL_STATIC_INITIALIZER_REQUIRED, INVALID_STATIC_FIELD_TYPE};
 
 pub(super) fn lower_static_fields(
     program: &crate::resolve::ResolvedProgram,
@@ -43,6 +43,20 @@ pub(super) fn lower_static_fields(
                         span: initializer.span,
                     })
                 }
+            } else if let Some(final_span) = field.final_span {
+                diagnostics.push(
+                    Diagnostic::error(
+                        FINAL_STATIC_INITIALIZER_REQUIRED,
+                        format!(
+                            "final static field `{}` requires an explicit initializer",
+                            field.name
+                        ),
+                    )
+                    .with_primary_label(final_span, "add `= expression` before the semicolon")
+                    .with_note("final static storage cannot use zero-default publication"),
+                );
+                valid = false;
+                None
             } else if !has_zero_default(ty) {
                 report_missing_zero_default(field, ty, diagnostics);
                 valid = false;

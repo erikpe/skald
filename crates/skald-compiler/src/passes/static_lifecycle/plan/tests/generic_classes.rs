@@ -32,9 +32,9 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
     let planned = plan(
         "class Str { init() {} }
          class Cache<T> {
-           static seed: i64 = 1;
-           static direct: i64 = Cache<T>.seed;
-           static transitive: i64 = Cache<T>.read();
+           final static seed: i64 = 1;
+           final static direct: i64 = Cache<T>.seed;
+           final static transitive: i64 = Cache<T>.read();
            init() {}
            static fn read() -> i64 { return Cache<T>.direct; }
          }
@@ -67,6 +67,18 @@ fn direct_and_transitive_dependencies_are_local_to_each_closed_owner() {
         assert!(planned.dependencies().iter().any(|dependency| {
             dependency.prerequisite == direct && dependency.dependent == transitive
         }));
+        for field in [seed, direct, transitive] {
+            assert!(preliminary
+                .static_fields()
+                .find(|candidate| candidate.field == field)
+                .is_some_and(|candidate| candidate.final_span.is_some()));
+            assert!(planned
+                .lifecycle_mir()
+                .definitions()
+                .iter()
+                .find(|candidate| candidate.field == field)
+                .is_some_and(|candidate| candidate.final_span.is_some()));
+        }
     }
     assert!(planned
         .dependencies()

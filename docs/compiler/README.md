@@ -290,10 +290,12 @@ declaration or layout identity. Final instance fields use ordinary construction,
 copy construction, complete-value assignment, read, destruction, layout, and
 backend paths. Type checking rejects independent slot replacement; exact user
 assignment writes and synthesized assignment plans carry independently verified
-final-update evidence. Final statics remain behind `MIR002`. Its
+final-update evidence. Final statics retain explicit publication evidence
+through the certified eager lifecycle, reject source root replacement, and use
+ordinary backend slots and reverse shutdown. Its
 [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) stages
 contextual metadata, instance write rules, user and synthesized assignment,
-final-static lifecycle, composition, and standard-library adoption.
+final-static lifecycle integration, composition, and standard-library adoption.
 
 ## Compiler crate API policy
 

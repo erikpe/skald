@@ -29,6 +29,7 @@ pub(super) fn lower_static_initializers(
             field: field.id,
             ty: optional_types::lower_type(field.ty),
             initializer: field.initializer.as_ref().map(|initializer| initializer.id),
+            final_span: field.final_span,
             span: field.span,
         })
         .collect();

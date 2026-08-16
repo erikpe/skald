@@ -63,6 +63,7 @@ fn accepts_a_complete_hand_built_phase_product() {
             field: field.field,
             ty: field.ty,
             initialization: MirStaticFieldInitialization::Explicit(initializer_id),
+            final_span: field.final_span,
             indices,
             span: field.span,
         }],
@@ -331,4 +332,42 @@ fn lifecycle_dump_has_an_exact_stable_schema() {
     );
 
     assert_eq!(super::super::dump_static_lifetime_plan(&planned), expected);
+}
+
+#[test]
+fn final_static_publication_metadata_is_verified_at_the_plan_boundary() {
+    let source =
+        "class State { final static value: i64 = 1; init() {} } fn main() -> i64 { return State.value; }";
+    let planned = plan(source);
+    verify_planned_mir(&planned).unwrap();
+    let definition = planned.lifecycle_mir().definitions()[0];
+    assert!(definition.final_span.is_some());
+    assert!(matches!(
+        definition.initialization,
+        MirStaticFieldInitialization::Explicit(_)
+    ));
+    let dump = super::super::dump_static_lifetime_plan(&planned);
+    assert!(dump.contains(" final i64 explicit"), "{dump}");
+
+    let mut missing_marker = planned.clone();
+    missing_marker
+        .lifecycle_mut_for_test()
+        .definitions_mut_for_test()[0]
+        .final_span = None;
+    let missing_marker_errors = errors(&missing_marker);
+    assert!(
+        missing_marker_errors.contains("disagrees with its declaration"),
+        "{missing_marker_errors}"
+    );
+
+    let mut zero_default = planned;
+    zero_default
+        .lifecycle_mut_for_test()
+        .definitions_mut_for_test()[0]
+        .initialization = MirStaticFieldInitialization::ZeroDefault;
+    let zero_default_errors = errors(&zero_default);
+    assert!(
+        zero_default_errors.contains("disagrees with its declaration"),
+        "{zero_default_errors}"
+    );
 }

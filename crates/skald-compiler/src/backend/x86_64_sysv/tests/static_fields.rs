@@ -373,6 +373,53 @@ fn inherited_inline_array_selection_uses_one_base_owned_descriptor() {
 }
 
 #[test]
+fn final_static_storage_is_private_writable_shallow_and_inherited_once() {
+    let source = concat!(
+        "class Item { value: i64; init(value: i64) { self.value = value; }\n",
+        "  mut fn increment() -> unit { self.value = self.value + 1; } }\n",
+        "class Base { final static item: Item = Item(10);\n",
+        "  final static values: i64[] = i64[]{1}; init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn main() -> i64 { Derived.item.increment(); Derived.values[0] = 31;\n",
+        "  return Base.item.value + Base.values[0]; }\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    let item_symbol = ".Lska.class.main.Base.c1.static.s0";
+    let values_symbol = ".Lska.class.main.Base.c1.static.s1";
+
+    assert!(assembly.contains(&format!("{item_symbol}:")), "{assembly}");
+    assert!(
+        assembly.contains(&format!("{values_symbol}:")),
+        "{assembly}"
+    );
+    assert!(!assembly.contains(".Lska.class.main.Derived.c2.static"));
+    assert!(!assembly.contains(&format!(".globl {item_symbol}")));
+    assert!(assembly.contains("\n.bss\n"));
+    assert_system_assembler_accepts(&assembly);
+    assembly.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn final_static_class_values_follow_reverse_shutdown_order() {
+    let source = concat!(
+        "extern fn test_record_i64(value: i64) -> unit;\n",
+        "class Item { value: i64; init(value: i64) { self.value = value; }\n",
+        "  destroy { test_record_i64(self.value); } }\n",
+        "class State { final static first: Item = Item(42);\n",
+        "  final static second: Item = Item(7); init() {} }\n",
+        "fn main() -> i64 { return State.first.value; }\n",
+    );
+    let mut assembly = lower_source_to_assembly(source, Target::X86_64SysV).unwrap();
+    assembly.push_str(record_seven_then_42_shutdown_stub());
+    let result = run_native_assembly_output(&assembly);
+
+    assert_eq!(result.status.code(), Some(42));
+    assert_eq!(result.stdout, b"7\n42\n");
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
 fn final_static_owner_may_participate_in_an_unreleased_strong_cycle() {
     let source = concat!(
         "class Node {\n",

@@ -83,6 +83,15 @@ pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificati
                 ),
             );
         }
+        if field.final_span.is_some() && field.initializer.is_none() {
+            program_error(
+                errors,
+                format!(
+                    "final static field {} cannot use zero-default lifecycle activation",
+                    field.field
+                ),
+            );
+        }
         let expected_indices = activation_indices
             .get(&field.field)
             .zip(shutdown_indices.get(&field.field))
@@ -107,6 +116,7 @@ pub(super) fn verify(program: &PlannedMirProgram, errors: &mut Vec<MirVerificati
         };
         if definition.ty != field.ty
             || definition.initialization != mode
+            || definition.final_span != field.final_span
             || Some(definition.indices) != expected_indices
             || definition.span != field.span
         {

@@ -1,6 +1,6 @@
 # Final Fields Roadmap
 
-Status: in progress; FFI3 is next.
+Status: in progress; FFI4 is next.
 
 This roadmap implements the frozen
 [final field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
@@ -75,7 +75,7 @@ decisions without reopening them.
 - [x] FFI0 — Represent contextual final declarations
 - [x] FFI1 — Enforce instance construction and direct-write semantics
 - [x] FFI2 — Authorize exact complete-value assignment
-- [ ] FFI3 — Integrate final statics with eager lifecycle
+- [x] FFI3 — Integrate final statics with eager lifecycle
 - [ ] FFI4 — Prove shallow cross-feature composition
 - [ ] FFI5 — Adopt public final primitive-box payloads and close
 
@@ -261,27 +261,27 @@ goldens, `make check`, `make msrv-check`, and `git diff --check` passed.
 weakening the existing effect-certified eager initialization and reverse
 shutdown pipeline.
 
-- [ ] Require one explicit initializer for every final static declaration and
+- [x] Require one explicit initializer for every final static declaration and
       reject the zero-default route at the declaration's final or missing-
       initializer span. Preserve all existing explicitly initialized stored
       types, expression selection, privacy, ownership, and full-expression
       semantics.
-- [ ] Reject every source assignment whose root is a final static, including
+- [x] Reject every source assignment whose root is a final static, including
       assignment from declaring-class bodies and every scalar, class,
       optional, shared-owner, array, and function-value carrier. Preserve
       reads, `ref` borrowing, and shallow nested mutation available through the
       equivalent initialized mutable static.
-- [ ] Carry final-static metadata through preliminary lifecycle definitions,
+- [x] Carry final-static metadata through preliminary lifecycle definitions,
       effect extraction, dependency solving, deterministic plan schema,
       certificates, coordinator synthesis, final MIR, and dumps.
-- [ ] Independently verify that a final static has exactly one explicit
+- [x] Independently verify that a final static has exactly one explicit
       planned publication, no zero-default publication, no later root write,
       correct ownership/effects/dependencies, and ordinary reverse shutdown.
       Distinguish source assignment from destruction or release.
-- [ ] Preserve one target-private writable slot used by generated startup and
+- [x] Preserve one target-private writable slot used by generated startup and
       shutdown code. Add no read guard, read-only section requirement, exported
       symbol, runtime flag, write barrier, or ABI change.
-- [ ] Cover inherited selection and exact closed-generic application-owned
+- [x] Cover inherited selection and exact closed-generic application-owned
       final statics without duplicating storage or final metadata.
 
 **Tests:** Syntax and missing-initializer diagnostics; type/HIR failures for
@@ -296,6 +296,19 @@ Rust-task gates.
 cannot be source-reassigned afterward, participates normally in certified
 dependency ordering and reverse cleanup, and changes neither static layout nor
 the runtime ABI.
+
+Completed 2026-08-16. Type checking rejects every direct root-assignment
+carrier with `TYP044` and treats final static roots as read-only alias sources
+while preserving reads and shallow nested mutation. Exact final evidence now
+crosses preliminary inventory, deterministic lifecycle definitions,
+coordinator synthesis, final MIR, and dumps; both MIR verification boundaries
+reject missing explicit publication, zero-default or mismatched lifecycle
+facts, forged root writes, and forged mutable aliases. Closed generic
+applications retain distinct final identities, inherited selection retains one
+declaring-class slot, and effect-certified dependencies and reverse shutdown
+remain unchanged. Focused source, lifecycle mutation, generic, backend-symbol,
+native shallow-mutation, and cleanup-order tests plus the documented complete
+Rust-task gates passed.
 
 ### FFI4 — Prove shallow cross-feature composition
 

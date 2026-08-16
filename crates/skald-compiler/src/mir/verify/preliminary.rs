@@ -44,7 +44,10 @@ impl<'mir> Verifier<'mir> {
             let Some(ordinary) = ordinary_fields.get(index) else {
                 break;
             };
-            if field.field != ordinary.id || field.ty != ordinary.ty || field.span != ordinary.span
+            if field.field != ordinary.id
+                || field.ty != ordinary.ty
+                || field.final_span != ordinary.final_span
+                || field.span != ordinary.span
             {
                 self.program_error(format!(
                     "preliminary static-field inventory entry {index} does not match {}",
@@ -58,6 +61,12 @@ impl<'mir> Verifier<'mir> {
             if ordinary.initialization != expected_mode {
                 self.program_error(format!(
                     "static field {} has initialization mode inconsistent with its preliminary inventory",
+                    ordinary.id
+                ));
+            }
+            if field.final_span.is_some() && field.initializer.is_none() {
+                self.program_error(format!(
+                    "final static field {} must have one explicit preliminary initializer",
                     ordinary.id
                 ));
             }

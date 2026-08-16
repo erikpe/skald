@@ -16,6 +16,9 @@ pub fn dump_preliminary_mir(program: &PreliminaryMirProgram) -> String {
     for field in program.static_fields() {
         output.push_str("    StaticField ");
         write_static_field_reference(&mut output, program.program(), field.field);
+        if field.final_span.is_some() {
+            output.push_str(" final");
+        }
         output.push(' ');
         match field.initializer {
             Some(initializer) => {
@@ -253,6 +256,22 @@ fn dump_static_lifecycle_coordinator(
         lifecycle.certificate().effects().summaries().len(),
         lifecycle.certificate().dependencies().len()
     );
+    output.push_str("    Definitions\n");
+    for definition in lifecycle.definitions() {
+        output.push_str("      Field ");
+        write_static_field_reference(output, program, definition.field);
+        if definition.final_span.is_some() {
+            output.push_str(" final");
+        }
+        let _ = writeln!(
+            output,
+            " : {} {} activation={} shutdown={}",
+            definition.ty,
+            definition.initialization,
+            definition.indices.activation,
+            definition.indices.shutdown
+        );
+    }
     output.push_str("    ActivationRegions\n");
     for region in coordinator.activation() {
         output.push_str("      Field ");

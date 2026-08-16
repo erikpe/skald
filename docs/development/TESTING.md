@@ -994,10 +994,9 @@ Implemented declaration tests follow final evidence through each phase owner.
 Syntax and resolution cover contextual canonical modifier order, recovery,
 exact spans, ordinary identities, and closed specialization for instance and
 static declarations. HIR/MIR tests cover marker propagation and malformed
-metadata, backend tests confirm unchanged layout inputs, and driver tests pin
-the post-verification `MIR002` executable gate. Later tasks add exact-once
-construction, rejection of independent writes, and the exact declaring-class
-user-assignment exception without weakening ordinary receiver or place access.
+metadata; backend tests confirm unchanged layout inputs and private writable
+static slots. Driver tests exercise final statics through verified lifecycle
+synthesis and target emission.
 
 Capability, HIR, and MIR tests must cover synthesized base-first and direct-
 field assignment plans plus explicit authorization on every scalar, class,
