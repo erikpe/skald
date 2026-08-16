@@ -14,6 +14,11 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
+The [final fields design proposal](FINAL_FIELDS_DESIGN_PROPOSAL.md) is ready
+for review. It defines shallow final instance and class-owned static fields,
+preserves replacement of mutable complete values through synthesized or
+user-defined copy assignment, and explicitly excludes immutable local storage.
+
 The completed private cell fields design and implementation roadmap are
 preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
 
