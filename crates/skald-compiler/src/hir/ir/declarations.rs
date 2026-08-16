@@ -418,6 +418,7 @@ impl HirClassDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldDeclaration {
     pub id: FieldId,
+    pub cell_span: Option<Span>,
     pub name: String,
     pub name_span: Span,
     pub ty: Type,

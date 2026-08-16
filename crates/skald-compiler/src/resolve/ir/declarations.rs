@@ -324,6 +324,7 @@ impl ResolvedClassDeclaration {
 pub struct ResolvedFieldDeclaration {
     pub id: FieldId,
     pub visibility: ResolvedMemberVisibility,
+    pub cell_span: Option<Span>,
     pub name: String,
     pub name_span: Span,
     pub type_syntax: ResolvedType,

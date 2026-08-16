@@ -1210,18 +1210,20 @@ that centralized check. No-match and ambiguity stop before access checking.
 Authorized HIR deliberately erases initializer visibility along with field
 and method visibility.
 
-## Frozen private cell field representation
+## Private cell field representation
 
-Status: **frozen design; not yet implemented**. The active
+Status: **declaration metadata implemented; write authorization staged**. The active
 [private cell fields roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
 the staged compiler work. The source meaning is defined by
-[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-private-cell-field-direction).
+[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction).
 
-Syntax will retain one explicit `cell` modifier and exact span on an ordinary
-private instance field. Resolution will preserve the field's existing dense
+Syntax retains one explicit `cell` modifier and exact span on an ordinary
+private instance field. Resolution preserves the field's existing dense
 `FieldId`, declaring `ClassId`, visibility, name, type, declaration order, and
 span plus one cell marker. Generic template collection and closed
-specialization preserve and substitute that same declaration property. The
+specialization preserve and substitute that same declaration property. HIR
+and MIR field declarations retain the modifier span, and MIR verification
+rejects structurally invalid evidence. The
 marker does not create another field identity, wrapper type, member category,
 layout edge, or lifecycle slot.
 
@@ -1286,10 +1288,10 @@ alignment, calling convention, dispatch table, symbol family, runtime call,
 public C API, or runtime ABI version. It carries no atomic, volatile,
 synchronization, thread-local, or runtime borrow semantics.
 
-The planned rollout first establishes declaration metadata, then typed
-authorization behind an executable gate, then verified MIR and minimal native
-execution, then lifecycle/alias composition, and finally inheritance,
-dispatch, generics, determinism, and publication. The compiler-known
+Declaration metadata is established. The remaining rollout adds typed
+authorization behind an executable gate, then write-aware verified MIR and
+minimal native execution, then lifecycle/alias composition, and finally
+inheritance, dispatch, generics, determinism, and publication. The compiler-known
 `std::str::Str` descriptor remains a separate follow-up and retains its exact
 current literal-materialization contract during this roadmap.
 

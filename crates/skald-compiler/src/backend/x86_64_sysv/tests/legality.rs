@@ -493,6 +493,7 @@ fn recursive_inline_layout_is_a_structured_target_error() {
         static_fields: vec![],
         fields: vec![MirFieldDeclaration {
             id: recursive_field,
+            cell_span: None,
             name: "self".to_owned(),
             ty: MirType::Class(class),
             span: mir.span,
@@ -528,6 +529,7 @@ fn incomplete_class_metadata_is_rejected_before_layout() {
         static_fields: vec![],
         fields: vec![MirFieldDeclaration {
             id: missing_field,
+            cell_span: None,
             name: "missing".to_owned(),
             ty: MirType::Class(ClassId::new(1)),
             span: mir.span,

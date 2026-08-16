@@ -381,10 +381,21 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
     }
     for field in &class.fields {
         let _ = write!(output, "      Field {} ", field.id);
+        if field.cell_span.is_some() {
+            output.push_str("cell ");
+        }
         write_quoted(output, &field.name);
         let _ = write!(output, " : {}", field.ty);
         write_span(output, field.span);
         output.push('\n');
+        if let Some(span) = field.cell_span {
+            let _ = writeln!(
+                output,
+                "        Cell @{}..{}",
+                span.range().start(),
+                span.range().end()
+            );
+        }
     }
     for field in &class.static_fields {
         let _ = write!(output, "      StaticField {} ", field.id);

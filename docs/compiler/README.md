@@ -273,13 +273,13 @@ verification, dumps, and trust boundaries, and
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) for orchestration and output
 behavior.
 
-The frozen planned
-[private cell field representation](PHASES_AND_IR.md#frozen-private-cell-field-representation)
-adds one declaration capability and explicit whole-field write authorization
-without upgrading receiver access. Its
+The staged
+[private cell field representation](PHASES_AND_IR.md#private-cell-field-representation)
+now carries one declaration capability through verified MIR. Its deferred
+whole-field write authorization does not upgrade receiver access. The
 [implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) stages
-metadata, typed authorization, MIR verification, alias/lifecycle composition,
-and publication; the current compiler does not yet accept the modifier.
+typed authorization, write-aware MIR verification, alias/lifecycle
+composition, and publication; declaration metadata is already implemented.
 
 ## Compiler crate API policy
 

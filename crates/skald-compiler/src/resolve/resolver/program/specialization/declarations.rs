@@ -233,6 +233,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
         self.fields.push(ResolvedFieldDeclaration {
             id,
             visibility: member_visibility(source.visibility),
+            cell_span: source.cell_span,
             name: source.name.text.to_string(),
             name_span: source.name.span,
             type_syntax: ResolvedType {

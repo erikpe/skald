@@ -4,8 +4,8 @@ Status: authoritative for the implemented inline class, ordinary-initializer
 overload, explicit-copy, and base-subobject lifecycle model, including the
 frozen path-dependent logical-expression temporary extension. It also defines
 how implemented produced read-only aliases compose with initializer selection
-and owning full-expression temporaries, and owns the frozen planned private
-cell field direction. The [status matrix](STATUS.md) records the current
+and owning full-expression temporaries, and owns the staged private cell field
+direction. The [status matrix](STATUS.md) records the current
 compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
@@ -216,21 +216,22 @@ a new const-qualified type or perform a runtime conversion. Detailed alias
 forwarding, overlap, and non-escape rules are defined by
 [aliases and ownership](ALIASES_AND_OWNERSHIP.md).
 
-## Frozen private cell field direction
+## Private cell field direction
 
-Status: **frozen design; not yet implemented**. The active
-[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns
-delivery. Until its relevant stages complete, the implemented grammar and
-ordinary read-only field-assignment diagnostic remain unchanged.
+Status: **staged implementation**. Contextual declarations and durable
+cross-phase field metadata are implemented. The active
+[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) owns the
+remaining write semantics. Until those stages complete, assignment through a
+read-only receiver retains the ordinary read-only field diagnostic.
 
-A private cell field has this planned form:
+A private cell field has this accepted form:
 
 ```ska
 class Cache {
     private cell _value: u64?;
 
     fn remember(value: u64) -> unit {
-        self._value = value;
+        self._value = value; // staged: rejected until write authorization ships
     }
 }
 ```

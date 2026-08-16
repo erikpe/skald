@@ -397,10 +397,16 @@ impl<'types> HirDumper<'types> {
                 for field in &class.fields {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Field {} ", field.id);
+                    if field.cell_span.is_some() {
+                        dumper.output.push_str("cell ");
+                    }
                     write_quoted(&mut dumper.output, &field.name);
                     let _ = write!(dumper.output, " : {}", dumper.type_name(field.ty));
                     write_span(&mut dumper.output, field.span);
                     dumper.output.push('\n');
+                    if let Some(span) = field.cell_span {
+                        dumper.indented(|dumper| dumper.line("Cell", span));
+                    }
                 }
             });
             if !class.static_fields.is_empty() {

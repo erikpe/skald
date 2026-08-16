@@ -53,6 +53,7 @@ mod optional_values;
 mod path_conditions;
 mod primitive_binding_assignment;
 mod primitive_casts;
+mod private_cell_fields;
 mod produced_aliases;
 mod produced_fields;
 mod produced_receivers;

@@ -30,6 +30,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             static_fields: vec![],
             fields: vec![MirFieldDeclaration {
                 id: inner_value,
+                cell_span: None,
                 name: "value".to_owned(),
                 ty: MirType::I64,
                 span,
@@ -52,6 +53,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             static_fields: vec![],
             fields: vec![MirFieldDeclaration {
                 id: outer_inner,
+                cell_span: None,
                 name: "inner".to_owned(),
                 ty: MirType::Class(inner),
                 span,

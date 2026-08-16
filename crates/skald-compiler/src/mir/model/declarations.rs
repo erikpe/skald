@@ -546,6 +546,7 @@ impl MirClassDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirFieldDeclaration {
     pub id: FieldId,
+    pub cell_span: Option<Span>,
     pub name: String,
     pub ty: MirType,
     pub span: Span,

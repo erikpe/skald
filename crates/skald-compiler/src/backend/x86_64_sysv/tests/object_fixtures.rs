@@ -712,6 +712,7 @@ pub(super) fn field(
 ) -> MirFieldDeclaration {
     MirFieldDeclaration {
         id,
+        cell_span: None,
         name: name.to_owned(),
         ty,
         span,

@@ -1,11 +1,11 @@
 # Private Cell Fields Roadmap
 
-Status: planned; CFI0 is next.
+Status: in progress; CFI0 is complete and CFI1 is next.
 
 This roadmap implements the frozen
-[private cell field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-private-cell-field-direction)
+[private cell field language contract](../language/CLASSES_AND_LIFECYCLE.md#private-cell-field-direction)
 and its
-[compiler representation contract](../compiler/PHASES_AND_IR.md#frozen-private-cell-field-representation).
+[compiler representation contract](../compiler/PHASES_AND_IR.md#private-cell-field-representation).
 It adds contextual private field metadata and one verified whole-field write
 authorization through read-only object places while preserving ordinary
 types, assignment families, lifecycle, aliases, layout, calling conventions,
@@ -60,7 +60,7 @@ implement those decisions without reopening them.
 
 ## Progress
 
-- [ ] CFI0 — Represent contextual private cell declarations
+- [x] CFI0 — Represent contextual private cell declarations
 - [ ] CFI1 — Authorize typed whole-field replacement
 - [ ] CFI2 — Preserve and verify cell writes in MIR
 - [ ] CFI3 — Prove lifecycle-bearing and alias-safe assignment families
@@ -79,27 +79,27 @@ CI.
 **Purpose:** Establish exact source and cross-phase field metadata before any
 read-only write is authorized against it.
 
-- [ ] Add an explicit cell modifier and span to instance-field AST metadata.
+- [x] Add an explicit cell modifier and span to instance-field AST metadata.
       Parse it only in `private cell name: T;`, keeping both words contextual
       and preserving `cell: T;`, `private: T;`, `private cell: T;`, and
       `private static cell: T;` with their existing ordinary meanings.
-- [ ] Diagnose missing private visibility, static/method/lifecycle use,
+- [x] Diagnose missing private visibility, static/method/lifecycle use,
       duplicates, reordering, missing field names or punctuation, and malformed
       recovery at exact modifier/member spans.
-- [ ] Preserve one ordinary `FieldId`, visibility, type, declaration order,
+- [x] Preserve one ordinary `FieldId`, visibility, type, declaration order,
       and explicit cell marker through resolved declarations, class tables,
       source and resolved dumps, generic template analysis, and closed
       specialization.
-- [ ] Carry the marker through HIR and MIR field declarations and deterministic
+- [x] Carry the marker through HIR and MIR field declarations and deterministic
       dumps so later verification can inspect it. Keep privacy source-owned
       and retain only the durable cell capability after authorization.
-- [ ] Extend syntax/resolution consistency tests to reject public or static
+- [x] Extend syntax/resolution consistency tests to reject public or static
       modifier forms, and declaration-lowering/verifier tests to catch missing
       or mismatched durable cell metadata, without changing field layout or
       synthesized lifecycle selection.
-- [ ] Keep assignment through a read-only root rejected during this task. A
+- [x] Keep assignment through a read-only root rejected during this task. A
       parsed cell marker alone must not silently grant an unverified write.
-- [ ] Update living documentation only for the declaration syntax and phase
+- [x] Update living documentation only for the declaration syntax and phase
       representation that actually ship in this task; retain frozen or staged
       status for executable cell writes.
 
@@ -114,6 +114,9 @@ syntax, resolution, specialization, HIR, and verified MIR as ordinary private
 fields with one exact capability marker, malformed forms stop with focused
 diagnostics, layout and lifecycle remain unchanged, and read-only assignment
 is still rejected.
+
+Completed 2026-08-16. Focused cross-phase tests, `make check`,
+`make msrv-check`, documentation validation, and `git diff --check` passed.
 
 ### CFI1 — Authorize typed whole-field replacement
 

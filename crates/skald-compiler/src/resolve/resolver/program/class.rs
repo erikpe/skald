@@ -88,6 +88,7 @@ impl ClassCollectionState {
         self.fields.push(ResolvedFieldDeclaration {
             id: field_id,
             visibility: resolved_member_visibility(field.visibility),
+            cell_span: field.cell_span,
             name: field.name.text.to_string(),
             name_span: field.name.span,
             type_syntax,

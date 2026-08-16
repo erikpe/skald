@@ -201,9 +201,9 @@ makes a result source-observable.
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and
   object places, plus assignment, temporaries, and deterministic lifetime. It
-  also owns the frozen planned `private cell` whole-field replacement contract;
-  the status matrix and active roadmap distinguish it from current compiler
-  support.
+  also owns the staged `private cell` whole-field replacement contract. The
+  compiler accepts declaration metadata; the status matrix and active roadmap
+  distinguish that support from the deferred read-only write permission.
 - [Generic classes](GENERIC_CLASSES.md) defines implemented explicit closed generic class
   applications, structural substitution, inferred contextual requirements,
   nominal interface bounds, invariance, complete-class validation, and native

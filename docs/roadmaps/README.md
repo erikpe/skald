@@ -6,17 +6,13 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The [private cell fields roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) is in
+progress. CFI0 established contextual declaration syntax and durable field
+metadata; CFI1 is next, while read-only cell assignment remains rejected.
 
 ## Planned
 
-The [private cell fields roadmap](PRIVATE_CELL_FIELDS_ROADMAP.md) is planned to
-implement narrow verified whole-field interior mutation for ordinary private
-instance fields. CFI0, contextual declaration metadata, is next. It depends
-on the implemented privacy, receiver-access, field-assignment, lifecycle,
-alias-anchor, optional-guard, generic-specialization, and verified-MIR
-contracts; no active roadmap blocks it. The separate `Str` cached-hash
-migration depends on its completion and remains outside this roadmap.
+No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 

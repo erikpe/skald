@@ -208,6 +208,7 @@ impl ClassMember {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FieldDecl {
     pub visibility: MemberVisibility,
+    pub cell_span: Option<Span>,
     pub name: Name,
     pub type_syntax: TypeSyntax,
     pub span: Span,

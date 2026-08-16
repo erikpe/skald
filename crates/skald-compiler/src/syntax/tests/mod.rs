@@ -46,6 +46,7 @@ mod modules;
 mod objects;
 mod optional_values;
 mod primitive_casts;
+mod private_cell_fields;
 mod recovery;
 mod shared_ownership;
 mod shifts;

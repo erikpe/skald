@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-use crate::{identity::CallableId, lexical_policy::is_source_identifier};
+use crate::{identity::CallableId, lexical_policy::is_source_identifier, source::Span};
 
 use super::{
     super::model::{
@@ -437,6 +437,14 @@ impl<'mir> Verifier<'mir> {
                         "class {} field table index {index} contains {}",
                         class.id, field.id
                     ));
+                }
+                if let Some(cell_span) = field.cell_span {
+                    if cell_span.range().is_empty() || !span_contains(field.span, cell_span) {
+                        self.program_error(format!(
+                            "field {} cell modifier span must be nonempty and contained by its declaration span",
+                            field.id
+                        ));
+                    }
                 }
                 match field.ty {
                     MirType::Interface(_) | MirType::Obj => self.program_error(format!(
@@ -1024,6 +1032,12 @@ impl<'mir> Verifier<'mir> {
     fn verify_member_parameters(&mut self, owner: &str, parameters: &[MirParameter]) {
         self.verify_parameters_declaration(owner, parameters);
     }
+}
+
+fn span_contains(outer: Span, inner: Span) -> bool {
+    outer.source_id() == inner.source_id()
+        && outer.range().start() <= inner.range().start()
+        && inner.range().end() <= outer.range().end()
 }
 
 #[cfg(test)]

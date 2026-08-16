@@ -205,6 +205,7 @@ mod objects;
 mod optional_values;
 mod primitive_binding_assignment;
 mod primitive_casts;
+mod private_cell_fields;
 mod produced_fields;
 mod produced_receivers;
 mod receiver_carriers;

@@ -308,6 +308,8 @@ class-member                = field-declaration
                             | method-declaration
 
 field-declaration           = ["private"] identifier ":" storage-type ";"
+                            | "private" "cell" identifier ":"
+                              storage-type ";"
 static-field-declaration    = ["private"] "static" identifier ":"
                               storage-type ["=" expression] ";"
 initializer-declaration     = ["private"] "init" parameter-list block
@@ -374,20 +376,19 @@ Type checking lowers all supported stored static types—including primitives,
 exact classes, optionals, shared owners, strings, and inline arrays—through
 typed HIR and verified lifecycle MIR.
 
-### Frozen planned private-cell field extension
+### Private-cell field declarations
 
-The frozen private-cell design adds this instance-field alternative:
+The implemented declaration grammar includes this instance-field alternative:
 
 ```text
 cell-field-declaration = "private" "cell" identifier ":"
                          storage-type ";"
 ```
 
-It is deliberately absent from the implemented `class-member` production
-above until the active
-[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md) reaches
-the corresponding compiler stage. The current compiler therefore does not
-yet accept the modifier form.
+The compiler accepts this form and preserves its modifier through resolved,
+typed, and MIR field declarations. The modifier does not yet authorize writes
+through a read-only receiver; that executable behavior remains staged by the
+[implementation roadmap](../roadmaps/PRIVATE_CELL_FIELDS_ROADMAP.md).
 
 Both words remain contextual. The modifier form is selected only when
 `private cell` is followed by a field name and `:`. An ordinary field may
@@ -401,13 +402,13 @@ private cell: i64;
 private static cell: u64?;
 ```
 
-The frozen form is restricted to private instance fields. `cell name: T;`
+The modifier form is restricted to private instance fields. `cell name: T;`
 without `private`, a cell static field, and the modifier applied to a method,
 initializer, copy operation, or destructor are invalid. The source-visible
 meaning is owned by
-[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#frozen-private-cell-field-direction),
+[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md#private-cell-field-direction),
 and the compiler representation is owned by
-[Phases and IR](../compiler/PHASES_AND_IR.md#frozen-private-cell-field-representation).
+[Phases and IR](../compiler/PHASES_AND_IR.md#private-cell-field-representation).
 
 ### Construction-selection syntax
 
