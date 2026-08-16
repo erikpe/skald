@@ -1,0 +1,16 @@
+schema = 1
+
+[[test]]
+name = "solver"
+mode = "run"
+source = "test_solver.ska"
+
+[[test.run]]
+name = "full_input"
+stdin = { file = "input.txt" }
+expect = { stdout = { inline = "RESULT:20172\n" } }
+
+[[test.run]]
+name = "example_input"
+stdin = { file = "test1_input.txt" }
+expect = { stdout = { inline = "RESULT:33\n" } }
