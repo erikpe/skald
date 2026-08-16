@@ -1,0 +1,17 @@
+class Value {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn get() -> i64 {
+        return self.value;
+    }
+}
+
+fn main() -> i64 {
+    var first: Value = Value(21);
+    var second: Value = first;
+    return first.get() + second.value;
+}

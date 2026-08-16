@@ -1320,9 +1320,9 @@ without adding a runtime or target-level cell operation.
 
 ## Frozen final field representation
 
-Status: **declaration metadata implemented; executable semantics frozen**. The
+Status: **instance construction and direct-write semantics implemented**. The
 active [final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns the
-remaining staged compiler work. Source semantics are defined by
+remaining assignment and static-lifecycle work. Source semantics are defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction)
 and [Static Fields](../language/STATIC_FIELDS.md#frozen-final-static-field-direction).
 
@@ -1344,33 +1344,46 @@ resolved IR, HIR, preliminary MIR, and final MIR dumps expose the marker;
 declaration verification rejects malformed spans, incompatible cell metadata,
 and zero-default final statics.
 
-After the ordinary final MIR pipeline verifies a final-bearing program, the
-driver reports `MIR002` before backend lowering. This phase-owned gate ensures
-that declaration support cannot silently execute as mutable storage. It is
-removed only as the later roadmap tasks establish and verify the write and
-lifecycle semantics below; non-final programs use the unchanged backend path.
+After the ordinary final MIR pipeline verifies a program, the driver reports
+`MIR002` for final statics and `MIR003` for complete-value assignment whose
+stored representation directly or transitively contains final instance fields.
+Construction, copy construction, reads, destruction, and shallow mutation do
+not trip either gate. These phase-owned checks keep unverified assignment and
+static lifecycle semantics non-executable; non-final programs use the unchanged
+backend path.
 
-Construction remains direct initialization of incomplete storage. Ordinary
+Construction is direct initialization of incomplete storage. Ordinary
 and copy constructors use the current exact-once direct-field analysis, and
 synthesized copy construction retains final fields in declaration order.
 Those operations do not require post-construction write authorization.
+
+Type checking owns one centralized complete-object field-write decision.
+Privacy is resolved first. Declaration finality then takes precedence over
+ordinary mutable receiver access and the separate declaring-class cell
+capability. Every independent final-slot replacement reports `TYP043`,
+including writes from the declaring class, methods, static methods, helpers,
+destructors, and derived bodies. Reads retain ordinary access, and finality is
+shallow: selecting mutable state beneath a final field does not replace the
+final slot.
 
 For complete objects, typed HIR must distinguish at least these write reasons:
 
 ```text
 FieldWriteAuthorization = Mutable
                         | DeclaringClassCell
-                        | DeclaringClassFinalAssignment
+                        | DeferredFinalAssignment  // temporary until FFI2
 ```
 
 The concrete Rust representation remains implementation-private. An ordinary
 mutable field write uses `Mutable`; an exact private-cell write retains its
-existing authorization; and a final-field write is accepted only when the
-current callable is the exact declaring class's copy-assignment lifecycle and
-the endpoint is one of that class's direct fields. The final authorization
-does not flow through helper calls, base projections, or nested projections.
-It must not be represented by clearing declaration metadata or broadly
-upgrading a receiver, object place, or class body to mutable access.
+existing authorization. The current temporary final-assignment marker is
+created only for a direct endpoint in the exact declaring class's user
+copy-assignment body. It does not flow through helper calls, base projections,
+or nested projections, does not clear declaration metadata, and does not
+broadly upgrade a receiver, object place, or class body. It is diagnostic and
+lowering evidence only: `MIR003` keeps every invocation of a complete
+assignment involving final representation non-executable until FFI2 replaces
+it with independently verified authorization.
 
 Synthesized copy assignment needs equivalent exact evidence on every final
 field step in its selected capability plan. User-defined assignment remains a
@@ -1404,8 +1417,8 @@ metadata changes no size, alignment, offset, register classification, symbol
 family, runtime call, public C API, or runtime ABI version. Backend code must
 not infer authorization from source names or reconstruct it after verification.
 
-The rollout establishes contextual declaration metadata behind an explicit
-executable gate, then instance construction and direct-write rules, exact user
+The rollout established contextual declaration metadata, then instance
+construction and direct-write rules. It next adds exact user
 and synthesized copy-assignment authorization, final-static lifecycle,
 cross-feature native composition, and standard-library box adoption. The
 standard library receives no compiler exception.

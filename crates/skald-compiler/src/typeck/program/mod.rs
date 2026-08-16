@@ -69,6 +69,7 @@ pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
 pub const PANIC_REQUIRES_CALL_STATEMENT: &str = "TYP041";
 pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
+pub const FINAL_FIELD_REPLACEMENT: &str = "TYP043";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

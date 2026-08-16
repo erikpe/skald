@@ -668,14 +668,33 @@ fn verified_cell_writes_reach_backend_lowering() {
 }
 
 #[test]
-fn stops_final_fields_after_verified_mir_and_before_backend_emission() {
+fn executes_final_instance_construction_and_reads() {
+    let artifact = compile_source_to_assembly(
+        "final-instance.ska",
+        concat!(
+            "class Values {\n",
+            "  final value: i64;\n",
+            "  init(value: i64) { self.value = value; }\n",
+            "  fn get() -> i64 { return self.value; }\n",
+            "}\n",
+            "fn main() -> i64 { var value: Values = Values(7); return value.get(); }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap();
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains(".globl main"));
+}
+
+#[test]
+fn stops_final_static_fields_after_verified_mir_and_before_backend_emission() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "final-fields.ska",
         concat!(
             "class Values {\n",
-            "  final value: i64;\n",
             "  final static version: u64 = 1u;\n",
-            "  init(value: i64) { self.value = value; }\n",
+            "  init() {}\n",
             "}\n",
             "fn main() -> i64 { return 0; }\n",
         ),
@@ -686,15 +705,56 @@ fn stops_final_fields_after_verified_mir_and_before_backend_emission() {
     };
 
     let diagnostics = report.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(diagnostics.len(), 1);
     assert!(diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code == "MIR002"));
     assert!(diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.message == "final fields cannot be emitted yet"));
+        .all(|diagnostic| diagnostic.message == "final static fields cannot be emitted yet"));
     let rendered = render_diagnostics(&report.sources, &report.diagnostics);
-    assert!(rendered.contains("metadata is preserved through verified MIR"));
+    assert!(rendered.contains("final instance construction and reads are supported independently"));
+}
+
+#[test]
+fn gates_complete_assignment_of_direct_and_transitively_final_values() {
+    let cases = [
+        concat!(
+            "class Value { final value: i64; init(value: i64) { self.value = value; } }\n",
+            "fn main() -> i64 { var left: Value = Value(1); var right: Value = Value(2); ",
+            "left = right; return left.value; }\n",
+        ),
+        concat!(
+            "class Inner { final value: i64; init(value: i64) { self.value = value; } }\n",
+            "class Outer { inner: Inner; init(value: i64) { self.inner = Inner(value); } }\n",
+            "fn main() -> i64 { var left: Outer = Outer(1); var right: Outer = Outer(2); ",
+            "left = right; return left.inner.value; }\n",
+        ),
+        concat!(
+            "class Base { final value: i64; init(value: i64) { self.value = value; } }\n",
+            "class Derived extends Base { init(value: i64) { super(value); } }\n",
+            "fn main() -> i64 { var left: Derived = Derived(1); var right: Derived = Derived(2); ",
+            "left = right; return left.value; }\n",
+        ),
+    ];
+
+    for source in cases {
+        let CompilationError::Diagnostics(report) =
+            compile_source_to_assembly("final-assignment.ska", source, Target::X86_64SysV)
+                .unwrap_err()
+        else {
+            panic!("expected the final-assignment execution gate");
+        };
+        assert_eq!(report.diagnostics.len(), 1);
+        let diagnostic = report.diagnostics.iter().next().unwrap();
+        assert_eq!(diagnostic.code, "MIR003");
+        assert_eq!(
+            diagnostic.message,
+            "assignment of a value containing final fields cannot be emitted yet"
+        );
+        let rendered = render_diagnostics(&report.sources, &report.diagnostics);
+        assert!(rendered.contains("complete-value final-field update evidence is not implemented"));
+    }
 }
 
 #[test]

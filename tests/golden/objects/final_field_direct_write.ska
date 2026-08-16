@@ -1,0 +1,15 @@
+class Value {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    mut fn replace(value: i64) -> unit {
+        self.value = value;
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

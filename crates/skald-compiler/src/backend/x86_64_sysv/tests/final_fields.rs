@@ -1,5 +1,5 @@
 use super::*;
-use crate::backend::x86_64_sysv::layout::DataLayout;
+use crate::{backend::x86_64_sysv::layout::DataLayout, driver::compile_source_to_assembly};
 
 #[test]
 fn final_markers_do_not_change_class_layout() {
@@ -29,4 +29,53 @@ fn final_markers_do_not_change_class_layout() {
         let field = FieldId::new(class, index);
         assert_eq!(mutable_layout.field(field), final_layout.field(field));
     }
+}
+
+#[test]
+fn executes_final_construction_synthesized_copy_construction_and_reads() {
+    let artifact = compile_source_to_assembly(
+        "final-construction.ska",
+        concat!(
+            "class Value {\n",
+            "  final value: i64;\n",
+            "  init(value: i64) { self.value = value; }\n",
+            "  fn get() -> i64 { return self.value; }\n",
+            "}\n",
+            "fn main() -> i64 {\n",
+            "  var first: Value = Value(21); var second: Value = first;\n",
+            "  return first.get() + second.value;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("final instance construction and reads must compile");
+
+    assert_eq!(run_native_assembly(&artifact.assembly).code(), Some(42));
+}
+
+#[test]
+fn lowers_every_final_storage_family_through_the_backend() {
+    let artifact = compile_source_to_assembly(
+        "final-storage-matrix.ska",
+        concat!(
+            "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+            "fn identity(value: i64) -> i64 { return value; }\n",
+            "class Values {\n",
+            "  final primitive: i64; final object: Item; final maybe: i64?;\n",
+            "  final owner: shared Item; final values: i64[]; final callback: fn(i64) -> i64;\n",
+            "  init() { self.primitive = 1; self.object = Item(2); self.maybe = 3;\n",
+            "    self.owner = new Item(4); self.values = i64[]{5}; self.callback = identity; }\n",
+            "  fn score() -> i64 { return self.primitive + self.object.value + self.maybe!\n",
+            "    + self.owner->value + self.values[0] + self.callback(6); }\n",
+            "}\n",
+            "fn main() -> i64 { var first: Values = Values(); var second: Values = first;\n",
+            "  return first.score() + second.score(); }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("the complete final storage matrix must lower");
+
+    assert!(artifact
+        .assembly
+        .contains(".Lska.class.main.Values.c1.method.score.m0"));
 }

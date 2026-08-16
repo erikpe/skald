@@ -1,6 +1,6 @@
 # Final Fields Roadmap
 
-Status: in progress; FFI1 is next.
+Status: in progress; FFI2 is next.
 
 This roadmap implements the frozen
 [final field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
@@ -73,7 +73,7 @@ decisions without reopening them.
 ## Progress
 
 - [x] FFI0 — Represent contextual final declarations
-- [ ] FFI1 — Enforce instance construction and direct-write semantics
+- [x] FFI1 — Enforce instance construction and direct-write semantics
 - [ ] FFI2 — Authorize exact complete-value assignment
 - [ ] FFI3 — Integrate final statics with eager lifecycle
 - [ ] FFI4 — Prove shallow cross-feature composition
@@ -142,33 +142,33 @@ documentation validation, and `git diff --check` passed.
 **Purpose:** Make final instance fields executable for construction and reads
 while rejecting every independent post-construction slot replacement.
 
-- [ ] Centralize the instance-field write decision around declaration
+- [x] Centralize the instance-field write decision around declaration
       finality, current lifecycle kind, exact endpoint, and construction state.
       Preserve declaring-class privacy diagnostic precedence and the existing
       private-cell decision as a separate capability.
-- [ ] Treat ordinary and copy-constructor writes to the exact class's direct
+- [x] Treat ordinary and copy-constructor writes to the exact class's direct
       final fields as ordinary incomplete-storage initialization. Reuse the
       current exact-once, direct-`self`, base-first, no-control-flow, definite-
       initialization, type, ownership, and cleanup rules.
-- [ ] Preserve synthesized copy construction and construction capability for
+- [x] Preserve synthesized copy construction and construction capability for
       final primitive, class, optional, shared-owner, array, and function-
       valued fields whenever the equivalent mutable field supports it.
-- [ ] Reject direct final-field replacement in ordinary methods, mutable
+- [x] Reject direct final-field replacement in ordinary methods, mutable
       methods, static methods through explicit objects, helpers, destructors,
       derived and unrelated bodies, and the declaring class outside its exact
       copy-assignment lifecycle. Cover public and private fields uniformly.
-- [ ] Reject direct inherited and nested final-field destinations while
+- [x] Reject direct inherited and nested final-field destinations while
       preserving reads, read-only aliases, produced-field reads, and shallow
       mutation of nested state wherever ordinary access already permits it.
-- [ ] Recognize an exact user or synthesized copy-assignment write as a
+- [x] Recognize an exact user or synthesized copy-assignment write as a
       deferred lifecycle candidate rather than misdiagnosing it as an ordinary
       direct write. Keep that candidate behind the operation-owned executable
       gate until FFI2 defines and verifies its durable authorization.
-- [ ] Lower accepted construction and reads through ordinary HIR/MIR/backend
+- [x] Lower accepted construction and reads through ordinary HIR/MIR/backend
       paths. Keep whole-object assignment involving final-bearing classes
       behind a narrow operation-owned gate until FFI2 provides independently
       verifiable final-update evidence.
-- [ ] Add deterministic diagnostics and dumps for declaration finality,
+- [x] Add deterministic diagnostics and dumps for declaration finality,
       construction initialization, rejected direct writes, and the temporary
       complete-assignment gate.
 
@@ -183,6 +183,17 @@ gates.
 destroy exactly like ordinary fields, every independent post-construction
 replacement is rejected at its semantic owner, no layout/runtime change is
 present, and unverifiable complete assignment remains non-executable.
+
+Completed 2026-08-16. Centralized typed field-write policy now gives finality
+precedence after privacy, preserves construction and private-cell capabilities,
+rejects independent replacement with `TYP043`, and records exact user
+copy-assignment candidates without making them executable. Final instance
+construction, synthesized and user copy construction, reads, shallow nested
+mutation, destruction, unchanged layout, and native emission pass through the
+ordinary pipeline. Recursive complete-value assignment is temporarily stopped
+after verified MIR with `MIR003`; final statics remain independently gated by
+`MIR002`. Focused type-checking, HIR/MIR verification, driver, layout, and
+native tests plus the documented complete Rust-task gates passed.
 
 ### FFI2 — Authorize exact complete-value assignment
 

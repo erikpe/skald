@@ -79,13 +79,13 @@ constructed as part of their containing object and are destroyed in the
 language-defined order.
 
 The frozen final-field direction keeps those lifecycle rules while making one
-selected field slot independently non-replaceable after construction. Mutable
-complete class values remain assignable, and the exact class's selected user
-or synthesized copy assignment may update its own direct final representation.
-The compiler accepts and represents this shallow field modifier through
-verified MIR, then stops at the `MIR002` executable gate while the frozen write
-semantics are implemented. It does not introduce immutable local storage or
-deep constness.
+selected field slot independently non-replaceable after construction. Final
+instance construction, copy construction, reads, destruction, and shallow
+nested mutation execute; type checking rejects independent replacement.
+Mutable complete class values remain assignable in source semantics, but their
+execution is temporarily stopped at `MIR003` until exact user and synthesized
+copy-assignment evidence is verified. Final statics remain behind `MIR002`.
+Finality does not introduce immutable local storage or deep constness.
 
 ## Lifetimes and safety direction
 

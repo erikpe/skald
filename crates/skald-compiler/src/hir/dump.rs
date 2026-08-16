@@ -2574,6 +2574,14 @@ impl<'types> HirDumper<'types> {
                     place.field
                 ));
             }
+            if place.write_authorization
+                == Some(HirFieldWriteAuthorization::DeferredFinalAssignment)
+            {
+                dumper.raw_line(&format!(
+                    "WriteAuthorization DeferredFinalAssignment {}",
+                    place.field
+                ));
+            }
             match &place.receiver {
                 HirObjectReceiver::ArrayElement {
                     element,

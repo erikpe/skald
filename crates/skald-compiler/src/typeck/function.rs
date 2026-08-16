@@ -29,6 +29,7 @@ use super::{
 
 mod construction;
 mod copy;
+mod field_write;
 mod initializer;
 mod overload;
 mod statement;

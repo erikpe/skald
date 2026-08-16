@@ -1,0 +1,17 @@
+schema = 2
+
+[[test]]
+name = "construction"
+mode = "run"
+source = "final_field_construction.ska"
+[[test.run]]
+name = "construction_copy_construction_and_read"
+expect = { exit = 42 }
+
+[[test]]
+name = "direct_write"
+mode = "compile-fail"
+source = "final_field_direct_write.ska"
+[test.expect.stderr]
+match = "contains"
+inline = "error[TYP043]: final field `value` cannot be replaced"

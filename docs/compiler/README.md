@@ -284,12 +284,13 @@ capture-free function values.
 
 The staged
 [final field representation](PHASES_AND_IR.md#frozen-final-field-representation)
-now preserves contextual declaration evidence through resolved IR, closed
+preserves contextual declaration evidence through resolved IR, closed
 specialization, typed HIR, and verified MIR without changing ordinary
-declaration or layout identity. A post-MIR `MIR002` gate prevents backend
-emission until the frozen semantics distinguish
-construction, independent mutable writes, and exact declaring-class
-copy-assignment authorization. Its
+declaration or layout identity. Final instance fields use ordinary construction,
+copy construction, read, destruction, layout, and backend paths. Type checking
+rejects independent slot replacement; a post-MIR `MIR003` gate temporarily
+stops complete-value assignment involving final representation until durable
+copy-assignment authorization ships. Final statics remain behind `MIR002`. Its
 [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) stages
 contextual metadata, instance write rules, user and synthesized assignment,
 final-static lifecycle, composition, and standard-library adoption.

@@ -589,4 +589,8 @@ pub struct HirFieldPlace {
 pub enum HirFieldWriteAuthorization {
     Mutable,
     DeclaringClassCell,
+    /// Temporary typed evidence accepted only inside the exact user copy
+    /// assignment. Complete compilation remains gated until MIR carries and
+    /// verifies durable final-assignment authorization.
+    DeferredFinalAssignment,
 }
