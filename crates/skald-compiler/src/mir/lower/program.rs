@@ -490,6 +490,7 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                         }
                     })
                     .collect(),
+                final_fields: copy.final_fields.clone(),
             })
         }
         HirCopyCapability::Unavailable => MirCopyCapability::Unavailable,

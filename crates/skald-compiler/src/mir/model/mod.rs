@@ -5,6 +5,7 @@ mod cell_write;
 mod control_flow;
 mod declarations;
 mod definition;
+mod final_write;
 mod function_type;
 mod ids;
 mod instruction;
@@ -45,6 +46,7 @@ pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,
     MirMemberDefinition, MirMemberDefinitionTable, MirStorage, MirStorageKind,
 };
+pub use final_write::MirFinalWriteAuthorization;
 pub use function_type::{MirFunctionType, MirFunctionTypeTable};
 pub use ids::{BlockId, OptionalGuardId, PathConditionId, StorageId, ValueId};
 pub use instruction::{

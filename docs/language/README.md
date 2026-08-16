@@ -82,9 +82,9 @@ The frozen final-field direction keeps those lifecycle rules while making one
 selected field slot independently non-replaceable after construction. Final
 instance construction, copy construction, reads, destruction, and shallow
 nested mutation execute; type checking rejects independent replacement.
-Mutable complete class values remain assignable in source semantics, but their
-execution is temporarily stopped at `MIR003` until exact user and synthesized
-copy-assignment evidence is verified. Final statics remain behind `MIR002`.
+Mutable complete class values remain assignable through exact selected user or
+synthesized copy-assignment evidence verified in preliminary and final MIR.
+Final statics remain behind `MIR002`.
 Finality does not introduce immutable local storage or deep constness.
 
 ## Lifetimes and safety direction

@@ -766,9 +766,12 @@ impl<'mir> Verifier<'mir> {
         copy: &MirSynthesizedCopy<crate::identity::CopyConstructorId>,
     ) {
         self.verify_constructor_base(class, copy.base);
-        if copy.class != class.id || copy.fields.len() != class.fields.len() {
+        if copy.class != class.id
+            || copy.fields.len() != class.fields.len()
+            || !copy.final_fields.is_empty()
+        {
             self.program_error(format!(
-                "class {} synthesized copy-construction plan has the wrong owner or field count",
+                "class {} synthesized copy-construction plan has invalid owner, field count, or final-update evidence",
                 class.id
             ));
             return;
@@ -893,6 +896,18 @@ impl<'mir> Verifier<'mir> {
                 class.id
             ));
             return;
+        }
+        let expected_final_fields = class
+            .fields
+            .iter()
+            .filter(|field| field.final_span.is_some())
+            .map(|field| field.id)
+            .collect::<Vec<_>>();
+        if copy.final_fields != expected_final_fields {
+            self.program_error(format!(
+                "class {} synthesized copy-assignment plan has invalid final-update evidence",
+                class.id
+            ));
         }
         for (field, step) in class.fields.iter().zip(&copy.fields) {
             let valid = match (field.ty, step) {

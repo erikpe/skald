@@ -27,6 +27,9 @@ pub(super) struct CheckedSharedPointee {
     span: Span,
 }
 
+// Anchored sources retain exact place evidence; keeping them inline avoids a
+// heap allocation on every checked shared-pointee selection.
+#[allow(clippy::large_enum_variant)]
 enum CheckedSharedPointeeSource {
     Stable(BindingId),
     Anchored(HirSharedSource),

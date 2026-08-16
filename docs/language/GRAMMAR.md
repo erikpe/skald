@@ -430,9 +430,9 @@ final-static-field-declaration = ["private"] "final" "static"
 Syntax, resolution, closed specialization, typed HIR, and verified MIR retain
 the exact modifier evidence on each ordinary field or static identity. Final
 instance construction and reads compile through the backend, while independent
-replacement is rejected during type checking. Complete-value assignment
-involving final representation temporarily stops after verified MIR with
-`MIR003`; final statics remain staged behind `MIR002` in the active
+replacement is rejected during type checking. Complete-value assignment uses
+exact verified user or synthesized lifecycle evidence; final statics remain
+staged behind `MIR002` in the active
 [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md).
 
 `private`, `final`, and `static` are contextual in these declarations. The

@@ -434,6 +434,7 @@ fn array_fields_distinguish_initialization_from_replacement() {
         source,
         array,
         authorization: None,
+        final_authorization: None,
         span,
     };
     assert!(messages(&replacement_before_initialization)

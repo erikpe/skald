@@ -131,6 +131,7 @@ impl BodyLowerer<'_> {
                     destination,
                     value,
                     authorization: None,
+                    final_authorization: None,
                     span,
                 }));
             }

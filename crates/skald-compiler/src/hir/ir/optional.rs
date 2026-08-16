@@ -96,6 +96,9 @@ pub struct HirOptionalValue {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+// Exact field-write evidence deliberately stays inline in places. Boxing this
+// uncommon variant would add allocation to the ordinary optional HIR path.
+#[allow(clippy::large_enum_variant)]
 pub enum HirOptionalValueSource {
     Absent,
     Present(Box<super::HirStoredValueInitialization>),

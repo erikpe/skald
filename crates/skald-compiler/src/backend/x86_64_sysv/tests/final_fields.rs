@@ -79,3 +79,38 @@ fn lowers_every_final_storage_family_through_the_backend() {
         .assembly
         .contains(".Lska.class.main.Values.c1.method.score.m0"));
 }
+
+#[test]
+fn executes_synthesized_and_user_final_assignment_including_self_assignment() {
+    let synthesized = compile_source_to_assembly(
+        "final-synthesized-assignment.ska",
+        concat!(
+            "class Inner { final value: i64; init(value: i64) { self.value = value; } }\n",
+            "class Outer { inner: Inner; init(value: i64) { self.inner = Inner(value); } }\n",
+            "fn main() -> i64 {\n",
+            "  var left: Outer = Outer(1); var right: Outer = Outer(21);\n",
+            "  left = right; left = left; return left.inner.value * 2;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("synthesized final assignment must compile");
+    assert_eq!(run_native_assembly(&synthesized.assembly).code(), Some(42));
+
+    let user = compile_source_to_assembly(
+        "final-user-assignment.ska",
+        concat!(
+            "class Value { final value: i64; init(value: i64) { self.value = value; }\n",
+            "  assign(ref other: Value) {\n",
+            "    if (other.value > 0) { self.value = other.value + 1; }\n",
+            "    else { self.value = 0; }\n",
+            "  }\n",
+            "}\n",
+            "fn main() -> i64 { var left: Value = Value(1); var right: Value = Value(20);\n",
+            "  left = right; return left.value * 2; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("user final assignment must compile");
+    assert_eq!(run_native_assembly(&user.assembly).code(), Some(42));
+}

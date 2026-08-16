@@ -135,6 +135,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         destination: MirPlace::base(activation),
         value: selected_true,
         authorization: None,
+        final_authorization: None,
         span,
     }));
     lowerer.terminate(MirTerminator::Goto {
@@ -157,6 +158,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         destination: MirPlace::base(activation),
         value: selected_false,
         authorization: None,
+        final_authorization: None,
         span,
     }));
     lowerer.terminate(MirTerminator::Goto {
@@ -178,6 +180,7 @@ fn full_expression_owner_emits_reverse_conditional_cleanup_and_lifetime_graphs()
         destination: MirPlace::base(result),
         value: secured,
         authorization: None,
+        final_authorization: None,
         span,
     }));
     lowerer.finish_full_expression(span);

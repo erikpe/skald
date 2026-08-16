@@ -158,6 +158,7 @@ pub struct MirStore {
     pub destination: MirPlace,
     pub value: ValueId,
     pub authorization: Option<MirCellWriteAuthorization>,
+    pub final_authorization: Option<super::MirFinalWriteAuthorization>,
     pub span: Span,
 }
 
@@ -185,6 +186,7 @@ pub struct MirCopyAssignment {
     pub class: ClassId,
     pub operation: MirSelectedCopyOperation<CopyAssignmentId>,
     pub authorization: Option<MirCellWriteAuthorization>,
+    pub final_authorization: Option<super::MirFinalWriteAuthorization>,
     pub span: Span,
 }
 

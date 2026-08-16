@@ -330,14 +330,13 @@ fourth field to absence before ordinary string methods may populate it.
 
 ## Frozen final field direction
 
-Status: **frozen semantics; instance construction and direct-write rules
-implemented**. The compiler accepts canonical final instance and static
+Status: **frozen semantics; instance construction, direct-write, and
+complete-assignment rules implemented**. The compiler accepts canonical final instance and static
 declarations and retains their exact evidence through verified MIR. Final
 instance construction, copy construction, reads, shallow nested mutation, and
 destruction execute normally. Independent slot replacement is rejected during
-type checking. Complete-value assignment involving final representation stops
-at the temporary post-MIR `MIR003` gate, while final statics remain behind
-`MIR002`; the active
+type checking, while exact selected user and synthesized complete-value
+assignment executes normally. Final statics remain behind `MIR002`; the active
 [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns those stages.
 
 A final instance field has one of these canonical forms:
@@ -382,7 +381,7 @@ copy assignment:
 ```ska
 var left: BoxF64 = BoxF64(1.0, 7u);
 var right: BoxF64 = BoxF64(2.0, 8u);
-left = right; // valid source semantics; temporarily stopped at MIR003
+left = right; // valid: invokes the selected whole-value assignment
 ```
 
 This distinction is source semantics. The selected whole-value operation may

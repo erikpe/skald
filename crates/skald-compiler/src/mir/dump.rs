@@ -517,6 +517,9 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
         MirCopyCapability::Synthesized(copy) => {
             let _ = writeln!(output, "        Synthesized {}", copy.class);
             dump_base_copy(output, copy.base);
+            for field in &copy.final_fields {
+                let _ = writeln!(output, "          FinalField {field}");
+            }
             for field in &copy.fields {
                 match field {
                     MirSynthesizedFieldCopy::Primitive { field } => {
@@ -593,6 +596,19 @@ fn dump_cell_write_authorization(
 ) {
     if let Some(authorization) = authorization {
         let _ = write!(output, " cell-write {}", authorization.field);
+    }
+}
+
+fn dump_final_write_authorization(
+    output: &mut String,
+    authorization: Option<MirFinalWriteAuthorization>,
+) {
+    if let Some(authorization) = authorization {
+        let _ = write!(
+            output,
+            " final-write {} via {}",
+            authorization.field, authorization.operation
+        );
     }
 }
 
@@ -888,6 +904,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &store.destination);
                 let _ = write!(output, ", {}", store.value);
                 dump_cell_write_authorization(output, store.authorization);
+                dump_final_write_authorization(output, store.final_authorization);
                 write_span(output, store.span);
             }
             MirInstruction::CopyConstruct(copy) => {
@@ -907,6 +924,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 let _ = write!(output, " as {} via ", copy.class);
                 dump_copy_operation(output, copy.operation);
                 dump_cell_write_authorization(output, copy.authorization);
+                dump_final_write_authorization(output, copy.final_authorization);
                 write_span(output, copy.span);
             }
             MirInstruction::EndFullExpression(end) => {
@@ -1029,6 +1047,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &replace.destination);
                 let _ = write!(output, " from {}", replace.source);
                 dump_cell_write_authorization(output, replace.authorization);
+                dump_final_write_authorization(output, replace.final_authorization);
                 write_span(output, replace.span);
             }
             MirInstruction::StringInitialize(initialize) => {
@@ -1062,6 +1081,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output.push_str(" from ");
                 dump_optional_source(output, &assignment.source);
                 dump_cell_write_authorization(output, assignment.authorization);
+                dump_final_write_authorization(output, assignment.final_authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::AggregateOptionalInitialize(initialize) => {
@@ -1081,6 +1101,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output.push_str(" from ");
                 dump_aggregate_optional_source(output, &assignment.source);
                 dump_cell_write_authorization(output, assignment.authorization);
+                dump_final_write_authorization(output, assignment.final_authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::AggregateOptionalPublish(publish) => {
@@ -1110,6 +1131,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output.push_str(" from ");
                 dump_optional_shared_source(output, &assignment.source);
                 dump_cell_write_authorization(output, assignment.authorization);
+                dump_final_write_authorization(output, assignment.final_authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::OptionalSharedCleanup(cleanup) => {
@@ -1128,6 +1150,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &assignment.destination);
                 let _ = write!(output, " : class {}?", assignment.class);
                 dump_cell_write_authorization(output, assignment.authorization);
+                dump_final_write_authorization(output, assignment.final_authorization);
                 write_span(output, assignment.span);
             }
             MirInstruction::ClassOptionalPublish(publish) => {
@@ -1849,8 +1872,14 @@ fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction
             output.push(' ');
             dump_place(output, destination);
             let _ = write!(output, " from {source} as {array}");
-            if let MirArrayInstruction::Replace { authorization, .. } = instruction {
+            if let MirArrayInstruction::Replace {
+                authorization,
+                final_authorization,
+                ..
+            } = instruction
+            {
                 dump_cell_write_authorization(output, *authorization);
+                dump_final_write_authorization(output, *final_authorization);
             }
             write_span(output, *span);
         }

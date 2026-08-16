@@ -67,6 +67,7 @@ impl BodyLowerer<'_> {
                     destination,
                     source: secured,
                     authorization: super::lower_cell_write_authorization(&write.place),
+                    final_authorization: super::lower_final_write_authorization(&write.place),
                     span: write.span,
                 })
             }
@@ -85,6 +86,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::static_field(assignment.destination.field),
             source: secured,
             authorization: None,
+            final_authorization: None,
             span: assignment.span,
         }));
         self.full_expression.mark_shared_effect();

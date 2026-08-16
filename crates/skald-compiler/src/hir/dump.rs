@@ -628,6 +628,9 @@ impl<'types> HirDumper<'types> {
                         dumper.raw_line(&format!("Base {}", base.base));
                         dumper.indented(|dumper| dumper.selected_copy_operation(base.operation));
                     }
+                    for field in &operation.final_fields {
+                        dumper.raw_line(&format!("FinalField {field}"));
+                    }
                     for field in &operation.fields {
                         match field {
                             HirSynthesizedFieldCopy::Scalar { field } => {
@@ -2574,12 +2577,12 @@ impl<'types> HirDumper<'types> {
                     place.field
                 ));
             }
-            if place.write_authorization
-                == Some(HirFieldWriteAuthorization::DeferredFinalAssignment)
+            if let Some(HirFieldWriteAuthorization::DeclaringClassFinalAssignment(operation)) =
+                place.write_authorization
             {
                 dumper.raw_line(&format!(
-                    "WriteAuthorization DeferredFinalAssignment {}",
-                    place.field
+                    "WriteAuthorization DeclaringClassFinalAssignment {} {}",
+                    place.field, operation
                 ));
             }
             match &place.receiver {

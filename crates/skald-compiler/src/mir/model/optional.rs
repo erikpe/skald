@@ -29,6 +29,7 @@ pub struct MirOptionalAssign {
     pub destination: MirPlace,
     pub source: MirOptionalSource,
     pub authorization: Option<MirCellWriteAuthorization>,
+    pub final_authorization: Option<super::MirFinalWriteAuthorization>,
     pub span: Span,
 }
 
@@ -59,6 +60,7 @@ pub struct MirAggregateOptionalAssign {
     pub destination: MirPlace,
     pub source: MirAggregateOptionalSource,
     pub authorization: Option<MirCellWriteAuthorization>,
+    pub final_authorization: Option<super::MirFinalWriteAuthorization>,
     pub span: Span,
 }
 
@@ -108,6 +110,7 @@ pub struct MirClassOptionalAssign {
     pub copy_constructor: Option<MirSelectedCopyOperation<CopyConstructorId>>,
     pub copy_assignment: Option<MirSelectedCopyOperation<CopyAssignmentId>>,
     pub authorization: Option<MirCellWriteAuthorization>,
+    pub final_authorization: Option<super::MirFinalWriteAuthorization>,
     pub span: Span,
 }
 
@@ -188,6 +191,7 @@ pub struct MirOptionalSharedAssign {
     pub source: MirOptionalSharedSource,
     pub target: MirSharedTarget,
     pub authorization: Option<MirCellWriteAuthorization>,
+    pub final_authorization: Option<super::MirFinalWriteAuthorization>,
     pub span: Span,
 }
 

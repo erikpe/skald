@@ -117,6 +117,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::base(result),
             value: right,
             authorization: None,
+            final_authorization: None,
             span: logical.right.span,
         }));
         self.terminate(MirTerminator::Goto {
@@ -137,6 +138,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::base(result),
             value: fixed,
             authorization: None,
+            final_authorization: None,
             span: expression.span,
         }));
         self.terminate(MirTerminator::Goto {
@@ -198,6 +200,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::base(activation),
             value: selected,
             authorization: None,
+            final_authorization: None,
             span: expression.span,
         }));
         self.terminate(MirTerminator::Goto {

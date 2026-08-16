@@ -221,6 +221,7 @@ fn verifier_rejects_uninitialized_use_and_mismatched_failure_edges() {
             destination: initialize.destination,
             source: initialize.source,
             authorization: None,
+            final_authorization: None,
             span: initialize.span,
         }),
     );

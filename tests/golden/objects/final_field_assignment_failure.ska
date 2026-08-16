@@ -1,0 +1,19 @@
+class Value {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    assign(ref other: Value) {
+        self.value = other.value;
+        self.value = 1 / (other.value - other.value);
+    }
+}
+
+fn main() -> i64 {
+    var left: Value = Value(1);
+    var right: Value = Value(2);
+    left = right;
+    return left.value;
+}

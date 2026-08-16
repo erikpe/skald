@@ -1,6 +1,6 @@
 # Final Fields Roadmap
 
-Status: in progress; FFI2 is next.
+Status: in progress; FFI3 is next.
 
 This roadmap implements the frozen
 [final field language contract](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction),
@@ -74,7 +74,7 @@ decisions without reopening them.
 
 - [x] FFI0 — Represent contextual final declarations
 - [x] FFI1 — Enforce instance construction and direct-write semantics
-- [ ] FFI2 — Authorize exact complete-value assignment
+- [x] FFI2 — Authorize exact complete-value assignment
 - [ ] FFI3 — Integrate final statics with eager lifecycle
 - [ ] FFI4 — Prove shallow cross-feature composition
 - [ ] FFI5 — Adopt public final primitive-box payloads and close
@@ -201,31 +201,31 @@ native tests plus the documented complete Rust-task gates passed.
 selected exact copy-assignment lifecycle explicit, independently verified
 permission to update its own direct final representation.
 
-- [ ] Extend the centralized typed field-write authorization with one exact
+- [x] Extend the centralized typed field-write authorization with one exact
       declaring-class final-assignment reason. Require the current callable to
       be that class's selected user copy assignment and the destination to end
       at one of its direct final fields.
-- [ ] Preserve the full existing user `assign(ref source: T)` body model:
+- [x] Preserve the full existing user `assign(ref source: T)` body model:
       locals, nested blocks, conditionals, loops, calls, returns, zero or
       repeated final writes, arbitrary supported source expressions, and any
       supported subset of direct fields.
-- [ ] Keep permission lexical and exact. Reject final writes in helpers called
+- [x] Keep permission lexical and exact. Reject final writes in helpers called
       by assignment, derived assignment bodies targeting inherited final
       state, direct writes into nested final state, and ordinary methods or
       destructors. Complete base and nested field assignment must select their
       respective lifecycle operations.
-- [ ] Add equivalent explicit evidence to synthesized assignment capability
+- [x] Add equivalent explicit evidence to synthesized assignment capability
       plans for final direct fields while preserving base-first and declaration-
       order processing, selected nested operations, capability availability,
       self-assignment, and lifecycle-visible effects.
-- [ ] Carry user and synthesized final-update evidence through every scalar,
+- [x] Carry user and synthesized final-update evidence through every scalar,
       exact-class, optional, shared-owner, and array HIR/MIR assignment carrier.
       Do not clear the final marker or upgrade an entire receiver/class body.
-- [ ] Extend preliminary and final MIR verification to prove exact field,
+- [x] Extend preliminary and final MIR verification to prove exact field,
       lifecycle owner, directness, selected operation, assignment family,
       liveness, guards, anchors, ownership transitions, displacement, failure,
       and cleanup. Add mutation tests for every forged or over-broad case.
-- [ ] Remove the complete-assignment gate and execute local, parameter, mutable
+- [x] Remove the complete-assignment gate and execute local, parameter, mutable
       field, mutable static, array-element, optional-payload, and other existing
       complete class destinations through the unchanged whole-object source
       contract.
@@ -241,6 +241,19 @@ and destruction order; then the complete Rust-task gates.
 when its selected operation is available, final representation changes only
 under exact verified user or synthesized lifecycle evidence, neighboring
 writes remain rejected, and the temporary gate is removed.
+
+Completed 2026-08-16. Typed HIR now grants final replacement only to the exact
+selected declaring-class user copy assignment, while synthesized assignment
+plans carry the exact ordered set of direct final fields. Separate final-update
+evidence crosses every scalar, class, optional, shared-owner, and array MIR
+carrier without widening receiver access or conflating private-cell permission.
+Preliminary and final verification prove the endpoint, direct receiver,
+selected operation, family, declaration plan, and all existing lifetime,
+guard, anchor, displacement, failure, and cleanup invariants. The `MIR003`
+gate and its recursive classifier are removed; ordinary whole-value lowering
+now executes direct, inherited, nested, fresh-source, and self-assignment cases.
+Focused HIR/MIR mutation tests, backend-native tests, failure and destruction
+goldens, `make check`, `make msrv-check`, and `git diff --check` passed.
 
 ### FFI3 — Integrate final statics with eager lifecycle
 

@@ -305,6 +305,7 @@ impl InstructionSelector<'_, '_> {
                                     copy_constructor: Some(constructor),
                                     copy_assignment: Some(operation),
                                     authorization: None,
+                                    final_authorization: None,
                                     span: self.function.span(),
                                 },
                             )?;
@@ -328,6 +329,7 @@ impl InstructionSelector<'_, '_> {
                                     ),
                                     target,
                                     authorization: None,
+                                    final_authorization: None,
                                     span: self.function.span(),
                                 },
                             )?;
@@ -341,6 +343,7 @@ impl InstructionSelector<'_, '_> {
                                         source.clone().project_field(field),
                                     ),
                                     authorization: None,
+                                    final_authorization: None,
                                     span: self.function.span(),
                                 },
                             )?;

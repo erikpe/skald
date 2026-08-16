@@ -51,6 +51,7 @@ impl BodyLowerer<'_> {
                     },
                     value,
                     authorization: None,
+                    final_authorization: None,
                     span: assignment.span,
                 }));
                 self.finish_full_expression(assignment.span);
@@ -103,6 +104,7 @@ impl BodyLowerer<'_> {
                     destination,
                     &assignment.value,
                     super::lower_array_cell_write_authorization(&assignment.destination),
+                    super::lower_array_final_write_authorization(&assignment.destination),
                 );
                 self.finish_full_expression(assignment.span);
             }
@@ -158,6 +160,7 @@ impl BodyLowerer<'_> {
                     destination: storage.into(),
                     value,
                     authorization: None,
+                    final_authorization: None,
                     span: local.span,
                 }));
                 self.finish_full_expression(local.span);
@@ -372,6 +375,7 @@ impl BodyLowerer<'_> {
             destination,
             value,
             authorization: super::lower_cell_write_authorization(&assignment.place),
+            final_authorization: super::lower_final_write_authorization(&assignment.place),
             span: assignment.span,
         }));
         self.finish_full_expression(assignment.span);
@@ -408,6 +412,7 @@ impl BodyLowerer<'_> {
             class: statement.source.class(),
             operation: lower_selected_copy_operation(statement.operation),
             authorization: super::lower_cell_write_authorization(&statement.place),
+            final_authorization: super::lower_final_write_authorization(&statement.place),
             span: statement.span,
         }));
         self.end_optional_views_from(optional_mark, statement.span);
@@ -423,6 +428,7 @@ impl BodyLowerer<'_> {
             class: statement.destination.class(),
             operation: lower_selected_copy_operation(statement.operation),
             authorization: None,
+            final_authorization: None,
             span: statement.span,
         }));
         self.end_optional_views_from(optional_mark, statement.span);

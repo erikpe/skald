@@ -302,6 +302,7 @@ fn mutate_definition(
                     .project_field(inner_value),
                 value,
                 authorization: None,
+                final_authorization: None,
                 span,
             }),
         ],

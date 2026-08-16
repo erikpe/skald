@@ -287,10 +287,10 @@ The staged
 preserves contextual declaration evidence through resolved IR, closed
 specialization, typed HIR, and verified MIR without changing ordinary
 declaration or layout identity. Final instance fields use ordinary construction,
-copy construction, read, destruction, layout, and backend paths. Type checking
-rejects independent slot replacement; a post-MIR `MIR003` gate temporarily
-stops complete-value assignment involving final representation until durable
-copy-assignment authorization ships. Final statics remain behind `MIR002`. Its
+copy construction, complete-value assignment, read, destruction, layout, and
+backend paths. Type checking rejects independent slot replacement; exact user
+assignment writes and synthesized assignment plans carry independently verified
+final-update evidence. Final statics remain behind `MIR002`. Its
 [implementation roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) stages
 contextual metadata, instance write rules, user and synthesized assignment,
 final-static lifecycle, composition, and standard-library adoption.

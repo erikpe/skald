@@ -20,20 +20,22 @@ impl Verifier<'_> {
         if let MirArrayInstruction::Replace {
             destination,
             authorization,
+            final_authorization,
             ..
         } = instruction
         {
-            let cell_authorized = self.verify_cell_write_authorization(
+            let write_access = self.verify_field_write_authorizations(
                 function,
                 block,
                 destination,
                 *authorization,
+                *final_authorization,
                 CellWriteFamily::Array,
             );
             if self
                 .verify_place(function, block, destination)
                 .is_some_and(|place| place.access != MirAliasAccess::Mutable)
-                && !cell_authorized
+                && !write_access.allows_read_only()
             {
                 self.block_error(
                     function.callable(),

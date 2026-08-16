@@ -1320,9 +1320,9 @@ without adding a runtime or target-level cell operation.
 
 ## Frozen final field representation
 
-Status: **instance construction and direct-write semantics implemented**. The
-active [final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md) owns the
-remaining assignment and static-lifecycle work. Source semantics are defined by
+Status: **instance construction, direct-write, and complete-assignment semantics
+implemented**. The active [final fields roadmap](../roadmaps/FINAL_FIELDS_ROADMAP.md)
+owns the remaining static-lifecycle and composition work. Source semantics are defined by
 [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md#frozen-final-field-direction)
 and [Static Fields](../language/STATIC_FIELDS.md#frozen-final-static-field-direction).
 
@@ -1345,12 +1345,10 @@ declaration verification rejects malformed spans, incompatible cell metadata,
 and zero-default final statics.
 
 After the ordinary final MIR pipeline verifies a program, the driver reports
-`MIR002` for final statics and `MIR003` for complete-value assignment whose
-stored representation directly or transitively contains final instance fields.
-Construction, copy construction, reads, destruction, and shallow mutation do
-not trip either gate. These phase-owned checks keep unverified assignment and
-static lifecycle semantics non-executable; non-final programs use the unchanged
-backend path.
+`MIR002` for final statics. Final-bearing complete values use the ordinary
+assignment backend path after exact user or synthesized evidence crosses both
+MIR verification boundaries. Construction, copy construction, assignment,
+reads, destruction, and shallow mutation otherwise require no feature gate.
 
 Construction is direct initialization of incomplete storage. Ordinary
 and copy constructors use the current exact-once direct-field analysis, and
@@ -1371,21 +1369,18 @@ For complete objects, typed HIR must distinguish at least these write reasons:
 ```text
 FieldWriteAuthorization = Mutable
                         | DeclaringClassCell
-                        | DeferredFinalAssignment  // temporary until FFI2
+                        | DeclaringClassFinalAssignment(CopyAssignmentId)
 ```
 
 The concrete Rust representation remains implementation-private. An ordinary
 mutable field write uses `Mutable`; an exact private-cell write retains its
-existing authorization. The current temporary final-assignment marker is
-created only for a direct endpoint in the exact declaring class's user
-copy-assignment body. It does not flow through helper calls, base projections,
-or nested projections, does not clear declaration metadata, and does not
-broadly upgrade a receiver, object place, or class body. It is diagnostic and
-lowering evidence only: `MIR003` keeps every invocation of a complete
-assignment involving final representation non-executable until FFI2 replaces
-it with independently verified authorization.
+existing authorization. Final-assignment authorization is created only for a
+direct endpoint in the exact declaring class's selected user copy-assignment
+body. It does not flow through helper calls, base projections, or nested
+projections, does not clear declaration metadata, and does not broadly upgrade
+a receiver, object place, or class body.
 
-Synthesized copy assignment needs equivalent exact evidence on every final
+Synthesized copy assignment carries equivalent exact evidence on every final
 field step in its selected capability plan. User-defined assignment remains a
 general mutable body and may contain control flow, calls, zero or repeated
 final writes, and arbitrary supported source expressions. Whole-object
@@ -1393,9 +1388,9 @@ assignment keeps its existing destination, source evaluation, operation
 selection, self-assignment, and live-lifetime rules whether or not the class
 contains final fields.
 
-HIR-to-MIR lowering will preserve final-assignment evidence on every affected
+HIR-to-MIR lowering preserves final-assignment evidence on every affected
 scalar, exact-class, optional, shared-owner, and array replacement carrier.
-Preliminary and final MIR verification will independently prove the declared
+Preliminary and final MIR verification independently prove the declared
 marker, direct endpoint, exact lifecycle owner, assignment family, field type,
 place liveness, initialization state, optional guards, ownership transitions,
 anchors, and cleanup. Forged evidence in a method, destructor, helper, derived
@@ -1417,9 +1412,9 @@ metadata changes no size, alignment, offset, register classification, symbol
 family, runtime call, public C API, or runtime ABI version. Backend code must
 not infer authorization from source names or reconstruct it after verification.
 
-The rollout established contextual declaration metadata, then instance
-construction and direct-write rules. It next adds exact user
-and synthesized copy-assignment authorization, final-static lifecycle,
+The rollout established contextual declaration metadata, instance construction
+and direct-write rules, and exact user and synthesized copy-assignment
+authorization. It next adds final-static lifecycle,
 cross-feature native composition, and standard-library box adoption. The
 standard library receives no compiler exception.
 

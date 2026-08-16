@@ -290,6 +290,7 @@ impl BodyLowerer<'_> {
             destination: storage.into(),
             value,
             authorization: None,
+            final_authorization: None,
             span,
         }));
         (storage, ty)

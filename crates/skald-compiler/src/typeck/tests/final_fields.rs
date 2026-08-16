@@ -265,7 +265,7 @@ fn preserves_reads_aliases_produced_reads_and_shallow_nested_mutation() {
 }
 
 #[test]
-fn exact_copy_assignment_is_deferred_but_nested_and_inherited_writes_are_rejected() {
+fn exact_copy_assignment_is_authorized_but_nested_and_inherited_writes_are_rejected() {
     let output = check_text(concat!(
         "class Value { final value: i64; init(value: i64) { self.value = value; }\n",
         "  assign(ref other: Value) { self.value = other.value; } }\n",
@@ -285,9 +285,12 @@ fn exact_copy_assignment_is_deferred_but_nested_and_inherited_writes_are_rejecte
     };
     assert_eq!(
         write.place.write_authorization,
-        Some(HirFieldWriteAuthorization::DeferredFinalAssignment)
+        Some(HirFieldWriteAuthorization::DeclaringClassFinalAssignment(
+            assignment.id
+        ))
     );
-    assert!(dump_hir(&hir).contains("WriteAuthorization DeferredFinalAssignment c0:field0"));
+    assert!(dump_hir(&hir)
+        .contains("WriteAuthorization DeclaringClassFinalAssignment c0:field0 c0:assign0"));
 
     for source in [
         concat!(
@@ -305,4 +308,38 @@ fn exact_copy_assignment_is_deferred_but_nested_and_inherited_writes_are_rejecte
     ] {
         assert_final_replacement_rejected(source);
     }
+}
+
+#[test]
+fn user_copy_assignment_keeps_ordinary_control_flow_and_subset_freedom() {
+    let output = check_text(concat!(
+        "fn adjust(value: i64) -> i64 { return value + 1; }\n",
+        "class Flexible { final first: i64; final second: i64;\n",
+        "  init(first: i64, second: i64) { self.first = first; self.second = second; }\n",
+        "  assign(ref other: Flexible) {\n",
+        "    var next: i64 = adjust(other.first);\n",
+        "    if (next > 0) { self.first = next; } else { self.first = other.first; }\n",
+        "    var index: i64 = 0;\n",
+        "    while (index < 1) { self.first = other.first + index; index = index + 1; }\n",
+        "    if (other.second < 0) { return; }\n",
+        "  }\n",
+        "}\n",
+        "class Empty { final value: i64; init(value: i64) { self.value = value; }\n",
+        "  assign(ref other: Empty) { var observed: i64 = other.value; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let dump = dump_hir(&hir);
+    assert_eq!(
+        dump.matches("WriteAuthorization DeclaringClassFinalAssignment c0:field0 c0:assign0")
+            .count(),
+        3,
+        "{dump}"
+    );
+    assert!(!dump.contains("DeclaringClassFinalAssignment c0:field1"));
+    let preliminary = crate::mir::lower_preliminary_hir(&hir);
+    crate::mir::verify_preliminary_mir(&preliminary).unwrap();
+    verify_mir(&lower_hir_to_final_mir(&hir)).unwrap();
 }

@@ -603,6 +603,7 @@ pub struct MirSynthesizedCopy<I> {
     pub class: ClassId,
     pub base: Option<MirBaseCopy<I>>,
     pub fields: Vec<MirSynthesizedFieldCopy<I>>,
+    pub final_fields: Vec<FieldId>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,7 +1,11 @@
 //! Central instance-field replacement policy.
 
 use super::*;
-use crate::{hir::HirFieldWriteAuthorization, source::Span};
+use crate::{
+    hir::{HirCopyCapability, HirFieldWriteAuthorization},
+    identity::CallableId,
+    source::Span,
+};
 
 pub(super) enum FieldWriteDecision {
     ConstructionInitialization,
@@ -32,13 +36,19 @@ impl CallableChecker<'_, '_> {
         }
 
         if let Some(final_span) = context.final_span {
-            if context.body_kind == MemberBodyKind::CopyAssignment
-                && context.direct_self_field
-                && self.class_owner == Some(context.field.class())
-            {
-                return FieldWriteDecision::Authorized(
-                    HirFieldWriteAuthorization::DeferredFinalAssignment,
-                );
+            if let CallableId::CopyAssignment(operation) = self.callable {
+                if context.body_kind == MemberBodyKind::CopyAssignment
+                    && context.direct_self_field
+                    && self.class_owner == Some(context.field.class())
+                    && matches!(
+                        self.copy_capabilities.assignment(context.field.class()),
+                        HirCopyCapability::User(copy) if copy.operation == operation
+                    )
+                {
+                    return FieldWriteDecision::Authorized(
+                        HirFieldWriteAuthorization::DeclaringClassFinalAssignment(operation),
+                    );
+                }
             }
             let field = self
                 .program

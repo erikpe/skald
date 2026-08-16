@@ -1,0 +1,43 @@
+class Inner {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Outer {
+    inner: Inner;
+
+    init(value: i64) {
+        self.inner = Inner(value);
+    }
+}
+
+class Adjusted {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    assign(ref other: Adjusted) {
+        if (other.value > 0) {
+            self.value = other.value + 1;
+        } else {
+            self.value = 0;
+        }
+    }
+}
+
+fn main() -> i64 {
+    var outer: Outer = Outer(1);
+    var source: Outer = Outer(21);
+    outer = source;
+    outer = outer;
+
+    var adjusted: Adjusted = Adjusted(1);
+    var adjustment: Adjusted = Adjusted(20);
+    adjusted = adjustment;
+    return outer.inner.value + adjusted.value;
+}

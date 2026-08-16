@@ -501,6 +501,7 @@ pub(crate) fn store(destination: MirPlace, value: ValueId, span: Span) -> MirIns
         destination,
         value,
         authorization: None,
+        final_authorization: None,
         span,
     })
 }

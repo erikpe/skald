@@ -90,6 +90,18 @@ fn lower_cell_write_authorization(place: &HirFieldPlace) -> Option<MirCellWriteA
         .then_some(MirCellWriteAuthorization { field: place.field })
 }
 
+fn lower_final_write_authorization(place: &HirFieldPlace) -> Option<MirFinalWriteAuthorization> {
+    match place.write_authorization {
+        Some(HirFieldWriteAuthorization::DeclaringClassFinalAssignment(operation)) => {
+            Some(MirFinalWriteAuthorization {
+                field: place.field,
+                operation,
+            })
+        }
+        _ => None,
+    }
+}
+
 fn lower_optional_cell_write_authorization(
     storage: &HirOptionalStorage,
 ) -> Option<MirCellWriteAuthorization> {
@@ -102,11 +114,34 @@ fn lower_optional_cell_write_authorization(
     }
 }
 
+fn lower_optional_final_write_authorization(
+    storage: &HirOptionalStorage,
+) -> Option<MirFinalWriteAuthorization> {
+    match storage {
+        HirOptionalStorage::Field(place) => lower_final_write_authorization(place),
+        HirOptionalStorage::Binding(_)
+        | HirOptionalStorage::Static(_)
+        | HirOptionalStorage::ArrayElement(_)
+        | HirOptionalStorage::SharedPointee(_) => None,
+    }
+}
+
 fn lower_array_cell_write_authorization(
     place: &HirArrayPlace,
 ) -> Option<MirCellWriteAuthorization> {
     match place {
         HirArrayPlace::Field { place, .. } => lower_cell_write_authorization(place),
+        HirArrayPlace::Binding { .. }
+        | HirArrayPlace::Static { .. }
+        | HirArrayPlace::Element(_) => None,
+    }
+}
+
+fn lower_array_final_write_authorization(
+    place: &HirArrayPlace,
+) -> Option<MirFinalWriteAuthorization> {
+    match place {
+        HirArrayPlace::Field { place, .. } => lower_final_write_authorization(place),
         HirArrayPlace::Binding { .. }
         | HirArrayPlace::Static { .. }
         | HirArrayPlace::Element(_) => None,

@@ -281,6 +281,7 @@ impl InstructionSelector<'_, '_> {
                     destination,
                     source: MirOptionalSource::Copy(source),
                     authorization: None,
+                    final_authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 })
             }
@@ -304,6 +305,7 @@ impl InstructionSelector<'_, '_> {
                     copy_constructor: Some(copy_constructor),
                     copy_assignment: Some(copy_assignment),
                     authorization: None,
+                    final_authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 })
             }
@@ -314,6 +316,7 @@ impl InstructionSelector<'_, '_> {
                     source: MirOptionalSharedSource::Copy(source),
                     target,
                     authorization: None,
+                    final_authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
             crate::mir::MirOptionalStorage::Nested(_)
@@ -323,6 +326,7 @@ impl InstructionSelector<'_, '_> {
                     destination,
                     source: MirAggregateOptionalSource::Copy(source),
                     authorization: None,
+                    final_authorization: None,
                     span: self.active_instruction_span.expect("active instruction"),
                 }),
         }

@@ -177,6 +177,7 @@ fn verifier_rejects_wrong_copy_selection_overlap_and_liveness() {
             class: copy.class,
             operation: MirSelectedCopyOperation::User(CopyAssignmentId::new(copy.class, 0)),
             authorization: None,
+            final_authorization: None,
             span: copy.span,
         });
     let errors = verify_mir(&assign_uninitialized).unwrap_err().to_string();
@@ -278,6 +279,7 @@ fn verifier_rejects_complete_receiver_replacement() {
             class,
             operation: MirSelectedCopyOperation::User(assignment),
             authorization: None,
+            final_authorization: None,
             span: definition.span,
         }),
     );

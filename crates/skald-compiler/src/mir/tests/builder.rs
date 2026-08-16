@@ -50,6 +50,7 @@ fn body_builder_rejects_emission_and_duplicate_termination_after_a_terminator() 
                 destination: StorageId::new(function.function, 0).into(),
                 value: ValueId::new(function.function, 0),
                 authorization: None,
+                final_authorization: None,
                 span: function.span,
             }))
             .unwrap_err(),

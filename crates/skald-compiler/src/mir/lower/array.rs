@@ -23,6 +23,7 @@ impl BodyLowerer<'_> {
                     destination,
                     value,
                     authorization: None,
+                    final_authorization: None,
                     span: assignment.span,
                 }));
             }
@@ -42,6 +43,7 @@ impl BodyLowerer<'_> {
                     class,
                     operation: lower_selected_copy_operation(*operation),
                     authorization: None,
+                    final_authorization: None,
                     span: assignment.span,
                 }));
             }
@@ -66,6 +68,7 @@ impl BodyLowerer<'_> {
                         source,
                         target: lower_shared_target(value.target),
                         authorization: None,
+                        final_authorization: None,
                         span: value.span,
                     },
                 ));
@@ -76,6 +79,7 @@ impl BodyLowerer<'_> {
                     destination,
                     source,
                     authorization: None,
+                    final_authorization: None,
                     span: assignment.span,
                 }));
             }
@@ -99,6 +103,7 @@ impl BodyLowerer<'_> {
                         copy_constructor: (!source_is_absent).then_some(copy_constructor),
                         copy_assignment: (!source_is_absent).then_some(copy_assignment),
                         authorization: None,
+                        final_authorization: None,
                         span: assignment.span,
                     },
                 ));
@@ -145,6 +150,7 @@ impl BodyLowerer<'_> {
                         destination,
                         source,
                         authorization: None,
+                        final_authorization: None,
                         span: assignment.span,
                     },
                 ));
@@ -210,7 +216,7 @@ impl BodyLowerer<'_> {
         initialization: &HirArrayInitialize,
         replace: bool,
     ) {
-        self.lower_array_transfer(destination, initialization, replace, None);
+        self.lower_array_transfer(destination, initialization, replace, None, None);
     }
 
     pub(super) fn lower_array_replace(
@@ -218,8 +224,15 @@ impl BodyLowerer<'_> {
         destination: MirPlace,
         initialization: &HirArrayInitialize,
         authorization: Option<crate::mir::MirCellWriteAuthorization>,
+        final_authorization: Option<crate::mir::MirFinalWriteAuthorization>,
     ) {
-        self.lower_array_transfer(destination, initialization, true, authorization);
+        self.lower_array_transfer(
+            destination,
+            initialization,
+            true,
+            authorization,
+            final_authorization,
+        );
     }
 
     fn lower_array_transfer(
@@ -228,6 +241,7 @@ impl BodyLowerer<'_> {
         initialization: &HirArrayInitialize,
         replace: bool,
         authorization: Option<crate::mir::MirCellWriteAuthorization>,
+        final_authorization: Option<crate::mir::MirFinalWriteAuthorization>,
     ) {
         let produced = match initialization.operation {
             HirArrayTransfer::DeepCopy(operation) => self.lower_array_named_copy(
@@ -244,6 +258,7 @@ impl BodyLowerer<'_> {
                 source: produced,
                 array: initialization.source.array,
                 authorization,
+                final_authorization,
                 span: initialization.span,
             }
         } else {
@@ -890,6 +905,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::base(length_storage),
             value: length,
             authorization: None,
+            final_authorization: None,
             span,
         }));
         self.emit(MirInstruction::Array(MirArrayInstruction::Allocate {
@@ -906,6 +922,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::base(index),
             value: zero,
             authorization: None,
+            final_authorization: None,
             span,
         }));
 

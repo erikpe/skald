@@ -1,0 +1,25 @@
+import std::io;
+
+class Trace {
+    final value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    assign(ref other: Trace) {
+        std::io::println_i64(other.value);
+        self.value = other.value + 200;
+    }
+
+    destroy {
+        std::io::println_i64(self.value + 1000);
+    }
+}
+
+fn main() -> i64 {
+    var left: Trace = Trace(1);
+    var right: Trace = Trace(2);
+    left = right;
+    return 0;
+}

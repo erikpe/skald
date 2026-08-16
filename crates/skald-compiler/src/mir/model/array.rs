@@ -245,6 +245,7 @@ pub enum MirArrayInstruction {
         source: StorageId,
         array: ArrayTypeId,
         authorization: Option<super::MirCellWriteAuthorization>,
+        final_authorization: Option<super::MirFinalWriteAuthorization>,
         span: Span,
     },
     ElementAssign {

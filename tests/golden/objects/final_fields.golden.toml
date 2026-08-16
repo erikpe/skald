@@ -9,6 +9,30 @@ name = "construction_copy_construction_and_read"
 expect = { exit = 42 }
 
 [[test]]
+name = "assignment_lifecycle"
+mode = "run"
+source = "final_field_assignment_lifecycle.ska"
+[[test.run]]
+name = "user_effect_and_reverse_destruction"
+expect = { stdout = { file = "data/final_field_assignment_lifecycle.stdout" } }
+
+[[test]]
+name = "assignment_failure"
+mode = "run"
+source = "final_field_assignment_failure.ska"
+[[test.run]]
+name = "user_assignment_preserves_failure"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: integer division by zero\n" } }
+
+[[test]]
+name = "assignment"
+mode = "run"
+source = "final_field_assignment.ska"
+[[test.run]]
+name = "synthesized_user_nested_and_self_assignment"
+expect = { exit = 42 }
+
+[[test]]
 name = "direct_write"
 mode = "compile-fail"
 source = "final_field_direct_write.ska"

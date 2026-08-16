@@ -38,6 +38,7 @@ impl BodyLowerer<'_> {
                     destination,
                     value,
                     authorization: None,
+                    final_authorization: None,
                     span,
                 }));
             }
@@ -212,6 +213,9 @@ impl BodyLowerer<'_> {
                 destination,
                 source,
                 authorization: super::lower_optional_cell_write_authorization(
+                    &assignment.destination.storage,
+                ),
+                final_authorization: super::lower_optional_final_write_authorization(
                     &assignment.destination.storage,
                 ),
                 span: assignment.span,
@@ -587,6 +591,9 @@ impl BodyLowerer<'_> {
                 authorization: super::lower_optional_cell_write_authorization(
                     &assignment.destination.storage,
                 ),
+                final_authorization: super::lower_optional_final_write_authorization(
+                    &assignment.destination.storage,
+                ),
                 span: assignment.span,
             },
         ));
@@ -730,6 +737,9 @@ impl BodyLowerer<'_> {
                     destination,
                     source,
                     authorization: super::lower_optional_cell_write_authorization(
+                        &assignment.destination.storage,
+                    ),
+                    final_authorization: super::lower_optional_final_write_authorization(
                         &assignment.destination.storage,
                     ),
                     span: assignment.span,
@@ -908,6 +918,9 @@ impl BodyLowerer<'_> {
             source,
             target: super::lower_shared_target(assignment.destination.target),
             authorization: super::lower_optional_cell_write_authorization(
+                &assignment.destination.storage,
+            ),
+            final_authorization: super::lower_optional_final_write_authorization(
                 &assignment.destination.storage,
             ),
             span: assignment.span,

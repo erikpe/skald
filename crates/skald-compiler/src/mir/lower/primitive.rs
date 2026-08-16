@@ -95,6 +95,7 @@ impl BodyLowerer<'_> {
             destination: MirPlace::base(result),
             value: converted,
             authorization: None,
+            final_authorization: None,
             span: expression.span,
         }));
         self.terminate(MirTerminator::Goto {

@@ -60,6 +60,9 @@ pub struct HirSynthesizedCopy<I> {
     pub class: ClassId,
     pub base: Option<HirBaseCopy<I>>,
     pub fields: Vec<HirSynthesizedFieldCopy<I>>,
+    /// Direct final fields this synthesized assignment may update. This is
+    /// empty for copy construction.
+    pub final_fields: Vec<FieldId>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -589,8 +592,7 @@ pub struct HirFieldPlace {
 pub enum HirFieldWriteAuthorization {
     Mutable,
     DeclaringClassCell,
-    /// Temporary typed evidence accepted only inside the exact user copy
-    /// assignment. Complete compilation remains gated until MIR carries and
-    /// verifies durable final-assignment authorization.
-    DeferredFinalAssignment,
+    /// Exact user copy-assignment lifecycle authorized to update this direct
+    /// declaring-class final field.
+    DeclaringClassFinalAssignment(CopyAssignmentId),
 }

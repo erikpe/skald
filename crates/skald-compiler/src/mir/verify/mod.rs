@@ -22,6 +22,7 @@ mod context;
 mod dataflow;
 mod declarations;
 mod dispatch;
+mod final_write;
 mod function_values;
 mod inheritance;
 mod instructions;

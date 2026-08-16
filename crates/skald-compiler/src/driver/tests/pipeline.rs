@@ -717,7 +717,7 @@ fn stops_final_static_fields_after_verified_mir_and_before_backend_emission() {
 }
 
 #[test]
-fn gates_complete_assignment_of_direct_and_transitively_final_values() {
+fn emits_complete_assignment_of_direct_and_transitively_final_values() {
     let cases = [
         concat!(
             "class Value { final value: i64; init(value: i64) { self.value = value; } }\n",
@@ -739,21 +739,10 @@ fn gates_complete_assignment_of_direct_and_transitively_final_values() {
     ];
 
     for source in cases {
-        let CompilationError::Diagnostics(report) =
-            compile_source_to_assembly("final-assignment.ska", source, Target::X86_64SysV)
-                .unwrap_err()
-        else {
-            panic!("expected the final-assignment execution gate");
-        };
-        assert_eq!(report.diagnostics.len(), 1);
-        let diagnostic = report.diagnostics.iter().next().unwrap();
-        assert_eq!(diagnostic.code, "MIR003");
-        assert_eq!(
-            diagnostic.message,
-            "assignment of a value containing final fields cannot be emitted yet"
-        );
-        let rendered = render_diagnostics(&report.sources, &report.diagnostics);
-        assert!(rendered.contains("complete-value final-field update evidence is not implemented"));
+        let artifact =
+            compile_source_to_assembly("final-assignment.ska", source, Target::X86_64SysV).unwrap();
+        assert!(artifact.report.diagnostics.is_empty());
+        assert!(artifact.assembly.contains(".globl main"));
     }
 }
 

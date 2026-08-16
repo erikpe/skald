@@ -38,7 +38,7 @@ impl VerifiedWriteAccess {
 }
 
 impl CellWriteFamily {
-    const fn accepts(self, ty: MirType) -> bool {
+    pub(super) const fn accepts(self, ty: MirType) -> bool {
         match self {
             Self::Scalar => ty.is_scalar_value(),
             Self::Class => matches!(ty, MirType::Class(_)),

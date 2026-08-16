@@ -423,6 +423,16 @@ fn compute_class<I: Copy>(
                         class: class_id,
                         base,
                         fields,
+                        final_fields: if required_constructors.is_some() {
+                            class
+                                .fields
+                                .iter()
+                                .filter(|field| field.final_span.is_some())
+                                .map(|field| field.id)
+                                .collect()
+                        } else {
+                            Vec::new()
+                        },
                     }),
                     None,
                 ),

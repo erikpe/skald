@@ -131,6 +131,7 @@ impl InstructionSelector<'_, '_> {
                     destination,
                     value: *value,
                     authorization: None,
+                    final_authorization: None,
                     span: *span,
                 })?;
                 self.advance_array_index(*prefix);

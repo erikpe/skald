@@ -574,11 +574,12 @@ impl<'mir> Verifier<'mir> {
         block: &MirBasicBlock,
         replace: &MirSharedFieldReplace,
     ) {
-        let cell_authorized = self.verify_cell_write_authorization(
+        let write_access = self.verify_field_write_authorizations(
             function,
             block,
             &replace.destination,
             replace.authorization,
+            replace.final_authorization,
             CellWriteFamily::Shared,
         );
         self.verify_shared_field_destination(
@@ -587,7 +588,7 @@ impl<'mir> Verifier<'mir> {
             &replace.destination,
             replace.source,
             false,
-            cell_authorized,
+            write_access.allows_read_only(),
         );
     }
 
