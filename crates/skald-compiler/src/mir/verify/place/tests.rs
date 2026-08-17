@@ -1,10 +1,10 @@
 use crate::{
-    identity::{ClassId, FieldId, FunctionId},
+    identity::{ArrayTypeId, ClassId, FieldId, FunctionId},
     mir::{verify_mir, MirInstruction, MirPlace, MirPlaceProjection, MirRvalueKind, StorageId},
     test_support::lower_source_to_mir,
 };
 
-use super::{is_ancestor, places_overlap};
+use super::{is_ancestor, places_overlap, projects_into_array_element_storage};
 
 #[test]
 fn ancestry_requires_the_same_base_and_a_projection_prefix() {
@@ -37,6 +37,23 @@ fn overlap_is_symmetric_and_limited_to_ancestor_relationships() {
     assert!(places_overlap(&root, &child));
     assert!(places_overlap(&child, &root));
     assert!(!places_overlap(&child, &sibling));
+}
+
+#[test]
+fn array_element_projection_crosses_into_backing_owned_storage() {
+    let function = FunctionId::new(0);
+    let class = ClassId::new(0);
+    let root = MirPlace::alias_parameter(StorageId::new(function, 0));
+    let field = root.clone().project_field(FieldId::new(class, 0));
+    let element = field
+        .clone()
+        .project_array_element(ArrayTypeId::new(0), StorageId::new(function, 1));
+    let element_field = element.clone().project_field(FieldId::new(class, 1));
+
+    assert!(!projects_into_array_element_storage(&root));
+    assert!(!projects_into_array_element_storage(&field));
+    assert!(projects_into_array_element_storage(&element));
+    assert!(projects_into_array_element_storage(&element_field));
 }
 
 #[test]

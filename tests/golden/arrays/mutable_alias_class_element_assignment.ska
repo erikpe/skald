@@ -1,0 +1,30 @@
+class Item {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    assign(ref source: Item) {
+        self.value = source.value;
+    }
+}
+
+fn replace(mut ref items: Item[], ref source: Item) -> unit {
+    items[0] = source;
+}
+
+fn replace_nested(mut ref rows: Item[][]) -> unit {
+    rows[0][0] = Item(23);
+}
+
+fn main() -> i64 {
+    var items: Item[] = Item[]{Item(1)};
+    var source: Item = Item(19);
+    replace(items, source);
+
+    var rows: Item[][] = Item[][]{Item[]{Item(2)}};
+    replace_nested(rows);
+
+    return items[0].value + rows[0][0].value;
+}

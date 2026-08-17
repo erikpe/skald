@@ -417,5 +417,16 @@ pub(super) fn places_overlap(left: &MirPlace, right: &MirPlace) -> bool {
     is_ancestor(left, right) || is_ancestor(right, left)
 }
 
+/// Returns whether a projection leaves its root carrier and enters element
+/// storage owned by an array backing. Once crossed, subsequent projections
+/// remain within that owning element storage even when the descriptor itself
+/// was reached through a non-owning alias or checked view.
+pub(super) fn projects_into_array_element_storage(place: &MirPlace) -> bool {
+    place
+        .projections
+        .iter()
+        .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
+}
+
 #[cfg(test)]
 mod tests;

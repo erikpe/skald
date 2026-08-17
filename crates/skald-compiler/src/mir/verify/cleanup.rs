@@ -13,7 +13,7 @@ use super::{
     context::Verifier,
     dataflow::ForwardDataflow,
     path_state::{condition_reads, PathStates},
-    place::{is_ancestor, places_overlap},
+    place::{is_ancestor, places_overlap, projects_into_array_element_storage},
     sink::ErrorSink,
 };
 
@@ -995,6 +995,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 
     fn is_owning_class_place(&self, place: &MirPlace, expected_class: ClassId) -> bool {
+        if projects_into_array_element_storage(place) {
+            return self.place_type(place) == Some(MirType::Class(expected_class));
+        }
         if !matches!(place.base, MirPlaceBase::Storage(_)) {
             return false;
         }

@@ -10,7 +10,7 @@ use super::{
     },
     cell_write::{CellWriteFamily, VerifiedWriteAccess},
     context::Verifier,
-    place::places_overlap,
+    place::{places_overlap, projects_into_array_element_storage},
 };
 
 #[derive(Clone, Copy)]
@@ -688,10 +688,10 @@ impl Verifier<'_> {
             .base
             .local_storage()
             .and_then(|storage| function.storage(storage));
-        if matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
+        let alias_root = matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
             || destination_storage
-                .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
-        {
+                .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)));
+        if alias_root && (construction || !projects_into_array_element_storage(destination_place)) {
             self.block_error(
                 function.callable(),
                 block.id,

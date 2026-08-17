@@ -33,3 +33,11 @@ source = "array_whole_pointee_assignment.ska"
 match = "starts-with"
 inline = """error[RES020]: a complete shared pointee cannot be replaced
  --> tests/golden/arrays/array_whole_pointee_assignment.ska:3:5"""
+
+[[test]]
+name = "mutable_alias_class_element_assignment"
+mode = "run"
+source = "mutable_alias_class_element_assignment.ska"
+[[test.run]]
+name = "direct_and_nested"
+expect = { exit = 42 }

@@ -62,6 +62,83 @@ fn class_array_elements_participate_in_copy_assignment() {
 }
 
 #[test]
+fn class_array_elements_are_owning_beyond_mutable_array_alias_roots() {
+    let program = lower_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "}\n",
+        "fn replace(mut ref items: Item[], ref source: Item) -> unit {\n",
+        "  items[0] = source;\n",
+        "}\n",
+        "fn replace_nested(mut ref rows: Item[][]) -> unit {\n",
+        "  rows[0][0] = Item(23);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var items: Item[] = Item[]{Item(1)};\n",
+        "  var source: Item = Item(19);\n",
+        "  replace(items, source);\n",
+        "  var rows: Item[][] = Item[][]{Item[]{Item(2)}};\n",
+        "  replace_nested(rows);\n",
+        "  return items[0].value + rows[0][0].value;\n",
+        "}\n",
+    ));
+
+    verify_mir(&program).expect("array backing elements must be owning through alias roots");
+    let mut projection_depths = program
+        .definitions
+        .iter()
+        .flat_map(|definition| &definition.body.blocks)
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::CopyAssign(copy)
+                if matches!(copy.destination.base, MirPlaceBase::AliasParameter(_)) =>
+            {
+                Some(
+                    copy.destination
+                        .projections
+                        .iter()
+                        .filter(|projection| {
+                            matches!(projection, MirPlaceProjection::ArrayElement { .. })
+                        })
+                        .count(),
+                )
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    projection_depths.sort_unstable();
+    assert_eq!(projection_depths, [1, 2]);
+
+    let mut malformed = program;
+    let replace = malformed
+        .declarations
+        .iter()
+        .find(|declaration| declaration.name == "replace")
+        .unwrap()
+        .id;
+    let destination = malformed
+        .definitions
+        .get_mut_for_test(replace)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::CopyAssign(copy) => Some(&mut copy.destination),
+            _ => None,
+        })
+        .unwrap();
+    destination.projections.clear();
+    let errors = verify_mir(&malformed).unwrap_err().to_string();
+    assert!(
+        errors.contains("copy-assignment destination must be owning storage"),
+        "{errors}"
+    );
+}
+
+#[test]
 fn private_initializer_array_default_plans_reject_identity_mutations() {
     let mut program = lower_text(concat!(
         "class Item {\n",

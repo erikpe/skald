@@ -59,16 +59,6 @@ class Machine {
     }
 }
 
-class Reduction {
-    matrix: Rat[][];
-    pivot_columns: i64[];
-
-    init(matrix: Rat[][], pivot_columns: i64[]) {
-        self.matrix = matrix;
-        self.pivot_columns = pivot_columns;
-    }
-}
-
 fn abs_i64(value: i64) -> i64 {
     if (value < 0) {
         return 0 - value;
@@ -218,7 +208,7 @@ fn build_matrix(ref machine: Machine) -> Rat[][] {
     return matrix;
 }
 
-fn rref(matrix: Rat[][], num_buttons: i64) -> Reduction {
+fn rref(mut ref matrix: Rat[][], num_buttons: i64) -> i64[] {
     var pivot_columns: i64[] = i64[](matrix.len());
     var pivot_count: i64 = 0;
     var pivot_row: i64 = 0;
@@ -237,12 +227,9 @@ fn rref(matrix: Rat[][], num_buttons: i64) -> Reduction {
         if (found_row != pivot_row) {
             var swap_col: i64 = 0;
             while (swap_col <= num_buttons) {
-                var num: i64 = matrix[pivot_row][swap_col].num;
-                var den: i64 = matrix[pivot_row][swap_col].den;
-                matrix[pivot_row][swap_col].num = matrix[found_row][swap_col].num;
-                matrix[pivot_row][swap_col].den = matrix[found_row][swap_col].den;
-                matrix[found_row][swap_col].num = num;
-                matrix[found_row][swap_col].den = den;
+                var value: Rat = matrix[pivot_row][swap_col];
+                matrix[pivot_row][swap_col] = matrix[found_row][swap_col];
+                matrix[found_row][swap_col] = value;
                 swap_col = swap_col + 1;
             }
         }
@@ -251,8 +238,7 @@ fn rref(matrix: Rat[][], num_buttons: i64) -> Reduction {
         var normalize_col: i64 = col;
         while (normalize_col <= num_buttons) {
             var normalized: Rat = matrix[pivot_row][normalize_col].div(pivot);
-            matrix[pivot_row][normalize_col].num = normalized.num;
-            matrix[pivot_row][normalize_col].den = normalized.den;
+            matrix[pivot_row][normalize_col] = normalized;
             normalize_col = normalize_col + 1;
         }
 
@@ -266,8 +252,7 @@ fn rref(matrix: Rat[][], num_buttons: i64) -> Reduction {
                         var updated: Rat = matrix[eliminate_row][update_col].sub(
                             factor.mul(matrix[pivot_row][update_col])
                         );
-                        matrix[eliminate_row][update_col].num = updated.num;
-                        matrix[eliminate_row][update_col].den = updated.den;
+                        matrix[eliminate_row][update_col] = updated;
                         update_col = update_col + 1;
                     }
                 }
@@ -281,7 +266,7 @@ fn rref(matrix: Rat[][], num_buttons: i64) -> Reduction {
         col = col + 1;
     }
 
-    return Reduction(matrix, pivot_columns[:pivot_count]);
+    return pivot_columns[:pivot_count];
 }
 
 fn row_has_coefficient(ref row: Rat[], num_buttons: i64) -> bool {
@@ -412,18 +397,19 @@ fn solve_machine(ref line: Str) -> i64 {
     sort_buttons(machine, upper_bounds);
 
     var num_buttons: i64 = (i64) machine.buttons.len();
-    var reduction: Reduction = rref(build_matrix(machine), num_buttons);
-    validate_consistent(reduction.matrix, num_buttons);
+    var matrix: Rat[][] = build_matrix(machine);
+    var pivot_columns: i64[] = rref(matrix, num_buttons);
+    validate_consistent(matrix, num_buttons);
 
-    var free_columns: i64[] = collect_free_columns(num_buttons, reduction.pivot_columns);
+    var free_columns: i64[] = collect_free_columns(num_buttons, pivot_columns);
     if (free_columns.len() > 3u) {
         panic("too many free variables");
     }
     var free_values: i64[] = i64[](free_columns.len());
     var best: i64 = search_best_cost(
-        reduction.matrix,
+        matrix,
         num_buttons,
-        reduction.pivot_columns,
+        pivot_columns,
         free_columns,
         upper_bounds,
         free_values,
