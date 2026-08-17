@@ -14,6 +14,11 @@ No implementation roadmap is currently planned but not started.
 
 ## Design proposals
 
+The proposed [generic interfaces design](GENERIC_INTERFACES_DESIGN_PROPOSAL.md)
+extends closed semantic specialization to exact interface applications. It is
+not yet frozen or implemented; primitive conformances, operator overloading,
+and iteration protocols remain explicitly outside its scope.
+
 The completed private cell fields design and implementation roadmap are
 preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).
 
