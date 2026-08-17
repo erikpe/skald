@@ -10,14 +10,18 @@ No implementation roadmap is currently in progress.
 
 ## Planned
 
-No implementation roadmap is currently planned but not started.
+The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is planned;
+I0, generic interface syntax and recovery, is next. It implements the frozen
+language and compiler contracts by extending the existing generic-class
+specialization and ordinary interface-dispatch foundations. No other active
+roadmap blocks it; primitive conformances, operators, and iteration remain
+separate future work.
 
 ## Design proposals
 
-The proposed [generic interfaces design](GENERIC_INTERFACES_DESIGN_PROPOSAL.md)
-extends closed semantic specialization to exact interface applications. It is
-not yet frozen or implemented; primitive conformances, operator overloading,
-and iteration protocols remain explicitly outside its scope.
+The confirmed generic interfaces decisions are preserved in the
+[archive](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) and promoted into
+focused frozen language and compiler contracts.
 
 The completed private cell fields design and implementation roadmap are
 preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).

@@ -380,10 +380,11 @@ interface conformance, slicing, dispatch, base lifecycle, and access rules
 apply to the exact closed identities. A template cannot extend a bare type
 parameter or raw generic name.
 
-Generic classes may implement existing non-generic interfaces. Each closed
-application is checked independently because substituted signatures may affect
-conformance. Generic interfaces and generic interface requirements are not in
-the initial profile.
+Generic classes currently implement existing non-generic interfaces. Each
+closed application is checked independently because substituted signatures may
+affect conformance. Generic interfaces remain outside this implemented profile;
+their separate [frozen contract](GENERIC_INTERFACES.md) defines the planned
+extension.
 
 ## Names, modules, and visibility
 
@@ -430,7 +431,8 @@ The frozen initial profile excludes:
 
 - generic top-level functions, methods, and constructors independent of their
   class's parameters;
-- generic interfaces and interface requirements;
+- generic interfaces and interface requirements in the current implementation
+  (their separate frozen contract is planned for implementation);
 - member-level constraints;
 - generic aliases and other generic declaration families;
 - argument inference, defaults, wildcards, existentials, and higher-kinded

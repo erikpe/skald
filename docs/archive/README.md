@@ -151,6 +151,10 @@ Resolved generic-class design inputs:
 
 - [generic classes design record](GENERIC_CLASSES_DESIGN_PROPOSAL.md)
 
+Resolved generic-interface design inputs:
+
+- [generic interfaces design record](GENERIC_INTERFACES_DESIGN_PROPOSAL.md)
+
 Resolved generic-class follow-ups:
 
 - [generic classes discoveries](GENERIC_CLASSES_DISCOVERIES.md)

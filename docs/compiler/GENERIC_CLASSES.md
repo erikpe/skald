@@ -467,10 +467,12 @@ gates to each task and finishes with `make check`, `make msrv-check`,
 
 ## Deliberate exclusions
 
-The compiler contract does not provide generic functions, independent generic
-methods or constructors, generic interfaces, member-level constraints,
+The compiler contract does not currently provide generic functions,
+independent generic methods or constructors, generic interfaces, member-level constraints,
 inference, defaults, variance, partial specialization, parameter construction,
 source-visible lifecycle bounds, lazy method validation, erased code, runtime
 dictionaries, reflection, or separate-compilation specialization ownership.
-Those require later language designs rather than implementation extensions to
-this frozen profile.
+Generic interfaces now have a separate frozen
+[compiler contract](GENERIC_INTERFACES.md) and active implementation roadmap;
+the other exclusions require later language designs rather than extensions to
+this generic-class profile.

@@ -194,6 +194,15 @@ identities, caching, finite-recursion handling, and complete ordinary closed
 declarations and resolved bodies are implemented; lifecycle and later phases
 remain staged by the active roadmap.
 
+The frozen, not-yet-implemented
+[generic-interface specialization contract](GENERIC_INTERFACES.md) extends
+that boundary with interface-template and template-requirement identities,
+parameter-bearing claims and bounds, coordinated class/interface
+specialization, and exact closed interface identities. Successful closure
+reuses ordinary conformance, views, witness calls, HIR, verified MIR, and
+backend metadata without runtime dictionaries or an ABI change. Its
+[active roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md) owns delivery.
+
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
 The x86-64 target executes inline and shared-outer arrays containing

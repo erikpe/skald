@@ -1,9 +1,8 @@
 # Generic Interfaces Design Proposal
 
-Status: proposed design; recommended direction, not yet frozen or implemented.
-The complete decision register should be reviewed and confirmed before living
-language or compiler contracts are changed and before an implementation
-roadmap is created.
+Status: frozen design; GI1 through GI16 were confirmed together on 2026-08-17
+and promoted into living language and compiler contracts before the
+implementation roadmap was created.
 
 This proposal extends Skald's existing interface model with explicit type
 parameters and closed interface applications. It deliberately builds on the
@@ -152,28 +151,28 @@ the controlling architecture for this proposal.
 
 ## Decision register
 
-| ID | Decision | Recommended direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [GI1](#gi1--source-declarations-and-applications) | Source surface | Add `interface I<T, U>`, require explicit applications, and admit parameter-bearing applications only inside templates | **Proposed** |
-| [GI2](#gi2--template-parameter-and-requirement-identity) | Identity | Add interface-template and template-requirement identities; generalize type-parameter ownership | **Proposed** |
-| [GI3](#gi3--closed-application-identity) | Closed representation | Give each canonical closed application one ordinary `InterfaceId` and ordinary requirement IDs | **Proposed** |
-| [GI4](#gi4--semantic-substitution-and-application-legality) | Substitution | Substitute structurally, then validate all closed signatures and nested applications contextually | **Proposed** |
-| [GI5](#gi5--generic-where-bounds) | Constraints | Permit closed or parameter-bearing generic interface applications on the right of template-level `where` bounds | **Proposed** |
-| [GI6](#gi6--nominal-conformance) | Conformance | Check each exact closed application independently after class and interface specialization | **Proposed** |
-| [GI7](#gi7--bound-member-selection-and-dispatch) | Calls | Resolve to a template requirement first, then map to the exact closed requirement and preserve ordinary dispatch | **Proposed** |
-| [GI8](#gi8--views-ownership-casts-and-tests) | Object model | Reuse bare-view, `shared`, cast, and type-test semantics for the exact closed interface | **Proposed** |
-| [GI9](#gi9--invariance-and-multiple-applications) | Compatibility | Keep applications invariant and allow multiple exact applications when ordinary method rules can satisfy all of them | **Proposed** |
-| [GI10](#gi10--specialization-discovery-caching-and-recursion) | Specialization | Use coordinated deterministic class/interface worklists, early IDs, cached failures, and conservative expansion guards | **Proposed** |
-| [GI11](#gi11--modules-visibility-and-name-resolution) | Modules | Reuse top-level visibility; resolve template-owned names at definition sites and arguments at application sites | **Proposed** |
-| [GI12](#gi12--compiler-phase-and-ir-boundaries) | Compiler architecture | Extend the template layer and close every application before ordinary resolved interfaces and HIR | **Proposed** |
-| [GI13](#gi13--target-realization-and-abi) | Runtime | Emit ordinary closed witness metadata without dictionaries, erasure, or ABI additions | **Proposed** |
-| [GI14](#gi14--diagnostics-dumps-and-testing) | Quality | Expose exact applications, obligations, mappings, origins, and recursion deterministically | **Proposed** |
-| [GI15](#gi15--initial-exclusions-and-future-consumers) | Boundary | Exclude primitives, operators, iteration, generic methods, variance, associated types, and erased generics | **Proposed** |
-| [GI16](#gi16--promotion-and-roadmap-boundary) | Delivery | Confirm the register, promote living contracts, then create a PR-sized implementation roadmap | **Proposed** |
+| [GI1](#gi1--source-declarations-and-applications) | Source surface | Add `interface I<T, U>`, require explicit applications, and admit parameter-bearing applications only inside templates | **Confirmed** |
+| [GI2](#gi2--template-parameter-and-requirement-identity) | Identity | Add interface-template and template-requirement identities; generalize type-parameter ownership | **Confirmed** |
+| [GI3](#gi3--closed-application-identity) | Closed representation | Give each canonical closed application one ordinary `InterfaceId` and ordinary requirement IDs | **Confirmed** |
+| [GI4](#gi4--semantic-substitution-and-application-legality) | Substitution | Substitute structurally, then validate all closed signatures and nested applications contextually | **Confirmed** |
+| [GI5](#gi5--generic-where-bounds) | Constraints | Permit closed or parameter-bearing generic interface applications on the right of template-level `where` bounds | **Confirmed** |
+| [GI6](#gi6--nominal-conformance) | Conformance | Check each exact closed application independently after class and interface specialization | **Confirmed** |
+| [GI7](#gi7--bound-member-selection-and-dispatch) | Calls | Resolve to a template requirement first, then map to the exact closed requirement and preserve ordinary dispatch | **Confirmed** |
+| [GI8](#gi8--views-ownership-casts-and-tests) | Object model | Reuse bare-view, `shared`, cast, and type-test semantics for the exact closed interface | **Confirmed** |
+| [GI9](#gi9--invariance-and-multiple-applications) | Compatibility | Keep applications invariant and allow multiple exact applications when ordinary method rules can satisfy all of them | **Confirmed** |
+| [GI10](#gi10--specialization-discovery-caching-and-recursion) | Specialization | Use coordinated deterministic class/interface worklists, early IDs, cached failures, and conservative expansion guards | **Confirmed** |
+| [GI11](#gi11--modules-visibility-and-name-resolution) | Modules | Reuse top-level visibility; resolve template-owned names at definition sites and arguments at application sites | **Confirmed** |
+| [GI12](#gi12--compiler-phase-and-ir-boundaries) | Compiler architecture | Extend the template layer and close every application before ordinary resolved interfaces and HIR | **Confirmed** |
+| [GI13](#gi13--target-realization-and-abi) | Runtime | Emit ordinary closed witness metadata without dictionaries, erasure, or ABI additions | **Confirmed** |
+| [GI14](#gi14--diagnostics-dumps-and-testing) | Quality | Expose exact applications, obligations, mappings, origins, and recursion deterministically | **Confirmed** |
+| [GI15](#gi15--initial-exclusions-and-future-consumers) | Boundary | Exclude primitives, operators, iteration, generic methods, variance, associated types, and erased generics | **Confirmed** |
+| [GI16](#gi16--promotion-and-roadmap-boundary) | Delivery | Confirm the register, promote living contracts, then create a PR-sized implementation roadmap | **Confirmed** |
 
 ## GI1 — Source declarations and applications
 
-The proposed grammar shape is:
+The confirmed grammar shape is:
 
 ```text
 generic-parameter-list     = "<" identifier {"," identifier} ">"
@@ -249,8 +248,8 @@ non-executable `InterfaceTemplateId`. It is distinct from both
 `ClassTemplateId` and `InterfaceId`.
 
 The current `TypeParameterId` is class-template-specific. Generic interfaces
-should generalize it around an explicit owner rather than encode an interface
-as a synthetic class:
+generalize it around an explicit owner rather than encode an interface as a
+synthetic class:
 
 ```text
 GenericTemplateId =
@@ -364,7 +363,7 @@ interface Marker<T> {}
 - `Marker<Readable>` may be valid because its parameter creates no storage,
   result, alias, or lifecycle obligation.
 
-The compiler should reuse the generic-class contextual-requirement model for
+The compiler reuses the generic-class contextual-requirement model for
 interface signatures. Definition-independent errors are diagnosed once on the
 template. Application-dependent failures point both to the supplied argument
 and to the substituted requirement position that made it invalid.
@@ -390,7 +389,7 @@ where T: RankedAs<Rank>
 }
 ```
 
-Interface-level `where` clauses are recommended because they make nested
+Interface-level `where` clauses are included because they make nested
 constrained applications composable. Without them, an interface signature
 could not soundly mention a generic class or interface whose application
 requires a nominal fact about one of the enclosing parameters.
@@ -535,7 +534,7 @@ Each application receives an independent conformance check and witness entry.
 This is useful for marker interfaces and for cases where the same ordinary
 method can exactly satisfy both closed signatures. Skald's lack of method
 overloading naturally rejects incompatible requirements that would need two
-same-named methods with different signatures. The design should not add a
+same-named methods with different signatures. The design does not add a
 broader blanket prohibition merely because the template identity is shared.
 
 Duplicate claims of the same closed application, including redundant exact
@@ -549,8 +548,8 @@ interface signatures, and nested generic applications. A parameter-bearing
 application requests specialization when enclosing substitution first closes
 it.
 
-Class and interface requests can discover each other, so specialization
-should have one deterministic coordinator even if declaration-specific logic
+Class and interface requests can discover each other, so specialization has
+one deterministic coordinator even if declaration-specific logic
 and caches remain separate. Its request domain is conceptually:
 
 ```text
@@ -582,7 +581,7 @@ filling their declarations. Ordinary type and containment validation remains
 responsible for whether each closed use is legal.
 
 Generic transformation can request an infinite family, for example an
-interface whose signature mentions `Expanding<T[]>`. The recommended initial
+interface whose signature mentions `Expanding<T[]>`. The confirmed initial
 guard matches generic classes: if the same generic template reappears on the
 active cross-kind specialization path with a different argument sequence,
 reject the application as non-terminating generic specialization. Identical
@@ -619,7 +618,7 @@ ABI are deferred.
 
 ## GI12 — Compiler phase and IR boundaries
 
-The target-independent pipeline should remain:
+The target-independent pipeline remains:
 
 ```text
 generic class/interface syntax
@@ -656,10 +655,10 @@ substitution, or dictionary variants. Their existing declaration-presence and
 requirement-ownership verifiers continue to establish the lower-phase trust
 boundary.
 
-Shared infrastructure should be extracted around template ownership,
+Shared infrastructure is extracted around template ownership,
 structural substitution, application origins, deterministic scheduling,
 recursion paths, and diagnostics. Class-specific lifecycle/body specialization
-and interface-specific requirement specialization should remain separate
+and interface-specific requirement specialization remain separate
 owners rather than one large generic resolver module.
 
 ## GI13 — Target realization and ABI
@@ -691,7 +690,7 @@ The initial feature adds no:
 
 ## GI14 — Diagnostics, dumps, and testing
 
-Diagnostics should distinguish declaration, application, and conformance
+Diagnostics distinguish declaration, application, and conformance
 failures. Important cases include:
 
 - duplicate parameters or requirements in an interface template;
@@ -706,11 +705,11 @@ failures. Important cases include:
 - invalid casts or type tests between exact applications; and
 - recursive specialization expansion, including the complete cross-kind path.
 
-Application-dependent errors should report both causes. For example,
-`Producer<Readable>` should point to `Readable` at the application and note
+Application-dependent errors report both causes. For example,
+`Producer<Readable>` points to `Readable` at the application and notes
 that `Producer<T>.produce` uses `T` as an owning result.
 
-Resolved dumps should expose:
+Resolved dumps expose:
 
 - interface templates, parameters, bounds, and template requirements;
 - structural parameter-bearing interface applications;
@@ -721,7 +720,7 @@ Resolved dumps should expose:
 - application origins and specialization state transitions; and
 - deterministic recursion paths for failures.
 
-The validation matrix should include:
+The validation matrix includes:
 
 - parser and recovery coverage for declarations, nested closers, bounds,
   claims, casts, tests, and raw names;
@@ -748,7 +747,7 @@ The validation matrix should include:
 - resolved, HIR, MIR, verifier, x86-64, native golden, and runtime-ABI
   regression coverage.
 
-Repository validation should use the supported `make docs-check`, focused
+Repository validation uses the supported `make docs-check`, focused
 Rust test targets during implementation, and the documented golden/check
 interfaces rather than ad hoc test runners.
 
@@ -785,15 +784,13 @@ The initial generic-interface feature deliberately excludes:
 These exclusions are not judgments against later features. In particular, a
 future standard library could define `Iterable<Item, State>`, and future
 operator work could define `Add<Right, Result>`, using the exact generic
-interface machinery proposed here. Their compiler-provided conformances,
+interface machinery confirmed here. Their compiler-provided conformances,
 syntax lowering, optimization guarantees, and ergonomics require separate
 designs after generic interfaces work end to end.
 
 ## GI16 — Promotion and roadmap boundary
 
-This document is a design proposal, not an implementation roadmap. The next
-decision gate should confirm or revise GI1 through GI15 as one coherent
-contract, especially:
+GI1 through GI15 were confirmed as one coherent contract, including:
 
 - closed `InterfaceId` specialization rather than dictionaries or erasure;
 - interface-level `where` clauses;
@@ -802,8 +799,12 @@ contract, especially:
 - the coordinated class/interface recursion model; and
 - the explicit future boundary around primitives, operators, and iteration.
 
-After confirmation, the design should be promoted into focused living
-language and compiler contracts. Only then should an implementation roadmap
-divide work into dependency-ordered PR-sized tasks. The roadmap must not
-quietly reopen representation, ownership, conformance, dispatch, or ABI
+Promotion added focused living language and compiler contracts, retained the
+implemented grammar unchanged until syntax support lands, changed the status
+matrix to frozen design, archived this proposal as the historical decision
+record, and created an active
+[implementation roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md).
+
+The roadmap divides delivery into dependency-ordered PR-sized tasks. It must
+not quietly reopen representation, ownership, conformance, dispatch, or ABI
 decisions while scheduling implementation.

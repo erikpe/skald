@@ -65,6 +65,15 @@ semantics, deterministic closed identities, declarations, and complete
 ordinary resolved bodies are implemented and explicitly gated before typed
 HIR while lifecycle and later integration remain staged.
 
+The frozen, not-yet-implemented
+[generic-interface specialization contract](GENERIC_INTERFACES.md) extends the
+same pre-HIR layer. Interface templates and their template requirement
+identities remain resolution-only products; a coordinated class/interface
+worklist closes every requested application into ordinary `InterfaceId` and
+`InterfaceRequirementId` values. Ordinary resolved executable declarations,
+HIR, MIR, verification, and backends remain free of parameter-bearing
+interface terms, dictionaries, or runtime type arguments.
+
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus
 the selected entry module. Every top-level function, class, and interface

@@ -568,6 +568,20 @@ gain no generic-specific harness; compiler, backend, linker-surface, and native
 specialization tests provide the feature evidence while the existing runtime
 contract suite continues to freeze the version-9 header and archive surface.
 
+## Frozen generic-interface ABI boundary
+
+The frozen, not-yet-implemented
+[generic-interface specialization contract](GENERIC_INTERFACES.md) adds no
+public C symbol, allocation-header field, runtime-owned type argument,
+dictionary, witness-construction service, reflection record, or ABI-version
+change. Closed generic interfaces use the same compiler-emitted object metadata
+and interface witness dispatch as ordinary interfaces.
+
+Specialization identities, private symbols, and additional exact witness
+entries are compiler/backend concerns. The runtime receives neither a template
+identity nor an argument list. Existing external-signature eligibility remains
+unchanged, and the compatibility marker remains `ska_rt_abi_v9`.
+
 ## Produced exact-class receiver ABI boundary
 
 The implemented
