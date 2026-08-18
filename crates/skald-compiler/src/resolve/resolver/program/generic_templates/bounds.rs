@@ -17,6 +17,9 @@ pub(super) fn resolve_bounds(
     };
 
     for requirement in &clause.requirements {
+        if reject_unsupported_generic_interface_application(&requirement.interface, diagnostics) {
+            continue;
+        }
         let Some(parameter) = (!requirement.parameter.is_qualified())
             .then(|| parameters.get(requirement.parameter.text.as_str()))
             .flatten()
@@ -98,6 +101,9 @@ pub(super) fn resolve_implemented_interfaces(
     let mut interfaces = Vec::new();
     let mut seen = HashSet::new();
     for claim in &class.implemented_interfaces {
+        if reject_unsupported_generic_interface_application(claim, diagnostics) {
+            continue;
+        }
         match lookup.select(claim, diagnostics) {
             TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Interface(interface),

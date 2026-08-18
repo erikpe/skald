@@ -1,7 +1,8 @@
 # Generic-Interface Specialization
 
-Status: frozen compiler contract; not yet implemented. This document defines
-the target-independent compilation contract for the frozen
+Status: frozen compiler contract; source AST implemented and semantic
+resolution explicitly gated, specialization and execution not yet implemented.
+This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
 availability.

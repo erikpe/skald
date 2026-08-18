@@ -127,11 +127,53 @@ impl AstDumper {
         }
     }
 
+    fn generic_parameters(&mut self, parameters: &GenericParameterList) {
+        self.line("TypeParameters", parameters.span);
+        self.indented(|dumper| {
+            dumper.line("LeftAngle", parameters.left_angle_span);
+            for (index, parameter) in parameters.parameters.iter().enumerate() {
+                dumper.named("Parameter", &parameter.text, parameter.span);
+                if let Some(comma) = parameters.comma_spans.get(index) {
+                    dumper.line("Comma", *comma);
+                }
+            }
+            dumper.line("RightAngle", parameters.right_angle_span);
+        });
+    }
+
+    fn generic_where_clause(&mut self, clause: &GenericWhereClause) {
+        self.line("WhereClause", clause.span);
+        self.indented(|dumper| {
+            dumper.line("Where", clause.where_span);
+            for (index, requirement) in clause.requirements.iter().enumerate() {
+                dumper.line("Requirement", requirement.span);
+                dumper.indented(|dumper| {
+                    dumper.named(
+                        "Parameter",
+                        &requirement.parameter.text,
+                        requirement.parameter.span,
+                    );
+                    dumper.line("Colon", requirement.colon_span);
+                    dumper.named_type("Interface", &requirement.interface);
+                });
+                if let Some(comma) = clause.comma_spans.get(index) {
+                    dumper.line("Comma", *comma);
+                }
+            }
+        });
+    }
+
     fn interface(&mut self, interface: &InterfaceDecl) {
         self.line("Interface", interface.span);
         self.indented(|dumper| {
             dumper.visibility(interface.visibility);
             dumper.named("Name", &interface.name.text, interface.name.span);
+            if let Some(parameters) = &interface.type_parameters {
+                dumper.generic_parameters(parameters);
+            }
+            if let Some(clause) = &interface.where_clause {
+                dumper.generic_where_clause(clause);
+            }
             dumper.heading("Requirements");
             dumper.indented(|dumper| {
                 for requirement in &interface.requirements {
@@ -159,44 +201,16 @@ impl AstDumper {
             dumper.visibility(class.visibility);
             dumper.named("Name", &class.name.text, class.name.span);
             if let Some(parameters) = &class.type_parameters {
-                dumper.line("TypeParameters", parameters.span);
-                dumper.indented(|dumper| {
-                    dumper.line("LeftAngle", parameters.left_angle_span);
-                    for (index, parameter) in parameters.parameters.iter().enumerate() {
-                        dumper.named("Parameter", &parameter.text, parameter.span);
-                        if let Some(comma) = parameters.comma_spans.get(index) {
-                            dumper.line("Comma", *comma);
-                        }
-                    }
-                    dumper.line("RightAngle", parameters.right_angle_span);
-                });
+                dumper.generic_parameters(parameters);
             }
             if let Some(base) = &class.direct_base {
                 dumper.named_type("DirectBase", base);
             }
             for interface in &class.implemented_interfaces {
-                dumper.name_path("Implements", interface);
+                dumper.named_type("Implements", interface);
             }
             if let Some(clause) = &class.where_clause {
-                dumper.line("WhereClause", clause.span);
-                dumper.indented(|dumper| {
-                    dumper.line("Where", clause.where_span);
-                    for (index, requirement) in clause.requirements.iter().enumerate() {
-                        dumper.line("Requirement", requirement.span);
-                        dumper.indented(|dumper| {
-                            dumper.named(
-                                "Parameter",
-                                &requirement.parameter.text,
-                                requirement.parameter.span,
-                            );
-                            dumper.line("Colon", requirement.colon_span);
-                            dumper.name_path("Interface", &requirement.interface);
-                        });
-                        if let Some(comma) = clause.comma_spans.get(index) {
-                            dumper.line("Comma", *comma);
-                        }
-                    }
-                });
+                dumper.generic_where_clause(clause);
             }
             dumper.heading("Members");
             dumper.indented(|dumper| {

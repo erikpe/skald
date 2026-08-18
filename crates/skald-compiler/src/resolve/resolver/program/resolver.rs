@@ -517,6 +517,24 @@ impl<'ast> ProgramResolver<'ast> {
         for unit in &mut self.units {
             for (ast_index, declaration) in unit.ast.declarations.iter().enumerate() {
                 let name = declaration.name();
+                if let syntax::TopLevelDeclaration::Interface(interface) = declaration {
+                    if interface.type_parameters.is_some() || interface.where_clause.is_some() {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                UNSUPPORTED_GENERIC_INTERFACE,
+                                format!(
+                                    "generic interface `{}` is not yet supported",
+                                    interface.name.text
+                                ),
+                            )
+                            .with_primary_label(
+                                interface.name.span,
+                                "syntax is preserved, but semantic resolution is not implemented",
+                            ),
+                        );
+                        continue;
+                    }
+                }
                 if name.text == "Obj" {
                     self.diagnostics.push(
                         Diagnostic::error(

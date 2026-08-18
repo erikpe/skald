@@ -31,7 +31,7 @@ impl Parser<'_> {
             let right_angle = self.advance();
             self.report(
                 INVALID_GENERIC_SYNTAX,
-                "a generic class must declare at least one type parameter",
+                "a generic declaration must declare at least one type parameter",
                 self.cover(left_angle.span, right_angle.span),
                 "remove the empty list or add a parameter name",
             );
@@ -100,7 +100,7 @@ impl Parser<'_> {
         loop {
             let parameter = self.parse_name("expected a type parameter after `where`")?;
             let colon = self.expect(TokenKind::Colon, "`:` after the constrained parameter")?;
-            let interface = self.parse_name_path("expected an interface name after `:`")?;
+            let interface = self.parse_named_type("expected an interface name after `:`")?;
             let requirement_span = self.cover(parameter.span, interface.span);
             requirements.push(GenericRequirementSyntax {
                 parameter,
@@ -122,7 +122,11 @@ impl Parser<'_> {
                 }
                 continue;
             }
-            if self.at(TokenKind::Identifier) && !self.at_contextual("extends") {
+            if self.at(TokenKind::Identifier)
+                && !self.at_contextual("extends")
+                && !self.at_contextual("implements")
+                && !self.at_contextual("where")
+            {
                 self.report(
                     INVALID_GENERIC_SYNTAX,
                     "expected `,` between generic requirements",
@@ -146,6 +150,25 @@ impl Parser<'_> {
     }
 
     fn parse_generic_argument_list(&mut self) -> Option<GenericArgumentList> {
+        self.generic_argument_depth += 1;
+        let result = self.parse_generic_argument_list_contents();
+        self.generic_argument_depth -= 1;
+
+        if self.generic_argument_depth == 0 {
+            if let Some(extra_closer) = self.pending_generic_closer.take() {
+                self.report(
+                    INVALID_GENERIC_SYNTAX,
+                    "unexpected `>` after generic type arguments",
+                    extra_closer.span,
+                    "remove this extra closer",
+                );
+            }
+        }
+
+        result
+    }
+
+    fn parse_generic_argument_list_contents(&mut self) -> Option<GenericArgumentList> {
         let left_angle = self.advance();
         debug_assert_eq!(left_angle.kind, TokenKind::Less);
         if self.at_generic_argument_close() {
@@ -170,6 +193,13 @@ impl Parser<'_> {
             })?;
             arguments.push(argument);
 
+            // A closer split from `>>` belongs to this argument list before
+            // any current token can act as its separator. The current comma,
+            // when present, belongs to an enclosing generic, bound, or claim
+            // list and must remain available to that parser.
+            if self.pending_generic_closer.is_some() {
+                break;
+            }
             if let Some(comma) = self.consume(TokenKind::Comma) {
                 comma_spans.push(comma.span);
                 if self.at_generic_argument_close() {

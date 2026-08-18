@@ -97,6 +97,7 @@ struct Parser<'source> {
     expression_parse_depth: usize,
     brace_depth: usize,
     class_depth: usize,
+    generic_argument_depth: usize,
     recovering_from_excessive_nesting: bool,
     pending_generic_closer: Option<Token>,
 }
@@ -112,6 +113,7 @@ impl<'source> Parser<'source> {
             expression_parse_depth: 0,
             brace_depth: 0,
             class_depth: 0,
+            generic_argument_depth: 0,
             recovering_from_excessive_nesting: false,
             pending_generic_closer: None,
         }

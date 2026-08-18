@@ -42,7 +42,10 @@ fn exercise_generic_syntax_mutations() {
         "class Pair<Left, Right> { left: Left; right: Right; } fn main() -> i64 { return 0; }",
         "class Box<T> { value: T?[]; } fn use(ref value: Box<Box<i64?>[]>) -> unit {} fn main() -> i64 { return 0; }",
         "interface Comparable { fn compare(ref other: Obj) -> i64; } class Sorted<T> where T: Comparable { value: T; } fn main() -> i64 { return 0; }",
+        "interface Producer<T> where T: Marker<Outer<T>> { fn produce() -> T; } class Use<T> implements Producer<T> {} fn main() -> i64 { return 0; }",
+        "interface PairSource<Left, Right> { fn left() -> Left; fn right() -> Right; } class Pair<Left, Right> implements PairSource<Left, Right> {} fn main() -> i64 { return 0; }",
         "class Broken<T where T Comparable, T: { value: Box<T; } fn recovered() -> i64 { return 0; }",
+        "interface Broken<T U where T: Marker<Outer<T>>, U Marker { fn read(value: T -> U; } fn recovered() -> i64 { return 0; }",
     ];
 
     for (seed_index, seed) in SEEDS.iter().enumerate() {

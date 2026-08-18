@@ -291,11 +291,11 @@ defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 generic-parameter-list     = "<" identifier {"," identifier} ">"
 generic-where-clause       = "where" generic-requirement
                              {"," generic-requirement}
-generic-requirement        = identifier ":" declaration-path
+generic-requirement        = identifier ":" named-type
 
 class-declaration           = "class" identifier [generic-parameter-list]
                               ["extends" named-type]
-                              ["implements" declaration-path {"," declaration-path}]
+                              ["implements" named-type {"," named-type}]
                               [generic-where-clause]
                               "{" {class-member} "}"
 
@@ -332,6 +332,8 @@ static-method-declaration   = ["private"] "static" "fn" identifier parameter-lis
 method-modifier             = "virtual" | "override"
 
 interface-declaration       = "interface" identifier
+                              [generic-parameter-list]
+                              [generic-where-clause]
                               "{" {interface-requirement} "}"
 interface-requirement       = ["mut"] "fn" identifier parameter-list
                               "->" result-type ";"
@@ -353,6 +355,15 @@ requirements, and specializes requested closed declarations and bodies into
 ordinary class and callable identities without introducing executable
 placeholder types. Accepted closed applications use the ordinary lifecycle,
 HIR, MIR, verification, and backend pipeline.
+
+Generic interface headers, parameter-bearing `implements` targets, and generic
+interface applications on the right of `where` requirements are currently a
+syntax-only stage of the frozen
+[generic-interface contract](GENERIC_INTERFACES.md). The AST preserves their
+complete named-type applications and punctuation. Resolution reports
+`RES051` before assigning a generic interface an ordinary `InterfaceId` or
+reducing an applied claim or bound to its unparameterized name. Ordinary
+non-generic interfaces and generic classes retain their implemented semantics.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,

@@ -132,7 +132,7 @@ pub struct ClassDecl {
     pub name: Name,
     pub type_parameters: Option<GenericParameterList>,
     pub direct_base: Option<NamedTypeSyntax>,
-    pub implemented_interfaces: Vec<Name>,
+    pub implemented_interfaces: Vec<NamedTypeSyntax>,
     pub where_clause: Option<GenericWhereClause>,
     pub members: Vec<ClassMember>,
     pub span: Span,
@@ -159,7 +159,7 @@ pub struct GenericWhereClause {
 pub struct GenericRequirementSyntax {
     pub parameter: Name,
     pub colon_span: Span,
-    pub interface: Name,
+    pub interface: NamedTypeSyntax,
     pub span: Span,
 }
 
@@ -167,6 +167,8 @@ pub struct GenericRequirementSyntax {
 pub struct InterfaceDecl {
     pub visibility: Visibility,
     pub name: Name,
+    pub type_parameters: Option<GenericParameterList>,
+    pub where_clause: Option<GenericWhereClause>,
     pub requirements: Vec<InterfaceRequirementDecl>,
     pub span: Span,
 }

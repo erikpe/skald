@@ -6,7 +6,38 @@ impl Parser<'_> {
     pub(super) fn parse_interface(&mut self, visibility: Visibility) -> Option<InterfaceDecl> {
         let interface_token = self.advance();
         let name = self.parse_name("expected an interface name after `interface`");
-        let left = self.expect(TokenKind::LeftBrace, "`{` after the interface name")?;
+        let type_parameters = if self.at(TokenKind::Less) {
+            self.parse_generic_parameter_list()
+        } else {
+            None
+        };
+        let where_clause = if self.at_contextual("where") {
+            let where_span = self.peek().span;
+            let clause = self.parse_generic_where_clause();
+            if type_parameters.is_none() {
+                self.report(
+                    INVALID_GENERIC_SYNTAX,
+                    "a `where` clause requires generic interface parameters",
+                    where_span,
+                    "add type parameters to the interface or remove this clause",
+                );
+            }
+            clause
+        } else {
+            None
+        };
+        if self.at_contextual("where") {
+            let duplicate = self.advance();
+            self.report(
+                INVALID_GENERIC_SYNTAX,
+                "an interface cannot declare more than one `where` clause",
+                duplicate.span,
+                "merge the requirements into the first clause",
+            );
+            self.synchronize_declaration();
+            return None;
+        }
+        let left = self.expect(TokenKind::LeftBrace, "`{` after the interface header")?;
         self.brace_depth += 1;
         let requirements = self.with_syntax_nesting(left.span, |parser| {
             let mut requirements = Vec::new();
@@ -28,6 +59,8 @@ impl Parser<'_> {
         Some(InterfaceDecl {
             visibility,
             name: name?,
+            type_parameters,
+            where_clause,
             requirements: requirements?,
             span: self.cover(visibility.start_span(interface_token.span), right.span),
         })

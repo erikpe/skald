@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: planned; I0 is next.
+Status: in progress; I0 is complete and I1 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -60,7 +60,7 @@ not reopen those decisions during implementation.
 
 ## Progress
 
-- [ ] I0 — Parse and preserve generic interface syntax
+- [x] I0 — Parse and preserve generic interface syntax
 - [ ] I1 — Generalize template identities and module declarations
 - [ ] I2 — Resolve generic interface templates and requirements
 - [ ] I3 — Resolve parameterized interface applications and bounds
@@ -80,23 +80,23 @@ not reopen those decisions during implementation.
 **Purpose:** Establish the complete frozen source shape, exact spans, syntax
 dumps, and deterministic recovery before semantic owners depend on it.
 
-- [ ] Extend `InterfaceDecl` with the existing generic parameter-list and
+- [x] Extend `InterfaceDecl` with the existing generic parameter-list and
   generic `where`-clause AST shapes.
-- [ ] Parse `interface I<T, U> [where ...]` while retaining `where` as a
+- [x] Parse `interface I<T, U> [where ...]` while retaining `where` as a
   contextual word outside the confirmed header form.
-- [ ] Generalize `generic-requirement` parsing so its right side is a named
+- [x] Generalize `generic-requirement` parsing so its right side is a named
   type application rather than only a declaration path.
-- [ ] Admit named type applications in `implements` clauses while retaining
+- [x] Admit named type applications in `implements` clauses while retaining
   semantic wrong-kind validation for non-interface targets.
-- [ ] Preserve nested closers in interface declarations, requirement
+- [x] Preserve nested closers in interface declarations, requirement
   signatures, bounds, and claims without changing expression comparison or
   shift tokenization.
-- [ ] Diagnose empty or trailing parameter/argument lists, missing commas and
+- [x] Diagnose empty or trailing parameter/argument lists, missing commas and
   closers, malformed bounds, misplaced `where`, and broken `implements`
   applications with stable recovery into later requirements and declarations.
-- [ ] Extend syntax dumps with interface parameters, bounds, applied claims,
+- [x] Extend syntax dumps with interface parameters, bounds, applied claims,
   punctuation spans, and grouping provenance.
-- [ ] Update the implemented grammar only for syntax actually accepted by this
+- [x] Update the implemented grammar only for syntax actually accepted by this
   task, with an explicit semantic staging note until later tasks complete.
 
 **Tests:** Focused parser and AST tests in the existing generic and interface

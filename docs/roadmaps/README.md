@@ -6,16 +6,13 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress.
+The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
+progress. I0, generic interface syntax and recovery, is complete; I1,
+template identities and module declarations, is next.
 
 ## Planned
 
-The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is planned;
-I0, generic interface syntax and recovery, is next. It implements the frozen
-language and compiler contracts by extending the existing generic-class
-specialization and ordinary interface-dispatch foundations. No other active
-roadmap blocks it; primitive conformances, operators, and iteration remain
-separate future work.
+No implementation roadmap is currently waiting to start.
 
 ## Design proposals
 

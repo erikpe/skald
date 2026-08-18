@@ -81,6 +81,9 @@ pub(super) fn resolve_interface_claims(
         };
         let mut seen = HashSet::new();
         for claim in &syntax_class.implemented_interfaces {
+            if reject_unsupported_generic_interface_application(claim, diagnostics) {
+                continue;
+            }
             match lookup.select(claim, diagnostics) {
                 TopLevelLookup::Found(TopLevelSymbol {
                     kind: TopLevelSymbolKind::Interface(interface),

@@ -110,18 +110,33 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_implemented_interfaces(&mut self) -> Vec<Name> {
+    fn parse_implemented_interfaces(&mut self) -> Vec<NamedTypeSyntax> {
         if !self.at_contextual("implements") {
             return Vec::new();
         }
         self.advance();
         let mut interfaces = Vec::new();
-        while let Some(name) = self.parse_name_path("expected an interface name after `implements`")
+        while let Some(interface) =
+            self.parse_named_type("expected an interface name after `implements`")
         {
-            interfaces.push(name);
-            if self.consume(TokenKind::Comma).is_none() {
-                break;
+            interfaces.push(interface);
+            if self.consume(TokenKind::Comma).is_some() {
+                continue;
             }
+            if self.at(TokenKind::Identifier)
+                && !self.at_contextual("where")
+                && !self.at_contextual("extends")
+                && !self.at_contextual("implements")
+            {
+                self.report(
+                    INVALID_GENERIC_SYNTAX,
+                    "expected `,` between implemented interfaces",
+                    self.peek().span,
+                    "insert `,` before this interface",
+                );
+                continue;
+            }
+            break;
         }
         interfaces
     }
