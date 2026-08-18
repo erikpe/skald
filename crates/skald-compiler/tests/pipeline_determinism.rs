@@ -142,6 +142,9 @@ const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_
 const GENERIC_MODULE_HELPER_OUTPUT: &str = "SKALD_GENERIC_MODULE_DETERMINISM_OUTPUT";
 const GENERIC_MODULE_TEST_NAME: &str =
     "generic_module_phase_products_are_deterministic_across_processes";
+const GENERIC_INTERFACE_HELPER_OUTPUT: &str = "SKALD_GENERIC_INTERFACE_DETERMINISM_OUTPUT";
+const GENERIC_INTERFACE_TEST_NAME: &str =
+    "generic_interface_specialization_is_deterministic_across_processes";
 const FUNCTION_VALUE_COMPOSITION_HELPER_OUTPUT: &str =
     "SKALD_FUNCTION_VALUE_COMPOSITION_DETERMINISM_OUTPUT";
 const FUNCTION_VALUE_COMPOSITION_TEST_NAME: &str =
@@ -656,6 +659,16 @@ fn generic_module_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
+fn generic_interface_specialization_is_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "generic-interfaces",
+        GENERIC_INTERFACE_HELPER_OUTPUT,
+        GENERIC_INTERFACE_TEST_NAME,
+        generic_interface_resolution_dump,
+    );
+}
+
+#[test]
 fn function_value_composition_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "function-value-composition",
@@ -963,6 +976,31 @@ fn generic_module_phase_dump(variant: usize) -> String {
             planned_dump,
             dump_mir(&final_mir),
         ),
+    )
+}
+
+fn generic_interface_resolution_dump() -> String {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add(
+        "generic-interface-specialization.ska",
+        "interface Chain<T> { fn next() -> Chain<T>; }\n\
+         interface Expand<T> { fn next() -> Expand<T[]>; }\n\
+         fn first(ref chain: Chain<(shared Item)?>, ref failed: Expand<i64>) -> unit {}\n\
+         fn second(ref chain: Chain<shared? Item>, ref failed: Expand<i64>) -> unit {}\n\
+         class Item {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+
+    format!(
+        "RESOLVED\n{}DIAGNOSTICS\n{}",
+        dump_resolved(&resolved.program),
+        render_diagnostics(&sources, &resolved.diagnostics),
     )
 }
 

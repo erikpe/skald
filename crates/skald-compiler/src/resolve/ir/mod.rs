@@ -6,7 +6,7 @@ mod declarations;
 mod expression;
 mod function_references;
 mod function_types;
-mod generic_interface_applications;
+mod generic_interface_specializations;
 mod generic_requirements;
 mod generic_specializations;
 mod generic_templates;
@@ -66,17 +66,18 @@ pub use function_types::{
     ResolvedFunctionType, ResolvedFunctionTypeParameter, ResolvedFunctionTypeParameterMode,
     ResolvedFunctionTypeTable,
 };
-pub use generic_interface_applications::{
-    GenericInterfaceApplicationOrigin, ResolvedGenericInterfaceApplication,
-    ResolvedGenericInterfaceApplicationTable,
+pub use generic_interface_specializations::{
+    GenericInterfaceApplicationOrigin, GenericInterfaceInstanceKey, GenericInterfaceSpecialization,
+    GenericInterfaceSpecializationProvenance, GenericInterfaceSpecializationState,
+    GenericInterfaceSpecializationTable, GenericInterfaceSpecializationTransition,
 };
 pub use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
 pub(crate) use generic_specializations::{
     ClosedGenericRequirementSubject, GenericApplicationOrigin, GenericClassInstanceKey,
-    GenericSpecialization, GenericSpecializationProvenance, GenericSpecializationState,
-    GenericSpecializationTable, GenericSpecializationTransition,
+    GenericSpecialization, GenericSpecializationKey, GenericSpecializationProvenance,
+    GenericSpecializationState, GenericSpecializationTable, GenericSpecializationTransition,
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedInterfaceTemplate,

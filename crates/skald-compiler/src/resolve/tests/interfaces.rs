@@ -569,7 +569,11 @@ fn generic_interface_claims_and_bounds_are_retained_structurally() {
         ResolvedInterfaceType::TemplateApplication { .. }
     ));
     assert_eq!(
-        output.program.generic_interface_applications.iter().len(),
+        output
+            .program
+            .generic_interface_specializations
+            .iter()
+            .len(),
         1
     );
 }
@@ -582,7 +586,7 @@ fn closed_interface_applications_are_discovered_once_with_ordered_origins() {
         "class Box<T> {}\n",
         "class Generic<T> where T: Second<First<i64>> {}\n",
         "class Claimed implements First<i64> {}\n",
-        "fn inspect(ref value: Obj, ref typed: First<i64>, ref shared_value: shared First<i64>, ref nested: Box<First<i64>>) -> unit {\n",
+        "fn inspect(ref value: Obj, ref typed: First<i64>, ref combined: Second<First<i64>>, ref shared_value: shared First<i64>, ref nested: Box<First<i64>>) -> unit {\n",
         "  (First<i64>) value;\n",
         "  value is First<i64>;\n",
         "}\n",
@@ -598,37 +602,19 @@ fn closed_interface_applications_are_discovered_once_with_ordered_origins() {
     );
     let applications = output
         .program
-        .generic_interface_applications
+        .generic_interface_specializations
         .iter()
         .collect::<Vec<_>>();
     assert_eq!(applications.len(), 2);
-    assert!(matches!(
-        applications[0].interface,
-        ResolvedInterfaceType::TemplateApplication {
-            template,
-            ..
-        } if template == InterfaceTemplateId::new(1)
-    ));
-    assert!(matches!(
-        applications[1].interface,
-        ResolvedInterfaceType::TemplateApplication {
-            template,
-            ..
-        } if template == InterfaceTemplateId::new(0)
-    ));
-    assert_eq!(applications[0].origins.len(), 1);
-    assert_eq!(applications[1].origins.len(), 7);
+    assert_eq!(applications[0].key.template, InterfaceTemplateId::new(0));
+    assert_eq!(applications[1].key.template, InterfaceTemplateId::new(1));
+    assert_eq!(applications[0].provenance.origins.len(), 7);
+    assert_eq!(applications[1].provenance.origins.len(), 1);
 
     let dump = dump_resolved(&output.program);
     assert_eq!(dump, dump_resolved(&output.program));
-    assert!(
-        dump.contains("Application interface-template1<interface-template0<i64>>"),
-        "{dump}"
-    );
-    assert!(
-        dump.contains("Application interface-template0<i64>"),
-        "{dump}"
-    );
+    assert!(dump.contains("Specialization Second<i0>"), "{dump}");
+    assert!(dump.contains("Specialization First<i64>"), "{dump}");
 }
 
 #[test]
@@ -726,15 +712,11 @@ fn closed_interface_arguments_resolve_in_the_application_module() {
     );
     let applications = output
         .program
-        .generic_interface_applications
+        .generic_interface_specializations
         .iter()
         .collect::<Vec<_>>();
     assert_eq!(applications.len(), 2);
-    let ResolvedInterfaceType::TemplateApplication { arguments, .. } = &applications[0].interface
-    else {
-        panic!("expected a structural interface application");
-    };
-    let ResolvedTemplateTypeKind::Class(argument) = arguments[0].kind else {
+    let ResolvedTypeKind::Class(argument) = applications[0].key.arguments[0] else {
         panic!("expected the caller's class argument");
     };
     assert_eq!(output.program.class(argument).unwrap().name, "Arg");
@@ -772,5 +754,16 @@ fn specializing_a_class_with_structural_interface_constraints_stays_gated() {
     assert!(matches!(
         specialization.state,
         GenericSpecializationState::Failed { .. }
+    ));
+    let interfaces = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(interfaces.len(), 1, "{}", dump_resolved(&output.program));
+    assert_eq!(interfaces[0].provenance.origins.len(), 2);
+    assert!(matches!(
+        interfaces[0].state,
+        GenericInterfaceSpecializationState::Complete(_)
     ));
 }

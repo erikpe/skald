@@ -1,13 +1,74 @@
 //! Structural closing and bottom-up interning for template type terms.
 
 use super::*;
+use crate::identity::GenericTemplateId;
 
-impl SpecializationOwner<'_, '_, '_> {
+#[derive(Clone, Copy)]
+pub(super) struct TypeClosingEnvironment<'arguments> {
+    owner: Option<GenericTemplateId>,
+    arguments: &'arguments [ResolvedTypeKind],
+    module: ModuleId,
+}
+
+impl<'arguments> TypeClosingEnvironment<'arguments> {
+    pub(super) fn class(
+        template: ClassTemplateId,
+        arguments: &'arguments [ResolvedTypeKind],
+        module: ModuleId,
+    ) -> Self {
+        Self {
+            owner: Some(template.into()),
+            arguments,
+            module,
+        }
+    }
+
+    pub(super) fn interface(
+        template: InterfaceTemplateId,
+        arguments: &'arguments [ResolvedTypeKind],
+        module: ModuleId,
+    ) -> Self {
+        Self {
+            owner: Some(template.into()),
+            arguments,
+            module,
+        }
+    }
+}
+
+impl SpecializationCoordinator<'_, '_, '_> {
+    pub(super) fn close_template_interface(
+        &mut self,
+        interface: &ResolvedInterfaceType,
+        span: Span,
+        environment: TypeClosingEnvironment<'_>,
+    ) -> Option<InterfaceId> {
+        match interface {
+            ResolvedInterfaceType::Ordinary(interface) => Some(*interface),
+            ResolvedInterfaceType::TemplateApplication {
+                template,
+                arguments,
+            } => {
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.close_template_type(argument, environment))
+                    .collect::<Option<Vec<_>>>()?;
+                self.request_interface(
+                    *template,
+                    arguments,
+                    GenericInterfaceApplicationOrigin {
+                        module: environment.module,
+                        span,
+                    },
+                )
+            }
+        }
+    }
+
     pub(super) fn close_template_type(
         &mut self,
         term: &ResolvedTemplateType,
-        template: ClassTemplateId,
-        arguments: &[ResolvedTypeKind],
+        environment: TypeClosingEnvironment<'_>,
     ) -> Option<ResolvedTypeKind> {
         Some(match &term.kind {
             ResolvedTemplateTypeKind::I64 => ResolvedTypeKind::I64,
@@ -18,8 +79,8 @@ impl SpecializationOwner<'_, '_, '_> {
             ResolvedTemplateTypeKind::Unit => ResolvedTypeKind::Unit,
             ResolvedTemplateTypeKind::Obj => ResolvedTypeKind::Obj,
             ResolvedTemplateTypeKind::Parameter(parameter) => {
-                debug_assert_eq!(parameter.owner(), template.into());
-                *arguments.get(parameter.index())?
+                debug_assert_eq!(Some(parameter.owner()), environment.owner);
+                *environment.arguments.get(parameter.index())?
             }
             ResolvedTemplateTypeKind::Class(class) => ResolvedTypeKind::Class(*class),
             ResolvedTemplateTypeKind::Interface(interface) => {
@@ -31,27 +92,42 @@ impl SpecializationOwner<'_, '_, '_> {
             } => {
                 let nested_arguments = nested_arguments
                     .iter()
-                    .map(|argument| self.close_template_type(argument, template, arguments))
+                    .map(|argument| self.close_template_type(argument, environment))
                     .collect::<Option<Vec<_>>>()?;
-                let declaration = self
-                    .templates
-                    .get(template)
-                    .expect("closing environment belongs to a collected template");
-                let class = self.request(
+                let class = self.request_class(
                     *nested,
                     nested_arguments,
                     GenericApplicationOrigin {
-                        module: declaration.module,
+                        module: environment.module,
                         span: term.span,
                     },
                 )?;
                 ResolvedTypeKind::Class(class)
             }
-            // Interface-template closure is owned by the cross-kind scheduler
-            // introduced in I4. I2 can retain these terms in interface
-            // semantics, but class specialization must not manufacture an
-            // ordinary interface identity for them.
-            ResolvedTemplateTypeKind::InterfaceTemplate { .. } => return None,
+            ResolvedTemplateTypeKind::InterfaceTemplate {
+                template,
+                arguments,
+            } => {
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.close_template_type(argument, environment))
+                    .collect::<Option<Vec<_>>>()?;
+                let interface = self.request_interface(
+                    *template,
+                    arguments,
+                    GenericInterfaceApplicationOrigin {
+                        module: environment.module,
+                        span: term.span,
+                    },
+                )?;
+                if matches!(environment.owner, Some(GenericTemplateId::Class(_))) {
+                    // I4 discovers and closes the cross-kind dependency, but
+                    // an ordinary class declaration must not reference the
+                    // reserved identity until I5 materializes that interface.
+                    return None;
+                }
+                ResolvedTypeKind::Interface(interface)
+            }
             ResolvedTemplateTypeKind::Function { parameters, result } => {
                 let parameters = parameters
                     .iter()
@@ -59,11 +135,8 @@ impl SpecializationOwner<'_, '_, '_> {
                         Some(ResolvedFunctionTypeParameter {
                             mode: parameter.mode,
                             type_syntax: ResolvedType {
-                                kind: self.close_template_type(
-                                    &parameter.type_syntax,
-                                    template,
-                                    arguments,
-                                )?,
+                                kind: self
+                                    .close_template_type(&parameter.type_syntax, environment)?,
                                 span: parameter.type_syntax.span,
                             },
                             span: parameter.span,
@@ -71,26 +144,26 @@ impl SpecializationOwner<'_, '_, '_> {
                     })
                     .collect::<Option<Vec<_>>>()?;
                 let result = ResolvedType {
-                    kind: self.close_template_type(result, template, arguments)?,
+                    kind: self.close_template_type(result, environment)?,
                     span: result.span,
                 };
                 ResolvedTypeKind::Function(
                     self.interner.intern_function(parameters, result, term.span),
                 )
             }
-            ResolvedTemplateTypeKind::Shared(target) => ResolvedTypeKind::Shared(
-                self.close_template_shared_target(target, template, arguments)?,
-            ),
+            ResolvedTemplateTypeKind::Shared(target) => {
+                ResolvedTypeKind::Shared(self.close_template_shared_target(target, environment)?)
+            }
             ResolvedTemplateTypeKind::Optional(payload) => {
                 let payload = ResolvedType {
-                    kind: self.close_template_type(payload, template, arguments)?,
+                    kind: self.close_template_type(payload, environment)?,
                     span: payload.span,
                 };
                 ResolvedTypeKind::Optional(self.interner.intern_optional(payload))
             }
             ResolvedTemplateTypeKind::Array(element) => {
                 let element = ResolvedType {
-                    kind: self.close_template_type(element, template, arguments)?,
+                    kind: self.close_template_type(element, environment)?,
                     span: element.span,
                 };
                 ResolvedTypeKind::Array(self.interner.intern_array(element))
@@ -101,12 +174,11 @@ impl SpecializationOwner<'_, '_, '_> {
     pub(super) fn close_template_shared_target(
         &mut self,
         target: &ResolvedTemplateType,
-        template: ClassTemplateId,
-        arguments: &[ResolvedTypeKind],
+        environment: TypeClosingEnvironment<'_>,
     ) -> Option<ResolvedSharedTarget> {
         let (optional_depth, leaf) = template_optional_leaf(target);
         if optional_depth > 0 {
-            let leaf = self.close_template_type(leaf, template, arguments)?;
+            let leaf = self.close_template_type(leaf, environment)?;
             if let Some(object) = object_target(leaf) {
                 if matches!(
                     object,
@@ -123,7 +195,7 @@ impl SpecializationOwner<'_, '_, '_> {
             }
         }
 
-        let kind = self.close_template_type(target, template, arguments)?;
+        let kind = self.close_template_type(target, environment)?;
         match kind {
             ResolvedTypeKind::Optional(optional) => Some(ResolvedSharedTarget::OptionalBox(
                 self.interner.intern_optional_box(optional, target.span),

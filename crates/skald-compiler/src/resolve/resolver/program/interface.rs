@@ -67,11 +67,9 @@ pub(super) fn collect_interface_declarations(
 
 pub(super) fn resolve_interface_claims(
     ast: &syntax::CompilationUnit,
-    module: ModuleId,
     work: &[(ClassId, usize)],
     lookup: ModuleLookup<'_>,
     classes: &mut ResolvedClassDeclarationTable,
-    interface_applications: &mut ResolvedGenericInterfaceApplicationTable,
     diagnostics: &mut Diagnostics,
 ) {
     for (class_id, ast_index) in work.iter().copied() {
@@ -117,13 +115,6 @@ pub(super) fn resolve_interface_claims(
                     continue;
                 }
                 seen.push(interface.clone());
-                interface_applications.record_interface(
-                    &interface,
-                    GenericInterfaceApplicationOrigin {
-                        module,
-                        span: claim.span,
-                    },
-                );
                 class.implemented_interfaces.push(ResolvedInterfaceClaim {
                     interface,
                     span: claim.span,

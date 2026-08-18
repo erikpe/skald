@@ -1,11 +1,211 @@
 use super::*;
 use crate::{
-    identity::{ClassId, ClassTemplateId},
+    identity::{ClassId, ClassTemplateId, InterfaceId, InterfaceTemplateId},
     resolve::{
         dump_resolved, NON_TERMINATING_GENERIC_SPECIALIZATION, PRIVATE_DECLARATION, UNKNOWN_TYPE,
     },
     test_support::{load_module_sources, resolve_source},
 };
+
+#[test]
+fn interface_grouping_and_optional_shared_shorthand_share_one_canonical_key() {
+    let output = resolve_source(
+        "class Item {}\n\
+         interface View<T> {}\n\
+         fn canonical(ref value: View<(shared Item)?>) -> unit {}\n\
+         fn shorthand(ref value: View<shared? Item>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let entries = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 1, "{}", dump_resolved(&output.program));
+    assert_eq!(entries[0].key.template, InterfaceTemplateId::new(0));
+    assert_eq!(entries[0].provenance.origins.len(), 2);
+    assert_eq!(
+        entries[0].state,
+        GenericInterfaceSpecializationState::Complete(InterfaceId::new(0)),
+    );
+}
+
+#[test]
+fn interface_keys_distinguish_templates_argument_order_and_nested_closed_types() {
+    let output = resolve_source(
+        "class Item {}\n\
+         interface One<T> {}\n\
+         interface Two<T> {}\n\
+         interface Pair<Left, Right> {}\n\
+         fn use_types(ref one: One<i64>, ref two: Two<i64>, ref forward: Pair<i64, bool>, ref reverse: Pair<bool, i64>, ref owner: One<shared Item>, ref nested: Two<One<i64>>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let entries = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 6, "{}", dump_resolved(&output.program));
+    assert_ne!(entries[0].key.template, entries[1].key.template);
+    assert_eq!(entries[2].key.template, entries[3].key.template);
+    assert_ne!(entries[2].key.arguments, entries[3].key.arguments);
+    assert_ne!(entries[0].key.arguments, entries[4].key.arguments);
+    assert!(entries.iter().all(|entry| matches!(
+        entry.state,
+        GenericInterfaceSpecializationState::Complete(_)
+    )));
+}
+
+#[test]
+fn identical_recursive_interface_requests_reuse_the_reserved_identity() {
+    let output = resolve_source(
+        "interface Node<T> { fn next() -> Node<T>; }\n\
+         fn use(ref value: Node<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        0
+    );
+    let entry = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .next()
+        .unwrap();
+    assert_eq!(
+        entry.state,
+        GenericInterfaceSpecializationState::Complete(InterfaceId::new(0))
+    );
+    assert_eq!(
+        entry.transitions,
+        [
+            GenericInterfaceSpecializationTransition::Requested,
+            GenericInterfaceSpecializationTransition::InProgress(InterfaceId::new(0)),
+            GenericInterfaceSpecializationTransition::Complete(InterfaceId::new(0)),
+        ]
+    );
+    assert!(entry.provenance.recursion_path.is_empty());
+}
+
+#[test]
+fn mutually_recursive_interfaces_complete_in_one_cross_kind_worklist() {
+    let output = resolve_source(
+        "interface Left<T> { fn right() -> Right<T>; }\n\
+         interface Right<T> { fn left() -> Left<T>; }\n\
+         fn use(ref value: Left<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        0
+    );
+    let entries = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 2, "{}", dump_resolved(&output.program));
+    assert!(entries.iter().all(|entry| matches!(
+        entry.state,
+        GenericInterfaceSpecializationState::Complete(_)
+    )));
+}
+
+#[test]
+fn transformed_interface_recursion_is_cached_and_diagnosed_once() {
+    let output = resolve_source(
+        "interface Expand<T> { fn next() -> Expand<T[]>; }\n\
+         fn first(ref value: Expand<i64>) -> unit {}\n\
+         fn second(ref value: Expand<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        1
+    );
+    let entries = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 2, "{}", dump_resolved(&output.program));
+    assert_eq!(entries[0].provenance.origins.len(), 2);
+    assert!(entries.iter().all(|entry| matches!(
+        entry.state,
+        GenericInterfaceSpecializationState::Failed { .. }
+    )));
+    assert!(!entries[0].provenance.recursion_path.is_empty());
+}
+
+#[test]
+fn mixed_interface_and_class_recursion_terminates_without_publishing_the_interface() {
+    let output = resolve_source(
+        "interface View<T> { fn box_value() -> Box<T>; }\n\
+         class Box<T> { view: View<T>; }\n\
+         fn use(ref value: View<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        0
+    );
+    let interface = output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .next()
+        .unwrap();
+    assert!(matches!(
+        interface.state,
+        GenericInterfaceSpecializationState::Complete(_)
+    ));
+    let class = output
+        .program
+        .generic_specializations
+        .iter()
+        .next()
+        .unwrap();
+    assert!(matches!(
+        class.state,
+        GenericSpecializationState::Failed { .. }
+    ));
+    assert_eq!(output.program.interfaces.len(), 0);
+}
+
+#[test]
+fn mixed_transformed_recursion_is_rejected_by_the_shared_active_path() {
+    let output = resolve_source(
+        "interface Grow<T> { fn box_value() -> Box<T>; }\n\
+         class Box<T> { next: Grow<T[]>; }\n\
+         fn use(ref value: Grow<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert_eq!(
+        diagnostic_count(&output, NON_TERMINATING_GENERIC_SPECIALIZATION),
+        1
+    );
+    assert!(output
+        .program
+        .generic_interface_specializations
+        .iter()
+        .all(|entry| matches!(
+            entry.state,
+            GenericInterfaceSpecializationState::Failed { .. }
+        )));
+    assert!(output
+        .program
+        .generic_specializations
+        .iter()
+        .all(|entry| matches!(entry.state, GenericSpecializationState::Failed { .. })));
+}
 
 #[test]
 fn grouping_and_optional_shared_shorthand_share_one_canonical_key() {
@@ -479,6 +679,46 @@ fn cyclic_module_applications_use_canonical_names_and_stable_graph_order() {
     assert!(first_names.contains(&"left::Box<right::Item>"));
     assert!(first_names.contains(&"right::Wrap<right::Item>"));
 
+    assert_eq!(
+        dump_resolved(&first.program),
+        dump_resolved(&second.program)
+    );
+}
+
+#[test]
+fn interface_aliases_and_qualification_reuse_one_cross_module_key() {
+    let first = [
+        (
+            "app.ska",
+            "from dep import View as Alias, Item;\n\
+             import dep;\n\
+             fn first(ref value: Alias<Item>) -> unit {}\n\
+             fn second(ref value: dep::View<dep::Item>) -> unit {}\n\
+             fn main() -> i64 { return 0; }\n",
+        ),
+        (
+            "dep.ska",
+            "public class Item {}\n\
+             public interface View<T> {}\n",
+        ),
+    ];
+    let second = [first[1], first[0]];
+
+    let first = resolve_modules(&first);
+    let second = resolve_modules(&second);
+    let first_entries = first
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    let second_entries = second
+        .program
+        .generic_interface_specializations
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(first_entries.len(), 1, "{}", dump_resolved(&first.program));
+    assert_eq!(first_entries[0].provenance.origins.len(), 2);
+    assert_eq!(first_entries, second_entries);
     assert_eq!(
         dump_resolved(&first.program),
         dump_resolved(&second.program)

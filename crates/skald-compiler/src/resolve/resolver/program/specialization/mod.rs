@@ -2,9 +2,9 @@
 
 mod bodies;
 mod closed_types;
+mod coordinator;
 mod declarations;
 mod names;
-mod owner;
 mod requests;
 mod validation;
 
@@ -27,7 +27,7 @@ mod tests;
 use super::*;
 use crate::module::ProgramModuleTable;
 use crate::resolve::resolver::body::StringLiteralResolutionEnvironment;
-use owner::SpecializationOwner;
+use coordinator::SpecializationCoordinator;
 
 pub(super) struct SpecializationBodyInput<'program, 'ast> {
     pub(super) units: &'program [resolver::ModuleUnit<'ast>],

@@ -30,9 +30,9 @@ use super::modules::{
     ResolvedVisibility,
 };
 use super::optional_types::ResolvedOptionalTypeTable;
+use super::GenericInterfaceSpecializationTable;
 use super::GenericSpecializationTable;
 use super::ResolvedAddressTakenCallableTable;
-use super::ResolvedGenericInterfaceApplicationTable;
 use super::{ResolvedOptionalBoxTypeTable, ResolvedSharedTarget};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,7 +48,7 @@ pub struct ResolvedProgram {
     pub type_parameters: ResolvedTypeParameterTable,
     pub(crate) template_semantics: ResolvedClassTemplateSemanticTable,
     pub(crate) generic_specializations: GenericSpecializationTable,
-    pub generic_interface_applications: ResolvedGenericInterfaceApplicationTable,
+    pub generic_interface_specializations: GenericInterfaceSpecializationTable,
     pub function_types: ResolvedFunctionTypeTable,
     pub address_taken_callables: ResolvedAddressTakenCallableTable,
     pub array_types: ResolvedArrayTypeTable,
@@ -133,6 +133,9 @@ impl ResolvedInterfaceDeclarationTable {
     }
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedInterfaceDeclaration> {
         self.entries.iter()
+    }
+    pub fn len(&self) -> usize {
+        self.entries.len()
     }
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()

@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I3 are complete and I4 is next.
+Status: in progress; I0–I4 are complete and I5 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -64,7 +64,7 @@ not reopen those decisions during implementation.
 - [x] I1 — Generalize template identities and module declarations
 - [x] I2 — Resolve generic interface templates and requirements
 - [x] I3 — Resolve parameterized interface applications and bounds
-- [ ] I4 — Coordinate deterministic class and interface specialization
+- [x] I4 — Coordinate deterministic class and interface specialization
 - [ ] I5 — Materialize ordinary closed interface declarations
 - [ ] I6 — Integrate exact nominal conformance and inheritance
 - [ ] I7 — Close generic bounds and bound-selected calls
@@ -232,23 +232,23 @@ representation.
 worklist, recursion handling, and failure caching before publishing generated
 interface declarations.
 
-- [ ] Add `GenericInterfaceInstanceKey` from one template identity and ordered
+- [x] Add `GenericInterfaceInstanceKey` from one template identity and ordered
   canonical closed `ResolvedTypeKind` arguments, excluding spans and spelling.
-- [ ] Refactor the specialization owner into a small coordinator that can
+- [x] Refactor the specialization owner into a small coordinator that can
   schedule class and interface keys while retaining declaration-specific
   caches and realization logic.
-- [ ] Implement requested, in-progress, complete, and failed interface cache
+- [x] Implement requested, in-progress, complete, and failed interface cache
   states with one early reserved `InterfaceId` per unique key.
-- [ ] Reuse equivalent requests across signatures, claims, bounds, modules,
+- [x] Reuse equivalent requests across signatures, claims, bounds, modules,
   casts, tests, and nested applications.
-- [ ] Maintain one cross-kind active path; accept identical-key recursion and
+- [x] Maintain one cross-kind active path; accept identical-key recursion and
   reject re-entry of the same template with changed arguments as deterministic
   non-terminating expansion.
-- [ ] Cache failures and collate later origins without duplicate IDs or
+- [x] Cache failures and collate later origins without duplicate IDs or
   independently ordered cascades.
-- [ ] Preserve deterministic source-derived queue order and explicit
+- [x] Preserve deterministic source-derived queue order and explicit
   transition/provenance dumps; never expose hash iteration.
-- [ ] Keep the existing generic-class key, class identity, static order, and
+- [x] Keep the existing generic-class key, class identity, static order, and
   recursion behavior stable during coordinator extraction.
 
 **Tests:** Canonical key equality across grouping/import aliases/optional

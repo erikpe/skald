@@ -10,8 +10,11 @@ mod resolver;
 pub use dump::dump_resolved;
 pub(crate) use ir::{ClosedGenericRequirementSubject, GenericSpecializationState};
 pub use ir::{
-    GenericAliasAccess, GenericCapability, GenericInterfaceApplicationOrigin, GenericRequirement,
-    GenericRequirementReason, ResolvedAbsentExpr, ResolvedAddressTakenCallable,
+    GenericAliasAccess, GenericCapability, GenericInterfaceApplicationOrigin,
+    GenericInterfaceInstanceKey, GenericInterfaceSpecialization,
+    GenericInterfaceSpecializationProvenance, GenericInterfaceSpecializationState,
+    GenericInterfaceSpecializationTable, GenericInterfaceSpecializationTransition,
+    GenericRequirement, GenericRequirementReason, ResolvedAbsentExpr, ResolvedAddressTakenCallable,
     ResolvedAddressTakenCallableTable, ResolvedAllocationExpr, ResolvedArrayAssignment,
     ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr, ResolvedArrayElementList,
     ResolvedArrayLengthExpr, ResolvedArrayLengthOperator, ResolvedArrayProjectionBounds,
@@ -29,8 +32,7 @@ pub use ir::{
     ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage, ResolvedFunctionReferenceExpr,
     ResolvedFunctionType, ResolvedFunctionTypeParameter, ResolvedFunctionTypeParameterMode,
-    ResolvedFunctionTypeTable, ResolvedGenericInterfaceApplication,
-    ResolvedGenericInterfaceApplicationTable, ResolvedGroupedExpr, ResolvedIndirectCallExpr,
+    ResolvedFunctionTypeTable, ResolvedGroupedExpr, ResolvedIndirectCallExpr,
     ResolvedInitializerDeclaration, ResolvedInterfaceCallExpr, ResolvedInterfaceClaim,
     ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter,
     ResolvedInterfaceReceiver, ResolvedInterfaceRequirement, ResolvedInterfaceTemplate,

@@ -5,7 +5,7 @@ use crate::{
     source::Span,
 };
 
-use super::{ResolvedSharedTarget, ResolvedTypeKind};
+use super::{GenericInterfaceInstanceKey, ResolvedSharedTarget, ResolvedTypeKind};
 
 /// Canonical identity input for one closed generic class.
 ///
@@ -15,6 +15,12 @@ use super::{ResolvedSharedTarget, ResolvedTypeKind};
 pub(crate) struct GenericClassInstanceKey {
     pub(crate) template: ClassTemplateId,
     pub(crate) arguments: Vec<ResolvedTypeKind>,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum GenericSpecializationKey {
+    Class(GenericClassInstanceKey),
+    Interface(GenericInterfaceInstanceKey),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -43,7 +49,7 @@ pub(crate) struct GenericApplicationOrigin {
 pub(crate) struct GenericSpecializationProvenance {
     pub(crate) template_span: Span,
     pub(crate) origins: Vec<GenericApplicationOrigin>,
-    pub(crate) recursion_path: Vec<GenericClassInstanceKey>,
+    pub(crate) recursion_path: Vec<GenericSpecializationKey>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

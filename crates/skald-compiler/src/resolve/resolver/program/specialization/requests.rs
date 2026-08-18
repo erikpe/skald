@@ -9,6 +9,7 @@ pub(crate) struct SpecializationDiscoveryInput<'program, 'ast> {
     lookups: ProgramLookupTables<'program>,
     templates: GenericTemplateDiscoveryInput<'program>,
     ordinary_class_count: usize,
+    ordinary_interface_count: usize,
 }
 
 pub(crate) struct GenericTemplateDiscoveryInput<'program> {
@@ -41,6 +42,7 @@ impl<'program, 'ast> SpecializationDiscoveryInput<'program, 'ast> {
         lookups: ProgramLookupTables<'program>,
         templates: GenericTemplateDiscoveryInput<'program>,
         ordinary_class_count: usize,
+        ordinary_interface_count: usize,
     ) -> Self {
         Self {
             units,
@@ -48,13 +50,14 @@ impl<'program, 'ast> SpecializationDiscoveryInput<'program, 'ast> {
             lookups,
             templates,
             ordinary_class_count,
+            ordinary_interface_count,
         }
     }
 }
 
 pub(crate) struct GenericApplicationDiscovery {
     pub(crate) class_specializations: GenericSpecializationTable,
-    pub(crate) interface_applications: ResolvedGenericInterfaceApplicationTable,
+    pub(crate) interface_specializations: GenericInterfaceSpecializationTable,
 }
 
 pub(crate) fn discover_specializations(
@@ -62,14 +65,16 @@ pub(crate) fn discover_specializations(
     interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> GenericApplicationDiscovery {
-    let mut owner = SpecializationOwner::new(
+    let mut owner = SpecializationCoordinator::new(
         input.templates.class_semantics,
+        input.templates.interface_semantics,
         input.templates.classes,
+        input.templates.interfaces,
         interner,
         diagnostics,
         input.ordinary_class_count,
+        input.ordinary_interface_count,
     );
-    record_template_interface_applications(&mut owner, &input);
     for unit in input.units {
         let lookup = input.lookups.for_unit(unit, input.modules);
         SourceRequestScanner {
@@ -84,58 +89,8 @@ pub(crate) fn discover_specializations(
     owner.finish()
 }
 
-fn record_template_interface_applications(
-    owner: &mut SpecializationOwner<'_, '_, '_>,
-    input: &SpecializationDiscoveryInput<'_, '_>,
-) {
-    for semantics in input.templates.class_semantics.iter() {
-        let module = input
-            .templates
-            .classes
-            .get(semantics.template)
-            .expect("class semantics reference a collected template")
-            .module;
-        for type_use in &semantics.type_uses {
-            owner
-                .interface_applications
-                .record_type(module, &type_use.type_term);
-        }
-        for claim in &semantics.implemented_interfaces {
-            owner.interface_applications.record_interface(
-                &claim.interface,
-                GenericInterfaceApplicationOrigin {
-                    module,
-                    span: claim.span,
-                },
-            );
-        }
-        for bound in &semantics.bounds {
-            owner.interface_applications.record_interface(
-                &bound.interface,
-                GenericInterfaceApplicationOrigin {
-                    module,
-                    span: bound.interface_span,
-                },
-            );
-        }
-    }
-    for semantics in input.templates.interface_semantics.iter() {
-        let module = input
-            .templates
-            .interfaces
-            .get(semantics.template)
-            .expect("interface semantics reference a collected template")
-            .module;
-        for type_use in &semantics.type_uses {
-            owner
-                .interface_applications
-                .record_type(module, &type_use.type_term);
-        }
-    }
-}
-
 struct SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup> {
-    owner: &'owner mut SpecializationOwner<'semantic, 'interner, 'diagnostics>,
+    owner: &'owner mut SpecializationCoordinator<'semantic, 'interner, 'diagnostics>,
     lookup: ModuleLookup<'lookup>,
     module: ModuleId,
 }
@@ -259,7 +214,7 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                     return None;
                 }
                 self.owner
-                    .request(
+                    .request_class(
                         template,
                         closed,
                         GenericApplicationOrigin {
@@ -303,32 +258,23 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                 }
                 None
             }
-            (TopLevelSymbolKind::InterfaceTemplate(_), Some(_)) => {
-                let syntax = syntax::TypeSyntax {
-                    kind: syntax::TypeKind::Named(named.clone()),
-                    span: named.span,
-                };
-                let term = if report_lookup_errors {
-                    super::super::generic_templates::TemplateTypeResolver::for_application_site(
-                        self.lookup,
-                        self.owner.diagnostics,
-                    )
-                    .resolve(&syntax)?
-                } else {
-                    // Ordinary resolution owns diagnostics for the outer site.
-                    // Discovery repeats structural resolution silently so it
-                    // can retain a request without allocating an InterfaceId.
-                    let mut scratch = Diagnostics::new();
-                    super::super::generic_templates::TemplateTypeResolver::for_application_site(
-                        self.lookup,
-                        &mut scratch,
-                    )
-                    .resolve(&syntax)?
-                };
-                let interface = ResolvedInterfaceType::from_type(&term)
-                    .expect("an interface-template application resolves as an interface");
-                self.owner.interface_applications.record_interface(
-                    &interface,
+            (TopLevelSymbolKind::InterfaceTemplate(template), Some(arguments))
+                if arguments.arguments.len() == self.lookup.interface_template_arity(template) =>
+            {
+                let mut closed = Vec::with_capacity(arguments.arguments.len());
+                let mut valid = true;
+                for argument in &arguments.arguments {
+                    match self.close_with_lookup_diagnostics(argument, true) {
+                        Some(argument) => closed.push(argument),
+                        None => valid = false,
+                    }
+                }
+                if !valid {
+                    return None;
+                }
+                let interface = self.owner.request_interface(
+                    template,
+                    closed,
                     GenericInterfaceApplicationOrigin {
                         module: self.module,
                         span: named.span,
@@ -347,6 +293,27 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                             named.span,
                             "closed interface specialization is implemented by the next roadmap stage",
                         )
+                        .with_secondary_label(symbol.name_span, "template declared here"),
+                    );
+                }
+                // The identity is usable while closing an enclosing request;
+                // I5 remains responsible for publishing a declaration that
+                // ordinary semantic resolution can consume.
+                interface.map(ResolvedTypeKind::Interface)
+            }
+            (TopLevelSymbolKind::InterfaceTemplate(template), Some(arguments)) => {
+                if report_lookup_errors {
+                    let expected = self.lookup.interface_template_arity(template);
+                    self.owner.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::GENERIC_ARITY_MISMATCH,
+                            format!(
+                                "generic interface `{}` expects {expected} type argument{}",
+                                named.name.text,
+                                if expected == 1 { "" } else { "s" }
+                            ),
+                        )
+                        .with_primary_label(arguments.span, "wrong number of type arguments")
                         .with_secondary_label(symbol.name_span, "template declared here"),
                     );
                 }
@@ -524,6 +491,9 @@ impl SourceRequestScanner<'_, '_, '_, '_, '_> {
             syntax::TopLevelDeclaration::Class(class) if class.type_parameters.is_none() => {
                 if let Some(base) = &class.direct_base {
                     self.visit_named_type(base);
+                }
+                for interface in &class.implemented_interfaces {
+                    self.visit_named_type(interface);
                 }
                 for member in &class.members {
                     self.visit_member(member);

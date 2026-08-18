@@ -404,15 +404,6 @@ impl ResolvedInterfaceType {
             _ => false,
         }
     }
-
-    pub(crate) fn depends_on_parameter(&self) -> bool {
-        match self {
-            Self::Ordinary(_) => false,
-            Self::TemplateApplication { arguments, .. } => arguments
-                .iter()
-                .any(ResolvedTemplateType::depends_on_parameter),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

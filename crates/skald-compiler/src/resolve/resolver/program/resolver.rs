@@ -308,12 +308,13 @@ impl<'ast> ProgramResolver<'ast> {
                     &interface_templates,
                 ),
                 ordinary_class_count,
+                interfaces.len(),
             ),
             &mut self.type_interner,
             &mut self.diagnostics,
         );
         let generic_specializations = discovery.class_specializations;
-        let mut generic_interface_applications = discovery.interface_applications;
+        let generic_interface_specializations = discovery.interface_specializations;
         let lookups = lookups.with_specializations(&generic_specializations);
         let function_declarations =
             self.collect_function_declarations(lookups, &external_link_plan);
@@ -335,15 +336,12 @@ impl<'ast> ProgramResolver<'ast> {
             let lookup = lookups.for_unit(unit, &self.modules);
             resolve_interface_claims(
                 unit.ast,
-                unit.module,
                 &unit.class_work,
                 lookup,
                 &mut class_declarations,
-                &mut generic_interface_applications,
                 &mut self.diagnostics,
             );
         }
-        generic_interface_applications.sort_by_source_origin();
         let ordinary_hierarchy = {
             let mut diagnostics = Diagnostics::new();
             build_class_hierarchy(&class_declarations, &class_symbols, &mut diagnostics)
@@ -523,7 +521,7 @@ impl<'ast> ProgramResolver<'ast> {
                 type_parameters,
                 template_semantics,
                 generic_specializations,
-                generic_interface_applications,
+                generic_interface_specializations,
                 function_types,
                 address_taken_callables: self.address_taken_callables,
                 array_types,

@@ -486,25 +486,39 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
-        if !program.generic_interface_applications.is_empty() {
-            dumper.heading("GenericInterfaceApplications");
+        if !program.generic_interface_specializations.is_empty() {
+            dumper.heading("GenericInterfaceSpecializations");
             dumper.indented(|dumper| {
-                for application in program.generic_interface_applications.iter() {
-                    let span = application
-                        .origins
-                        .first()
-                        .expect("every retained application has an origin")
-                        .span;
+                for specialization in program.generic_interface_specializations.iter() {
                     dumper.line(
                         &format!(
-                            "Application {}",
-                            render_interface_type(&application.interface)
+                            "Specialization {} interface {} state {}",
+                            dumper.render_interface_specialization_key(&specialization.key),
+                            specialization.interface().map_or_else(
+                                || "unassigned".to_owned(),
+                                |interface| interface.to_string(),
+                            ),
+                            render_interface_specialization_state(specialization.state),
                         ),
-                        span,
+                        specialization.provenance.template_span,
                     );
                     dumper.indented(|dumper| {
-                        for origin in &application.origins {
+                        for transition in &specialization.transitions {
+                            dumper.raw_line(&format!(
+                                "Transition {}",
+                                render_interface_specialization_transition(*transition),
+                            ));
+                        }
+                        for origin in &specialization.provenance.origins {
                             dumper.line(&format!("Origin module {}", origin.module), origin.span);
+                        }
+                        if !specialization.provenance.recursion_path.is_empty() {
+                            dumper.raw_line("RecursionPath");
+                            dumper.indented(|dumper| {
+                                for key in &specialization.provenance.recursion_path {
+                                    dumper.raw_line(&dumper.render_cross_kind_specialization_key(key));
+                                }
+                            });
                         }
                     });
                 }
@@ -539,7 +553,7 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                             dumper.raw_line("RecursionPath");
                             dumper.indented(|dumper| {
                                 for key in &specialization.provenance.recursion_path {
-                                    dumper.raw_line(&dumper.render_specialization_key(key));
+                                    dumper.raw_line(&dumper.render_cross_kind_specialization_key(key));
                                 }
                             });
                         }
@@ -2191,6 +2205,28 @@ impl<'program> ResolvedDumper<'program> {
         format!("{}<{arguments}>", self.template_name(key.template))
     }
 
+    fn render_interface_specialization_key(&self, key: &GenericInterfaceInstanceKey) -> String {
+        let arguments = ResolvedTypeNameRenderer::new(self).render_list(&key.arguments);
+        let name = self
+            .program
+            .interface_templates
+            .get(key.template)
+            .map_or_else(
+                || key.template.to_string(),
+                |template| self.qualified_declaration_name(template.module, &template.name),
+            );
+        format!("{name}<{arguments}>")
+    }
+
+    fn render_cross_kind_specialization_key(&self, key: &GenericSpecializationKey) -> String {
+        match key {
+            GenericSpecializationKey::Class(key) => self.render_specialization_key(key),
+            GenericSpecializationKey::Interface(key) => {
+                self.render_interface_specialization_key(key)
+            }
+        }
+    }
+
     fn render_shared_target(&self, target: ResolvedSharedTarget) -> String {
         match target.category() {
             ResolvedSharedTargetCategory::Object(ResolvedObjectTarget::Obj) => "Obj".to_owned(),
@@ -2303,5 +2339,35 @@ fn render_specialization_transition(transition: GenericSpecializationTransition)
             "failed {}",
             reserved_class.map_or_else(|| "unassigned".to_owned(), |class| class.to_string())
         ),
+    }
+}
+
+fn render_interface_specialization_state(state: GenericInterfaceSpecializationState) -> String {
+    match state {
+        GenericInterfaceSpecializationState::Requested => "requested".to_owned(),
+        GenericInterfaceSpecializationState::InProgress(interface) => {
+            format!("in-progress {interface}")
+        }
+        GenericInterfaceSpecializationState::Complete(interface) => format!("complete {interface}"),
+        GenericInterfaceSpecializationState::Failed { reserved_interface } => {
+            format!("failed {reserved_interface}")
+        }
+    }
+}
+
+fn render_interface_specialization_transition(
+    transition: GenericInterfaceSpecializationTransition,
+) -> String {
+    match transition {
+        GenericInterfaceSpecializationTransition::Requested => "requested".to_owned(),
+        GenericInterfaceSpecializationTransition::InProgress(interface) => {
+            format!("in-progress {interface}")
+        }
+        GenericInterfaceSpecializationTransition::Complete(interface) => {
+            format!("complete {interface}")
+        }
+        GenericInterfaceSpecializationTransition::Failed { reserved_interface } => {
+            format!("failed {reserved_interface}")
+        }
     }
 }

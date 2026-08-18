@@ -2,8 +2,9 @@
 
 Status: frozen compiler contract; source AST, template identities, parameter
 ownership, module declaration kinds, definition-site semantics, structural
-applications, claims, bounds, and closed-request discovery implemented; closed
-identity assignment, specialization, and execution are not yet implemented.
+applications, claims, bounds, canonical closed identities, and coordinated
+dependency discovery implemented; declaration materialization, conformance,
+and execution are not yet implemented.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
@@ -104,13 +105,14 @@ Generic class interface claims and bounds can no longer store only an
 interface or a parameter-bearing generic interface application until
 substitution closes it.
 
-The implemented pre-specialization boundary also retains every closed generic
-interface request without assigning an `InterfaceId`. Requests are compared by
-span-free structural identity, deduplicated across signatures, claims, bounds,
-aliases, shared targets, casts, tests, and nested generic arguments, and keep
-all application origins in canonical module/source order. `RES051` remains the
-honest gate where an ordinary type or executable conformance would require the
-closed identity that later stages provide.
+The implemented specialization boundary turns every closed generic-interface
+request into a span-free canonical key and reserves one `InterfaceId` before
+closing its dependencies. Requests are deduplicated across signatures, claims,
+bounds, aliases, shared targets, casts, tests, and nested generic arguments,
+and keep all application origins in canonical module/source order. The reserved
+identity is visible only to the specialization coordinator until I5 publishes
+its ordinary declaration; `RES051` remains the honest gate at ordinary type or
+executable-conformance uses.
 
 Nondependent names resolve once in the template's definition module. Type
 arguments resolve at each application site before entering a canonical key.
@@ -186,7 +188,7 @@ Interface specialization uses the conceptual states:
 Requested
 InProgress(InterfaceId)
 Complete(InterfaceId)
-Failed { reserved_interface: InterfaceId? }
+Failed { reserved_interface: InterfaceId }
 ```
 
 Allocating the ordinary identity at `InProgress` closes identical recursive
