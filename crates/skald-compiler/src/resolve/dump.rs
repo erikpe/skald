@@ -1041,6 +1041,12 @@ impl<'program> ResolvedDumper<'program> {
                         ));
                     }
                 }
+                for (index, interface) in specialization.closed_interface_claims.iter().enumerate()
+                {
+                    if let Some(interface) = interface {
+                        dumper.raw_line(&format!("ClosedInterfaceClaim {index} -> {interface}"));
+                    }
+                }
                 for origin in &specialization.provenance.origins {
                     dumper.line(
                         &format!("SpecializationOrigin module {}", origin.module),

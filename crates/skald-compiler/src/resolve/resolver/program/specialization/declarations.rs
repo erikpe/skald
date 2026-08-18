@@ -181,6 +181,23 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
                 .map_or(ResolvedCopyOperation::Synthesized(self.class_id), |copy| {
                     ResolvedCopyOperation::User(copy.id)
                 });
+            let implemented_interfaces = self
+                .semantic
+                .implemented_interfaces
+                .iter()
+                .enumerate()
+                .map(|(index, claim)| ResolvedInterfaceClaim {
+                    interface: ResolvedInterfaceType::Ordinary(
+                        self.specialization
+                            .closed_interface_claims
+                            .get(index)
+                            .copied()
+                            .flatten()
+                            .expect("complete specialization closes every interface claim"),
+                    ),
+                    span: claim.span,
+                })
+                .collect();
             (
                 ResolvedClassDeclaration {
                     id: self.class_id,
@@ -189,7 +206,7 @@ impl<'source, 'semantic, 'specialization, 'diagnostics>
                     name: self.name,
                     name_span: self.source.name.span,
                     direct_base,
-                    implemented_interfaces: self.semantic.implemented_interfaces.clone(),
+                    implemented_interfaces,
                     fields: self.fields,
                     static_fields: self.static_fields,
                     initializers: self.initializers,

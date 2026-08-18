@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I5 are complete and I6 is next.
+Status: in progress; I0–I6 are complete and I7 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -66,7 +66,7 @@ not reopen those decisions during implementation.
 - [x] I3 — Resolve parameterized interface applications and bounds
 - [x] I4 — Coordinate deterministic class and interface specialization
 - [x] I5 — Materialize ordinary closed interface declarations
-- [ ] I6 — Integrate exact nominal conformance and inheritance
+- [x] I6 — Integrate exact nominal conformance and inheritance
 - [ ] I7 — Close generic bounds and bound-selected calls
 - [ ] I8 — Integrate views, ownership, casts, tests, and structural calls
 - [ ] I9 — Prove HIR, MIR, witness, backend, and native execution
@@ -305,23 +305,23 @@ application and template causes.
 **Purpose:** Check ordinary and generic classes against exact closed interface
 applications and build trustworthy witness maps.
 
-- [ ] Resolve ordinary class claims to closed generic interfaces and close
+- [x] Resolve ordinary class claims to closed generic interfaces and close
   structural claims independently for every generic class specialization.
-- [ ] Order hierarchy/effective-method validation, interface materialization,
+- [x] Order hierarchy/effective-method validation, interface materialization,
   and conformance so each consumes complete identities and signatures.
-- [ ] Reuse the existing exact conformance algorithm for name, arity, modes,
+- [x] Reuse the existing exact conformance algorithm for name, arity, modes,
   types, result, receiver mutability, visibility, inherited methods, and
   overrides.
-- [ ] Key conformance maps by exact closed `InterfaceId` and map every closed
+- [x] Key conformance maps by exact closed `InterfaceId` and map every closed
   requirement to one concrete `MethodId`.
-- [ ] Preserve inherited conformance as the same exact application and update
+- [x] Preserve inherited conformance as the same exact application and update
   witnesses through compatible effective overrides.
-- [ ] Support multiple distinct applications of one template, including
+- [x] Support multiple distinct applications of one template, including
   markers and shared exact implementations, while rejecting incompatible
   non-overloaded methods.
-- [ ] Apply existing duplicate direct and redundant inherited conformance rules
+- [x] Apply existing duplicate direct and redundant inherited conformance rules
   to the exact closed application rather than only the template name.
-- [ ] Retain class/interface application and method-signature origins in
+- [x] Retain class/interface application and method-signature origins in
   conformance diagnostics and resolved dumps.
 
 **Tests:** Ordinary and generic class positive conformance; substituted

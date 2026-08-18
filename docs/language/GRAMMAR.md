@@ -364,10 +364,11 @@ interface-template, template-requirement, and owner-correct type-parameter
 identities; module declarations and imports retain the template kind. Claims
 and bounds retain exact ordinary-or-structural interface terms, while closed
 requests are deduplicated with ordered origins and valid applications are
-materialized as ordinary `InterfaceId` declarations. `RES051` still prevents
-uses from crossing later conformance and executable-integration boundaries.
-Ordinary non-generic interfaces and generic classes retain their implemented
-semantics.
+materialized as ordinary `InterfaceId` declarations. Ordinary and specialized
+classes close their claims to exact identities and use ordinary conformance
+selection. `RES051` still gates generic-interface bounds during generic-class
+specialization. Ordinary non-generic interfaces and generic classes retain
+their implemented semantics.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,

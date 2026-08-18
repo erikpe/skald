@@ -90,8 +90,10 @@ identities, owner-correct parameters, structural claims and bounds, deduplicated
 closed requests, every ordered source origin, generated ordinary `Interface`
 declarations, and template-to-closed requirement mappings. Selective and
 qualified imports retain the same `InterfaceTemplateId`. A complete successful
-application receives an ordinary `InterfaceId`; `RES051` now identifies later
-conformance or executable-integration boundaries.
+application receives an ordinary `InterfaceId`. Inspect resolved class
+`Implements` entries and HIR `Conformances` to follow each exact claim through
+its requirement-to-method mappings. `RES051` identifies the remaining generic-
+bound specialization boundary.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

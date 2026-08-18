@@ -91,7 +91,7 @@ pub(super) fn resolve_interface_claims(
                 else {
                     continue;
                 };
-                let Some(interface) = ResolvedInterfaceType::from_type(&term) else {
+                if ResolvedInterfaceType::from_type(&term).is_none() {
                     diagnostics.push(
                         Diagnostic::error(
                             INVALID_INTERFACE_CLAIM,
@@ -100,11 +100,12 @@ pub(super) fn resolve_interface_claims(
                         .with_primary_label(claim.span, "expected an interface application"),
                     );
                     continue;
+                }
+                let Some(interface_id) = lookup.specialized_interface(claim.span) else {
+                    continue;
                 };
-                if seen
-                    .iter()
-                    .any(|existing| existing.semantically_eq(&interface))
-                {
+                let interface = ResolvedInterfaceType::Ordinary(interface_id);
+                if seen.contains(&interface) {
                     diagnostics.push(
                         Diagnostic::error(
                             INVALID_INTERFACE_CLAIM,
@@ -119,19 +120,6 @@ pub(super) fn resolve_interface_claims(
                     interface,
                     span: claim.span,
                 });
-                diagnostics.push(
-                    Diagnostic::error(
-                        UNSUPPORTED_GENERIC_INTERFACE,
-                        format!(
-                            "generic interface application `{}` is resolved but not yet specialized",
-                            claim.text
-                        ),
-                    )
-                    .with_primary_label(
-                        claim.span,
-                        "generic interface conformance is implemented by the next roadmap stage",
-                    ),
-                );
                 continue;
             }
             match lookup.select(claim, diagnostics) {

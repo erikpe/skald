@@ -3,8 +3,9 @@
 Status: frozen compiler contract; source AST, template identities, parameter
 ownership, module declaration kinds, definition-site semantics, structural
 applications, claims, bounds, canonical closed identities, coordinated
-dependency discovery, and ordinary closed declaration materialization
-implemented; conformance and execution are not yet implemented.
+dependency discovery, ordinary closed declaration materialization, and exact
+nominal class conformance implemented; generic bounds, interface-object
+integration, and execution are not yet implemented.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
@@ -109,11 +110,11 @@ The implemented specialization boundary turns every closed generic-interface
 request into a span-free canonical key and reserves one `InterfaceId` before
 closing its dependencies. Requests are deduplicated across signatures, claims,
 bounds, aliases, shared targets, casts, tests, and nested generic arguments,
-and keep all application origins in canonical module/source order. I5 now
-publishes complete successful identities as ordinary
+and keep all application origins in canonical module/source order. Complete
+successful identities are published as ordinary
 `ResolvedInterfaceDeclaration` entries. Ordinary closed type uses therefore
-resolve to `ResolvedTypeKind::Interface`; `RES051` remains only where later
-conformance or executable integration is still required.
+resolve to `ResolvedTypeKind::Interface`; `RES051` remains at the generic-bound
+specialization boundary.
 
 Nondependent names resolve once in the template's definition module. Type
 arguments resolve at each application site before entering a canonical key.
@@ -248,6 +249,13 @@ behavior. Its result maps each closed `InterfaceRequirementId` to one concrete
 `MethodId`. Multiple applications of the same template remain separate
 conformances and metadata entries. Existing method non-overloading and
 duplicate exact-conformance rules apply unchanged.
+
+Every successful resolved class declaration contains only ordinary exact
+claims. Each generic-class specialization records its closed claims directly,
+so two applications originating at the same template span cannot be confused.
+Conformance diagnostics retain the claim, effective method, and originating
+template requirement spans; resolved and HIR dumps expose the closed claim and
+requirement-to-method identities.
 
 Inherited conformance retains the exact closed `InterfaceId`. An override
 replaces the inherited witness only when it continues to satisfy the exact

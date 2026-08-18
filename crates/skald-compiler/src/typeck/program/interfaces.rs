@@ -42,19 +42,27 @@ pub(super) fn analyze_interfaces(
                     .into_iter()
                     .flat_map(|class| class.implemented_interfaces.iter())
             })
-            .filter_map(|claim| claim.interface.ordinary())
+            .filter_map(|claim| {
+                claim
+                    .interface
+                    .ordinary()
+                    .map(|interface| (interface, claim.span))
+            })
             .collect::<Vec<_>>();
-        let mut selected = HashSet::new();
+        let mut selected = HashMap::new();
         for claim in &class.implemented_interfaces {
             let Some(interface_id) = claim.interface.ordinary() else {
-                // Generic interface applications are retained structurally until
-                // interface specialization assigns them concrete identities.
+                // A structural claim can survive only in an already-invalid
+                // resolution product and cannot produce conformance evidence.
                 continue;
             };
             let interface = program
                 .interface(interface_id)
                 .expect("resolved interface claim must reference an interface");
-            if inherited_interfaces.contains(&interface_id) {
+            if inherited_interfaces
+                .iter()
+                .any(|(inherited, _)| inherited == &interface_id)
+            {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_INTERFACE_CONFORMANCE,
@@ -67,23 +75,35 @@ pub(super) fn analyze_interfaces(
                     .with_note("inherited interface conformance is automatic"),
                 );
             }
-            if selected.insert(interface_id) {
-                if let Some(conformance) =
-                    validate_conformance(program, class.id, interface, diagnostics)
-                {
-                    conformances[class.id.index()].push(conformance);
-                }
+            if let Some(previous) = selected.insert(interface_id, claim.span) {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INTERFACE_CONFORMANCE,
+                        format!(
+                            "class `{}` implements interface `{}` more than once",
+                            class.name, interface.name
+                        ),
+                    )
+                    .with_primary_label(claim.span, "duplicate exact conformance")
+                    .with_secondary_label(previous, "first exact conformance declared here"),
+                );
+                continue;
+            }
+            if let Some(conformance) =
+                validate_conformance(program, class.id, interface, claim.span, diagnostics)
+            {
+                conformances[class.id.index()].push(conformance);
             }
         }
-        for interface_id in inherited_interfaces {
-            if !selected.insert(interface_id) {
+        for (interface_id, claim_span) in inherited_interfaces {
+            if selected.insert(interface_id, claim_span).is_some() {
                 continue;
             }
             let interface = program
                 .interface(interface_id)
                 .expect("inherited interface claim must reference an interface");
             if let Some(conformance) =
-                validate_conformance(program, class.id, interface, diagnostics)
+                validate_conformance(program, class.id, interface, claim_span, diagnostics)
             {
                 conformances[class.id.index()].push(conformance);
             }
@@ -243,6 +263,7 @@ fn validate_conformance(
     program: &ResolvedProgram,
     class: ClassId,
     interface: &crate::resolve::ResolvedInterfaceDeclaration,
+    claim_span: crate::source::Span,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirInterfaceConformance> {
     let class_declaration = program.class(class).expect("conforming class must exist");
@@ -266,6 +287,7 @@ fn validate_conformance(
                         class_declaration.name_span,
                         "required method is missing from this class and its bases",
                     )
+                    .with_secondary_label(claim_span, "interface conformance declared here")
                     .with_secondary_label(requirement.name_span, "requirement declared here"),
                 );
             }
@@ -288,6 +310,7 @@ fn validate_conformance(
                     method.name_span,
                     "static methods have no interface receiver",
                 )
+                .with_secondary_label(claim_span, "interface conformance declared here")
                 .with_secondary_label(requirement.name_span, "requirement declared here"),
             );
             valid = false;
@@ -306,6 +329,7 @@ fn validate_conformance(
                     private_span,
                     "private methods do not satisfy interface requirements",
                 )
+                .with_secondary_label(claim_span, "interface conformance declared here")
                 .with_secondary_label(requirement.name_span, "requirement declared here"),
             );
             valid = false;
@@ -321,6 +345,7 @@ fn validate_conformance(
                     ),
                 )
                 .with_primary_label(method.name_span, reason)
+                .with_secondary_label(claim_span, "interface conformance declared here")
                 .with_secondary_label(requirement.name_span, "requirement declared here")
                 .with_note("receiver access, binding modes, parameter types, and result type must match exactly"),
             );

@@ -121,9 +121,8 @@ impl SpecializationCoordinator<'_, '_, '_> {
                     },
                 )?;
                 if matches!(environment.owner, Some(GenericTemplateId::Class(_))) {
-                    // I5 materializes the interface dependency, but an
-                    // ordinary class declaration cannot claim it until I6
-                    // performs exact generic-interface conformance.
+                    // Class-bound closure remains staged separately from
+                    // closed interface declaration and claim materialization.
                     return None;
                 }
                 ResolvedTypeKind::Interface(interface)

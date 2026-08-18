@@ -530,20 +530,14 @@ fn resolved_dump_exposes_interface_template_parameter_and_requirement_identities
 }
 
 #[test]
-fn generic_interface_claims_and_bounds_are_retained_structurally() {
+fn generic_interface_claims_close_for_ordinary_classes_and_remain_structural_in_templates() {
     let output = resolve_text(concat!(
         "interface Param<Item> {}\n",
         "class Ordinary implements Param<i64> {}\n",
         "class Generic<T> implements Param<T> where T: Param<T> {}\n",
     ));
 
-    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
-    assert_eq!(diagnostics[0].code, UNSUPPORTED_GENERIC_INTERFACE);
-    assert_eq!(
-        diagnostics[0].message,
-        "generic interface application `Param` is resolved but not yet specialized"
-    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     assert!(matches!(
         output
             .program
@@ -553,7 +547,7 @@ fn generic_interface_claims_and_bounds_are_retained_structurally() {
             .first()
             .unwrap()
             .interface,
-        ResolvedInterfaceType::TemplateApplication { .. }
+        ResolvedInterfaceType::Ordinary(_)
     ));
     let generic = output
         .program
@@ -743,7 +737,7 @@ fn specializing_a_class_with_structural_interface_constraints_stays_gated() {
     assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
     assert_eq!(
         diagnostics[0].message,
-        "generic class specialization depends on a generic interface"
+        "generic class specialization depends on a generic interface bound"
     );
     let specialization = output
         .program

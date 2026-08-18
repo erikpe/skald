@@ -1,7 +1,7 @@
 //! Deterministic identities and provenance for closed generic-class requests.
 
 use crate::{
-    identity::{ClassId, ClassTemplateId, ModuleId},
+    identity::{ClassId, ClassTemplateId, InterfaceId, ModuleId},
     source::Span,
 };
 
@@ -60,6 +60,7 @@ pub(crate) struct GenericSpecialization {
     pub(crate) provenance: GenericSpecializationProvenance,
     pub(crate) closed_type_uses: Vec<Option<ResolvedTypeKind>>,
     pub(crate) closed_requirements: Vec<Option<ClosedGenericRequirementSubject>>,
+    pub(crate) closed_interface_claims: Vec<Option<InterfaceId>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -195,6 +195,7 @@ mod final_fields;
 mod floating_division;
 mod function_values;
 mod generic_classes;
+mod generic_interfaces;
 mod generic_object_model;
 mod indirect_calls;
 mod inline_fields;
