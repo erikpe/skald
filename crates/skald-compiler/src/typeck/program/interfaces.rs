@@ -42,14 +42,19 @@ pub(super) fn analyze_interfaces(
                     .into_iter()
                     .flat_map(|class| class.implemented_interfaces.iter())
             })
-            .map(|claim| claim.interface)
+            .filter_map(|claim| claim.interface.ordinary())
             .collect::<Vec<_>>();
         let mut selected = HashSet::new();
         for claim in &class.implemented_interfaces {
+            let Some(interface_id) = claim.interface.ordinary() else {
+                // Generic interface applications are retained structurally until
+                // interface specialization assigns them concrete identities.
+                continue;
+            };
             let interface = program
-                .interface(claim.interface)
+                .interface(interface_id)
                 .expect("resolved interface claim must reference an interface");
-            if inherited_interfaces.contains(&claim.interface) {
+            if inherited_interfaces.contains(&interface_id) {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_INTERFACE_CONFORMANCE,
@@ -62,7 +67,7 @@ pub(super) fn analyze_interfaces(
                     .with_note("inherited interface conformance is automatic"),
                 );
             }
-            if selected.insert(claim.interface) {
+            if selected.insert(interface_id) {
                 if let Some(conformance) =
                     validate_conformance(program, class.id, interface, diagnostics)
                 {

@@ -1,7 +1,7 @@
 //! Interface declaration collection and class conformance-name resolution.
 
+use super::generic_templates::TemplateTypeResolver;
 use super::*;
-use std::collections::HashSet;
 
 pub(super) fn collect_interface_declarations(
     ast: &syntax::CompilationUnit,
@@ -67,9 +67,11 @@ pub(super) fn collect_interface_declarations(
 
 pub(super) fn resolve_interface_claims(
     ast: &syntax::CompilationUnit,
+    module: ModuleId,
     work: &[(ClassId, usize)],
     lookup: ModuleLookup<'_>,
     classes: &mut ResolvedClassDeclarationTable,
+    interface_applications: &mut ResolvedGenericInterfaceApplicationTable,
     diagnostics: &mut Diagnostics,
 ) {
     for (class_id, ast_index) in work.iter().copied() {
@@ -79,18 +81,76 @@ pub(super) fn resolve_interface_claims(
         let syntax::TopLevelDeclaration::Class(syntax_class) = &ast.declarations[ast_index] else {
             unreachable!("class work item must reference a class")
         };
-        let mut seen = HashSet::new();
+        let mut seen = Vec::<ResolvedInterfaceType>::new();
         for claim in &syntax_class.implemented_interfaces {
-            if reject_unsupported_generic_interface_application(claim, diagnostics) {
+            if claim.arguments.is_some() {
+                let syntax = syntax::TypeSyntax {
+                    kind: syntax::TypeKind::Named(claim.clone()),
+                    span: claim.span,
+                };
+                let Some(term) = TemplateTypeResolver::for_application_site(lookup, diagnostics)
+                    .resolve(&syntax)
+                else {
+                    continue;
+                };
+                let Some(interface) = ResolvedInterfaceType::from_type(&term) else {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_INTERFACE_CLAIM,
+                            format!("`{}` does not name an interface", claim.text),
+                        )
+                        .with_primary_label(claim.span, "expected an interface application"),
+                    );
+                    continue;
+                };
+                if seen
+                    .iter()
+                    .any(|existing| existing.semantically_eq(&interface))
+                {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_INTERFACE_CLAIM,
+                            format!("duplicate interface `{}`", claim.text),
+                        )
+                        .with_primary_label(claim.span, "repeated here"),
+                    );
+                    continue;
+                }
+                seen.push(interface.clone());
+                interface_applications.record_interface(
+                    &interface,
+                    GenericInterfaceApplicationOrigin {
+                        module,
+                        span: claim.span,
+                    },
+                );
+                class.implemented_interfaces.push(ResolvedInterfaceClaim {
+                    interface,
+                    span: claim.span,
+                });
+                diagnostics.push(
+                    Diagnostic::error(
+                        UNSUPPORTED_GENERIC_INTERFACE,
+                        format!(
+                            "generic interface application `{}` is resolved but not yet specialized",
+                            claim.text
+                        ),
+                    )
+                    .with_primary_label(
+                        claim.span,
+                        "closed interface specialization is implemented by the next roadmap stage",
+                    ),
+                );
                 continue;
             }
             match lookup.select(claim, diagnostics) {
                 TopLevelLookup::Found(TopLevelSymbol {
                     kind: TopLevelSymbolKind::Interface(interface),
                     ..
-                }) if seen.insert(interface) => {
+                }) if !seen.contains(&ResolvedInterfaceType::Ordinary(interface)) => {
+                    seen.push(ResolvedInterfaceType::Ordinary(interface));
                     class.implemented_interfaces.push(ResolvedInterfaceClaim {
-                        interface,
+                        interface: ResolvedInterfaceType::Ordinary(interface),
                         span: claim.span,
                     });
                 }

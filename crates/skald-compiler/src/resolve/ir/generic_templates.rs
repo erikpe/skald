@@ -275,6 +275,144 @@ impl ResolvedTemplateType {
             | ResolvedTemplateTypeKind::Interface(_) => false,
         }
     }
+
+    pub(crate) fn semantically_eq(&self, other: &Self) -> bool {
+        match (&self.kind, &other.kind) {
+            (ResolvedTemplateTypeKind::I64, ResolvedTemplateTypeKind::I64)
+            | (ResolvedTemplateTypeKind::U64, ResolvedTemplateTypeKind::U64)
+            | (ResolvedTemplateTypeKind::U8, ResolvedTemplateTypeKind::U8)
+            | (ResolvedTemplateTypeKind::F64, ResolvedTemplateTypeKind::F64)
+            | (ResolvedTemplateTypeKind::Bool, ResolvedTemplateTypeKind::Bool)
+            | (ResolvedTemplateTypeKind::Unit, ResolvedTemplateTypeKind::Unit)
+            | (ResolvedTemplateTypeKind::Obj, ResolvedTemplateTypeKind::Obj) => true,
+            (
+                ResolvedTemplateTypeKind::Parameter(left),
+                ResolvedTemplateTypeKind::Parameter(right),
+            ) => left == right,
+            (ResolvedTemplateTypeKind::Class(left), ResolvedTemplateTypeKind::Class(right)) => {
+                left == right
+            }
+            (
+                ResolvedTemplateTypeKind::Interface(left),
+                ResolvedTemplateTypeKind::Interface(right),
+            ) => left == right,
+            (
+                ResolvedTemplateTypeKind::ClassTemplate {
+                    template: left,
+                    arguments: left_arguments,
+                },
+                ResolvedTemplateTypeKind::ClassTemplate {
+                    template: right,
+                    arguments: right_arguments,
+                },
+            ) => left == right && semantic_arguments_eq(left_arguments, right_arguments),
+            (
+                ResolvedTemplateTypeKind::InterfaceTemplate {
+                    template: left,
+                    arguments: left_arguments,
+                },
+                ResolvedTemplateTypeKind::InterfaceTemplate {
+                    template: right,
+                    arguments: right_arguments,
+                },
+            ) => left == right && semantic_arguments_eq(left_arguments, right_arguments),
+            (
+                ResolvedTemplateTypeKind::Function {
+                    parameters: left_parameters,
+                    result: left_result,
+                },
+                ResolvedTemplateTypeKind::Function {
+                    parameters: right_parameters,
+                    result: right_result,
+                },
+            ) => {
+                left_parameters.len() == right_parameters.len()
+                    && left_parameters
+                        .iter()
+                        .zip(right_parameters)
+                        .all(|(left, right)| {
+                            left.mode == right.mode
+                                && left.type_syntax.semantically_eq(&right.type_syntax)
+                        })
+                    && left_result.semantically_eq(right_result)
+            }
+            (ResolvedTemplateTypeKind::Shared(left), ResolvedTemplateTypeKind::Shared(right))
+            | (
+                ResolvedTemplateTypeKind::Optional(left),
+                ResolvedTemplateTypeKind::Optional(right),
+            )
+            | (ResolvedTemplateTypeKind::Array(left), ResolvedTemplateTypeKind::Array(right)) => {
+                left.semantically_eq(right)
+            }
+            _ => false,
+        }
+    }
+}
+
+fn semantic_arguments_eq(left: &[ResolvedTemplateType], right: &[ResolvedTemplateType]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.semantically_eq(right))
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedInterfaceType {
+    Ordinary(InterfaceId),
+    TemplateApplication {
+        template: InterfaceTemplateId,
+        arguments: Vec<ResolvedTemplateType>,
+    },
+}
+
+impl ResolvedInterfaceType {
+    pub const fn ordinary(&self) -> Option<InterfaceId> {
+        match self {
+            Self::Ordinary(interface) => Some(*interface),
+            Self::TemplateApplication { .. } => None,
+        }
+    }
+
+    pub(crate) fn from_type(type_term: &ResolvedTemplateType) -> Option<Self> {
+        match &type_term.kind {
+            ResolvedTemplateTypeKind::Interface(interface) => Some(Self::Ordinary(*interface)),
+            ResolvedTemplateTypeKind::InterfaceTemplate {
+                template,
+                arguments,
+            } => Some(Self::TemplateApplication {
+                template: *template,
+                arguments: arguments.clone(),
+            }),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn semantically_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Ordinary(left), Self::Ordinary(right)) => left == right,
+            (
+                Self::TemplateApplication {
+                    template: left,
+                    arguments: left_arguments,
+                },
+                Self::TemplateApplication {
+                    template: right,
+                    arguments: right_arguments,
+                },
+            ) => left == right && semantic_arguments_eq(left_arguments, right_arguments),
+            _ => false,
+        }
+    }
+
+    pub(crate) fn depends_on_parameter(&self) -> bool {
+        match self {
+            Self::Ordinary(_) => false,
+            Self::TemplateApplication { arguments, .. } => arguments
+                .iter()
+                .any(ResolvedTemplateType::depends_on_parameter),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -300,7 +438,8 @@ pub struct ResolvedInterfaceTemplateRequirementSignature {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInterfaceTemplateBound {
     pub parameter: TypeParameterId,
-    pub interface: ResolvedTemplateType,
+    pub interface: ResolvedInterfaceType,
+    pub interface_span: Span,
     pub parameter_span: Span,
     pub span: Span,
 }
@@ -379,7 +518,7 @@ impl ResolvedInterfaceTemplateSemanticTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ResolvedTemplateBound {
     pub(crate) parameter: TypeParameterId,
-    pub(crate) interface: InterfaceId,
+    pub(crate) interface: ResolvedInterfaceType,
     pub(crate) parameter_span: Span,
     pub(crate) interface_span: Span,
     pub(crate) span: Span,

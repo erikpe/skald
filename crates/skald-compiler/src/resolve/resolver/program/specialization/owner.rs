@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use super::requests::GenericApplicationDiscovery;
 use super::*;
 
 pub(super) struct SpecializationOwner<'semantic, 'interner, 'diagnostics> {
@@ -15,6 +16,7 @@ pub(super) struct SpecializationOwner<'semantic, 'interner, 'diagnostics> {
     rejected_edges: HashSet<(usize, GenericClassInstanceKey)>,
     specialization_failures: usize,
     next_class: usize,
+    pub(super) interface_applications: ResolvedGenericInterfaceApplicationTable,
 }
 
 impl<'semantic, 'interner, 'diagnostics> SpecializationOwner<'semantic, 'interner, 'diagnostics> {
@@ -36,12 +38,16 @@ impl<'semantic, 'interner, 'diagnostics> SpecializationOwner<'semantic, 'interne
             rejected_edges: HashSet::new(),
             specialization_failures: 0,
             next_class: ordinary_class_count,
+            interface_applications: ResolvedGenericInterfaceApplicationTable::default(),
         }
     }
 
-    pub(super) fn finish(self) -> GenericSpecializationTable {
+    pub(super) fn finish(self) -> GenericApplicationDiscovery {
         debug_assert!(self.active.is_empty());
-        GenericSpecializationTable::new(self.entries)
+        GenericApplicationDiscovery {
+            class_specializations: GenericSpecializationTable::new(self.entries),
+            interface_applications: self.interface_applications,
+        }
     }
 
     pub(super) fn request(
@@ -117,6 +123,37 @@ impl<'semantic, 'interner, 'diagnostics> SpecializationOwner<'semantic, 'interne
             .semantics
             .get(key.template)
             .expect("specialization key references template semantics");
+        let unsupported_interface = semantics
+            .implemented_interfaces
+            .iter()
+            .find(|claim| claim.interface.ordinary().is_none())
+            .map(|claim| (claim.span, "generic interface claim"))
+            .or_else(|| {
+                semantics
+                    .bounds
+                    .iter()
+                    .find(|bound| bound.interface.ordinary().is_none())
+                    .map(|bound| (bound.span, "generic interface bound"))
+            });
+        if let Some((declaration_span, kind)) = unsupported_interface {
+            let origin = self.entries[index]
+                .provenance
+                .origins
+                .first()
+                .expect("requested specialization retains an origin");
+            self.diagnostics.push(
+                Diagnostic::error(
+                    super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
+                    "generic class specialization depends on a generic interface",
+                )
+                .with_primary_label(
+                    origin.span,
+                    "closed interface specialization is implemented by the next roadmap stage",
+                )
+                .with_secondary_label(declaration_span, format!("{kind} declared here")),
+            );
+            self.specialization_failures += 1;
+        }
         let terms = semantics
             .type_uses
             .iter()

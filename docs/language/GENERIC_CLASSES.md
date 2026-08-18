@@ -380,11 +380,11 @@ interface conformance, slicing, dispatch, base lifecycle, and access rules
 apply to the exact closed identities. A template cannot extend a bare type
 parameter or raw generic name.
 
-Generic classes currently implement existing non-generic interfaces. Each
-closed application is checked independently because substituted signatures may
-affect conformance. Generic interfaces remain outside this implemented profile;
-their separate [frozen contract](GENERIC_INTERFACES.md) defines the planned
-extension.
+Generic class templates may retain ordinary interfaces or parameter-bearing
+generic interface applications in `implements` and `where` clauses. The latter
+remain structural until enclosing substitution closes their arguments. Closed
+generic-interface identity, conformance checking, and execution are still
+gated by the active [generic-interface roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md).
 
 ## Names, modules, and visibility
 

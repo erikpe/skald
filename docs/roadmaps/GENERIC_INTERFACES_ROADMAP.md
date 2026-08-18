@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I2 are complete and I3 is next.
+Status: in progress; I0–I3 are complete and I4 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -63,7 +63,7 @@ not reopen those decisions during implementation.
 - [x] I0 — Parse and preserve generic interface syntax
 - [x] I1 — Generalize template identities and module declarations
 - [x] I2 — Resolve generic interface templates and requirements
-- [ ] I3 — Resolve parameterized interface applications and bounds
+- [x] I3 — Resolve parameterized interface applications and bounds
 - [ ] I4 — Coordinate deterministic class and interface specialization
 - [ ] I5 — Materialize ordinary closed interface declarations
 - [ ] I6 — Integrate exact nominal conformance and inheritance
@@ -192,25 +192,25 @@ parameter or interface-template kind.
 **Purpose:** Make generic interface applications first-class structural terms
 through all pre-specialization type, claim, and constraint positions.
 
-- [ ] Resolve closed applications at ordinary use sites and parameter-bearing
+- [x] Resolve closed applications at ordinary use sites and parameter-bearing
   applications inside class or interface templates with exact arity,
   visibility, and declaration-kind checking.
-- [ ] Generalize class `implements` template claims from ordinary
+- [x] Generalize class `implements` template claims from ordinary
   `InterfaceId` to ordinary-or-structural interface applications.
-- [ ] Generalize class bounds and add interface bounds whose right side may be
+- [x] Generalize class bounds and add interface bounds whose right side may be
   an ordinary interface or generic interface application.
-- [ ] Validate bound subjects, duplicate exact bounds, inaccessible targets,
+- [x] Validate bound subjects, duplicate exact bounds, inaccessible targets,
   nested application arity, and wrong declaration kinds with complete source
   origins.
-- [ ] Propagate nested generic-class and generic-interface obligations through
+- [x] Propagate nested generic-class and generic-interface obligations through
   enclosing bounds rather than accepting unconstrained dependent applications.
-- [ ] Discover closed interface requests from signatures, claims, bounds,
+- [x] Discover closed interface requests from signatures, claims, bounds,
   aliases, shared targets, casts, tests, and outer generic arguments without
   allocating the same request twice.
-- [ ] Preserve contextual legality: bare interface arguments may survive where
+- [x] Preserve contextual legality: bare interface arguments may survive where
   actual uses are alias-only or unused and fail only where substituted owning
   roles require it.
-- [ ] Extend resolved template dumps with structural interface applications,
+- [x] Extend resolved template dumps with structural interface applications,
   claims, bounds, and application origins.
 
 **Tests:** Ordinary and template use-site matrices; class and interface

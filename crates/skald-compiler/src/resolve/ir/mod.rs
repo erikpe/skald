@@ -6,6 +6,7 @@ mod declarations;
 mod expression;
 mod function_references;
 mod function_types;
+mod generic_interface_applications;
 mod generic_requirements;
 mod generic_specializations;
 mod generic_templates;
@@ -65,6 +66,10 @@ pub use function_types::{
     ResolvedFunctionType, ResolvedFunctionTypeParameter, ResolvedFunctionTypeParameterMode,
     ResolvedFunctionTypeTable,
 };
+pub use generic_interface_applications::{
+    GenericInterfaceApplicationOrigin, ResolvedGenericInterfaceApplication,
+    ResolvedGenericInterfaceApplicationTable,
+};
 pub use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
@@ -79,9 +84,9 @@ pub use generic_templates::{
     ResolvedInterfaceTemplateRequirement, ResolvedInterfaceTemplateRequirementSignature,
     ResolvedInterfaceTemplateSemanticTable, ResolvedInterfaceTemplateSemantics,
     ResolvedInterfaceTemplateTable, ResolvedInterfaceTemplateTypeUse,
-    ResolvedInterfaceTemplateTypeUseContext, ResolvedTemplateFunctionTypeParameter,
-    ResolvedTemplateType, ResolvedTemplateTypeKind, ResolvedTypeParameter,
-    ResolvedTypeParameterTable, ResolvedTypeParameters,
+    ResolvedInterfaceTemplateTypeUseContext, ResolvedInterfaceType,
+    ResolvedTemplateFunctionTypeParameter, ResolvedTemplateType, ResolvedTemplateTypeKind,
+    ResolvedTypeParameter, ResolvedTypeParameterTable, ResolvedTypeParameters,
 };
 pub(crate) use generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateSemantics, ResolvedTemplateBound,

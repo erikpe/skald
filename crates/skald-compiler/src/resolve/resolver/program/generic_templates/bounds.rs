@@ -1,7 +1,5 @@
 //! Nominal interface-bound and implemented-interface resolution.
 
-use std::collections::HashSet;
-
 use super::*;
 
 pub(super) fn resolve_bounds(
@@ -11,15 +9,11 @@ pub(super) fn resolve_bounds(
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedTemplateBound> {
     let mut resolved = Vec::new();
-    let mut seen = HashSet::new();
     let Some(clause) = &class.where_clause else {
         return resolved;
     };
 
     for requirement in &clause.requirements {
-        if reject_unsupported_generic_interface_application(&requirement.interface, diagnostics) {
-            continue;
-        }
         let Some(parameter) = (!requirement.parameter.is_qualified())
             .then(|| parameters.get(requirement.parameter.text.as_str()))
             .flatten()
@@ -39,34 +33,17 @@ pub(super) fn resolve_bounds(
             );
             continue;
         };
-        match lookup.select(&requirement.interface, diagnostics) {
-            TopLevelLookup::Found(TopLevelSymbol {
-                kind: TopLevelSymbolKind::Interface(interface),
-                ..
-            }) if seen.insert((parameter.id, interface)) => {
-                resolved.push(ResolvedTemplateBound {
-                    parameter: parameter.id,
-                    interface,
-                    parameter_span: requirement.parameter.span,
-                    interface_span: requirement.interface.span,
-                    span: requirement.span,
-                });
-            }
-            TopLevelLookup::Found(TopLevelSymbol {
-                kind: TopLevelSymbolKind::Interface(_),
-                name_span,
-            }) => diagnostics.push(
-                Diagnostic::error(
-                    super::super::super::DUPLICATE_GENERIC_BOUND,
-                    format!(
-                        "duplicate bound `{}: {}`",
-                        requirement.parameter.text, requirement.interface.text
-                    ),
-                )
-                .with_primary_label(requirement.span, "repeated here")
-                .with_secondary_label(name_span, "interface declared here"),
-            ),
-            TopLevelLookup::Found(symbol) => diagnostics.push(
+        let syntax = syntax::TypeSyntax {
+            kind: syntax::TypeKind::Named(requirement.interface.clone()),
+            span: requirement.interface.span,
+        };
+        let Some(term) =
+            TemplateTypeResolver::new(parameters, lookup, diagnostics).resolve(&syntax)
+        else {
+            continue;
+        };
+        let Some(interface) = ResolvedInterfaceType::from_type(&term) else {
+            diagnostics.push(
                 Diagnostic::error(
                     super::super::super::INVALID_GENERIC_BOUND,
                     format!(
@@ -74,72 +51,80 @@ pub(super) fn resolve_bounds(
                         requirement.interface.text
                     ),
                 )
-                .with_primary_label(requirement.interface.span, "expected an interface name")
-                .with_secondary_label(symbol.name_span, "different declaration kind here"),
-            ),
-            TopLevelLookup::Missing => diagnostics.push(
+                .with_primary_label(requirement.interface.span, "expected an interface type"),
+            );
+            continue;
+        };
+        if resolved.iter().any(|bound: &ResolvedTemplateBound| {
+            bound.parameter == parameter.id && bound.interface.semantically_eq(&interface)
+        }) {
+            diagnostics.push(
                 Diagnostic::error(
-                    super::super::super::INVALID_GENERIC_BOUND,
-                    format!("unknown interface `{}`", requirement.interface.text),
+                    super::super::super::DUPLICATE_GENERIC_BOUND,
+                    format!(
+                        "duplicate bound `{}: {}`",
+                        requirement.parameter.text, requirement.interface.text
+                    ),
                 )
-                .with_primary_label(
-                    requirement.interface.span,
-                    "no interface with this name is visible in the template's module",
-                ),
-            ),
-            TopLevelLookup::Diagnosed => {}
+                .with_primary_label(requirement.span, "repeated here"),
+            );
+            continue;
         }
+        resolved.push(ResolvedTemplateBound {
+            parameter: parameter.id,
+            interface,
+            parameter_span: requirement.parameter.span,
+            interface_span: requirement.interface.span,
+            span: requirement.span,
+        });
     }
     resolved
 }
 
 pub(super) fn resolve_implemented_interfaces(
     class: &syntax::ClassDecl,
+    parameters: &ResolvedTypeParameters,
     lookup: ModuleLookup<'_>,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedInterfaceClaim> {
     let mut interfaces = Vec::new();
-    let mut seen = HashSet::new();
     for claim in &class.implemented_interfaces {
-        if reject_unsupported_generic_interface_application(claim, diagnostics) {
+        let syntax = syntax::TypeSyntax {
+            kind: syntax::TypeKind::Named(claim.clone()),
+            span: claim.span,
+        };
+        let Some(term) =
+            TemplateTypeResolver::new(parameters, lookup, diagnostics).resolve(&syntax)
+        else {
             continue;
-        }
-        match lookup.select(claim, diagnostics) {
-            TopLevelLookup::Found(TopLevelSymbol {
-                kind: TopLevelSymbolKind::Interface(interface),
-                ..
-            }) if seen.insert(interface) => interfaces.push(ResolvedInterfaceClaim {
-                interface,
-                span: claim.span,
-            }),
-            TopLevelLookup::Found(TopLevelSymbol {
-                kind: TopLevelSymbolKind::Interface(_),
-                name_span,
-            }) => diagnostics.push(
-                Diagnostic::error(
-                    super::super::super::INVALID_INTERFACE_CLAIM,
-                    format!("duplicate interface `{}`", claim.text),
-                )
-                .with_primary_label(claim.span, "repeated here")
-                .with_secondary_label(name_span, "interface declared here"),
-            ),
-            TopLevelLookup::Found(symbol) => diagnostics.push(
+        };
+        let Some(interface) = ResolvedInterfaceType::from_type(&term) else {
+            diagnostics.push(
                 Diagnostic::error(
                     super::super::super::INVALID_INTERFACE_CLAIM,
                     format!("`{}` does not name an interface", claim.text),
                 )
-                .with_primary_label(claim.span, "expected an interface name")
-                .with_secondary_label(symbol.name_span, "different declaration kind here"),
-            ),
-            TopLevelLookup::Missing => diagnostics.push(
+                .with_primary_label(claim.span, "expected an interface type"),
+            );
+            continue;
+        };
+        if interfaces
+            .iter()
+            .any(|existing: &ResolvedInterfaceClaim| existing.interface.semantically_eq(&interface))
+        {
+            diagnostics.push(
                 Diagnostic::error(
                     super::super::super::INVALID_INTERFACE_CLAIM,
-                    format!("unknown interface `{}`", claim.text),
+                    format!("duplicate interface `{}`", claim.text),
                 )
-                .with_primary_label(claim.span, "no interface with this name is declared"),
-            ),
-            TopLevelLookup::Diagnosed => {}
+                .with_primary_label(claim.span, "repeated here"),
+            );
+            continue;
         }
+        interfaces.push(ResolvedInterfaceClaim {
+            interface,
+            span: claim.span,
+        });
     }
     interfaces
 }

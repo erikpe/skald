@@ -21,7 +21,7 @@ use super::body::{
 use super::function_types::ResolvedFunctionTypeTable;
 use super::generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateTable,
-    ResolvedInterfaceTemplateSemanticTable, ResolvedInterfaceTemplateTable,
+    ResolvedInterfaceTemplateSemanticTable, ResolvedInterfaceTemplateTable, ResolvedInterfaceType,
     ResolvedTypeParameterTable,
 };
 use super::hierarchy::ResolvedClassHierarchy;
@@ -32,6 +32,7 @@ use super::modules::{
 use super::optional_types::ResolvedOptionalTypeTable;
 use super::GenericSpecializationTable;
 use super::ResolvedAddressTakenCallableTable;
+use super::ResolvedGenericInterfaceApplicationTable;
 use super::{ResolvedOptionalBoxTypeTable, ResolvedSharedTarget};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -47,6 +48,7 @@ pub struct ResolvedProgram {
     pub type_parameters: ResolvedTypeParameterTable,
     pub(crate) template_semantics: ResolvedClassTemplateSemanticTable,
     pub(crate) generic_specializations: GenericSpecializationTable,
+    pub generic_interface_applications: ResolvedGenericInterfaceApplicationTable,
     pub function_types: ResolvedFunctionTypeTable,
     pub address_taken_callables: ResolvedAddressTakenCallableTable,
     pub array_types: ResolvedArrayTypeTable,
@@ -233,9 +235,9 @@ pub struct ResolvedClassDeclaration {
     pub methods: Vec<ResolvedMethodDeclaration>,
     pub span: Span,
 }
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInterfaceClaim {
-    pub interface: InterfaceId,
+    pub interface: ResolvedInterfaceType,
     pub span: Span,
 }
 

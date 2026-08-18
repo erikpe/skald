@@ -346,10 +346,14 @@ fn invalid_unknown_duplicate_and_inaccessible_bounds_are_diagnosed() {
             .iter()
             .filter(|diagnostic| diagnostic.code == INVALID_GENERIC_BOUND)
             .count()
-            >= 3,
+            == 2,
         "{:?}",
         local.diagnostics
     );
+    assert!(local
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNKNOWN_TYPE));
 
     let (_workspace, graph) = load_module_sources(
         "app",

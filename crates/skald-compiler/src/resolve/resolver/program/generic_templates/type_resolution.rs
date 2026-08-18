@@ -2,11 +2,10 @@
 
 use super::*;
 
-pub(super) struct TemplateTypeResolver<'parameters, 'diagnostics> {
-    parameters: &'parameters ResolvedTypeParameters,
+pub(in crate::resolve::resolver) struct TemplateTypeResolver<'parameters, 'diagnostics> {
+    parameters: Option<&'parameters ResolvedTypeParameters>,
     lookup: ModuleLookup<'parameters>,
     diagnostics: &'diagnostics mut Diagnostics,
-    interface_applications: bool,
 }
 
 impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> {
@@ -16,10 +15,9 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
-            parameters,
+            parameters: Some(parameters),
             lookup,
             diagnostics,
-            interface_applications: false,
         }
     }
 
@@ -29,14 +27,27 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
-            parameters,
+            parameters: Some(parameters),
             lookup,
             diagnostics,
-            interface_applications: true,
         }
     }
 
-    pub(super) fn resolve(&mut self, syntax: &syntax::TypeSyntax) -> Option<ResolvedTemplateType> {
+    pub(in crate::resolve::resolver) fn for_application_site(
+        lookup: ModuleLookup<'parameters>,
+        diagnostics: &'diagnostics mut Diagnostics,
+    ) -> Self {
+        Self {
+            parameters: None,
+            lookup,
+            diagnostics,
+        }
+    }
+
+    pub(in crate::resolve::resolver) fn resolve(
+        &mut self,
+        syntax: &syntax::TypeSyntax,
+    ) -> Option<ResolvedTemplateType> {
         let kind = match &syntax.kind {
             syntax::TypeKind::I64 => ResolvedTemplateTypeKind::I64,
             syntax::TypeKind::U64 => ResolvedTemplateTypeKind::U64,
@@ -98,7 +109,10 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
         named: &syntax::NamedTypeSyntax,
     ) -> Option<ResolvedTemplateType> {
         if !named.name.is_qualified() {
-            if let Some(parameter) = self.parameters.get(named.name.text.as_str()) {
+            if let Some(parameter) = self
+                .parameters
+                .and_then(|parameters| parameters.get(named.name.text.as_str()))
+            {
                 if let Some(arguments) = &named.arguments {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -216,23 +230,6 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                     );
                     return None;
                 };
-                if !self.interface_applications {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
-                            format!(
-                                "generic interface application `{}` is not yet supported",
-                                named.name.text
-                            ),
-                        )
-                        .with_primary_label(
-                            arguments.span,
-                            "generic interface applications outside interface templates land in I3",
-                        )
-                        .with_secondary_label(name_span, "template declared here"),
-                    );
-                    return None;
-                }
                 let expected = self.lookup.interface_template_arity(template);
                 if arguments.arguments.len() != expected {
                     self.diagnostics.push(

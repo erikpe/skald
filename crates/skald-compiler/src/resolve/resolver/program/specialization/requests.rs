@@ -7,9 +7,31 @@ pub(crate) struct SpecializationDiscoveryInput<'program, 'ast> {
     units: &'program [ModuleUnit<'ast>],
     modules: &'program crate::module::ProgramModuleTable,
     lookups: ProgramLookupTables<'program>,
-    semantics: &'program ResolvedClassTemplateSemanticTable,
-    templates: &'program ResolvedClassTemplateTable,
+    templates: GenericTemplateDiscoveryInput<'program>,
     ordinary_class_count: usize,
+}
+
+pub(crate) struct GenericTemplateDiscoveryInput<'program> {
+    class_semantics: &'program ResolvedClassTemplateSemanticTable,
+    interface_semantics: &'program ResolvedInterfaceTemplateSemanticTable,
+    classes: &'program ResolvedClassTemplateTable,
+    interfaces: &'program ResolvedInterfaceTemplateTable,
+}
+
+impl<'program> GenericTemplateDiscoveryInput<'program> {
+    pub(crate) const fn new(
+        class_semantics: &'program ResolvedClassTemplateSemanticTable,
+        interface_semantics: &'program ResolvedInterfaceTemplateSemanticTable,
+        classes: &'program ResolvedClassTemplateTable,
+        interfaces: &'program ResolvedInterfaceTemplateTable,
+    ) -> Self {
+        Self {
+            class_semantics,
+            interface_semantics,
+            classes,
+            interfaces,
+        }
+    }
 }
 
 impl<'program, 'ast> SpecializationDiscoveryInput<'program, 'ast> {
@@ -17,33 +39,37 @@ impl<'program, 'ast> SpecializationDiscoveryInput<'program, 'ast> {
         units: &'program [ModuleUnit<'ast>],
         modules: &'program crate::module::ProgramModuleTable,
         lookups: ProgramLookupTables<'program>,
-        semantics: &'program ResolvedClassTemplateSemanticTable,
-        templates: &'program ResolvedClassTemplateTable,
+        templates: GenericTemplateDiscoveryInput<'program>,
         ordinary_class_count: usize,
     ) -> Self {
         Self {
             units,
             modules,
             lookups,
-            semantics,
             templates,
             ordinary_class_count,
         }
     }
 }
 
+pub(crate) struct GenericApplicationDiscovery {
+    pub(crate) class_specializations: GenericSpecializationTable,
+    pub(crate) interface_applications: ResolvedGenericInterfaceApplicationTable,
+}
+
 pub(crate) fn discover_specializations(
     input: SpecializationDiscoveryInput<'_, '_>,
     interner: &mut ResolvedTypeInterner,
     diagnostics: &mut Diagnostics,
-) -> GenericSpecializationTable {
+) -> GenericApplicationDiscovery {
     let mut owner = SpecializationOwner::new(
-        input.semantics,
-        input.templates,
+        input.templates.class_semantics,
+        input.templates.classes,
         interner,
         diagnostics,
         input.ordinary_class_count,
     );
+    record_template_interface_applications(&mut owner, &input);
     for unit in input.units {
         let lookup = input.lookups.for_unit(unit, input.modules);
         SourceRequestScanner {
@@ -56,6 +82,56 @@ pub(crate) fn discover_specializations(
         .visit_unit(unit.ast);
     }
     owner.finish()
+}
+
+fn record_template_interface_applications(
+    owner: &mut SpecializationOwner<'_, '_, '_>,
+    input: &SpecializationDiscoveryInput<'_, '_>,
+) {
+    for semantics in input.templates.class_semantics.iter() {
+        let module = input
+            .templates
+            .classes
+            .get(semantics.template)
+            .expect("class semantics reference a collected template")
+            .module;
+        for type_use in &semantics.type_uses {
+            owner
+                .interface_applications
+                .record_type(module, &type_use.type_term);
+        }
+        for claim in &semantics.implemented_interfaces {
+            owner.interface_applications.record_interface(
+                &claim.interface,
+                GenericInterfaceApplicationOrigin {
+                    module,
+                    span: claim.span,
+                },
+            );
+        }
+        for bound in &semantics.bounds {
+            owner.interface_applications.record_interface(
+                &bound.interface,
+                GenericInterfaceApplicationOrigin {
+                    module,
+                    span: bound.interface_span,
+                },
+            );
+        }
+    }
+    for semantics in input.templates.interface_semantics.iter() {
+        let module = input
+            .templates
+            .interfaces
+            .get(semantics.template)
+            .expect("interface semantics reference a collected template")
+            .module;
+        for type_use in &semantics.type_uses {
+            owner
+                .interface_applications
+                .record_type(module, &type_use.type_term);
+        }
+    }
 }
 
 struct SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup> {
@@ -227,19 +303,49 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                 }
                 None
             }
-            (TopLevelSymbolKind::InterfaceTemplate(_), Some(arguments)) => {
+            (TopLevelSymbolKind::InterfaceTemplate(_), Some(_)) => {
+                let syntax = syntax::TypeSyntax {
+                    kind: syntax::TypeKind::Named(named.clone()),
+                    span: named.span,
+                };
+                let term = if report_lookup_errors {
+                    super::super::generic_templates::TemplateTypeResolver::for_application_site(
+                        self.lookup,
+                        self.owner.diagnostics,
+                    )
+                    .resolve(&syntax)?
+                } else {
+                    // Ordinary resolution owns diagnostics for the outer site.
+                    // Discovery repeats structural resolution silently so it
+                    // can retain a request without allocating an InterfaceId.
+                    let mut scratch = Diagnostics::new();
+                    super::super::generic_templates::TemplateTypeResolver::for_application_site(
+                        self.lookup,
+                        &mut scratch,
+                    )
+                    .resolve(&syntax)?
+                };
+                let interface = ResolvedInterfaceType::from_type(&term)
+                    .expect("an interface-template application resolves as an interface");
+                self.owner.interface_applications.record_interface(
+                    &interface,
+                    GenericInterfaceApplicationOrigin {
+                        module: self.module,
+                        span: named.span,
+                    },
+                );
                 if report_lookup_errors {
                     self.owner.diagnostics.push(
                         Diagnostic::error(
                             super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
                             format!(
-                                "generic interface application `{}` is not yet supported",
+                                "generic interface application `{}` is resolved but not yet specialized",
                                 named.name.text
                             ),
                         )
                         .with_primary_label(
-                            arguments.span,
-                            "identity is known, but application resolution is not implemented",
+                            named.span,
+                            "closed interface specialization is implemented by the next roadmap stage",
                         )
                         .with_secondary_label(symbol.name_span, "template declared here"),
                     );

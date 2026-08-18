@@ -103,8 +103,8 @@ fn headers_allocate_stable_member_and_callable_identities() {
     let pair = output.program.classes.get(ClassId::new(1)).unwrap();
     assert_eq!(pair.direct_base.unwrap().class, ClassId::new(0));
     assert_eq!(
-        pair.implemented_interfaces[0].interface,
-        InterfaceId::new(0)
+        pair.implemented_interfaces[0].interface.ordinary(),
+        Some(InterfaceId::new(0))
     );
     assert_eq!(pair.fields[0].id, FieldId::new(pair.id, 0));
     assert!(matches!(

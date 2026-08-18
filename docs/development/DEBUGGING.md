@@ -84,12 +84,13 @@ matter.
 
 For generic interfaces, first inspect `Interface` AST nodes for
 `TypeParameters` and `WhereClause`, then inspect resolved
-`ModuleDeclarations` and `InterfaceTemplates`. The latter prints the stable
-template identity, owner-correct parameter identities, and source-ordered
-template requirement identities. Selective and qualified imports retain the
-same `InterfaceTemplateId`. `RES051` is the intentional semantic gate: a
-generic interface must not receive an ordinary `InterfaceId`, and an applied
-claim or bound must not be silently reduced to its declaration name.
+`ModuleDeclarations`, `InterfaceTemplates`, `InterfaceTemplateSemantics`, and
+`GenericInterfaceApplications`. These expose stable template and requirement
+identities, owner-correct parameters, structural claims and bounds, deduplicated
+closed requests, and every ordered source origin. Selective and qualified
+imports retain the same `InterfaceTemplateId`. `RES051` is the intentional
+specialization gate: a generic interface must not receive an ordinary
+`InterfaceId` before the closed-identity stage.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

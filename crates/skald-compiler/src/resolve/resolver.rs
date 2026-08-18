@@ -314,20 +314,31 @@ fn report_generic_application(
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::InterfaceTemplate(_),
             name_span,
-        }) => diagnostics.push(
-            Diagnostic::error(
-                UNSUPPORTED_GENERIC_INTERFACE,
-                format!(
-                    "generic interface application `{}` is not yet supported",
-                    named.name.text
-                ),
-            )
-            .with_primary_label(
-                arguments.span,
-                "identity is known, but application resolution is not implemented",
-            )
-            .with_secondary_label(name_span, "template declared here"),
-        ),
+        }) => {
+            let syntax = syntax::TypeSyntax {
+                kind: syntax::TypeKind::Named(named.clone()),
+                span: named.span,
+            };
+            if program::TemplateTypeResolver::for_application_site(lookup, diagnostics)
+                .resolve(&syntax)
+                .is_some()
+            {
+                diagnostics.push(
+                    Diagnostic::error(
+                        UNSUPPORTED_GENERIC_INTERFACE,
+                        format!(
+                            "generic interface application `{}` is resolved but not yet specialized",
+                            named.name.text
+                        ),
+                    )
+                    .with_primary_label(
+                        arguments.span,
+                        "closed interface specialization is implemented by the next roadmap stage",
+                    )
+                    .with_secondary_label(name_span, "template declared here"),
+                );
+            }
+        }
         TopLevelLookup::Found(symbol) => diagnostics.push(
             Diagnostic::error(
                 INVALID_GENERIC_APPLICATION,

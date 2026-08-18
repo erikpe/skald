@@ -17,4 +17,4 @@ pub(super) use interface_resolution::resolve_interface_template_semantics;
 pub(super) use resolution::resolve_class_template_semantics;
 
 use super::*;
-use type_resolution::TemplateTypeResolver;
+pub(in crate::resolve::resolver) use type_resolution::TemplateTypeResolver;

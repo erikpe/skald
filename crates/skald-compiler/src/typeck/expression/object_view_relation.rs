@@ -104,7 +104,7 @@ fn class_conforms_to(
                 declaration
                     .implemented_interfaces
                     .iter()
-                    .any(|claim| claim.interface == interface)
+                    .any(|claim| claim.interface.ordinary() == Some(interface))
             })
         })
 }

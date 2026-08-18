@@ -1,8 +1,9 @@
 # Generic-Interface Specialization
 
 Status: frozen compiler contract; source AST, template identities, parameter
-ownership, module declaration kinds, and definition-site interface-template
-semantics implemented; closed specialization and execution are not yet implemented.
+ownership, module declaration kinds, definition-site semantics, structural
+applications, claims, bounds, and closed-request discovery implemented; closed
+identity assignment, specialization, and execution are not yet implemented.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
@@ -102,6 +103,14 @@ Generic class interface claims and bounds can no longer store only an
 `InterfaceId`. Their template representation retains either an ordinary
 interface or a parameter-bearing generic interface application until
 substitution closes it.
+
+The implemented pre-specialization boundary also retains every closed generic
+interface request without assigning an `InterfaceId`. Requests are compared by
+span-free structural identity, deduplicated across signatures, claims, bounds,
+aliases, shared targets, casts, tests, and nested generic arguments, and keep
+all application origins in canonical module/source order. `RES051` remains the
+honest gate where an ordinary type or executable conformance would require the
+closed identity that later stages provide.
 
 Nondependent names resolve once in the template's definition module. Type
 arguments resolve at each application site before entering a canonical key.

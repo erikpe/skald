@@ -34,6 +34,7 @@ use super::{
 };
 use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
+pub(in crate::resolve::resolver) use generic_templates::TemplateTypeResolver;
 use generic_templates::{
     collect_generic_templates, resolve_class_template_semantics,
     resolve_interface_template_semantics, ClassTemplateWorkItem, CollectedGenericTemplates,
@@ -48,35 +49,12 @@ use resolver::{
 };
 use specialization::{
     discover_specializations, generated_class_work, specialize_bodies, specialize_declarations,
-    validate_specialization_requirements, SpecializationBodyInput, SpecializationDeclarationInput,
-    SpecializationDiscoveryInput,
+    validate_specialization_requirements, GenericTemplateDiscoveryInput, SpecializationBodyInput,
+    SpecializationDeclarationInput, SpecializationDiscoveryInput,
 };
 use static_initializer::{attach_static_field_initializers, resolve_static_field_initializers};
 use string_language_item::validate_string_language_item;
 use virtuals::resolve_virtual_families;
-
-fn reject_unsupported_generic_interface_application(
-    target: &syntax::NamedTypeSyntax,
-    diagnostics: &mut Diagnostics,
-) -> bool {
-    let Some(arguments) = &target.arguments else {
-        return false;
-    };
-    diagnostics.push(
-        Diagnostic::error(
-            UNSUPPORTED_GENERIC_INTERFACE,
-            format!(
-                "generic interface application `{}` is not yet supported",
-                target.name.text
-            ),
-        )
-        .with_primary_label(
-            arguments.span,
-            "generic interface syntax is preserved, but semantic resolution is not implemented",
-        ),
-    );
-    true
-}
 
 pub(super) fn resolve_singleton(
     ast: &syntax::CompilationUnit,

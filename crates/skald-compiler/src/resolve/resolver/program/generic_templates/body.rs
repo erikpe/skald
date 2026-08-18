@@ -665,13 +665,16 @@ impl TemplateBodyResolver<'_, '_, '_> {
             .iter()
             .filter(|bound| bound.parameter == parameter)
         {
+            let Some(interface_id) = bound.interface.ordinary() else {
+                continue;
+            };
             let interface = self
                 .interfaces
-                .get(bound.interface)
+                .get(interface_id)
                 .expect("resolved bounds reference interface declarations");
             for requirement in &interface.requirements {
                 if requirement.name == member.text.as_str() {
-                    candidates.push((bound.interface, requirement));
+                    candidates.push((interface_id, requirement));
                 }
             }
         }

@@ -269,7 +269,7 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                 &format!(
                                     "Bound {} {}",
                                     bound.parameter,
-                                    render_template_type(&bound.interface)
+                                    render_interface_type(&bound.interface)
                                 ),
                                 bound.span,
                             );
@@ -369,13 +369,20 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                         }
                         for interface in &semantics.implemented_interfaces {
                             dumper.line(
-                                &format!("Implements {}", interface.interface),
+                                &format!(
+                                    "Implements {}",
+                                    render_interface_type(&interface.interface)
+                                ),
                                 interface.span,
                             );
                         }
                         for bound in &semantics.bounds {
                             dumper.line(
-                                &format!("Bound {} interface {}", bound.parameter, bound.interface),
+                                &format!(
+                                    "Bound {} interface {}",
+                                    bound.parameter,
+                                    render_interface_type(&bound.interface)
+                                ),
                                 bound.span,
                             );
                         }
@@ -474,6 +481,30 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                     *span,
                                 ),
                             }
+                        }
+                    });
+                }
+            });
+        }
+        if !program.generic_interface_applications.is_empty() {
+            dumper.heading("GenericInterfaceApplications");
+            dumper.indented(|dumper| {
+                for application in program.generic_interface_applications.iter() {
+                    let span = application
+                        .origins
+                        .first()
+                        .expect("every retained application has an origin")
+                        .span;
+                    dumper.line(
+                        &format!(
+                            "Application {}",
+                            render_interface_type(&application.interface)
+                        ),
+                        span,
+                    );
+                    dumper.indented(|dumper| {
+                        for origin in &application.origins {
+                            dumper.line(&format!("Origin module {}", origin.module), origin.span);
                         }
                     });
                 }
@@ -808,6 +839,23 @@ fn render_template_type(type_term: &ResolvedTemplateType) -> String {
     }
 }
 
+fn render_interface_type(interface: &ResolvedInterfaceType) -> String {
+    match interface {
+        ResolvedInterfaceType::Ordinary(interface) => interface.to_string(),
+        ResolvedInterfaceType::TemplateApplication {
+            template,
+            arguments,
+        } => format!(
+            "{template}<{}>",
+            arguments
+                .iter()
+                .map(render_template_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
+}
+
 fn render_template_type_context(context: ResolvedTemplateTypeUseContext) -> String {
     match context {
         ResolvedTemplateTypeUseContext::DirectBase => "direct-base".to_owned(),
@@ -970,7 +1018,10 @@ impl<'program> ResolvedDumper<'program> {
                 dumper.line(&format!("DirectBase {}", base.class), base.span);
             }
             for claim in &class.implemented_interfaces {
-                dumper.line(&format!("Implements {}", claim.interface), claim.span);
+                dumper.line(
+                    &format!("Implements {}", render_interface_type(&claim.interface)),
+                    claim.span,
+                );
             }
             dumper.heading("Fields");
             dumper.indented(|dumper| {

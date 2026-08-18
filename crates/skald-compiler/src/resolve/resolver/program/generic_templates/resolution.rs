@@ -13,7 +13,8 @@ pub(crate) fn resolve_class_template_semantics(
     diagnostics: &mut Diagnostics,
 ) -> ResolvedClassTemplateSemantics {
     let bounds = resolve_bounds(class, parameters, lookup, diagnostics);
-    let implemented_interfaces = resolve_implemented_interfaces(class, lookup, diagnostics);
+    let implemented_interfaces =
+        resolve_implemented_interfaces(class, parameters, lookup, diagnostics);
     let mut type_uses = Vec::new();
     let mut fields = HashMap::new();
     let mut callable_parameters = Vec::with_capacity(class.members.len());

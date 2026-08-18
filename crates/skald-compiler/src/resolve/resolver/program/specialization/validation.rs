@@ -39,8 +39,12 @@ pub(crate) fn validate_specialization_requirements(
                     .find(|parameter| parameter.id == bound.parameter)
             })
             .expect("resolved bound parameter belongs to its template");
+        let interface_id = bound
+            .interface
+            .ordinary()
+            .expect("only ordinary bounds are validated before interface specialization");
         let interface = program
-            .interface(bound.interface)
+            .interface(interface_id)
             .expect("resolved bound references an interface");
         let argument = specialization.key.arguments[bound.parameter.index()];
         let origin = specialization
@@ -281,10 +285,13 @@ fn failed_nominal_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         for (bound_index, bound) in semantics.bounds.iter().enumerate() {
+            let Some(interface) = bound.interface.ordinary() else {
+                continue;
+            };
             let argument = specialization.key.arguments[bound.parameter.index()];
             let satisfied = match argument {
                 ResolvedTypeKind::Class(argument_class) => {
-                    effective_nominal_conformance(program, argument_class, bound.interface)
+                    effective_nominal_conformance(program, argument_class, interface)
                 }
                 ResolvedTypeKind::I64
                 | ResolvedTypeKind::U64
@@ -319,7 +326,7 @@ fn effective_nominal_conformance(
                 declaration
                     .implemented_interfaces
                     .iter()
-                    .any(|claim| claim.interface == interface)
+                    .any(|claim| claim.interface.ordinary() == Some(interface))
             })
         })
 }

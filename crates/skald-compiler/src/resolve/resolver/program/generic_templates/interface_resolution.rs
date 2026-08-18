@@ -152,11 +152,7 @@ fn resolve_interface_bounds(
         else {
             continue;
         };
-        if !matches!(
-            term.kind,
-            ResolvedTemplateTypeKind::Interface(_)
-                | ResolvedTemplateTypeKind::InterfaceTemplate { .. }
-        ) {
+        let Some(interface_type) = ResolvedInterfaceType::from_type(&term) else {
             diagnostics.push(
                 Diagnostic::error(
                     super::super::super::INVALID_GENERIC_BOUND,
@@ -168,9 +164,9 @@ fn resolve_interface_bounds(
                 .with_primary_label(requirement.interface.span, "expected an interface type"),
             );
             continue;
-        }
+        };
         if bounds.iter().any(|bound: &ResolvedInterfaceTemplateBound| {
-            bound.parameter == parameter.id && same_type(&bound.interface, &term)
+            bound.parameter == parameter.id && bound.interface.semantically_eq(&interface_type)
         }) {
             diagnostics.push(
                 Diagnostic::error(
@@ -191,7 +187,8 @@ fn resolve_interface_bounds(
         });
         bounds.push(ResolvedInterfaceTemplateBound {
             parameter: parameter.id,
-            interface: term,
+            interface: interface_type,
+            interface_span: requirement.interface.span,
             parameter_span: requirement.parameter.span,
             span: requirement.span,
         });
@@ -269,62 +266,4 @@ fn record_type_use(
         push(requirements, term, capability, term.span, reason);
     }
     validate_interface_signature_type(term, capability, diagnostics);
-}
-
-fn same_type(left: &ResolvedTemplateType, right: &ResolvedTemplateType) -> bool {
-    match (&left.kind, &right.kind) {
-        (ResolvedTemplateTypeKind::I64, ResolvedTemplateTypeKind::I64)
-        | (ResolvedTemplateTypeKind::U64, ResolvedTemplateTypeKind::U64)
-        | (ResolvedTemplateTypeKind::U8, ResolvedTemplateTypeKind::U8)
-        | (ResolvedTemplateTypeKind::F64, ResolvedTemplateTypeKind::F64)
-        | (ResolvedTemplateTypeKind::Bool, ResolvedTemplateTypeKind::Bool)
-        | (ResolvedTemplateTypeKind::Unit, ResolvedTemplateTypeKind::Unit)
-        | (ResolvedTemplateTypeKind::Obj, ResolvedTemplateTypeKind::Obj) => true,
-        (ResolvedTemplateTypeKind::Parameter(a), ResolvedTemplateTypeKind::Parameter(b)) => a == b,
-        (ResolvedTemplateTypeKind::Class(a), ResolvedTemplateTypeKind::Class(b)) => a == b,
-        (ResolvedTemplateTypeKind::Interface(a), ResolvedTemplateTypeKind::Interface(b)) => a == b,
-        (
-            ResolvedTemplateTypeKind::ClassTemplate {
-                template: a,
-                arguments: aa,
-            },
-            ResolvedTemplateTypeKind::ClassTemplate {
-                template: b,
-                arguments: ba,
-            },
-        ) => a == b && aa.len() == ba.len() && aa.iter().zip(ba).all(|(a, b)| same_type(a, b)),
-        (
-            ResolvedTemplateTypeKind::InterfaceTemplate {
-                template: a,
-                arguments: aa,
-            },
-            ResolvedTemplateTypeKind::InterfaceTemplate {
-                template: b,
-                arguments: ba,
-            },
-        ) => a == b && aa.len() == ba.len() && aa.iter().zip(ba).all(|(a, b)| same_type(a, b)),
-        (ResolvedTemplateTypeKind::Shared(a), ResolvedTemplateTypeKind::Shared(b))
-        | (ResolvedTemplateTypeKind::Optional(a), ResolvedTemplateTypeKind::Optional(b))
-        | (ResolvedTemplateTypeKind::Array(a), ResolvedTemplateTypeKind::Array(b)) => {
-            same_type(a, b)
-        }
-        (
-            ResolvedTemplateTypeKind::Function {
-                parameters: ap,
-                result: ar,
-            },
-            ResolvedTemplateTypeKind::Function {
-                parameters: bp,
-                result: br,
-            },
-        ) => {
-            ap.len() == bp.len()
-                && ap
-                    .iter()
-                    .zip(bp)
-                    .all(|(a, b)| a.mode == b.mode && same_type(&a.type_syntax, &b.type_syntax))
-                && same_type(ar, br)
-        }
-        _ => false,
-    }
 }

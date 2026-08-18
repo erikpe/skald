@@ -7,8 +7,8 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
-progress. I0–I2 are complete; I3, parameterized interface applications and
-bounds across use sites, is next.
+progress. I0–I3 are complete; I4, coordinated deterministic class and
+interface specialization, is next.
 
 The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
 maintainability follow-ups intentionally deferred until after the roadmap.

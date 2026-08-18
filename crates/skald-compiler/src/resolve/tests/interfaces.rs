@@ -32,7 +32,7 @@ fn assigns_stable_interface_and_requirement_identities() {
     assert_eq!(
         claims
             .iter()
-            .map(|claim| claim.interface)
+            .filter_map(|claim| claim.interface.ordinary())
             .collect::<Vec<_>>(),
         [InterfaceId::new(1), InterfaceId::new(0)]
     );
@@ -171,8 +171,8 @@ fn resolves_complete_generic_interface_signature_trees_and_modes() {
         .unwrap();
     assert_eq!(semantics.bounds.len(), 1);
     assert!(matches!(
-        semantics.bounds[0].interface.kind,
-        ResolvedTemplateTypeKind::InterfaceTemplate { .. }
+        semantics.bounds[0].interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
     ));
     let all = &semantics.requirements[0];
     assert_eq!(
@@ -530,25 +530,247 @@ fn resolved_dump_exposes_interface_template_parameter_and_requirement_identities
 }
 
 #[test]
-fn generic_interface_claims_and_bounds_are_gated_without_name_only_resolution() {
+fn generic_interface_claims_and_bounds_are_retained_structurally() {
     let output = resolve_text(concat!(
-        "interface Plain {}\n",
-        "class Ordinary implements Plain<i64> {}\n",
-        "class Generic<T> implements Plain<T> where T: Plain<T> {}\n",
+        "interface Param<Item> {}\n",
+        "class Ordinary implements Param<i64> {}\n",
+        "class Generic<T> implements Param<T> where T: Param<T> {}\n",
     ));
 
     let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 3, "{:?}", output.diagnostics);
-    assert!(diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == UNSUPPORTED_GENERIC_INTERFACE));
-    assert!(diagnostics.iter().all(|diagnostic| {
-        diagnostic.message == "generic interface application `Plain` is not yet supported"
-    }));
-    assert!(output
+    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics[0].code, UNSUPPORTED_GENERIC_INTERFACE);
+    assert_eq!(
+        diagnostics[0].message,
+        "generic interface application `Param` is resolved but not yet specialized"
+    );
+    assert!(matches!(
+        output
+            .program
+            .class(ClassId::new(0))
+            .unwrap()
+            .implemented_interfaces
+            .first()
+            .unwrap()
+            .interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
+    ));
+    let generic = output
         .program
-        .class(ClassId::new(0))
-        .unwrap()
-        .implemented_interfaces
-        .is_empty());
+        .template_semantics
+        .get(crate::identity::ClassTemplateId::new(0))
+        .unwrap();
+    assert!(matches!(
+        generic.implemented_interfaces[0].interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
+    ));
+    assert!(matches!(
+        generic.bounds[0].interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
+    ));
+    assert_eq!(
+        output.program.generic_interface_applications.iter().len(),
+        1
+    );
+}
+
+#[test]
+fn closed_interface_applications_are_discovered_once_with_ordered_origins() {
+    let output = resolve_text(concat!(
+        "interface First<T> {}\n",
+        "interface Second<T> {}\n",
+        "class Box<T> {}\n",
+        "class Generic<T> where T: Second<First<i64>> {}\n",
+        "class Claimed implements First<i64> {}\n",
+        "fn inspect(ref value: Obj, ref typed: First<i64>, ref shared_value: shared First<i64>, ref nested: Box<First<i64>>) -> unit {\n",
+        "  (First<i64>) value;\n",
+        "  value is First<i64>;\n",
+        "}\n",
+    ));
+
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == UNSUPPORTED_GENERIC_INTERFACE),
+        "{:?}",
+        output.diagnostics
+    );
+    let applications = output
+        .program
+        .generic_interface_applications
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(applications.len(), 2);
+    assert!(matches!(
+        applications[0].interface,
+        ResolvedInterfaceType::TemplateApplication {
+            template,
+            ..
+        } if template == InterfaceTemplateId::new(1)
+    ));
+    assert!(matches!(
+        applications[1].interface,
+        ResolvedInterfaceType::TemplateApplication {
+            template,
+            ..
+        } if template == InterfaceTemplateId::new(0)
+    ));
+    assert_eq!(applications[0].origins.len(), 1);
+    assert_eq!(applications[1].origins.len(), 7);
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump, dump_resolved(&output.program));
+    assert!(
+        dump.contains("Application interface-template1<interface-template0<i64>>"),
+        "{dump}"
+    );
+    assert!(
+        dump.contains("Application interface-template0<i64>"),
+        "{dump}"
+    );
+}
+
+#[test]
+fn generic_interface_bounds_validate_structural_targets_and_duplicates() {
+    let output = resolve_text(concat!(
+        "interface Pair<Left, Right> {}\n",
+        "class Wrap<T> {}\n",
+        "class NotAnInterface<T> {}\n",
+        "class Good<T, U> implements Pair<T, Wrap<U>> where T: Pair<U, Wrap<T>> {}\n",
+        "interface AlsoGood<T, U> where T: Pair<U, Wrap<T>> {}\n",
+        "class Bad<T> where T: Pair<T>, T: Pair<T, T>, T: Pair<T, T>, Missing: Pair<T, T>, T: NotAnInterface<T> {}\n",
+    ));
+
+    let codes = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect::<Vec<_>>();
+    assert!(
+        codes.contains(&GENERIC_ARITY_MISMATCH),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(
+        codes.contains(&DUPLICATE_GENERIC_BOUND),
+        "{:?}",
+        output.diagnostics
+    );
+    assert!(
+        codes.contains(&INVALID_GENERIC_BOUND),
+        "{:?}",
+        output.diagnostics
+    );
+
+    let class = output
+        .program
+        .template_semantics
+        .get(crate::identity::ClassTemplateId::new(2))
+        .unwrap();
+    assert!(matches!(
+        class.implemented_interfaces[0].interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
+    ));
+    assert!(matches!(
+        class.bounds[0].interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
+    ));
+    let interface = output
+        .program
+        .interface_template_semantics
+        .get(InterfaceTemplateId::new(1))
+        .unwrap();
+    assert!(matches!(
+        interface.bounds[0].interface,
+        ResolvedInterfaceType::TemplateApplication { .. }
+    ));
+}
+
+#[test]
+fn closed_interface_arguments_resolve_in_the_application_module() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "from dep import PublicView as View;\n",
+                    "import dep;\n",
+                    "class Arg {}\n",
+                    "fn inspect(ref local: View<Arg>, ref qualified: dep::PublicView<u64>, ref hidden: dep::Hidden<i64>) -> unit {}\n",
+                    "fn main() -> i64 { return 0; }\n",
+                ),
+            ),
+            (
+                "dep.ska",
+                concat!(
+                    "public interface PublicView<T> {}\n",
+                    "interface Hidden<T> {}\n",
+                    "public class Arg {}\n",
+                ),
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == PRIVATE_DECLARATION)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+    let applications = output
+        .program
+        .generic_interface_applications
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(applications.len(), 2);
+    let ResolvedInterfaceType::TemplateApplication { arguments, .. } = &applications[0].interface
+    else {
+        panic!("expected a structural interface application");
+    };
+    let ResolvedTemplateTypeKind::Class(argument) = arguments[0].kind else {
+        panic!("expected the caller's class argument");
+    };
+    assert_eq!(output.program.class(argument).unwrap().name, "Arg");
+    assert_eq!(
+        output.program.class(argument).unwrap().module,
+        output.program.modules.selected()
+    );
+}
+
+#[test]
+fn specializing_a_class_with_structural_interface_constraints_stays_gated() {
+    let output = resolve_text(concat!(
+        "interface Constraint<T> {}\n",
+        "class Item {}\n",
+        "class Generic<T> implements Constraint<T> where T: Constraint<T> {}\n",
+        "fn inspect(ref value: Generic<Item>) -> unit {}\n",
+    ));
+
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == UNSUPPORTED_GENERIC_INTERFACE)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(
+        diagnostics[0].message,
+        "generic class specialization depends on a generic interface"
+    );
+    let specialization = output
+        .program
+        .generic_specializations
+        .iter()
+        .next()
+        .unwrap();
+    assert!(matches!(
+        specialization.state,
+        GenericSpecializationState::Failed { .. }
+    ));
 }

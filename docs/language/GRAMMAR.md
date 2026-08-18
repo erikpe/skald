@@ -357,15 +357,15 @@ placeholder types. Accepted closed applications use the ordinary lifecycle,
 HIR, MIR, verification, and backend pipeline.
 
 Generic interface headers, parameter-bearing `implements` targets, and generic
-interface applications on the right of `where` requirements are currently an
-identity-only semantic stage of the frozen
+interface applications on the right of `where` requirements follow the frozen
 [generic-interface contract](GENERIC_INTERFACES.md). The AST preserves their
 complete named-type applications and punctuation. Resolution assigns distinct
 interface-template, template-requirement, and owner-correct type-parameter
-identities; module declarations and imports retain the template kind.
-`RES051` still prevents semantic application resolution, ordinary
-`InterfaceId` allocation, or reduction of an applied claim or bound to its
-unparameterized name. Ordinary non-generic interfaces and generic classes
+identities; module declarations and imports retain the template kind. Claims
+and bounds retain exact ordinary-or-structural interface terms, while closed
+requests are deduplicated with ordered origins. `RES051` still prevents an
+ordinary use from crossing the not-yet-implemented `InterfaceId`
+specialization boundary. Ordinary non-generic interfaces and generic classes
 retain their implemented semantics.
 
 The grammar intentionally does not encode base-name resolution, hierarchy

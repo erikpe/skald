@@ -10,7 +10,9 @@ mod validation;
 
 pub(super) use bodies::generated_class_work;
 pub(super) use declarations::{specialize_declarations, SpecializationDeclarationInput};
-pub(super) use requests::{discover_specializations, SpecializationDiscoveryInput};
+pub(super) use requests::{
+    discover_specializations, GenericTemplateDiscoveryInput, SpecializationDiscoveryInput,
+};
 pub(super) use validation::validate_specialization_requirements;
 
 #[cfg(test)]
