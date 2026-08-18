@@ -258,6 +258,99 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if !program.interface_template_semantics.is_empty() {
+            dumper.heading("InterfaceTemplateSemantics");
+            dumper.indented(|dumper| {
+                for semantics in program.interface_template_semantics.iter() {
+                    dumper.raw_line(&format!("Template {}", semantics.template));
+                    dumper.indented(|dumper| {
+                        for bound in &semantics.bounds {
+                            dumper.line(
+                                &format!(
+                                    "Bound {} {}",
+                                    bound.parameter,
+                                    render_template_type(&bound.interface)
+                                ),
+                                bound.span,
+                            );
+                        }
+                        for requirement in &semantics.requirements {
+                            dumper.line(
+                                &format!(
+                                    "Requirement {} {}{}",
+                                    requirement.id,
+                                    if requirement.mutable { "mutable " } else { "" },
+                                    requirement.name
+                                ),
+                                requirement.span,
+                            );
+                            dumper.indented(|dumper| {
+                                for (index, parameter) in
+                                    requirement.parameters.iter().enumerate()
+                                {
+                                    let mode = match parameter.binding_mode {
+                                        ResolvedParameterBindingMode::Value => "value",
+                                        ResolvedParameterBindingMode::ReadOnlyAlias { .. } => {
+                                            "readonly-alias"
+                                        }
+                                        ResolvedParameterBindingMode::MutableAlias { .. } => {
+                                            "mutable-alias"
+                                        }
+                                    };
+                                    dumper.line(
+                                        &format!(
+                                            "Parameter {index} {mode} {} {}",
+                                            parameter.name,
+                                            render_template_type(&parameter.type_syntax)
+                                        ),
+                                        parameter.span,
+                                    );
+                                }
+                                dumper.line(
+                                    &format!(
+                                        "Result {}",
+                                        render_template_type(&requirement.return_type)
+                                    ),
+                                    requirement.return_type.span,
+                                );
+                            });
+                        }
+                        for type_use in &semantics.type_uses {
+                            let context = match type_use.context {
+                                ResolvedInterfaceTemplateTypeUseContext::Bound { bound } => {
+                                    format!("bound{bound}")
+                                }
+                                ResolvedInterfaceTemplateTypeUseContext::RequirementParameter {
+                                    requirement,
+                                    parameter,
+                                } => format!("{requirement}:parameter{parameter}"),
+                                ResolvedInterfaceTemplateTypeUseContext::RequirementResult {
+                                    requirement,
+                                } => format!("{requirement}:result"),
+                            };
+                            dumper.line(
+                                &format!(
+                                    "TypeUse {context} {}",
+                                    render_template_type(&type_use.type_term)
+                                ),
+                                type_use.type_term.span,
+                            );
+                        }
+                        for requirement in &semantics.contextual_requirements {
+                            dumper.line(
+                                &format!(
+                                    "ContextualRequirement {} {} reason {}",
+                                    render_generic_capability(requirement.capability),
+                                    render_template_type(&requirement.type_term),
+                                    render_generic_requirement_reason(requirement.reason),
+                                ),
+                                requirement.origin,
+                            );
+                        }
+                    });
+                }
+            });
+        }
         if program.template_semantics.iter().next().is_some() {
             dumper.heading("TemplateSemantics");
             dumper.indented(|dumper| {
@@ -619,6 +712,13 @@ fn render_generic_requirement_reason(reason: GenericRequirementReason) -> String
         GenericRequirementReason::MethodResult { member } => {
             format!("member{member}:method-result")
         }
+        GenericRequirementReason::InterfaceParameter {
+            requirement,
+            parameter,
+        } => format!("{requirement}:parameter{parameter}-declaration"),
+        GenericRequirementReason::InterfaceResult { requirement } => {
+            format!("{requirement}:result")
+        }
         GenericRequirementReason::OptionalType => "optional-type".to_owned(),
         GenericRequirementReason::ArrayType => "array-type".to_owned(),
         GenericRequirementReason::SharedType => "shared-type".to_owned(),
@@ -659,6 +759,17 @@ fn render_template_type(type_term: &ResolvedTemplateType) -> String {
         ResolvedTemplateTypeKind::Class(class) => format!("class {class}"),
         ResolvedTemplateTypeKind::Interface(interface) => format!("interface {interface}"),
         ResolvedTemplateTypeKind::ClassTemplate {
+            template,
+            arguments,
+        } => format!(
+            "{template}<{}>",
+            arguments
+                .iter()
+                .map(render_template_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        ResolvedTemplateTypeKind::InterfaceTemplate {
             template,
             arguments,
         } => format!(

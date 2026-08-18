@@ -373,6 +373,13 @@ fn reason_name(reason: GenericRequirementReason) -> String {
         GenericRequirementReason::MethodResult { member } => {
             format!("the result of member {member}")
         }
+        GenericRequirementReason::InterfaceParameter {
+            requirement,
+            parameter,
+        } => format!("parameter {parameter} of interface requirement {requirement}"),
+        GenericRequirementReason::InterfaceResult { requirement } => {
+            format!("the result of interface requirement {requirement}")
+        }
         GenericRequirementReason::OptionalType => "an optional type".to_owned(),
         GenericRequirementReason::ArrayType => "an array type".to_owned(),
         GenericRequirementReason::SharedType => "a shared-owner type".to_owned(),

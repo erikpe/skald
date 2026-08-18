@@ -195,15 +195,15 @@ pub struct ResolvedTypeParameterTable {
     interface_entries: DenseIdTable<InterfaceTemplateId, ResolvedTypeParameters>,
 }
 
-/// Structural type used only while a class template still contains parameters.
+/// Structural type used while a generic declaration still contains parameters.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct ResolvedTemplateType {
-    pub(crate) kind: ResolvedTemplateTypeKind,
-    pub(crate) span: Span,
+pub struct ResolvedTemplateType {
+    pub kind: ResolvedTemplateTypeKind,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum ResolvedTemplateTypeKind {
+pub enum ResolvedTemplateTypeKind {
     I64,
     U64,
     U8,
@@ -218,6 +218,10 @@ pub(crate) enum ResolvedTemplateTypeKind {
         template: ClassTemplateId,
         arguments: Vec<ResolvedTemplateType>,
     },
+    InterfaceTemplate {
+        template: InterfaceTemplateId,
+        arguments: Vec<ResolvedTemplateType>,
+    },
     Function {
         parameters: Vec<ResolvedTemplateFunctionTypeParameter>,
         result: Box<ResolvedTemplateType>,
@@ -228,10 +232,10 @@ pub(crate) enum ResolvedTemplateTypeKind {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct ResolvedTemplateFunctionTypeParameter {
-    pub(crate) mode: ResolvedFunctionTypeParameterMode,
-    pub(crate) type_syntax: ResolvedTemplateType,
-    pub(crate) span: Span,
+pub struct ResolvedTemplateFunctionTypeParameter {
+    pub mode: ResolvedFunctionTypeParameterMode,
+    pub type_syntax: ResolvedTemplateType,
+    pub span: Span,
 }
 
 impl ResolvedTemplateType {
@@ -246,6 +250,9 @@ impl ResolvedTemplateType {
         match &self.kind {
             ResolvedTemplateTypeKind::Parameter(_) => true,
             ResolvedTemplateTypeKind::ClassTemplate { arguments, .. } => {
+                arguments.iter().any(Self::depends_on_parameter)
+            }
+            ResolvedTemplateTypeKind::InterfaceTemplate { arguments, .. } => {
                 arguments.iter().any(Self::depends_on_parameter)
             }
             ResolvedTemplateTypeKind::Function { parameters, result } => {
@@ -267,6 +274,105 @@ impl ResolvedTemplateType {
             | ResolvedTemplateTypeKind::Class(_)
             | ResolvedTemplateTypeKind::Interface(_) => false,
         }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceTemplateParameter {
+    pub binding_mode: super::ResolvedParameterBindingMode,
+    pub name: String,
+    pub name_span: Span,
+    pub type_syntax: ResolvedTemplateType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceTemplateRequirementSignature {
+    pub id: InterfaceTemplateRequirementId,
+    pub name: String,
+    pub name_span: Span,
+    pub mutable: bool,
+    pub parameters: Vec<ResolvedInterfaceTemplateParameter>,
+    pub return_type: ResolvedTemplateType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceTemplateBound {
+    pub parameter: TypeParameterId,
+    pub interface: ResolvedTemplateType,
+    pub parameter_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedInterfaceTemplateTypeUseContext {
+    Bound {
+        bound: usize,
+    },
+    RequirementParameter {
+        requirement: InterfaceTemplateRequirementId,
+        parameter: usize,
+    },
+    RequirementResult {
+        requirement: InterfaceTemplateRequirementId,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceTemplateTypeUse {
+    pub context: ResolvedInterfaceTemplateTypeUseContext,
+    pub type_term: ResolvedTemplateType,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceTemplateSemantics {
+    pub template: InterfaceTemplateId,
+    pub bounds: Vec<ResolvedInterfaceTemplateBound>,
+    pub requirements: Vec<ResolvedInterfaceTemplateRequirementSignature>,
+    pub type_uses: Vec<ResolvedInterfaceTemplateTypeUse>,
+    pub contextual_requirements: Vec<GenericRequirement>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ResolvedInterfaceTemplateSemanticTable {
+    entries: DenseIdTable<InterfaceTemplateId, ResolvedInterfaceTemplateSemantics>,
+}
+
+impl ResolvedInterfaceTemplateSemanticTable {
+    pub(crate) fn new(entries: Vec<ResolvedInterfaceTemplateSemantics>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |entry| entry.template),
+        }
+    }
+
+    pub fn get(
+        &self,
+        template: InterfaceTemplateId,
+    ) -> Option<&ResolvedInterfaceTemplateSemantics> {
+        self.entries.get(template, |entry| entry.template)
+    }
+
+    pub fn requirement(
+        &self,
+        requirement: InterfaceTemplateRequirementId,
+    ) -> Option<&ResolvedInterfaceTemplateRequirementSignature> {
+        self.get(requirement.template())?
+            .requirements
+            .get(requirement.index())
+            .filter(|candidate| candidate.id == requirement)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedInterfaceTemplateSemantics> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 }
 

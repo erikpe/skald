@@ -52,12 +52,17 @@ use skald_compiler::{
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
-        ResolvedClassMember, ResolvedInterfaceTemplate, ResolvedInterfaceTemplateRequirement,
-        ResolvedInterfaceTemplateTable, ResolvedModuleBinding, ResolvedModuleBindingTable,
-        ResolvedModuleBindings, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
-        ResolvedModuleDeclarations, ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable,
-        ResolvedOrdinaryBindings, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType,
-        ResolvedProgram, ResolvedTopLevelId, ResolvedTypeParameter, ResolvedTypeParameterTable,
+        ResolvedClassMember, ResolvedInterfaceTemplate, ResolvedInterfaceTemplateBound,
+        ResolvedInterfaceTemplateParameter, ResolvedInterfaceTemplateRequirement,
+        ResolvedInterfaceTemplateRequirementSignature, ResolvedInterfaceTemplateSemanticTable,
+        ResolvedInterfaceTemplateSemantics, ResolvedInterfaceTemplateTable,
+        ResolvedInterfaceTemplateTypeUse, ResolvedInterfaceTemplateTypeUseContext,
+        ResolvedModuleBinding, ResolvedModuleBindingTable, ResolvedModuleBindings,
+        ResolvedModuleDeclaration, ResolvedModuleDeclarationTable, ResolvedModuleDeclarations,
+        ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings,
+        ResolvedPrimitiveCastExpr, ResolvedPrimitiveType, ResolvedProgram,
+        ResolvedTemplateFunctionTypeParameter, ResolvedTemplateType, ResolvedTemplateTypeKind,
+        ResolvedTopLevelId, ResolvedTypeParameter, ResolvedTypeParameterTable,
         ResolvedTypeParameters, ResolvedVisibility,
     },
     source::SourceDatabase,
@@ -132,6 +137,17 @@ fn intentional_module_and_request_paths_compose() {
     let _interface_template: Option<ResolvedInterfaceTemplate> = None;
     let _interface_template_requirement: Option<ResolvedInterfaceTemplateRequirement> = None;
     let _interface_template_table: Option<ResolvedInterfaceTemplateTable> = None;
+    let _interface_template_semantics: Option<ResolvedInterfaceTemplateSemantics> = None;
+    let _interface_template_semantic_table: Option<ResolvedInterfaceTemplateSemanticTable> = None;
+    let _interface_template_signature: Option<ResolvedInterfaceTemplateRequirementSignature> = None;
+    let _interface_template_parameter: Option<ResolvedInterfaceTemplateParameter> = None;
+    let _interface_template_bound: Option<ResolvedInterfaceTemplateBound> = None;
+    let _interface_template_type_use: Option<ResolvedInterfaceTemplateTypeUse> = None;
+    let _interface_template_type_use_context: Option<ResolvedInterfaceTemplateTypeUseContext> =
+        None;
+    let _template_type: Option<ResolvedTemplateType> = None;
+    let _template_type_kind: Option<ResolvedTemplateTypeKind> = None;
+    let _template_function_parameter: Option<ResolvedTemplateFunctionTypeParameter> = None;
     let _type_parameter: Option<ResolvedTypeParameter> = None;
     let _type_parameters: Option<ResolvedTypeParameters> = None;
     let _type_parameter_table: Option<ResolvedTypeParameterTable> = None;

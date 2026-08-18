@@ -65,7 +65,7 @@ pub use function_types::{
     ResolvedFunctionType, ResolvedFunctionTypeParameter, ResolvedFunctionTypeParameterMode,
     ResolvedFunctionTypeTable,
 };
-pub(crate) use generic_requirements::{
+pub use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
 pub(crate) use generic_specializations::{
@@ -75,14 +75,18 @@ pub(crate) use generic_specializations::{
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedInterfaceTemplate,
-    ResolvedInterfaceTemplateRequirement, ResolvedInterfaceTemplateTable, ResolvedTypeParameter,
+    ResolvedInterfaceTemplateBound, ResolvedInterfaceTemplateParameter,
+    ResolvedInterfaceTemplateRequirement, ResolvedInterfaceTemplateRequirementSignature,
+    ResolvedInterfaceTemplateSemanticTable, ResolvedInterfaceTemplateSemantics,
+    ResolvedInterfaceTemplateTable, ResolvedInterfaceTemplateTypeUse,
+    ResolvedInterfaceTemplateTypeUseContext, ResolvedTemplateFunctionTypeParameter,
+    ResolvedTemplateType, ResolvedTemplateTypeKind, ResolvedTypeParameter,
     ResolvedTypeParameterTable, ResolvedTypeParameters,
 };
 pub(crate) use generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateSemantics, ResolvedTemplateBound,
     ResolvedTemplateConstructionMode, ResolvedTemplateDependentSelectionKind,
-    ResolvedTemplateFunctionTypeParameter, ResolvedTemplateSelection, ResolvedTemplateType,
-    ResolvedTemplateTypeKind, ResolvedTemplateTypeUse, ResolvedTemplateTypeUseContext,
+    ResolvedTemplateSelection, ResolvedTemplateTypeUse, ResolvedTemplateTypeUseContext,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

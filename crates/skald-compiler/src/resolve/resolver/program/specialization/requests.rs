@@ -423,13 +423,15 @@ impl SourceRequestScanner<'_, '_, '_, '_, '_> {
                     self.visit_member(member);
                 }
             }
-            syntax::TopLevelDeclaration::Interface(interface) => {
+            syntax::TopLevelDeclaration::Interface(interface)
+                if interface.type_parameters.is_none() =>
+            {
                 for requirement in &interface.requirements {
                     self.visit_parameters(&requirement.parameters);
                     self.visit_type(&requirement.return_type);
                 }
             }
-            syntax::TopLevelDeclaration::Class(_) => {
+            syntax::TopLevelDeclaration::Class(_) | syntax::TopLevelDeclaration::Interface(_) => {
                 // Applications in an unrequested template are discovered only
                 // after substitution closes that template.
             }

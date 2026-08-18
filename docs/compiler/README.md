@@ -82,6 +82,10 @@ Declaration indexes and bindings distinguish ordinary classes and interfaces
 from class and interface templates; interface-template parameters and
 requirements have stable non-executable identities without consuming ordinary
 interface IDs.
+Definition-site generic-interface resolution publishes a separate inspectable
+semantic table containing structural requirement signatures, parameter modes,
+bounds, type uses, exact source origins, and deferred contextual capabilities.
+It never inserts parameterized terms into ordinary resolved type tables.
 Compatible cross-module external declarations retain separate `FunctionId`
 values while sharing one verified, symbol-owning external-link identity.
 The request pipeline and CLI compile positional or logical entries with

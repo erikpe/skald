@@ -6,6 +6,7 @@ pub(super) struct TemplateTypeResolver<'parameters, 'diagnostics> {
     parameters: &'parameters ResolvedTypeParameters,
     lookup: ModuleLookup<'parameters>,
     diagnostics: &'diagnostics mut Diagnostics,
+    interface_applications: bool,
 }
 
 impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> {
@@ -18,6 +19,20 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
             parameters,
             lookup,
             diagnostics,
+            interface_applications: false,
+        }
+    }
+
+    pub(super) fn for_interface_template(
+        parameters: &'parameters ResolvedTypeParameters,
+        lookup: ModuleLookup<'parameters>,
+        diagnostics: &'diagnostics mut Diagnostics,
+    ) -> Self {
+        Self {
+            parameters,
+            lookup,
+            diagnostics,
+            interface_applications: true,
         }
     }
 
@@ -184,25 +199,10 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                 })
             }
             TopLevelLookup::Found(TopLevelSymbol {
-                kind: TopLevelSymbolKind::InterfaceTemplate(_),
+                kind: TopLevelSymbolKind::InterfaceTemplate(template),
                 name_span,
             }) => {
-                if let Some(arguments) = &named.arguments {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
-                            format!(
-                                "generic interface application `{}` is not yet supported",
-                                named.name.text
-                            ),
-                        )
-                        .with_primary_label(
-                            arguments.span,
-                            "identity is known, but template type resolution is not implemented",
-                        )
-                        .with_secondary_label(name_span, "template declared here"),
-                    );
-                } else {
+                let Some(arguments) = &named.arguments else {
                     self.diagnostics.push(
                         Diagnostic::error(
                             super::super::super::RAW_GENERIC_TYPE,
@@ -214,8 +214,53 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                         .with_primary_label(named.name.span, "type arguments cannot be omitted")
                         .with_secondary_label(name_span, "template declared here"),
                     );
+                    return None;
+                };
+                if !self.interface_applications {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
+                            format!(
+                                "generic interface application `{}` is not yet supported",
+                                named.name.text
+                            ),
+                        )
+                        .with_primary_label(
+                            arguments.span,
+                            "generic interface applications outside interface templates land in I3",
+                        )
+                        .with_secondary_label(name_span, "template declared here"),
+                    );
+                    return None;
                 }
-                None
+                let expected = self.lookup.interface_template_arity(template);
+                if arguments.arguments.len() != expected {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::GENERIC_ARITY_MISMATCH,
+                            format!(
+                                "generic interface `{}` expects {expected} type argument{}",
+                                named.name.text,
+                                if expected == 1 { "" } else { "s" },
+                            ),
+                        )
+                        .with_primary_label(arguments.span, "wrong number of type arguments")
+                        .with_secondary_label(name_span, "template declared here"),
+                    );
+                    return None;
+                }
+                let resolved_arguments = arguments
+                    .arguments
+                    .iter()
+                    .filter_map(|argument| self.resolve(argument))
+                    .collect::<Vec<_>>();
+                (resolved_arguments.len() == expected).then_some(ResolvedTemplateType {
+                    kind: ResolvedTemplateTypeKind::InterfaceTemplate {
+                        template,
+                        arguments: resolved_arguments,
+                    },
+                    span: named.span,
+                })
             }
             TopLevelLookup::Found(symbol) => {
                 self.diagnostics.push(

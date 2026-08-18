@@ -249,6 +249,29 @@ impl<'ast> ProgramResolver<'ast> {
             })
         }));
         let interfaces = self.collect_interface_declarations(lookups);
+        let mut interface_template_semantics = Vec::new();
+        for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
+            for item in &unit.interface_template_work {
+                let syntax::TopLevelDeclaration::Interface(interface) =
+                    &unit.ast.declarations[item.ast_index]
+                else {
+                    unreachable!("interface-template work must reference an interface declaration")
+                };
+                let parameters = type_parameters
+                    .for_interface_template(item.id)
+                    .expect("every interface template has one parameter list");
+                interface_template_semantics.push(resolve_interface_template_semantics(
+                    item.id,
+                    interface,
+                    parameters,
+                    lookup,
+                    &mut self.diagnostics,
+                ));
+            }
+        }
+        let interface_template_semantics =
+            ResolvedInterfaceTemplateSemanticTable::new(interface_template_semantics);
         let mut template_semantics = Vec::new();
         for unit in &self.units {
             let lookup = lookups.for_unit(unit, &self.modules);
@@ -487,6 +510,7 @@ impl<'ast> ProgramResolver<'ast> {
                 module_declarations,
                 class_templates,
                 interface_templates,
+                interface_template_semantics,
                 type_parameters,
                 template_semantics,
                 generic_specializations,
@@ -625,16 +649,6 @@ impl<'ast> ProgramResolver<'ast> {
                         interface_template_count += 1;
                         unit.interface_template_work
                             .push(InterfaceTemplateWorkItem { id, ast_index });
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                UNSUPPORTED_GENERIC_INTERFACE,
-                                format!("generic interface `{}` is not yet supported", name.text),
-                            )
-                            .with_primary_label(
-                                name.span,
-                                "identity is preserved, but semantic resolution is not implemented",
-                            ),
-                        );
                         ResolvedTopLevelId::InterfaceTemplate(id)
                     }
                 };

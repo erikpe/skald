@@ -35,8 +35,9 @@ use super::{
 use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
 use generic_templates::{
-    collect_generic_templates, resolve_class_template_semantics, ClassTemplateWorkItem,
-    CollectedGenericTemplates, InterfaceTemplateWorkItem,
+    collect_generic_templates, resolve_class_template_semantics,
+    resolve_interface_template_semantics, ClassTemplateWorkItem, CollectedGenericTemplates,
+    InterfaceTemplateWorkItem,
 };
 use hierarchy::build_class_hierarchy;
 use interface::{collect_interface_declarations, resolve_interface_claims};

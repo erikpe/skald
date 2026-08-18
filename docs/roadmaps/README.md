@@ -7,8 +7,11 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
-progress. I0–I1, syntax plus template identities and module declarations, are
-complete; I2, semantic template and requirement resolution, is next.
+progress. I0–I2 are complete; I3, parameterized interface applications and
+bounds across use sites, is next.
+
+The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
+maintainability follow-ups intentionally deferred until after the roadmap.
 
 ## Planned
 

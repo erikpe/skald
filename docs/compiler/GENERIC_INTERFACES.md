@@ -1,8 +1,8 @@
 # Generic-Interface Specialization
 
 Status: frozen compiler contract; source AST, template identities, parameter
-ownership, and module declaration kinds implemented; semantic template
-resolution is explicitly gated, and specialization and execution are not yet implemented.
+ownership, module declaration kinds, and definition-site interface-template
+semantics implemented; closed specialization and execution are not yet implemented.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler

@@ -193,6 +193,16 @@ impl<'program> ModuleLookup<'program> {
             .len()
     }
 
+    pub(super) fn interface_template_arity(
+        self,
+        template: crate::identity::InterfaceTemplateId,
+    ) -> usize {
+        self.type_parameters
+            .for_interface_template(template)
+            .expect("every interface template has one parameter list")
+            .len()
+    }
+
     pub(super) fn specialized_class(self, span: Span) -> Option<ClassId> {
         self.specializations?
             .class_at_application(self.current, span)

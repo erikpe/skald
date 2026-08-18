@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I1 are complete and I2 is next.
+Status: in progress; I0–I2 are complete and I3 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -62,7 +62,7 @@ not reopen those decisions during implementation.
 
 - [x] I0 — Parse and preserve generic interface syntax
 - [x] I1 — Generalize template identities and module declarations
-- [ ] I2 — Resolve generic interface templates and requirements
+- [x] I2 — Resolve generic interface templates and requirements
 - [ ] I3 — Resolve parameterized interface applications and bounds
 - [ ] I4 — Coordinate deterministic class and interface specialization
 - [ ] I5 — Materialize ordinary closed interface declarations
@@ -154,24 +154,24 @@ class changes semantic identity or output.
 **Purpose:** Build one complete definition-site-resolved semantic product for
 a generic interface without adding unresolved parameters to ordinary types.
 
-- [ ] Add cohesive generic-interface template declaration, requirement,
+- [x] Add cohesive generic-interface template declaration, requirement,
   parameter, bound, type-use, and table models behind the resolve facade.
-- [ ] Extend structural template types with parameter-bearing interface
+- [x] Extend structural template types with parameter-bearing interface
   applications while retaining separate closed ordinary interface terms.
-- [ ] Resolve requirement parameter modes/types and results structurally,
+- [x] Resolve requirement parameter modes/types and results structurally,
   including primitives, parameters, functions, shared, optionals, arrays,
   nested generic classes, and nested generic interfaces.
-- [ ] Resolve nondependent names in the template definition module and retain
+- [x] Resolve nondependent names in the template definition module and retain
   dependent applications as semantic terms rather than reparsed source.
-- [ ] Assign and preserve `InterfaceTemplateRequirementId` through duplicate-
+- [x] Assign and preserve `InterfaceTemplateRequirementId` through duplicate-
   name checking, lookup, dumps, and diagnostics.
-- [ ] Infer contextual parameter, result, alias, shared-target, optional,
+- [x] Infer contextual parameter, result, alias, shared-target, optional,
   array, and nested-application requirements using existing generic
   requirement vocabulary and ordinary capability owners.
-- [ ] Validate all definition-independent interface errors once, including
+- [x] Validate all definition-independent interface errors once, including
   duplicate requirements, invalid modes, inaccessible names, raw declarations,
   and forbidden ordinary interface constructs.
-- [ ] Add deterministic template semantic dumps with exact spans and
+- [x] Add deterministic template semantic dumps with exact spans and
   requirement origins.
 
 **Tests:** Focused template-resolution tests for every supported type tree and

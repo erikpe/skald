@@ -4,6 +4,10 @@ use crate::{
         GenericTemplateId, InterfaceId, InterfaceRequirementId, InterfaceTemplateId,
         InterfaceTemplateRequirementId, TypeParameterId,
     },
+    resolve::{
+        GenericCapability, GenericRequirementReason, ResolvedParameterBindingMode,
+        ResolvedTemplateTypeKind,
+    },
     test_support::load_module_sources,
 };
 
@@ -73,6 +77,7 @@ fn rejects_interface_construction_without_claiming_interface_calls_are_unavailab
 fn generic_interface_declarations_receive_stable_non_executable_identities() {
     let output = resolve_text(concat!(
         "interface Plain {}\n",
+        "interface Marker {}\n",
         "interface Producer<T, Item> where T: Marker {\n",
         "  fn produce() -> T;\n",
         "  fn item() -> Item;\n",
@@ -80,22 +85,20 @@ fn generic_interface_declarations_receive_stable_non_executable_identities() {
         "interface Other { fn run() -> unit; }\n",
     ));
 
-    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
-    assert_eq!(diagnostics[0].code, UNSUPPORTED_GENERIC_INTERFACE);
-    assert_eq!(
-        diagnostics[0].message,
-        "generic interface `Producer` is not yet supported"
-    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
     assert_eq!(
         output.program.interface(InterfaceId::new(0)).unwrap().name,
         "Plain"
     );
     assert_eq!(
         output.program.interface(InterfaceId::new(1)).unwrap().name,
+        "Marker"
+    );
+    assert_eq!(
+        output.program.interface(InterfaceId::new(2)).unwrap().name,
         "Other"
     );
-    assert!(output.program.interface(InterfaceId::new(2)).is_none());
+    assert!(output.program.interface(InterfaceId::new(3)).is_none());
 
     let template = output
         .program
@@ -143,6 +146,221 @@ fn generic_interface_declarations_receive_stable_non_executable_identities() {
             .unwrap()
             .name,
         "item"
+    );
+}
+
+#[test]
+fn resolves_complete_generic_interface_signature_trees_and_modes() {
+    let output = resolve_text(concat!(
+        "class Box<T> {}\n",
+        "interface Inner<T> {}\n",
+        "interface Complex<T, U> where T: Inner<U> {\n",
+        "  fn all(value: i64, ref borrowed: T, mut ref maybe: T?) -> fn(ref U[], mut ref Box<T>) -> shared T?;\n",
+        "  fn nested(value: Box<Inner<T>>) -> Inner<Box<U>>;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert!(output.program.function_types.is_empty());
+    assert!(output.program.array_types.is_empty());
+    assert!(output.program.optional_types.is_empty());
+
+    let semantics = output
+        .program
+        .interface_template_semantics
+        .get(InterfaceTemplateId::new(1))
+        .unwrap();
+    assert_eq!(semantics.bounds.len(), 1);
+    assert!(matches!(
+        semantics.bounds[0].interface.kind,
+        ResolvedTemplateTypeKind::InterfaceTemplate { .. }
+    ));
+    let all = &semantics.requirements[0];
+    assert_eq!(
+        all.parameters[0].binding_mode,
+        ResolvedParameterBindingMode::Value
+    );
+    assert!(matches!(
+        all.parameters[1].binding_mode,
+        ResolvedParameterBindingMode::ReadOnlyAlias { .. }
+    ));
+    assert!(matches!(
+        all.parameters[2].binding_mode,
+        ResolvedParameterBindingMode::MutableAlias { .. }
+    ));
+    assert!(matches!(
+        all.return_type.kind,
+        ResolvedTemplateTypeKind::Function { .. }
+    ));
+    let nested = &semantics.requirements[1];
+    assert!(matches!(
+        nested.parameters[0].type_syntax.kind,
+        ResolvedTemplateTypeKind::ClassTemplate { .. }
+    ));
+    assert!(matches!(
+        nested.return_type.kind,
+        ResolvedTemplateTypeKind::InterfaceTemplate { .. }
+    ));
+    assert!(semantics.contextual_requirements.iter().any(|requirement| {
+        requirement.capability == GenericCapability::ValueResult
+            && matches!(
+                requirement.reason,
+                GenericRequirementReason::InterfaceResult { .. }
+            )
+    }));
+}
+
+#[test]
+fn validates_definition_independent_interface_signature_errors_once() {
+    let output = resolve_text(concat!(
+        "interface Plain {}\n",
+        "interface Broken<T> {\n",
+        "  fn bad(value: Plain) -> Plain;\n",
+        "  fn observe(ref view: Plain) -> unit;\n",
+        "  fn arrays(values: T[]) -> unit;\n",
+        "}\n",
+    ));
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_GENERIC_INTERFACE_REQUIREMENT)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 3, "{:?}", output.diagnostics);
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.message.contains("invalid closed type"))
+            .count(),
+        2
+    );
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.message.contains("array types"))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn retains_duplicate_requirement_identities_and_marker_parameters() {
+    let output = resolve_text(
+        "interface Marker<T> { fn same(value: T, value: T) -> unit; fn same() -> unit; }",
+    );
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_GENERIC_INTERFACE_REQUIREMENT)
+            .count(),
+        2
+    );
+    let semantics = output
+        .program
+        .interface_template_semantics
+        .get(InterfaceTemplateId::new(0))
+        .unwrap();
+    assert_eq!(semantics.requirements.len(), 2);
+    assert_eq!(
+        semantics.requirements[1].id,
+        InterfaceTemplateRequirementId::new(InterfaceTemplateId::new(0), 1)
+    );
+    assert_eq!(semantics.contextual_requirements.len(), 2);
+
+    let marker = resolve_text("interface Marker<T> {}");
+    assert!(marker
+        .program
+        .interface_template_semantics
+        .get(InterfaceTemplateId::new(0))
+        .unwrap()
+        .contextual_requirements
+        .is_empty());
+}
+
+#[test]
+fn resolves_interface_signature_names_in_the_definition_module() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "from dep import Source;\nclass Item {}\nfn main() -> i64 { return 0; }\n",
+            ),
+            (
+                "dep.ska",
+                "public class Item {}\npublic interface Source<T> { fn take(value: Item) -> T; }\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let template = output
+        .program
+        .interface_templates
+        .iter()
+        .find(|template| template.name == "Source")
+        .unwrap();
+    let semantics = output
+        .program
+        .interface_template_semantics
+        .get(template.id)
+        .unwrap();
+    let ResolvedTemplateTypeKind::Class(item) =
+        semantics.requirements[0].parameters[0].type_syntax.kind
+    else {
+        panic!("definition-site Item must resolve to an ordinary class")
+    };
+    assert_eq!(output.program.class(item).unwrap().module, template.module);
+}
+
+#[test]
+fn resolves_qualified_interface_signature_names_across_cyclic_modules() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep;\npublic class Host {}\npublic interface AppView<T> { fn node(ref value: dep::Node) -> T; }\nfn main() -> i64 { return 0; }\n",
+            ),
+            (
+                "dep.ska",
+                "import app;\npublic class Node {}\npublic interface DepView<T> { fn host(ref value: app::Host) -> T; }\n",
+            ),
+        ],
+    );
+    let output = resolve_module_graph(&graph);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    for semantics in output.program.interface_template_semantics.iter() {
+        assert!(matches!(
+            semantics.requirements[0].parameters[0].type_syntax.kind,
+            ResolvedTemplateTypeKind::Class(_)
+        ));
+    }
+}
+
+#[test]
+fn diagnoses_raw_and_wrong_arity_interface_terms_without_losing_requirements() {
+    let output = resolve_text(concat!(
+        "interface Inner<T> {}\n",
+        "interface Broken<T> {\n",
+        "  fn raw(value: Inner) -> unit;\n",
+        "  fn arity(value: Inner<T, T>) -> unit;\n",
+        "}\n",
+    ));
+    let codes = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect::<Vec<_>>();
+    assert_eq!(codes, [RAW_GENERIC_TYPE, GENERIC_ARITY_MISMATCH]);
+    let semantics = output
+        .program
+        .interface_template_semantics
+        .get(InterfaceTemplateId::new(1))
+        .unwrap();
+    assert_eq!(semantics.requirements.len(), 2);
+    assert_eq!(
+        semantics.requirements[1].id,
+        InterfaceTemplateRequirementId::new(InterfaceTemplateId::new(1), 1)
     );
 }
 
@@ -301,6 +519,14 @@ fn resolved_dump_exposes_interface_template_parameter_and_requirement_identities
         dump.contains("Requirement interface-template0:requirement1 \"second\""),
         "{dump}"
     );
+    assert!(dump.contains("InterfaceTemplateSemantics"), "{dump}");
+    assert!(
+        dump.contains("TypeUse interface-template0:requirement0:result interface-template0:type0"),
+        "{dump}"
+    );
+    assert!(dump.contains(
+        "ContextualRequirement value-result interface-template0:type0 reason interface-template0:requirement0:result"
+    ), "{dump}");
 }
 
 #[test]

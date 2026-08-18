@@ -134,7 +134,8 @@ pub(super) fn infer_type_construction(
             );
             infer_type_construction(element, requirements);
         }
-        ResolvedTemplateTypeKind::ClassTemplate { arguments, .. } => {
+        ResolvedTemplateTypeKind::ClassTemplate { arguments, .. }
+        | ResolvedTemplateTypeKind::InterfaceTemplate { arguments, .. } => {
             for argument in arguments {
                 infer_type_construction(argument, requirements);
             }

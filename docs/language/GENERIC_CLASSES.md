@@ -431,8 +431,9 @@ The frozen initial profile excludes:
 
 - generic top-level functions, methods, and constructors independent of their
   class's parameters;
-- generic interfaces and interface requirements in the current implementation
-  (their separate frozen contract is planned for implementation);
+- closed generic-interface applications, conformances, and execution (generic
+  interface declarations and definition-site signatures are resolved under
+  their separate frozen contract);
 - member-level constraints;
 - generic aliases and other generic declaration families;
 - argument inference, defaults, wildcards, existentials, and higher-kinded

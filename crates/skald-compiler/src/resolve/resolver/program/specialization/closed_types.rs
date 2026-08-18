@@ -47,6 +47,11 @@ impl SpecializationOwner<'_, '_, '_> {
                 )?;
                 ResolvedTypeKind::Class(class)
             }
+            // Interface-template closure is owned by the cross-kind scheduler
+            // introduced in I4. I2 can retain these terms in interface
+            // semantics, but class specialization must not manufacture an
+            // ordinary interface identity for them.
+            ResolvedTemplateTypeKind::InterfaceTemplate { .. } => return None,
             ResolvedTemplateTypeKind::Function { parameters, result } => {
                 let parameters = parameters
                     .iter()

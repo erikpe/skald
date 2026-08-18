@@ -20,7 +20,8 @@ use super::body::{
 };
 use super::function_types::ResolvedFunctionTypeTable;
 use super::generic_templates::{
-    ResolvedClassTemplateSemanticTable, ResolvedClassTemplateTable, ResolvedInterfaceTemplateTable,
+    ResolvedClassTemplateSemanticTable, ResolvedClassTemplateTable,
+    ResolvedInterfaceTemplateSemanticTable, ResolvedInterfaceTemplateTable,
     ResolvedTypeParameterTable,
 };
 use super::hierarchy::ResolvedClassHierarchy;
@@ -42,6 +43,7 @@ pub struct ResolvedProgram {
     pub module_declarations: ResolvedModuleDeclarationTable,
     pub class_templates: ResolvedClassTemplateTable,
     pub interface_templates: ResolvedInterfaceTemplateTable,
+    pub interface_template_semantics: ResolvedInterfaceTemplateSemanticTable,
     pub type_parameters: ResolvedTypeParameterTable,
     pub(crate) template_semantics: ResolvedClassTemplateSemanticTable,
     pub(crate) generic_specializations: GenericSpecializationTable,

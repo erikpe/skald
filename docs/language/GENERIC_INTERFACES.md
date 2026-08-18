@@ -1,13 +1,17 @@
 # Generic Interfaces
 
-Status: frozen design; source syntax and non-executable template identities
-implemented, semantic template resolution and execution not yet implemented. This document defines the confirmed
+Status: frozen design; source syntax, non-executable template identities, and
+definition-site template semantics implemented; closed applications and
+execution are not yet implemented. This document defines the confirmed
 source-visible generic-interface contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
 compiler. Resolution assigns distinct interface-template, template-requirement,
 and owner-correct type-parameter identities, then gates unsupported semantic
-uses with `RES051` without assigning ordinary interface identity.
+applications outside interface-template definitions with `RES051` without
+assigning ordinary interface identity. Generic interface signatures retain
+structural parameter, function, shared, optional, array, generic-class, and
+generic-interface terms plus contextual capability requirements.
 
 Generic interfaces parameterize an interface declaration with explicit type
 arguments. A generic interface is a compile-time template rather than a
