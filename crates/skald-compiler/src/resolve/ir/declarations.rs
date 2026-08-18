@@ -140,6 +140,9 @@ impl ResolvedInterfaceDeclarationTable {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+    pub(crate) fn extend(&mut self, entries: Vec<ResolvedInterfaceDeclaration>) {
+        self.entries.extend(entries, |entry| entry.id);
+    }
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInterfaceDeclaration {

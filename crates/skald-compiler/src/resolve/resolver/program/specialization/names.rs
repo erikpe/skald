@@ -8,9 +8,16 @@ pub(super) struct SpecializationNameRenderer<'program, 'ast> {
     units: &'program [ModuleUnit<'ast>],
     modules: &'program ProgramModuleTable,
     specializations: &'program GenericSpecializationTable,
+    interface_sources: Option<InterfaceNameSources<'program>>,
     ordinary_classes: &'program ResolvedClassDeclarationTable,
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     type_interner: &'program ResolvedTypeInterner,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct InterfaceNameSources<'program> {
+    pub(super) specializations: &'program GenericInterfaceSpecializationTable,
+    pub(super) templates: &'program ResolvedInterfaceTemplateTable,
 }
 
 impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
@@ -18,6 +25,7 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
         units: &'program [ModuleUnit<'ast>],
         modules: &'program ProgramModuleTable,
         specializations: &'program GenericSpecializationTable,
+        interface_sources: Option<InterfaceNameSources<'program>>,
         ordinary_classes: &'program ResolvedClassDeclarationTable,
         interfaces: &'program ResolvedInterfaceDeclarationTable,
         type_interner: &'program ResolvedTypeInterner,
@@ -26,6 +34,7 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
             units,
             modules,
             specializations,
+            interface_sources,
             ordinary_classes,
             interfaces,
             type_interner,
@@ -42,6 +51,18 @@ impl<'program, 'ast> SpecializationNameRenderer<'program, 'ast> {
         format!(
             "{}<{arguments}>",
             self.declaration_name(source_module, &source.name.text)
+        )
+    }
+
+    pub(super) fn specialized_interface_name(
+        &self,
+        template: &ResolvedInterfaceTemplate,
+        arguments: &[ResolvedTypeKind],
+    ) -> String {
+        let arguments = ResolvedTypeNameRenderer::new(self).render_list(arguments);
+        format!(
+            "{}<{arguments}>",
+            self.declaration_name(template.module, &template.name)
         )
     }
 
@@ -81,6 +102,10 @@ impl ResolvedTypeNameContext for SpecializationNameRenderer<'_, '_> {
         self.ordinary_classes
             .get(id)
             .map(|declaration| self.declaration_name(declaration.module, &declaration.name))
+            .or_else(|| {
+                class_source(self.units, id)
+                    .map(|(unit, source)| self.declaration_name(unit.module, &source.name.text))
+            })
     }
 
     fn class_specialization(&self, id: ClassId) -> Option<&GenericClassInstanceKey> {
@@ -99,5 +124,11 @@ impl ResolvedTypeNameContext for SpecializationNameRenderer<'_, '_> {
         self.interfaces
             .get(id)
             .map(|declaration| self.declaration_name(declaration.module, &declaration.name))
+            .or_else(|| {
+                let sources = self.interface_sources?;
+                let specialization = sources.specializations.for_interface(id)?;
+                let template = sources.templates.get(specialization.key.template)?;
+                Some(self.specialized_interface_name(template, &specialization.key.arguments))
+            })
     }
 }

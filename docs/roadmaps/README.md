@@ -7,8 +7,8 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
-progress. I0–I4 are complete; I5, ordinary closed interface declaration
-materialization, is next.
+progress. I0–I5 are complete; I6, exact nominal conformance and inheritance,
+is next.
 
 The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
 maintainability follow-ups intentionally deferred until after the roadmap.

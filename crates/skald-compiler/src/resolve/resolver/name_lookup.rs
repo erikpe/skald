@@ -25,6 +25,7 @@ pub(super) struct ModuleLookupProgram<'program> {
     pub(super) class_templates: &'program ResolvedClassTemplateTable,
     pub(super) type_parameters: &'program ResolvedTypeParameterTable,
     pub(super) specializations: Option<&'program GenericSpecializationTable>,
+    pub(super) interface_specializations: Option<&'program GenericInterfaceSpecializationTable>,
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +40,7 @@ pub(super) struct ModuleLookup<'program> {
     class_templates: &'program ResolvedClassTemplateTable,
     type_parameters: &'program ResolvedTypeParameterTable,
     specializations: Option<&'program GenericSpecializationTable>,
+    interface_specializations: Option<&'program GenericInterfaceSpecializationTable>,
     qualified_enabled: bool,
 }
 
@@ -60,6 +62,7 @@ impl<'program> ModuleLookup<'program> {
             class_templates: program.class_templates,
             type_parameters: program.type_parameters,
             specializations: program.specializations,
+            interface_specializations: program.interface_specializations,
             qualified_enabled,
         }
     }
@@ -206,6 +209,11 @@ impl<'program> ModuleLookup<'program> {
     pub(super) fn specialized_class(self, span: Span) -> Option<ClassId> {
         self.specializations?
             .class_at_application(self.current, span)
+    }
+
+    pub(super) fn specialized_interface(self, span: Span) -> Option<InterfaceId> {
+        self.interface_specializations?
+            .interface_at_application(self.current, span)
     }
 
     fn report_unknown_binding(

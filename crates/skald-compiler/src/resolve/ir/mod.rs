@@ -67,7 +67,8 @@ pub use function_types::{
     ResolvedFunctionTypeTable,
 };
 pub use generic_interface_specializations::{
-    GenericInterfaceApplicationOrigin, GenericInterfaceInstanceKey, GenericInterfaceSpecialization,
+    GenericInterfaceApplicationOrigin, GenericInterfaceInstanceKey,
+    GenericInterfaceRequirementMapping, GenericInterfaceSpecialization,
     GenericInterfaceSpecializationProvenance, GenericInterfaceSpecializationState,
     GenericInterfaceSpecializationTable, GenericInterfaceSpecializationTransition,
 };

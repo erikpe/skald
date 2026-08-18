@@ -503,6 +503,26 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                         specialization.provenance.template_span,
                     );
                     dumper.indented(|dumper| {
+                        if let Some(parameters) = program
+                            .type_parameters
+                            .for_interface_template(specialization.key.template)
+                        {
+                            for (parameter, argument) in
+                                parameters.iter().zip(&specialization.key.arguments)
+                            {
+                                dumper.raw_line(&format!(
+                                    "TypeArgument {} = {}",
+                                    parameter.id,
+                                    dumper.render_semantic_type_kind(*argument),
+                                ));
+                            }
+                        }
+                        for mapping in &specialization.requirement_mappings {
+                            dumper.raw_line(&format!(
+                                "RequirementMapping {} -> {}",
+                                mapping.template, mapping.closed,
+                            ));
+                        }
                         for transition in &specialization.transitions {
                             dumper.raw_line(&format!(
                                 "Transition {}",

@@ -31,6 +31,12 @@ pub(crate) struct FailedSpecializationRequirement {
     pub(crate) lifecycle_path: Vec<super::capabilities::CopyPathElement>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct FailedInterfaceSpecializationRequirement {
+    pub(crate) interface: crate::identity::InterfaceId,
+    pub(crate) requirement_index: usize,
+}
+
 pub(crate) struct GenericCapabilityQuery<'program> {
     program: &'program ResolvedProgram,
     copy: OnceCell<CopyCapabilities>,
@@ -204,6 +210,39 @@ pub(crate) fn failed_specialization_requirements(
                     class,
                     requirement_index,
                     lifecycle_path,
+                });
+                break;
+            }
+        }
+    }
+    failures
+}
+
+pub(crate) fn failed_interface_specialization_requirements(
+    program: &ResolvedProgram,
+) -> Vec<FailedInterfaceSpecializationRequirement> {
+    let query = GenericCapabilityQuery::new(program);
+    let mut failures = Vec::new();
+    for specialization in program.generic_interface_specializations.iter() {
+        let crate::resolve::GenericInterfaceSpecializationState::Complete(interface) =
+            specialization.state
+        else {
+            continue;
+        };
+        let semantics = program
+            .interface_template_semantics
+            .get(specialization.key.template)
+            .expect("specialization key references interface template semantics");
+        for (requirement_index, (requirement, subject)) in semantics
+            .contextual_requirements
+            .iter()
+            .zip(&specialization.closed_requirements)
+            .enumerate()
+        {
+            if !subject.is_some_and(|subject| query.supports(requirement, subject)) {
+                failures.push(FailedInterfaceSpecializationRequirement {
+                    interface,
+                    requirement_index,
                 });
                 break;
             }

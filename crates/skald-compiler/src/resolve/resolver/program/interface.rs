@@ -129,7 +129,7 @@ pub(super) fn resolve_interface_claims(
                     )
                     .with_primary_label(
                         claim.span,
-                        "closed interface specialization is implemented by the next roadmap stage",
+                        "generic interface conformance is implemented by the next roadmap stage",
                     ),
                 );
                 continue;

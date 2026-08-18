@@ -56,6 +56,7 @@ pub(crate) fn specialize_declarations(
         input.units,
         input.modules,
         input.specializations,
+        None,
         input.ordinary_classes,
         input.interfaces,
         input.type_interner,

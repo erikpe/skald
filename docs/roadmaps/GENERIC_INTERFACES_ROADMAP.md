@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I4 are complete and I5 is next.
+Status: in progress; I0–I5 are complete and I6 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -65,7 +65,7 @@ not reopen those decisions during implementation.
 - [x] I2 — Resolve generic interface templates and requirements
 - [x] I3 — Resolve parameterized interface applications and bounds
 - [x] I4 — Coordinate deterministic class and interface specialization
-- [ ] I5 — Materialize ordinary closed interface declarations
+- [x] I5 — Materialize ordinary closed interface declarations
 - [ ] I6 — Integrate exact nominal conformance and inheritance
 - [ ] I7 — Close generic bounds and bound-selected calls
 - [ ] I8 — Integrate views, ownership, casts, tests, and structural calls
@@ -269,22 +269,22 @@ pretending incomplete declarations are valid.
 **Purpose:** Turn each valid interface key into a complete ordinary
 declaration that existing type checking and lower phases can consume unchanged.
 
-- [ ] Substitute every requirement parameter and result type structurally,
+- [x] Substitute every requirement parameter and result type structurally,
   close nested class/interface applications, and intern all ordinary compound
   types through existing owners.
-- [ ] Allocate ordinary `InterfaceRequirementId` values from the reserved
+- [x] Allocate ordinary `InterfaceRequirementId` values from the reserved
   closed `InterfaceId` and template requirement source-order indexes.
-- [ ] Retain an explicit template-to-closed requirement mapping for bound-call
+- [x] Retain an explicit template-to-closed requirement mapping for bound-call
   closure, diagnostics, and dumps.
-- [ ] Evaluate every contextual signature and nested-application obligation;
+- [x] Evaluate every contextual signature and nested-application obligation;
   reject the complete application if any requirement is invalid.
-- [ ] Publish only complete closed `ResolvedInterfaceDeclaration` entries and
+- [x] Publish only complete closed `ResolvedInterfaceDeclaration` entries and
   feed them through existing ordinary interface signature validation.
-- [ ] Make ordinary closed type resolution use
+- [x] Make ordinary closed type resolution use
   `ResolvedTypeKind::Interface(InterfaceId)` with no generic alternative.
-- [ ] Diagnose failures at both the application and originating requirement
+- [x] Diagnose failures at both the application and originating requirement
   type use; retain cached failure identity/provenance consistently.
-- [ ] Render generated interfaces, canonical argument mappings, closed
+- [x] Render generated interfaces, canonical argument mappings, closed
   requirements, and origins deterministically.
 
 **Tests:** Exact substitution for primitives, exact classes, shared owners,

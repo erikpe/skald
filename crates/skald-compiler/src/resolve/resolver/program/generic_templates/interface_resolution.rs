@@ -14,6 +14,7 @@ pub(crate) fn resolve_interface_template_semantics(
     lookup: ModuleLookup<'_>,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedInterfaceTemplateSemantics {
+    let diagnostics_before = diagnostics.len();
     let mut type_uses = Vec::new();
     let bounds =
         resolve_interface_bounds(interface, parameters, lookup, diagnostics, &mut type_uses);
@@ -104,6 +105,7 @@ pub(crate) fn resolve_interface_template_semantics(
 
     ResolvedInterfaceTemplateSemantics {
         template,
+        valid: diagnostics.len() == diagnostics_before,
         bounds,
         requirements,
         type_uses,

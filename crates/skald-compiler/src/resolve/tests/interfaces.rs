@@ -613,7 +613,7 @@ fn closed_interface_applications_are_discovered_once_with_ordered_origins() {
 
     let dump = dump_resolved(&output.program);
     assert_eq!(dump, dump_resolved(&output.program));
-    assert!(dump.contains("Specialization Second<i0>"), "{dump}");
+    assert!(dump.contains("Specialization Second<First<i64>>"), "{dump}");
     assert!(dump.contains("Specialization First<i64>"), "{dump}");
 }
 

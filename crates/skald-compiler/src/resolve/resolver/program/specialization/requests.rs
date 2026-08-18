@@ -280,25 +280,9 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                         span: named.span,
                     },
                 );
-                if report_lookup_errors {
-                    self.owner.diagnostics.push(
-                        Diagnostic::error(
-                            super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
-                            format!(
-                                "generic interface application `{}` is resolved but not yet specialized",
-                                named.name.text
-                            ),
-                        )
-                        .with_primary_label(
-                            named.span,
-                            "closed interface specialization is implemented by the next roadmap stage",
-                        )
-                        .with_secondary_label(symbol.name_span, "template declared here"),
-                    );
-                }
                 // The identity is usable while closing an enclosing request;
-                // I5 remains responsible for publishing a declaration that
-                // ordinary semantic resolution can consume.
+                // declaration materialization decides whether ordinary
+                // semantic resolution may consume it.
                 interface.map(ResolvedTypeKind::Interface)
             }
             (TopLevelSymbolKind::InterfaceTemplate(template), Some(arguments)) => {

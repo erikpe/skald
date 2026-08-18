@@ -87,10 +87,11 @@ For generic interfaces, first inspect `Interface` AST nodes for
 `ModuleDeclarations`, `InterfaceTemplates`, `InterfaceTemplateSemantics`, and
 `GenericInterfaceApplications`. These expose stable template and requirement
 identities, owner-correct parameters, structural claims and bounds, deduplicated
-closed requests, and every ordered source origin. Selective and qualified
-imports retain the same `InterfaceTemplateId`. `RES051` is the intentional
-specialization gate: a generic interface must not receive an ordinary
-`InterfaceId` before the closed-identity stage.
+closed requests, every ordered source origin, generated ordinary `Interface`
+declarations, and template-to-closed requirement mappings. Selective and
+qualified imports retain the same `InterfaceTemplateId`. A complete successful
+application receives an ordinary `InterfaceId`; `RES051` now identifies later
+conformance or executable-integration boundaries.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

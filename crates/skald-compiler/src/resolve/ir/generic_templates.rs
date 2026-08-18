@@ -458,6 +458,7 @@ pub struct ResolvedInterfaceTemplateTypeUse {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInterfaceTemplateSemantics {
     pub template: InterfaceTemplateId,
+    pub valid: bool,
     pub bounds: Vec<ResolvedInterfaceTemplateBound>,
     pub requirements: Vec<ResolvedInterfaceTemplateRequirementSignature>,
     pub type_uses: Vec<ResolvedInterfaceTemplateTypeUse>,

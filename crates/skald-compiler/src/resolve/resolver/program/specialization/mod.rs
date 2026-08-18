@@ -4,12 +4,18 @@ mod bodies;
 mod closed_types;
 mod coordinator;
 mod declarations;
+mod interface_declarations;
+mod interface_validation;
 mod names;
 mod requests;
 mod validation;
 
 pub(super) use bodies::generated_class_work;
 pub(super) use declarations::{specialize_declarations, SpecializationDeclarationInput};
+pub(super) use interface_declarations::{
+    materialize_interface_declarations, InterfaceMaterializationInput,
+};
+pub(super) use interface_validation::validate_interface_specializations;
 pub(super) use requests::{
     discover_specializations, GenericTemplateDiscoveryInput, SpecializationDiscoveryInput,
 };
@@ -21,6 +27,8 @@ mod body_tests;
 mod declaration_tests;
 #[cfg(test)]
 mod function_values_tests;
+#[cfg(test)]
+mod interface_declaration_tests;
 #[cfg(test)]
 mod tests;
 
@@ -75,6 +83,23 @@ fn template_source<'unit, 'ast>(
                     unreachable!("template work references a class declaration")
                 };
                 (unit, class, work.ast_index)
+            })
+        })
+    })
+}
+
+fn class_source<'unit, 'ast>(
+    units: &'unit [resolver::ModuleUnit<'ast>],
+    class: ClassId,
+) -> Option<(&'unit resolver::ModuleUnit<'ast>, &'ast syntax::ClassDecl)> {
+    units.iter().find_map(|unit| {
+        unit.class_work.iter().find_map(|(id, ast_index)| {
+            (*id == class).then(|| {
+                let syntax::TopLevelDeclaration::Class(class) = &unit.ast.declarations[*ast_index]
+                else {
+                    unreachable!("class work references a class declaration")
+                };
+                (unit, class)
             })
         })
     })

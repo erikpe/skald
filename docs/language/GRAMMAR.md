@@ -363,10 +363,11 @@ complete named-type applications and punctuation. Resolution assigns distinct
 interface-template, template-requirement, and owner-correct type-parameter
 identities; module declarations and imports retain the template kind. Claims
 and bounds retain exact ordinary-or-structural interface terms, while closed
-requests are deduplicated with ordered origins. `RES051` still prevents an
-ordinary use from crossing the not-yet-implemented `InterfaceId`
-specialization boundary. Ordinary non-generic interfaces and generic classes
-retain their implemented semantics.
+requests are deduplicated with ordered origins and valid applications are
+materialized as ordinary `InterfaceId` declarations. `RES051` still prevents
+uses from crossing later conformance and executable-integration boundaries.
+Ordinary non-generic interfaces and generic classes retain their implemented
+semantics.
 
 The grammar intentionally does not encode base-name resolution, hierarchy
 validity, the required number or signature of lifecycle members,

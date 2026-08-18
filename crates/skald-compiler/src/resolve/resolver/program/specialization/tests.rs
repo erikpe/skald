@@ -61,7 +61,7 @@ fn interface_keys_distinguish_templates_argument_order_and_nested_closed_types()
 #[test]
 fn identical_recursive_interface_requests_reuse_the_reserved_identity() {
     let output = resolve_source(
-        "interface Node<T> { fn next() -> Node<T>; }\n\
+        "interface Node<T> { fn next(ref value: Node<T>) -> unit; }\n\
          fn use(ref value: Node<i64>) -> unit {}\n\
          fn main() -> i64 { return 0; }\n",
     );
@@ -94,8 +94,8 @@ fn identical_recursive_interface_requests_reuse_the_reserved_identity() {
 #[test]
 fn mutually_recursive_interfaces_complete_in_one_cross_kind_worklist() {
     let output = resolve_source(
-        "interface Left<T> { fn right() -> Right<T>; }\n\
-         interface Right<T> { fn left() -> Left<T>; }\n\
+        "interface Left<T> { fn right(ref value: Right<T>) -> unit; }\n\
+         interface Right<T> { fn left(ref value: Left<T>) -> unit; }\n\
          fn use(ref value: Left<i64>) -> unit {}\n\
          fn main() -> i64 { return 0; }\n",
     );
@@ -144,7 +144,7 @@ fn transformed_interface_recursion_is_cached_and_diagnosed_once() {
 }
 
 #[test]
-fn mixed_interface_and_class_recursion_terminates_without_publishing_the_interface() {
+fn mixed_interface_and_class_recursion_does_not_publish_a_failed_dependency_graph() {
     let output = resolve_source(
         "interface View<T> { fn box_value() -> Box<T>; }\n\
          class Box<T> { view: View<T>; }\n\
@@ -164,7 +164,7 @@ fn mixed_interface_and_class_recursion_terminates_without_publishing_the_interfa
         .unwrap();
     assert!(matches!(
         interface.state,
-        GenericInterfaceSpecializationState::Complete(_)
+        GenericInterfaceSpecializationState::Failed { .. }
     ));
     let class = output
         .program

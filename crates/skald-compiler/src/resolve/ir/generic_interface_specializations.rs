@@ -1,11 +1,14 @@
 //! Canonical identities, cache states, and provenance for generic interfaces.
 
 use crate::{
-    identity::{InterfaceId, InterfaceTemplateId, ModuleId},
+    identity::{
+        InterfaceId, InterfaceRequirementId, InterfaceTemplateId, InterfaceTemplateRequirementId,
+        ModuleId,
+    },
     source::Span,
 };
 
-use super::{GenericSpecializationKey, ResolvedTypeKind};
+use super::{ClosedGenericRequirementSubject, GenericSpecializationKey, ResolvedTypeKind};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GenericInterfaceApplicationOrigin {
@@ -52,7 +55,15 @@ pub struct GenericInterfaceSpecialization {
     pub state: GenericInterfaceSpecializationState,
     pub transitions: Vec<GenericInterfaceSpecializationTransition>,
     pub provenance: GenericInterfaceSpecializationProvenance,
+    pub requirement_mappings: Vec<GenericInterfaceRequirementMapping>,
     pub(crate) closed_type_uses: Vec<Option<ResolvedTypeKind>>,
+    pub(crate) closed_requirements: Vec<Option<ClosedGenericRequirementSubject>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct GenericInterfaceRequirementMapping {
+    pub template: InterfaceTemplateRequirementId,
+    pub closed: InterfaceRequirementId,
 }
 
 impl GenericInterfaceSpecialization {
@@ -90,5 +101,54 @@ impl GenericInterfaceSpecializationTable {
         self.entries
             .iter()
             .find(|entry| entry.interface() == Some(interface))
+    }
+
+    pub(crate) fn iter_mut(
+        &mut self,
+    ) -> impl ExactSizeIterator<Item = &mut GenericInterfaceSpecialization> {
+        self.entries.iter_mut()
+    }
+
+    pub(crate) fn interface_at_application(
+        &self,
+        module: ModuleId,
+        span: Span,
+    ) -> Option<InterfaceId> {
+        self.entries
+            .iter()
+            .find(|entry| {
+                entry
+                    .provenance
+                    .origins
+                    .contains(&GenericInterfaceApplicationOrigin { module, span })
+            })
+            .and_then(|entry| match entry.state {
+                GenericInterfaceSpecializationState::Complete(interface) => Some(interface),
+                GenericInterfaceSpecializationState::Requested
+                | GenericInterfaceSpecializationState::InProgress(_)
+                | GenericInterfaceSpecializationState::Failed { .. } => None,
+            })
+    }
+
+    pub(crate) fn fail_all(&mut self) {
+        for entry in &mut self.entries {
+            let Some(interface) = entry.interface() else {
+                continue;
+            };
+            if matches!(
+                entry.state,
+                GenericInterfaceSpecializationState::Failed { .. }
+            ) {
+                continue;
+            }
+            entry.state = GenericInterfaceSpecializationState::Failed {
+                reserved_interface: interface,
+            };
+            entry
+                .transitions
+                .push(GenericInterfaceSpecializationTransition::Failed {
+                    reserved_interface: interface,
+                });
+        }
     }
 }

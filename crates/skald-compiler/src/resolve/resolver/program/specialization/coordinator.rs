@@ -200,7 +200,9 @@ impl<'semantic, 'interner, 'diagnostics>
                 origins: vec![origin],
                 recursion_path: Vec::new(),
             },
+            requirement_mappings: Vec::new(),
             closed_type_uses: Vec::new(),
+            closed_requirements: Vec::new(),
         });
         self.activate_interface(index)
     }
@@ -242,7 +244,7 @@ impl<'semantic, 'interner, 'diagnostics>
                 )
                 .with_primary_label(
                     origin.span,
-                    "closed interface declaration materialization is implemented by the next roadmap stage",
+                    "generic interface conformance is implemented by the next roadmap stage",
                 )
                 .with_secondary_label(declaration_span, format!("{kind} declared here")),
             );
@@ -337,6 +339,7 @@ impl<'semantic, 'interner, 'diagnostics>
             .iter()
             .map(|use_| use_.type_term.clone())
             .collect::<Vec<_>>();
+        let requirements = semantics.contextual_requirements.clone();
         let environment = TypeClosingEnvironment::interface(
             key.template,
             &key.arguments,
@@ -349,7 +352,20 @@ impl<'semantic, 'interner, 'diagnostics>
             .iter()
             .map(|term| self.close_template_type(term, environment))
             .collect();
+        let closed_requirements = requirements
+            .iter()
+            .map(|requirement| {
+                if requirement.capability == GenericCapability::SharedTarget {
+                    self.close_template_shared_target(&requirement.type_term, environment)
+                        .map(ClosedGenericRequirementSubject::SharedTarget)
+                } else {
+                    self.close_template_type(&requirement.type_term, environment)
+                        .map(ClosedGenericRequirementSubject::Type)
+                }
+            })
+            .collect();
         self.interface_entries[index].closed_type_uses = closed_type_uses;
+        self.interface_entries[index].closed_requirements = closed_requirements;
         let valid = self.specialization_failures == failures_before;
         debug_assert_eq!(self.active.pop(), Some(work_key));
         if valid {
@@ -445,7 +461,9 @@ impl<'semantic, 'interner, 'diagnostics>
                 origins: vec![origin],
                 recursion_path: path.clone(),
             },
+            requirement_mappings: Vec::new(),
             closed_type_uses: Vec::new(),
+            closed_requirements: Vec::new(),
         });
         if let GenericSpecializationKey::Interface(conflict_key) = &conflict {
             let conflict_index = self.interface_indices[conflict_key];

@@ -32,7 +32,7 @@ pub(super) struct ModuleUnit<'ast> {
     qualified_enabled: bool,
     top_levels: HashMap<String, TopLevelSymbol>,
     function_work: Vec<FunctionWorkItem>,
-    class_work: Vec<(ClassId, usize)>,
+    pub(super) class_work: Vec<(ClassId, usize)>,
     pub(super) template_work: Vec<ClassTemplateWorkItem>,
     interface_work: Vec<(InterfaceId, usize)>,
     pub(super) interface_template_work: Vec<InterfaceTemplateWorkItem>,
@@ -103,14 +103,17 @@ pub(super) struct ProgramLookupTables<'program> {
     class_templates: &'program ResolvedClassTemplateTable,
     type_parameters: &'program ResolvedTypeParameterTable,
     specializations: Option<&'program GenericSpecializationTable>,
+    interface_specializations: Option<&'program GenericInterfaceSpecializationTable>,
 }
 
 impl<'program> ProgramLookupTables<'program> {
     pub(super) const fn with_specializations(
         mut self,
         specializations: &'program GenericSpecializationTable,
+        interface_specializations: &'program GenericInterfaceSpecializationTable,
     ) -> Self {
         self.specializations = Some(specializations);
+        self.interface_specializations = Some(interface_specializations);
         self
     }
 
@@ -137,6 +140,7 @@ impl<'program> ProgramLookupTables<'program> {
                 class_templates: self.class_templates,
                 type_parameters: self.type_parameters,
                 specializations: self.specializations,
+                interface_specializations: self.interface_specializations,
             },
             unit.qualified_enabled,
         )
@@ -233,6 +237,7 @@ impl<'ast> ProgramResolver<'ast> {
             class_templates: &class_templates,
             type_parameters: &type_parameters,
             specializations: None,
+            interface_specializations: None,
         };
 
         let external_link_plan = ExternalLinkPlan::new(self.units.iter().flat_map(|unit| {
@@ -248,7 +253,7 @@ impl<'ast> ProgramResolver<'ast> {
                 }
             })
         }));
-        let interfaces = self.collect_interface_declarations(lookups);
+        let mut interfaces = self.collect_interface_declarations(lookups);
         let mut interface_template_semantics = Vec::new();
         for unit in &self.units {
             let lookup = lookups.for_unit(unit, &self.modules);
@@ -314,8 +319,26 @@ impl<'ast> ProgramResolver<'ast> {
             &mut self.diagnostics,
         );
         let generic_specializations = discovery.class_specializations;
-        let generic_interface_specializations = discovery.interface_specializations;
-        let lookups = lookups.with_specializations(&generic_specializations);
+        let mut generic_interface_specializations = discovery.interface_specializations;
+        let ordinary_interfaces = interfaces.clone();
+        let materialized_interfaces = materialize_interface_declarations(
+            InterfaceMaterializationInput {
+                units: &self.units,
+                modules: &self.modules,
+                templates: &interface_templates,
+                semantics: &interface_template_semantics,
+                class_specializations: &generic_specializations,
+                ordinary_interfaces: &interfaces,
+                type_interner: &self.type_interner,
+            },
+            &mut generic_interface_specializations,
+            &mut self.diagnostics,
+        );
+        if materialized_interfaces.valid {
+            interfaces.extend(materialized_interfaces.declarations);
+        }
+        let lookups = lookups
+            .with_specializations(&generic_specializations, &generic_interface_specializations);
         let function_declarations =
             self.collect_function_declarations(lookups, &external_link_plan);
         let external_links =
@@ -547,6 +570,11 @@ impl<'ast> ProgramResolver<'ast> {
             ordinary_class_count,
             ordinary_hierarchy,
             ordinary_classes,
+        );
+        validate_interface_specializations(
+            &mut output.program,
+            &mut output.diagnostics,
+            ordinary_interfaces,
         );
         output
     }

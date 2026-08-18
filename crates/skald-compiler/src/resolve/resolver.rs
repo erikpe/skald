@@ -192,6 +192,9 @@ fn resolve_type_inner(
             if let Some(class) = lookup.specialized_class(named.span) {
                 report_generic_application(named, lookup, diagnostics);
                 ResolvedTypeKind::Class(class)
+            } else if let Some(interface) = lookup.specialized_interface(named.span) {
+                report_generic_application(named, lookup, diagnostics);
+                ResolvedTypeKind::Interface(interface)
             } else {
                 report_generic_application(named, lookup, diagnostics);
                 return None;
@@ -313,31 +316,14 @@ fn report_generic_application(
         }
         TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::InterfaceTemplate(_),
-            name_span,
+            ..
         }) => {
             let syntax = syntax::TypeSyntax {
                 kind: syntax::TypeKind::Named(named.clone()),
                 span: named.span,
             };
-            if program::TemplateTypeResolver::for_application_site(lookup, diagnostics)
-                .resolve(&syntax)
-                .is_some()
-            {
-                diagnostics.push(
-                    Diagnostic::error(
-                        UNSUPPORTED_GENERIC_INTERFACE,
-                        format!(
-                            "generic interface application `{}` is resolved but not yet specialized",
-                            named.name.text
-                        ),
-                    )
-                    .with_primary_label(
-                        arguments.span,
-                        "closed interface specialization is implemented by the next roadmap stage",
-                    )
-                    .with_secondary_label(name_span, "template declared here"),
-                );
-            }
+            let _ = program::TemplateTypeResolver::for_application_site(lookup, diagnostics)
+                .resolve(&syntax);
         }
         TopLevelLookup::Found(symbol) => diagnostics.push(
             Diagnostic::error(
@@ -426,6 +412,14 @@ fn resolve_shared_target(
         return None;
     };
     if target.arguments.is_some() {
+        if let Some(class) = lookup.specialized_class(target.span) {
+            report_generic_application(target, lookup, diagnostics);
+            return ResolvedSharedTarget::from_direct_type(ResolvedTypeKind::Class(class));
+        }
+        if let Some(interface) = lookup.specialized_interface(target.span) {
+            report_generic_application(target, lookup, diagnostics);
+            return ResolvedSharedTarget::from_direct_type(ResolvedTypeKind::Interface(interface));
+        }
         report_generic_application(target, lookup, diagnostics);
         return None;
     }

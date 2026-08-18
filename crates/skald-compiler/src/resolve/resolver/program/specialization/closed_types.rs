@@ -121,9 +121,9 @@ impl SpecializationCoordinator<'_, '_, '_> {
                     },
                 )?;
                 if matches!(environment.owner, Some(GenericTemplateId::Class(_))) {
-                    // I4 discovers and closes the cross-kind dependency, but
-                    // an ordinary class declaration must not reference the
-                    // reserved identity until I5 materializes that interface.
+                    // I5 materializes the interface dependency, but an
+                    // ordinary class declaration cannot claim it until I6
+                    // performs exact generic-interface conformance.
                     return None;
                 }
                 ResolvedTypeKind::Interface(interface)
