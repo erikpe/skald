@@ -227,6 +227,41 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
                 }
                 None
             }
+            (TopLevelSymbolKind::InterfaceTemplate(_), Some(arguments)) => {
+                if report_lookup_errors {
+                    self.owner.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
+                            format!(
+                                "generic interface application `{}` is not yet supported",
+                                named.name.text
+                            ),
+                        )
+                        .with_primary_label(
+                            arguments.span,
+                            "identity is known, but application resolution is not implemented",
+                        )
+                        .with_secondary_label(symbol.name_span, "template declared here"),
+                    );
+                }
+                None
+            }
+            (TopLevelSymbolKind::InterfaceTemplate(_), None) => {
+                if report_lookup_errors {
+                    self.owner.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::RAW_GENERIC_TYPE,
+                            format!(
+                                "generic interface `{}` requires type arguments",
+                                named.name.text
+                            ),
+                        )
+                        .with_primary_label(named.name.span, "type arguments cannot be omitted")
+                        .with_secondary_label(symbol.name_span, "template declared here"),
+                    );
+                }
+                None
+            }
             (TopLevelSymbolKind::Class(_), Some(arguments))
             | (TopLevelSymbolKind::Interface(_), Some(arguments))
             | (TopLevelSymbolKind::Function(_), Some(arguments)) => {

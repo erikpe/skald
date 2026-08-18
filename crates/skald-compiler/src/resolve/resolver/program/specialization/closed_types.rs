@@ -18,7 +18,7 @@ impl SpecializationOwner<'_, '_, '_> {
             ResolvedTemplateTypeKind::Unit => ResolvedTypeKind::Unit,
             ResolvedTemplateTypeKind::Obj => ResolvedTypeKind::Obj,
             ResolvedTemplateTypeKind::Parameter(parameter) => {
-                debug_assert_eq!(parameter.template(), template);
+                debug_assert_eq!(parameter.owner(), template.into());
                 *arguments.get(parameter.index())?
             }
             ResolvedTemplateTypeKind::Class(class) => ResolvedTypeKind::Class(*class),

@@ -153,6 +153,23 @@ impl CallableResolver<'_, '_> {
                 None
             }
             TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::InterfaceTemplate(_),
+                name_span,
+            }) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        RAW_GENERIC_TYPE,
+                        format!(
+                            "generic interface `{}` requires type arguments",
+                            allocation.target.name.text
+                        ),
+                    )
+                    .with_primary_label(allocation.target.span, "type arguments cannot be omitted")
+                    .with_secondary_label(name_span, "template declared here"),
+                );
+                None
+            }
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Function(_),
                 ..
             }) => {

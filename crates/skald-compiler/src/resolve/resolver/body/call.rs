@@ -759,6 +759,23 @@ impl CallableResolver<'_, '_> {
                         self.report_raw_generic_type(&identifier.name.text, identifier.span);
                         None
                     }
+                    TopLevelLookup::Found(TopLevelSymbol {
+                        kind: TopLevelSymbolKind::InterfaceTemplate(_),
+                        name_span,
+                    }) => {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                RAW_GENERIC_TYPE,
+                                format!(
+                                    "generic interface `{}` requires type arguments",
+                                    identifier.name.text
+                                ),
+                            )
+                            .with_primary_label(identifier.span, "type arguments cannot be omitted")
+                            .with_secondary_label(name_span, "template declared here"),
+                        );
+                        None
+                    }
                     TopLevelLookup::Missing => {
                         self.report_unknown(
                             &identifier.name.text,

@@ -7,7 +7,8 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
         ClassId, ClassTemplateId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
-        FunctionId, InitializerId, InterfaceId, MethodId, StaticFieldId, StaticInitializerId,
+        FunctionId, InitializerId, InterfaceId, InterfaceTemplateId, MethodId, StaticFieldId,
+        StaticInitializerId,
     },
     module::ModuleGraph,
     source::Span,
@@ -226,6 +227,23 @@ fn resolve_type_inner(
                 );
                 return None;
             }
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::InterfaceTemplate(_),
+                name_span,
+            }) => {
+                diagnostics.push(
+                    Diagnostic::error(
+                        RAW_GENERIC_TYPE,
+                        format!(
+                            "generic interface `{}` requires type arguments",
+                            named.name.text
+                        ),
+                    )
+                    .with_primary_label(named.name.span, "type arguments cannot be omitted")
+                    .with_secondary_label(name_span, "template declared here"),
+                );
+                return None;
+            }
             TopLevelLookup::Found(symbol) => {
                 diagnostics.push(
                     Diagnostic::error(
@@ -292,6 +310,23 @@ fn report_generic_application(
                 );
             }
         }
+        TopLevelLookup::Found(TopLevelSymbol {
+            kind: TopLevelSymbolKind::InterfaceTemplate(_),
+            name_span,
+        }) => diagnostics.push(
+            Diagnostic::error(
+                UNSUPPORTED_GENERIC_INTERFACE,
+                format!(
+                    "generic interface application `{}` is not yet supported",
+                    named.name.text
+                ),
+            )
+            .with_primary_label(
+                arguments.span,
+                "identity is known, but application resolution is not implemented",
+            )
+            .with_secondary_label(name_span, "template declared here"),
+        ),
         TopLevelLookup::Found(symbol) => diagnostics.push(
             Diagnostic::error(
                 INVALID_GENERIC_APPLICATION,
@@ -411,6 +446,23 @@ fn resolve_shared_target(
             );
             None
         }
+        TopLevelLookup::Found(TopLevelSymbol {
+            kind: TopLevelSymbolKind::InterfaceTemplate(_),
+            name_span,
+        }) => {
+            diagnostics.push(
+                Diagnostic::error(
+                    RAW_GENERIC_TYPE,
+                    format!(
+                        "generic interface `{}` requires type arguments",
+                        target.name.text
+                    ),
+                )
+                .with_primary_label(target.name.span, "type arguments cannot be omitted")
+                .with_secondary_label(name_span, "template declared here"),
+            );
+            None
+        }
         TopLevelLookup::Found(symbol) => {
             diagnostics.push(
                 Diagnostic::error(
@@ -473,6 +525,7 @@ pub(super) enum TopLevelSymbolKind {
     Class(ClassId),
     ClassTemplate(ClassTemplateId),
     Interface(InterfaceId),
+    InterfaceTemplate(InterfaceTemplateId),
 }
 
 #[derive(Clone, Copy, Debug)]

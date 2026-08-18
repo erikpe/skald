@@ -146,6 +146,9 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                 ResolvedTopLevelId::Class(class) => class.to_string(),
                                 ResolvedTopLevelId::ClassTemplate(template) => template.to_string(),
                                 ResolvedTopLevelId::Interface(interface) => interface.to_string(),
+                                ResolvedTopLevelId::InterfaceTemplate(template) => {
+                                    template.to_string()
+                                }
                             };
                             dumper.write_indentation();
                             let _ = write!(
@@ -180,6 +183,9 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                             ResolvedTopLevelId::Class(class) => class.to_string(),
                             ResolvedTopLevelId::ClassTemplate(template) => template.to_string(),
                             ResolvedTopLevelId::Interface(interface) => interface.to_string(),
+                            ResolvedTopLevelId::InterfaceTemplate(template) => {
+                                template.to_string()
+                            }
                         };
                         let _ = write!(dumper.output, "{visibility} {identity} ");
                         write_quoted(&mut dumper.output, &declaration.name);
@@ -213,6 +219,42 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                     }
                     write_span(&mut dumper.output, template.span);
                     dumper.output.push('\n');
+                }
+            });
+        }
+        if !program.interface_templates.is_empty() {
+            dumper.heading("InterfaceTemplates");
+            dumper.indented(|dumper| {
+                for template in program.interface_templates.iter() {
+                    let parameters = program
+                        .type_parameters
+                        .for_interface_template(template.id)
+                        .expect("every interface template has one parameter list");
+                    dumper.write_indentation();
+                    let _ = write!(
+                        dumper.output,
+                        "Template {} module {} ",
+                        template.id, template.module
+                    );
+                    let name =
+                        dumper.qualified_declaration_name(template.module, &template.name);
+                    write_quoted(&mut dumper.output, &name);
+                    dumper.output.push_str(" parameters");
+                    for parameter in parameters.iter() {
+                        let _ = write!(dumper.output, " {}=", parameter.id);
+                        write_quoted(&mut dumper.output, &parameter.name);
+                    }
+                    write_span(&mut dumper.output, template.span);
+                    dumper.output.push('\n');
+                    dumper.indented(|dumper| {
+                        for requirement in template.requirements() {
+                            dumper.write_indentation();
+                            let _ = write!(dumper.output, "Requirement {} ", requirement.id);
+                            write_quoted(&mut dumper.output, &requirement.name);
+                            write_span(&mut dumper.output, requirement.span);
+                            dumper.output.push('\n');
+                        }
+                    });
                 }
             });
         }
@@ -278,6 +320,9 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                         }
                                         ResolvedTopLevelId::Interface(interface) => {
                                             interface.to_string()
+                                        }
+                                        ResolvedTopLevelId::InterfaceTemplate(template) => {
+                                            template.to_string()
                                         }
                                     };
                                     dumper.line(

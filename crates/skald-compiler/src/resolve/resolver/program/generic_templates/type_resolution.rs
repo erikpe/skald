@@ -183,6 +183,40 @@ impl<'parameters, 'diagnostics> TemplateTypeResolver<'parameters, 'diagnostics> 
                     span: named.span,
                 })
             }
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::InterfaceTemplate(_),
+                name_span,
+            }) => {
+                if let Some(arguments) = &named.arguments {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
+                            format!(
+                                "generic interface application `{}` is not yet supported",
+                                named.name.text
+                            ),
+                        )
+                        .with_primary_label(
+                            arguments.span,
+                            "identity is known, but template type resolution is not implemented",
+                        )
+                        .with_secondary_label(name_span, "template declared here"),
+                    );
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            super::super::super::RAW_GENERIC_TYPE,
+                            format!(
+                                "generic interface `{}` requires type arguments",
+                                named.name.text
+                            ),
+                        )
+                        .with_primary_label(named.name.span, "type arguments cannot be omitted")
+                        .with_secondary_label(name_span, "template declared here"),
+                    );
+                }
+                None
+            }
             TopLevelLookup::Found(symbol) => {
                 self.diagnostics.push(
                     Diagnostic::error(

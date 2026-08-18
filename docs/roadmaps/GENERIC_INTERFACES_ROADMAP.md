@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0 is complete and I1 is next.
+Status: in progress; I0–I1 are complete and I2 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -61,7 +61,7 @@ not reopen those decisions during implementation.
 ## Progress
 
 - [x] I0 — Parse and preserve generic interface syntax
-- [ ] I1 — Generalize template identities and module declarations
+- [x] I1 — Generalize template identities and module declarations
 - [ ] I2 — Resolve generic interface templates and requirements
 - [ ] I3 — Resolve parameterized interface applications and bounds
 - [ ] I4 — Coordinate deterministic class and interface specialization
@@ -117,23 +117,23 @@ interfaces are explicitly gated rather than assigned false ordinary identity.
 **Purpose:** Give interface templates and their requirements honest stable
 identity while safely migrating the class-only type-parameter owner.
 
-- [ ] Add `InterfaceTemplateId`, `InterfaceTemplateRequirementId`, and a
+- [x] Add `InterfaceTemplateId`, `InterfaceTemplateRequirementId`, and a
   class-or-interface `GenericTemplateId` owner to shared identity vocabulary
   with deterministic display and crate-private construction.
-- [ ] Change `TypeParameterId` from class-template ownership to
+- [x] Change `TypeParameterId` from class-template ownership to
   `GenericTemplateId`; adapt class-template tables and callers without
   weakening their typed accessors.
-- [ ] Distinguish ordinary interface, interface template, class template, and
+- [x] Distinguish ordinary interface, interface template, class template, and
   other declaration kinds in top-level symbols, resolved module declarations,
   imports, qualification, visibility, collisions, and wrong-kind diagnostics.
-- [ ] Allocate interface template and template requirement identities in
+- [x] Allocate interface template and template requirement identities in
   canonical module, declaration, and requirement source order without
   consuming placeholder ordinary `InterfaceId` values.
-- [ ] Collect interface type parameters, reject duplicates, and establish
+- [x] Collect interface type parameters, reject duplicates, and establish
   scope over the interface `where` clause and every requirement signature.
-- [ ] Preserve generic-class identity, specialization key, dump, and module
+- [x] Preserve generic-class identity, specialization key, dump, and module
   behavior through focused migration tests.
-- [ ] Extend public phase facades only with stable inspectable identity/table
+- [x] Extend public phase facades only with stable inspectable identity/table
   products; keep allocation and collection implementation private.
 
 **Tests:** Identity construction/display and owner distinction; dense table

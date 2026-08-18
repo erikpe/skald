@@ -19,8 +19,9 @@ use skald_compiler::{
         HirPrimitiveType, HirProgram, HirUnaryOperation, HirViewTarget, ObjectProjection, Type,
     },
     identity::{
-        ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
-        OptionalTypeId, PackageId, ProviderId,
+        ArrayTypeId, CallableId, ExternalLinkId, GenericTemplateId, InterfaceId,
+        InterfaceRequirementId, InterfaceTemplateId, InterfaceTemplateRequirementId, ModuleId,
+        OptionalTypeId, PackageId, ProviderId, TypeParameterId,
     },
     lexer::{dump_tokens, lex, LexOutput},
     literal::{IntegerRadix, NumericLiteralKind},
@@ -51,11 +52,13 @@ use skald_compiler::{
     },
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
-        ResolvedClassMember, ResolvedModuleBinding, ResolvedModuleBindingTable,
+        ResolvedClassMember, ResolvedInterfaceTemplate, ResolvedInterfaceTemplateRequirement,
+        ResolvedInterfaceTemplateTable, ResolvedModuleBinding, ResolvedModuleBindingTable,
         ResolvedModuleBindings, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
         ResolvedModuleDeclarations, ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable,
         ResolvedOrdinaryBindings, ResolvedPrimitiveCastExpr, ResolvedPrimitiveType,
-        ResolvedProgram, ResolvedTopLevelId, ResolvedVisibility,
+        ResolvedProgram, ResolvedTopLevelId, ResolvedTypeParameter, ResolvedTypeParameterTable,
+        ResolvedTypeParameters, ResolvedVisibility,
     },
     source::SourceDatabase,
     syntax::{dump_ast, parse, CompilationUnit, ParseOutput, PrimitiveCastExpr, PrimitiveType},
@@ -122,6 +125,16 @@ fn intentional_module_and_request_paths_compose() {
     let _ordinary_bindings: Option<ResolvedOrdinaryBindings> = None;
     let _ordinary_binding_table: Option<ResolvedOrdinaryBindingTable> = None;
     let _top_level_id: Option<ResolvedTopLevelId> = None;
+    let _generic_template: Option<GenericTemplateId> = None;
+    let _interface_template_id: Option<InterfaceTemplateId> = None;
+    let _interface_template_requirement_id: Option<InterfaceTemplateRequirementId> = None;
+    let _type_parameter_id: Option<TypeParameterId> = None;
+    let _interface_template: Option<ResolvedInterfaceTemplate> = None;
+    let _interface_template_requirement: Option<ResolvedInterfaceTemplateRequirement> = None;
+    let _interface_template_table: Option<ResolvedInterfaceTemplateTable> = None;
+    let _type_parameter: Option<ResolvedTypeParameter> = None;
+    let _type_parameters: Option<ResolvedTypeParameters> = None;
+    let _type_parameter_table: Option<ResolvedTypeParameterTable> = None;
     assert!(ResolvedVisibility::Public.is_public());
     assert!(!ResolvedVisibility::Private.is_public());
 }

@@ -74,7 +74,8 @@ pub(crate) use generic_specializations::{
     GenericSpecializationTable, GenericSpecializationTransition,
 };
 pub use generic_templates::{
-    ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedTypeParameter,
+    ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedInterfaceTemplate,
+    ResolvedInterfaceTemplateRequirement, ResolvedInterfaceTemplateTable, ResolvedTypeParameter,
     ResolvedTypeParameterTable, ResolvedTypeParameters,
 };
 pub(crate) use generic_templates::{

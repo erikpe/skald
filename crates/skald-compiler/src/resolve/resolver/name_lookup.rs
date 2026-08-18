@@ -154,6 +154,9 @@ impl<'program> ModuleLookup<'program> {
                 ResolvedTopLevelId::Interface(interface) => {
                     TopLevelSymbolKind::Interface(interface)
                 }
+                ResolvedTopLevelId::InterfaceTemplate(template) => {
+                    TopLevelSymbolKind::InterfaceTemplate(template)
+                }
             },
             name_span: declaration.name_span,
         })
@@ -173,6 +176,9 @@ impl<'program> ModuleLookup<'program> {
                 }
                 ResolvedTopLevelId::Interface(interface) => {
                     TopLevelSymbolKind::Interface(interface)
+                }
+                ResolvedTopLevelId::InterfaceTemplate(template) => {
+                    TopLevelSymbolKind::InterfaceTemplate(template)
                 }
             },
             name_span: declaration.name_span,

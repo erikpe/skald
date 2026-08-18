@@ -9,6 +9,15 @@ the contracts mean.
 
 Choose the narrowest layer that observes the behavior at its owning boundary.
 
+Generic-interface declaration coverage currently belongs to syntax and
+resolution tests. Syntax tests own source shape and recovery. Resolution tests
+own interface-template and template-requirement ID order, class-versus-
+interface parameter ownership, dense lookup, module declaration/import kinds,
+visibility, collisions, dumps, and graph-order determinism. Every such test
+must also assert that generic templates consume no ordinary `InterfaceId`.
+Semantic requirement types, closed applications, conformance, and execution
+join this matrix only in their owning implementation stages.
+
 Optional-value coverage spans type/capability/containment tests, HIR and MIR
 shape and verifier tests, target layout tests, and native lifecycle tests.
 Exact-class optional native tests use side-effect-visible destructors to catch

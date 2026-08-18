@@ -4,7 +4,10 @@ use super::super::body::StringLiteralResolutionEnvironment;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{CallableId, ClassTemplateId, InterfaceId, LiteralDataId, ModuleId, ParameterId},
+    identity::{
+        CallableId, ClassTemplateId, InterfaceId, InterfaceTemplateId, LiteralDataId, ModuleId,
+        ParameterId,
+    },
     lexer::decode_string_literal,
     module::{ModuleGraph, ModulePath, ProgramModuleTable},
 };
@@ -32,6 +35,7 @@ pub(super) struct ModuleUnit<'ast> {
     class_work: Vec<(ClassId, usize)>,
     pub(super) template_work: Vec<ClassTemplateWorkItem>,
     interface_work: Vec<(InterfaceId, usize)>,
+    pub(super) interface_template_work: Vec<InterfaceTemplateWorkItem>,
     declarations: Vec<ResolvedModuleDeclaration>,
 }
 
@@ -84,6 +88,7 @@ impl<'ast> ModuleUnit<'ast> {
             class_work: Vec::new(),
             template_work: Vec::new(),
             interface_work: Vec::new(),
+            interface_template_work: Vec::new(),
             declarations: Vec::new(),
         }
     }
@@ -201,8 +206,11 @@ impl<'ast> ProgramResolver<'ast> {
         }
         self.collect_top_levels();
 
-        let (class_templates, type_parameters) =
-            collect_class_templates(&self.units, &mut self.diagnostics);
+        let CollectedGenericTemplates {
+            classes: class_templates,
+            interfaces: interface_templates,
+            parameters: type_parameters,
+        } = collect_generic_templates(&self.units, &mut self.diagnostics);
 
         let module_declarations = ResolvedModuleDeclarationTable::new(
             self.units
@@ -464,6 +472,7 @@ impl<'ast> ProgramResolver<'ast> {
                     TopLevelSymbolKind::Class(_) => None,
                     TopLevelSymbolKind::ClassTemplate(_) => None,
                     TopLevelSymbolKind::Interface(_) => None,
+                    TopLevelSymbolKind::InterfaceTemplate(_) => None,
                 });
 
         let span = entry_unit.ast.span;
@@ -477,6 +486,7 @@ impl<'ast> ProgramResolver<'ast> {
                 ordinary_bindings,
                 module_declarations,
                 class_templates,
+                interface_templates,
                 type_parameters,
                 template_semantics,
                 generic_specializations,
@@ -514,27 +524,10 @@ impl<'ast> ProgramResolver<'ast> {
         let mut class_count = 0;
         let mut interface_count = 0;
         let mut template_count = 0;
+        let mut interface_template_count = 0;
         for unit in &mut self.units {
             for (ast_index, declaration) in unit.ast.declarations.iter().enumerate() {
                 let name = declaration.name();
-                if let syntax::TopLevelDeclaration::Interface(interface) = declaration {
-                    if interface.type_parameters.is_some() || interface.where_clause.is_some() {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                UNSUPPORTED_GENERIC_INTERFACE,
-                                format!(
-                                    "generic interface `{}` is not yet supported",
-                                    interface.name.text
-                                ),
-                            )
-                            .with_primary_label(
-                                interface.name.span,
-                                "syntax is preserved, but semantic resolution is not implemented",
-                            ),
-                        );
-                        continue;
-                    }
-                }
                 if name.text == "Obj" {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -558,6 +551,14 @@ impl<'ast> ProgramResolver<'ast> {
                     }
                     syntax::TopLevelDeclaration::Class(_) => {
                         TopLevelSymbolKind::Class(ClassId::new(class_count))
+                    }
+                    syntax::TopLevelDeclaration::Interface(interface)
+                        if interface.type_parameters.is_some()
+                            || interface.where_clause.is_some() =>
+                    {
+                        TopLevelSymbolKind::InterfaceTemplate(InterfaceTemplateId::new(
+                            interface_template_count,
+                        ))
                     }
                     syntax::TopLevelDeclaration::Interface(_) => {
                         TopLevelSymbolKind::Interface(InterfaceId::new(interface_count))
@@ -619,6 +620,22 @@ impl<'ast> ProgramResolver<'ast> {
                         interface_count += 1;
                         unit.interface_work.push((id, ast_index));
                         ResolvedTopLevelId::Interface(id)
+                    }
+                    TopLevelSymbolKind::InterfaceTemplate(id) => {
+                        interface_template_count += 1;
+                        unit.interface_template_work
+                            .push(InterfaceTemplateWorkItem { id, ast_index });
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                UNSUPPORTED_GENERIC_INTERFACE,
+                                format!("generic interface `{}` is not yet supported", name.text),
+                            )
+                            .with_primary_label(
+                                name.span,
+                                "identity is preserved, but semantic resolution is not implemented",
+                            ),
+                        );
+                        ResolvedTopLevelId::InterfaceTemplate(id)
                     }
                 };
                 unit.declarations.push(ResolvedModuleDeclaration {

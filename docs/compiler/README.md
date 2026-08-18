@@ -78,6 +78,10 @@ uses see owned declarations plus explicit selective ordinary bindings. Direct
 module imports create exact default or aliased qualified bindings, and
 selective imports bind only requested directly owned public declarations;
 both resolve once to existing semantic identities without re-exporting.
+Declaration indexes and bindings distinguish ordinary classes and interfaces
+from class and interface templates; interface-template parameters and
+requirements have stable non-executable identities without consuming ordinary
+interface IDs.
 Compatible cross-module external declarations retain separate `FunctionId`
 values while sharing one verified, symbol-owning external-link identity.
 The request pipeline and CLI compile positional or logical entries with

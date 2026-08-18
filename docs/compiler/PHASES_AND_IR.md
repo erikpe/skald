@@ -65,10 +65,12 @@ semantics, deterministic closed identities, declarations, and complete
 ordinary resolved bodies are implemented and explicitly gated before typed
 HIR while lifecycle and later integration remain staged.
 
-The frozen, not-yet-implemented
-[generic-interface specialization contract](GENERIC_INTERFACES.md) extends the
-same pre-HIR layer. Interface templates and their template requirement
-identities remain resolution-only products; a coordinated class/interface
+The frozen [generic-interface specialization contract](GENERIC_INTERFACES.md)
+extends the same pre-HIR layer. Declaration collection now exposes stable
+interface-template, template-requirement, and owner-correct type-parameter
+identities as resolution-only products, and module declarations distinguish
+them from ordinary interfaces and class templates. Semantic template
+resolution remains staged. A future coordinated class/interface
 worklist closes every requested application into ordinary `InterfaceId` and
 `InterfaceRequirementId` values. Ordinary resolved executable declarations,
 HIR, MIR, verification, and backends remain free of parameter-bearing

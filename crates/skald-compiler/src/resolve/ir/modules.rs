@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{ClassId, ClassTemplateId, FunctionId, InterfaceId, ModuleId},
+    identity::{ClassId, ClassTemplateId, FunctionId, InterfaceId, InterfaceTemplateId, ModuleId},
     module::ModulePath,
     source::Span,
 };
@@ -25,6 +25,7 @@ pub enum ResolvedTopLevelId {
     Class(ClassId),
     ClassTemplate(ClassTemplateId),
     Interface(InterfaceId),
+    InterfaceTemplate(InterfaceTemplateId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

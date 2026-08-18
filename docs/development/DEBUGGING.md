@@ -82,12 +82,14 @@ same across selective imports, aliases, provider-root spellings, and process
 runs. Numeric IDs remain beside those names wherever identity relationships
 matter.
 
-Generic interface syntax currently stops at the AST boundary. Inspect
-`Interface` nodes for `TypeParameters` and `WhereClause`, and class nodes for
-the complete applied `Implements` or bound `Interface` named type. `RES051`
-is the intentional resolution gate: a generic interface declaration must not
-receive an ordinary `InterfaceId`, and an applied claim or bound must not be
-silently reduced to its declaration name.
+For generic interfaces, first inspect `Interface` AST nodes for
+`TypeParameters` and `WhereClause`, then inspect resolved
+`ModuleDeclarations` and `InterfaceTemplates`. The latter prints the stable
+template identity, owner-correct parameter identities, and source-ordered
+template requirement identities. Selective and qualified imports retain the
+same `InterfaceTemplateId`. `RES051` is the intentional semantic gate: a
+generic interface must not receive an ordinary `InterfaceId`, and an applied
+claim or bound must not be silently reduced to its declaration name.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

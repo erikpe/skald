@@ -40,6 +40,9 @@ fn generic_declarations_receive_non_executable_template_identities() {
             (TypeParameterId::new(ClassTemplateId::new(1), 1), "Right"),
         ]
     );
+    assert!(pair_parameters.iter().all(|parameter| {
+        parameter.id.owner() == crate::identity::GenericTemplateId::Class(ClassTemplateId::new(1))
+    }));
 }
 
 #[test]

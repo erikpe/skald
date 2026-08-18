@@ -619,6 +619,20 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 .with_primary_label(identifier.span, "interfaces cannot be constructed")
                 .with_secondary_label(name_span, "interface declared here"),
             ),
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::InterfaceTemplate(_),
+                name_span,
+            }) => self.diagnostics.push(
+                Diagnostic::error(
+                    super::super::super::RAW_GENERIC_TYPE,
+                    format!(
+                        "generic interface `{}` requires type arguments",
+                        identifier.name.text
+                    ),
+                )
+                .with_primary_label(identifier.span, "type arguments cannot be omitted")
+                .with_secondary_label(name_span, "template declared here"),
+            ),
             TopLevelLookup::Missing => self.diagnostics.push(
                 Diagnostic::error(
                     super::super::super::UNKNOWN_NAME,

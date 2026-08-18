@@ -155,6 +155,7 @@ global_id!(FunctionTypeId, "ft");
 global_id!(ExternalLinkId, "ext");
 global_id!(ClassId, "c");
 global_id!(ClassTemplateId, "template");
+global_id!(InterfaceTemplateId, "interface-template");
 global_id!(InterfaceId, "i");
 global_id!(ArrayTypeId, "a");
 global_id!(OptionalTypeId, "o");
@@ -172,15 +173,73 @@ class_member_id!(DestructorId, "destroy");
 class_member_id!(MethodId, "method");
 interface_member_id!(InterfaceRequirementId, "requirement");
 
-/// Stable source-order identity for a parameter owned by one class template.
+/// Stable identity of the generic declaration that owns type parameters.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum GenericTemplateId {
+    Class(ClassTemplateId),
+    Interface(InterfaceTemplateId),
+}
+
+impl From<ClassTemplateId> for GenericTemplateId {
+    fn from(template: ClassTemplateId) -> Self {
+        Self::Class(template)
+    }
+}
+
+impl From<InterfaceTemplateId> for GenericTemplateId {
+    fn from(template: InterfaceTemplateId) -> Self {
+        Self::Interface(template)
+    }
+}
+
+impl fmt::Display for GenericTemplateId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Class(template) => template.fmt(formatter),
+            Self::Interface(template) => template.fmt(formatter),
+        }
+    }
+}
+
+/// Stable source-order identity for a parameter owned by one generic template.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TypeParameterId {
-    template: ClassTemplateId,
+    owner: GenericTemplateId,
     index: usize,
 }
 
 impl TypeParameterId {
-    pub const fn template(self) -> ClassTemplateId {
+    pub const fn owner(self) -> GenericTemplateId {
+        self.owner
+    }
+
+    pub const fn index(self) -> usize {
+        self.index
+    }
+
+    pub(crate) fn new(owner: impl Into<GenericTemplateId>, index: usize) -> Self {
+        Self {
+            owner: owner.into(),
+            index,
+        }
+    }
+}
+
+impl fmt::Display for TypeParameterId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}:type{}", self.owner(), self.index())
+    }
+}
+
+/// Stable source-order identity for a requirement owned by an interface template.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct InterfaceTemplateRequirementId {
+    template: InterfaceTemplateId,
+    index: usize,
+}
+
+impl InterfaceTemplateRequirementId {
+    pub const fn template(self) -> InterfaceTemplateId {
         self.template
     }
 
@@ -188,14 +247,14 @@ impl TypeParameterId {
         self.index
     }
 
-    pub(crate) const fn new(template: ClassTemplateId, index: usize) -> Self {
+    pub(crate) const fn new(template: InterfaceTemplateId, index: usize) -> Self {
         Self { template, index }
     }
 }
 
-impl fmt::Display for TypeParameterId {
+impl fmt::Display for InterfaceTemplateRequirementId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:type{}", self.template(), self.index())
+        write!(formatter, "{}:requirement{}", self.template(), self.index())
     }
 }
 
@@ -392,6 +451,9 @@ mod tests {
         let second = FunctionId::new(3);
         let template = ClassTemplateId::new(4);
         let type_parameter = TypeParameterId::new(template, 1);
+        let interface_template = InterfaceTemplateId::new(4);
+        let interface_type_parameter = TypeParameterId::new(interface_template, 1);
+        let template_requirement = InterfaceTemplateRequirementId::new(interface_template, 3);
         let family = VirtualFamilyId::new(6);
         let slot = VirtualSlotId::new(7);
         let parameter = ParameterId::new(first, 4);
@@ -415,9 +477,29 @@ mod tests {
         assert_eq!(loop_id.index(), 6);
         assert_eq!(first.to_string(), "f2");
         assert_eq!(template.to_string(), "template4");
-        assert_eq!(type_parameter.template(), template);
+        assert_eq!(type_parameter.owner(), GenericTemplateId::Class(template));
         assert_eq!(type_parameter.index(), 1);
         assert_eq!(type_parameter.to_string(), "template4:type1");
+        assert_eq!(interface_template.to_string(), "interface-template4");
+        assert_eq!(
+            interface_type_parameter.owner(),
+            GenericTemplateId::Interface(interface_template)
+        );
+        assert_eq!(
+            interface_type_parameter.to_string(),
+            "interface-template4:type1"
+        );
+        assert_ne!(type_parameter, interface_type_parameter);
+        assert_eq!(template_requirement.template(), interface_template);
+        assert_eq!(template_requirement.index(), 3);
+        assert_eq!(
+            template_requirement.to_string(),
+            "interface-template4:requirement3"
+        );
+        assert_ne!(
+            GenericTemplateId::Class(template),
+            GenericTemplateId::Interface(interface_template)
+        );
         assert_eq!(family.to_string(), "vf6");
         assert_eq!(slot.to_string(), "vs7");
         assert_eq!(parameter.to_string(), "f2:p4");
