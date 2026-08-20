@@ -649,3 +649,246 @@ fn generic_bound_selection_uses_the_template_definition_module() {
         "definition-site bound must select api::Producer"
     );
 }
+
+#[test]
+fn closed_generic_interfaces_reuse_alias_cast_and_exact_type_test_paths() {
+    let hir = check_generic_source(
+        "interface Value<T> { fn value() -> T; }\n\
+         class U64Value implements Value<u64> {\n\
+           init() {}\n\
+           fn value() -> u64 { return 7u; }\n\
+         }\n\
+         class I64Value implements Value<i64> {\n\
+           init() {}\n\
+           fn value() -> i64 { return 8; }\n\
+         }\n\
+         class Derived extends U64Value { init() { super(); } }\n\
+         fn read(ref value: Value<u64>) -> u64 { return value.value(); }\n\
+         fn forward(ref value: Value<u64>) -> u64 { return read(value); }\n\
+         fn inherited(ref value: Derived) -> u64 { return read(value); }\n\
+         fn checked(ref value: Obj) -> u64 { return ((Value<u64>) value).value(); }\n\
+         fn dynamic_tests(ref value: Obj) -> bool {\n\
+           var is_u64: bool = value is Value<u64>;\n\
+           var is_i64: bool = value is Value<i64>;\n\
+           return is_u64 && is_i64;\n\
+         }\n\
+         fn exact_tests() -> bool {\n\
+           var value: U64Value = U64Value();\n\
+           return (value is Value<u64>) && (value is Value<i64>);\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let value_interfaces = hir
+        .interfaces
+        .iter()
+        .map(|interface| interface.id)
+        .collect::<Vec<_>>();
+    assert_eq!(value_interfaces, [InterfaceId::new(0), InterfaceId::new(1)]);
+
+    let dump = dump_hir(&hir);
+    for expected in [
+        "InterfaceCall i0 i0:requirement0",
+        "CheckedViewArgument runtime-terminate -> interface i0",
+        "TypeTest -> interface i0 runtime",
+        "TypeTest -> interface i1 runtime",
+        "TypeTest -> interface i0 static-success",
+        "TypeTest -> interface i1 static-failure",
+    ] {
+        assert!(dump.contains(expected), "missing `{expected}`:\n{dump}");
+    }
+    assert!(dump.contains("Forwarded"), "{dump}");
+}
+
+#[test]
+fn closed_generic_shared_interfaces_reuse_owner_optional_array_and_anchor_paths() {
+    let hir = check_generic_source(
+        "interface Value<T> { fn value() -> T; }\n\
+         class U64Value implements Value<u64> {\n\
+           init() {}\n\
+           fn value() -> u64 { return 7u; }\n\
+         }\n\
+         interface Factory<T> { fn make() -> T; }\n\
+         class ValueFactory implements Factory<shared Value<u64>> {\n\
+           init() {}\n\
+           fn make() -> shared Value<u64> { return new U64Value(); }\n\
+         }\n\
+         class Owners {\n\
+           owner: shared Value<u64>;\n\
+           maybe: (shared Value<u64>)?;\n\
+           values: (shared Value<u64>)[];\n\
+           init(owner: shared Value<u64>) {\n\
+             self.owner = owner;\n\
+             self.maybe = some(owner);\n\
+             self.values = (shared Value<u64>)[]{owner};\n\
+           }\n\
+           mut fn replace(owner: shared Value<u64>) -> unit {\n\
+             self.owner = owner;\n\
+             self.maybe = some(owner);\n\
+             self.values[0] = owner;\n\
+           }\n\
+         }\n\
+         fn make() -> shared Value<u64> { return new U64Value(); }\n\
+         fn pass(owner: shared Value<u64>) -> shared Value<u64> { return owner; }\n\
+         fn produced(ref factory: Factory<shared Value<u64>>) -> u64 {\n\
+           return factory.make()->value();\n\
+         }\n\
+         fn use(owner: shared Value<u64>, maybe: (shared Value<u64>)?, values: (shared Value<u64>)[]) -> u64 {\n\
+           var copy: shared Value<u64> = owner;\n\
+           copy = pass(make());\n\
+           return copy->value() + maybe!->value() + values[0]->value();\n\
+         }\n\
+         fn checked(owner: shared Obj) -> shared Value<u64> {\n\
+           return (shared Value<u64>) owner;\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let dump = dump_hir(&hir);
+    for expected in [
+        "shared interface i0",
+        "SharedTransfer",
+        "OptionalShared",
+        "ArrayElementAssignment",
+        "SharedCast",
+        "AnchoredSharedPointee",
+        "InterfaceCall",
+    ] {
+        assert!(dump.contains(expected), "missing `{expected}`:\n{dump}");
+    }
+}
+
+#[test]
+fn closed_generic_interface_arguments_keep_contextual_storage_rules() {
+    let valid = check_generic_source(
+        "interface Value<T> { fn value() -> T; }\n\
+         class AliasOnly<T> { init() {} fn inspect(ref value: T) -> unit {} }\n\
+         class Vec<T> {\n\
+           values: T[];\n\
+           init() { self.values = T[](); }\n\
+         }\n\
+         fn alias_only(ref value: AliasOnly<Value<u64>>) -> unit {}\n\
+         fn owning(ref value: Vec<shared Value<u64>>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let dump = dump_hir(&valid);
+    assert!(dump.contains("AliasOnly<Value<u64>>"), "{dump}");
+    assert!(dump.contains("Vec<shared Value<u64>>"), "{dump}");
+
+    let invalid = crate::test_support::resolve_source(
+        "interface Value<T> { fn value() -> T; }\n\
+         class Vec<T> { values: T[]; init() { self.values = T[](); } }\n\
+         fn owning(ref value: Vec<Value<u64>>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        invalid.diagnostics.iter().any(|diagnostic| diagnostic
+            .message
+            .contains("do not satisfy its requirements")),
+        "{:?}",
+        invalid.diagnostics
+    );
+}
+
+#[test]
+fn structural_brackets_select_closed_generic_interface_requirements() {
+    let hir = check_generic_source(
+        "interface Sequence<T> {\n\
+           fn index_get(key: i64) -> T;\n\
+           mut fn index_set(key: i64, replacement: T) -> unit;\n\
+           fn slice_get(start: i64?, end: i64?) -> T;\n\
+           mut fn slice_set(start: i64?, end: i64?, replacement: T) -> unit;\n\
+         }\n\
+         class Numbers implements Sequence<i64> {\n\
+           init() {}\n\
+           fn index_get(key: i64) -> i64 { return key; }\n\
+           mut fn index_set(key: i64, replacement: i64) -> unit {}\n\
+           fn slice_get(start: i64?, end: i64?) -> i64 { return 1; }\n\
+           mut fn slice_set(start: i64?, end: i64?, replacement: i64) -> unit {}\n\
+         }\n\
+         fn use(mut ref value: Sequence<i64>) -> i64 {\n\
+           value[0] = 1;\n\
+           value[:] = 2;\n\
+           return value[0] + value[:];\n\
+         }\n\
+         fn shared_read(value: shared Sequence<i64>) -> i64 { return value->[0]; }\n\
+         fn checked(ref value: Obj) -> i64 { return ((Sequence<i64>) value)[:]; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let dump = dump_hir(&hir);
+    assert_eq!(dump.matches("InterfaceCall i0").count(), 6, "{dump}");
+    for requirement in 0..4 {
+        assert!(
+            dump.contains(&format!("i0:requirement{requirement}")),
+            "{dump}"
+        );
+    }
+    assert!(!dump.contains("ArrayElementPlace"), "{dump}");
+    assert!(!dump.contains("ArraySlice"), "{dump}");
+}
+
+#[test]
+fn closed_generic_interfaces_retain_non_owning_view_exclusions() {
+    let method_reference = crate::test_support::resolve_source(
+        "interface Value<T> { fn value() -> T; }\n\
+         fn invalid(ref value: Value<u64>) -> unit { value.value; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(method_reference
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic
+            .message
+            .contains("interface requirement `value` cannot be used as a function value")));
+
+    let boxing = crate::test_support::resolve_source(
+        "interface Value<T> { fn value() -> T; }\n\
+         fn invalid() -> unit { new Value<u64>(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        boxing
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.message.contains("cannot be allocated")),
+        "{:?}",
+        boxing.diagnostics
+    );
+
+    let storage = check_text(
+        "interface Value<T> { fn value() -> T; }\n\
+         fn invalid(ref value: Value<u64>) -> unit { var stored: Value<u64> = value; }\n\
+         fn escape(ref value: Value<u64>) -> Value<u64> { return value; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        storage.diagnostics.iter().any(|diagnostic| diagnostic
+            .message
+            .contains("cannot store a non-owning view")),
+        "{:?}",
+        storage.diagnostics
+    );
+    assert!(
+        storage.diagnostics.iter().any(|diagnostic| diagnostic
+            .message
+            .contains("cannot return a non-owning view")),
+        "{:?}",
+        storage.diagnostics
+    );
+
+    let conversion = check_text(
+        "interface Value<T> { fn value() -> T; }\n\
+         fn consume_i64(ref value: Value<i64>) -> unit {}\n\
+         fn invalid(ref value: Value<u64>) -> unit { consume_i64(value); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(
+        conversion.diagnostics.iter().any(|diagnostic| diagnostic
+            .labels
+            .iter()
+            .any(|label| label.message.contains("do not implicitly convert"))),
+        "{:?}",
+        conversion.diagnostics
+    );
+}

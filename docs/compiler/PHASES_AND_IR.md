@@ -69,12 +69,15 @@ The frozen [generic-interface specialization contract](GENERIC_INTERFACES.md)
 extends the same pre-HIR layer. Declaration collection now exposes stable
 interface-template, template-requirement, and owner-correct type-parameter
 identities as resolution-only products, and module declarations distinguish
-them from ordinary interfaces and class templates. Semantic template
-resolution remains staged. A future coordinated class/interface
-worklist closes every requested application into ordinary `InterfaceId` and
-`InterfaceRequirementId` values. Ordinary resolved executable declarations,
-HIR, MIR, verification, and backends remain free of parameter-bearing
-interface terms, dictionaries, or runtime type arguments.
+them from ordinary interfaces and class templates. One coordinated
+class/interface worklist closes every requested application into ordinary
+`InterfaceId` and `InterfaceRequirementId` values before executable body
+resolution. Exact claims and bounds, interface aliases, shared owners,
+optionals, arrays, casts, type tests, and structural calls then reuse their
+ordinary resolved and type-checking paths. Ordinary resolved executable
+declarations, HIR, MIR, verification, and backends remain free of
+parameter-bearing interface terms, dictionaries, or runtime type arguments;
+complete lower-IR and target execution coverage remains staged.
 
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus

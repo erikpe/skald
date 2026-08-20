@@ -5,8 +5,9 @@ ownership, module declaration kinds, definition-site semantics, structural
 applications, claims, bounds, canonical closed identities, coordinated
 dependency discovery, ordinary closed declaration materialization, exact
 nominal class conformance, generic bounds, and bound-selected calls
-implemented; complete interface-object integration and execution are not yet
-implemented.
+implemented. Closed applications now compose with ordinary interface views,
+shared ownership, casts, type tests, and structural calls; lower-IR and target
+execution coverage is not yet complete.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler

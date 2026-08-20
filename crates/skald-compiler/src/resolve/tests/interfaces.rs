@@ -74,6 +74,27 @@ fn rejects_interface_construction_without_claiming_interface_calls_are_unavailab
 }
 
 #[test]
+fn closed_generic_interfaces_remain_non_constructible_view_types() {
+    let output = resolve_text(
+        "interface Value<T> { fn value() -> T; }\n\
+         fn invalid() -> unit { Value<u64>(); new Value<u64>(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    let messages = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.message.as_str())
+        .collect::<Vec<_>>();
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("is not callable")));
+    assert!(messages
+        .iter()
+        .any(|message| message.contains("cannot be allocated")));
+}
+
+#[test]
 fn generic_interface_declarations_receive_stable_non_executable_identities() {
     let output = resolve_text(concat!(
         "interface Plain {}\n",

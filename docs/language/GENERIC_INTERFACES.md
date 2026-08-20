@@ -4,9 +4,10 @@ Status: frozen design; source syntax, non-executable template identities,
 definition-site template semantics, structural claims and bounds, closed
 application discovery, ordinary closed interface materialization, exact
 nominal class conformance, generic bounds, and bound-selected calls
-implemented; complete object-model integration and execution are not yet
-implemented. This document defines the confirmed
-source-visible generic-interface contract. The
+implemented. Closed applications also use the ordinary interface alias,
+shared-owner, optional, array, cast, type-test, and structural-call model;
+lower-IR and native execution coverage is not yet complete. This document
+defines the confirmed source-visible generic-interface contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
 compiler. Resolution assigns distinct interface-template, template-requirement,

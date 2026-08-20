@@ -2,6 +2,32 @@ use super::*;
 use crate::resolve::ResolvedSharedTarget;
 
 #[test]
+fn shared_interface_array_elements_are_explicit_dereference_sources() {
+    let output = resolve_text(
+        "interface Value<T> { fn value() -> T; }\n\
+         fn read(values: (shared Value<u64>)[]) -> u64 { return values[0]->value(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let read = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::InterfaceCall(call) = return_value(&read.body.statements[0]) else {
+        panic!("shared interface array element must dispatch through its closed interface");
+    };
+    let crate::resolve::ResolvedInterfaceReceiver::Dereference(dereference) = &call.receiver else {
+        panic!("array element owner must remain an explicit dereference receiver");
+    };
+    assert!(matches!(
+        dereference.source.as_ref(),
+        ResolvedExpression::ArrayProjection(_)
+    ));
+    assert_eq!(
+        dereference.target,
+        ResolvedSharedTarget::Interface(crate::identity::InterfaceId::new(0))
+    );
+}
+
+#[test]
 fn resolves_shared_targets_and_allocation_modes_to_stable_identities() {
     let output = resolve_text(concat!(
         "interface Drawable {}\n",

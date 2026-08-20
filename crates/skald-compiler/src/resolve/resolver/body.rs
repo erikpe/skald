@@ -385,6 +385,20 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         Some(class)
     }
 
+    fn specialized_interface(&mut self, named: &syntax::NamedTypeSyntax) -> Option<InterfaceId> {
+        if let Some(specialization) = self.environment.specialization {
+            let kind = specialization.closed_type(named.span)?;
+            let ResolvedTypeKind::Interface(interface) = kind else {
+                return None;
+            };
+            return Some(interface);
+        }
+
+        let interface = self.environment.lookup.specialized_interface(named.span)?;
+        super::report_generic_application(named, self.environment.lookup, self.diagnostics);
+        Some(interface)
+    }
+
     pub(super) fn report_unsupported_generic_application(
         &mut self,
         named: &syntax::NamedTypeSyntax,

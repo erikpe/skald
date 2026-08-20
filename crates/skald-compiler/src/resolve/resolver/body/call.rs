@@ -309,11 +309,29 @@ impl CallableResolver<'_, '_> {
     pub(super) fn resolve_call(&mut self, call: &syntax::CallExpr) -> Option<ResolvedExpression> {
         let specialized_target = match call.callee.as_ref() {
             syntax::Expression::GenericTypeApplication(application) => {
-                let Some(class) = self.specialized_class(&application.target) else {
+                if let Some(class) = self.specialized_class(&application.target) {
+                    Some(CallTarget::Constructor { class })
+                } else if let Some(interface) = self.specialized_interface(&application.target) {
+                    let declaration = self
+                        .environment
+                        .interfaces
+                        .get(interface)
+                        .expect("specialized interface application must be materialized");
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_CALL_TARGET,
+                            format!("interface `{}` is not callable", declaration.name),
+                        )
+                        .with_primary_label(
+                            application.target.span,
+                            "interfaces describe non-owning views and cannot be constructed",
+                        ),
+                    );
+                    return None;
+                } else {
                     self.report_unsupported_generic_application(&application.target);
                     return None;
-                };
-                Some(CallTarget::Constructor { class })
+                }
             }
             syntax::Expression::GenericStaticSelection(selection) => {
                 let Some(class) = self.specialized_class(&selection.target) else {

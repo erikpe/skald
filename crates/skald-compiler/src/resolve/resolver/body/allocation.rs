@@ -89,7 +89,25 @@ impl CallableResolver<'_, '_> {
             match self.specialized_class(&allocation.target) {
                 Some(class) => self.validate_constructible_allocation_class(class, allocation),
                 None => {
-                    self.report_unsupported_generic_application(&allocation.target);
+                    if let Some(interface) = self.specialized_interface(&allocation.target) {
+                        let declaration = self
+                            .environment
+                            .interfaces
+                            .get(interface)
+                            .expect("specialized interface application must be materialized");
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_CONSTRUCTION_TARGET,
+                                format!("interface `{}` cannot be allocated", declaration.name),
+                            )
+                            .with_primary_label(
+                                allocation.target.span,
+                                "`new` requires a concrete class",
+                            ),
+                        );
+                    } else {
+                        self.report_unsupported_generic_application(&allocation.target);
+                    }
                     None
                 }
             }

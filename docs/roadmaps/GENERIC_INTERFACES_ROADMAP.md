@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I7 are complete and I8 is next.
+Status: in progress; I0–I8 are complete and I9 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -68,7 +68,7 @@ not reopen those decisions during implementation.
 - [x] I5 — Materialize ordinary closed interface declarations
 - [x] I6 — Integrate exact nominal conformance and inheritance
 - [x] I7 — Close generic bounds and bound-selected calls
-- [ ] I8 — Integrate views, ownership, casts, tests, and structural calls
+- [x] I8 — Integrate views, ownership, casts, tests, and structural calls
 - [ ] I9 — Prove HIR, MIR, witness, backend, and native execution
 - [ ] I10 — Harden modules, diagnostics, dumps, robustness, and determinism
 - [ ] I11 — Complete the conformance matrix and close the feature
@@ -379,22 +379,22 @@ no specialization may reselect a member from the concrete class.
 **Purpose:** Prove that exact closed applications compose with the complete
 existing interface object model rather than only conformance and direct calls.
 
-- [ ] Admit closed generic interfaces in every ordinary interface alias and
+- [x] Admit closed generic interfaces in every ordinary interface alias and
   receiver position with unchanged access and call-scoped lifetime rules.
-- [ ] Integrate `shared I<T>` and optional/array combinations through existing
+- [x] Integrate `shared I<T>` and optional/array combinations through existing
   owner construction, copy, transfer, assignment, result, cleanup, and hidden
   anchor paths.
-- [ ] Resolve class-to-interface views, object-place casts, shared casts, and
+- [x] Resolve class-to-interface views, object-place casts, shared casts, and
   type tests against the exact closed `InterfaceId`.
-- [ ] Preserve exact dynamic metadata checks: implementing `I<A>` never
+- [x] Preserve exact dynamic metadata checks: implementing `I<A>` never
   satisfies a query for `I<B>`.
-- [ ] Compose closed generic interfaces used as generic class arguments,
+- [x] Compose closed generic interfaces used as generic class arguments,
   including alias-only acceptance and owning-storage rejection for bare views.
-- [ ] Route structural indexing and slicing through closed generic interface
+- [x] Route structural indexing and slicing through closed generic interface
   requirements when the exact specialized signature is eligible.
-- [ ] Verify produced owning results, optionals, arrays, shared owners, access
+- [x] Verify produced owning results, optionals, arrays, shared owners, access
   modes, checked anchors, and cleanup use ordinary closed paths.
-- [ ] Retain current exclusions for interface method references, independently
+- [x] Retain current exclusions for interface method references, independently
   stored bare views, escaping borrows, boxing, and interface-to-interface
   implicit conversion.
 

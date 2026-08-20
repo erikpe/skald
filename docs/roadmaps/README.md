@@ -7,8 +7,8 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
-progress. I0–I7 are complete; I8, exact interface views, ownership, casts,
-tests, and structural calls, is next.
+progress. I0–I8 are complete; I9, lower-IR verification, witness realization,
+backend integration, and native execution, is next.
 
 The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
 maintainability follow-ups intentionally deferred until after the roadmap.

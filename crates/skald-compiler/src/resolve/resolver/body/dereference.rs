@@ -149,108 +149,8 @@ impl CallableResolver<'_, '_> {
         &self,
         expression: &ResolvedExpression,
     ) -> Option<ResolvedSharedTarget> {
-        let kind = match expression {
-            ResolvedExpression::Binding(binding) => self.binding_type(binding.binding)?,
-            ResolvedExpression::FieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::StaticFieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .static_field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::Allocation(allocation) => {
-                return Some(ResolvedSharedTarget::Class(allocation.class))
-            }
-            ResolvedExpression::OptionalBoxAllocation(allocation) => {
-                return Some(ResolvedSharedTarget::OptionalBox(allocation.target))
-            }
-            ResolvedExpression::DirectCall(call) => {
-                self.environment
-                    .functions
-                    .get(call.function)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::StaticCall(call) => {
-                self.environment
-                    .classes
-                    .get(call.method.class())?
-                    .method(call.method)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::MethodCall(call) => {
-                self.environment
-                    .classes
-                    .get(call.method.class())?
-                    .method(call.method)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::InterfaceCall(call) => {
-                self.environment
-                    .interfaces
-                    .get(call.interface)?
-                    .requirements
-                    .get(call.requirement.index())?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::ObjectCast(cast)
-                if matches!(
-                    cast.target_mode,
-                    ResolvedObjectCastTargetMode::Shared { .. }
-                ) =>
-            {
-                if let Some(target) = cast.optional_box_target {
-                    return Some(ResolvedSharedTarget::OptionalBox(target));
-                }
-                match cast.target.kind {
-                    ResolvedTypeKind::Class(class) => {
-                        return Some(ResolvedSharedTarget::Class(class))
-                    }
-                    ResolvedTypeKind::Interface(interface) => {
-                        return Some(ResolvedSharedTarget::Interface(interface))
-                    }
-                    ResolvedTypeKind::Obj => return Some(ResolvedSharedTarget::Obj),
-                    _ => return None,
-                }
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                return self.resolved_shared_target(&grouped.expression)
-            }
-            ResolvedExpression::Unwrap(unwrap) => {
-                return self.resolved_optional_shared_target(&unwrap.source)
-            }
-            _ => return None,
-        };
-        match kind {
+        match self.resolved_expression_type(expression)? {
             ResolvedTypeKind::Shared(target) => Some(target),
-            _ => None,
-        }
-    }
-
-    fn resolved_optional_shared_target(
-        &self,
-        expression: &ResolvedExpression,
-    ) -> Option<ResolvedSharedTarget> {
-        let kind = self.resolved_expression_type(expression)?;
-        match kind {
-            ResolvedTypeKind::Optional(optional) => {
-                match self.type_interner.optional(optional)?.payload.kind {
-                    ResolvedTypeKind::Shared(target) => Some(target),
-                    _ => None,
-                }
-            }
             _ => None,
         }
     }
@@ -276,17 +176,5 @@ impl CallableResolver<'_, '_> {
             }
             _ => None,
         }
-    }
-
-    fn binding_type(&self, binding: BindingId) -> Option<ResolvedTypeKind> {
-        if binding == BindingId::Receiver(self.callable) {
-            return self.receiver_class.map(ResolvedTypeKind::Class);
-        }
-        self.scopes
-            .iter()
-            .rev()
-            .flat_map(HashMap::values)
-            .find(|symbol| symbol.id == binding)
-            .map(|symbol| symbol.ty)
     }
 }
