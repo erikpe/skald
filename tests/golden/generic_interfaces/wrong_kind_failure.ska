@@ -1,0 +1,12 @@
+class Box<T> {
+    init() {}
+}
+
+class Item implements Box<i64> {
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}
+

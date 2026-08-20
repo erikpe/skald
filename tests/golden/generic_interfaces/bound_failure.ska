@@ -1,0 +1,18 @@
+interface Value<T> {}
+
+class Item {
+    init() {}
+}
+
+class Reader<Source>
+where Source: Value<i64>
+{
+    init() {}
+}
+
+fn use(ref value: Reader<Item>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}
+

@@ -9,14 +9,18 @@ the contracts mean.
 
 Choose the narrowest layer that observes the behavior at its owning boundary.
 
-Generic-interface declaration coverage currently belongs to syntax and
-resolution tests. Syntax tests own source shape and recovery. Resolution tests
-own interface-template and template-requirement ID order, class-versus-
-interface parameter ownership, dense lookup, module declaration/import kinds,
-visibility, collisions, dumps, and graph-order determinism. Every such test
-must also assert that generic templates consume no ordinary `InterfaceId`.
-Semantic requirement types, closed applications, conformance, and execution
-join this matrix only in their owning implementation stages.
+Generic-interface coverage follows the complete compiler pipeline. Syntax
+tests own source shape, punctuation, nested closers, and recovery. Resolution
+tests own template and requirement identities, structural applications,
+specialization caches, recursion, module lookup, bounds, closed declarations,
+conformance, and exact diagnostics. Type-check/HIR tests own closed calls,
+bound-member selection, casts, tests, and the absence of unresolved template
+terms. MIR, verifier, backend, and native golden tests own witness dispatch,
+ownership, metadata, ABI behavior, and execution. Cross-process integration
+tests compile mixed generic classes and interfaces through every inspectable
+phase while permuting source and provider-root order. Generic templates must
+never consume ordinary `InterfaceId` values; only successful closed
+applications do.
 
 Optional-value coverage spans type/capability/containment tests, HIR and MIR
 shape and verifier tests, target layout tests, and native lifecycle tests.

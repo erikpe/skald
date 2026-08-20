@@ -96,6 +96,25 @@ its requirement-to-method mappings. For bound calls, compare template
 `Selection bound-member` entries with generated `ClosedBoundSelection` entries
 and the resulting resolved or HIR `InterfaceCall` identity.
 
+Use the focused generic-interface inspection commands to keep the failure at
+its owning boundary:
+
+```text
+cargo test --locked -p skald-compiler generic_interface
+cargo test --locked -p skald-compiler --test pipeline_determinism generic_interface
+make golden-filter GOLDEN_FILTER='generic_interfaces/**'
+```
+
+The pipeline-determinism test renders tokens and AST for the cached-failure
+case and renders the module graph, resolved program, HIR, preliminary/planned/
+final MIR, assembly, and runtime trace metadata for a successful mixed generic
+class/interface graph. It permutes source discovery and provider-root order in
+separate compiler processes. If those products differ, compare the first
+divergent phase before inspecting later text. Exact diagnostic goldens pin one
+primary application span plus template, requirement, candidate, or nested
+obligation context; repeated requests for a failed closed key must extend that
+single diagnostic rather than emit another primary cause.
+
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and
 retains index/slice shape, omitted bounds, punctuation, and ordinary versus

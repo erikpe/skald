@@ -1,0 +1,11 @@
+interface Expand<T> {
+    fn next() -> Expand<T[]>;
+}
+
+fn first(ref value: Expand<i64>) -> unit {}
+fn second(ref value: Expand<i64>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}
+

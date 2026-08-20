@@ -7,5 +7,184 @@ source = "exact_conformance_failure.ska"
 compiler_args = ["--no-stdlib"]
 
 [test.expect.stderr]
+match = "exact"
+inline = """error[TYP026]: method `value` does not exactly implement `Value<u64>.value`
+ --> tests/golden/generic_interfaces/exact_conformance_failure.ska:8:8
+   |
+8 |     fn value() -> i64 {
+   |        ^^^^^ result type differs from the interface requirement
+   |
+5 | class Wrong implements Value<u64> {
+   |                        ---------- interface conformance declared here
+   |
+2 |     fn value() -> T;
+   |        ----- requirement declared here
+  = note: receiver access, binding modes, parameter types, and result type must match exactly
+"""
+
+[[test]]
+name = "raw_application"
+mode = "compile-fail"
+source = "raw_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES039]: generic interface `Value` requires type arguments
+ --> tests/golden/generic_interfaces/raw_failure.ska:3:19
+   |
+3 | fn use(ref value: Value) -> unit {}
+   |                   ^^^^^ type arguments cannot be omitted
+   |
+1 | interface Value<T> {}
+   |           ----- template declared here
+"""
+
+[[test]]
+name = "arity"
+mode = "compile-fail"
+source = "arity_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES040]: generic interface `Value` expects 1 type argument
+ --> tests/golden/generic_interfaces/arity_failure.ska:3:24
+   |
+3 | fn use(ref value: Value<i64, u64>) -> unit {}
+   |                        ^^^^^^^^^^ wrong number of type arguments
+   |
+1 | interface Value<T> {}
+   |           ----- template declared here
+"""
+
+[[test]]
+name = "invalid_signature_application"
+mode = "compile-fail"
+source = "signature_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES052]: type arguments for `Value` do not produce a valid interface signature
+ --> tests/golden/generic_interfaces/signature_failure.ska:5:19
+   |
+5 | fn use(ref value: Value<Obj>) -> unit {}
+   |                   ^^^^^^^^^^ this application creates a non-owning result type
+   |
+2 |     fn value() -> T;
+   |                   - requirement originates here
+   |
+1 | interface Value<T> {
+   |           ----- generic interface declared here
+"""
+
+[[test]]
+name = "transformed_recursion"
+mode = "compile-fail"
+source = "recursion_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES047]: recursive application of `Expand` changes its type arguments
+ --> tests/golden/generic_interfaces/recursion_failure.ska:5:21
+   |
+5 | fn first(ref value: Expand<i64>) -> unit {}
+   |                     ^^^^^^^^^^^ this application produces a non-terminating family of types
+   |
+2 |     fn next() -> Expand<T[]>;
+   |                  ----------- substitution recursively requests a different closed argument sequence
+   |
+1 | interface Expand<T> {
+   |           ------ template declared here
+"""
+
+[[test]]
+name = "unsatisfied_exact_bound"
+mode = "compile-fail"
+source = "bound_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES048]: type argument for `Reader<Item>` does not satisfy `Source`'s bound
+ --> tests/golden/generic_interfaces/bound_failure.ska:13:19
+    |
+13 | fn use(ref value: Reader<Item>) -> unit {}
+    |                   ^^^^^^^^^^^^ the exact class argument does not provide effective nominal conformance to `Value<i64>`
+   |
+8 | where Source: Value<i64>
+   |       ------------------ bound declared here
+   |
+1 | interface Value<T> {}
+   |           ----- interface declared here
+   |
+7 | class Reader<Source>
+   |       ------ template declared here
+  = note: generic bounds accept only exact class arguments with direct or inherited declared conformance
+"""
+
+[[test]]
+name = "ambiguous_bound_member"
+mode = "compile-fail"
+source = "ambiguous_bound_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES046]: member `read` is provided by multiple interface bounds
+ --> tests/golden/generic_interfaces/ambiguous_bound_failure.ska:15:23
+    |
+15 |         return source.read();
+    |                       ^^^^ bound member selection is ambiguous
+   |
+2 |     fn read() -> i64;
+   |        ---- candidate interface requirement declared here
+   |
+6 |     fn read() -> T;
+   |        ---- candidate interface requirement declared here
+"""
+
+[[test]]
+name = "wrong_claim_kind"
+mode = "compile-fail"
+source = "wrong_kind_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES018]: `Box` does not name an interface
+ --> tests/golden/generic_interfaces/wrong_kind_failure.ska:5:23
+   |
+5 | class Item implements Box<i64> {
+   |                       ^^^^^^^^ expected an interface application
+"""
+
+[[test]]
+name = "duplicate_exact_application"
+mode = "compile-fail"
+source = "duplicate_application_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "exact"
+inline = """error[RES018]: duplicate interface `Marker`
+ --> tests/golden/generic_interfaces/duplicate_application_failure.ska:3:36
+   |
+3 | class Item implements Marker<i64>, Marker<i64> {
+   |                                    ^^^^^^^^^^^ repeated here
+"""
+
+[[test]]
+name = "private_template"
+mode = "compile-fail"
+compiler_args = [
+  "--entry", "app",
+  "--module-root", "cases/privacy/modules",
+  "--no-stdlib",
+]
+
+[test.expect.stderr]
 match = "starts-with"
-inline = "error[TYP026]: method `value` does not exactly implement `Value<u64>.value`"
+inline = "error[RES026]: declaration `dep::Hidden` is private"

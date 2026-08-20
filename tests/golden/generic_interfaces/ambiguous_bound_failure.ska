@@ -1,0 +1,22 @@
+interface Plain {
+    fn read() -> i64;
+}
+
+interface Value<T> {
+    fn read() -> T;
+}
+
+class Reader<Source>
+where Source: Plain, Source: Value<i64>
+{
+    init() {}
+
+    fn read(ref source: Source) -> i64 {
+        return source.read();
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}
+

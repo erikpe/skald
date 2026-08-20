@@ -1,5 +1,6 @@
 use super::*;
 use crate::{
+    diagnostics::LabelStyle,
     identity::{
         GenericTemplateId, InterfaceId, InterfaceRequirementId, InterfaceTemplateId,
         InterfaceTemplateRequirementId, TypeParameterId,
@@ -10,6 +11,66 @@ use crate::{
     },
     test_support::load_module_sources,
 };
+
+#[test]
+fn generic_interface_diagnostics_keep_one_attributed_primary_cause() {
+    let cases = [
+        (
+            RAW_GENERIC_TYPE,
+            "generic interface `Value` requires type arguments",
+            "interface Value<T> {}\nfn use(ref value: Value) -> unit {}\n",
+        ),
+        (
+            GENERIC_ARITY_MISMATCH,
+            "generic interface `Value` expects 1 type argument",
+            "interface Value<T> {}\nfn use(ref value: Value<i64, u64>) -> unit {}\n",
+        ),
+        (
+            INVALID_GENERIC_INTERFACE_REQUIREMENT,
+            "type arguments for `Value` do not produce a valid interface signature",
+            "interface Value<T> { fn value() -> T; }\nfn use(ref value: Value<Obj>) -> unit {}\n",
+        ),
+        (
+            NON_TERMINATING_GENERIC_SPECIALIZATION,
+            "recursive application of `Expand` changes its type arguments",
+            "interface Expand<T> { fn next() -> Expand<T[]>; }\nfn first(ref value: Expand<i64>) -> unit {}\nfn second(ref value: Expand<i64>) -> unit {}\n",
+        ),
+        (
+            UNSATISFIED_GENERIC_REQUIREMENT,
+            "type argument for `Reader<Item>` does not satisfy `Source`'s bound",
+            "interface Value<T> {}\nclass Item { init() {} }\nclass Reader<Source> where Source: Value<i64> { init() {} }\nfn use(ref value: Reader<Item>) -> unit {}\n",
+        ),
+    ];
+
+    for (code, message, source) in cases {
+        let output = resolve_text(source);
+        let matches = output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == code)
+            .collect::<Vec<_>>();
+        assert_eq!(matches.len(), 1, "{code}: {:?}", output.diagnostics);
+        let diagnostic = matches[0];
+        assert_eq!(diagnostic.message, message);
+        assert_eq!(
+            diagnostic
+                .labels
+                .iter()
+                .filter(|label| label.style == LabelStyle::Primary)
+                .count(),
+            1,
+            "{diagnostic:?}"
+        );
+        assert!(
+            diagnostic
+                .labels
+                .iter()
+                .any(|label| label.style == LabelStyle::Secondary)
+                || !diagnostic.notes.is_empty(),
+            "diagnostic must retain template, requirement, or obligation context: {diagnostic:?}"
+        );
+    }
+}
 
 #[test]
 fn assigns_stable_interface_and_requirement_identities() {

@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I9 are complete and I10 is next.
+Status: in progress; I0–I10 are complete and I11 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -70,7 +70,7 @@ not reopen those decisions during implementation.
 - [x] I7 — Close generic bounds and bound-selected calls
 - [x] I8 — Integrate views, ownership, casts, tests, and structural calls
 - [x] I9 — Prove HIR, MIR, witness, backend, and native execution
-- [ ] I10 — Harden modules, diagnostics, dumps, robustness, and determinism
+- [x] I10 — Harden modules, diagnostics, dumps, robustness, and determinism
 - [ ] I11 — Complete the conformance matrix and close the feature
 
 ## PR-sized implementation sequence
@@ -456,26 +456,26 @@ version and surface are unchanged.
 **Purpose:** Make failures and inspectable products stable across large module
 graphs, malformed source, recursive specialization, and independent processes.
 
-- [ ] Audit every generic-interface diagnostic for one primary cause, precise
+- [x] Audit every generic-interface diagnostic for one primary cause, precise
   application span, relevant template/requirement note, nested obligation
   path, and absence of duplicate cascades.
-- [ ] Complete public/private, selective import, qualified import, alias,
+- [x] Complete public/private, selective import, qualified import, alias,
   cyclic module, shadowing, and application-site argument lookup coverage.
-- [ ] Stabilize syntax, resolved, HIR, MIR, assembly, metadata, and diagnostic
+- [x] Stabilize syntax, resolved, HIR, MIR, assembly, metadata, and diagnostic
   dumps for mixed generic classes/interfaces and alternate module orderings.
-- [ ] Add cross-process pipeline determinism cases containing nested
+- [x] Add cross-process pipeline determinism cases containing nested
   applications, multiple conformances, bounds, mutual recursion, cached
   failure, casts/tests, and witness dispatch.
-- [ ] Extend frontend robustness generation to mutate interface parameter and
+- [x] Extend frontend robustness generation to mutate interface parameter and
   argument lists, nested closers, `where` applications, generic `implements`,
   requirement signatures, casts, and tests.
-- [ ] Audit specialization and template modules for focused ownership, bounded
+- [x] Audit specialization and template modules for focused ownership, bounded
   functions, reusable test builders, and absence of new resolver god objects;
   split only demonstrated mixed responsibilities.
-- [ ] Document debugging and testing inspection points for interface template
+- [x] Document debugging and testing inspection points for interface template
   identities, closed keys, requirement mappings, conformance, and witness
   metadata.
-- [ ] Run focused determinism and extended robustness gates and retain every
+- [x] Run focused determinism and extended robustness gates and retain every
   minimized discovered defect as an owner-local regression.
 
 **Tests:** Module graph and provider permutation tests; exact diagnostic

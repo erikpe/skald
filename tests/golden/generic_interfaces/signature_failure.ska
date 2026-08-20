@@ -1,0 +1,10 @@
+interface Value<T> {
+    fn value() -> T;
+}
+
+fn use(ref value: Value<Obj>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}
+

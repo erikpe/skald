@@ -358,6 +358,10 @@ The complete feature gate includes `make check`, `make msrv-check`,
 `make robustness-long`, `make golden-determinism-test`, and
 `git diff --check`.
 
+The concrete phase-by-phase workflow and focused commands are documented in
+[Debugging the Compiler](../development/DEBUGGING.md#follow-the-pipeline), and
+test placement remains governed by [Testing](../development/TESTING.md#test-layers).
+
 ## Deliberate exclusions
 
 This compiler contract does not provide primitive conformances, operator

@@ -7,8 +7,9 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
-progress. I0–I9 are complete; I10, module, diagnostic, dump, robustness, and
-determinism hardening, is next.
+progress. I0–I10, including module, diagnostic, dump, robustness, and
+determinism hardening, are complete; I11, the final conformance audit and
+roadmap closure, is next.
 
 The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
 maintainability follow-ups intentionally deferred until after the roadmap.

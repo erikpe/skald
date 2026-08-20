@@ -44,6 +44,10 @@ fn exercise_generic_syntax_mutations() {
         "interface Comparable { fn compare(ref other: Obj) -> i64; } class Sorted<T> where T: Comparable { value: T; } fn main() -> i64 { return 0; }",
         "interface Producer<T> where T: Marker<Outer<T>> { fn produce() -> T; } class Use<T> implements Producer<T> {} fn main() -> i64 { return 0; }",
         "interface PairSource<Left, Right> { fn left() -> Left; fn right() -> Right; } class Pair<Left, Right> implements PairSource<Left, Right> {} fn main() -> i64 { return 0; }",
+        "interface Transfer<Left, Right> where Left: Marker<Outer<Right>> { fn move(value: Left, ref fallback: Outer<Right>) -> Right; } fn use(ref value: Transfer<Item, u64>) -> unit {} fn main() -> i64 { return 0; }",
+        "interface Value<T> { fn value() -> T; } class Item implements Value<i64> { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); var exact: bool = item is Value<i64>; return ((Value<i64>) item).value(); }",
+        "interface Sequence<T> { fn index_get(key: i64) -> T; } fn read(ref values: Sequence<Outer<i64[]?>[]>) -> unit {} fn main() -> i64 { return 0; }",
+        "interface Marker<T> {} class Pair<Left, Right> implements Marker<Outer<Left>>, Marker<Outer<Right>> where Left: Marker<Right> { init() {} } fn main() -> i64 { return 0; }",
         "class Broken<T where T Comparable, T: { value: Box<T; } fn recovered() -> i64 { return 0; }",
         "interface Broken<T U where T: Marker<Outer<T>>, U Marker { fn read(value: T -> U; } fn recovered() -> i64 { return 0; }",
     ];
@@ -59,7 +63,20 @@ fn exercise_generic_syntax_mutations() {
         }
         for index in 0..=seed.len() {
             let mut insertion = (*seed).to_owned();
-            insertion.insert(index, ['<', '>', ',', ':'][index % 4]);
+            let fragments = [
+                "<",
+                ">",
+                ",",
+                ":",
+                "(",
+                ")",
+                "[",
+                "]",
+                "?",
+                " where ",
+                " implements ",
+            ];
+            insertion.insert_str(index, fragments[index % fragments.len()]);
             assert_deterministic_frontend_recovery(
                 &format!("generic-{seed_index}-insert-{index}"),
                 &insertion,

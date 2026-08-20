@@ -1,0 +1,8 @@
+interface Value<T> {}
+
+fn use(ref value: Value<i64, u64>) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}
+
