@@ -570,7 +570,8 @@ contract suite continues to freeze the version-9 header and archive surface.
 
 ## Implemented generic-interface ABI boundary
 
-The implemented [generic-interface specialization contract](GENERIC_INTERFACES.md) adds no
+The implemented
+[generic-interface specialization contract](GENERIC_INTERFACES.md) adds no
 public C symbol, allocation-header field, runtime-owned type argument,
 dictionary, witness-construction service, reflection record, or ABI-version
 change. Closed generic interfaces use the same compiler-emitted object metadata

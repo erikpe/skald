@@ -6,10 +6,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-The [generic interfaces roadmap](GENERIC_INTERFACES_ROADMAP.md) is in
-progress. I0–I10, including module, diagnostic, dump, robustness, and
-determinism hardening, are complete; I11, the final conformance audit and
-roadmap closure, is next.
+No implementation roadmap is currently in progress. The completed generic
+interfaces roadmap is preserved in the
+[archive](../archive/GENERIC_INTERFACES_ROADMAP.md).
 
 The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
 maintainability follow-ups intentionally deferred until after the roadmap.
@@ -20,9 +19,11 @@ No implementation roadmap is currently waiting to start.
 
 ## Design proposals
 
-The confirmed generic interfaces decisions are preserved in the
-[archive](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) and promoted into
-focused frozen language and compiler contracts.
+The confirmed generic interfaces decisions and completed delivery history are
+preserved in the
+[archive](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) and
+[completed roadmap](../archive/GENERIC_INTERFACES_ROADMAP.md), and promoted
+into focused implemented language and compiler contracts.
 
 The completed private cell fields design and implementation roadmap are
 preserved in the [archive](../archive/PRIVATE_CELL_FIELDS_DESIGN_PROPOSAL.md).

@@ -1,17 +1,11 @@
 # Generic-Interface Specialization
 
-Status: frozen compiler contract; source AST, template identities, parameter
-ownership, module declaration kinds, definition-site semantics, structural
-applications, claims, bounds, canonical closed identities, coordinated
-dependency discovery, ordinary closed declaration materialization, exact
-nominal class conformance, generic bounds, and bound-selected calls
-implemented. Closed applications now compose with ordinary interface views,
-shared ownership, casts, type tests, and structural calls. HIR construction
-asserts the closed-claim boundary; preliminary/final MIR verification and the
-x86-64 backend consume only ordinary exact identities, including ownership,
-effects, witness metadata, dynamic operations, and runtime traces.
-This document defines the target-independent compilation contract for the frozen
-[generic-interface language design](../language/GENERIC_INTERFACES.md). The
+Status: implemented compiler contract. Resolution owns non-executable template
+semantics and coordinated closed specialization; ordinary resolved IR, HIR,
+verified MIR, and the x86-64 backend consume only closed exact interface and
+requirement identities. This document defines the target-independent
+compilation contract for the implemented
+[generic-interface language](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
 availability.
 
@@ -354,6 +348,10 @@ Testing is owned at each phase:
   ownership/lifecycle composition, checked failure, exact diagnostics, and
   independent-process determinism.
 
+The [generic-interface conformance matrix](GENERIC_INTERFACES_TEST_MATRIX.md)
+maps every language/compiler rule and deliberate exclusion to its primary
+owner-local or source-to-native evidence.
+
 The complete feature gate includes `make check`, `make msrv-check`,
 `make robustness-long`, `make golden-determinism-test`, and
 `git diff --check`.
@@ -373,6 +371,4 @@ separate-compilation template ABI.
 
 The archived
 [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) preserves the
-confirmed decisions. The active
-[implementation roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md) owns the
-delivery sequence without redefining this contract.
+confirmed decisions.

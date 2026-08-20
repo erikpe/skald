@@ -940,8 +940,8 @@ applications.
 
 ## Implemented generic-interface specialization target boundary
 
-The implemented [generic-interface compiler contract](GENERIC_INTERFACES.md) reaches the
-backend only through ordinary closed `InterfaceId` and
+The implemented [generic-interface compiler contract](GENERIC_INTERFACES.md)
+reaches the backend only through ordinary closed `InterfaceId` and
 `InterfaceRequirementId` values. Each exact application uses the existing
 interface view, complete-object metadata, witness lookup, receiver/result ABI,
 checked cast, type-test, shared-owner, cleanup, and runtime-trace paths.

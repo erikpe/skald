@@ -460,19 +460,17 @@ Test ownership follows existing phase boundaries:
 - golden tests own native lifecycle/ownership behavior, checked failure,
   multi-module execution, and byte-exact source diagnostics.
 
-Cross-process determinism must cover specialization IDs, diagnostics, phase
-dumps, assembly, and native observation. The active roadmap assigns focused
-gates to each task and finishes with `make check`, `make msrv-check`,
-`make robustness-long`, and `git diff --check`.
+Cross-process determinism covers specialization IDs, diagnostics, phase dumps,
+assembly, and native observation. Repository validation includes `make check`,
+`make msrv-check`, `make robustness-long`, and `git diff --check`.
 
 ## Deliberate exclusions
 
 The compiler contract does not currently provide generic functions,
-independent generic methods or constructors, generic interfaces, member-level constraints,
+independent generic methods or constructors, member-level constraints,
 inference, defaults, variance, partial specialization, parameter construction,
 source-visible lifecycle bounds, lazy method validation, erased code, runtime
 dictionaries, reflection, or separate-compilation specialization ownership.
-Generic interfaces now have a separate frozen
-[compiler contract](GENERIC_INTERFACES.md) and active implementation roadmap;
-the other exclusions require later language designs rather than extensions to
-this generic-class profile.
+Generic interfaces have a separate implemented
+[compiler contract](GENERIC_INTERFACES.md); the other exclusions require later
+language designs rather than extensions to this generic-class profile.

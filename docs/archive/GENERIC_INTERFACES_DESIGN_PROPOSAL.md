@@ -803,7 +803,7 @@ Promotion added focused living language and compiler contracts, retained the
 implemented grammar unchanged until syntax support lands, changed the status
 matrix to frozen design, archived this proposal as the historical decision
 record, and created an active
-[implementation roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md).
+[implementation roadmap](GENERIC_INTERFACES_ROADMAP.md).
 
 The roadmap divides delivery into dependency-ordered PR-sized tasks. It must
 not quietly reopen representation, ownership, conformance, dispatch, or ABI

@@ -1,15 +1,11 @@
 # Generic Interfaces
 
-Status: frozen design; source syntax, non-executable template identities,
-definition-site template semantics, structural claims and bounds, closed
-application discovery, ordinary closed interface materialization, exact
-nominal class conformance, generic bounds, and bound-selected calls
-implemented. Closed applications also use the ordinary interface alias,
-shared-owner, optional, array, cast, type-test, and structural-call model;
-closed declarations, exact witnesses, calls, ownership, cleanup, and static
-effects now pass through verified MIR and native x86-64 execution without a
-generic-specific lower-IR or runtime representation. This document
-defines the confirmed source-visible generic-interface contract. The
+Status: implemented language contract. Source syntax, template semantics,
+structural claims and bounds, closed specialization, exact nominal
+conformance, bound-selected calls, ordinary interface views and ownership,
+verified MIR, and native x86-64 witness dispatch are implemented without a
+generic-specific runtime representation. This document defines the
+source-visible generic-interface contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
 compiler. Resolution assigns distinct interface-template, template-requirement,
@@ -351,8 +347,8 @@ semantics, and optimization guarantees require separate designs.
 
 The [generic-interface compiler contract](../compiler/GENERIC_INTERFACES.md)
 defines template identities, specialization, phase boundaries, witness
-realization, and verification obligations. The archived
+realization, and verification obligations. The
+[conformance matrix](../compiler/GENERIC_INTERFACES_TEST_MATRIX.md) maps this
+contract and its exclusions to executable evidence. The archived
 [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) preserves the
-confirmed decisions, and the active
-[implementation roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md) owns
-delivery order without redefining this language contract.
+confirmed decisions.

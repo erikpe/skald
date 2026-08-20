@@ -458,9 +458,10 @@ This profile excludes:
   results;
 - local/general reference values and stored cast views;
 - external polymorphic/object ABI and cross-module metadata coalescing;
-- closures, generic interfaces, generic functions, and reflection. Implemented
-  [generic classes](GENERIC_CLASSES.md) specialize closed classes before
-  applying this profile. Arrays and static fields compose through their
+- closures, generic functions, and reflection. Implemented
+  [generic classes](GENERIC_CLASSES.md) and
+  [generic interfaces](GENERIC_INTERFACES.md) specialize closed declarations
+  before applying this profile. Arrays and static fields compose through their
   separate implemented contracts;
 - aliases to optional shared owners. Primitive, exact-class, and optional
   shared-owner parameters/results, plus aliases to supported inline optional

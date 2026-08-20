@@ -281,3 +281,30 @@ fn nested_generic_interface_closers_do_not_change_expression_operators() {
     };
     assert_eq!(shift.operator, BinaryOperator::ShiftRight);
 }
+
+#[test]
+fn excluded_generic_interface_extensions_remain_syntax_errors() {
+    let cases = [
+        "interface Derived<T> extends Base<T> {}",
+        "interface Default<T> { fn value() -> T { return value; } }",
+        "interface GenericRequirement<T> { fn map<U>(value: U) -> T; }",
+        "class GenericMethod { fn map<T>(value: T) -> T { return value; } }",
+        "fn generic_function<T>(value: T) -> T { return value; }",
+        "interface Operator<T> { fn +(left: T, right: T) -> T; }",
+    ];
+
+    for excluded in cases {
+        let source = format!("{excluded}\nfn recovered() -> i64 {{ return 0; }}\n");
+        let (_, output) = parse_text(&source);
+        assert!(output.has_errors(), "excluded syntax parsed: {excluded}");
+        assert!(
+            output
+                .ast
+                .declarations
+                .iter()
+                .any(|declaration| declaration.name().text == "recovered"),
+            "failed to recover after {excluded}: {:?}",
+            output.diagnostics
+        );
+    }
+}

@@ -383,8 +383,8 @@ parameter or raw generic name.
 Generic class templates may retain ordinary interfaces or parameter-bearing
 generic interface applications in `implements` and `where` clauses. The latter
 remain structural until enclosing substitution closes their arguments. Closed
-generic-interface identity, conformance checking, and execution are still
-gated by the active [generic-interface roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md).
+generic-interface identity, conformance checking, bound-selected calls, and
+execution follow the implemented [generic-interface contract](GENERIC_INTERFACES.md).
 
 ## Names, modules, and visibility
 
@@ -431,9 +431,6 @@ The frozen initial profile excludes:
 
 - generic top-level functions, methods, and constructors independent of their
   class's parameters;
-- closed generic-interface applications, conformances, and execution (generic
-  interface declarations and definition-site signatures are resolved under
-  their separate frozen contract);
 - member-level constraints;
 - generic aliases and other generic declaration families;
 - argument inference, defaults, wildcards, existentials, and higher-kinded

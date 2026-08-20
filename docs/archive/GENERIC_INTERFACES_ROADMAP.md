@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I10 are complete and I11 is next.
+Status: complete; I0–I11 delivered the implemented generic-interface contract.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -10,7 +10,7 @@ exact interface before HIR, enforce exact nominal bounds and conformance, and
 execute ordinary witness dispatch through the existing verified MIR and
 x86-64 backend without a runtime generic ABI.
 
-The archived [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md)
+The archived [design record](GENERIC_INTERFACES_DESIGN_PROPOSAL.md)
 preserves the confirmed decisions. This roadmap owns delivery order and must
 not reopen those decisions during implementation.
 
@@ -71,7 +71,7 @@ not reopen those decisions during implementation.
 - [x] I8 — Integrate views, ownership, casts, tests, and structural calls
 - [x] I9 — Prove HIR, MIR, witness, backend, and native execution
 - [x] I10 — Harden modules, diagnostics, dumps, robustness, and determinism
-- [ ] I11 — Complete the conformance matrix and close the feature
+- [x] I11 — Complete the conformance matrix and close the feature
 
 ## PR-sized implementation sequence
 
@@ -496,33 +496,33 @@ owners have cohesive responsibilities.
 gaps, promote implemented documentation, and close from an artifact-free
 repository state.
 
-- [ ] Build a traceability matrix from every language/compiler contract rule
+- [x] Build a traceability matrix from every language/compiler contract rule
   and exclusion to owner-local or golden tests; add missing positive, negative,
   boundary, and determinism cases rather than relying on prose assertions.
-- [ ] Cover all five primitives as interface arguments, exact classes,
+- [x] Cover all five primitives as interface arguments, exact classes,
   inheritance, shared exact/interface/`Obj`, bare interface alias-only uses,
   optionals, arrays, nested generic classes/interfaces, multiple parameters,
   functions in signatures, and marker interfaces.
-- [ ] Cover ordinary/generic implementing classes, exact mismatches, multiple
+- [x] Cover ordinary/generic implementing classes, exact mismatches, multiple
   applications, inherited conformance, overrides, generic bounds, views,
   casts, tests, structural calls, produced results, ownership, cleanup, and
   checked failure in complete source-to-native programs.
-- [ ] Prove every initial exclusion remains rejected or unaffected, especially
+- [x] Prove every initial exclusion remains rejected or unaffected, especially
   primitives as conforming subjects, operators, iteration, generic methods,
   variance, interface inheritance/defaults, structural conformance, method
   references, erasure, and runtime dictionaries.
-- [ ] Audit public phase facades and substantial changed files/functions by
+- [x] Audit public phase facades and substantial changed files/functions by
   responsibility; resolve high-priority maintainability issues and record any
   bounded lower-priority follow-up in an indexed discoveries document.
-- [ ] Update `GRAMMAR.md`, language/compiler status, overview, architecture,
+- [x] Update `GRAMMAR.md`, language/compiler status, overview, architecture,
   phase, testing, debugging, backend, and runtime ABI documentation to describe
   only implemented behavior and remove stale rollout language from living
   docs.
-- [ ] Remove roadmap codes from living tests, comments, diagnostics, and docs;
+- [x] Remove roadmap codes from living tests, comments, diagnostics, and docs;
   retain them only in the historical roadmap.
-- [ ] Run the full ordinary and extended repository gates from an artifact-free
+- [x] Run the full ordinary and extended repository gates from an artifact-free
   snapshot and inspect final diff/status hygiene.
-- [ ] Mark the roadmap complete, move it and the frozen implementation history
+- [x] Mark the roadmap complete, move it and the frozen implementation history
   to the archive, update both indexes and every incoming link, and leave no
   unindexed actionable discovery.
 

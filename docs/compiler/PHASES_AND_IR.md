@@ -63,9 +63,10 @@ verification, and backends do not gain an unresolved parameter variant or a
 runtime type-argument protocol. The source-shaped syntax nodes, template
 semantics, deterministic closed identities, declarations, and complete
 ordinary resolved bodies are implemented and explicitly gated before typed
-HIR while lifecycle and later integration remain staged.
+HIR; lifecycle and every later phase consume only those closed ordinary
+products.
 
-The frozen [generic-interface specialization contract](GENERIC_INTERFACES.md)
+The implemented [generic-interface specialization contract](GENERIC_INTERFACES.md)
 extends the same pre-HIR layer. Declaration collection now exposes stable
 interface-template, template-requirement, and owner-correct type-parameter
 identities as resolution-only products, and module declarations distinguish

@@ -20,3 +20,12 @@ compiler_args = ["--no-stdlib"]
 name = "wrong_exact_application"
 expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: checked object cast failed\n" } }
 
+[[test]]
+name = "conformance_matrix"
+mode = "run"
+source = "conformance_matrix.ska"
+compiler_args = ["--no-stdlib"]
+
+[[test.run]]
+name = "all_primitive_and_composite_applications"
+expect = { exit = 29 }

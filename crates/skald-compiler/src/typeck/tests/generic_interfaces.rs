@@ -903,3 +903,77 @@ fn closed_generic_interfaces_retain_non_owning_view_exclusions() {
         conversion.diagnostics
     );
 }
+
+#[test]
+fn closed_generic_interfaces_remain_invariant_and_nominal() {
+    let invariant = check_text(
+        "interface Marker<T> {}\n\
+         class Base { init() {} }\n\
+         class Derived extends Base { init() { super(); } }\n\
+         class DerivedMarker implements Marker<Derived> { init() {} }\n\
+         fn take(ref value: Marker<Base>) -> unit {}\n\
+         fn reject(ref value: Marker<Derived>) -> unit { take(value); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(invariant.hir.is_none());
+    assert!(invariant
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+
+    let structural = check_text(
+        "interface Value<T> { fn value() -> T; }\n\
+         class LooksCompatible { init() {} fn value() -> i64 { return 1; } }\n\
+         fn take(ref value: Value<i64>) -> unit {}\n\
+         fn reject(ref value: LooksCompatible) -> unit { take(value); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(structural.hir.is_none());
+    assert!(structural
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+
+    let primitive_subject = crate::test_support::resolve_source(
+        "interface Marker<T> {}\n\
+         class Needs<Subject> where Subject: Marker<i64> { init() {} }\n\
+         fn reject(ref value: Needs<i64>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(primitive_subject.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT
+            && diagnostic
+                .message
+                .contains("does not satisfy `Subject`'s bound")
+    }));
+}
+
+#[test]
+fn generic_interface_bounds_do_not_enable_operators() {
+    let output = check_text(
+        "interface Add<T> { fn add(value: T) -> T; }\n\
+         class Number implements Add<Number> {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           copy(ref source: Number) { self.value = source.value; }\n\
+           assign(ref source: Number) { self.value = source.value; }\n\
+           fn add(value: Number) -> Number { return Number(self.value + value.value); }\n\
+         }\n\
+         class Gazonker<T> where T: Add<T> {\n\
+           init() {}\n\
+           fn gazonk(left: T, right: T) -> T { return left + right; }\n\
+         }\n\
+         fn instantiate(ref value: Gazonker<Number>) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.hir.is_none());
+    assert!(
+        output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == INVALID_OBJECT_CONTEXT
+                && diagnostic.message == "copy source must be an existing object place"
+        }),
+        "{:?}",
+        output.diagnostics
+    );
+}

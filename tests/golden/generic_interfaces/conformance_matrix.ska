@@ -1,0 +1,163 @@
+interface Value<T> {
+    fn value() -> T;
+}
+
+interface Marker<T> {}
+
+interface Pair<Left, Right> {}
+
+interface Observer<T> {
+    fn observe(ref value: T) -> i64;
+}
+
+interface Callback<T> {
+    fn callback() -> fn(T) -> T;
+}
+
+interface View {
+    fn number() -> i64;
+}
+
+class I64Value implements Value<i64> {
+    init() {}
+    fn value() -> i64 { return 1; }
+}
+
+class U64Value implements Value<u64> {
+    init() {}
+    fn value() -> u64 { return 2u; }
+}
+
+class U8Value implements Value<u8> {
+    init() {}
+    fn value() -> u8 { return 3u8; }
+}
+
+class F64Value implements Value<f64> {
+    init() {}
+    fn value() -> f64 { return 4.0; }
+}
+
+class BoolValue implements Value<bool> {
+    init() {}
+    fn value() -> bool { return true; }
+}
+
+class Payload {
+    number: i64;
+
+    init(number: i64) {
+        self.number = number;
+    }
+
+    copy(ref source: Payload) {
+        self.number = source.number;
+    }
+
+    assign(ref source: Payload) {
+        self.number = source.number;
+    }
+}
+
+class PayloadValue implements Value<Payload> {
+    init() {}
+
+    fn value() -> Payload {
+        return Payload(5);
+    }
+}
+
+class ViewValue implements View {
+    init() {}
+    fn number() -> i64 { return 6; }
+}
+
+class ViewObserver implements Observer<View> {
+    init() {}
+
+    fn observe(ref value: View) -> i64 {
+        return value.number();
+    }
+}
+
+class Holder<T> {
+    init() {}
+}
+
+class ShapeMatrix implements
+    Marker<shared Payload>,
+    Marker<shared View>,
+    Marker<shared Obj>,
+    Marker<i64?>,
+    Marker<i64[]>,
+    Marker<Holder<Value<i64>>>,
+    Pair<Holder<Value<i64>>, Value<u64>>
+{
+    init() {}
+}
+
+fn increment(value: i64) -> i64 {
+    return value + 1;
+}
+
+class IncrementCallback implements Callback<i64> {
+    init() {}
+
+    fn callback() -> fn(i64) -> i64 {
+        return increment;
+    }
+}
+
+fn read_i64(ref value: Value<i64>) -> i64 {
+    return value.value();
+}
+
+fn read_u64(ref value: Value<u64>) -> i64 {
+    return (i64) value.value();
+}
+
+fn read_u8(ref value: Value<u8>) -> i64 {
+    return (i64) value.value();
+}
+
+fn read_f64(ref value: Value<f64>) -> i64 {
+    return (i64) value.value();
+}
+
+fn read_bool(ref value: Value<bool>) -> i64 {
+    return (i64) value.value();
+}
+
+fn read_payload(ref value: Value<Payload>) -> i64 {
+    return value.value().number;
+}
+
+fn observe(ref observer: Observer<View>, ref value: View) -> i64 {
+    return observer.observe(value);
+}
+
+fn invoke(ref callback: Callback<i64>) -> i64 {
+    return callback.callback()(6);
+}
+
+fn main() -> i64 {
+    var i64_value: I64Value = I64Value();
+    var u64_value: U64Value = U64Value();
+    var u8_value: U8Value = U8Value();
+    var f64_value: F64Value = F64Value();
+    var bool_value: BoolValue = BoolValue();
+    var payload_value: PayloadValue = PayloadValue();
+    var view_value: ViewValue = ViewValue();
+    var observer: ViewObserver = ViewObserver();
+    var callback: IncrementCallback = IncrementCallback();
+    var shapes: ShapeMatrix = ShapeMatrix();
+
+    return read_i64(i64_value)
+        + read_u64(u64_value)
+        + read_u8(u8_value)
+        + read_f64(f64_value)
+        + read_bool(bool_value)
+        + read_payload(payload_value)
+        + observe(observer, view_value)
+        + invoke(callback);
+}

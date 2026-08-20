@@ -50,7 +50,7 @@ arguments have deterministic source order.
 | **alias** | A call-scoped, non-owning view of a live object place. A read-only object alias may select an existing place or materialize a compatible produced exact-class object in hidden caller-owned storage. The static target may be a class, an ancestor, an interface, or `Obj`; mutable aliases still require existing mutable places. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **generic class** | A compile-time class template with named type parameters. Each accepted explicit closed application denotes a distinct ordinary exact class after semantic specialization; no unresolved parameter or erased generic value exists at runtime. |
-| **generic interface** | A compile-time interface template with named type parameters. Each valid requested closed application becomes a distinct ordinary exact interface. Class claims and generic bounds use exact nominal conformance, and bound-selected calls map template requirements to ordinary interface dispatch; complete object-model and execution integration remain in progress. |
+| **generic interface** | A compile-time interface template with named type parameters. Each valid requested closed application becomes a distinct ordinary exact interface. Class claims and generic bounds use exact nominal conformance, and bound-selected calls map template requirements to ordinary interface dispatch through verified MIR and native execution. |
 | **function value** | A non-null, capture-free reference to one exact internal top-level function or static method. Its canonical recursive function type fixes parameter modes and types plus the result; copying carries no receiver, environment, owner, or cleanup. |
 | **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. Ordinary `init` declarations form an overload set; `copy`, `assign`, and `destroy` retain their distinct slots. |
 
@@ -222,10 +222,10 @@ makes a result source-observable.
   applications, structural substitution, inferred contextual requirements,
   nominal interface bounds, invariance, complete-class validation, and native
   execution.
-- [Generic interfaces](GENERIC_INTERFACES.md) defines the frozen explicit
+- [Generic interfaces](GENERIC_INTERFACES.md) defines the implemented explicit
   interface-template surface, closed exact identity, contextual signature
   validity, generic bounds, nominal conformance, ownership, and dispatch
-  contract. It is not yet implemented.
+  contract.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the

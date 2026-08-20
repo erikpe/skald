@@ -200,16 +200,17 @@ or lower IR, and no runtime generic ABI is introduced. Template semantics,
 contextual requirements, canonical closed keys, deterministic reserved class
 identities, caching, finite-recursion handling, and complete ordinary closed
 declarations and resolved bodies are implemented; lifecycle and later phases
-remain staged by the active roadmap.
+use the existing closed HIR, verified MIR, backend, and native paths.
 
-The frozen, not-yet-implemented
+The implemented
 [generic-interface specialization contract](GENERIC_INTERFACES.md) extends
 that boundary with interface-template and template-requirement identities,
 parameter-bearing claims and bounds, coordinated class/interface
 specialization, and exact closed interface identities. Successful closure
 reuses ordinary conformance, views, witness calls, HIR, verified MIR, and
-backend metadata without runtime dictionaries or an ABI change. Its
-[active roadmap](../roadmaps/GENERIC_INTERFACES_ROADMAP.md) owns delivery.
+backend metadata without runtime dictionaries or an ABI change. The
+[conformance matrix](GENERIC_INTERFACES_TEST_MATRIX.md) maps the complete
+contract and its exclusions to executable evidence.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
