@@ -16,7 +16,7 @@ use crate::{
         BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
         MethodId,
     },
-    test_support::{lower_source_to_mir, type_check_source},
+    test_support::{lower_source_to_final_mir, lower_source_to_mir, type_check_source},
 };
 
 mod alias_fixtures;

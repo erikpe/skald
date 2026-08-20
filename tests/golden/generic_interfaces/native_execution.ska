@@ -1,0 +1,166 @@
+interface Plain {
+    fn ping() -> i64;
+}
+
+interface Value<T> {
+    fn value() -> T;
+}
+
+interface Named<T> {
+    fn name() -> i64;
+}
+
+interface Factory<T> {
+    fn make() -> T;
+}
+
+interface Sequence<T> {
+    fn index_get(key: i64) -> T;
+    mut fn index_set(key: i64, replacement: T) -> unit;
+}
+
+class Base implements Plain, Value<i64>, Named<i64>, Named<u64> {
+    amount: i64;
+
+    init(amount: i64) {
+        self.amount = amount;
+    }
+
+    fn ping() -> i64 {
+        return 0;
+    }
+
+    virtual fn value() -> i64 {
+        return self.amount;
+    }
+
+    fn name() -> i64 {
+        return 5;
+    }
+}
+
+class Derived extends Base {
+    init(amount: i64) {
+        super(amount);
+    }
+
+    override fn value() -> i64 {
+        return self.amount + 2;
+    }
+}
+
+class Box<T> implements Value<T> {
+    amount: T;
+
+    init(amount: T) {
+        self.amount = amount;
+    }
+
+    fn value() -> T {
+        return self.amount;
+    }
+}
+
+class Reader<Source>
+where Source: Value<i64>
+{
+    init() {}
+
+    fn read(ref source: Source) -> i64 {
+        return source.value();
+    }
+}
+
+class Maker implements Factory<shared Value<i64>> {
+    init() {}
+
+    fn make() -> shared Value<i64> {
+        return new Base(2);
+    }
+}
+
+class Numbers implements Sequence<i64> {
+    init() {}
+
+    fn index_get(key: i64) -> i64 {
+        return key;
+    }
+
+    mut fn index_set(key: i64, replacement: i64) -> unit {}
+}
+
+class Tracked implements Value<i64> {
+    static destroyed: i64;
+    amount: i64;
+
+    init(amount: i64) {
+        self.amount = amount;
+    }
+
+    fn value() -> i64 {
+        return self.amount;
+    }
+
+    destroy {
+        Tracked.destroyed = Tracked.destroyed + 1;
+    }
+}
+
+fn read_i64(ref value: Value<i64>) -> i64 {
+    return value.value();
+}
+
+fn read_name_i64(ref value: Named<i64>) -> i64 {
+    return value.name();
+}
+
+fn read_name_u64(ref value: Named<u64>) -> i64 {
+    return value.name();
+}
+
+fn read_structural(mut ref values: Sequence<i64>) -> i64 {
+    values[0] = 0;
+    return values[1];
+}
+
+fn read_factory(ref factory: Factory<shared Value<i64>>) -> i64 {
+    return factory.make()->value();
+}
+
+fn exercise_cleanup() -> i64 {
+    var owner: shared Value<i64> = new Tracked(0);
+    return owner->value();
+}
+
+fn main() -> i64 {
+    var value: Derived = Derived(10);
+    var box: Box<i64> = Box<i64>(0);
+    var reader: Reader<Derived> = Reader<Derived>();
+    var numbers: Numbers = Numbers();
+    var maker: Maker = Maker();
+
+    var owner: shared Value<i64> = new Base(5);
+    var maybe: (shared Value<i64>)? = some(owner);
+    var values: (shared Value<i64>)[] = (shared Value<i64>)[]{owner};
+    var erased: shared Obj = owner;
+    var is_exact: bool = *erased is Value<i64>;
+    var is_other: bool = *erased is Value<u64>;
+    var recovered: shared Value<i64> = (shared Value<i64>) erased;
+
+    var cleanup_value: i64 = exercise_cleanup();
+
+    return read_i64(value)
+        + read_i64(box)
+        + read_name_i64(value)
+        + read_name_u64(value)
+        + reader.read(value)
+        + read_structural(numbers)
+        + values[0]->value()
+        + read_factory(maker)
+        + maybe!->value()
+        + recovered->value()
+        + value.ping()
+        + cleanup_value
+        + Tracked.destroyed
+        - 11;
+}

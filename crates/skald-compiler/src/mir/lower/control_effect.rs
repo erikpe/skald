@@ -183,7 +183,7 @@ fn optional_storage_contains_control_effect(storage: &crate::hir::HirOptionalSto
 
 fn shared_source_contains_control_effect(source: &HirSharedSource) -> bool {
     match source {
-        HirSharedSource::Place(_) => false,
+        HirSharedSource::Place(place) => shared_place_contains_control_effect(place),
         HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
             shared_allocation_contains_control_effect(allocation)
         }
@@ -199,6 +199,20 @@ fn shared_source_contains_control_effect(source: &HirSharedSource) -> bool {
             array_construction_contains_control_effect(construction)
         }
         HirSharedSource::Produced(HirSharedProducer::OptionalBoxAllocation(_)) => true,
+    }
+}
+
+fn shared_place_contains_control_effect(place: &crate::hir::HirSharedPlace) -> bool {
+    match place {
+        crate::hir::HirSharedPlace::Binding { .. } | crate::hir::HirSharedPlace::Static { .. } => {
+            false
+        }
+        crate::hir::HirSharedPlace::Field { place, .. } => {
+            object_receiver_contains_control_effect(&place.receiver)
+        }
+        // Array position and backing-storage checks select successor blocks
+        // before the shared owner can be copied or borrowed.
+        crate::hir::HirSharedPlace::ArrayElement { .. } => true,
     }
 }
 
@@ -496,6 +510,28 @@ mod tests {
             &initialization.source.receiver.source
         else {
             panic!("expected inline element-list source");
+        };
+
+        assert!(expression_contains_control_effect(expression));
+    }
+
+    #[test]
+    fn shared_array_element_interface_receiver_is_control_affecting() {
+        let hir = type_check_source(concat!(
+            "interface Value<T> { fn value() -> T; }\n",
+            "fn read(values: (shared Value<i64>)[]) -> i64 {\n",
+            "  return 1 + values[0]->value();\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ))
+        .hir
+        .unwrap();
+        let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
+        let HirStatement::Return(returned) = definition.body.statements.last().unwrap() else {
+            panic!("expected return statement");
+        };
+        let HirReturnValue::Scalar(expression) = returned.value.as_ref().unwrap() else {
+            panic!("expected scalar return");
         };
 
         assert!(expression_contains_control_effect(expression));

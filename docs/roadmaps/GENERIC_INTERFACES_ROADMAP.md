@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I8 are complete and I9 is next.
+Status: in progress; I0–I9 are complete and I10 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -69,7 +69,7 @@ not reopen those decisions during implementation.
 - [x] I6 — Integrate exact nominal conformance and inheritance
 - [x] I7 — Close generic bounds and bound-selected calls
 - [x] I8 — Integrate views, ownership, casts, tests, and structural calls
-- [ ] I9 — Prove HIR, MIR, witness, backend, and native execution
+- [x] I9 — Prove HIR, MIR, witness, backend, and native execution
 - [ ] I10 — Harden modules, diagnostics, dumps, robustness, and determinism
 - [ ] I11 — Complete the conformance matrix and close the feature
 
@@ -416,24 +416,24 @@ specific runtime representation.
 **Purpose:** Carry the closed feature through every lower trust boundary and
 execute exact generic-interface dispatch without new lower-IR concepts.
 
-- [ ] Lower generated closed interface declarations, conformances, views, and
+- [x] Lower generated closed interface declarations, conformances, views, and
   calls through existing HIR structures with ordinary interface identities.
-- [ ] Assert at HIR construction that no template parameter, interface
+- [x] Assert at HIR construction that no template parameter, interface
   template, template requirement, or structural application survives.
-- [ ] Lower exact conformance and requirement calls through existing MIR,
+- [x] Lower exact conformance and requirement calls through existing MIR,
   including shared ownership, optional/array values, produced results, cleanup,
   and static-effect inference.
-- [ ] Extend preliminary and final MIR verification tests for generated closed
+- [x] Extend preliminary and final MIR verification tests for generated closed
   declarations, requirement ownership, exact signature maps, call targets,
   effects, and complete-object metadata.
-- [ ] Add mutation tests that inject undeclared/mismatched closed interface IDs
+- [x] Add mutation tests that inject undeclared/mismatched closed interface IDs
   or forbidden template provenance below resolution and require rejection.
-- [ ] Emit distinct deterministic witness metadata and symbols for distinct
+- [x] Emit distinct deterministic witness metadata and symbols for distinct
   applications; allow one concrete method address to satisfy multiple exact
   entries.
-- [ ] Verify x86-64 receiver/result ABI, dynamic lookup, casts/tests, shared
+- [x] Verify x86-64 receiver/result ABI, dynamic lookup, casts/tests, shared
   handles, runtime trace identity, and unchanged runtime ABI version.
-- [ ] Add native goldens for ordinary/generic classes, inherited overrides,
+- [x] Add native goldens for ordinary/generic classes, inherited overrides,
   multiple applications, bound calls, shared owners, structural calls, and
   dynamic failure.
 

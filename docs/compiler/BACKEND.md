@@ -938,10 +938,9 @@ symbols encode the canonical semantic application plus the closed `ClassId`;
 assembler and native tests cover equal-layout identities and cross-module
 applications.
 
-## Frozen generic-interface specialization target boundary
+## Implemented generic-interface specialization target boundary
 
-The frozen, not-yet-implemented
-[generic-interface compiler contract](GENERIC_INTERFACES.md) reaches the
+The implemented [generic-interface compiler contract](GENERIC_INTERFACES.md) reaches the
 backend only through ordinary closed `InterfaceId` and
 `InterfaceRequirementId` values. Each exact application uses the existing
 interface view, complete-object metadata, witness lookup, receiver/result ABI,
@@ -953,6 +952,11 @@ Private names include sufficient canonical application identity to prevent
 collisions. The backend receives no interface template, type argument vector,
 dictionary, substitution request, or erased generic-interface representation,
 and the feature adds no target instruction family or runtime call.
+
+Backend, assembler, runtime-trace, and native tests cover distinct applications
+sharing one method address, inherited overrides, bound-selected and structural
+calls, produced shared results, exact casts/tests, checked failure, and the
+unchanged version-9 ABI marker.
 
 ## Symbols and process entry
 

@@ -51,6 +51,17 @@ fn generic_interface_bound_call_closes_to_ordinary_dispatch() {
     let dump = dump_hir(&hir);
     assert!(dump.contains("InterfaceCall i0 i0:requirement0"), "{dump}");
     assert!(dump.contains("i0:requirement0 -> c0:method0"), "{dump}");
+    for forbidden in [
+        "interface-template",
+        "template-requirement",
+        "type-parameter",
+        "structural-interface-application",
+    ] {
+        assert!(
+            !dump.contains(forbidden),
+            "forbidden `{forbidden}` in:\n{dump}"
+        );
+    }
 }
 
 #[test]

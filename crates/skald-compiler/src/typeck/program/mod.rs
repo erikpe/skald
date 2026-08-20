@@ -139,6 +139,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let hir = if diagnostics.has_errors() {
         None
     } else {
+        assert_closed_interface_boundary(program);
         Some(HirProgram {
             modules: program.modules.clone(),
             external_links: program.external_links.clone(),
@@ -188,6 +189,22 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     };
 
     TypeCheckOutput { hir, diagnostics }
+}
+
+/// Enforces the specialization trust boundary immediately before executable
+/// HIR is constructed. Ordinary resolved types already cannot represent type
+/// parameters or structural interface applications; class claims are the one
+/// structural declaration form that exists in the resolved program model.
+fn assert_closed_interface_boundary(program: &ResolvedProgram) {
+    for class in program.classes.iter() {
+        for claim in &class.implemented_interfaces {
+            assert!(
+                claim.interface.ordinary().is_some(),
+                "successful type checking cannot lower a structural interface claim for class {}",
+                class.id
+            );
+        }
+    }
 }
 
 fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {

@@ -1,0 +1,11 @@
+schema = 2
+
+[[test]]
+name = "exact_conformance"
+mode = "compile-fail"
+source = "exact_conformance_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[test.expect.stderr]
+match = "starts-with"
+inline = "error[TYP026]: method `value` does not exactly implement `Value<u64>.value`"

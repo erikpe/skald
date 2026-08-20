@@ -6,8 +6,10 @@ applications, claims, bounds, canonical closed identities, coordinated
 dependency discovery, ordinary closed declaration materialization, exact
 nominal class conformance, generic bounds, and bound-selected calls
 implemented. Closed applications now compose with ordinary interface views,
-shared ownership, casts, type tests, and structural calls; lower-IR and target
-execution coverage is not yet complete.
+shared ownership, casts, type tests, and structural calls. HIR construction
+asserts the closed-claim boundary; preliminary/final MIR verification and the
+x86-64 backend consume only ordinary exact identities, including ownership,
+effects, witness metadata, dynamic operations, and runtime traces.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
@@ -310,6 +312,12 @@ existing contracts.
 Generated semantic and target names include qualified template identity plus
 canonical arguments. Generic interfaces add no public C runtime function,
 runtime ABI version change, descriptor, dictionary, or reflective payload.
+
+The implemented x86-64 path emits one ordinary complete-object metadata entry
+per exact application. Distinct applications keep distinct witness slots even
+when both slots contain the same concrete method address. Receiver/result
+classification, shared retain/release, checked casts and tests, source trace
+identity, and symbol determinism remain the ordinary interface contracts.
 
 ## Diagnostics, dumps, and verification strategy
 

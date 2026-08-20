@@ -165,6 +165,31 @@ fn expands_virtual_and_interface_dispatch_to_all_linked_implementations() {
 }
 
 #[test]
+fn propagates_closed_generic_interface_dispatch_effects() {
+    let preliminary = lower(
+        "interface Reader<T> { fn read() -> T; }
+         class State { static value: i64 = 42; init() {} }
+         class Source implements Reader<i64> {
+           init() {}
+           fn read() -> i64 { return State.value; }
+         }
+         fn read(ref value: Reader<i64>) -> i64 { return value.read(); }
+         fn main() -> i64 { return 0; }",
+    );
+    let field = preliminary.static_fields().next().unwrap().field;
+    let analysis = infer_static_effects(&preliminary);
+    let summary = analysis
+        .summary(StaticEffectNode::Callable(FunctionId::new(0).into()))
+        .unwrap();
+
+    assert!(summary.effects.iter().any(|effect| effect.field == field
+        && effect
+            .witness
+            .iter()
+            .any(|edge| edge.kind == StaticEffectEdgeKind::InterfaceDispatch)));
+}
+
+#[test]
 fn models_constructor_copy_temporary_optional_and_array_lifecycle_effects() {
     let preliminary = lower(
         "class State {

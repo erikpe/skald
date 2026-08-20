@@ -265,3 +265,132 @@ fn rejects_missing_inherited_conformance_and_owning_interface_storage() {
         .iter()
         .any(|message| message == "interface receiver origin is not live"));
 }
+
+#[test]
+fn closed_generic_interfaces_lower_as_ordinary_exact_mir() {
+    let program = lower_text(generic_interface_lowering_source());
+    verify_mir(&program).unwrap();
+
+    let final_program = lower_source_to_final_mir(generic_interface_lowering_source());
+    verify_mir(&final_program).unwrap();
+    assert!(final_program.static_lifecycle.is_some());
+    assert_eq!(
+        final_program
+            .class(ClassId::new(1))
+            .unwrap()
+            .conformances
+            .len(),
+        2
+    );
+
+    assert_eq!(program.interfaces.iter().count(), 3);
+    for interface in program.interfaces.iter() {
+        for (index, requirement) in interface.requirements.iter().enumerate() {
+            assert_eq!(requirement.id.interface(), interface.id);
+            assert_eq!(requirement.id.index(), index);
+        }
+    }
+
+    let both = program.class(ClassId::new(1)).unwrap();
+    assert_eq!(both.conformances.len(), 2);
+    assert_ne!(
+        both.conformances[0].interface,
+        both.conformances[1].interface
+    );
+    assert!(both.conformances.iter().all(|conformance| {
+        conformance.implementations[0].method == MethodId::new(ClassId::new(1), 0)
+    }));
+
+    let dump = dump_mir(&program);
+    for expected in [
+        "Interface i0",
+        "Interface i1",
+        "Interface i2",
+        "i0:requirement0 -> c1:method0",
+        "i1:requirement0 -> c1:method0",
+        "call interface i0 i0:requirement0",
+        "call interface i1 i1:requirement0",
+        "shared interface i0",
+        "shared-release",
+    ] {
+        assert!(dump.contains(expected), "missing `{expected}` in:\n{dump}");
+    }
+
+    // HIR and MIR intentionally have no identity or type variant capable of
+    // carrying any of these pre-closure concepts. Keep dumps equally strict
+    // so new lower-IR provenance cannot silently weaken that boundary.
+    for forbidden in [
+        "interface-template",
+        "template-requirement",
+        "type-parameter",
+        "structural-interface-application",
+    ] {
+        assert!(
+            !dump.contains(forbidden),
+            "forbidden `{forbidden}` in:\n{dump}"
+        );
+    }
+}
+
+#[test]
+fn rejects_corrupt_closed_generic_interface_identities() {
+    let mut undeclared = lower_text(generic_interface_lowering_source());
+    undeclared.classes.entries_mut_for_test()[1].conformances[0].interface = InterfaceId::new(99);
+    assert!(messages(&undeclared)
+        .iter()
+        .any(|message| message == "class c1 conforms to undeclared interface i99"));
+
+    let mut cross_application = lower_text(generic_interface_lowering_source());
+    let second_requirement = cross_application
+        .interfaces
+        .get(InterfaceId::new(1))
+        .unwrap()
+        .requirements[0]
+        .id;
+    cross_application.classes.entries_mut_for_test()[1].conformances[0].implementations[0]
+        .requirement = second_requirement;
+    assert!(messages(&cross_application).iter().any(|message| {
+        message.contains("implementation 0 names i1:requirement0 instead of i0:requirement0")
+    }));
+
+    let mut undeclared_call = lower_text(generic_interface_lowering_source());
+    let call = first_interface_call_mut(&mut undeclared_call);
+    let MirCallTarget::Interface(target) = &mut call.target else {
+        unreachable!()
+    };
+    target.interface = InterfaceId::new(99);
+    assert!(messages(&undeclared_call)
+        .iter()
+        .any(|message| message == "interface call requirement belongs to a different interface"));
+}
+
+fn generic_interface_lowering_source() -> &'static str {
+    concat!(
+        "interface Named<T> { fn name() -> i64; }\n",
+        "interface Factory<T> { fn make() -> T; }\n",
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Both implements Named<i64>, Named<u64> {\n",
+        "  init() {}\n",
+        "  fn name() -> i64 { return 7; }\n",
+        "}\n",
+        "class Maker implements Factory<shared Named<i64>> {\n",
+        "  init() {}\n",
+        "  fn make() -> shared Named<i64> { return new Both(); }\n",
+        "}\n",
+        "class Reader<Source> where Source: Named<u64> {\n",
+        "  init() {}\n",
+        "  fn read(ref source: Source) -> i64 { return source.name(); }\n",
+        "}\n",
+        "fn read_i64(ref value: Named<i64>) -> i64 { return value.name(); }\n",
+        "fn read_u64(ref value: Named<u64>) -> i64 { return value.name(); }\n",
+        "fn produced(ref factory: Factory<shared Named<i64>>) -> i64 {\n",
+        "  return factory.make()->name();\n",
+        "}\n",
+        "fn use_reader(ref value: Reader<Both>) -> unit {}\n",
+        "fn main() -> i64 {\n",
+        "  var value: Both = Both();\n",
+        "  var maker: Maker = Maker();\n",
+        "  return read_i64(value) + read_u64(value) + produced(maker);\n",
+        "}\n",
+    )
+}

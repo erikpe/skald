@@ -1,0 +1,16 @@
+interface Value<T> {
+    fn value() -> T;
+}
+
+class Wrong implements Value<u64> {
+    init() {}
+
+    fn value() -> i64 {
+        return 0;
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}
+

@@ -6,7 +6,9 @@ application discovery, ordinary closed interface materialization, exact
 nominal class conformance, generic bounds, and bound-selected calls
 implemented. Closed applications also use the ordinary interface alias,
 shared-owner, optional, array, cast, type-test, and structural-call model;
-lower-IR and native execution coverage is not yet complete. This document
+closed declarations, exact witnesses, calls, ownership, cleanup, and static
+effects now pass through verified MIR and native x86-64 execution without a
+generic-specific lower-IR or runtime representation. This document
 defines the confirmed source-visible generic-interface contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current

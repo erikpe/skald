@@ -1,0 +1,29 @@
+interface Mark<T> {
+    fn mark() -> i64;
+}
+
+class Left implements Mark<i64> {
+    init() {}
+
+    fn mark() -> i64 {
+        return 1;
+    }
+}
+
+class Right implements Mark<u64> {
+    init() {}
+
+    fn mark() -> i64 {
+        return 2;
+    }
+}
+
+fn require_u64(ref value: Obj) -> i64 {
+    return ((Mark<u64>) value).mark();
+}
+
+fn main() -> i64 {
+    var value: Left = Left();
+    return require_u64(value);
+}
+

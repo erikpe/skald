@@ -1,0 +1,22 @@
+schema = 2
+
+[[test]]
+name = "native_execution"
+mode = "run"
+source = "native_execution.ska"
+compiler_args = ["--no-stdlib"]
+
+[[test.run]]
+name = "exact_witnesses_bounds_ownership_structural_and_cleanup"
+expect = { exit = 42 }
+
+[[test]]
+name = "checked_failure"
+mode = "run"
+source = "checked_failure.ska"
+compiler_args = ["--no-stdlib"]
+
+[[test.run]]
+name = "wrong_exact_application"
+expect = { exit = "failure", stderr = { match = "starts-with", inline = "panic: checked object cast failed\n" } }
+

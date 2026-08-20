@@ -77,7 +77,10 @@ optionals, arrays, casts, type tests, and structural calls then reuse their
 ordinary resolved and type-checking paths. Ordinary resolved executable
 declarations, HIR, MIR, verification, and backends remain free of
 parameter-bearing interface terms, dictionaries, or runtime type arguments;
-complete lower-IR and target execution coverage remains staged.
+successful HIR construction explicitly asserts that every executable class
+claim is ordinary. Preliminary and final MIR verification, static effects,
+complete-object metadata, exact witness calls, ownership cleanup, and native
+x86-64 execution now consume these closed identities unchanged.
 
 Resolved IR, typed HIR, and MIR carry the same validated
 `module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus
