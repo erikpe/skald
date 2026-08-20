@@ -470,13 +470,15 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                 ),
                                 ResolvedTemplateSelection::BoundMember {
                                     parameter,
-                                    interface,
+                                    bound,
                                     requirement,
                                     member_name,
                                     span,
                                 } => dumper.line(
                                     &format!(
-                                        "Selection bound-member {parameter} interface {interface} requirement {requirement} member {member_name}"
+                                        "Selection bound-member {parameter} bound {bound} {} {} member {member_name}",
+                                        render_interface_type(&semantics.bounds[*bound].interface),
+                                        render_template_bound_requirement(*requirement),
                                     ),
                                     *span,
                                 ),
@@ -743,6 +745,17 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
         }
     });
     dumper.output
+}
+
+fn render_template_bound_requirement(requirement: ResolvedTemplateBoundRequirement) -> String {
+    match requirement {
+        ResolvedTemplateBoundRequirement::Ordinary(requirement) => {
+            format!("ordinary-requirement {requirement}")
+        }
+        ResolvedTemplateBoundRequirement::Generic(requirement) => {
+            format!("template-requirement {requirement}")
+        }
+    }
 }
 
 fn render_generic_capability(capability: GenericCapability) -> &'static str {
@@ -1045,6 +1058,14 @@ impl<'program> ResolvedDumper<'program> {
                 {
                     if let Some(interface) = interface {
                         dumper.raw_line(&format!("ClosedInterfaceClaim {index} -> {interface}"));
+                    }
+                }
+                for (index, selection) in specialization.closed_bound_members.iter().enumerate() {
+                    if let Some(selection) = selection {
+                        dumper.raw_line(&format!(
+                            "ClosedBoundSelection {index} interface {} requirement {}",
+                            selection.interface, selection.requirement,
+                        ));
                     }
                 }
                 for origin in &specialization.provenance.origins {

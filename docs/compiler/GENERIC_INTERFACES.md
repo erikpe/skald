@@ -3,9 +3,10 @@
 Status: frozen compiler contract; source AST, template identities, parameter
 ownership, module declaration kinds, definition-site semantics, structural
 applications, claims, bounds, canonical closed identities, coordinated
-dependency discovery, ordinary closed declaration materialization, and exact
-nominal class conformance implemented; generic bounds, interface-object
-integration, and execution are not yet implemented.
+dependency discovery, ordinary closed declaration materialization, exact
+nominal class conformance, generic bounds, and bound-selected calls
+implemented; complete interface-object integration and execution are not yet
+implemented.
 This document defines the target-independent compilation contract for the frozen
 [generic-interface language design](../language/GENERIC_INTERFACES.md). The
 [status matrix](../language/STATUS.md) remains authoritative for compiler
@@ -113,8 +114,7 @@ bounds, aliases, shared targets, casts, tests, and nested generic arguments,
 and keep all application origins in canonical module/source order. Complete
 successful identities are published as ordinary
 `ResolvedInterfaceDeclaration` entries. Ordinary closed type uses therefore
-resolve to `ResolvedTypeKind::Interface`; `RES051` remains at the generic-bound
-specialization boundary.
+resolve to `ResolvedTypeKind::Interface`.
 
 Nondependent names resolve once in the template's definition module. Type
 arguments resolve at each application site before entering a canonical key.
@@ -218,7 +218,10 @@ metadata, static effects, or target artifacts.
 A template bound retains its subject parameter plus an ordinary or structural
 interface application. Closing the enclosing template substitutes the right
 side, requests its interface specialization, and checks exact nominal
-conformance of the exact class argument.
+conformance of the exact class argument. Class-template and interface-template
+bounds share this rule. Structurally distinct bounds that become the same
+subject/application pair after substitution are rejected as duplicate closed
+bounds without repeating the nominal-failure cascade.
 
 Definition-time member lookup through a parameter-bearing bound selects one
 `InterfaceTemplateRequirementId`. Specialization closes the interface

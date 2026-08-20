@@ -2,9 +2,10 @@
 
 Status: frozen design; source syntax, non-executable template identities,
 definition-site template semantics, structural claims and bounds, closed
-application discovery, ordinary closed interface materialization, and exact
-nominal class conformance implemented; generic bounds, object-model
-integration, and execution are not yet implemented. This document defines the confirmed
+application discovery, ordinary closed interface materialization, exact
+nominal class conformance, generic bounds, and bound-selected calls
+implemented; complete object-model integration and execution are not yet
+implemented. This document defines the confirmed
 source-visible generic-interface contract. The
 [status matrix](STATUS.md) remains authoritative for availability, and the
 [implemented grammar](GRAMMAR.md) is the exact syntax accepted by the current
@@ -12,8 +13,9 @@ compiler. Resolution assigns distinct interface-template, template-requirement,
 and owner-correct type-parameter identities. It retains parameter-bearing
 applications in generic class/interface claims and bounds, deduplicates closed
 requests with exact source origins, and materializes every valid requested
-application as an ordinary exact interface identity. `RES051` currently gates
-generic-interface bounds during generic-class specialization.
+application as an ordinary exact interface identity. Generic-interface bounds
+close to those exact identities and bound calls retain ordinary interface
+dispatch.
 Generic interface signatures retain
 structural parameter, function, shared, optional, array, generic-class, and
 generic-interface terms plus contextual capability requirements.

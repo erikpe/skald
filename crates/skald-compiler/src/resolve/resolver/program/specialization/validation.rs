@@ -11,8 +11,12 @@ pub(crate) fn validate_specialization_requirements(
     ordinary_classes: ResolvedClassDeclarationTable,
 ) {
     let bound_failures = failed_nominal_bounds(program);
+    let duplicate_bound_failures = duplicate_closed_bounds(program);
     let requirement_failures = crate::typeck::failed_specialization_requirements(program);
-    if bound_failures.is_empty() && requirement_failures.is_empty() {
+    if bound_failures.is_empty()
+        && duplicate_bound_failures.is_empty()
+        && requirement_failures.is_empty()
+    {
         return;
     }
 
@@ -39,10 +43,8 @@ pub(crate) fn validate_specialization_requirements(
                     .find(|parameter| parameter.id == bound.parameter)
             })
             .expect("resolved bound parameter belongs to its template");
-        let interface_id = bound
-            .interface
-            .ordinary()
-            .expect("only ordinary bounds are validated before interface specialization");
+        let interface_id = specialization.closed_interface_bounds[*bound_index]
+            .expect("complete specialization closes every interface bound");
         let interface = program
             .interface(interface_id)
             .expect("resolved bound references an interface");
@@ -73,6 +75,51 @@ pub(crate) fn validate_specialization_requirements(
             .with_note(
                 "generic bounds accept only exact class arguments with direct or inherited declared conformance",
             );
+        diagnostic = add_repeated_application_origins(diagnostic, specialization);
+        diagnostics.push(diagnostic);
+    }
+
+    for (class, first_index, duplicate_index) in &duplicate_bound_failures {
+        let specialization = program
+            .generic_specializations
+            .for_class(*class)
+            .expect("duplicate bounds reference a specialization class");
+        let semantics = program
+            .template_semantics
+            .get(specialization.key.template)
+            .expect("specialization key references template semantics");
+        let template = program
+            .class_templates
+            .get(specialization.key.template)
+            .expect("specialization key references a template declaration");
+        let interface = specialization.closed_interface_bounds[*duplicate_index]
+            .expect("complete specialization closes every interface bound");
+        let interface = program
+            .interface(interface)
+            .expect("closed bound references an interface");
+        let origin = specialization
+            .provenance
+            .origins
+            .first()
+            .expect("requested specialization retains an origin");
+        let mut diagnostic = Diagnostic::error(
+            super::super::super::DUPLICATE_GENERIC_BOUND,
+            format!(
+                "type arguments for `{}` produce duplicate bound `{}`",
+                application_name(program, specialization),
+                interface.name
+            ),
+        )
+        .with_primary_label(origin.span, "this closed application duplicates a bound")
+        .with_secondary_label(
+            semantics.bounds[*duplicate_index].span,
+            "duplicate closed bound declared here",
+        )
+        .with_secondary_label(
+            semantics.bounds[*first_index].span,
+            "first equivalent closed bound declared here",
+        )
+        .with_secondary_label(template.name_span, "template declared here");
         diagnostic = add_repeated_application_origins(diagnostic, specialization);
         diagnostics.push(diagnostic);
     }
@@ -285,9 +332,14 @@ fn failed_nominal_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
             .get(specialization.key.template)
             .expect("specialization key references template semantics");
         for (bound_index, bound) in semantics.bounds.iter().enumerate() {
-            let Some(interface) = bound.interface.ordinary() else {
+            let interface = specialization.closed_interface_bounds[bound_index]
+                .expect("complete specialization closes every interface bound");
+            if (0..bound_index).any(|previous| {
+                semantics.bounds[previous].parameter == bound.parameter
+                    && specialization.closed_interface_bounds[previous] == Some(interface)
+            }) {
                 continue;
-            };
+            }
             let argument = specialization.key.arguments[bound.parameter.index()];
             let satisfied = match argument {
                 ResolvedTypeKind::Class(argument_class) => {
@@ -314,7 +366,31 @@ fn failed_nominal_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize)> {
     failures
 }
 
-fn effective_nominal_conformance(
+fn duplicate_closed_bounds(program: &ResolvedProgram) -> Vec<(ClassId, usize, usize)> {
+    let mut failures = Vec::new();
+    for specialization in program.generic_specializations.iter() {
+        let GenericSpecializationState::Complete(class) = specialization.state else {
+            continue;
+        };
+        let semantics = program
+            .template_semantics
+            .get(specialization.key.template)
+            .expect("specialization key references template semantics");
+        for duplicate in 0..semantics.bounds.len() {
+            let bound = &semantics.bounds[duplicate];
+            let interface = specialization.closed_interface_bounds[duplicate];
+            if let Some(first) = (0..duplicate).find(|first| {
+                semantics.bounds[*first].parameter == bound.parameter
+                    && specialization.closed_interface_bounds[*first] == interface
+            }) {
+                failures.push((class, first, duplicate));
+            }
+        }
+    }
+    failures
+}
+
+pub(super) fn effective_nominal_conformance(
     program: &ResolvedProgram,
     class: ClassId,
     interface: InterfaceId,
@@ -331,7 +407,7 @@ fn effective_nominal_conformance(
         })
 }
 
-const fn argument_kind_name(argument: ResolvedTypeKind) -> &'static str {
+pub(super) const fn argument_kind_name(argument: ResolvedTypeKind) -> &'static str {
     match argument {
         ResolvedTypeKind::Class(_) => "the exact class argument",
         ResolvedTypeKind::Interface(_) => "the non-owning interface argument",

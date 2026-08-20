@@ -76,9 +76,10 @@ pub use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
 pub(crate) use generic_specializations::{
-    ClosedGenericRequirementSubject, GenericApplicationOrigin, GenericClassInstanceKey,
-    GenericSpecialization, GenericSpecializationKey, GenericSpecializationProvenance,
-    GenericSpecializationState, GenericSpecializationTable, GenericSpecializationTransition,
+    ClosedGenericBoundMember, ClosedGenericRequirementSubject, GenericApplicationOrigin,
+    GenericClassInstanceKey, GenericSpecialization, GenericSpecializationKey,
+    GenericSpecializationProvenance, GenericSpecializationState, GenericSpecializationTable,
+    GenericSpecializationTransition,
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedInterfaceTemplate,
@@ -92,8 +93,9 @@ pub use generic_templates::{
 };
 pub(crate) use generic_templates::{
     ResolvedClassTemplateSemanticTable, ResolvedClassTemplateSemantics, ResolvedTemplateBound,
-    ResolvedTemplateConstructionMode, ResolvedTemplateDependentSelectionKind,
-    ResolvedTemplateSelection, ResolvedTemplateTypeUse, ResolvedTemplateTypeUseContext,
+    ResolvedTemplateBoundRequirement, ResolvedTemplateConstructionMode,
+    ResolvedTemplateDependentSelectionKind, ResolvedTemplateSelection, ResolvedTemplateTypeUse,
+    ResolvedTemplateTypeUseContext,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

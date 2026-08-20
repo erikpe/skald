@@ -295,6 +295,7 @@ impl<'ast> ProgramResolver<'ast> {
                     parameters,
                     lookup,
                     &interfaces,
+                    &interface_template_semantics,
                     &mut self.diagnostics,
                 ));
             }
@@ -318,7 +319,7 @@ impl<'ast> ProgramResolver<'ast> {
             &mut self.type_interner,
             &mut self.diagnostics,
         );
-        let generic_specializations = discovery.class_specializations;
+        let mut generic_specializations = discovery.class_specializations;
         let mut generic_interface_specializations = discovery.interface_specializations;
         let ordinary_interfaces = interfaces.clone();
         let materialized_interfaces = materialize_interface_declarations(
@@ -336,6 +337,11 @@ impl<'ast> ProgramResolver<'ast> {
         );
         if materialized_interfaces.valid {
             interfaces.extend(materialized_interfaces.declarations);
+            close_bound_member_selections(
+                &template_semantics,
+                &mut generic_specializations,
+                &generic_interface_specializations,
+            );
         }
         let lookups = lookups
             .with_specializations(&generic_specializations, &generic_interface_specializations);

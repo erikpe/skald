@@ -586,14 +586,7 @@ fn closed_interface_applications_are_discovered_once_with_ordered_origins() {
         "}\n",
     ));
 
-    assert!(
-        output
-            .diagnostics
-            .iter()
-            .all(|diagnostic| diagnostic.code == UNSUPPORTED_GENERIC_INTERFACE),
-        "{:?}",
-        output.diagnostics
-    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let applications = output
         .program
         .generic_interface_specializations
@@ -721,7 +714,7 @@ fn closed_interface_arguments_resolve_in_the_application_module() {
 }
 
 #[test]
-fn specializing_a_class_with_structural_interface_constraints_stays_gated() {
+fn specializing_a_class_validates_the_closed_generic_interface_bound() {
     let output = resolve_text(concat!(
         "interface Constraint<T> {}\n",
         "class Item {}\n",
@@ -732,13 +725,10 @@ fn specializing_a_class_with_structural_interface_constraints_stays_gated() {
     let diagnostics = output
         .diagnostics
         .iter()
-        .filter(|diagnostic| diagnostic.code == UNSUPPORTED_GENERIC_INTERFACE)
+        .filter(|diagnostic| diagnostic.code == UNSATISFIED_GENERIC_REQUIREMENT)
         .collect::<Vec<_>>();
     assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
-    assert_eq!(
-        diagnostics[0].message,
-        "generic class specialization depends on a generic interface bound"
-    );
+    assert!(diagnostics[0].message.contains("does not satisfy"));
     let specialization = output
         .program
         .generic_specializations

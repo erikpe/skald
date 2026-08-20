@@ -58,6 +58,7 @@ pub struct GenericInterfaceSpecialization {
     pub requirement_mappings: Vec<GenericInterfaceRequirementMapping>,
     pub(crate) closed_type_uses: Vec<Option<ResolvedTypeKind>>,
     pub(crate) closed_requirements: Vec<Option<ClosedGenericRequirementSubject>>,
+    pub(crate) closed_interface_bounds: Vec<Option<InterfaceId>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

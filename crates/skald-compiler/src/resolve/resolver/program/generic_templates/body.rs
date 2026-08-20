@@ -15,6 +15,7 @@ pub(super) fn resolve_template_body(
     parameters: &ResolvedTypeParameters,
     bounds: &[ResolvedTemplateBound],
     interfaces: &ResolvedInterfaceDeclarationTable,
+    interface_semantics: &ResolvedInterfaceTemplateSemanticTable,
     lookup: ModuleLookup<'_>,
     fields: &HashMap<String, ResolvedTemplateType>,
     member_names: &HashMap<String, usize>,
@@ -53,6 +54,7 @@ pub(super) fn resolve_template_body(
         parameters,
         bounds,
         interfaces,
+        interface_semantics,
         lookup,
         fields,
         member_names,
@@ -79,6 +81,7 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
     parameters: &'semantic ResolvedTypeParameters,
     bounds: &'semantic [ResolvedTemplateBound],
     interfaces: &'semantic ResolvedInterfaceDeclarationTable,
+    interface_semantics: &'semantic ResolvedInterfaceTemplateSemanticTable,
     lookup: ModuleLookup<'lookup>,
     fields: &'semantic HashMap<String, ResolvedTemplateType>,
     member_names: &'semantic HashMap<String, usize>,
@@ -660,32 +663,53 @@ impl TemplateBodyResolver<'_, '_, '_> {
         span: Span,
     ) {
         let mut candidates = Vec::new();
-        for bound in self
+        for (bound_index, bound) in self
             .bounds
             .iter()
-            .filter(|bound| bound.parameter == parameter)
+            .enumerate()
+            .filter(|(_, bound)| bound.parameter == parameter)
         {
-            let Some(interface_id) = bound.interface.ordinary() else {
-                continue;
-            };
-            let interface = self
-                .interfaces
-                .get(interface_id)
-                .expect("resolved bounds reference interface declarations");
-            for requirement in &interface.requirements {
-                if requirement.name == member.text.as_str() {
-                    candidates.push((interface_id, requirement));
+            match &bound.interface {
+                ResolvedInterfaceType::Ordinary(interface_id) => {
+                    let interface = self
+                        .interfaces
+                        .get(*interface_id)
+                        .expect("resolved bounds reference interface declarations");
+                    for requirement in &interface.requirements {
+                        if requirement.name == member.text.as_str() {
+                            candidates.push((
+                                bound_index,
+                                ResolvedTemplateBoundRequirement::Ordinary(requirement.id),
+                                requirement.name_span,
+                            ));
+                        }
+                    }
+                }
+                ResolvedInterfaceType::TemplateApplication { template, .. } => {
+                    let semantics = self
+                        .interface_semantics
+                        .get(*template)
+                        .expect("resolved bounds reference interface template semantics");
+                    for requirement in &semantics.requirements {
+                        if requirement.name == member.text.as_str() {
+                            candidates.push((
+                                bound_index,
+                                ResolvedTemplateBoundRequirement::Generic(requirement.id),
+                                requirement.name_span,
+                            ));
+                        }
+                    }
                 }
             }
         }
 
         match candidates.as_slice() {
-            [(interface, requirement)] => {
+            [(bound, requirement, _)] => {
                 self.selections
                     .push(ResolvedTemplateSelection::BoundMember {
                         parameter,
-                        interface: *interface,
-                        requirement: requirement.id,
+                        bound: *bound,
+                        requirement: *requirement,
                         member_name: member.text.to_string(),
                         span,
                     });
@@ -723,9 +747,9 @@ impl TemplateBodyResolver<'_, '_, '_> {
                     ),
                 )
                 .with_primary_label(member.span, "bound member selection is ambiguous");
-                for (_, requirement) in candidates {
+                for (_, _, requirement_span) in candidates {
                     diagnostic = diagnostic.with_secondary_label(
-                        requirement.name_span,
+                        *requirement_span,
                         "candidate interface requirement declared here",
                     );
                 }

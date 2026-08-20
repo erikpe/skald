@@ -366,8 +366,9 @@ and bounds retain exact ordinary-or-structural interface terms, while closed
 requests are deduplicated with ordered origins and valid applications are
 materialized as ordinary `InterfaceId` declarations. Ordinary and specialized
 classes close their claims to exact identities and use ordinary conformance
-selection. `RES051` still gates generic-interface bounds during generic-class
-specialization. Ordinary non-generic interfaces and generic classes retain
+selection. Generic-interface bounds close independently for every class or
+interface application, and bound-selected members become ordinary exact
+interface calls. Ordinary non-generic interfaces and generic classes retain
 their implemented semantics.
 
 The grammar intentionally does not encode base-name resolution, hierarchy

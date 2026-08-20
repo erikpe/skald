@@ -92,8 +92,9 @@ declarations, and template-to-closed requirement mappings. Selective and
 qualified imports retain the same `InterfaceTemplateId`. A complete successful
 application receives an ordinary `InterfaceId`. Inspect resolved class
 `Implements` entries and HIR `Conformances` to follow each exact claim through
-its requirement-to-method mappings. `RES051` identifies the remaining generic-
-bound specialization boundary.
+its requirement-to-method mappings. For bound calls, compare template
+`Selection bound-member` entries with generated `ClosedBoundSelection` entries
+and the resulting resolved or HIR `InterfaceCall` identity.
 
 For bracket syntax, first distinguish an intrinsic array receiver from a
 class or interface receiver. The AST always prints `BracketProjection` and

@@ -138,6 +138,8 @@ impl<'semantic, 'interner, 'diagnostics>
             closed_type_uses: Vec::new(),
             closed_requirements: Vec::new(),
             closed_interface_claims: Vec::new(),
+            closed_interface_bounds: Vec::new(),
+            closed_bound_members: Vec::new(),
         });
         self.activate_class(index)
     }
@@ -204,6 +206,7 @@ impl<'semantic, 'interner, 'diagnostics>
             requirement_mappings: Vec::new(),
             closed_type_uses: Vec::new(),
             closed_requirements: Vec::new(),
+            closed_interface_bounds: Vec::new(),
         });
         self.activate_interface(index)
     }
@@ -224,26 +227,6 @@ impl<'semantic, 'interner, 'diagnostics>
             .class_semantics
             .get(key.template)
             .expect("specialization key references template semantics");
-        let unsupported_interface = semantics
-            .bounds
-            .iter()
-            .find(|bound| bound.interface.ordinary().is_none())
-            .map(|bound| (bound.span, "generic interface bound"));
-        if let Some((declaration_span, kind)) = unsupported_interface {
-            let origin = self.class_entries[index].provenance.origins[0];
-            self.diagnostics.push(
-                Diagnostic::error(
-                    super::super::super::UNSUPPORTED_GENERIC_INTERFACE,
-                    "generic class specialization depends on a generic interface bound",
-                )
-                .with_primary_label(
-                    origin.span,
-                    "generic interface bounds are not yet supported during class specialization",
-                )
-                .with_secondary_label(declaration_span, format!("{kind} declared here")),
-            );
-            self.specialization_failures += 1;
-        }
         let terms = semantics
             .type_uses
             .iter()
@@ -272,9 +255,10 @@ impl<'semantic, 'interner, 'diagnostics>
             .iter()
             .map(|(interface, span)| self.close_template_interface(interface, *span, environment))
             .collect::<Vec<_>>();
-        for (interface, span) in &interface_bounds {
-            let _ = self.close_template_interface(interface, *span, environment);
-        }
+        let closed_interface_bounds = interface_bounds
+            .iter()
+            .map(|(interface, span)| self.close_template_interface(interface, *span, environment))
+            .collect::<Vec<_>>();
         let closed_type_uses = terms
             .iter()
             .map(|term| self.close_template_type(term, environment))
@@ -294,6 +278,8 @@ impl<'semantic, 'interner, 'diagnostics>
         self.class_entries[index].closed_type_uses = closed_type_uses;
         self.class_entries[index].closed_requirements = closed_requirements;
         self.class_entries[index].closed_interface_claims = closed_interface_claims;
+        self.class_entries[index].closed_interface_bounds = closed_interface_bounds;
+        self.class_entries[index].closed_bound_members = vec![None; semantics.selections.len()];
         let valid = self.specialization_failures == failures_before;
         debug_assert_eq!(self.active.pop(), Some(work_key));
         if valid {
@@ -338,6 +324,11 @@ impl<'semantic, 'interner, 'diagnostics>
             .map(|use_| use_.type_term.clone())
             .collect::<Vec<_>>();
         let requirements = semantics.contextual_requirements.clone();
+        let bounds = semantics
+            .bounds
+            .iter()
+            .map(|bound| (bound.interface.clone(), bound.interface_span))
+            .collect::<Vec<_>>();
         let environment = TypeClosingEnvironment::interface(
             key.template,
             &key.arguments,
@@ -362,8 +353,13 @@ impl<'semantic, 'interner, 'diagnostics>
                 }
             })
             .collect();
+        let closed_interface_bounds = bounds
+            .iter()
+            .map(|(bound, span)| self.close_template_interface(bound, *span, environment))
+            .collect();
         self.interface_entries[index].closed_type_uses = closed_type_uses;
         self.interface_entries[index].closed_requirements = closed_requirements;
+        self.interface_entries[index].closed_interface_bounds = closed_interface_bounds;
         let valid = self.specialization_failures == failures_before;
         debug_assert_eq!(self.active.pop(), Some(work_key));
         if valid {
@@ -462,6 +458,7 @@ impl<'semantic, 'interner, 'diagnostics>
             requirement_mappings: Vec::new(),
             closed_type_uses: Vec::new(),
             closed_requirements: Vec::new(),
+            closed_interface_bounds: Vec::new(),
         });
         if let GenericSpecializationKey::Interface(conflict_key) = &conflict {
             let conflict_index = self.interface_indices[conflict_key];

@@ -899,8 +899,11 @@ Generic-interface syntax coverage lives with the interface and shared generic
 parser owners. It checks parameters, interface-level bounds, applied claims,
 nested applications and closers, punctuation-preserving dumps, contextual
 `where`, malformed-list recovery, and unchanged comparison/shift parsing.
-Resolution tests separately pin `RES051` and the absence of a false ordinary
-interface identity until semantic template support lands.
+Resolver and type-check tests cover canonical closed identities, materialized
+requirements, exact ordinary and specialized class conformance, inherited
+overrides, generic class/interface bounds, definition-site template
+requirement selection, explicit closed requirement mappings, ordinary bound
+dispatch, ownership-sensitive results, diagnostics, modules, and dumps.
 
 `tests/golden/standard_vec/` owns `std::vec::Vec<T>` behavior. The matrix covers
 primitives, `Str`, nested optionals, exact inline lifecycle, nested arrays,

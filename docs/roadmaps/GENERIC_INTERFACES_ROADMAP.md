@@ -1,6 +1,6 @@
 # Generic Interfaces Roadmap
 
-Status: in progress; I0–I6 are complete and I7 is next.
+Status: in progress; I0–I7 are complete and I8 is next.
 
 Implement the frozen [generic-interface language contract](../language/GENERIC_INTERFACES.md)
 and [compiler specialization contract](../compiler/GENERIC_INTERFACES.md).
@@ -67,7 +67,7 @@ not reopen those decisions during implementation.
 - [x] I4 — Coordinate deterministic class and interface specialization
 - [x] I5 — Materialize ordinary closed interface declarations
 - [x] I6 — Integrate exact nominal conformance and inheritance
-- [ ] I7 — Close generic bounds and bound-selected calls
+- [x] I7 — Close generic bounds and bound-selected calls
 - [ ] I8 — Integrate views, ownership, casts, tests, and structural calls
 - [ ] I9 — Prove HIR, MIR, witness, backend, and native execution
 - [ ] I10 — Harden modules, diagnostics, dumps, robustness, and determinism
@@ -343,23 +343,23 @@ ordinary identities.
 **Purpose:** Make parameterized interface bounds useful in generic bodies
 without introducing application-dependent duck typing or altered dispatch.
 
-- [ ] Resolve a member selected through a generic interface bound to one
+- [x] Resolve a member selected through a generic interface bound to one
   `InterfaceTemplateRequirementId` at the template definition site.
-- [ ] Retain the bounded parameter, exact structural bound application,
+- [x] Retain the bounded parameter, exact structural bound application,
   selected requirement, member spelling, and source origin in template
   selections.
-- [ ] Detect ambiguous same-named requirements across ordinary and generic
+- [x] Detect ambiguous same-named requirements across ordinary and generic
   bounds before specialization.
-- [ ] At class specialization, close each bound application and require the
+- [x] At class specialization, close each bound application and require the
   exact class argument's effective conformance to that exact interface.
-- [ ] Map template requirement identity to the closed
+- [x] Map template requirement identity to the closed
   `InterfaceRequirementId` and generate an ordinary interface call selection.
-- [ ] Preserve interface dispatch, receiver access, argument/result ownership,
+- [x] Preserve interface dispatch, receiver access, argument/result ownership,
   evaluation order, produced-result lifetime, and failure behavior.
-- [ ] Reject bounds satisfied only structurally, through a bare interface,
+- [x] Reject bounds satisfied only structurally, through a bare interface,
   through an unlifted shared wrapper, or by another application of the same
   interface template.
-- [ ] Extend template and generated-body dumps with before/after bound
+- [x] Extend template and generated-body dumps with before/after bound
   selections and exact conformance evidence.
 
 **Tests:** `where Source: Producer<T>` positive calls for primitive, class, and

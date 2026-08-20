@@ -294,7 +294,7 @@ fn nominal_bounds_resolve_interface_and_requirement_identities() {
         "{dump}"
     );
     assert!(dump.contains(
-        "Selection bound-member template0:type0 interface i0 requirement i0:requirement0 member rank"
+        "Selection bound-member template0:type0 bound 0 i0 ordinary-requirement i0:requirement0 member rank"
     ), "{dump}");
 }
 
@@ -319,7 +319,7 @@ fn bound_members_remain_interface_selected_on_parameter_returning_calls() {
 
     let dump = dump_resolved(&program);
     assert!(dump.contains(
-        "Selection bound-member template0:type0 interface i0 requirement i0:requirement0 member rank"
+        "Selection bound-member template0:type0 bound 0 i0 ordinary-requirement i0:requirement0 member rank"
     ), "{dump}");
     assert!(
         dump.contains("InterfaceCall i0 i0:requirement0 receiver exact object"),

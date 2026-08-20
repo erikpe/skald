@@ -1,6 +1,7 @@
 //! Closed generic-class request discovery and deterministic identity ownership.
 
 mod bodies;
+mod bound_members;
 mod closed_types;
 mod coordinator;
 mod declarations;
@@ -11,6 +12,7 @@ mod requests;
 mod validation;
 
 pub(super) use bodies::generated_class_work;
+pub(super) use bound_members::close_bound_member_selections;
 pub(super) use declarations::{specialize_declarations, SpecializationDeclarationInput};
 pub(super) use interface_declarations::{
     materialize_interface_declarations, InterfaceMaterializationInput,

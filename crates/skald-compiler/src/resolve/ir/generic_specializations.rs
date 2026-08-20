@@ -1,7 +1,7 @@
 //! Deterministic identities and provenance for closed generic-class requests.
 
 use crate::{
-    identity::{ClassId, ClassTemplateId, InterfaceId, ModuleId},
+    identity::{ClassId, ClassTemplateId, InterfaceId, InterfaceRequirementId, ModuleId},
     source::Span,
 };
 
@@ -61,6 +61,14 @@ pub(crate) struct GenericSpecialization {
     pub(crate) closed_type_uses: Vec<Option<ResolvedTypeKind>>,
     pub(crate) closed_requirements: Vec<Option<ClosedGenericRequirementSubject>>,
     pub(crate) closed_interface_claims: Vec<Option<InterfaceId>>,
+    pub(crate) closed_interface_bounds: Vec<Option<InterfaceId>>,
+    pub(crate) closed_bound_members: Vec<Option<ClosedGenericBoundMember>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ClosedGenericBoundMember {
+    pub(crate) interface: InterfaceId,
+    pub(crate) requirement: InterfaceRequirementId,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -92,6 +100,10 @@ impl GenericSpecializationTable {
 
     pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = &GenericSpecialization> {
         self.entries.iter()
+    }
+
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut GenericSpecialization> {
+        self.entries.iter_mut()
     }
 
     /// Used by declaration specialization to publish the complete class behind

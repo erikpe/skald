@@ -555,6 +555,12 @@ pub(crate) enum ResolvedTemplateDependentSelectionKind {
     StaticMember,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ResolvedTemplateBoundRequirement {
+    Ordinary(InterfaceRequirementId),
+    Generic(InterfaceTemplateRequirementId),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ResolvedTemplateSelection {
     TopLevel {
@@ -580,8 +586,8 @@ pub(crate) enum ResolvedTemplateSelection {
     },
     BoundMember {
         parameter: TypeParameterId,
-        interface: InterfaceId,
-        requirement: InterfaceRequirementId,
+        bound: usize,
+        requirement: ResolvedTemplateBoundRequirement,
         member_name: String,
         span: Span,
     },

@@ -91,18 +91,23 @@ impl<'program> BodySpecializationEnvironment<'program> {
         crate::identity::InterfaceId,
         crate::identity::InterfaceRequirementId,
     )> {
-        self.semantics.selections.iter().find_map(|selection| {
-            let ResolvedTemplateSelection::BoundMember {
-                interface,
-                requirement,
-                span: selection_span,
-                ..
-            } = selection
-            else {
-                return None;
-            };
-            (*selection_span == span).then_some((*interface, *requirement))
-        })
+        self.semantics
+            .selections
+            .iter()
+            .zip(&self.specialization.closed_bound_members)
+            .find_map(|(selection, closed)| {
+                let ResolvedTemplateSelection::BoundMember {
+                    span: selection_span,
+                    ..
+                } = selection
+                else {
+                    return None;
+                };
+                if *selection_span != span {
+                    return None;
+                }
+                closed.map(|closed| (closed.interface, closed.requirement))
+            })
     }
 }
 

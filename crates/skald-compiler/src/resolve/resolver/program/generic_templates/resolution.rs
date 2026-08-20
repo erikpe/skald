@@ -10,6 +10,7 @@ pub(crate) fn resolve_class_template_semantics(
     parameters: &ResolvedTypeParameters,
     lookup: ModuleLookup<'_>,
     interfaces: &ResolvedInterfaceDeclarationTable,
+    interface_semantics: &ResolvedInterfaceTemplateSemanticTable,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedClassTemplateSemantics {
     let bounds = resolve_bounds(class, parameters, lookup, diagnostics);
@@ -200,6 +201,7 @@ pub(crate) fn resolve_class_template_semantics(
             parameters,
             &bounds,
             interfaces,
+            interface_semantics,
             lookup,
             &fields,
             &member_names,
