@@ -10,9 +10,6 @@ No implementation roadmap is currently in progress. The completed generic
 interfaces roadmap is preserved in the
 [archive](../archive/GENERIC_INTERFACES_ROADMAP.md).
 
-The [generic interfaces discoveries](GENERIC_INTERFACES_DISCOVERIES.md) record
-maintainability follow-ups intentionally deferred until after the roadmap.
-
 ## Planned
 
 No implementation roadmap is currently waiting to start.

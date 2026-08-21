@@ -98,6 +98,18 @@ impl CallParameter for ResolvedFunctionTypeParameter {
 }
 
 impl CallableChecker<'_, '_> {
+    /// Select and check a binary value before an enclosing class-valued
+    /// context attempts to interpret it as an object copy source.
+    pub(in crate::typeck) fn check_binary_before_object_materialization(
+        &mut self,
+        binary: &crate::resolve::ResolvedBinaryExpr,
+    ) -> Option<HirExpression> {
+        if !self.preflight_arithmetic_expression(binary) {
+            return None;
+        }
+        self.check_binary_expression(binary)
+    }
+
     pub(super) fn check_expression(
         &mut self,
         expression: &ResolvedExpression,

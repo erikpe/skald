@@ -224,50 +224,79 @@ impl CallableChecker<'_, '_> {
             (Some(left), Some(right)) => (left, right),
             _ => return None,
         };
-        let operation = (left.ty == right.ty)
-            .then(|| select_arithmetic_operation(binary.operator, left.ty))
-            .flatten();
+        let operation = select_arithmetic_expression(binary.operator, left.ty, right.ty);
         let Some(operation) = operation else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    TYPE_MISMATCH,
-                    "binary arithmetic requires operands of the same numeric type",
-                )
-                .with_primary_label(
-                    binary.operator_span,
-                    "operator cannot be applied to these operand types",
-                )
-                .with_secondary_label(
-                    left.span,
-                    format!(
-                        "left operand has type `{}`",
-                        self.diagnostic_type_name(left.ty)
-                    ),
-                )
-                .with_secondary_label(
-                    right.span,
-                    format!(
-                        "right operand has type `{}`",
-                        self.diagnostic_type_name(right.ty)
-                    ),
-                )
-                .with_note(format!(
-                    "numeric operand types are {}",
-                    format_type_list(NUMERIC_TYPE_NAMES)
-                )),
-            );
+            self.report_invalid_arithmetic_expression(binary, left.ty, right.ty);
             return None;
         };
-        let ty = left.ty;
         Some(HirExpression {
             kind: HirExpressionKind::Binary {
                 operation,
                 left: Box::new(left),
                 right: Box::new(right),
             },
-            ty,
+            ty: operation.result_type(),
             span: binary.span,
         })
+    }
+
+    pub(super) fn preflight_arithmetic_expression(
+        &mut self,
+        binary: &crate::resolve::ResolvedBinaryExpr,
+    ) -> bool {
+        // Comparison, shift, bitwise, division, and remainder checkers already
+        // select from static operand types before checking operand values.
+        if !matches!(
+            binary.operator,
+            ResolvedBinaryOperator::Add
+                | ResolvedBinaryOperator::Subtract
+                | ResolvedBinaryOperator::Multiply
+        ) {
+            return true;
+        }
+        let left = self.static_expression_type(&binary.left);
+        let right = self.static_expression_type(&binary.right);
+        if select_arithmetic_expression(binary.operator, left, right).is_some() {
+            return true;
+        }
+        self.report_invalid_arithmetic_expression(binary, left, right);
+        false
+    }
+
+    fn report_invalid_arithmetic_expression(
+        &mut self,
+        binary: &crate::resolve::ResolvedBinaryExpr,
+        left: Type,
+        right: Type,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                TYPE_MISMATCH,
+                "binary arithmetic requires operands of the same numeric type",
+            )
+            .with_primary_label(
+                binary.operator_span,
+                "operator cannot be applied to these operand types",
+            )
+            .with_secondary_label(
+                binary.left.span(),
+                format!(
+                    "left operand has type `{}`",
+                    self.diagnostic_type_name(left)
+                ),
+            )
+            .with_secondary_label(
+                binary.right.span(),
+                format!(
+                    "right operand has type `{}`",
+                    self.diagnostic_type_name(right)
+                ),
+            )
+            .with_note(format!(
+                "numeric operand types are {}",
+                format_type_list(NUMERIC_TYPE_NAMES)
+            )),
+        );
     }
 
     pub(super) fn check_grouped_expression(
@@ -360,4 +389,14 @@ fn select_arithmetic_operation(
             | Type::Array(_),
         ) => None,
     }
+}
+
+fn select_arithmetic_expression(
+    operator: ResolvedBinaryOperator,
+    left: Type,
+    right: Type,
+) -> Option<HirBinaryOperation> {
+    (left == right)
+        .then(|| select_arithmetic_operation(operator, left))
+        .flatten()
 }

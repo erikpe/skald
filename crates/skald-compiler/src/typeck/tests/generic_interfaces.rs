@@ -970,10 +970,18 @@ fn generic_interface_bounds_do_not_enable_operators() {
     assert!(output.hir.is_none());
     assert!(
         output.diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == INVALID_OBJECT_CONTEXT
-                && diagnostic.message == "copy source must be an existing object place"
+            diagnostic.code == TYPE_MISMATCH
+                && diagnostic.message
+                    == "binary arithmetic requires operands of the same numeric type"
+                && diagnostic.labels.iter().any(|label| {
+                    label.message == "operator cannot be applied to these operand types"
+                })
         }),
         "{:?}",
         output.diagnostics
     );
+    assert!(!output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT));
 }
