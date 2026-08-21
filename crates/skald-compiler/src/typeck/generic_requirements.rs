@@ -12,8 +12,7 @@ use crate::{
     hir::Type,
     resolve::{
         ClosedGenericRequirementSubject, GenericCapability, GenericRequirement,
-        GenericRequirementReason, ResolvedProgram, ResolvedSharedTarget, ResolvedType,
-        ResolvedTypeKind,
+        GenericRequirementReason, ResolvedProgram, ResolvedType, ResolvedTypeKind,
     },
 };
 
@@ -77,7 +76,9 @@ impl<'program> GenericCapabilityQuery<'program> {
             return match subject {
                 ClosedGenericRequirementSubject::SharedTarget(_) => true,
                 ClosedGenericRequirementSubject::Type(kind) => {
-                    ResolvedSharedTarget::from_direct_type(kind).is_some()
+                    crate::type_capabilities::supports_direct_shared_target(
+                        super::resolved_type_category(kind),
+                    )
                 }
             };
         }
@@ -103,7 +104,9 @@ impl<'program> GenericCapabilityQuery<'program> {
                 super::program::is_stored_value_type(ty)
             }
             GenericCapability::ValueParameter => super::program::is_stored_value_type(ty),
-            GenericCapability::ValueResult => !matches!(ty, Type::Obj | Type::Interface(_)),
+            GenericCapability::ValueResult => {
+                crate::type_capabilities::supports_value_result(super::type_category(ty))
+            }
             GenericCapability::AliasTarget(_) => {
                 super::program::is_supported_alias_type(self.program, ty)
             }

@@ -25,6 +25,7 @@ pub mod passes;
 pub mod resolve;
 pub mod source;
 pub mod syntax;
+mod type_capabilities;
 pub mod typeck;
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 //! Definition-independent validation of structural interface signatures.
 
 use super::*;
+use crate::type_capabilities::{self, TypeCategory};
 
 pub(super) fn validate_interface_signature_type(
     term: &ResolvedTemplateType,
@@ -89,41 +90,15 @@ fn validate_closed_construction(term: &ResolvedTemplateType, diagnostics: &mut D
 }
 
 fn is_closed_stored_value(term: &ResolvedTemplateType) -> bool {
-    !matches!(
-        term.kind,
-        ResolvedTemplateTypeKind::Unit
-            | ResolvedTemplateTypeKind::Obj
-            | ResolvedTemplateTypeKind::Interface(_)
-    )
+    type_capabilities::supports_stored_value(type_category(term))
 }
 
 fn is_closed_optional_payload(term: &ResolvedTemplateType) -> bool {
-    matches!(
-        term.kind,
-        ResolvedTemplateTypeKind::I64
-            | ResolvedTemplateTypeKind::U64
-            | ResolvedTemplateTypeKind::U8
-            | ResolvedTemplateTypeKind::F64
-            | ResolvedTemplateTypeKind::Bool
-            | ResolvedTemplateTypeKind::Class(_)
-            | ResolvedTemplateTypeKind::ClassTemplate { .. }
-            | ResolvedTemplateTypeKind::Shared(_)
-            | ResolvedTemplateTypeKind::Optional(_)
-            | ResolvedTemplateTypeKind::Array(_)
-    )
+    type_capabilities::supports_optional_payload(type_category(term))
 }
 
 fn is_closed_shared_target(term: &ResolvedTemplateType) -> bool {
-    matches!(
-        term.kind,
-        ResolvedTemplateTypeKind::Obj
-            | ResolvedTemplateTypeKind::Class(_)
-            | ResolvedTemplateTypeKind::Interface(_)
-            | ResolvedTemplateTypeKind::ClassTemplate { .. }
-            | ResolvedTemplateTypeKind::InterfaceTemplate { .. }
-            | ResolvedTemplateTypeKind::Array(_)
-            | ResolvedTemplateTypeKind::Optional(_)
-    )
+    type_capabilities::supports_shared_target(type_category(term))
 }
 
 fn report_invalid_construction(span: Span, label: &'static str, diagnostics: &mut Diagnostics) {
@@ -141,44 +116,48 @@ fn supports_closed_signature_capability(
     capability: GenericCapability,
 ) -> bool {
     match capability {
-        GenericCapability::ValueParameter => !matches!(
-            term.kind,
-            ResolvedTemplateTypeKind::Unit
-                | ResolvedTemplateTypeKind::Obj
-                | ResolvedTemplateTypeKind::Interface(_)
-        ),
-        GenericCapability::ValueResult => !matches!(
-            term.kind,
-            ResolvedTemplateTypeKind::Obj | ResolvedTemplateTypeKind::Interface(_)
-        ),
-        GenericCapability::AliasTarget(_) => match &term.kind {
-            ResolvedTemplateTypeKind::I64
-            | ResolvedTemplateTypeKind::U64
-            | ResolvedTemplateTypeKind::U8
-            | ResolvedTemplateTypeKind::F64
-            | ResolvedTemplateTypeKind::Bool
-            | ResolvedTemplateTypeKind::Obj
-            | ResolvedTemplateTypeKind::Class(_)
-            | ResolvedTemplateTypeKind::Interface(_)
-            | ResolvedTemplateTypeKind::Array(_) => true,
-            ResolvedTemplateTypeKind::Optional(payload) => optional_alias_payload(payload),
-            _ => false,
-        },
+        GenericCapability::ValueParameter => {
+            type_capabilities::supports_stored_value(type_category(term))
+        }
+        GenericCapability::ValueResult => {
+            type_capabilities::supports_value_result(type_category(term))
+        }
+        GenericCapability::AliasTarget(_) => supports_closed_alias_target(term),
         _ => true,
     }
 }
 
-fn optional_alias_payload(term: &ResolvedTemplateType) -> bool {
+fn supports_closed_alias_target(term: &ResolvedTemplateType) -> bool {
     match &term.kind {
+        ResolvedTemplateTypeKind::Optional(payload) => type_capabilities::supports_alias_target(
+            TypeCategory::Optional,
+            supports_closed_alias_target(payload),
+        ),
+        _ => type_capabilities::supports_alias_target(type_category(term), false),
+    }
+}
+
+fn type_category(term: &ResolvedTemplateType) -> TypeCategory {
+    match term.kind {
         ResolvedTemplateTypeKind::I64
         | ResolvedTemplateTypeKind::U64
         | ResolvedTemplateTypeKind::U8
         | ResolvedTemplateTypeKind::F64
-        | ResolvedTemplateTypeKind::Bool
-        | ResolvedTemplateTypeKind::Class(_)
-        | ResolvedTemplateTypeKind::Array(_) => true,
-        ResolvedTemplateTypeKind::Optional(payload) => optional_alias_payload(payload),
-        _ => false,
+        | ResolvedTemplateTypeKind::Bool => TypeCategory::Primitive,
+        ResolvedTemplateTypeKind::Unit => TypeCategory::Unit,
+        ResolvedTemplateTypeKind::Obj => TypeCategory::Obj,
+        ResolvedTemplateTypeKind::Class(_) | ResolvedTemplateTypeKind::ClassTemplate { .. } => {
+            TypeCategory::Class
+        }
+        ResolvedTemplateTypeKind::Interface(_)
+        | ResolvedTemplateTypeKind::InterfaceTemplate { .. } => TypeCategory::Interface,
+        ResolvedTemplateTypeKind::Function { .. } => TypeCategory::Function,
+        ResolvedTemplateTypeKind::Shared(_) => TypeCategory::Shared,
+        ResolvedTemplateTypeKind::Optional(_) => TypeCategory::Optional,
+        ResolvedTemplateTypeKind::Array(_) => TypeCategory::Array,
+        ResolvedTemplateTypeKind::Parameter(_) => {
+            unreachable!("closed capability checks exclude template parameters")
+        }
     }
 }
 

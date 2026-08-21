@@ -53,16 +53,5 @@ pub(super) fn validate_optional_types(
 }
 
 pub(in crate::typeck) const fn is_optional_payload(kind: ResolvedTypeKind) -> bool {
-    matches!(
-        kind,
-        ResolvedTypeKind::I64
-            | ResolvedTypeKind::U64
-            | ResolvedTypeKind::U8
-            | ResolvedTypeKind::F64
-            | ResolvedTypeKind::Bool
-            | ResolvedTypeKind::Class(_)
-            | ResolvedTypeKind::Shared(_)
-            | ResolvedTypeKind::Optional(_)
-            | ResolvedTypeKind::Array(_)
-    )
+    crate::type_capabilities::supports_optional_payload(super::resolved_type_category(kind))
 }

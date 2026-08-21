@@ -126,7 +126,7 @@ fn report_invalid_explicit_storage(
 }
 
 pub(in crate::typeck) const fn is_stored_value_type(ty: Type) -> bool {
-    !matches!(ty, Type::Unit | Type::Obj | Type::Interface(_))
+    crate::type_capabilities::supports_stored_value(super::super::type_category(ty))
 }
 
 pub(in crate::typeck) const fn has_zero_default(ty: Type) -> bool {

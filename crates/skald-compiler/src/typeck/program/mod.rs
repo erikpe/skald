@@ -287,16 +287,7 @@ fn validate_parameters(
 }
 
 pub(super) fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bool {
-    match ty {
-        Type::I64
-        | Type::U64
-        | Type::U8
-        | Type::F64
-        | Type::Bool
-        | Type::Class(_)
-        | Type::Obj
-        | Type::Interface(_)
-        | Type::Array(_) => true,
+    let optional_payload_supports_alias = match ty {
         Type::Optional(optional) => matches!(
             super::optional_types::classify_payload(program, optional),
             Some(
@@ -306,8 +297,12 @@ pub(super) fn is_supported_alias_type(program: &ResolvedProgram, ty: Type) -> bo
                     | super::optional_types::OptionalPayloadKind::Array(_)
             )
         ),
-        Type::Unit | Type::Shared(_) | Type::Function(_) => false,
-    }
+        _ => false,
+    };
+    crate::type_capabilities::supports_alias_target(
+        super::type_category(ty),
+        optional_payload_supports_alias,
+    )
 }
 
 fn lower_parameter(program: &ResolvedProgram, parameter: &ResolvedParameter) -> HirParameter {
