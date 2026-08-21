@@ -1,102 +1,30 @@
-//! Canonical source-order discovery of explicit closed applications.
+//! Closing source syntax types into canonical specialization requests.
 
-use super::super::resolver::{ModuleUnit, ProgramLookupTables};
-use super::{closed_types::object_target, *};
+use super::super::closed_types::object_target;
+use super::*;
 
-pub(crate) struct SpecializationDiscoveryInput<'program, 'ast> {
-    units: &'program [ModuleUnit<'ast>],
-    modules: &'program crate::module::ProgramModuleTable,
-    lookups: ProgramLookupTables<'program>,
-    templates: GenericTemplateDiscoveryInput<'program>,
-    ordinary_class_count: usize,
-    ordinary_interface_count: usize,
-}
-
-pub(crate) struct GenericTemplateDiscoveryInput<'program> {
-    class_semantics: &'program ResolvedClassTemplateSemanticTable,
-    interface_semantics: &'program ResolvedInterfaceTemplateSemanticTable,
-    classes: &'program ResolvedClassTemplateTable,
-    interfaces: &'program ResolvedInterfaceTemplateTable,
-}
-
-impl<'program> GenericTemplateDiscoveryInput<'program> {
-    pub(crate) const fn new(
-        class_semantics: &'program ResolvedClassTemplateSemanticTable,
-        interface_semantics: &'program ResolvedInterfaceTemplateSemanticTable,
-        classes: &'program ResolvedClassTemplateTable,
-        interfaces: &'program ResolvedInterfaceTemplateTable,
-    ) -> Self {
-        Self {
-            class_semantics,
-            interface_semantics,
-            classes,
-            interfaces,
-        }
-    }
-}
-
-impl<'program, 'ast> SpecializationDiscoveryInput<'program, 'ast> {
-    pub(crate) fn new(
-        units: &'program [ModuleUnit<'ast>],
-        modules: &'program crate::module::ProgramModuleTable,
-        lookups: ProgramLookupTables<'program>,
-        templates: GenericTemplateDiscoveryInput<'program>,
-        ordinary_class_count: usize,
-        ordinary_interface_count: usize,
-    ) -> Self {
-        Self {
-            units,
-            modules,
-            lookups,
-            templates,
-            ordinary_class_count,
-            ordinary_interface_count,
-        }
-    }
-}
-
-pub(crate) struct GenericApplicationDiscovery {
-    pub(crate) class_specializations: GenericSpecializationTable,
-    pub(crate) interface_specializations: GenericInterfaceSpecializationTable,
-}
-
-pub(crate) fn discover_specializations(
-    input: SpecializationDiscoveryInput<'_, '_>,
-    interner: &mut ResolvedTypeInterner,
-    diagnostics: &mut Diagnostics,
-) -> GenericApplicationDiscovery {
-    let mut owner = SpecializationCoordinator::new(
-        input.templates.class_semantics,
-        input.templates.interface_semantics,
-        input.templates.classes,
-        input.templates.interfaces,
-        interner,
-        diagnostics,
-        input.ordinary_class_count,
-        input.ordinary_interface_count,
-    );
-    for unit in input.units {
-        let lookup = input.lookups.for_unit(unit, input.modules);
-        SourceRequestScanner {
-            resolver: SyntaxTypeCloser {
-                owner: &mut owner,
-                lookup,
-                module: unit.module,
-            },
-        }
-        .visit_unit(unit.ast);
-    }
-    owner.finish()
-}
-
-struct SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup> {
+pub(super) struct SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup> {
     owner: &'owner mut SpecializationCoordinator<'semantic, 'interner, 'diagnostics>,
     lookup: ModuleLookup<'lookup>,
     module: ModuleId,
 }
 
-impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
-    fn close(&mut self, syntax: &syntax::TypeSyntax) -> Option<ResolvedTypeKind> {
+impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
+    SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
+{
+    pub(super) const fn new(
+        owner: &'owner mut SpecializationCoordinator<'semantic, 'interner, 'diagnostics>,
+        lookup: ModuleLookup<'lookup>,
+        module: ModuleId,
+    ) -> Self {
+        Self {
+            owner,
+            lookup,
+            module,
+        }
+    }
+
+    pub(super) fn close(&mut self, syntax: &syntax::TypeSyntax) -> Option<ResolvedTypeKind> {
         self.close_with_lookup_diagnostics(syntax, false)
     }
 
@@ -173,7 +101,7 @@ impl SyntaxTypeCloser<'_, '_, '_, '_, '_> {
         })
     }
 
-    fn close_named(
+    pub(super) fn close_named(
         &mut self,
         named: &syntax::NamedTypeSyntax,
         report_lookup_errors: bool,
@@ -442,260 +370,6 @@ fn syntax_optional_leaf(mut syntax: &syntax::TypeSyntax) -> (usize, &syntax::Typ
                 syntax = payload;
             }
             _ => return (depth, syntax),
-        }
-    }
-}
-
-struct SourceRequestScanner<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup> {
-    resolver: SyntaxTypeCloser<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>,
-}
-
-impl SourceRequestScanner<'_, '_, '_, '_, '_> {
-    fn visit_unit(&mut self, unit: &syntax::CompilationUnit) {
-        for declaration in &unit.declarations {
-            self.visit_declaration(declaration);
-        }
-    }
-
-    fn visit_declaration(&mut self, declaration: &syntax::TopLevelDeclaration) {
-        match declaration {
-            syntax::TopLevelDeclaration::Function(function) => {
-                self.visit_parameters(&function.parameters);
-                self.visit_type(&function.return_type);
-                self.visit_block(&function.body);
-            }
-            syntax::TopLevelDeclaration::ExternalFunction(function) => {
-                self.visit_parameters(&function.parameters);
-                self.visit_type(&function.return_type);
-            }
-            syntax::TopLevelDeclaration::IntrinsicFunction(function) => {
-                self.visit_parameters(&function.parameters);
-                self.visit_type(&function.return_type);
-            }
-            syntax::TopLevelDeclaration::Class(class) if class.type_parameters.is_none() => {
-                if let Some(base) = &class.direct_base {
-                    self.visit_named_type(base);
-                }
-                for interface in &class.implemented_interfaces {
-                    self.visit_named_type(interface);
-                }
-                for member in &class.members {
-                    self.visit_member(member);
-                }
-            }
-            syntax::TopLevelDeclaration::Interface(interface)
-                if interface.type_parameters.is_none() =>
-            {
-                for requirement in &interface.requirements {
-                    self.visit_parameters(&requirement.parameters);
-                    self.visit_type(&requirement.return_type);
-                }
-            }
-            syntax::TopLevelDeclaration::Class(_) | syntax::TopLevelDeclaration::Interface(_) => {
-                // Applications in an unrequested template are discovered only
-                // after substitution closes that template.
-            }
-        }
-    }
-
-    fn visit_member(&mut self, member: &syntax::ClassMember) {
-        match member {
-            syntax::ClassMember::Field(field) => self.visit_type(&field.type_syntax),
-            syntax::ClassMember::StaticField(field) => {
-                self.visit_type(&field.type_syntax);
-                if let Some(initializer) = &field.initializer {
-                    self.visit_expression(&initializer.expression);
-                }
-            }
-            syntax::ClassMember::Initializer(declaration) => {
-                self.visit_parameters(&declaration.parameters);
-                self.visit_block(&declaration.body);
-            }
-            syntax::ClassMember::CopyConstructor(declaration) => {
-                self.visit_parameters(&declaration.parameters);
-                self.visit_block(&declaration.body);
-            }
-            syntax::ClassMember::CopyAssignment(declaration) => {
-                self.visit_parameters(&declaration.parameters);
-                self.visit_block(&declaration.body);
-            }
-            syntax::ClassMember::Destructor(declaration) => self.visit_block(&declaration.body),
-            syntax::ClassMember::Method(declaration) => {
-                self.visit_parameters(&declaration.parameters);
-                self.visit_type(&declaration.return_type);
-                self.visit_block(&declaration.body);
-            }
-        }
-    }
-
-    fn visit_parameters(&mut self, parameters: &[syntax::Parameter]) {
-        for parameter in parameters {
-            self.visit_type(&parameter.type_syntax);
-        }
-    }
-
-    fn visit_type(&mut self, syntax: &syntax::TypeSyntax) {
-        let _ = self.resolver.close(syntax);
-    }
-
-    fn visit_named_type(&mut self, syntax: &syntax::NamedTypeSyntax) {
-        let _ = self.resolver.close_named(syntax, false);
-    }
-
-    fn visit_block(&mut self, block: &syntax::Block) {
-        for statement in &block.statements {
-            self.visit_statement(statement);
-        }
-    }
-
-    fn visit_statement(&mut self, statement: &syntax::Statement) {
-        match statement {
-            syntax::Statement::BaseInitialization(statement) => {
-                self.visit_expressions(&statement.arguments)
-            }
-            syntax::Statement::Local(statement) => {
-                self.visit_type(&statement.type_syntax);
-                self.visit_expression(&statement.initializer);
-            }
-            syntax::Statement::Return(statement) => {
-                if let Some(value) = &statement.value {
-                    self.visit_expression(value);
-                }
-            }
-            syntax::Statement::Break(_) | syntax::Statement::Continue(_) => {}
-            syntax::Statement::Expression(statement) => {
-                self.visit_expression(&statement.expression)
-            }
-            syntax::Statement::Conditional(statement) => {
-                self.visit_expression(&statement.if_arm.condition);
-                self.visit_block(&statement.if_arm.body);
-                for arm in &statement.elif_arms {
-                    self.visit_expression(&arm.condition);
-                    self.visit_block(&arm.body);
-                }
-                if let Some(body) = &statement.else_block {
-                    self.visit_block(body);
-                }
-            }
-            syntax::Statement::While(statement) => {
-                self.visit_expression(&statement.condition);
-                self.visit_block(&statement.body);
-            }
-            syntax::Statement::Block(block) => self.visit_block(block),
-            syntax::Statement::FieldAssignment(statement) => {
-                self.visit_expression(&statement.place.receiver);
-                self.visit_expression(&statement.value);
-            }
-            syntax::Statement::ObjectAssignment(statement) => {
-                self.visit_expression(&statement.place);
-                self.visit_expression(&statement.value);
-            }
-        }
-    }
-
-    fn visit_expression(&mut self, expression: &syntax::Expression) {
-        match expression {
-            syntax::Expression::Absent(_)
-            | syntax::Expression::Identifier(_)
-            | syntax::Expression::NumericLiteral(_)
-            | syntax::Expression::ByteLiteral(_)
-            | syntax::Expression::StringLiteral(_)
-            | syntax::Expression::Boolean(_)
-            | syntax::Expression::SelfValue(_) => {}
-            syntax::Expression::Present(expression) => self.visit_expression(&expression.value),
-            syntax::Expression::GenericTypeApplication(application) => {
-                self.visit_named_type(&application.target)
-            }
-            syntax::Expression::GenericStaticSelection(selection) => {
-                self.visit_named_type(&selection.target)
-            }
-            syntax::Expression::Unary(expression) => self.visit_expression(&expression.operand),
-            syntax::Expression::Binary(expression) => {
-                self.visit_expression(&expression.left);
-                self.visit_expression(&expression.right);
-            }
-            syntax::Expression::Logical(expression) => {
-                self.visit_expression(&expression.left);
-                self.visit_expression(&expression.right);
-            }
-            syntax::Expression::TypeTest(expression) => {
-                self.visit_expression(&expression.source);
-                self.visit_named_type(&expression.target);
-            }
-            syntax::Expression::PresenceTest(expression) => {
-                self.visit_expression(&expression.source)
-            }
-            syntax::Expression::Unwrap(expression) => self.visit_expression(&expression.source),
-            syntax::Expression::PrimitiveCast(expression) => {
-                self.visit_expression(&expression.source)
-            }
-            syntax::Expression::ObjectCast(expression) => {
-                self.visit_named_type(&expression.target);
-                self.visit_expression(&expression.source);
-            }
-            syntax::Expression::Allocation(expression) => {
-                self.visit_named_type(&expression.target);
-                self.visit_call_arguments(&expression.arguments);
-            }
-            syntax::Expression::OptionalBoxAllocation(expression) => {
-                self.visit_type(&expression.target);
-                if let syntax::OptionalBoxInitializer::Value { value, .. } = &expression.initializer
-                {
-                    self.visit_expression(value);
-                }
-            }
-            syntax::Expression::ArrayConstruction(expression) => {
-                self.visit_type(&expression.array_type);
-                match &expression.arguments {
-                    syntax::ArrayConstructionArguments::Empty { .. } => {}
-                    syntax::ArrayConstructionArguments::Length { length, .. } => {
-                        self.visit_expression(length)
-                    }
-                    syntax::ArrayConstructionArguments::Copy { source, .. } => {
-                        self.visit_expression(source)
-                    }
-                    syntax::ArrayConstructionArguments::Elements(elements) => {
-                        self.visit_expressions(&elements.elements)
-                    }
-                }
-            }
-            syntax::Expression::Call(expression) => {
-                self.visit_expression(&expression.callee);
-                self.visit_call_arguments(&expression.arguments);
-            }
-            syntax::Expression::Grouped(expression) => {
-                self.visit_expression(&expression.expression)
-            }
-            syntax::Expression::MemberAccess(expression) => {
-                self.visit_expression(&expression.receiver)
-            }
-            syntax::Expression::BracketProjection(expression) => {
-                self.visit_expression(&expression.receiver);
-                match &expression.bounds {
-                    syntax::BracketProjectionBounds::Index(index) => self.visit_expression(index),
-                    syntax::BracketProjectionBounds::Slice { start, end, .. } => {
-                        if let Some(start) = start {
-                            self.visit_expression(start);
-                        }
-                        if let Some(end) = end {
-                            self.visit_expression(end);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn visit_call_arguments(&mut self, arguments: &syntax::CallArguments) {
-        match arguments {
-            syntax::CallArguments::Ordinary(arguments) => self.visit_expressions(arguments),
-            syntax::CallArguments::Copy { source, .. } => self.visit_expression(source),
-        }
-    }
-
-    fn visit_expressions(&mut self, expressions: &[syntax::Expression]) {
-        for expression in expressions {
-            self.visit_expression(expression);
         }
     }
 }
