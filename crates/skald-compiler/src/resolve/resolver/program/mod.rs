@@ -5,8 +5,9 @@ use std::path::Path;
 
 use super::{
     body::{
-        resolve_callable_body, resolve_static_initializer_expression, BodyResolutionEnvironment,
-        BodySpecializationEnvironment, CallableResolutionContext,
+        resolve_callable_body, resolve_static_initializer_expression, BodyDeclarationEnvironment,
+        BodyLanguageItemEnvironment, BodyResolutionEnvironment, BodySpecializationEnvironment,
+        CallableResolutionContext, IterationResolutionEnvironment,
     },
     *,
 };
@@ -39,7 +40,7 @@ pub(in crate::resolve::resolver) use generic_templates::TemplateTypeResolver;
 use generic_templates::{
     collect_generic_templates, resolve_class_template_semantics,
     resolve_interface_template_semantics, ClassTemplateWorkItem, CollectedGenericTemplates,
-    InterfaceTemplateWorkItem,
+    InterfaceTemplateWorkItem, TemplateInterfaceEnvironment,
 };
 use hierarchy::build_class_hierarchy;
 use interface::{collect_interface_declarations, resolve_interface_claims};

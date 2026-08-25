@@ -4,13 +4,33 @@ use std::collections::HashMap;
 
 use super::{body::resolve_template_body, bounds::*, requirements::*, *};
 
+#[derive(Clone, Copy)]
+pub(crate) struct TemplateInterfaceEnvironment<'program> {
+    interfaces: &'program ResolvedInterfaceDeclarationTable,
+    semantics: &'program ResolvedInterfaceTemplateSemanticTable,
+    iterable: Option<&'program ResolvedIterableLanguageItem>,
+}
+
+impl<'program> TemplateInterfaceEnvironment<'program> {
+    pub(crate) const fn new(
+        interfaces: &'program ResolvedInterfaceDeclarationTable,
+        semantics: &'program ResolvedInterfaceTemplateSemanticTable,
+        iterable: Option<&'program ResolvedIterableLanguageItem>,
+    ) -> Self {
+        Self {
+            interfaces,
+            semantics,
+            iterable,
+        }
+    }
+}
+
 pub(crate) fn resolve_class_template_semantics(
     template: ClassTemplateId,
     class: &syntax::ClassDecl,
     parameters: &ResolvedTypeParameters,
     lookup: ModuleLookup<'_>,
-    interfaces: &ResolvedInterfaceDeclarationTable,
-    interface_semantics: &ResolvedInterfaceTemplateSemanticTable,
+    interface_environment: TemplateInterfaceEnvironment<'_>,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedClassTemplateSemantics {
     let bounds = resolve_bounds(class, parameters, lookup, diagnostics);
@@ -200,8 +220,9 @@ pub(crate) fn resolve_class_template_semantics(
             member_index,
             parameters,
             &bounds,
-            interfaces,
-            interface_semantics,
+            interface_environment.interfaces,
+            interface_environment.semantics,
+            interface_environment.iterable,
             lookup,
             &fields,
             &member_names,

@@ -63,12 +63,23 @@ pub(crate) struct GenericSpecialization {
     pub(crate) closed_interface_claims: Vec<Option<InterfaceId>>,
     pub(crate) closed_interface_bounds: Vec<Option<InterfaceId>>,
     pub(crate) closed_bound_members: Vec<Option<ClosedGenericBoundMember>>,
+    pub(crate) closed_iteration_selections: Vec<Option<ClosedGenericIterationSelection>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct ClosedGenericBoundMember {
     pub(crate) interface: InterfaceId,
     pub(crate) requirement: InterfaceRequirementId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ClosedGenericIterationSelection {
+    pub(crate) interface: InterfaceId,
+    pub(crate) iter_state: InterfaceRequirementId,
+    pub(crate) iter_next: InterfaceRequirementId,
+    pub(crate) item: ResolvedTypeKind,
+    pub(crate) state: ResolvedTypeKind,
+    pub(crate) origin_span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -18,7 +18,7 @@ impl CallableResolver<'_, '_> {
         resolved
     }
 
-    fn resolve_block_in_current_scope(
+    pub(super) fn resolve_block_in_current_scope(
         &mut self,
         block: &syntax::Block,
         allow_root_base_initialization: bool,
@@ -79,9 +79,7 @@ impl CallableResolver<'_, '_> {
                 self.resolve_while(statement).map(ResolvedStatement::While)
             }
             syntax::Statement::ForIn(statement) => {
-                self.diagnostics
-                    .push(super::super::general_iteration_selection_pending(statement));
-                None
+                self.resolve_for_in(statement).map(ResolvedStatement::ForIn)
             }
             syntax::Statement::Block(block) => {
                 Some(ResolvedStatement::Block(self.resolve_block(block, true)))
@@ -573,7 +571,7 @@ impl CallableResolver<'_, '_> {
         }
     }
 
-    fn declare_binding(
+    pub(super) fn declare_binding(
         &mut self,
         name: &str,
         symbol: BindingSymbol,

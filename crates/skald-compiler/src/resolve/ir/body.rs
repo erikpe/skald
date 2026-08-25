@@ -3,7 +3,8 @@
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, FieldId, FunctionId, LocalId, LoopId, StaticFieldId,
+        BindingId, CallableId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
+        LocalId, LoopId, StaticFieldId,
     },
     source::Span,
 };
@@ -172,6 +173,7 @@ pub enum ResolvedStatement {
     Expression(ResolvedExpressionStatement),
     Conditional(ResolvedConditional),
     While(ResolvedWhile),
+    ForIn(ResolvedForIn),
     Block(ResolvedBlock),
     ScalarBindingAssignment(ResolvedScalarBindingAssignment),
     FieldAssignment(ResolvedFieldAssignment),
@@ -193,6 +195,7 @@ impl ResolvedStatement {
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
+            Self::ForIn(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::ScalarBindingAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
@@ -231,6 +234,35 @@ pub struct ResolvedWhile {
     pub condition: ResolvedExpression,
     pub body: ResolvedBlock,
     pub span: Span,
+}
+
+/// One nominally selected general-iteration statement.
+///
+/// Protocol names and generic arguments have already been closed to exact
+/// identities before this representation is constructed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedForIn {
+    pub loop_id: LoopId,
+    pub binding: LocalId,
+    pub iterable: ResolvedExpression,
+    pub selection: ResolvedIterableSelection,
+    pub body: ResolvedBlock,
+    pub for_span: Span,
+    pub binding_span: Span,
+    pub annotation_span: Option<Span>,
+    pub in_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedIterableSelection {
+    pub interface: InterfaceId,
+    pub iter_state: InterfaceRequirementId,
+    pub iter_next: InterfaceRequirementId,
+    pub item: super::ResolvedTypeKind,
+    pub state: super::ResolvedTypeKind,
+    /// Claim or bound span that supplied this application.
+    pub origin_span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

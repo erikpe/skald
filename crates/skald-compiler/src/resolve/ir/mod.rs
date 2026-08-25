@@ -25,8 +25,9 @@ pub use body::{
     ResolvedArrayAssignment, ResolvedBaseInitialization, ResolvedBlock, ResolvedBreak,
     ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedConditional,
     ResolvedConditionalArm, ResolvedContinue, ResolvedExpressionStatement, ResolvedFieldAssignment,
-    ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedLocalDecl,
-    ResolvedMemberDefinition, ResolvedObjectAssignment, ResolvedOptionalAssignment, ResolvedReturn,
+    ResolvedForIn, ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable,
+    ResolvedIterableSelection, ResolvedLocalDecl, ResolvedMemberDefinition,
+    ResolvedObjectAssignment, ResolvedOptionalAssignment, ResolvedReturn,
     ResolvedScalarBindingAssignment, ResolvedSharedAssignment, ResolvedStatement,
     ResolvedStaticFieldAssignment, ResolvedWhile,
 };
@@ -77,10 +78,10 @@ pub use generic_requirements::{
     GenericAliasAccess, GenericCapability, GenericRequirement, GenericRequirementReason,
 };
 pub(crate) use generic_specializations::{
-    ClosedGenericBoundMember, ClosedGenericRequirementSubject, GenericApplicationOrigin,
-    GenericClassInstanceKey, GenericSpecialization, GenericSpecializationKey,
-    GenericSpecializationProvenance, GenericSpecializationState, GenericSpecializationTable,
-    GenericSpecializationTransition,
+    ClosedGenericBoundMember, ClosedGenericIterationSelection, ClosedGenericRequirementSubject,
+    GenericApplicationOrigin, GenericClassInstanceKey, GenericSpecialization,
+    GenericSpecializationKey, GenericSpecializationProvenance, GenericSpecializationState,
+    GenericSpecializationTable, GenericSpecializationTransition,
 };
 pub use generic_templates::{
     ResolvedClassTemplate, ResolvedClassTemplateTable, ResolvedInterfaceTemplate,

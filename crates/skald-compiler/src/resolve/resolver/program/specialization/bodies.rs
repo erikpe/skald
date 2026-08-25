@@ -37,12 +37,14 @@ pub(super) fn specialize_bodies(
         let work = generated_work_item(declaration, source, unit.module, ast_index);
         let environment = BodyResolutionEnvironment::new(
             input.lookups.for_unit(unit, input.modules),
-            input.functions,
-            input.classes,
-            input.interfaces,
-            input.hierarchy,
+            BodyDeclarationEnvironment::new(
+                input.functions,
+                input.classes,
+                input.interfaces,
+                input.hierarchy,
+            ),
             input.has_module_context,
-            input.string_literals,
+            input.language_items,
         )
         .with_specialization(BodySpecializationEnvironment::new(
             semantics,

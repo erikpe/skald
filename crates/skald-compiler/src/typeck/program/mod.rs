@@ -72,6 +72,7 @@ pub const INVALID_STATIC_FIELD_TYPE: &str = "TYP042";
 pub const FINAL_FIELD_REPLACEMENT: &str = "TYP043";
 pub const FINAL_STATIC_REPLACEMENT: &str = "TYP044";
 pub const FINAL_STATIC_INITIALIZER_REQUIRED: &str = "TYP045";
+pub const GENERAL_ITERATION_TYPING_PENDING: &str = "TYP046";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

@@ -1,6 +1,8 @@
 use super::*;
 use crate::{
-    identity::{InterfaceTemplateId, InterfaceTemplateRequirementId, TypeParameterId},
+    identity::{
+        InterfaceTemplateId, InterfaceTemplateRequirementId, LocalId, LoopId, TypeParameterId,
+    },
     test_support::{load_module_sources, CANONICAL_ITER_SOURCE},
 };
 
@@ -11,6 +13,23 @@ fn resolve_iteration_module(source: &str) -> ResolveOutput {
         load_module_sources("app", &[("app.ska", APP), ("std/iter.ska", source)]);
     resolve_module_graph(&graph)
 }
+
+fn resolve_iteration_app(source: &str) -> ResolveOutput {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[("app.ska", source), ("std/iter.ska", CANONICAL_ITER_SOURCE)],
+    );
+    resolve_module_graph(&graph)
+}
+
+const COUNTER: &str = concat!(
+    "from std::iter import Iterable;\n",
+    "class Counter implements Iterable<i64, u64> {\n",
+    "  init() {}\n",
+    "  fn iter_state() -> u64 { return 0u; }\n",
+    "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+    "}\n",
+);
 
 #[test]
 fn canonical_iterable_language_item_retains_exact_template_identities() {
@@ -232,55 +251,377 @@ fn malformed_canonical_iterable_declarations_are_rejected_structurally() {
 }
 
 #[test]
-fn parsed_for_in_stops_at_one_intentional_resolution_gate() {
-    let source = concat!(
-        "fn main(values: u64) -> i64 {\n",
-        "  for (item in missing_iterable) { missing_call(item); }\n",
-        "  return 0;\n",
-        "}\n",
+fn direct_claim_selects_exact_protocol_evidence_item_scope_and_loop_identity() {
+    let source = format!(
+        "{COUNTER}fn main(values: Counter) -> i64 {{\n  for (item in values) {{ var observed: i64 = item; continue; }}\n  return 0;\n}}\n"
     );
-    let (_workspace, graph) = load_module_sources(
-        "app",
-        &[("app.ska", source), ("std/iter.ska", CANONICAL_ITER_SOURCE)],
-    );
-    let for_span = graph.find(&"app".parse().unwrap()).unwrap().imports()[0]
-        .compiler_dependency_spans(crate::module::CompilerDependencyKind::GeneralIteration)[0];
-    let output = resolve_module_graph(&graph);
-
-    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
-    assert_eq!(diagnostics[0].code, GENERAL_ITERATION_SELECTION_PENDING);
-    assert_eq!(diagnostics[0].labels[0].span, for_span);
-    assert!(output.program.iterable_language_item.is_some());
+    let output = resolve_iteration_app(&source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let main = output
         .program
         .definitions
         .get(output.program.entry_function.unwrap())
         .unwrap();
-    assert!(matches!(
-        main.body.statements.as_slice(),
-        [ResolvedStatement::Return(_)]
-    ));
+    let ResolvedStatement::ForIn(loop_) = &main.body.statements[0] else {
+        panic!("expected a resolved iteration statement")
+    };
+    assert_eq!(loop_.loop_id, LoopId::new(main.function, 0));
+    assert_eq!(loop_.binding, LocalId::new(main.function, 0));
+    assert_eq!(loop_.selection.item, ResolvedTypeKind::I64);
+    assert_eq!(loop_.selection.state, ResolvedTypeKind::U64);
+    assert_eq!(
+        loop_.selection.iter_state.interface(),
+        loop_.selection.interface
+    );
+    assert_eq!(
+        loop_.selection.iter_next.interface(),
+        loop_.selection.interface
+    );
+    assert_eq!(main.locals[0].name, "item");
+    assert_eq!(main.locals[0].type_syntax.kind, ResolvedTypeKind::I64);
+    assert_eq!(main.locals[1].name, "observed");
+    let ResolvedStatement::Continue(exit) = &loop_.body.statements[1] else {
+        panic!("expected continue in the iteration body")
+    };
+    assert_eq!(exit.target, loop_.loop_id);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Selection interface"), "{dump}");
+    assert!(dump.contains("item i64 state u64 iter_state"), "{dump}");
 }
 
 #[test]
-fn generic_template_for_in_uses_the_same_gate_without_guessing_an_item_binding() {
+fn selection_supports_inherited_claims_and_exact_interface_views() {
+    let source = format!(
+        "{COUNTER}class Derived extends Counter {{ init() {{ super(); }} }}\nfn inherited(values: Derived) -> unit {{ for (item in values) {{}} }}\nfn viewed(values: Iterable<i64, u64>) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+    );
+    let output = resolve_iteration_app(&source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let loops = output
+        .program
+        .definitions
+        .iter()
+        .filter_map(|definition| match &definition.body.statements[..] {
+            [ResolvedStatement::ForIn(loop_)] => Some(loop_),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(loops.len(), 2);
+    assert_eq!(loops[0].selection.interface, loops[1].selection.interface);
+    assert_eq!(loops[0].selection.item, ResolvedTypeKind::I64);
+}
+
+#[test]
+fn exact_annotation_filters_ambiguity_without_conversion_rules() {
     let source = concat!(
-        "class Container<T> {\n",
-        "  fn scan(values: T) -> unit {\n",
-        "    for (item: T in unknown_iterable) { unknown_call(item); }\n",
-        "  }\n",
-        "}\n",
+        "from std::iter import Iterable;\n",
+        "class Both implements Iterable<i64, u64>, Iterable<u8, i64> { init() {} }\n",
+        "fn choose(values: Both) -> unit { for (item: u8 in values) {} }\n",
         "fn main() -> i64 { return 0; }\n",
     );
-    let (_workspace, graph) = load_module_sources(
-        "app",
-        &[("app.ska", source), ("std/iter.ska", CANONICAL_ITER_SOURCE)],
-    );
-    let output = resolve_module_graph(&graph);
+    let output = resolve_iteration_app(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let choose = output.program.definitions.iter().next().unwrap();
+    let ResolvedStatement::ForIn(loop_) = &choose.body.statements[0] else {
+        panic!("expected selected iteration")
+    };
+    assert_eq!(loop_.selection.item, ResolvedTypeKind::U8);
+    assert_eq!(loop_.selection.state, ResolvedTypeKind::I64);
 
+    let ambiguous = resolve_iteration_app(&source.replace("item: u8", "item"));
+    assert!(ambiguous
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == AMBIGUOUS_ITERABLE_APPLICATION));
+
+    let mismatch = resolve_iteration_app(&source.replace("item: u8", "item: bool"));
+    assert!(mismatch
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ITERATION_ITEM_TYPE_MISMATCH));
+}
+
+#[test]
+fn an_item_annotation_does_not_hide_distinct_state_ambiguity() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Both implements Iterable<i64, u64>, Iterable<i64, bool> { init() {} }\n",
+        "fn scan(values: Both) -> unit { for (item: i64 in values) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
     let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
-    assert_eq!(diagnostics[0].code, GENERAL_ITERATION_SELECTION_PENDING);
-    assert!(output.program.iterable_language_item.is_some());
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == AMBIGUOUS_ITERABLE_APPLICATION)
+            .count(),
+        1,
+        "{:?}",
+        output.diagnostics
+    );
+    assert_eq!(diagnostics[0].labels.len(), 3);
+}
+
+#[test]
+fn specialized_generic_claim_is_selected_as_an_ordinary_exact_application() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Generic<T> implements Iterable<T, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> T? { return none; }\n",
+        "}\n",
+        "fn scan(values: Generic<i64>) -> unit { for (item in values) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let scan = output.program.definitions.iter().next().unwrap();
+    let ResolvedStatement::ForIn(loop_) = &scan.body.statements[0] else {
+        panic!("expected iteration over a specialized generic class")
+    };
+    assert_eq!(loop_.selection.item, ResolvedTypeKind::I64);
+    assert_eq!(loop_.selection.state, ResolvedTypeKind::U64);
+}
+
+#[test]
+fn nested_specialization_preserves_definition_site_bound_selection() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Generic<T> implements Iterable<T, u64> { init() {} }\n",
+        "class Scanner<Source> where Source: Iterable<i64, u64> {\n",
+        "  fn scan(ref values: Source) -> unit { for (item in values) {} }\n",
+        "}\n",
+        "fn use(ref scanner: Scanner<Generic<i64>>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let scanner = output
+        .program
+        .class_definitions
+        .iter()
+        .find(|definition| !definition.methods.is_empty())
+        .unwrap();
+    let ResolvedStatement::ForIn(loop_) = &scanner.methods[0].body.statements[0] else {
+        panic!("expected nested-specialization iteration")
+    };
+    assert_eq!(loop_.selection.item, ResolvedTypeKind::I64);
+    assert_eq!(loop_.selection.state, ResolvedTypeKind::U64);
+}
+
+#[test]
+fn claim_declaration_order_does_not_change_exact_selection() {
+    let source = |claims: &str| {
+        format!(
+            "from std::iter import Iterable;\nclass Both implements {claims} {{ init() {{}} }}\nfn scan(values: Both) -> unit {{ for (item: u8 in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+        )
+    };
+    let first = resolve_iteration_app(&source("Iterable<i64, u64>, Iterable<u8, bool>"));
+    let second = resolve_iteration_app(&source("Iterable<u8, bool>, Iterable<i64, u64>"));
+    assert!(first.diagnostics.is_empty(), "{:?}", first.diagnostics);
+    assert!(second.diagnostics.is_empty(), "{:?}", second.diagnostics);
+    let selection = |output: &ResolveOutput| {
+        let definition = output.program.definitions.iter().next().unwrap();
+        let ResolvedStatement::ForIn(loop_) = &definition.body.statements[0] else {
+            panic!("expected selected iteration")
+        };
+        (
+            loop_.selection.iter_state.index(),
+            loop_.selection.iter_next.index(),
+            loop_.selection.item,
+            loop_.selection.state,
+        )
+    };
+    assert_eq!(selection(&first), selection(&second));
+}
+
+#[test]
+fn module_creation_order_does_not_change_resolved_iteration_products() {
+    let source = format!(
+        "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+    );
+    let sources = [
+        ("app.ska", source.as_str()),
+        ("std/iter.ska", CANONICAL_ITER_SOURCE),
+    ];
+    let (_first_workspace, first_graph) = load_module_sources("app", &sources);
+    let (_second_workspace, second_graph) = load_module_sources("app", &[sources[1], sources[0]]);
+    let first = resolve_module_graph(&first_graph);
+    let second = resolve_module_graph(&second_graph);
+    assert!(first.diagnostics.is_empty(), "{:?}", first.diagnostics);
+    assert!(second.diagnostics.is_empty(), "{:?}", second.diagnostics);
+    assert_eq!(
+        dump_resolved(&first.program),
+        dump_resolved(&second.program)
+    );
+}
+
+#[test]
+fn ambiguous_claim_declaration_order_has_identical_diagnostic_ordering() {
+    let source = |claims: &str| {
+        format!(
+            "from std::iter import Iterable;\nclass Both implements {claims} {{ init() {{}} }}\nfn scan(values: Both) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+        )
+    };
+    let first = resolve_iteration_app(&source("Iterable<i64, u64>, Iterable<f64, i64>"));
+    let second = resolve_iteration_app(&source("Iterable<f64, i64>, Iterable<i64, u64>"));
+    assert_eq!(
+        first.diagnostics.iter().collect::<Vec<_>>(),
+        second.diagnostics.iter().collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn structural_methods_and_noncanonical_interfaces_do_not_make_a_type_iterable() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "interface Lookalike<Item, State> {\n",
+        "  fn iter_state() -> State;\n",
+        "  fn iter_next(mut ref state: State) -> Item?;\n",
+        "}\n",
+        "class Structural implements Lookalike<i64, u64> {\n",
+        "  init() {}\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "}\n",
+        "fn scan(values: Structural) -> unit { for (item in values) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == MISSING_ITERABLE_APPLICATION));
+}
+
+#[test]
+fn generic_bound_selection_is_frozen_before_specialization() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Concrete implements Iterable<i64, u64>, Iterable<u8, bool> { init() {} }\n",
+        "class Scanner<T> where T: Iterable<i64, u64> {\n",
+        "  fn scan(ref values: T) -> i64 {\n",
+        "    for (item in values) { var observed: i64 = item; break; }\n",
+        "    return 0;\n",
+        "  }\n",
+        "}\n",
+        "fn use(ref scanner: Scanner<Concrete>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Selection iteration"), "{dump}");
+    assert!(dump.contains("ClosedIterationSelection"), "{dump}");
+
+    let scanner = output
+        .program
+        .class_definitions
+        .iter()
+        .find(|definition| !definition.methods.is_empty())
+        .expect("the Scanner specialization has a method body");
+    let ResolvedStatement::ForIn(loop_) = &scanner.methods[0].body.statements[0] else {
+        panic!("expected specialized bound-selected iteration")
+    };
+    assert_eq!(loop_.selection.item, ResolvedTypeKind::I64);
+    assert_eq!(loop_.selection.state, ResolvedTypeKind::U64);
+}
+
+#[test]
+fn generic_annotation_selects_one_bound_and_ignores_additional_concrete_claims() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Concrete implements Iterable<i64, u64>, Iterable<u8, bool>, Iterable<bool, i64> { init() {} }\n",
+        "class Scanner<T> where T: Iterable<i64, u64>, T: Iterable<u8, bool> {\n",
+        "  fn scan(ref values: T) -> unit { for (item: u8 in values) {} }\n",
+        "}\n",
+        "fn use(ref scanner: Scanner<Concrete>) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let scanner = output
+        .program
+        .class_definitions
+        .iter()
+        .find(|definition| !definition.methods.is_empty())
+        .unwrap();
+    let ResolvedStatement::ForIn(loop_) = &scanner.methods[0].body.statements[0] else {
+        panic!("expected selected generic-bound iteration")
+    };
+    assert_eq!(loop_.selection.item, ResolvedTypeKind::U8);
+    assert_eq!(loop_.selection.state, ResolvedTypeKind::Bool);
+}
+
+#[test]
+fn iteration_binding_rejects_duplicate_outer_body_declarations_but_allows_nested_shadowing() {
+    let duplicate = format!(
+        "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{ var item: i64 = 0; }} }}\nfn main() -> i64 {{ return 0; }}\n"
+    );
+    let duplicate = resolve_iteration_app(&duplicate);
+    assert!(duplicate
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == DUPLICATE_BINDING));
+
+    let nested = format!(
+        "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{ {{ var item: i64 = 0; }} }} }}\nfn main() -> i64 {{ return 0; }}\n"
+    );
+    let nested = resolve_iteration_app(&nested);
+    assert!(nested.diagnostics.is_empty(), "{:?}", nested.diagnostics);
+}
+
+#[test]
+fn type_checking_stops_after_successful_selection_until_structured_hir_lands() {
+    let source = format!(
+        "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
+    );
+    let resolved = resolve_iteration_app(&source);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = crate::typeck::type_check(&resolved.program);
+    assert!(checked
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::GENERAL_ITERATION_TYPING_PENDING));
+    assert!(checked.hir.is_none());
+}
+
+#[test]
+fn iteration_binding_is_body_local_and_reuses_mixed_loop_exit_stack() {
+    let source = format!(
+        "{COUNTER}fn scan(values: Counter) -> i64 {{\n  while (true) {{\n    for (item in values) {{ while (true) {{ continue; }} break; }}\n    break;\n  }}\n  return item;\n}}\nfn main() -> i64 {{ return 0; }}\n"
+    );
+    let output = resolve_iteration_app(&source);
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == UNKNOWN_NAME));
+    let scan = output.program.definitions.iter().next().unwrap();
+    let ResolvedStatement::While(outer) = &scan.body.statements[0] else {
+        panic!("expected outer while")
+    };
+    let ResolvedStatement::ForIn(loop_) = &outer.body.statements[0] else {
+        panic!("expected inner iteration")
+    };
+    let ResolvedStatement::While(inner) = &loop_.body.statements[0] else {
+        panic!("expected nested while")
+    };
+    let ResolvedStatement::Continue(continue_) = &inner.body.statements[0] else {
+        panic!("expected nested continue")
+    };
+    let ResolvedStatement::Break(break_) = &loop_.body.statements[1] else {
+        panic!("expected iteration break")
+    };
+    assert_eq!(continue_.target, inner.loop_id);
+    assert_eq!(break_.target, loop_.loop_id);
+    assert_eq!(outer.loop_id, LoopId::new(scan.function, 0));
+    assert_eq!(loop_.loop_id, LoopId::new(scan.function, 1));
+    assert_eq!(inner.loop_id, LoopId::new(scan.function, 2));
 }

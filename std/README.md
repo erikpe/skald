@@ -72,8 +72,8 @@ The dependency-free `std::iter` module provides the canonical generic
 `Iterable<Item, State>` interface. Resolution validates its exact public
 template and requirement identities when the canonical module is requested.
 General `for-in` syntax is parsed and supplies implicit `std::iter` dependency
-evidence. Resolution intentionally gates before protocol selection, so loop
-typing and lowering remain later compiler work.
+evidence. Resolution selects exact nominal applications, including frozen
+generic bounds; structured HIR and lowering remain later compiler work.
 
 The `std::vec` module provides the implemented generic
 [`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`

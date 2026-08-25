@@ -1,9 +1,9 @@
 # General Iteration
 
-Status: frozen semantic design with source syntax and protocol foundation
-implemented. The compiler parses and retains `for-in`, activates the canonical
-module dependency, validates its exact interface, and then stops at an
-intentional resolution gate until nominal protocol selection is implemented.
+Status: frozen semantic design with source syntax, canonical protocol, and
+nominal resolution implemented. The compiler selects exact closed applications,
+types the item scope, freezes generic-bound selection, and then stops at an
+intentional type-checking gate until structured iteration HIR is implemented.
 The [status matrix](STATUS.md) records implementation maturity.
 
 This document is authoritative for general iteration semantics selected for
@@ -66,10 +66,10 @@ scope, while the item is visible only inside the body.
 in a `for` header and remains an ordinary identifier elsewhere, including as
 the item binding when followed by the delimiter.
 
-The current parser preserves the complete source structure and recovers at
-header and body boundaries. Resolution deliberately rejects the structured
-statement before declaring an item or resolving its body; selection and scope
-semantics below remain the next implementation stage.
+The parser preserves the complete source structure and recovers at header and
+body boundaries. Resolution evaluates the header in the enclosing lexical
+scope, selects the protocol, declares one exact-typed immutable item local in a
+fresh body scope, and resolves loop exits through the common loop stack.
 
 ## Iterable selection
 
@@ -90,6 +90,13 @@ type-parameter bound is fixed at definition-site checking. Specialization
 substitutes the already selected requirement and closed interface identities;
 it does not repeat overload-like selection against additional claims of the
 concrete argument.
+
+This selection boundary is implemented for direct and inherited exact-class
+claims, specialized generic-class claims, exact interface views, and generic
+bounds. Candidate sets are canonicalized by closed interface identity.
+Diagnostics distinguish no application, ambiguity, and an exact annotation
+mismatch and retain both use and claim/bound spans. Typed HIR construction and
+execution remain pending.
 
 ## Execution and termination
 

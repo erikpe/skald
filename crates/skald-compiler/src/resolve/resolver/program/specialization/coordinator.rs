@@ -140,6 +140,7 @@ impl<'semantic, 'interner, 'diagnostics>
             closed_interface_claims: Vec::new(),
             closed_interface_bounds: Vec::new(),
             closed_bound_members: Vec::new(),
+            closed_iteration_selections: Vec::new(),
         });
         self.activate_class(index)
     }
@@ -280,6 +281,8 @@ impl<'semantic, 'interner, 'diagnostics>
         self.class_entries[index].closed_interface_claims = closed_interface_claims;
         self.class_entries[index].closed_interface_bounds = closed_interface_bounds;
         self.class_entries[index].closed_bound_members = vec![None; semantics.selections.len()];
+        self.class_entries[index].closed_iteration_selections =
+            vec![None; semantics.selections.len()];
         let valid = self.specialization_failures == failures_before;
         debug_assert_eq!(self.active.pop(), Some(work_key));
         if valid {

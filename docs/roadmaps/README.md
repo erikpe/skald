@@ -10,10 +10,10 @@ The [general iteration roadmap](GENERAL_ITERATION_ROADMAP.md) is in progress.
 Its canonical dependency-free `std::iter::Iterable<Item, State>` declaration,
 typed compiler-dependency evidence, structural language-item validation,
 exact resolved identities, deterministic dump, and focused tests are complete.
-The `for-in` parser, structured AST, recovery, dumps, dependency activation,
-generic scanning, and intentional resolution gate are implemented and
-validated. `IT2` is next: deterministic nominal protocol selection and exact
-loop/item scope identities.
+The `for-in` parser, structured AST, dependency activation, deterministic
+nominal selection, exact resolved protocol evidence, frozen generic-bound
+selection, and loop/item scopes are implemented and validated. `IT3` is next:
+structured typed HIR and core lifecycle plans.
 
 The completed generic interfaces roadmap is preserved in the
 [archive](../archive/GENERIC_INTERFACES_ROADMAP.md).

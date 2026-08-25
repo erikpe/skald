@@ -146,7 +146,7 @@ Compiler-owned dependencies retain a typed source-evidence kind separately
 from explicit import spans, so loading a canonical module does not create a
 source name binding. String literals use this boundary for `std::str`; the
 general-iteration kind is implemented for the frozen `std::iter` protocol and
-will be populated when `for-in` parsing lands. Both use ordinary provider
+is populated by parsed `for-in` keyword spans. Both use ordinary provider
 lookup, missing/ambiguity diagnostics, parsing, identities, and dependency
 cycles. The owning feature resolves the canonical declaration once to semantic
 identities; lowering and backends do not repeatedly compare source path

@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT1` is complete; `IT2` is next.
+Status: in progress. `IT2` is complete; `IT3` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -80,7 +80,7 @@ Every task preserves these cross-cutting decisions:
 |---|---|---|
 | [IT0](#it0--canonical-iterable-language-item) | [x] Complete | Canonical dependency-free `std::iter::Iterable<Item, State>` is loadable, validated, and represented by exact identities. |
 | [IT1](#it1--for-in-source-syntax) | [x] Complete | Lexer, parser, AST, recovery, template scanning, and dumps retain the frozen statement shape. |
-| [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [ ] Planned | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
+| [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [x] Complete | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
 | [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [ ] Planned | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans. |
 | [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [ ] Planned | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
 | [IT5](#it5--loop-duration-receiver-composition) | [ ] Planned | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
@@ -218,33 +218,33 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Enumerate only exact canonical `Iterable<Item, State>` applications
+- [x] Enumerate only exact canonical `Iterable<Item, State>` applications
   reachable through the iterable static type's nominal claims, inherited
   claims, specialized generic claims, or exact generic bound.
-- [ ] Canonicalize and sort candidates by exact identities before selection,
+- [x] Canonicalize and sort candidates by exact identities before selection,
   diagnostics, or dumps.
-- [ ] Infer `Item` and `State` when exactly one candidate exists.
-- [ ] Apply an explicit item annotation as exact equality over `Item`; reject
+- [x] Infer `Item` and `State` when exactly one candidate exists.
+- [x] Apply an explicit item annotation as exact equality over `Item`; reject
   implicit conversion, unwrap, dereference, covariance, and best-match rules.
-- [ ] Diagnose zero candidates, multiple candidates, annotation mismatch, and
+- [x] Diagnose zero candidates, multiple candidates, annotation mismatch, and
   ambiguity remaining after filtering with declaration and use spans.
-- [ ] Retain selected interface, `iter_state`, `iter_next`, `Item`, `State`,
+- [x] Retain selected interface, `iter_state`, `iter_next`, `Item`, `State`,
   and bound-requirement identities in resolved evidence.
-- [ ] Resolve the iterable expression in the enclosing scope and select the
+- [x] Resolve the iterable expression in the enclosing scope and select the
   protocol from its statically determined ordinary type or generic template
   type term before resolving the body. Allocate one source-ordered
   callable-local `LoopId`; ordinary bodies receive an exact-typed item local,
   while generic templates retain a structurally typed binding that
   specialization materializes as an exact ordinary local. Do not add an
   unresolved inferred type variant to the ordinary local table.
-- [ ] Reuse the active loop stack so nearest `break`/`continue` targets mixed
+- [x] Reuse the active loop stack so nearest `break`/`continue` targets mixed
   `while`/`for-in` nesting correctly; keep the item out of the iterable and
   post-loop scopes and diagnose duplicate body-scope declarations.
-- [ ] Freeze generic-bound selection at template definition-site checking and
+- [x] Freeze generic-bound selection at template definition-site checking and
   substitute its already selected identities during specialization.
-- [ ] Prove that a concrete type's additional Iterable claims cannot change a
+- [x] Prove that a concrete type's additional Iterable claims cannot change a
   generic body's selection.
-- [ ] Reject structural same-named methods and lookalike interface identities.
+- [x] Reject structural same-named methods and lookalike interface identities.
 
 Tests:
 
@@ -262,6 +262,17 @@ Tests:
 Exit condition: every semantically viable loop has one deterministic exact
 selection record and an ordinary exact-typed body binding, all ambiguity is
 rejected before HIR, and specialization cannot reselect the protocol.
+
+Completion evidence: focused resolver tests cover direct, inherited,
+specialized-generic, and interface-view claims; exact annotation filtering;
+distinct item and state ambiguity; no-claim, structural-method, and
+noncanonical-interface negatives; deterministic exact resolved dumps; item
+scope, duplicate declarations, nested shadowing, and mixed loop identities.
+Generic-template tests retain a structural item binding, close the selected
+bound to ordinary identities, and prove additional concrete claims cannot
+redirect selection. The complete compiler suite and repository static/MSRV
+gates pass with the intentional structured-HIR type-checking gate retained for
+the next task.
 
 ## IT3 — Structured HIR and core lifecycle plans
 

@@ -16,6 +16,7 @@ pub(super) fn resolve_template_body(
     bounds: &[ResolvedTemplateBound],
     interfaces: &ResolvedInterfaceDeclarationTable,
     interface_semantics: &ResolvedInterfaceTemplateSemanticTable,
+    iterable_language_item: Option<&ResolvedIterableLanguageItem>,
     lookup: ModuleLookup<'_>,
     fields: &HashMap<String, ResolvedTemplateType>,
     member_names: &HashMap<String, usize>,
@@ -55,6 +56,7 @@ pub(super) fn resolve_template_body(
         bounds,
         interfaces,
         interface_semantics,
+        iterable_language_item,
         lookup,
         fields,
         member_names,
@@ -82,6 +84,7 @@ struct TemplateBodyResolver<'semantic, 'lookup, 'diagnostics> {
     bounds: &'semantic [ResolvedTemplateBound],
     interfaces: &'semantic ResolvedInterfaceDeclarationTable,
     interface_semantics: &'semantic ResolvedInterfaceTemplateSemanticTable,
+    iterable_language_item: Option<&'semantic ResolvedIterableLanguageItem>,
     lookup: ModuleLookup<'lookup>,
     fields: &'semantic HashMap<String, ResolvedTemplateType>,
     member_names: &'semantic HashMap<String, usize>,
@@ -131,10 +134,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                         );
                     }
                     push_destruction(self.requirements, &term, self.member);
-                    self.scopes
-                        .last_mut()
-                        .expect("template body always has a lexical scope")
-                        .insert(local.name.text.to_string(), term);
+                    self.declare_binding(&local.name, term, "local binding");
                 }
             }
             syntax::Statement::Return(statement) => {
@@ -174,10 +174,7 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.visit_block(&statement.body);
             }
             syntax::Statement::ForIn(statement) => {
-                self.diagnostics
-                    .push(super::super::super::general_iteration_selection_pending(
-                        statement,
-                    ));
+                self.visit_iteration(statement);
             }
             syntax::Statement::Block(block) => self.visit_block(block),
             syntax::Statement::FieldAssignment(statement) => {
@@ -840,6 +837,161 @@ impl TemplateBodyResolver<'_, '_, '_> {
 
     fn lookup_binding(&self, name: &str) -> Option<&ResolvedTemplateType> {
         self.scopes.iter().rev().find_map(|scope| scope.get(name))
+    }
+
+    fn visit_iteration(&mut self, statement: &syntax::ForInStatement) {
+        self.visit_expression(&statement.iterable);
+        let annotation = statement.annotation.as_ref().and_then(|annotation| {
+            self.resolve_type_use(
+                &annotation.type_syntax,
+                ResolvedTemplateTypeUseContext::IterationItemAnnotation {
+                    member: self.member,
+                },
+            )
+        });
+        let Some(parameter) = self
+            .type_of_expression(&statement.iterable)
+            .as_ref()
+            .and_then(ResolvedTemplateType::parameter)
+        else {
+            // A nondependent iterable is selected after this template closes
+            // to an ordinary body. Only parameter-bound selection must be
+            // frozen at definition site.
+            return;
+        };
+        let Some(language_item) = self.iterable_language_item else {
+            return;
+        };
+        let mut candidates = self
+            .bounds
+            .iter()
+            .enumerate()
+            .filter_map(|(bound, candidate)| {
+                if candidate.parameter != parameter {
+                    return None;
+                }
+                let ResolvedInterfaceType::TemplateApplication {
+                    template,
+                    arguments,
+                } = &candidate.interface
+                else {
+                    return None;
+                };
+                if *template != language_item.template {
+                    return None;
+                }
+                let [item, state] = arguments.as_slice() else {
+                    return None;
+                };
+                Some((bound, candidate.interface_span, item.clone(), state.clone()))
+            })
+            .collect::<Vec<_>>();
+        candidates.sort_by_key(|(bound, _, _, _)| *bound);
+        let unfiltered = candidates.clone();
+        if let Some(annotation) = &annotation {
+            candidates.retain(|(_, _, item, _)| item.semantically_eq(annotation));
+        }
+
+        let (bound, _, item, state) = match candidates.as_slice() {
+            [(bound, span, item, state)] => (*bound, *span, item.clone(), state.clone()),
+            [] if annotation.is_some() && !unfiltered.is_empty() => {
+                let mut diagnostic = Diagnostic::error(
+                    super::super::super::ITERATION_ITEM_TYPE_MISMATCH,
+                    "the iteration item annotation matches no eligible generic bound",
+                )
+                .with_primary_label(
+                    statement
+                        .annotation
+                        .as_ref()
+                        .expect("a structural annotation was resolved")
+                        .type_syntax
+                        .span,
+                    "exact item type required here",
+                );
+                for (_, span, _, _) in unfiltered {
+                    diagnostic = diagnostic
+                        .with_secondary_label(span, "candidate bound has a different item type");
+                }
+                self.diagnostics.push(diagnostic);
+                return;
+            }
+            [] => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        super::super::super::MISSING_ITERABLE_APPLICATION,
+                        "the generic iterable type has no canonical `Iterable` bound",
+                    )
+                    .with_primary_label(
+                        statement.iterable.span(),
+                        "declare an exact `std::iter::Iterable<Item, State>` bound",
+                    ),
+                );
+                return;
+            }
+            candidates => {
+                let mut diagnostic = Diagnostic::error(
+                    super::super::super::AMBIGUOUS_ITERABLE_APPLICATION,
+                    "multiple canonical `Iterable` bounds remain eligible",
+                )
+                .with_primary_label(
+                    statement
+                        .annotation
+                        .as_ref()
+                        .map_or(statement.iterable.span(), |annotation| {
+                            annotation.type_syntax.span
+                        }),
+                    "generic iteration selection is ambiguous",
+                );
+                for (_, span, _, _) in candidates {
+                    diagnostic =
+                        diagnostic.with_secondary_label(*span, "candidate bound declared here");
+                }
+                self.diagnostics.push(diagnostic);
+                return;
+            }
+        };
+
+        self.selections.push(ResolvedTemplateSelection::Iteration {
+            parameter,
+            bound,
+            item: item.clone(),
+            state,
+            iter_state: language_item.iter_state_requirement,
+            iter_next: language_item.iter_next_requirement,
+            span: statement.for_span,
+        });
+        self.scopes.push(HashMap::new());
+        self.declare_binding(&statement.binding, item, "iteration binding");
+        for statement in &statement.body.statements {
+            self.visit_statement(statement);
+        }
+        self.scopes
+            .pop()
+            .expect("generic iteration body owns one lexical scope");
+    }
+
+    fn declare_binding(
+        &mut self,
+        name: &syntax::Name,
+        ty: ResolvedTemplateType,
+        binding_kind: &'static str,
+    ) -> bool {
+        let scope = self
+            .scopes
+            .last_mut()
+            .expect("template body always has a lexical scope");
+        if scope.contains_key(name.text.as_str()) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    super::super::super::DUPLICATE_BINDING,
+                    format!("duplicate {binding_kind} `{}`", name.text),
+                )
+                .with_primary_label(name.span, "redeclared here"),
+            );
+            return false;
+        }
+        scope.insert(name.text.to_string(), ty);
+        true
     }
 
     fn type_of_expression(&self, expression: &syntax::Expression) -> Option<ResolvedTemplateType> {

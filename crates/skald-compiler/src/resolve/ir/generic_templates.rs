@@ -533,6 +533,7 @@ pub(crate) enum ResolvedTemplateTypeUseContext {
     StaticSelectionTarget { member: usize },
     ArrayConstructionTarget { member: usize },
     OptionalBoxTarget { member: usize },
+    IterationItemAnnotation { member: usize },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -589,6 +590,15 @@ pub(crate) enum ResolvedTemplateSelection {
         bound: usize,
         requirement: ResolvedTemplateBoundRequirement,
         member_name: String,
+        span: Span,
+    },
+    Iteration {
+        parameter: TypeParameterId,
+        bound: usize,
+        item: ResolvedTemplateType,
+        state: ResolvedTemplateType,
+        iter_state: InterfaceTemplateRequirementId,
+        iter_next: InterfaceTemplateRequirementId,
         span: Span,
     },
 }

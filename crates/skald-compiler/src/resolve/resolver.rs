@@ -78,19 +78,9 @@ pub const INVALID_INDEX_PROTOCOL: &str = "RES049";
 pub const INVALID_FUNCTION_REFERENCE: &str = "RES050";
 pub const INVALID_GENERIC_INTERFACE_REQUIREMENT: &str = "RES052";
 pub const INVALID_ITERABLE_LANGUAGE_ITEM: &str = "RES053";
-pub const GENERAL_ITERATION_SELECTION_PENDING: &str = "RES054";
-
-fn general_iteration_selection_pending(statement: &syntax::ForInStatement) -> Diagnostic {
-    Diagnostic::error(
-        GENERAL_ITERATION_SELECTION_PENDING,
-        "general iteration protocol selection is not implemented yet",
-    )
-    .with_primary_label(
-        statement.for_span,
-        "this `for-in` statement is parsed but cannot yet be resolved",
-    )
-    .with_note("protocol selection and item binding resolution are the next implementation stage")
-}
+pub const MISSING_ITERABLE_APPLICATION: &str = "RES054";
+pub const AMBIGUOUS_ITERABLE_APPLICATION: &str = "RES055";
+pub const ITERATION_ITEM_TYPE_MISMATCH: &str = "RES056";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

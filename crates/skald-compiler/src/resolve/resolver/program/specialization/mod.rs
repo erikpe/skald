@@ -36,7 +36,6 @@ mod tests;
 
 use super::*;
 use crate::module::ProgramModuleTable;
-use crate::resolve::resolver::body::StringLiteralResolutionEnvironment;
 use coordinator::SpecializationCoordinator;
 
 pub(super) struct SpecializationBodyInput<'program, 'ast> {
@@ -50,7 +49,7 @@ pub(super) struct SpecializationBodyInput<'program, 'ast> {
     pub(super) interfaces: &'program ResolvedInterfaceDeclarationTable,
     pub(super) hierarchy: &'program ResolvedClassHierarchy,
     pub(super) has_module_context: bool,
-    pub(super) string_literals: StringLiteralResolutionEnvironment<'program>,
+    pub(super) language_items: BodyLanguageItemEnvironment<'program>,
 }
 
 pub(super) struct SpecializedBodies {

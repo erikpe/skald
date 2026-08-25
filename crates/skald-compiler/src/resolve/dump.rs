@@ -492,6 +492,25 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                                     ),
                                     *span,
                                 ),
+                                ResolvedTemplateSelection::Iteration {
+                                    parameter,
+                                    bound,
+                                    item,
+                                    state,
+                                    iter_state,
+                                    iter_next,
+                                    span,
+                                } => dumper.line(
+                                    &format!(
+                                        "Selection iteration {parameter} bound {bound} {} item {} state {} iter_state {} iter_next {}",
+                                        render_interface_type(&semantics.bounds[*bound].interface),
+                                        render_template_type(item),
+                                        render_template_type(state),
+                                        iter_state,
+                                        iter_next,
+                                    ),
+                                    *span,
+                                ),
                             }
                         }
                     });
@@ -954,6 +973,9 @@ fn render_template_type_context(context: ResolvedTemplateTypeUseContext) -> Stri
         ResolvedTemplateTypeUseContext::OptionalBoxTarget { member } => {
             format!("member{member}:optional-box-target")
         }
+        ResolvedTemplateTypeUseContext::IterationItemAnnotation { member } => {
+            format!("member{member}:iteration-item-annotation")
+        }
     }
 }
 
@@ -1075,6 +1097,22 @@ impl<'program> ResolvedDumper<'program> {
                         dumper.raw_line(&format!(
                             "ClosedBoundSelection {index} interface {} requirement {}",
                             selection.interface, selection.requirement,
+                        ));
+                    }
+                }
+                for (index, selection) in specialization
+                    .closed_iteration_selections
+                    .iter()
+                    .enumerate()
+                {
+                    if let Some(selection) = selection {
+                        dumper.raw_line(&format!(
+                            "ClosedIterationSelection {index} interface {} item {} state {} iter_state {} iter_next {}",
+                            selection.interface,
+                            dumper.render_type_kind(selection.item),
+                            dumper.render_type_kind(selection.state),
+                            selection.iter_state,
+                            selection.iter_next,
                         ));
                     }
                 }
@@ -1502,6 +1540,34 @@ impl<'program> ResolvedDumper<'program> {
                 self.indented(|dumper| {
                     dumper.heading("Condition");
                     dumper.indented(|dumper| dumper.expression(&statement.condition));
+                    dumper.block(&statement.body);
+                });
+            }
+            ResolvedStatement::ForIn(statement) => {
+                self.line(
+                    &format!("ForIn {} {}", statement.loop_id, statement.binding),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("For", statement.for_span);
+                    dumper.line("Binding", statement.binding_span);
+                    if let Some(span) = statement.annotation_span {
+                        dumper.line("Annotation", span);
+                    }
+                    dumper.line("In", statement.in_span);
+                    dumper.line(
+                        &format!(
+                            "Selection interface {} item {} state {} iter_state {} iter_next {}",
+                            statement.selection.interface,
+                            dumper.render_type_kind(statement.selection.item),
+                            dumper.render_type_kind(statement.selection.state),
+                            statement.selection.iter_state,
+                            statement.selection.iter_next,
+                        ),
+                        statement.selection.origin_span,
+                    );
+                    dumper.heading("Iterable");
+                    dumper.indented(|dumper| dumper.expression(&statement.iterable));
                     dumper.block(&statement.body);
                 });
             }

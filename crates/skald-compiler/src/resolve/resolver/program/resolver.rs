@@ -365,8 +365,11 @@ impl<'ast> ProgramResolver<'ast> {
                     class,
                     parameters,
                     lookup,
-                    &interfaces,
-                    &interface_template_semantics,
+                    TemplateInterfaceEnvironment::new(
+                        &interfaces,
+                        &interface_template_semantics,
+                        iterable_language_item.as_ref(),
+                    ),
                     &mut self.diagnostics,
                 ));
             }
@@ -507,14 +510,24 @@ impl<'ast> ProgramResolver<'ast> {
                 &class_declarations,
                 BodyResolutionEnvironment::new(
                     lookup,
-                    &function_declarations,
-                    &class_declarations,
-                    &interfaces,
-                    &hierarchy,
+                    BodyDeclarationEnvironment::new(
+                        &function_declarations,
+                        &class_declarations,
+                        &interfaces,
+                        &hierarchy,
+                    ),
                     self.has_module_context,
-                    StringLiteralResolutionEnvironment::new(
-                        string_language_item.as_ref(),
-                        &self.literal_ids,
+                    BodyLanguageItemEnvironment::new(
+                        StringLiteralResolutionEnvironment::new(
+                            string_language_item.as_ref(),
+                            &self.literal_ids,
+                        ),
+                        iterable_language_item.as_ref().map(|item| {
+                            IterationResolutionEnvironment::new(
+                                item,
+                                &generic_interface_specializations,
+                            )
+                        }),
                     ),
                 ),
                 &mut self.type_interner,
@@ -536,9 +549,17 @@ impl<'ast> ProgramResolver<'ast> {
                 interfaces: &interfaces,
                 hierarchy: &hierarchy,
                 has_module_context: self.has_module_context,
-                string_literals: StringLiteralResolutionEnvironment::new(
-                    string_language_item.as_ref(),
-                    &self.literal_ids,
+                language_items: BodyLanguageItemEnvironment::new(
+                    StringLiteralResolutionEnvironment::new(
+                        string_language_item.as_ref(),
+                        &self.literal_ids,
+                    ),
+                    iterable_language_item.as_ref().map(|item| {
+                        IterationResolutionEnvironment::new(
+                            item,
+                            &generic_interface_specializations,
+                        )
+                    }),
                 ),
             },
             &mut self.type_interner,
@@ -554,11 +575,15 @@ impl<'ast> ProgramResolver<'ast> {
 
         let function_definitions = self.resolve_function_bodies(
             lookups,
-            &function_declarations,
-            &class_declarations,
-            &hierarchy,
-            &interfaces,
+            BodyDeclarationEnvironment::new(
+                &function_declarations,
+                &class_declarations,
+                &interfaces,
+                &hierarchy,
+            ),
             string_language_item.as_ref(),
+            iterable_language_item.as_ref(),
+            &generic_interface_specializations,
         );
         let mut class_definitions = Vec::with_capacity(class_declarations.len());
         for unit in &self.units {
@@ -574,14 +599,24 @@ impl<'ast> ProgramResolver<'ast> {
                 &class_declarations,
                 BodyResolutionEnvironment::new(
                     lookup,
-                    &function_declarations,
-                    &class_declarations,
-                    &interfaces,
-                    &hierarchy,
+                    BodyDeclarationEnvironment::new(
+                        &function_declarations,
+                        &class_declarations,
+                        &interfaces,
+                        &hierarchy,
+                    ),
                     self.has_module_context,
-                    StringLiteralResolutionEnvironment::new(
-                        string_language_item.as_ref(),
-                        &self.literal_ids,
+                    BodyLanguageItemEnvironment::new(
+                        StringLiteralResolutionEnvironment::new(
+                            string_language_item.as_ref(),
+                            &self.literal_ids,
+                        ),
+                        iterable_language_item.as_ref().map(|item| {
+                            IterationResolutionEnvironment::new(
+                                item,
+                                &generic_interface_specializations,
+                            )
+                        }),
                     ),
                 ),
                 &mut self.type_interner,
@@ -984,17 +1019,17 @@ impl<'ast> ProgramResolver<'ast> {
     fn resolve_function_bodies(
         &mut self,
         lookups: ProgramLookupTables<'_>,
-        functions: &ResolvedFunctionDeclarationTable,
-        classes: &ResolvedClassDeclarationTable,
-        hierarchy: &ResolvedClassHierarchy,
-        interfaces: &ResolvedInterfaceDeclarationTable,
+        declarations: BodyDeclarationEnvironment<'_>,
         string_language_item: Option<&ResolvedStringLanguageItem>,
+        iterable_language_item: Option<&ResolvedIterableLanguageItem>,
+        generic_interface_specializations: &GenericInterfaceSpecializationTable,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
-        let mut definitions = Vec::with_capacity(functions.len());
+        let mut definitions = Vec::with_capacity(declarations.functions.len());
         for unit in &self.units {
             let lookup = lookups.for_unit(unit, &self.modules);
             for item in &unit.function_work {
-                let declaration = functions
+                let declaration = declarations
+                    .functions
                     .get(item.id)
                     .expect("function work and declaration table must agree");
                 let syntax::TopLevelDeclaration::Function(function) =
@@ -1009,14 +1044,19 @@ impl<'ast> ProgramResolver<'ast> {
                     &function.body,
                     BodyResolutionEnvironment::new(
                         lookup,
-                        functions,
-                        classes,
-                        interfaces,
-                        hierarchy,
+                        declarations,
                         self.has_module_context,
-                        StringLiteralResolutionEnvironment::new(
-                            string_language_item,
-                            &self.literal_ids,
+                        BodyLanguageItemEnvironment::new(
+                            StringLiteralResolutionEnvironment::new(
+                                string_language_item,
+                                &self.literal_ids,
+                            ),
+                            iterable_language_item.map(|item| {
+                                IterationResolutionEnvironment::new(
+                                    item,
+                                    generic_interface_specializations,
+                                )
+                            }),
                         ),
                     ),
                     &mut self.type_interner,

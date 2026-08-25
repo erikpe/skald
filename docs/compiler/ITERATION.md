@@ -1,11 +1,10 @@
 # General-Iteration Compiler Contract
 
-Status: frozen compiler design with source syntax and canonical protocol
-identity implemented. Syntax retains structured `for-in`; the module graph
-attaches its keyword spans as typed dependency evidence; and resolution
-validates exact `std::iter::Iterable` identities before issuing an intentional
-selection-pending diagnostic. Resolved iteration and lower phases remain
-unimplemented. The [language status matrix](../language/STATUS.md) remains
+Status: frozen compiler design with syntax, canonical protocol identity, and
+nominal resolution implemented. Resolution retains exact selected interface,
+requirement, item/state, local, and loop identities. Type checking issues an
+intentional construction-pending diagnostic until structured iteration HIR is
+implemented. The [language status matrix](../language/STATUS.md) remains
 authoritative for implementation maturity.
 
 This document owns the selected phase, lifetime, verification, target, and ABI
@@ -20,8 +19,9 @@ Request-local module resolution loads the exact `std::iter` module through the
 ordinary standard-library provider. Resolution validates one public generic
 interface named `Iterable` with exactly two parameters and the exact
 `iter_state` and `iter_next` requirements from the language contract. The
-validated declaration supplies ordinary template, closed `InterfaceId`, and
-requirement identities; lower phases do not recognize source spelling.
+validated declaration supplies template identities; each selected closed
+application supplies its ordinary `InterfaceId` and requirement identities.
+Lower phases do not recognize source spelling.
 
 The compiler does not synthesize the declaration, accept a lookalike module,
 or use structural method lookup. Missing, inaccessible, ambiguous, or malformed
@@ -48,9 +48,6 @@ recognize the same statement shape.
 
 This syntax boundary is implemented, including deterministic dumps, logical
 depth checking of the iterable, generic-source request scanning, and recovery.
-The current resolver gate intentionally visits neither the iterable nor body,
-preventing guessed item types and secondary name diagnostics before selection
-exists.
 
 Resolution allocates a callable-local `LoopId` in source order and a body-local
 binding identity. The iterable expression resolves outside that binding's
@@ -62,6 +59,17 @@ evidence needed for type checking. Selection is over exact closed
 `Iterable<Item, State>` claims or an already selected generic-bound
 requirement. An explicit annotation is an exact candidate filter. Candidate
 order must not affect acceptance, diagnostics, or dumps.
+
+This resolution boundary is implemented. Exact candidates are enumerated from
+direct, inherited, specialized-generic, and interface-view claims and sorted by
+closed interface identity. A successful statement owns a source-ordered
+`LoopId`, an exact `ResolvedLocal`, the resolved iterable, selected interface
+and requirement IDs, `Item` and `State`, origin and source spans, and a resolved
+body. Generic-bound selection is recorded structurally during template
+checking and substituted to ordinary identities during specialization; the
+closed concrete type is never searched again. Missing, ambiguous, mismatched,
+structural-lookalike, and noncanonical cases remain deterministic resolution
+errors.
 
 ## Typed HIR plan
 

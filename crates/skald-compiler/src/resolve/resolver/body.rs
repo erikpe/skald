@@ -16,6 +16,7 @@ mod allocation;
 mod call;
 mod dereference;
 mod indirect_call;
+mod iteration;
 mod place;
 mod statement;
 mod structural_bracket;
@@ -51,8 +52,68 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     hierarchy: &'program ResolvedClassHierarchy,
     has_module_context: bool,
-    string_literals: StringLiteralResolutionEnvironment<'program>,
+    language_items: BodyLanguageItemEnvironment<'program>,
     specialization: Option<BodySpecializationEnvironment<'program>>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct BodyDeclarationEnvironment<'program> {
+    pub(super) functions: &'program ResolvedFunctionDeclarationTable,
+    pub(super) classes: &'program ResolvedClassDeclarationTable,
+    pub(super) interfaces: &'program ResolvedInterfaceDeclarationTable,
+    pub(super) hierarchy: &'program ResolvedClassHierarchy,
+}
+
+impl<'program> BodyDeclarationEnvironment<'program> {
+    pub(super) const fn new(
+        functions: &'program ResolvedFunctionDeclarationTable,
+        classes: &'program ResolvedClassDeclarationTable,
+        interfaces: &'program ResolvedInterfaceDeclarationTable,
+        hierarchy: &'program ResolvedClassHierarchy,
+    ) -> Self {
+        Self {
+            functions,
+            classes,
+            interfaces,
+            hierarchy,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct BodyLanguageItemEnvironment<'program> {
+    string_literals: StringLiteralResolutionEnvironment<'program>,
+    iteration: Option<IterationResolutionEnvironment<'program>>,
+}
+
+impl<'program> BodyLanguageItemEnvironment<'program> {
+    pub(super) const fn new(
+        string_literals: StringLiteralResolutionEnvironment<'program>,
+        iteration: Option<IterationResolutionEnvironment<'program>>,
+    ) -> Self {
+        Self {
+            string_literals,
+            iteration,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct IterationResolutionEnvironment<'program> {
+    language_item: &'program ResolvedIterableLanguageItem,
+    applications: &'program GenericInterfaceSpecializationTable,
+}
+
+impl<'program> IterationResolutionEnvironment<'program> {
+    pub(super) const fn new(
+        language_item: &'program ResolvedIterableLanguageItem,
+        applications: &'program GenericInterfaceSpecializationTable,
+    ) -> Self {
+        Self {
+            language_item,
+            applications,
+        }
+    }
 }
 
 /// Closed template information consulted only while resolving a generated
@@ -109,6 +170,33 @@ impl<'program> BodySpecializationEnvironment<'program> {
                 closed.map(|closed| (closed.interface, closed.requirement))
             })
     }
+
+    fn iteration_selection(self, span: Span) -> Option<ResolvedIterableSelection> {
+        self.semantics
+            .selections
+            .iter()
+            .zip(&self.specialization.closed_iteration_selections)
+            .find_map(|(selection, closed)| {
+                let ResolvedTemplateSelection::Iteration {
+                    span: selection_span,
+                    ..
+                } = selection
+                else {
+                    return None;
+                };
+                if *selection_span != span {
+                    return None;
+                }
+                closed.map(|closed| ResolvedIterableSelection {
+                    interface: closed.interface,
+                    iter_state: closed.iter_state,
+                    iter_next: closed.iter_next,
+                    item: closed.item,
+                    state: closed.state,
+                    origin_span: closed.origin_span,
+                })
+            })
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -129,21 +217,18 @@ impl<'program> StringLiteralResolutionEnvironment<'program> {
 impl<'program> BodyResolutionEnvironment<'program> {
     pub(super) fn new(
         lookup: ModuleLookup<'program>,
-        functions: &'program ResolvedFunctionDeclarationTable,
-        classes: &'program ResolvedClassDeclarationTable,
-        interfaces: &'program ResolvedInterfaceDeclarationTable,
-        hierarchy: &'program ResolvedClassHierarchy,
+        declarations: BodyDeclarationEnvironment<'program>,
         has_module_context: bool,
-        string_literals: StringLiteralResolutionEnvironment<'program>,
+        language_items: BodyLanguageItemEnvironment<'program>,
     ) -> Self {
         Self {
             lookup,
-            functions,
-            classes,
-            interfaces,
-            hierarchy,
+            functions: declarations.functions,
+            classes: declarations.classes,
+            interfaces: declarations.interfaces,
+            hierarchy: declarations.hierarchy,
             has_module_context,
-            string_literals,
+            language_items,
             specialization: None,
         }
     }
@@ -502,9 +587,14 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     );
                     return None;
                 }
-                let item = self.environment.string_literals.language_item?;
+                let item = self
+                    .environment
+                    .language_items
+                    .string_literals
+                    .language_item?;
                 let data = *self
                     .environment
+                    .language_items
                     .string_literals
                     .ids
                     .get(&literal.span)

@@ -615,8 +615,8 @@ contextual only at the delimiter position in a `for` header and remains an
 ordinary identifier elsewhere, including as the binding itself. Syntax
 retains the binding, optional annotation, iterable, body, header delimiters,
 and complete spans. Resolution currently emits one intentional implementation
-gate before it creates an item binding or resolves the body. Exact protocol
-selection, binding inference, execution, and cleanup are owned by
+gate after selecting an exact nominal application, creating the exact-typed
+item binding, and resolving the body. Structured HIR, execution, and cleanup are owned by
 [General Iteration](ITERATION.md).
 
 ## Expressions

@@ -1977,16 +1977,17 @@ control effects. HIR-to-MIR lowering expands that structure into ordinary
 interface calls, mutable state aliases, optional presence and payload
 operations, storage epochs, cleanup, branches, jumps, and the existing
 loop-context destinations. No dedicated iteration operation reaches MIR,
-verification, or a backend. This extension is frozen but not yet present in
-current phase products.
+verification, or a backend. The dedicated source and resolved forms are
+implemented; typed HIR and lower phase products remain pending.
 
 Its canonical protocol foundation is already present before executable body
 resolution: typed module-edge evidence identifies the canonical dependency,
 and `ResolvedProgram` may retain validated `Iterable` template, `Item` and
 `State` parameter, and `iter_state` and `iter_next` requirement identities.
-Explicit canonical imports and direct canonical-module compilation currently
-supply that evidence; `for-in` syntax will supply it implicitly. These
-resolution-only identities do not add a statement or operation to current HIR
+Explicit canonical imports, direct canonical-module compilation, and `for-in`
+syntax supply that evidence. Resolved loops additionally retain exact closed
+interface and requirement identities, `Item`, `State`, loop/local IDs, and the
+body. These resolution-only identities do not add an operation to current HIR
 or MIR.
 
 The initial lowering form has these semantic regions:

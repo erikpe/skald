@@ -93,7 +93,8 @@ pub(super) fn infer_declaration_requirements(
             | ResolvedTemplateTypeUseContext::ConstructionTarget { .. }
             | ResolvedTemplateTypeUseContext::StaticSelectionTarget { .. }
             | ResolvedTemplateTypeUseContext::ArrayConstructionTarget { .. }
-            | ResolvedTemplateTypeUseContext::OptionalBoxTarget { .. } => {}
+            | ResolvedTemplateTypeUseContext::OptionalBoxTarget { .. }
+            | ResolvedTemplateTypeUseContext::IterationItemAnnotation { .. } => {}
         }
     }
     requirements

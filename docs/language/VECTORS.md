@@ -174,9 +174,9 @@ The separately frozen [general-iteration contract](ITERATION.md) will make
 `Vec<T>` an ordinary `Iterable<T, u64>` implementation. Index zero is its
 initial state; each next call checks the current logical length, copies one
 element through existing Vec capabilities, advances the state, and returns
-outer absence at the end. `for-in` syntax is parsed but intentionally gated
-before selection; the Vec conformance and loop semantics are not yet
-implemented and add no vector intrinsic or mandatory iterator allocation.
+outer absence at the end. `for-in` nominal selection is implemented, while the
+Vec conformance, structured HIR, and loop execution are not yet implemented
+and add no vector intrinsic or mandatory iterator allocation.
 
 ## Deliberate limits
 
