@@ -326,8 +326,8 @@ The frozen initial profile excludes:
 - compiler-generated interfaces or conformances for primitive types;
 - operator protocols, operator overloading, and primitive operator lowering
   through interfaces;
-- iterable, iterator, range, generator, or sequence standard protocols and all
-  new loop syntax or lowering;
+- iteration, iterator, range, generator, or sequence protocols and new loop
+  lowering within the generic-interface implementation itself;
 - generic functions, generic methods, generic constructors, and requirement-
   local type parameters;
 - inference, defaults, placeholders, wildcards, raw types, generic aliases,
@@ -341,9 +341,11 @@ The frozen initial profile excludes:
   specialization; and
 - separate-compilation or stable package ABI for templates.
 
-Future `Iterable<Item, State>` or `Add<Right, Result>` interfaces can use this
-contract. Primitive conformances, operator syntax and lowering, iteration
-semantics, and optimization guarantees require separate designs.
+The separately frozen
+[general-iteration contract](ITERATION.md) uses this implemented foundation for
+`Iterable<Item, State>`. A future `Add<Right, Result>` interface can do the
+same. Primitive conformances, operator syntax and lowering, range semantics,
+and optimization guarantees require separate designs.
 
 The [generic-interface compiler contract](../compiler/GENERIC_INTERFACES.md)
 defines template identities, specialization, phase boundaries, witness

@@ -362,12 +362,14 @@ test placement remains governed by [Testing](../development/TESTING.md#test-laye
 
 ## Deliberate exclusions
 
-This compiler contract does not provide primitive conformances, operator
-protocols or overloading, iteration protocols or loop lowering, generic
-functions or methods, inference, defaults, variance, associated types,
+This compiler contract does not itself provide primitive conformances,
+operator protocols or overloading, iteration protocols or loop lowering,
+generic functions or methods, inference, defaults, variance, associated types,
 interface inheritance, default methods, structural conformance, erased
 generics, runtime dictionaries, reflection, runtime specialization, or stable
-separate-compilation template ABI.
+separate-compilation template ABI. The separately frozen
+[general-iteration compiler contract](ITERATION.md) is a future consumer of
+the implemented closed-interface machinery.
 
 The archived
 [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) preserves the

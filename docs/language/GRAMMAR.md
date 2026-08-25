@@ -594,6 +594,23 @@ loop exits carry no value, and labels are not part of the exit syntax.
 The corresponding semantics are owned by
 [Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 
+### Frozen general-iteration extension
+
+The following syntax is selected for implementation but is not accepted by
+the current parser:
+
+```text
+for-in-statement = "for" "(" identifier [":" storage-type]
+                   "in" expression ")" block
+```
+
+The parentheses and body block are mandatory. `for-in` is a statement and the
+binding is visible only in the body. When this extension is implemented,
+`for` becomes a reserved keyword; `in` is contextual only at the delimiter
+position in a `for` header and remains an ordinary identifier elsewhere.
+Exact protocol selection, binding inference, execution, and cleanup are owned
+by [General Iteration](ITERATION.md).
+
 ## Expressions
 
 ```text

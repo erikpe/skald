@@ -1,9 +1,11 @@
 # General Iteration Design Proposal
 
-Status: draft design proposal. ITER1 through ITER16 record the proposed
-direction and remain open until confirmed together. The implemented grammar
-and living language and compiler contracts remain authoritative until this
-design is frozen, promoted, and implemented.
+Status: frozen design proposal. ITER1 through ITER16 were confirmed together
+on 2026-08-25 and promoted into the focused
+[language](../language/ITERATION.md) and
+[compiler](../compiler/ITERATION.md) contracts before roadmap creation. The
+[status matrix](../language/STATUS.md) remains authoritative for compiler
+availability while implementation is pending.
 
 This proposal adds nominal state-based iteration and a general
 `for (item in iterable)` statement to Skald. Iteration is expressed by the
@@ -21,7 +23,8 @@ range can implement the same interface without changing `for` semantics.
 The [status matrix](../language/STATUS.md) remains authoritative for compiler
 availability, and the
 [implemented grammar](../language/GRAMMAR.md) remains the exact accepted
-syntax. This proposal does not make `for`, `in`, or `std::iter` executable.
+syntax. Freezing this proposal does not by itself make `for`, `in`, or
+`std::iter` executable.
 
 ## Intended outcome
 
@@ -181,28 +184,28 @@ composition, and explicit ownership anchors control this proposal.
 
 ## Decision register
 
-| ID | Decision | Proposed direction | State |
+| ID | Decision | Confirmed direction | State |
 |---|---|---|---|
-| [ITER1](#iter1--source-syntax-and-binding) | Source form | Add `for (name [: Type] in expression) block`; reserve `for` and recognize `in` contextually in the header | **Proposed** |
-| [ITER2](#iter2--canonical-iterable-interface) | Protocol | Use compiler-recognized, library-declared `std::iter::Iterable<Item, State>` with `iter_state` and `iter_next` | **Proposed** |
-| [ITER3](#iter3--termination-and-optional-items) | Termination | Treat outer `none` as termination and outer presence as one item, preserving nested optionality | **Proposed** |
-| [ITER4](#iter4--eligibility-selection-and-ambiguity) | Selection | Require one exact nominal application; use an explicit item annotation only as an exact candidate filter | **Proposed** |
-| [ITER5](#iter5--generic-bounds-and-definition-site-selection) | Generics | Permit selection through an `Iterable<Item, State>` bound and freeze its requirement identities before specialization | **Proposed** |
-| [ITER6](#iter6--iterable-evaluation-and-loop-duration-receiver) | Receiver | Evaluate once and retain one read-only loop-duration interface view with any required owner, guard, or anchor | **Proposed** |
-| [ITER7](#iter7--state-item-and-result-lifetimes) | Ownership | Initialize one owning state; create one optional result attempt and one fresh owning item per entered iteration | **Proposed** |
-| [ITER8](#iter8--evaluation-order-and-observable-effects) | Effects | Acquire receiver, initialize state, then call `iter_next` sequentially; perform no speculative or duplicate call | **Proposed** |
-| [ITER9](#iter9--break-continue-return-and-cleanup) | Loop exits | Reuse nearest-loop identities and clean item/result/body before the next attempt or loop exit, then state and receiver | **Proposed** |
-| [ITER10](#iter10--mutation-dispatch-and-source-stability) | Mutation | Keep a read-only, non-exclusive receiver; allow ordinary independent mutation while anchors and checked views remain valid | **Proposed** |
-| [ITER11](#iter11--compiler-phase-and-ir-boundaries) | Representation | Retain source and HIR `for-in` forms, then lower to ordinary call, optional, lifetime, branch, and loop MIR | **Proposed** |
-| [ITER12](#iter12--standard-library-adoption) | Library | Add dependency-free `std::iter` and make `Vec<T>` an ordinary `Iterable<T, u64>` implementation | **Proposed** |
-| [ITER13](#iter13--diagnostics-dumps-and-testing) | Quality | Diagnose canonical-interface, candidate, item, state, receiver, and scope failures with deterministic identities and spans | **Proposed** |
-| [ITER14](#iter14--performance-and-optimization-boundary) | Performance | Require allocation-free state when the implementation chooses an inline state; defer devirtualization and fast paths | **Proposed** |
-| [ITER15](#iter15--initial-exclusions-and-future-consumers) | Boundary | Exclude ranges, operators, intrinsic arrays/primitives, borrowed or mutable items, generators, labels, and loop values | **Proposed** |
-| [ITER16](#iter16--promotion-and-delivery-boundary) | Delivery | Confirm the register together, promote living contracts, then create a PR-sized implementation roadmap | **Proposed** |
+| [ITER1](#iter1--source-syntax-and-binding) | Source form | Add `for (name [: Type] in expression) block`; reserve `for` and recognize `in` contextually in the header | **Confirmed** |
+| [ITER2](#iter2--canonical-iterable-interface) | Protocol | Use compiler-recognized, library-declared `std::iter::Iterable<Item, State>` with `iter_state` and `iter_next` | **Confirmed** |
+| [ITER3](#iter3--termination-and-optional-items) | Termination | Treat outer `none` as termination and outer presence as one item, preserving nested optionality | **Confirmed** |
+| [ITER4](#iter4--eligibility-selection-and-ambiguity) | Selection | Require one exact nominal application; use an explicit item annotation only as an exact candidate filter | **Confirmed** |
+| [ITER5](#iter5--generic-bounds-and-definition-site-selection) | Generics | Permit selection through an `Iterable<Item, State>` bound and freeze its requirement identities before specialization | **Confirmed** |
+| [ITER6](#iter6--iterable-evaluation-and-loop-duration-receiver) | Receiver | Evaluate once and retain one read-only loop-duration interface view with any required owner, guard, or anchor | **Confirmed** |
+| [ITER7](#iter7--state-item-and-result-lifetimes) | Ownership | Initialize one owning state; create one optional result attempt and one fresh owning item per entered iteration | **Confirmed** |
+| [ITER8](#iter8--evaluation-order-and-observable-effects) | Effects | Acquire receiver, initialize state, then call `iter_next` sequentially; perform no speculative or duplicate call | **Confirmed** |
+| [ITER9](#iter9--break-continue-return-and-cleanup) | Loop exits | Reuse nearest-loop identities and clean item/result/body before the next attempt or loop exit, then state and receiver | **Confirmed** |
+| [ITER10](#iter10--mutation-dispatch-and-source-stability) | Mutation | Keep a read-only, non-exclusive receiver; allow ordinary independent mutation while anchors and checked views remain valid | **Confirmed** |
+| [ITER11](#iter11--compiler-phase-and-ir-boundaries) | Representation | Retain source and HIR `for-in` forms, then lower to ordinary call, optional, lifetime, branch, and loop MIR | **Confirmed** |
+| [ITER12](#iter12--standard-library-adoption) | Library | Add dependency-free `std::iter` and make `Vec<T>` an ordinary `Iterable<T, u64>` implementation | **Confirmed** |
+| [ITER13](#iter13--diagnostics-dumps-and-testing) | Quality | Diagnose canonical-interface, candidate, item, state, receiver, and scope failures with deterministic identities and spans | **Confirmed** |
+| [ITER14](#iter14--performance-and-optimization-boundary) | Performance | Require allocation-free state when the implementation chooses an inline state; defer devirtualization and fast paths | **Confirmed** |
+| [ITER15](#iter15--initial-exclusions-and-future-consumers) | Boundary | Exclude ranges, operators, intrinsic arrays/primitives, borrowed or mutable items, generators, labels, and loop values | **Confirmed** |
+| [ITER16](#iter16--promotion-and-delivery-boundary) | Delivery | Confirm the register together, promote living contracts, then create a PR-sized implementation roadmap | **Confirmed** |
 
 ## ITER1 — Source syntax and binding
 
-The proposed grammar extension is:
+The confirmed grammar extension is:
 
 ```text
 statement             = ...
@@ -540,7 +543,7 @@ from a read-only receiver, and state mutation occurs through its explicit
 
 ## ITER11 — Compiler phase and IR boundaries
 
-The proposed ownership boundary is:
+The confirmed ownership boundary is:
 
 - **Lexing and syntax** reserve `for`, recognize contextual header `in`, retain
   the optional annotation, iterable expression, body, punctuation, and exact
@@ -717,19 +720,22 @@ Confirmation requires ITER1 through ITER16 to be accepted together. Partial
 confirmation would leave source syntax, protocol shape, receiver lifetime,
 optional termination, and lowering mutually underspecified.
 
-After confirmation:
+Confirmation completed these promotion actions:
 
-1. promote exact source-visible behavior into a focused general-iteration
+1. promoted exact source-visible behavior into a focused general-iteration
    language contract and the implemented grammar as a frozen extension;
-2. promote phase, receiver, HIR, MIR, verification, target, and ABI boundaries
+2. promoted phase, receiver, HIR, MIR, verification, target, and ABI boundaries
    into the compiler documentation;
-3. update the status matrix to `Frozen design` while implementation remains
+3. updated the status matrix to `Frozen design` while implementation remains
    absent;
-4. create and index a PR-sized implementation roadmap ordered by contracts,
+4. created and indexed a PR-sized implementation roadmap ordered by contracts,
    syntax and identity, protocol selection, structured HIR, MIR cleanup,
    standard-library adoption, native execution, and hardening; and
-5. keep operator overloading and range syntax in separate proposals and
-   roadmaps whose dependencies point to the implemented iteration contract.
+5. kept operator overloading and range syntax in separate future proposals and
+   roadmaps whose dependencies can point to the implemented iteration contract.
+
+The resulting delivery order is the active
+[general-iteration implementation roadmap](GENERAL_ITERATION_ROADMAP.md).
 
 Implementation completes only after every accepted receiver and item family,
 generic-bound path, loop exit, cleanup edge, diagnostic, dump, standard-library

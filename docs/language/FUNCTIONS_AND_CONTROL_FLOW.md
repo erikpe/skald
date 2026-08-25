@@ -390,9 +390,11 @@ callable therefore cannot rely only on such a loop to satisfy its return
 requirement. Later constant folding may remove an executable false edge but
 does not change source acceptance or definite-return diagnostics.
 
-`for`, `for ... in`, `do while`, an unconditional `loop` form,
-iterator protocols, loop expressions, value-carrying `break`, loop `else`,
-and labels remain unfrozen.
+The general `for (item in expression)` statement and nominal state-based
+iteration protocol have a separate
+[frozen contract](ITERATION.md). They are not accepted by the current
+compiler. `do while`, an unconditional `loop` form, loop expressions,
+value-carrying `break`, loop `else`, and labels remain unfrozen.
 
 ## Returns and definite return
 
@@ -555,9 +557,11 @@ smaller statements. The exact syntax-budget behavior is documented in
 
 ## Unsupported control flow and callability
 
-Other loop forms, iteration and iterator protocols, closures, and lambda
-literals are neither implemented nor frozen. Capture-free function values and
-calls through function-typed expressions are implemented under the separate
+General `for-in` iteration is frozen separately in
+[General Iteration](ITERATION.md) but is not implemented. Other loop forms,
+broader iterator protocols, closures, and lambda literals are neither
+implemented nor frozen. Capture-free function values and calls through
+function-typed expressions are implemented under the separate
 [Capture-Free Function Values](FUNCTION_VALUES.md) contract. No semantics for
 open callability features should be inferred from legacy examples.
 

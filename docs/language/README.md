@@ -147,6 +147,11 @@ makes a result source-observable.
 - [Feature status](STATUS.md) is the sole matrix for language maturity and
   current compiler support.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
+- [General iteration](ITERATION.md) defines the frozen nominal
+  `Iterable<Item, State>` protocol, `for-in` selection and binding, one-time
+  receiver and state setup, optional termination, lifetimes, loop exits, and
+  standard-library adoption boundary. The current compiler does not yet
+  accept the frozen syntax.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, operator availability, and the
   complete implemented primitive operator profile and complete explicit

@@ -212,6 +212,14 @@ backend metadata without runtime dictionaries or an ABI change. The
 [conformance matrix](GENERIC_INTERFACES_TEST_MATRIX.md) maps the complete
 contract and its exclusions to executable evidence.
 
+The frozen [general-iteration compiler contract](ITERATION.md) selects one
+canonical closed `std::iter::Iterable<Item, State>` application, retains a
+structured source and HIR loop with a loop-duration receiver plan, and lowers
+it to ordinary interface calls, optional operations, ownership cleanup, and
+cyclic MIR. It deliberately adds no iterator MIR operation, backend primitive,
+runtime service, or ABI revision. The current compiler does not yet implement
+this contract.
+
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
 The x86-64 target executes inline and shared-outer arrays containing

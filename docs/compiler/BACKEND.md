@@ -428,6 +428,20 @@ acceptance, and observable per-iteration cleanup. Those tests prove mechanical
 realization of verified MIR; they do not establish source legality or repair
 invalid lifetime state.
 
+### Frozen general-iteration target boundary
+
+The frozen [general-iteration compiler contract](ITERATION.md) lowers
+`for-in` before the backend boundary. A target receives only verified ordinary
+interface calls, optional operations, storage lifetimes, cleanup, branches,
+jumps, and cyclic CFG. It neither distinguishes `for-in` from `while` nor
+implements protocol selection, state progression, termination, lexical loop
+identity, or loop-duration ownership.
+
+State and item values use their ordinary exact layouts and calling convention;
+interface calls use existing witness metadata. The mechanism adds no required
+allocation, target opcode, metadata format, or optimization guarantee. This
+boundary is frozen but not yet exercised by compiler-generated iteration MIR.
+
 ## Implemented standard I/O target boundary
 
 Standard I/O has five dedicated verified MIR operations which the x86-64

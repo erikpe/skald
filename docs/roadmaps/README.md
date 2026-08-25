@@ -12,17 +12,26 @@ interfaces roadmap is preserved in the
 
 ## Planned
 
-No implementation roadmap is currently waiting to start.
+The [general iteration roadmap](GENERAL_ITERATION_ROADMAP.md) is planned.
+`IT0` is next: add and validate the canonical dependency-free
+`std::iter::Iterable<Item, State>` language item. Later tasks add syntax and
+loop identities, nominal selection, structured HIR, ordinary MIR CFG,
+loop-duration receiver and value composition, ordinary `Vec<T>` adoption,
+hardening, native evidence, and release closure. Generic interfaces and
+ordinary `while`/optional/ownership machinery are implemented prerequisites;
+operator overloading and numeric ranges are deferred consumers.
 
 ## Design proposals
 
-The draft [general iteration design proposal](GENERAL_ITERATION_DESIGN_PROPOSAL.md)
+The frozen [general iteration design proposal](GENERAL_ITERATION_DESIGN_PROPOSAL.md)
 defines nominal `Iterable<Item, State>` selection, structured
 `for (item in iterable)` semantics, loop-duration receiver and state
 lifetimes, optional termination, loop exits, phase boundaries, and ordinary
-`Vec<T>` adoption. Its decision register remains open; operator overloading,
-numeric ranges, range syntax, and intrinsic array conformance are explicit
-future consumers rather than part of this proposal.
+`Vec<T>` adoption. Its complete decision register was confirmed on 2026-08-25,
+promoted into focused living language and compiler contracts, and translated
+into the active implementation roadmap above. Operator overloading, numeric
+ranges, range syntax, and intrinsic array conformance remain explicit future
+consumers rather than part of this proposal.
 
 The confirmed generic interfaces decisions and completed delivery history are
 preserved in the

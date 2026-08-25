@@ -1968,6 +1968,18 @@ representation is verified through the MIR pass boundary and native backend
 for zero, repeated, nested, returning, breaking, continuing, and
 ownership-heavy cases.
 
+The frozen [general-iteration compiler contract](ITERATION.md) extends this
+boundary with a dedicated source, resolved, and typed-HIR `for-in` form. HIR
+retains exact canonical interface and requirement identities, `Item`, `State`,
+the iterable expression, a loop-duration read-only receiver plan, state and
+optional-result lifecycle, the item binding, body, loop identity, spans, and
+control effects. HIR-to-MIR lowering expands that structure into ordinary
+interface calls, mutable state aliases, optional presence and payload
+operations, storage epochs, cleanup, branches, jumps, and the existing
+loop-context destinations. No dedicated iteration operation reaches MIR,
+verification, or a backend. This extension is frozen but not yet present in
+current phase products.
+
 The initial lowering form has these semantic regions:
 
 ```text

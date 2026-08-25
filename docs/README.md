@@ -41,6 +41,9 @@ Use the authority closest to the behavior:
   [optional values](language/OPTIONAL_VALUES.md);
 - callable, binding, statement, return, and evaluation-order semantics belong
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);
+- the frozen nominal `Iterable<Item, State>` protocol, `for-in` selection,
+  termination, and source-visible loop lifetimes belong in
+  [general iteration](language/ITERATION.md);
 - exact classes, inline containment, receivers, ordinary initializer
   overloading, explicit copy construction, and object places belong in
   [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
@@ -71,6 +74,9 @@ Use the authority closest to the behavior:
 - phase products, IR responsibilities, verification, dumps, trust boundaries,
   and the frozen primitive operator representation belong in
   [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- frozen canonical iteration identity, structured HIR, receiver ownership,
+  MIR expansion, verification, target, and ABI boundaries belong in the
+  [general-iteration compiler contract](compiler/ITERATION.md);
 - frozen multiple-file providers, filesystem resolution, entry selection,
   identities, loading, and linkage belong in the
   [module-system compiler contract](compiler/MODULE_SYSTEM.md);
