@@ -1,12 +1,12 @@
 # General-Iteration Compiler Contract
 
-Status: frozen compiler design with canonical protocol identity implemented.
-The module graph has typed general-iteration dependency evidence and resolution
-validates and records exact `std::iter::Iterable` template, parameter, and
-requirement identities. No current phase product contains `for-in`, and source
-syntax does not yet populate the implicit dependency evidence. The
-[language status matrix](../language/STATUS.md) remains authoritative for
-implementation maturity.
+Status: frozen compiler design with source syntax and canonical protocol
+identity implemented. Syntax retains structured `for-in`; the module graph
+attaches its keyword spans as typed dependency evidence; and resolution
+validates exact `std::iter::Iterable` identities before issuing an intentional
+selection-pending diagnostic. Resolved iteration and lower phases remain
+unimplemented. The [language status matrix](../language/STATUS.md) remains
+authoritative for implementation maturity.
 
 This document owns the selected phase, lifetime, verification, target, and ABI
 boundaries for the frozen
@@ -29,14 +29,14 @@ canonical declarations stop before typed HIR with deterministic diagnostics.
 The declaration remains ordinary dependency-free Skald source and participates
 in normal module visibility and generic-interface specialization.
 
-This canonical identity boundary is implemented. Explicit imports and direct
-canonical-module compilation provide current requirement evidence. Module
-edges separately retain explicit-import spans and typed compiler-dependency
-spans; the general-iteration kind is ready for the parser to populate without
-creating an import binding. Missing and ambiguous modules retain ordinary
-provider diagnostics, malformed declarations use a focused resolution
-diagnostic, and valid closed applications continue through the existing
-generic-interface specialization coordinator.
+This canonical identity boundary is implemented. Successfully parsed `for-in`
+keywords, explicit imports, and direct canonical-module compilation provide
+requirement evidence. Module edges separately retain explicit-import spans and
+typed compiler-dependency spans, so implicit acquisition creates no import
+binding. Missing and ambiguous modules retain ordinary provider diagnostics,
+malformed declarations use a focused resolution diagnostic, and valid closed
+applications continue through the existing generic-interface specialization
+coordinator.
 
 ## Syntax and resolution
 
@@ -45,6 +45,12 @@ binding, optional annotation, iterable-expression, body, and complete spans.
 Recovery must preserve later statements and distinguish a missing contextual
 `in` delimiter from an expression error. Generic-template body discovery must
 recognize the same statement shape.
+
+This syntax boundary is implemented, including deterministic dumps, logical
+depth checking of the iterable, generic-source request scanning, and recovery.
+The current resolver gate intentionally visits neither the iterable nor body,
+preventing guessed item types and secondary name diagnostics before selection
+exists.
 
 Resolution allocates a callable-local `LoopId` in source order and a body-local
 binding identity. The iterable expression resolves outside that binding's

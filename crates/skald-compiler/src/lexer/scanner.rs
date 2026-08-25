@@ -152,6 +152,7 @@ impl<'source> Lexer<'source> {
             "elif" => TokenKind::Elif,
             "else" => TokenKind::Else,
             "while" => TokenKind::While,
+            "for" => TokenKind::For,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             "unit" => TokenKind::Unit,

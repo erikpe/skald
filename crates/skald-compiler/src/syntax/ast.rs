@@ -600,6 +600,7 @@ pub enum Statement {
     Expression(ExpressionStatement),
     Conditional(ConditionalStatement),
     While(WhileStatement),
+    ForIn(ForInStatement),
     Block(Block),
     FieldAssignment(FieldAssignmentStatement),
     ObjectAssignment(ObjectAssignmentStatement),
@@ -616,6 +617,7 @@ impl Statement {
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
+            Self::ForIn(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
@@ -698,6 +700,26 @@ pub struct WhileStatement {
     pub while_span: Span,
     pub condition: Expression,
     pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ForInStatement {
+    pub for_span: Span,
+    pub left_paren_span: Span,
+    pub binding: Name,
+    pub annotation: Option<ForInTypeAnnotation>,
+    pub in_span: Span,
+    pub iterable: Expression,
+    pub right_paren_span: Span,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ForInTypeAnnotation {
+    pub colon_span: Span,
+    pub type_syntax: TypeSyntax,
     pub span: Span,
 }
 

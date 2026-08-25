@@ -78,6 +78,11 @@ impl CallableResolver<'_, '_> {
             syntax::Statement::While(statement) => {
                 self.resolve_while(statement).map(ResolvedStatement::While)
             }
+            syntax::Statement::ForIn(statement) => {
+                self.diagnostics
+                    .push(super::super::general_iteration_selection_pending(statement));
+                None
+            }
             syntax::Statement::Block(block) => {
                 Some(ResolvedStatement::Block(self.resolve_block(block, true)))
             }

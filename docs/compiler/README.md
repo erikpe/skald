@@ -219,8 +219,10 @@ it to ordinary interface calls, optional operations, ownership cleanup, and
 cyclic MIR. It deliberately adds no iterator MIR operation, backend primitive,
 runtime service, or ABI revision. The canonical dependency-free source module,
 typed module-dependency evidence, structural template validation, exact
-resolved language-item identities, and deterministic dump are implemented;
-source syntax, selection, structured HIR, and lowering remain pending.
+resolved language-item identities, structured source syntax, implicit
+dependency activation, deterministic syntax dumps, and an intentional
+resolution gate are implemented; selection, resolved iteration, structured
+HIR, and lowering remain pending.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

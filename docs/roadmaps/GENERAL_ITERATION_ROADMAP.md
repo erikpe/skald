@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT0` is complete; `IT1` is next.
+Status: in progress. `IT1` is complete; `IT2` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -79,7 +79,7 @@ Every task preserves these cross-cutting decisions:
 | Task | Status | Outcome |
 |---|---|---|
 | [IT0](#it0--canonical-iterable-language-item) | [x] Complete | Canonical dependency-free `std::iter::Iterable<Item, State>` is loadable, validated, and represented by exact identities. |
-| [IT1](#it1--for-in-source-syntax) | [ ] Planned | Lexer, parser, AST, recovery, template scanning, and dumps retain the frozen statement shape. |
+| [IT1](#it1--for-in-source-syntax) | [x] Complete | Lexer, parser, AST, recovery, template scanning, and dumps retain the frozen statement shape. |
 | [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [ ] Planned | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
 | [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [ ] Planned | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans. |
 | [IT4](#it4--ordinary-mir-cfg-and-loop-exits) | [ ] Planned | Core iteration lowers to verified ordinary MIR with exact call order, storage epochs, and exit cleanup. |
@@ -112,7 +112,7 @@ Checklist:
 - [x] Add exactly the frozen public generic interface declaration in
   `std::iter`, with no imports or dependency cycle.
 - [x] Add typed `GeneralIteration` compiler-dependency evidence to module-graph
-  edges so `IT1` can attach parsed `for-in` spans and acquire `std::iter`
+  edges; `IT1` attaches parsed `for-in` spans and acquires `std::iter`
   without creating a source binding; preserve ordinary provider ambiguity and
   missing-module diagnostics.
 - [x] Validate module path, public visibility, interface kind, generic arity,
@@ -125,8 +125,8 @@ Checklist:
 - [x] Diagnose missing and ambiguous canonical modules through ordinary module
   lookup, and diagnose private, wrong-kind, wrong-arity, malformed, shadow, and
   incompatible declarations at canonical dependency evidence. Explicit
-  imports and direct `std::iter` entry provide current evidence; `IT1` will
-  provide the first `for-in` span through the typed dependency hook.
+  imports, direct `std::iter` entry, and `IT1` source syntax provide evidence
+  through the typed dependency hook.
 - [x] Expose stable resolved dump evidence without making source spelling a
   lower-phase discriminator.
 
@@ -135,8 +135,8 @@ Tests:
 - standard-library source parse and dependency-cycle coverage;
 - module-graph tests for typed compiler-dependency evidence and canonical path
   mapping, explicitly imported reuse, missing roots, ambiguous providers, and
-  same-named noncanonical interfaces; `IT1` adds the source-to-evidence parser
-  activation test;
+  same-named noncanonical interfaces; `IT1` covers source-to-evidence parser
+  activation;
 - resolver table/dump tests for exact generic and requirement identities;
 - one mutation case per structural validation rule; and
 - existing generic-interface specialization and standard-library tests.
@@ -149,8 +149,8 @@ Completion evidence: focused module-graph tests cover dependency kinds,
 missing and ambiguous providers; resolver tests cover the canonical source,
 exact metadata and dumps, ordinary closed specialization, noncanonical
 lookalikes, and one mutation per structural rule. The standard-library fixture
-includes the dependency-free module. `for-in` activation remains correctly in
-`IT1`, because IT0 does not reserve or parse the new keyword.
+includes the dependency-free module. Source activation remained correctly in
+`IT1` and is now attached to parsed `for-in` keyword spans.
 
 ## IT1 — For-in source syntax
 
@@ -167,18 +167,18 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Reserve `for` and recognize `in` contextually only after the optional
+- [x] Reserve `for` and recognize `in` contextually only after the optional
   item annotation in a `for` header.
-- [ ] Parse `for (name in expression) block` and
+- [x] Parse `for (name in expression) block` and
   `for (name: storage-type in expression) block` with mandatory delimiters and
   body.
-- [ ] Retain binding, annotation, iterable, body, delimiter, and complete spans
+- [x] Retain binding, annotation, iterable, body, delimiter, and complete spans
   in a dedicated AST node.
-- [ ] Add recovery for missing binding, colon type, contextual `in`, iterable,
+- [x] Add recovery for missing binding, colon type, contextual `in`, iterable,
   parentheses, and block without swallowing later statements.
-- [ ] Update generic body discovery, logical-depth checks, statement-start
+- [x] Update generic body discovery, logical-depth checks, statement-start
   inventories, exhaustive matches, and deterministic AST dumps.
-- [ ] Add an explicit resolver gate that diagnoses the parsed feature until
+- [x] Add an explicit resolver gate that diagnoses the parsed feature until
   canonical selection can determine an exact item type before body resolution.
   Do not add an untyped `ResolvedLocal` placeholder or resolve item member uses
   against guessed types.
@@ -194,6 +194,14 @@ Tests:
 Exit condition: syntax preserves the statement exactly and deterministically,
 and resolution stops it with one intentional diagnostic rather than an
 internal assertion or lossy rewrite.
+
+Completion evidence: lexer and syntax tests cover the reserved/contextual word
+policy, both header forms, nested and generic-template bodies, exact spans and
+dumps, logical-depth enforcement, and recovery for every mandatory component.
+Module-graph tests prove implicit canonical acquisition, explicit-edge reuse,
+typed keyword-span evidence, and ordinary missing/ambiguous providers.
+Resolution tests prove one selection-pending diagnostic for ordinary and
+generic-template bodies without guessed bindings or secondary name errors.
 
 ## IT2 — Nominal protocol selection and loop scopes
 
@@ -562,8 +570,8 @@ Checklist:
 - [ ] Run golden expectation and determinism checks for all new programs.
 - [ ] Change the status matrix and focused living docs from frozen/not
   implemented to implemented only after every preceding exit condition passes.
-- [ ] Replace frozen grammar wording with exact implemented syntax and add
-  `for-in` to the accepted statement/keyword inventories.
+- [ ] Remove the temporary resolution-gate wording from grammar and status
+  documentation after selection and lowering are implemented.
 - [ ] Remove stale future-language in loop, generic-interface, Vec, backend,
   and runtime docs while preserving explicit exclusions.
 - [ ] Mark every roadmap task complete, record final evidence, move the design

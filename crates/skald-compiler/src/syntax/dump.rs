@@ -560,6 +560,26 @@ impl AstDumper {
                     dumper.block(&statement.body);
                 });
             }
+            Statement::ForIn(statement) => {
+                self.line("ForIn", statement.span);
+                self.indented(|dumper| {
+                    dumper.line("ForKeyword", statement.for_span);
+                    dumper.line("LeftParen", statement.left_paren_span);
+                    dumper.named("Binding", &statement.binding.text, statement.binding.span);
+                    if let Some(annotation) = &statement.annotation {
+                        dumper.line("Annotation", annotation.span);
+                        dumper.indented(|dumper| {
+                            dumper.line("Colon", annotation.colon_span);
+                            dumper.type_syntax(&annotation.type_syntax);
+                        });
+                    }
+                    dumper.line("InDelimiter", statement.in_span);
+                    dumper.heading("Iterable");
+                    dumper.indented(|dumper| dumper.expression(&statement.iterable));
+                    dumper.line("RightParen", statement.right_paren_span);
+                    dumper.block(&statement.body);
+                });
+            }
             Statement::Block(block) => self.block(block),
             Statement::FieldAssignment(statement) => {
                 self.line("FieldAssignment", statement.span);

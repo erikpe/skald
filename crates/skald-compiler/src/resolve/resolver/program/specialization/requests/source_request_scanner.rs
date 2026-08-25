@@ -146,6 +146,13 @@ impl<'resolver, 'semantic, 'interner, 'diagnostics, 'lookup>
                 self.visit_expression(&statement.condition);
                 self.visit_block(&statement.body);
             }
+            syntax::Statement::ForIn(statement) => {
+                if let Some(annotation) = &statement.annotation {
+                    self.visit_type(&annotation.type_syntax);
+                }
+                self.visit_expression(&statement.iterable);
+                self.visit_block(&statement.body);
+            }
             syntax::Statement::Block(block) => self.visit_block(block),
             syntax::Statement::FieldAssignment(statement) => {
                 self.visit_expression(&statement.place.receiver);

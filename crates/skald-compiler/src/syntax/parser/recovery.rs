@@ -87,6 +87,7 @@ impl Parser<'_> {
                     TokenKind::Elif,
                     TokenKind::Else,
                     TokenKind::While,
+                    TokenKind::For,
                     TokenKind::Break,
                     TokenKind::Continue,
                     TokenKind::Identifier,
@@ -112,6 +113,19 @@ impl Parser<'_> {
             {
                 return;
             }
+            self.advance();
+        }
+    }
+
+    pub(super) fn synchronize_for_in_header(&mut self) {
+        while !self.at_contextual("in")
+            && !self.at_any(&[
+                TokenKind::RightParen,
+                TokenKind::LeftBrace,
+                TokenKind::RightBrace,
+                TokenKind::Eof,
+            ])
+        {
             self.advance();
         }
     }

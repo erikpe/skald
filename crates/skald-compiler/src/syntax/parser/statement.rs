@@ -93,6 +93,9 @@ impl Parser<'_> {
         if self.at(TokenKind::While) {
             return self.parse_while().map(Statement::While);
         }
+        if self.at(TokenKind::For) {
+            return self.parse_for_in().map(Statement::ForIn);
+        }
         if self.at_any(&[TokenKind::Elif, TokenKind::Else]) {
             self.parse_misplaced_conditional_continuation();
             return None;
@@ -119,7 +122,7 @@ impl Parser<'_> {
             EXPECTED_STATEMENT,
             "expected a statement",
             self.peek().span,
-            "expected `var`, `return`, `if`, `while`, `break`, `continue`, an expression, a field assignment, or a nested block",
+            "expected `var`, `return`, `if`, `while`, `for`, `break`, `continue`, an expression, a field assignment, or a nested block",
         );
         None
     }

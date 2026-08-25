@@ -230,3 +230,57 @@ fn malformed_canonical_iterable_declarations_are_rejected_structurally() {
         );
     }
 }
+
+#[test]
+fn parsed_for_in_stops_at_one_intentional_resolution_gate() {
+    let source = concat!(
+        "fn main(values: u64) -> i64 {\n",
+        "  for (item in missing_iterable) { missing_call(item); }\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[("app.ska", source), ("std/iter.ska", CANONICAL_ITER_SOURCE)],
+    );
+    let for_span = graph.find(&"app".parse().unwrap()).unwrap().imports()[0]
+        .compiler_dependency_spans(crate::module::CompilerDependencyKind::GeneralIteration)[0];
+    let output = resolve_module_graph(&graph);
+
+    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics[0].code, GENERAL_ITERATION_SELECTION_PENDING);
+    assert_eq!(diagnostics[0].labels[0].span, for_span);
+    assert!(output.program.iterable_language_item.is_some());
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    assert!(matches!(
+        main.body.statements.as_slice(),
+        [ResolvedStatement::Return(_)]
+    ));
+}
+
+#[test]
+fn generic_template_for_in_uses_the_same_gate_without_guessing_an_item_binding() {
+    let source = concat!(
+        "class Container<T> {\n",
+        "  fn scan(values: T) -> unit {\n",
+        "    for (item: T in unknown_iterable) { unknown_call(item); }\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[("app.ska", source), ("std/iter.ska", CANONICAL_ITER_SOURCE)],
+    );
+    let output = resolve_module_graph(&graph);
+
+    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(diagnostics[0].code, GENERAL_ITERATION_SELECTION_PENDING);
+    assert!(output.program.iterable_language_item.is_some());
+}

@@ -12,6 +12,7 @@ mod array;
 mod class;
 mod declaration;
 mod expression;
+mod for_in;
 mod generic;
 mod interface;
 mod logical_depth;

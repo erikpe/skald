@@ -280,7 +280,6 @@ fn deferred_array_syntax_remains_rejected() {
         "var values: i64[] = i64[](4u); var part: i64[] = values[0:4:2];",
         "var values: i64[] = i64[](1u); var cast: i64[] = (i64[]) values;",
         "var values: i64[] = i64[](1u); var matches: bool = values is i64[];",
-        "var values: i64[] = i64[](1u); for (value in values) { return value; }",
         "var values: i64[] = i64[](1u); try { return values[0]; }",
         "static values: i64[] = i64[]();",
         "var values: atomic i64[] = i64[]();",

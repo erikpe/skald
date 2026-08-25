@@ -173,6 +173,12 @@ impl TemplateBodyResolver<'_, '_, '_> {
                 self.visit_expression(&statement.condition);
                 self.visit_block(&statement.body);
             }
+            syntax::Statement::ForIn(statement) => {
+                self.diagnostics
+                    .push(super::super::super::general_iteration_selection_pending(
+                        statement,
+                    ));
+            }
             syntax::Statement::Block(block) => self.visit_block(block),
             syntax::Statement::FieldAssignment(statement) => {
                 self.visit_member_access(&statement.place);

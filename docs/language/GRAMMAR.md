@@ -2,9 +2,8 @@
 
 Status: authoritative grammar for the source syntax accepted by the current
 compiler. [Feature status](STATUS.md) determines whether the syntactic forms
-below have a complete semantic implementation. Explicitly marked frozen
-extensions record syntax selected for later implementation and are not
-accepted by the current compiler.
+below have a complete semantic implementation. A parsed form may still stop at
+an intentional semantic implementation gate recorded there.
 
 This document defines tokens, concrete source shape, precedence,
 associativity, and syntax-error boundaries. It does not define name lookup,
@@ -59,7 +58,7 @@ fn extern var return
 i64 u64 u8 f64 bool unit
 true false
 if elif else
-while break continue
+while for break continue
 none
 ```
 
@@ -105,7 +104,9 @@ or an array construction. Both remain ordinary identifiers elsewhere.
 `import`, `from`, and `as` are contextual in file-leading import declarations;
 `public` is contextual before a top-level declaration. `intrinsic` is
 contextual only before `fn` in a top-level intrinsic-function declaration.
-All four spellings remain ordinary identifiers outside those positions.
+`in` is contextual only between the item header and iterable expression of a
+`for` statement. These spellings remain ordinary identifiers outside their
+contextual positions.
 
 ## Punctuation
 
@@ -534,7 +535,9 @@ statement             = local-declaration
                       | return-statement
                       | conditional-statement
                       | while-statement
+                      | for-in-statement
                       | break-statement
+                      | continue-statement
                       | assignment-statement
                       | expression-statement
                       | block
@@ -549,7 +552,10 @@ conditional-statement = "if" "(" expression ")" block
                         {"elif" "(" expression ")" block}
                         ["else" block]
 while-statement       = "while" "(" expression ")" block
+for-in-statement      = "for" "(" identifier [":" storage-type]
+                        "in" expression ")" block
 break-statement       = "break" ";"
+continue-statement    = "continue" ";"
 
 assignment-statement  = place "=" expression ";"
 place                 = place-atom {"." identifier}
@@ -594,10 +600,9 @@ loop exits carry no value, and labels are not part of the exit syntax.
 The corresponding semantics are owned by
 [Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 
-### Frozen general-iteration extension
+### General-iteration source syntax
 
-The following syntax is selected for implementation but is not accepted by
-the current parser:
+The parser accepts and retains:
 
 ```text
 for-in-statement = "for" "(" identifier [":" storage-type]
@@ -605,11 +610,14 @@ for-in-statement = "for" "(" identifier [":" storage-type]
 ```
 
 The parentheses and body block are mandatory. `for-in` is a statement and the
-binding is visible only in the body. When this extension is implemented,
-`for` becomes a reserved keyword; `in` is contextual only at the delimiter
-position in a `for` header and remains an ordinary identifier elsewhere.
-Exact protocol selection, binding inference, execution, and cleanup are owned
-by [General Iteration](ITERATION.md).
+binding is intended to be visible only in the body. `for` is reserved; `in` is
+contextual only at the delimiter position in a `for` header and remains an
+ordinary identifier elsewhere, including as the binding itself. Syntax
+retains the binding, optional annotation, iterable, body, header delimiters,
+and complete spans. Resolution currently emits one intentional implementation
+gate before it creates an item binding or resolves the body. Exact protocol
+selection, binding inference, execution, and cleanup are owned by
+[General Iteration](ITERATION.md).
 
 ## Expressions
 

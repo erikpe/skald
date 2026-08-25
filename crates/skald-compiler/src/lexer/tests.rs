@@ -699,7 +699,7 @@ fn recognizes_conditional_keywords_without_reserving_prefixes() {
 #[test]
 fn reserves_loop_words_together_without_reserving_prefixes() {
     let (sources, source_id, output) =
-        lex_text("while break continue while_value breaker continued");
+        lex_text("while for break continue in while_value foreach breaker continued inside");
     let source = sources.get(source_id).unwrap();
 
     assert_eq!(
@@ -710,8 +710,12 @@ fn reserves_loop_words_together_without_reserving_prefixes() {
             .collect::<Vec<_>>(),
         [
             TokenKind::While,
+            TokenKind::For,
             TokenKind::Break,
             TokenKind::Continue,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
             TokenKind::Identifier,
             TokenKind::Identifier,
             TokenKind::Identifier,
@@ -726,11 +730,15 @@ fn reserves_loop_words_together_without_reserving_prefixes() {
             .collect::<Vec<_>>(),
         [
             "while",
+            "for",
             "break",
             "continue",
+            "in",
             "while_value",
+            "foreach",
             "breaker",
             "continued",
+            "inside",
             "",
         ]
     );

@@ -472,6 +472,52 @@ fn explicit_and_synthetic_std_str_dependencies_coalesce_without_losing_kind() {
 }
 
 #[test]
+fn for_in_adds_typed_std_iter_evidence_and_reuses_an_explicit_edge() {
+    let workspace = directory("graph-iteration-dependency");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        concat!(
+            "import std::iter;\n",
+            "fn main(values: u64) -> i64 {\n",
+            "  for (item in values) {}\n",
+            "  for (item: u64 in values) {}\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+    );
+    source(
+        &root,
+        "std/iter.ska",
+        "public interface Iterable<Item, State> {}\n",
+    );
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+    let app = graph.find(&"app".parse().unwrap()).unwrap();
+    let edge = &app.imports()[0];
+
+    assert_eq!(app.imports().len(), 1);
+    assert_eq!(edge.import_spans().len(), 1);
+    assert_eq!(
+        edge.compiler_dependency_spans(CompilerDependencyKind::GeneralIteration)
+            .len(),
+        2
+    );
+    assert!(edge.string_literal_spans().is_empty());
+    let source = graph.sources().get(app.ast().span.source_id()).unwrap();
+    assert!(edge
+        .compiler_dependency_spans(CompilerDependencyKind::GeneralIteration)
+        .iter()
+        .all(|span| source.slice(span.range()) == Some("for")));
+}
+
+#[test]
 fn modules_without_literals_do_not_require_std_str() {
     let workspace = directory("graph-no-string-dependency");
     let root = workspace.join("modules");
@@ -496,7 +542,7 @@ fn canonical_iteration_dependency_uses_ordinary_missing_and_ambiguity_rules() {
     source(
         &first,
         "app.ska",
-        "import std::iter;\nfn main() -> i64 { return 0; }\n",
+        "fn main(values: u64) -> i64 { for (item in values) {} return 0; }\n",
     );
 
     let missing = load(

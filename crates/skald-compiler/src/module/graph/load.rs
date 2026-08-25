@@ -71,7 +71,7 @@ pub fn load_module_graph(
         let discovered = discover_dependencies(candidate.display_source_path(), &text);
         let dependencies = discovered
             .as_ref()
-            .map(|parsed| dependency_occurrences(&parsed.ast, &parsed.string_literal_ranges))
+            .map(|parsed| dependency_occurrences(&parsed.ast, &parsed.compiler_dependency_ranges))
             .unwrap_or_default();
         staged.insert(module_path.clone(), StagedModule { candidate, text });
 
@@ -142,12 +142,18 @@ fn parse_source(
         return (None, diagnostics);
     }
     let parsed = parse(source, &lexed.tokens);
-    let string_literal_ranges = lexed
-        .tokens
-        .iter()
-        .filter(|token| token.kind == TokenKind::StringLiteral)
-        .map(|token| token.span.range())
-        .collect();
+    let mut compiler_dependency_ranges = BTreeMap::<CompilerDependencyKind, Vec<TextRange>>::new();
+    for token in &lexed.tokens {
+        let kind = match token.kind {
+            TokenKind::StringLiteral => CompilerDependencyKind::StringLiteral,
+            TokenKind::For => CompilerDependencyKind::GeneralIteration,
+            _ => continue,
+        };
+        compiler_dependency_ranges
+            .entry(kind)
+            .or_default()
+            .push(token.span.range());
+    }
     diagnostics.append(parsed.diagnostics);
     if diagnostics.has_errors() {
         (None, diagnostics)
@@ -155,7 +161,7 @@ fn parse_source(
         (
             Some(ParsedModule {
                 ast: parsed.ast,
-                string_literal_ranges,
+                compiler_dependency_ranges,
             }),
             diagnostics,
         )
@@ -164,7 +170,7 @@ fn parse_source(
 
 struct ParsedModule {
     ast: CompilationUnit,
-    string_literal_ranges: Vec<TextRange>,
+    compiler_dependency_ranges: BTreeMap<CompilerDependencyKind, Vec<TextRange>>,
 }
 
 #[derive(Default)]
@@ -189,7 +195,7 @@ impl DependencyOccurrences {
 
 fn dependency_occurrences(
     ast: &CompilationUnit,
-    string_literal_ranges: &[TextRange],
+    compiler_dependency_ranges: &BTreeMap<CompilerDependencyKind, Vec<TextRange>>,
 ) -> BTreeMap<ModulePath, DependencyOccurrences> {
     let mut dependencies = BTreeMap::<ModulePath, DependencyOccurrences>::new();
     for import in &ast.imports {
@@ -207,12 +213,8 @@ fn dependency_occurrences(
             .import_ranges
             .push(name.span.range());
     }
-    if !string_literal_ranges.is_empty() {
-        record_compiler_dependency(
-            &mut dependencies,
-            CompilerDependencyKind::StringLiteral,
-            string_literal_ranges,
-        );
+    for (&kind, ranges) in compiler_dependency_ranges {
+        record_compiler_dependency(&mut dependencies, kind, ranges);
     }
     dependencies
 }
@@ -267,7 +269,7 @@ fn finalize_graph(
                 candidate: module.candidate,
                 source_id,
                 ast: parsed.ast,
-                string_literal_ranges: parsed.string_literal_ranges,
+                compiler_dependency_ranges: parsed.compiler_dependency_ranges,
             });
         }
     }
@@ -331,14 +333,14 @@ struct FinalizedModule {
     candidate: ModuleCandidate,
     source_id: SourceId,
     ast: CompilationUnit,
-    string_literal_ranges: Vec<TextRange>,
+    compiler_dependency_ranges: BTreeMap<CompilerDependencyKind, Vec<TextRange>>,
 }
 
 fn finalized_dependencies(
     module: &FinalizedModule,
     ids: &BTreeMap<ModulePath, ModuleId>,
 ) -> Vec<ModuleImportEdge> {
-    dependency_occurrences(&module.ast, &module.string_literal_ranges)
+    dependency_occurrences(&module.ast, &module.compiler_dependency_ranges)
         .into_iter()
         .map(|(path, occurrences)| {
             let target = ids[&path];

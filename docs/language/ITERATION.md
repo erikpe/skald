@@ -1,14 +1,14 @@
 # General Iteration
 
-Status: frozen source-visible design with protocol foundation implemented. The
-dependency-free canonical standard-library interface is present and its exact
-shape is compiler-validated when requested, but the current compiler does not
-yet accept `for-in`. The [status matrix](STATUS.md) records implementation
-maturity.
+Status: frozen semantic design with source syntax and protocol foundation
+implemented. The compiler parses and retains `for-in`, activates the canonical
+module dependency, validates its exact interface, and then stops at an
+intentional resolution gate until nominal protocol selection is implemented.
+The [status matrix](STATUS.md) records implementation maturity.
 
 This document is authoritative for general iteration semantics selected for
 implementation. The frozen syntax extension is recorded in the
-[grammar](GRAMMAR.md#frozen-general-iteration-extension), and compiler
+[grammar](GRAMMAR.md#general-iteration-source-syntax), and compiler
 representation is owned by the
 [general-iteration compiler contract](../compiler/ITERATION.md).
 
@@ -37,9 +37,10 @@ Neither the interface nor iteration requires a heap-allocated iterator.
 array, optional, or shared owner supported by ordinary stored-value rules.
 
 The installed `std::iter` declaration and request-local resolved identity
-record are implemented. Explicit canonical imports and direct compilation of
-the canonical module currently trigger validation; the frozen `for-in` syntax
-will supply the same compiler-dependency evidence when its parser task lands.
+record are implemented. Every successfully parsed `for-in` supplies exact
+keyword-span compiler-dependency evidence without creating a source import
+binding; explicit canonical imports and direct canonical-module compilation
+remain equivalent validation triggers.
 
 ## Source form and binding
 
@@ -61,9 +62,14 @@ scope; mutable or borrowed item bindings and destructuring patterns are not
 part of this contract. The iterable expression resolves in the enclosing
 scope, while the item is visible only inside the body.
 
-`for` becomes a reserved keyword when the extension is implemented. `in` is
-contextual only at the delimiter position in a `for` header and remains an
-ordinary identifier elsewhere.
+`for` is a reserved keyword. `in` is contextual only at the delimiter position
+in a `for` header and remains an ordinary identifier elsewhere, including as
+the item binding when followed by the delimiter.
+
+The current parser preserves the complete source structure and recovers at
+header and body boundaries. Resolution deliberately rejects the structured
+statement before declaring an item or resolving its body; selection and scope
+semantics below remain the next implementation stage.
 
 ## Iterable selection
 
