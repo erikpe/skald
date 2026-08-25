@@ -142,10 +142,15 @@ visibility, semantic, and code-generation rules. An ordinary root may provide
 other modules below `std`; an exact collision with the standard-library
 provider is ambiguous.
 
-Future language items may designate a logical path such as `std::Str`. The
-owning feature records whether that path denotes a module or declaration and
-resolves it once to the corresponding semantic identity. Lowering and backends
-must not repeatedly compare source path strings.
+Compiler-owned dependencies retain a typed source-evidence kind separately
+from explicit import spans, so loading a canonical module does not create a
+source name binding. String literals use this boundary for `std::str`; the
+general-iteration kind is implemented for the frozen `std::iter` protocol and
+will be populated when `for-in` parsing lands. Both use ordinary provider
+lookup, missing/ambiguity diagnostics, parsing, identities, and dependency
+cycles. The owning feature resolves the canonical declaration once to semantic
+identities; lowering and backends do not repeatedly compare source path
+strings.
 
 ## Entry selection and command line
 

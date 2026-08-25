@@ -6,20 +6,19 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmap is currently in progress. The completed generic
-interfaces roadmap is preserved in the
+The [general iteration roadmap](GENERAL_ITERATION_ROADMAP.md) is in progress.
+Its canonical dependency-free `std::iter::Iterable<Item, State>` declaration,
+typed compiler-dependency evidence, structural language-item validation,
+exact resolved identities, deterministic dump, and focused tests are complete.
+`IT1` is next: reserve and parse the `for-in` source form and attach its spans
+to the canonical module dependency without creating a source binding.
+
+The completed generic interfaces roadmap is preserved in the
 [archive](../archive/GENERIC_INTERFACES_ROADMAP.md).
 
 ## Planned
 
-The [general iteration roadmap](GENERAL_ITERATION_ROADMAP.md) is planned.
-`IT0` is next: add and validate the canonical dependency-free
-`std::iter::Iterable<Item, State>` language item. Later tasks add syntax and
-loop identities, nominal selection, structured HIR, ordinary MIR CFG,
-loop-duration receiver and value composition, ordinary `Vec<T>` adoption,
-hardening, native evidence, and release closure. Generic interfaces and
-ordinary `while`/optional/ownership machinery are implemented prerequisites;
-operator overloading and numeric ranges are deferred consumers.
+No additional implementation roadmap is currently waiting to start.
 
 ## Design proposals
 

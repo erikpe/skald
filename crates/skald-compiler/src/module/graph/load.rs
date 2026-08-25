@@ -14,7 +14,10 @@ use super::{
         append_pending_diagnostics, entry_failure, self_import_diagnostic, PendingLoadError,
     },
     entry::{select_entry, LoaderProviders},
-    model::{LoadedModule, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge},
+    model::{
+        CompilerDependencyEvidence, CompilerDependencyKind, LoadedModule, ModuleGraph,
+        ModuleGraphLoadFailure, ModuleImportEdge,
+    },
 };
 use crate::module::{
     ModuleCandidate, ModulePath, ModuleProvenance, ModuleSourceLocation, ProviderSet,
@@ -167,14 +170,18 @@ struct ParsedModule {
 #[derive(Default)]
 struct DependencyOccurrences {
     import_ranges: Vec<TextRange>,
-    string_literal_ranges: Vec<TextRange>,
+    compiler_dependency_ranges: BTreeMap<CompilerDependencyKind, Vec<TextRange>>,
 }
 
 impl DependencyOccurrences {
     fn first_range(&self) -> TextRange {
         self.import_ranges
             .first()
-            .or_else(|| self.string_literal_ranges.first())
+            .or_else(|| {
+                self.compiler_dependency_ranges
+                    .values()
+                    .find_map(|ranges| ranges.first())
+            })
             .copied()
             .expect("a discovered dependency has source evidence")
     }
@@ -201,16 +208,39 @@ fn dependency_occurrences(
             .push(name.span.range());
     }
     if !string_literal_ranges.is_empty() {
-        dependencies
-            .entry(
-                ModulePath::from_components(["std".to_owned(), "str".to_owned()])
-                    .expect("the canonical string module path is valid"),
-            )
-            .or_default()
-            .string_literal_ranges
-            .extend(string_literal_ranges.iter().copied());
+        record_compiler_dependency(
+            &mut dependencies,
+            CompilerDependencyKind::StringLiteral,
+            string_literal_ranges,
+        );
     }
     dependencies
+}
+
+fn record_compiler_dependency(
+    dependencies: &mut BTreeMap<ModulePath, DependencyOccurrences>,
+    kind: CompilerDependencyKind,
+    ranges: &[TextRange],
+) {
+    if ranges.is_empty() {
+        return;
+    }
+    let path = compiler_dependency_path(kind);
+    dependencies
+        .entry(path)
+        .or_default()
+        .compiler_dependency_ranges
+        .entry(kind)
+        .or_default()
+        .extend(ranges.iter().copied());
+}
+
+pub(super) fn compiler_dependency_path(kind: CompilerDependencyKind) -> ModulePath {
+    let path = match kind {
+        CompilerDependencyKind::StringLiteral => "std::str",
+        CompilerDependencyKind::GeneralIteration => "std::iter",
+    };
+    ModulePath::try_from(path).expect("compiler dependency path must be valid")
 }
 
 fn finalize_graph(
@@ -318,12 +348,20 @@ fn finalized_dependencies(
                 .into_iter()
                 .map(|range| Span::new(source_id, range))
                 .collect();
-            let string_literal_spans = occurrences
-                .string_literal_ranges
+            let compiler_dependencies = occurrences
+                .compiler_dependency_ranges
                 .into_iter()
-                .map(|range| Span::new(source_id, range))
+                .map(|(kind, ranges)| {
+                    CompilerDependencyEvidence::new(
+                        kind,
+                        ranges
+                            .into_iter()
+                            .map(|range| Span::new(source_id, range))
+                            .collect(),
+                    )
+                })
                 .collect();
-            ModuleImportEdge::new(target, import_spans, string_literal_spans)
+            ModuleImportEdge::new(target, import_spans, compiler_dependencies)
         })
         .collect()
 }

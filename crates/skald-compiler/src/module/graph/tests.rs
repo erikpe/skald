@@ -14,7 +14,8 @@ use super::{
         AMBIGUOUS_ENTRY_IDENTITY, AMBIGUOUS_MODULE, INVALID_ENTRY, MISSING_MODULE,
         MODULE_LOOKUP_FAILURE, MODULE_SOURCE_FAILURE, SELF_IMPORT,
     },
-    dump_module_graph, load_module_graph, ModuleGraph, ModuleGraphLoadFailure,
+    dump_module_graph, load_module_graph, CompilerDependencyKind, ModuleGraph,
+    ModuleGraphLoadFailure,
 };
 
 fn directory(label: &str) -> TemporaryDirectory {
@@ -437,6 +438,14 @@ fn string_literals_add_one_synthetic_std_str_dependency_with_all_evidence() {
     assert_eq!(app.imports().len(), 1);
     assert!(app.imports()[0].import_spans().is_empty());
     assert_eq!(app.imports()[0].string_literal_spans().len(), 2);
+    assert_eq!(app.imports()[0].compiler_dependencies().len(), 1);
+    assert_eq!(
+        app.imports()[0].compiler_dependencies()[0].kind(),
+        CompilerDependencyKind::StringLiteral
+    );
+    assert!(app.imports()[0]
+        .compiler_dependency_spans(CompilerDependencyKind::GeneralIteration)
+        .is_empty());
 }
 
 #[test]
@@ -477,6 +486,56 @@ fn modules_without_literals_do_not_require_std_str() {
 
     assert_eq!(graph.modules().len(), 1);
     assert!(graph.find(&"std::str".parse().unwrap()).is_none());
+}
+
+#[test]
+fn canonical_iteration_dependency_uses_ordinary_missing_and_ambiguity_rules() {
+    let workspace = directory("graph-iteration-dependency-errors");
+    let first = workspace.join("first");
+    let second = workspace.join("second");
+    source(
+        &first,
+        "app.ska",
+        "import std::iter;\nfn main() -> i64 { return 0; }\n",
+    );
+
+    let missing = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&first),
+    )
+    .unwrap_err();
+    assert_eq!(codes(&missing), [MISSING_MODULE]);
+
+    source(
+        &first,
+        "std/iter.ska",
+        "public interface Iterable<Item, State> {}\n",
+    );
+    source(
+        &second,
+        "std/iter.ska",
+        "public interface Iterable<Item, State> {}\n",
+    );
+    let ambiguous = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[first, second],
+    )
+    .unwrap_err();
+    assert_eq!(codes(&ambiguous), [AMBIGUOUS_MODULE]);
+}
+
+#[test]
+fn compiler_dependency_kinds_own_exact_canonical_module_paths() {
+    assert_eq!(
+        super::load::compiler_dependency_path(CompilerDependencyKind::StringLiteral),
+        "std::str".parse().unwrap()
+    );
+    assert_eq!(
+        super::load::compiler_dependency_path(CompilerDependencyKind::GeneralIteration),
+        "std::iter".parse().unwrap()
+    );
 }
 
 #[test]

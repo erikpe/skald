@@ -52,6 +52,7 @@ mod generic_object_model;
 mod integer_division;
 mod interfaces;
 mod intrinsics;
+mod iteration;
 mod modules;
 mod objects;
 mod optional_values;

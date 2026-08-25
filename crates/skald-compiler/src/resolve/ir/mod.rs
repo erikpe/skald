@@ -11,6 +11,7 @@ mod generic_requirements;
 mod generic_specializations;
 mod generic_templates;
 mod hierarchy;
+mod iteration;
 mod modules;
 mod object_place;
 mod optional_box_types;
@@ -98,6 +99,7 @@ pub(crate) use generic_templates::{
     ResolvedTemplateTypeUseContext,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
+pub use iteration::ResolvedIterableLanguageItem;
 pub use modules::{
     ResolvedModuleBinding, ResolvedModuleBindingTable, ResolvedModuleBindings,
     ResolvedModuleDeclaration, ResolvedModuleDeclarationTable, ResolvedModuleDeclarations,

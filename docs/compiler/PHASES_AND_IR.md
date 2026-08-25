@@ -1980,6 +1980,15 @@ loop-context destinations. No dedicated iteration operation reaches MIR,
 verification, or a backend. This extension is frozen but not yet present in
 current phase products.
 
+Its canonical protocol foundation is already present before executable body
+resolution: typed module-edge evidence identifies the canonical dependency,
+and `ResolvedProgram` may retain validated `Iterable` template, `Item` and
+`State` parameter, and `iter_state` and `iter_next` requirement identities.
+Explicit canonical imports and direct canonical-module compilation currently
+supply that evidence; `for-in` syntax will supply it implicitly. These
+resolution-only identities do not add a statement or operation to current HIR
+or MIR.
+
 The initial lowering form has these semantic regions:
 
 ```text

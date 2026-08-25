@@ -30,7 +30,7 @@ use crate::{
 mod standard_library;
 pub(crate) use standard_library::{
     canonical_standard_library_sources, CANONICAL_F64_SOURCE, CANONICAL_IO_SOURCE,
-    CANONICAL_STR_SOURCE,
+    CANONICAL_ITER_SOURCE, CANONICAL_STR_SOURCE,
 };
 
 static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
@@ -572,13 +572,15 @@ mod tests {
     #[test]
     fn canonical_standard_library_closure_is_complete_and_overridable() {
         let canonical = canonical_standard_library_sources(&[]);
-        assert_eq!(canonical.len(), 17);
+        assert_eq!(canonical.len(), 18);
         assert_eq!(canonical[0].0, "std/str.ska");
         assert_eq!(canonical[7].0, "std/f64.ska");
         assert_eq!(canonical[8].0, "std/hash.ska");
         assert_eq!(canonical[10].0, "std/io.ska");
-        assert_eq!(canonical[14].0, "std/u64.ska");
-        assert_eq!(canonical[16].0, "std/vec.ska");
+        assert_eq!(canonical[11].0, "std/iter.ska");
+        assert_eq!(canonical[11].1, CANONICAL_ITER_SOURCE);
+        assert_eq!(canonical[15].0, "std/u64.ska");
+        assert_eq!(canonical[17].0, "std/vec.ska");
         assert_eq!(
             canonical
                 .iter()

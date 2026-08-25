@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: planned. No implementation task has started. `IT0` is the next task.
+Status: in progress. `IT0` is complete; `IT1` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -78,7 +78,7 @@ Every task preserves these cross-cutting decisions:
 
 | Task | Status | Outcome |
 |---|---|---|
-| [IT0](#it0--canonical-iterable-language-item) | [ ] Planned | Canonical dependency-free `std::iter::Iterable<Item, State>` is loadable, validated, and represented by exact identities. |
+| [IT0](#it0--canonical-iterable-language-item) | [x] Complete | Canonical dependency-free `std::iter::Iterable<Item, State>` is loadable, validated, and represented by exact identities. |
 | [IT1](#it1--for-in-source-syntax) | [ ] Planned | Lexer, parser, AST, recovery, template scanning, and dumps retain the frozen statement shape. |
 | [IT2](#it2--nominal-protocol-selection-and-loop-scopes) | [ ] Planned | Exact claims and generic bounds select deterministic protocol evidence before the typed item scope and loop body resolve. |
 | [IT3](#it3--structured-hir-and-core-lifecycle-plans) | [ ] Planned | Typed HIR owns `Item`, `State`, receiver, state, result, item, effects, and cleanup plans. |
@@ -109,30 +109,34 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Add exactly the frozen public generic interface declaration in
+- [x] Add exactly the frozen public generic interface declaration in
   `std::iter`, with no imports or dependency cycle.
-- [ ] Make a request containing `for-in` able to acquire `std::iter` from the
-  configured standard-library provider even when source code does not name or
-  import `Iterable` directly; preserve exact provider ambiguity and missing
-  module diagnostics.
-- [ ] Validate module path, public visibility, interface kind, generic arity,
+- [x] Add typed `GeneralIteration` compiler-dependency evidence to module-graph
+  edges so `IT1` can attach parsed `for-in` spans and acquire `std::iter`
+  without creating a source binding; preserve ordinary provider ambiguity and
+  missing-module diagnostics.
+- [x] Validate module path, public visibility, interface kind, generic arity,
   direct requirement set, names, receiver access, parameter count/mode,
   substituted `State`/`Item?` signatures, and absence of incompatible extras.
-- [ ] Store exact template and requirement identities in a focused resolved
+- [x] Store exact template and requirement identities in a focused resolved
   language-item record; request ordinary closed applications through the
   existing specialization coordinator.
-- [ ] Keep all registries request-local and source identities deterministic.
-- [ ] Diagnose missing, private, wrong-kind, wrong-arity, malformed, shadow,
-  and ambiguous-provider declarations at the first iteration use.
-- [ ] Expose stable resolved dump evidence without making source spelling a
+- [x] Keep all registries request-local and source identities deterministic.
+- [x] Diagnose missing and ambiguous canonical modules through ordinary module
+  lookup, and diagnose private, wrong-kind, wrong-arity, malformed, shadow, and
+  incompatible declarations at canonical dependency evidence. Explicit
+  imports and direct `std::iter` entry provide current evidence; `IT1` will
+  provide the first `for-in` span through the typed dependency hook.
+- [x] Expose stable resolved dump evidence without making source spelling a
   lower-phase discriminator.
 
 Tests:
 
 - standard-library source parse and dependency-cycle coverage;
-- module-graph tests for implicit canonical acquisition, explicitly imported
-  reuse, missing roots, ambiguous providers, and same-named noncanonical
-  interfaces;
+- module-graph tests for typed compiler-dependency evidence and canonical path
+  mapping, explicitly imported reuse, missing roots, ambiguous providers, and
+  same-named noncanonical interfaces; `IT1` adds the source-to-evidence parser
+  activation test;
 - resolver table/dump tests for exact generic and requirement identities;
 - one mutation case per structural validation rule; and
 - existing generic-interface specialization and standard-library tests.
@@ -140,6 +144,13 @@ Tests:
 Exit condition: a compiler request can deterministically obtain and validate
 the canonical declaration and exact identities, while malformed alternatives
 fail before HIR; no `for-in` statement is accepted yet.
+
+Completion evidence: focused module-graph tests cover dependency kinds,
+missing and ambiguous providers; resolver tests cover the canonical source,
+exact metadata and dumps, ordinary closed specialization, noncanonical
+lookalikes, and one mutation per structural rule. The standard-library fixture
+includes the dependency-free module. `for-in` activation remains correctly in
+`IT1`, because IT0 does not reserve or parse the new keyword.
 
 ## IT1 — For-in source syntax
 

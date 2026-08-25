@@ -1,9 +1,12 @@
 # General-Iteration Compiler Contract
 
-Status: frozen compiler design. No current phase product contains `for-in`,
-and the current compiler does not load `std::iter::Iterable` as a language
-item. The [language status matrix](../language/STATUS.md) remains authoritative
-for implementation maturity.
+Status: frozen compiler design with canonical protocol identity implemented.
+The module graph has typed general-iteration dependency evidence and resolution
+validates and records exact `std::iter::Iterable` template, parameter, and
+requirement identities. No current phase product contains `for-in`, and source
+syntax does not yet populate the implicit dependency evidence. The
+[language status matrix](../language/STATUS.md) remains authoritative for
+implementation maturity.
 
 This document owns the selected phase, lifetime, verification, target, and ABI
 boundaries for the frozen
@@ -25,6 +28,15 @@ or use structural method lookup. Missing, inaccessible, ambiguous, or malformed
 canonical declarations stop before typed HIR with deterministic diagnostics.
 The declaration remains ordinary dependency-free Skald source and participates
 in normal module visibility and generic-interface specialization.
+
+This canonical identity boundary is implemented. Explicit imports and direct
+canonical-module compilation provide current requirement evidence. Module
+edges separately retain explicit-import spans and typed compiler-dependency
+spans; the general-iteration kind is ready for the parser to populate without
+creating an import binding. Missing and ambiguous modules retain ordinary
+provider diagnostics, malformed declarations use a focused resolution
+diagnostic, and valid closed applications continue through the existing
+generic-interface specialization coordinator.
 
 ## Syntax and resolution
 

@@ -1,0 +1,4 @@
+public interface Iterable<Item, State> {
+    fn iter_state() -> State;
+    fn iter_next(mut ref state: State) -> Item?;
+}

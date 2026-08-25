@@ -12,7 +12,7 @@ pub(super) struct SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, '
 impl<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
     SyntaxTypeCloser<'owner, 'semantic, 'interner, 'diagnostics, 'lookup>
 {
-    pub(super) const fn new(
+    pub(super) fn new(
         owner: &'owner mut SpecializationCoordinator<'semantic, 'interner, 'diagnostics>,
         lookup: ModuleLookup<'lookup>,
         module: ModuleId,

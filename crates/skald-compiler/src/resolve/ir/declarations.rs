@@ -54,6 +54,7 @@ pub struct ResolvedProgram {
     pub array_types: ResolvedArrayTypeTable,
     pub optional_types: ResolvedOptionalTypeTable,
     pub optional_box_types: ResolvedOptionalBoxTypeTable,
+    pub iterable_language_item: Option<super::ResolvedIterableLanguageItem>,
     pub string_language_item: Option<super::ResolvedStringLanguageItem>,
     pub literal_data: super::ResolvedLiteralDataTable,
     pub declarations: ResolvedFunctionDeclarationTable,

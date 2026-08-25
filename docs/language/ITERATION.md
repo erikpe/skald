@@ -1,8 +1,10 @@
 # General Iteration
 
-Status: frozen source-visible design. The current compiler does not yet accept
-the syntax or provide the canonical standard-library interface described here;
-the [status matrix](STATUS.md) records implementation maturity.
+Status: frozen source-visible design with protocol foundation implemented. The
+dependency-free canonical standard-library interface is present and its exact
+shape is compiler-validated when requested, but the current compiler does not
+yet accept `for-in`. The [status matrix](STATUS.md) records implementation
+maturity.
 
 This document is authoritative for general iteration semantics selected for
 implementation. The frozen syntax extension is recorded in the
@@ -33,6 +35,11 @@ select exact requirements and types without structural method discovery.
 Neither the interface nor iteration requires a heap-allocated iterator.
 `State` is an ordinary owning value and may itself be a primitive, class,
 array, optional, or shared owner supported by ordinary stored-value rules.
+
+The installed `std::iter` declaration and request-local resolved identity
+record are implemented. Explicit canonical imports and direct compilation of
+the canonical module currently trigger validation; the frozen `for-in` syntax
+will supply the same compiler-dependency evidence when its parser task lands.
 
 ## Source form and binding
 

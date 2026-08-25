@@ -77,6 +77,7 @@ pub const UNSATISFIED_GENERIC_REQUIREMENT: &str = "RES048";
 pub const INVALID_INDEX_PROTOCOL: &str = "RES049";
 pub const INVALID_FUNCTION_REFERENCE: &str = "RES050";
 pub const INVALID_GENERIC_INTERFACE_REQUIREMENT: &str = "RES052";
+pub const INVALID_ITERABLE_LANGUAGE_ITEM: &str = "RES053";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

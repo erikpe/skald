@@ -217,8 +217,10 @@ canonical closed `std::iter::Iterable<Item, State>` application, retains a
 structured source and HIR loop with a loop-duration receiver plan, and lowers
 it to ordinary interface calls, optional operations, ownership cleanup, and
 cyclic MIR. It deliberately adds no iterator MIR operation, backend primitive,
-runtime service, or ABI revision. The current compiler does not yet implement
-this contract.
+runtime service, or ABI revision. The canonical dependency-free source module,
+typed module-dependency evidence, structural template validation, exact
+resolved language-item identities, and deterministic dump are implemented;
+source syntax, selection, structured HIR, and lowering remain pending.
 
 The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.

@@ -57,6 +57,16 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 item.hash_code_field
             ));
         }
+        if let Some(item) = &program.iterable_language_item {
+            dumper.raw_line(&format!(
+                "IterableLanguageItem template {} parameters {} {} requirements {} {}",
+                item.template,
+                item.item_parameter,
+                item.state_parameter,
+                item.iter_state_requirement,
+                item.iter_next_requirement
+            ));
+        }
         if !program.literal_data.is_empty() {
             dumper.heading("LiteralData");
             dumper.indented(|dumper| {

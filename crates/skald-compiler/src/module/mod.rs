@@ -10,8 +10,8 @@ mod provenance;
 mod provider;
 
 pub use graph::{
-    dump_module_graph, load_module_graph, LoadedModule, ModuleGraph, ModuleGraphLoadFailure,
-    ModuleImportEdge,
+    dump_module_graph, load_module_graph, CompilerDependencyEvidence, CompilerDependencyKind,
+    LoadedModule, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge,
 };
 pub use metadata::{ProgramModuleTable, ProgramModuleTableError};
 pub use path::{ModulePath, ModulePathError, ModulePathErrorKind};

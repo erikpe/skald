@@ -7,29 +7,63 @@ use crate::{
 
 use super::super::{ModulePath, ModuleProvenance};
 
+/// Source construct that causes the compiler to load a canonical module
+/// without creating a source name binding.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum CompilerDependencyKind {
+    StringLiteral,
+    GeneralIteration,
+}
+
+/// Evidence for one compiler-owned dependency kind on a canonical edge.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompilerDependencyEvidence {
+    kind: CompilerDependencyKind,
+    spans: Vec<Span>,
+}
+
+impl CompilerDependencyEvidence {
+    pub(super) fn new(kind: CompilerDependencyKind, spans: Vec<Span>) -> Self {
+        debug_assert!(!spans.is_empty());
+        Self { kind, spans }
+    }
+
+    pub const fn kind(&self) -> CompilerDependencyKind {
+        self.kind
+    }
+
+    pub fn spans(&self) -> &[Span] {
+        &self.spans
+    }
+}
+
 /// One canonical direct dependency edge in a loaded module graph.
 ///
 /// Repeated source declarations of the same imported module share one edge
-/// while retaining explicit-import and compiler-owned literal evidence
-/// separately. Only explicit imports participate in source name binding.
+/// while retaining explicit-import and typed compiler-owned dependency
+/// evidence separately. Only explicit imports participate in source name
+/// binding.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ModuleImportEdge {
     target: ModuleId,
     import_spans: Vec<Span>,
-    string_literal_spans: Vec<Span>,
+    compiler_dependencies: Vec<CompilerDependencyEvidence>,
 }
 
 impl ModuleImportEdge {
     pub(super) fn new(
         target: ModuleId,
         import_spans: Vec<Span>,
-        string_literal_spans: Vec<Span>,
+        compiler_dependencies: Vec<CompilerDependencyEvidence>,
     ) -> Self {
-        debug_assert!(!import_spans.is_empty() || !string_literal_spans.is_empty());
+        debug_assert!(!import_spans.is_empty() || !compiler_dependencies.is_empty());
+        debug_assert!(compiler_dependencies
+            .windows(2)
+            .all(|pair| pair[0].kind < pair[1].kind));
         Self {
             target,
             import_spans,
-            string_literal_spans,
+            compiler_dependencies,
         }
     }
 
@@ -42,7 +76,19 @@ impl ModuleImportEdge {
     }
 
     pub fn string_literal_spans(&self) -> &[Span] {
-        &self.string_literal_spans
+        self.compiler_dependency_spans(CompilerDependencyKind::StringLiteral)
+    }
+
+    pub fn compiler_dependencies(&self) -> &[CompilerDependencyEvidence] {
+        &self.compiler_dependencies
+    }
+
+    pub fn compiler_dependency_spans(&self, kind: CompilerDependencyKind) -> &[Span] {
+        self.compiler_dependencies
+            .binary_search_by_key(&kind, CompilerDependencyEvidence::kind)
+            .ok()
+            .map(|index| self.compiler_dependencies[index].spans())
+            .unwrap_or_default()
     }
 }
 
