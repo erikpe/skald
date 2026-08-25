@@ -16,6 +16,14 @@ No implementation roadmap is currently waiting to start.
 
 ## Design proposals
 
+The draft [general iteration design proposal](GENERAL_ITERATION_DESIGN_PROPOSAL.md)
+defines nominal `Iterable<Item, State>` selection, structured
+`for (item in iterable)` semantics, loop-duration receiver and state
+lifetimes, optional termination, loop exits, phase boundaries, and ordinary
+`Vec<T>` adoption. Its decision register remains open; operator overloading,
+numeric ranges, range syntax, and intrinsic array conformance are explicit
+future consumers rather than part of this proposal.
+
 The confirmed generic interfaces decisions and completed delivery history are
 preserved in the
 [archive](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) and
