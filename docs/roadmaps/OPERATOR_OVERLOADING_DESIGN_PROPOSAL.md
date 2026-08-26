@@ -159,7 +159,7 @@ authoritative.
 | [OP1](#op1--protocol-ownership-and-canonical-identity) | Where do protocols live? | Ordinary declarations in canonical `std::ops`, validated and recognized by the compiler | **Recommended** |
 | [OP2](#op2--protocol-shape-and-parameter-modes) | What is the interface shape? | One read-only receiver, a `ref` RHS for binary operators, and explicit generic output | **Recommended** |
 | [OP3](#op3--initial-overloadable-operator-surface) | Which operators overload initially? | Eager algebraic operators, typed `OpEq<Rhs>` with derived `!=`, and four direct ordering predicates; prefix `!` is not overloadable | **Confirmed direction** |
-| [OP4](#op4--selection-and-ambiguity) | How is an implementation selected? | Built-in primitive match first; otherwise one canonical application from the left operand whose `ref Rhs` accepts the static RHS; no expected-result filtering | **Recommended**, specificity details open |
+| [OP4](#op4--selection-and-ambiguity) | How is an implementation selected? | Built-in primitive match first; otherwise require one unique canonical application from the left operand whose `ref Rhs` accepts the static RHS; no ranking or expected-result filtering | **Confirmed direction** |
 | [OP5](#op5--compiler-provided-primitive-implementations) | How do primitives implement protocols? | Compile-time implementation records mapped to existing primitive operations; no object conformance or witness | **Recommended** |
 | [OP6](#op6--generic-bounds-and-definition-site-selection) | How do generic bounds compose? | Bounds may be satisfied by a class witness or canonical primitive implementation; selected uses specialize to the corresponding realization | **Recommended** |
 | [OP7](#op7--evaluation-lifetimes-and-effects) | What are the evaluation rules? | Eager left-to-right call semantics with full-expression temporaries and a read-only receiver | **Recommended** |
@@ -401,52 +401,65 @@ syntax do not exist and are not reserved by this proposal.
 
 **Question:** Given `left + right`, which implementation is selected?
 
-**Recommended direction:** Selection uses this ordered semantic rule:
+**Confirmed direction:** Selection uses this ordered semantic rule:
 
 1. Evaluate neither operand during selection.
 2. If the exact static primitive operand pair is in the implemented primitive
    matrix, select the existing primitive operation.
 3. Otherwise map the operator to one canonical protocol template.
 4. Enumerate exact effective applications supplied by the static left type or
-   by its declared generic bounds.
+   by its declared generic bounds, deduplicating identical canonical
+   applications.
 5. Retain candidates whose `ref Rhs` can accept the static right source under
    ordinary read-only alias compatibility.
-6. Require exactly one candidate and take its declared `Output`, or the
-   protocol's fixed `bool`, as the result type.
+6. Require exactly one candidate. Zero candidates make the operator
+   unsupported; more than one candidate is ambiguous.
+7. Take the unique candidate's declared `Output`, or the protocol's fixed
+   `bool`, as the result type.
 
 The expected result type does not filter candidates. There is no implicit
 numeric cast, promotion, literal reinterpretation, owning copy, owner
 dereference, optional unwrap, or user-defined conversion during selection. An
 explicit cast may change an operand's static type before selection.
 
-The current recommendation is that the protocol's declared `ref` mode retains
-the same access-preserving class/interface/`Obj` view applicability as an
-ordinary call. Otherwise `left.op_add(derived)` could be valid for
+The protocol's declared `ref` mode retains the same access-preserving
+class/interface/`Obj` view applicability as an ordinary call. Otherwise
+`left.op_add(derived)` could be valid for
 `ref rhs: Base` while `left + derived` failed despite selecting the same
-requirement. If several applications eventually become applicable, an exact
-`Rhs` match should outrank a non-owning view conversion; the remaining
-most-specific view ranking or ambiguity rule is still open and should reuse an
-existing callable-specificity relation rather than create an operator-only
-one. Current method non-overloading makes this uncommon but must not be used as
-a semantic shortcut.
+requirement. Applicability is not ranking: an exact `Rhs` match does not
+outrank another candidate admitted through a non-owning view. If both are
+applicable, the expression is ambiguous.
+
+This uniqueness rule deliberately matches Skald's current non-overloaded
+ordinary method model. A concrete class can normally expose at most one
+effective application of a protocol template because distinct applications
+would require incompatible methods with the same requirement name. Existing
+conformance rules reject those declarations; operator selection does not add
+hidden overloads. Generic code can still declare several operator bounds, but
+an operator expression for which more than one bound is applicable is rejected
+as ambiguous at the template definition site. Specialization realizes the
+already unique selection and never ranks or reselects concrete
+implementations.
 
 Eligible left sources are initially:
 
 - an exact class with direct or inherited conformance;
 - a specialized generic class with a closed conformance;
 - the exact canonical operator-interface view itself; and
-- a generic type parameter through one exact declared bound.
+- a generic type parameter through one or more exact declared bounds.
 
 Produced expressions use their static exact class normally. `Obj`, unrelated
 interface views, shared handles without explicit dereference, optionals,
 arrays, and function values do not gain structural operator lookup.
 
 Zero candidates produce an unsupported-operator diagnostic. More than one
-equally specific candidate produces an ambiguity diagnostic in canonical
-interface-identity order. The current absence of method overloading means a
-class will normally be able to satisfy only one application of a given
-operator protocol, but the selection rule must not rely on that incidental
-restriction.
+candidate produces an ambiguity diagnostic listing candidate evidence in
+canonical interface-identity order. Exact-match preference, inheritance-depth
+ranking, expected-result filtering, and other specificity relations are not
+part of the initial feature. If ordinary method overloading or explicit
+per-interface implementation bodies are designed later, a separate extension
+may introduce broadly reusable callable-specificity rules; it must not change
+already unique selections.
 
 ## OP5 — Compiler-provided primitive implementations
 
@@ -655,8 +668,11 @@ application of each operator protocol because all applications require the
 same method name. Supporting `Vector + Vector` and `Vector + Scalar` on one
 class will eventually require ordinary method overloading, explicit interface
 implementation bodies, or another independently designed conformance
-mechanism. Operator selection must report the current limitation honestly and
-must not introduce operator-only hidden method overloads.
+mechanism. Ordinary conformance diagnostics report incompatible attempts to
+provide several applications, while a generic operator expression with
+several applicable bounds reports ambiguity under OP4. Operator syntax must
+not introduce operator-only hidden method overloads or a specificity relation
+that ordinary calls do not have.
 
 ## OP11 — Diagnostics, dependencies, and determinism
 
@@ -681,8 +697,8 @@ Diagnostics should distinguish:
 
 - invalid or missing canonical protocol declarations;
 - no built-in or protocol implementation for the operand types;
-- ambiguous exact protocol applications;
-- an exact RHS mismatch;
+- ambiguous applicable protocol applications;
+- an RHS that cannot bind to a candidate's read-only alias parameter;
 - an unsatisfied generic operator bound;
 - an unavailable `Output` capability in its consuming context;
 - a primitive protocol application that is not in the compiler matrix; and
@@ -903,8 +919,9 @@ An eventual roadmap should allocate evidence to each owner, including:
   cycles, and same-named lookalikes;
 - class conformance, inheritance, overrides, private/static/mutable mismatch,
   and unsupported multiple applications;
-- exact operand/result selection, mixed-type rejection, ambiguity, and absence
-  of expected-result filtering;
+- unique operand/result selection, read-only RHS view applicability,
+  mixed-type rejection, unranked ambiguity, and absence of expected-result
+  filtering;
 - typed `OpEq<Rhs>` selection, one-call derived `!=`, exact primitive equality,
   and deliberate separation from dynamic `Equatable`;
 - four direct ordering protocols, heterogeneous applications, unordered NaN,
@@ -949,10 +966,10 @@ or supported syntax also require the documented supported-toolchain gate.
 - [x] Confirm that compiler-provided `f64` equality and ordering preserve the
       implemented IEEE-754 numeric predicates rather than `BoxF64` bit
       equality.
-- [ ] Confirm ordinary read-only alias applicability, exact-match preference,
-      remaining specificity, and no expected-result filtering.
-- [ ] Confirm candidate behavior for inherited claims, exact interface views,
-      generic bounds, and ambiguity.
+- [x] Confirm ordinary read-only alias applicability, uniqueness without
+      specificity ranking, and no expected-result filtering.
+- [x] Confirm candidate behavior for inherited claims, exact interface views,
+      generic bounds, and unranked ambiguity.
 - [ ] Confirm compiler-provided primitive implementation semantics and exact
       primitive matrix.
 - [ ] Confirm that primitive protocol evidence is static and creates no object
@@ -963,7 +980,7 @@ or supported syntax also require the documented supported-toolchain gate.
       securing, and temporary cleanup.
 - [ ] Freeze or implement produced primitive read-only alias materialization.
 - [ ] Confirm the semantic-selection and HIR erasure boundary.
-- [ ] Confirm the current no-method-overloading limitation and future
+- [x] Confirm the current no-method-overloading limitation and future
       extension boundary.
 - [ ] Confirm canonical module acquisition timing and dependency evidence.
 - [ ] Audit generic specialization, interface dispatch, checked and produced
