@@ -103,6 +103,7 @@ Resolved loop-design inputs:
 Resolved operator-design inputs:
 
 - [Primitive operator semantics design proposal](OPERATORS_DESIGN_PROPOSAL.md)
+- [Interface-based operator overloading design proposal](OPERATOR_OVERLOADING_DESIGN_PROPOSAL.md)
 
 Resolved array-design inputs:
 

@@ -514,6 +514,25 @@ The panic call uses these ordinary argument rules: its one exact
 unrecoverable failure during that production wins; after reporting starts,
 the call terminates without performing remaining cleanup.
 
+## Frozen overloaded-operator evaluation
+
+The frozen
+[interface-based operator-overloading contract](OPERATOR_OVERLOADING.md#evaluation-aliases-and-cleanup)
+reuses ordinary eager-call ordering. A binary expression evaluates and secures
+its left receiver once, then evaluates and secures its RHS once, binds the
+protocol's read-only alias, performs one selected interface call, secures the
+result, and joins reverse completion-order cleanup at the enclosing full-
+expression boundary. Unary protocol operations evaluate and secure one
+receiver before their call.
+
+Produced exact-class operands use the existing caller-owned object temporary
+rules. Produced primitive RHS expressions use the separately frozen read-only
+scalar alias materialization rule. `mut ref` remains place-only. Operator
+methods retain ordinary observable effects and are not implicitly pure.
+
+This ordering is frozen but not implemented for class operators. Existing
+primitive operators and calls retain their implemented behavior.
+
 ## Short-circuit logical expressions
 
 Exact-`bool` `&&` and `||` are implemented as control-flow expressions rather

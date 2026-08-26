@@ -447,6 +447,26 @@ placeholder hierarchy, dispatch family, or conformance. Diagnostics remain
 structured compiler behavior; exact codes and wording are not language
 guarantees.
 
+## Frozen operator-protocol conformance and dispatch
+
+The frozen
+[interface-based operator-overloading contract](OPERATOR_OVERLOADING.md)
+uses ordinary public instance methods to satisfy exact canonical `std::ops`
+applications. Existing conformance, inherited application, override
+replacement, complete-object identity, interface witness dispatch, produced
+receiver, checked-view, and shared-anchor rules apply unchanged. Punctuation
+does not select private or structurally same-named methods.
+
+Because ordinary methods are not overloaded, a class can normally satisfy at
+most one differently typed application of a given operator protocol.
+Incompatible applications retain ordinary conformance diagnostics; the
+operator feature creates no hidden overload set or operator-only specificity
+relation. Compiler-provided primitive protocol evidence is static and never
+enters this object conformance or dispatch model.
+
+This integration is frozen but not implemented; the current polymorphism
+surface does not authorize class-valued operator expressions.
+
 ## Exclusions
 
 This profile excludes:

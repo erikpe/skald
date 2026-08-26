@@ -523,6 +523,21 @@ Operator verification belongs to compiler, backend, assembler, and native
 tests. Direct runtime tests continue covering the generic reporter rather than
 gaining operator-specific ABI harnesses.
 
+## Frozen operator-protocol ABI boundary
+
+The frozen [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
+adds no public C symbol, runtime-managed protocol value, primitive box,
+dictionary, reflection record, witness service, allocation, or ABI-version
+change. Class protocol operations become ordinary generated interface calls;
+primitive specializations become existing generated primitive operations.
+Produced primitive read-only aliases use caller-owned scalar storage and the
+unchanged internal alias ABI.
+
+The runtime never receives an operator spelling, canonical protocol identity,
+candidate set, primitive implementation record, or temporary-lifetime plan.
+Compiler, verifier, backend, linker-surface, and native tests own all eventual
+implementation evidence. The compatibility marker remains `ska_rt_abi_v9`.
+
 Any future addition outside a separately frozen boundary must first have a
 source-language contract, then define its runtime ownership, failure behavior,
 ABI representation, version transition, and focused tests.

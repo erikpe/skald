@@ -199,6 +199,12 @@ an exact class. Bounds do not lift through `shared`, make a bare interface
 view satisfy itself, or authorize structural conformance. Multiple bounds are
 conjunctive.
 
+The frozen
+[operator-protocol contract](OPERATOR_OVERLOADING.md#class-implementations-and-generic-bounds)
+adds one deliberately narrow future exception: a primitive may satisfy a
+canonical `std::ops` bound through compiler-owned static evidence. This does
+not change the current compiler or generalize ordinary interface bounds.
+
 A body may select a member on a parameter only through a declared bound. The
 selection is fixed to the named interface requirement at the template's
 definition site. A later specialization cannot redirect it to a same-named
@@ -319,13 +325,29 @@ Template identities, closed interface identities, requirement identities,
 specialization order, conformance maps, witness metadata, dumps, diagnostics,
 and generated artifacts are deterministic and independent of hash iteration.
 
+## Frozen operator-protocol consumer
+
+The frozen [interface-based operator-overloading contract](OPERATOR_OVERLOADING.md)
+uses exact generic-interface applications for canonical `std::ops` protocols.
+Class arguments retain ordinary nominal conformance and witness dispatch.
+Supported primitive arguments instead use a closed compiler-provided mapping
+to existing primitive operations without acquiring an object interface view,
+witness, box, cast, or runtime conformance.
+
+Operator expressions in templates select one applicable bound at the
+definition site. Specialization maps that fixed selection to an ordinary class
+interface call or an existing primitive operation and never searches again.
+Several applicable bounds are an unranked definition-site ambiguity. Manual
+bound requirement calls use the same realization, while direct primitive
+member syntax remains invalid.
+
+This consumer is frozen but not implemented. The current implemented generic-
+interface contract still accepts exact-class bound satisfaction only.
+
 ## Exclusions and future consumers
 
 The frozen initial profile excludes:
 
-- compiler-generated interfaces or conformances for primitive types;
-- operator protocols, operator overloading, and primitive operator lowering
-  through interfaces;
 - iteration, iterator, range, generator, or sequence protocols and new loop
   lowering within the generic-interface implementation itself;
 - generic functions, generic methods, generic constructors, and requirement-
@@ -343,9 +365,10 @@ The frozen initial profile excludes:
 
 The separately frozen
 [general-iteration contract](ITERATION.md) uses this implemented foundation for
-`Iterable<Item, State>`. A future `Add<Right, Result>` interface can do the
-same. Primitive conformances, operator syntax and lowering, range semantics,
-and optimization guarantees require separate designs.
+`Iterable<Item, State>`. The separately frozen operator contract defines its
+canonical protocols, primitive-only evidence exception, source selection, and
+lowering boundary. Range semantics and optimization guarantees remain
+separate work.
 
 The [generic-interface compiler contract](../compiler/GENERIC_INTERFACES.md)
 defines template identities, specialization, phase boundaries, witness

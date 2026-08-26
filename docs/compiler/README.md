@@ -154,6 +154,14 @@ cleanup, verified compiler-known failures, and mechanical target realization.
 They do not claim support for the explicitly deferred operator and conversion
 work in the [status matrix](../language/STATUS.md#not-implemented).
 
+The frozen [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
+defines the next operator extension without changing the current pipeline.
+Canonical class uses erase before HIR to ordinary interface calls, canonical
+primitive-bound uses erase to existing primitive operations, and produced
+primitive read-only arguments use caller-owned scalar temporaries. The design
+adds no overloaded-operator MIR node, backend semantic lookup, runtime service,
+or ABI revision and is not implemented yet.
+
 The frozen
 [complete explicit primitive cast matrix](../language/TYPES_AND_VALUES.md#frozen-complete-explicit-primitive-cast-matrix)
 has separately selected

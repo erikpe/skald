@@ -75,6 +75,15 @@ General `for-in` syntax supplies implicit `std::iter` dependency evidence.
 Resolution selects exact nominal applications, including frozen generic
 bounds, and the structured HIR lowers through ordinary calls and cyclic MIR.
 
+The frozen [operator-overloading contract](../docs/language/OPERATOR_OVERLOADING.md)
+assigns the dependency-free `std::ops` module one complete canonical bundle of
+generic arithmetic, bitwise, shift, typed-equality, and direct-ordering
+interfaces. The module is not implemented yet. When it lands, ordinary
+explicit protocol imports or direct entry selection make it reachable;
+operator punctuation creates no dependency. The compiler validates the whole
+bundle, supplies only static primitive implementation evidence, and lowers
+class uses through ordinary interface calls without adding a runtime service.
+
 The `std::vec` module provides the implemented generic
 [`Vec<T>` vector](../docs/language/VECTORS.md). It owns independent `T?[]`
 capacity storage and infers its element lifecycle requirements from ordinary

@@ -152,6 +152,13 @@ cycles. The owning feature resolves the canonical declaration once to semantic
 identities; lowering and backends do not repeatedly compare source path
 strings.
 
+The frozen [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
+deliberately uses no compiler-owned dependency kind. Explicit protocol imports
+and direct canonical entry selection provide ordinary `std::ops` reachability;
+operator tokens never expand the graph. Once reachable, semantic resolution
+validates the complete bundle exactly once. Primitive-only operations neither
+load nor validate it, including under `--no-stdlib`.
+
 ## Entry selection and command line
 
 The CLI requires exactly one entry selector:

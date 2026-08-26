@@ -289,6 +289,21 @@ symbol, metadata object, or runtime entry point. Exact instruction sequences,
 register choices, flag use, branch shapes, and constant-folding algorithms
 remain private after these observable requirements are met.
 
+## Frozen operator-protocol target boundary
+
+The frozen [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
+reaches a backend only as an existing verified primitive operation or ordinary
+interface call. Primitive-bound specialization must generate the same target
+semantics as direct primitive syntax. Class implementations use existing
+witness metadata, receiver adjustment, internal call ABI, result ownership,
+and cleanup.
+
+No backend receives source punctuation, unresolved protocol identity,
+candidate set, primitive conformance object, or operator-specific dispatch
+operation. The feature adds no calling convention, layout rule, public symbol,
+runtime entry point, or target-specific semantic selection. This boundary is
+frozen but not implemented.
+
 ## Frozen complete primitive cast target boundary
 
 The frozen

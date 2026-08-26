@@ -161,6 +161,11 @@ makes a result source-observable.
   x86-64 backend. The twenty-two non-failing primitive cast cells use pure
   MIR; the three checked `f64`-to-integer cells use explicit verified control
   flow. Every cell is accepted from source and executes inline on x86-64.
+- [Interface-based operator overloading](OPERATOR_OVERLOADING.md) freezes the
+  canonical `std::ops` bundle, exact primitive priority, unique nominal class
+  and generic-bound selection, static primitive bound evidence, typed versus
+  dynamic equality, eager call order, produced primitive read-only alias
+  prerequisite, and unchanged runtime boundary. It is not implemented.
 - [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
   descriptor, literal syntax, logical immutability, ordinary standard-library
   operations including canonical boolean and integer formatting, exact
@@ -229,9 +234,10 @@ makes a result source-observable.
 - [Generic interfaces](GENERIC_INTERFACES.md) defines the implemented explicit
   interface-template surface, closed exact identity, contextual signature
   validity, generic bounds, nominal conformance, ownership, and dispatch
-  contract.
+  contract, plus the separately frozen canonical operator-protocol consumer.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
-  call-scoped aliases, non-exclusive access, and current inline lifetime.
+  call-scoped aliases, non-exclusive access, current inline lifetime, and the
+  frozen produced primitive read-only materialization prerequisite.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the
   implemented non-null shared value, ordinary and exact-class copy allocation,
   owner copy/release, dynamic destruction, cycle, and borrow-anchor semantics

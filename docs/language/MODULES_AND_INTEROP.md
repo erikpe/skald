@@ -446,6 +446,13 @@ redundant qualified path to declarations already owned by the current module.
 Compiler-owned dependencies, such as a string literal in `std::str`, may point
 back to their owning module because they create no source binding.
 
+The frozen [operator-protocol contract](OPERATOR_OVERLOADING.md#modules-diagnostics-and-determinism)
+does not add such a dependency. Canonical `std::ops` becomes reachable through
+ordinary explicit imports needed to name a protocol, or by direct entry
+selection. Operator punctuation alone creates neither a binding nor an edge;
+primitive-only programs therefore remain independent of the standard library.
+When reachable, `std::ops` is validated as one complete canonical bundle.
+
 Modules have no executable top-level state and an import cycle therefore has
 no initialization order. Any future top-level initialization feature must
 define cyclic initialization independently or reject it. Cyclic imports do

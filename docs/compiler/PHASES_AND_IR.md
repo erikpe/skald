@@ -894,6 +894,34 @@ selection, branch shape, instruction sequence, and optimization algorithm
 remain private. The operator profile adds no public runtime ABI entry point
 beyond the existing common panic reporter.
 
+## Frozen interface-based operator representation
+
+The frozen [operator-protocol lowering contract](OPERATOR_OVERLOADING.md)
+extends semantic selection while preserving the existing phase boundary.
+Syntax and resolution retain source operator shape and evidence. Semantic
+selection chooses either an exact existing primitive operation or one unique
+canonical `std::ops` application from the static left operand or its declared
+generic bounds. Expected result types, implicit conversion, and specificity
+ranking do not participate.
+
+Definition-site generic selection records the canonical template requirement
+and structural operand/result terms. Specialization closes that record to an
+ordinary class witness or compiler-owned primitive operation without
+reselection. Class realizations become existing HIR interface calls; primitive
+realizations become existing HIR primitive operations. No unresolved operator
+protocol reaches completed HIR, and MIR gains no overloaded-operator node,
+dispatcher, effect model, backend lookup, or runtime service.
+
+Produced primitive RHS expressions rely on the separately frozen caller-owned
+read-only scalar alias temporary. Lowering otherwise reuses existing receiver,
+argument, result, effect, panic, anchor, and reverse full-expression cleanup
+plans. MIR verification proves only the resulting ordinary call or primitive
+operation and rejects injected unresolved or mismatched realization evidence.
+
+This representation is frozen but not implemented. The
+[implemented primitive representation](#implemented-primitive-operator-representation)
+remains the current compiler boundary.
+
 ## Frozen complete primitive cast representation
 
 The

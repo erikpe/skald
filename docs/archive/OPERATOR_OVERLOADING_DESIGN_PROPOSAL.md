@@ -1,11 +1,8 @@
 # Operator Overloading Design Proposal
 
-Status: draft for review. No decision in this document is frozen, promoted, or
-scheduled for implementation. The directions marked **Recommended** form a
-coherent initial design, while the questions marked **Open** are intended for
-iteration before this proposal can be promoted into living language and
-compiler contracts. An implementation roadmap must not be created from this
-draft.
+Status: frozen design; OP1 through OP12 were confirmed together on 2026-08-26
+and promoted into living language and compiler contracts. Implementation is
+not yet scheduled, and this record does not make class operators valid source.
 
 This proposal explores interface-based operator overloading now that generic
 interfaces and general iteration are implemented. Its central direction is
@@ -26,8 +23,10 @@ The proposal deliberately separates:
   smuggled into the initial feature.
 
 The implemented primitive operator profile remains authoritative until this
-design is frozen, promoted, and implemented. This draft does not make any
-class operator valid source.
+frozen design is implemented. The
+[status matrix](../language/STATUS.md) remains authoritative for compiler
+availability, and the [implemented grammar](../language/GRAMMAR.md) remains
+the exact accepted source surface.
 
 ## Intended outcome
 
@@ -156,23 +155,23 @@ authoritative.
 
 | ID | Question | Current direction | State |
 |---|---|---|---|
-| [OP1](#op1--protocol-ownership-and-canonical-identity) | Where do protocols live? | Ordinary declarations in canonical `std::ops`, validated and recognized by the compiler | **Recommended** |
-| [OP2](#op2--protocol-shape-and-parameter-modes) | What is the interface shape? | One read-only receiver, a `ref` RHS for binary operators, and explicit generic output | **Recommended** |
-| [OP3](#op3--initial-overloadable-operator-surface) | Which operators overload initially? | Eager algebraic operators, typed `OpEq<Rhs>` with derived `!=`, and four direct ordering predicates; prefix `!` is not overloadable | **Confirmed direction** |
-| [OP4](#op4--selection-and-ambiguity) | How is an implementation selected? | Built-in primitive match first; otherwise require one unique canonical application from the left operand whose `ref Rhs` accepts the static RHS; no ranking or expected-result filtering | **Confirmed direction** |
-| [OP5](#op5--compiler-provided-primitive-implementations) | How do primitives implement protocols? | Compile-time implementation records mapped to existing primitive operations; no object conformance or witness | **Recommended** |
-| [OP6](#op6--generic-bounds-and-definition-site-selection) | How do generic bounds compose? | Bounds may be satisfied by a class witness or canonical primitive implementation; selected uses specialize to the corresponding realization | **Recommended** |
-| [OP7](#op7--evaluation-lifetimes-and-effects) | What are the evaluation rules? | Eager left-to-right call semantics with full-expression temporaries and a read-only receiver | **Recommended** |
-| [OP8](#op8--primitive-read-only-alias-materialization) | Is primitive temporary materialization required? | Yes for arbitrary produced primitive expressions passed to protocol `ref`; `mut ref` remains place-only | **Recommended** |
-| [OP9](#op9--compiler-phase-and-ir-boundaries) | Where is sugar erased? | Semantic selection before HIR; emit existing primitive operations or ordinary interface calls | **Recommended** |
-| [OP10](#op10--inheritance-dispatch-and-manual-use) | How observable are protocols? | Ordinary public class implementations and interface dispatch; primitive implementations remain statically callable through canonical bounds | **Recommended** |
-| [OP11](#op11--diagnostics-dependencies-and-determinism) | How are canonical declarations acquired and errors reported? | Ordinary reachability through explicit protocol references, whole-bundle validation, and deterministic selection evidence; operator syntax adds no module edge | **Confirmed direction** |
-| [OP12](#op12--promotion-and-roadmap-boundary) | When may implementation planning start? | Only after every open decision is settled and the complete contract is promoted | **Recommended** |
+| [OP1](#op1--protocol-ownership-and-canonical-identity) | Where do protocols live? | Ordinary declarations in canonical `std::ops`, validated and recognized by the compiler | **Confirmed** |
+| [OP2](#op2--protocol-shape-and-parameter-modes) | What is the interface shape? | One read-only receiver, a `ref` RHS for binary operators, and explicit generic output | **Confirmed** |
+| [OP3](#op3--initial-overloadable-operator-surface) | Which operators overload initially? | Eager algebraic operators, typed `OpEq<Rhs>` with derived `!=`, and four direct ordering predicates; prefix `!` is not overloadable | **Confirmed** |
+| [OP4](#op4--selection-and-ambiguity) | How is an implementation selected? | Built-in primitive match first; otherwise require one unique canonical application from the left operand whose `ref Rhs` accepts the static RHS; no ranking or expected-result filtering | **Confirmed** |
+| [OP5](#op5--compiler-provided-primitive-implementations) | How do primitives implement protocols? | Compile-time implementation records mapped to existing primitive operations; no object conformance or witness | **Confirmed** |
+| [OP6](#op6--generic-bounds-and-definition-site-selection) | How do generic bounds compose? | Bounds may be satisfied by a class witness or canonical primitive implementation; selected uses specialize to the corresponding realization | **Confirmed** |
+| [OP7](#op7--evaluation-lifetimes-and-effects) | What are the evaluation rules? | Eager left-to-right call semantics with full-expression temporaries and a read-only receiver | **Confirmed** |
+| [OP8](#op8--primitive-read-only-alias-materialization) | Is primitive temporary materialization required? | Yes for arbitrary produced primitive expressions passed to protocol `ref`; `mut ref` remains place-only | **Confirmed** |
+| [OP9](#op9--compiler-phase-and-ir-boundaries) | Where is sugar erased? | Semantic selection before HIR; emit existing primitive operations or ordinary interface calls | **Confirmed** |
+| [OP10](#op10--inheritance-dispatch-and-manual-use) | How observable are protocols? | Ordinary public class implementations and interface dispatch; primitive implementations remain statically callable through canonical bounds | **Confirmed** |
+| [OP11](#op11--diagnostics-dependencies-and-determinism) | How are canonical declarations acquired and errors reported? | Ordinary reachability through explicit protocol references, whole-bundle validation, and deterministic selection evidence; operator syntax adds no module edge | **Confirmed** |
+| [OP12](#op12--promotion-and-roadmap-boundary) | When may implementation planning start? | Only after every decision is settled and the complete contract is promoted | **Confirmed** |
 
 ## Proposed standard-library surface
 
-Under the recommended algebraic profile, a dependency-free `std::ops` module
-would declare ordinary generic interfaces conceptually equivalent to:
+Under the confirmed algebraic profile, the dependency-free `std::ops` module
+declares these canonical ordinary generic interfaces:
 
 ```ska
 public interface OpNeg<Output> {
@@ -244,11 +243,11 @@ public interface OpShiftRight<Rhs, Output> {
 }
 ```
 
-The exact names remain open until OP1 through OP3 are confirmed. `OpShl` and
-`OpShr` would be shorter but less immediately readable; `Add` would be
-pleasant in source but less explicit beside ordinary domain interfaces. The
-`Op` prefix is currently recommended because it makes compiler-recognized
-language protocols visually distinct without adding a new namespace feature.
+The exact names above are frozen. `OpShl` and `OpShr` would be shorter but less
+immediately readable; `Add` would be pleasant in source but less explicit
+beside ordinary domain interfaces. The confirmed `Op` prefix makes compiler-
+recognized language protocols visually distinct without adding a new
+namespace feature.
 
 The protocol declarations are ordinary Skald source. A user class imports and
 implements them normally. A lookalike interface in another module has no
@@ -261,7 +260,7 @@ replaced silently.
 **Question:** Should operator interfaces be synthesized by the compiler or
 declared in the standard library?
 
-**Recommended direction:** Declare them in canonical `std::ops` source and
+**Confirmed direction:** Declare them in canonical `std::ops` source and
 make the compiler recognize their exact module, visibility, generic arity,
 requirement name, receiver mutability, parameter mode and type, and result
 type. This mirrors `std::iter::Iterable`.
@@ -281,14 +280,14 @@ would introduce declarations that source cannot own or inspect through the
 ordinary module model. Pure library declarations would be insufficient
 because operator syntax must recognize exact protocols and primitives cannot
 declare class-style conformance. The canonical library-plus-compiler model is
-therefore the recommended middle ground.
+therefore the confirmed middle ground.
 
 ## OP2 — Protocol shape and parameter modes
 
 **Question:** What do the generic arguments mean, and should the RHS be a
 value or an alias?
 
-**Recommended direction:** A binary protocol is parameterized as
+**Confirmed direction:** A binary protocol is parameterized as
 `OpAdd<Rhs, Output>`. Its receiver is the ordinary implicit read-only
 interface receiver, its one explicit operand is `ref rhs: Rhs`, and its result
 is the owning `Output`. A unary protocol has only `Output`.
@@ -322,7 +321,7 @@ carry a redundant `Output` parameter.
 **Question:** Which existing source operators should consult a protocol when
 the primitive matrix does not apply?
 
-**Recommended initial core:** Include only eager algebraic operations whose
+**Confirmed initial core:** Include only eager algebraic operations whose
 source meaning is one unary or binary call:
 
 | Source | Canonical protocol | Primitive implementations |
@@ -467,7 +466,7 @@ already unique selections.
 **Question:** How can `u64` satisfy `OpAdd<u64, u64>` without becoming an
 object?
 
-**Recommended direction:** The compiler owns a closed, declarative mapping
+**Confirmed direction:** The compiler owns a closed, declarative mapping
 from each supported primitive protocol application to one existing primitive
 semantic operation. Conceptually:
 
@@ -508,7 +507,7 @@ no `OpRem<f64, f64>` merely because a protocol template exists.
 **Question:** How does `where T: OpAdd<T, T>` work for both classes and
 primitives?
 
-**Recommended direction:** Extend bound satisfaction only for canonical
+**Confirmed direction:** Extend bound satisfaction only for canonical
 operator protocols. This applies uniformly when closing generic class bounds
 and generic interface bounds. A closed bound may carry one of two
 implementation kinds:
@@ -533,7 +532,7 @@ The same principle should apply when a generic body spells the canonical
 bound requirement manually, such as `left.op_add(right)`. If a primitive can
 satisfy the bound but the bound's own requirement becomes uncallable after
 specialization, the bound would be internally inconsistent. Supporting this
-manual form is therefore recommended, although direct primitive member syntax
+manual form is therefore confirmed, although direct primitive member syntax
 such as `17u.op_add(2u)` remains invalid because primitives have no members.
 
 Ordinary non-operator interface bounds remain exact-class-only. This proposal
@@ -543,7 +542,7 @@ does not generalize every interface to structural or primitive conformance.
 
 **Question:** What observable execution does an overloaded operator have?
 
-**Recommended direction:** An overloaded eager binary operation behaves as
+**Confirmed direction:** An overloaded eager binary operation behaves as
 one interface call with this order:
 
 1. evaluate and secure the left receiver exactly once;
@@ -574,7 +573,7 @@ preserving those effects and the exact source order.
 
 **Question:** Is produced primitive storage still a prerequisite?
 
-**Recommended direction:** Yes. With a `ref` RHS, these ordinary expressions
+**Confirmed direction:** Yes. With a `ref` RHS, these ordinary expressions
 must work:
 
 ```ska
@@ -600,13 +599,13 @@ storage.
 
 This extension is independently useful for ordinary functions and methods and
 can be implemented and documented before operator overloading. It is a strict
-prerequisite for the recommended protocol shape, not an optional optimization.
+prerequisite for the confirmed protocol shape, not an optional optimization.
 
 ## OP9 — Compiler phase and IR boundaries
 
 **Question:** Which phases know that source used an overloaded operator?
 
-**Recommended direction:** Preserve source operator identity through syntax
+**Confirmed direction:** Preserve source operator identity through syntax
 and resolved template analysis, select semantics once, and erase the sugar
 before typed HIR:
 
@@ -647,7 +646,7 @@ should require no operator-specific effect model.
 
 **Question:** Does operator syntax bypass ordinary interface behavior?
 
-**Recommended direction:** No. A class implementation is an ordinary public
+**Confirmed direction:** No. A class implementation is an ordinary public
 instance method satisfying an exact ordinary interface application. Existing
 rules govern exact signature matching, inherited conformance, override
 replacement, receiver access, produced receivers, checked views, shared
@@ -748,7 +747,7 @@ must remain independent of hash iteration and module discovery order.
 
 **Question:** When is this proposal ready to become implementation work?
 
-**Recommended direction:** Do not create an implementation roadmap until:
+**Confirmed direction:** Do not create an implementation roadmap until:
 
 - OP1 through OP12 have confirmed decisions;
 - the exact canonical interfaces and initial operator table are fixed;
@@ -788,14 +787,13 @@ protocol declarations and validation, primitive implementation evidence and
 bound closure, class operator selection, generic definition-site selection,
 and complete hardening. Those are design observations, not a frozen sequence.
 
-## Equality and ordering recommendations
+## Equality and ordering decisions
 
-The initial proposal should not claim that all punctuation is overloadable
-until these contracts are chosen.
+The frozen design does not claim that all punctuation is overloadable.
 
-### Equality recommendation
+### Equality decision
 
-The recorded recommendation is `OpEq<Rhs>` for typed operator equality.
+The confirmed decision is `OpEq<Rhs>` for typed operator equality.
 `==` performs one statically selected `op_eq(ref rhs: Rhs) -> bool` call, and
 `!=` performs the same call once followed by exact boolean negation. Primitive
 types receive compiler-provided exact same-type applications matching the
@@ -828,7 +826,7 @@ introduced.
 Generic-interface invariance remains visible in hierarchies. Inherited
 `OpEq<Base>` is not `OpEq<Derived>`, so it does not satisfy the exact bound of
 `Comparer<Derived>`. A direct `Derived == Derived` may still select inherited
-`OpEq<Base>` through the ordinary read-only RHS up-view recommended by OP4.
+`OpEq<Base>` through the ordinary read-only RHS up-view confirmed by OP4.
 Code requiring open-ended dynamic subclass comparison can instead use
 `Equatable`, compare through an explicit common base view, or use a two-type
 generic bound such as `Left: OpEq<Right>`. The compiler must not special-case
@@ -918,8 +916,7 @@ can be designed independently if real programs require multiple RHS types.
 
 ## Deliberate exclusions
 
-Unless an open decision above is resolved differently, the initial feature
-does not include:
+The frozen initial feature does not include:
 
 - short-circuit `&&` or `||` protocols;
 - overloaded prefix `!`, truthiness, or overloaded conditional conversion;
@@ -991,11 +988,11 @@ or supported syntax also require the documented supported-toolchain gate.
 
 ## Decisions required before freeze
 
-- [ ] Confirm canonical module, interface, parameter, and requirement names.
-- [ ] Confirm library declaration plus compiler recognition rather than fully
+- [x] Confirm canonical module, interface, parameter, and requirement names.
+- [x] Confirm library declaration plus compiler recognition rather than fully
       compiler-synthesized protocols.
-- [ ] Confirm read-only receiver, `ref` RHS, and explicit `Output` parameters.
-- [ ] Confirm the initial overloadable operator table.
+- [x] Confirm read-only receiver, `ref` RHS, and explicit `Output` parameters.
+- [x] Confirm the initial overloadable operator table.
 - [x] Confirm that prefix `!` remains exact-`bool` and is not overloadable.
 - [x] Confirm typed `OpEq<Rhs>`, one-call derived `!=`, exact primitive
       implementations, and no automatic `Equatable` bridge.
@@ -1008,26 +1005,26 @@ or supported syntax also require the documented supported-toolchain gate.
       specificity ranking, and no expected-result filtering.
 - [x] Confirm candidate behavior for inherited claims, exact interface views,
       generic bounds, and unranked ambiguity.
-- [ ] Confirm compiler-provided primitive implementation semantics and exact
+- [x] Confirm compiler-provided primitive implementation semantics and exact
       primitive matrix.
-- [ ] Confirm that primitive protocol evidence is static and creates no object
+- [x] Confirm that primitive protocol evidence is static and creates no object
       interface view or witness.
-- [ ] Confirm primitive satisfaction of canonical operator bounds and manual
+- [x] Confirm primitive satisfaction of canonical operator bounds and manual
       bound-requirement call behavior.
-- [ ] Confirm left-to-right call-equivalent evaluation, effects, result
+- [x] Confirm left-to-right call-equivalent evaluation, effects, result
       securing, and temporary cleanup.
-- [ ] Freeze or implement produced primitive read-only alias materialization.
-- [ ] Confirm the semantic-selection and HIR erasure boundary.
+- [x] Freeze or implement produced primitive read-only alias materialization.
+- [x] Confirm the semantic-selection and HIR erasure boundary.
 - [x] Confirm the current no-method-overloading limitation and future
       extension boundary.
 - [x] Confirm ordinary canonical-module reachability, complete-bundle
       validation, and separate deterministic selection evidence.
-- [ ] Audit generic specialization, interface dispatch, checked and produced
+- [x] Audit generic specialization, interface dispatch, checked and produced
       receivers, shared anchors, static effects, panic traces, dumps,
       determinism, verifier obligations, backend legality, and runtime ABI.
-- [ ] Promote every accepted decision into living language and compiler
+- [x] Promote every accepted decision into living language and compiler
       contracts without claiming implementation.
-- [ ] Validate links and indexes, archive the frozen proposal, and only then
+- [x] Validate links and indexes, archive the frozen proposal, and only then
       create an implementation roadmap.
 
 ## Promotion criteria
@@ -1049,6 +1046,5 @@ This proposal may be frozen and archived only when:
 - no implementation roadmap depends on an open representation choice; and
 - documentation links, indexes, and terminology validate cleanly.
 
-After promotion, this file becomes the historical decision record under
-`docs/archive/`. A new roadmap may then schedule implementation from the
-promoted living contracts.
+This archived file is the historical decision record. A new roadmap may now
+schedule implementation from the promoted living contracts.

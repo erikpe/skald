@@ -220,6 +220,11 @@ bounds share this rule. Structurally distinct bounds that become the same
 subject/application pair after substitution are rejected as duplicate closed
 bounds without repeating the nominal-failure cascade.
 
+The frozen [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
+adds one future canonical-only realization: a supported primitive may satisfy
+a `std::ops` bound through static primitive evidence. The implemented general
+bound algorithm remains exact-class-only until that feature lands.
+
 Definition-time member lookup through a parameter-bearing bound selects one
 `InterfaceTemplateRequirementId`. Specialization closes the interface
 application and maps that identity to the same-index ordinary
@@ -360,16 +365,36 @@ The concrete phase-by-phase workflow and focused commands are documented in
 [Debugging the Compiler](../development/DEBUGGING.md#follow-the-pipeline), and
 test placement remains governed by [Testing](../development/TESTING.md#test-layers).
 
+## Frozen operator-protocol specialization
+
+The frozen [operator-protocol compiler contract](OPERATOR_OVERLOADING.md)
+extends definition-site bound selection without changing ordinary generic-
+interface identity. A canonical operator bound closes to either an ordinary
+class witness or one compiler-owned primitive operation. The template records
+one unique selected requirement; specialization maps it to an ordinary
+interface call or existing primitive HIR operation and never reselects from
+the concrete type.
+
+Primitive evidence creates no closed object interface, witness metadata,
+dictionary, cast, shared interface owner, or runtime representation. Multiple
+applicable operator bounds remain an unranked definition-site error. Manual
+bound calls and punctuation share the same specialization evidence.
+
+This integration is frozen but not implemented. The current generic-interface
+pipeline and verifier continue to require ordinary class conformance for every
+implemented bound.
+
 ## Deliberate exclusions
 
 This compiler contract does not itself provide primitive conformances,
-operator protocols or overloading, iteration protocols or loop lowering,
+iteration protocols or loop lowering,
 generic functions or methods, inference, defaults, variance, associated types,
 interface inheritance, default methods, structural conformance, erased
 generics, runtime dictionaries, reflection, runtime specialization, or stable
 separate-compilation template ABI. The separately frozen
 [general-iteration compiler contract](ITERATION.md) is an implemented consumer
-of the closed-interface machinery.
+of the closed-interface machinery. Operator protocols and their narrow
+primitive-evidence exception are owned by the separately frozen contract above.
 
 The archived
 [design record](../archive/GENERIC_INTERFACES_DESIGN_PROPOSAL.md) preserves the

@@ -10,7 +10,9 @@ aliases into other future value families remain unfrozen. The produced
 exact-class read-only alias extension is implemented through type checking,
 HIR, verified MIR, and native x86-64 execution. Array-specific descriptor and
 detached-backing behavior belongs to [Arrays](ARRAYS.md). Feature maturity is
-authoritative in the [status matrix](STATUS.md).
+authoritative in the [status matrix](STATUS.md). Produced primitive read-only
+alias materialization is frozen below as a prerequisite for operator
+protocols, but is not implemented.
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -164,8 +166,8 @@ temporary storage is physically writable during initialization. This keeps
 implicit temporary binding observational. Any future facility for mutating an
 unnamed object would require its own source syntax and contract.
 
-The relaxation does not apply to produced primitives, optional containers,
-arrays, raw shared handles, or implicit shared dereference. Existing
+The implemented relaxation does not apply to produced primitives, optional
+containers, arrays, raw shared handles, or implicit shared dereference. Existing
 inline-optional and array alias rules remain place-based. Shared-backed
 borrowing continues to require explicit `*` or `->` selection and follows its
 existing stable-owner or hidden-anchor rules. The extension also creates no
@@ -241,6 +243,27 @@ errors retain ordinary reporting and source order. The typed representation
 uses one produced read-only view. Verified MIR constructs its owner once,
 keeps it live for the complete call, and destroys it once at the enclosing
 full-expression boundary.
+
+## Frozen produced primitive read-only alias arguments
+
+The frozen
+[operator-protocol contract](OPERATOR_OVERLOADING.md#evaluation-aliases-and-cleanup)
+requires any successfully checked primitive value expression to bind to a
+compatible read-only primitive `ref` parameter. A literal, call result,
+primitive field read, cast, or compound primitive expression is evaluated once
+at its ordinary argument position and materialized in hidden caller-owned
+scalar storage. That storage remains live through later argument effects and
+the complete call and ends at the enclosing full-expression boundary after
+the result is secured.
+
+An existing compatible primitive place continues to borrow directly. `mut
+ref` remains restricted to an existing mutable place. Materialization creates
+no source reference value, alias local, escaping or stored alias, external
+alias signature, implicit conversion, or observable permission to mutate
+unnamed storage.
+
+This extension is frozen but not implemented. The implemented primitive-source
+list above remains authoritative until the status matrix promotes the feature.
 
 ## Access propagation
 
