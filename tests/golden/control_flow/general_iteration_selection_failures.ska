@@ -1,0 +1,21 @@
+from std::iter import Iterable;
+
+class Both implements Iterable<i64, u64>, Iterable<u8, bool> {
+    init() {}
+}
+
+fn missing(number: u64) -> unit {
+    for (item in number) {}
+}
+
+fn ambiguous(values: Both) -> unit {
+    for (item in values) {}
+}
+
+fn mismatch(values: Both) -> unit {
+    for (item: bool in values) {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

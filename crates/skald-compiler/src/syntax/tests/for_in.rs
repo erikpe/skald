@@ -1,5 +1,5 @@
 use super::*;
-use crate::source::Span;
+use crate::{diagnostics::LabelStyle, source::Span};
 
 fn source_slice(source: &str, span: Span) -> &str {
     &source[span.range().start()..span.range().end()]
@@ -88,53 +88,65 @@ fn in_remains_an_identifier_outside_the_for_header_delimiter() {
 
 #[test]
 fn malformed_for_in_headers_recover_without_swallowing_later_statements() {
-    for (source, code, message) in [
+    for (source, code, message, primary) in [
         (
             "fn main() -> i64 { for item in values) {} return 0; }",
             EXPECTED_TOKEN,
             "expected `(` after `for`",
+            "item",
         ),
         (
             "fn main() -> i64 { for (: u64 in values) {} return 0; }",
             EXPECTED_TOKEN,
             "expected an item binding after `for (`",
+            ":",
         ),
         (
             "fn main() -> i64 { for (item: ) {} return 0; }",
             EXPECTED_TOKEN,
             "expected the item type `i64`, `u64`, `u8`, `f64`, or `bool`, a class name, or a shared object type",
+            ")",
         ),
         (
             "fn main() -> i64 { for (item values) {} return 0; }",
             EXPECTED_TOKEN,
             "expected contextual `in` after the item binding",
+            "values",
         ),
         (
             "fn main() -> i64 { for (item in) {} return 0; }",
             EXPECTED_EXPRESSION,
             "expected an iterable expression after `in`",
+            ")",
         ),
         (
             "fn main() -> i64 { for (item in values {} return 0; }",
             EXPECTED_TOKEN,
             "expected `)` after the iterable expression",
+            "{",
         ),
         (
             "fn main() -> i64 { for (item in values) return 1; return 0; }",
             EXPECTED_TOKEN,
             "expected `{` to start a block",
+            "return",
         ),
     ] {
         let (_, output) = parse_text(source);
         assert!(output.has_errors(), "source should be rejected: {source}");
-        assert!(
-            output
-                .diagnostics
-                .iter()
-                .any(|diagnostic| diagnostic.code == code && diagnostic.message == message),
-            "missing focused diagnostic for {source}: {:?}",
-            output.diagnostics
-        );
+        let diagnostic = output
+            .diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.code == code && diagnostic.message == message)
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing focused diagnostic for {source}: {:?}",
+                    output.diagnostics
+                )
+            });
+        assert_eq!(diagnostic.labels.len(), 1, "{source}");
+        assert_eq!(diagnostic.labels[0].style, LabelStyle::Primary, "{source}");
+        assert_eq!(source_slice(source, diagnostic.labels[0].span), primary);
         assert!(
             function(&output.ast, 0)
                 .body

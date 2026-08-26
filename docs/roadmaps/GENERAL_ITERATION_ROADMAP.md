@@ -1,6 +1,6 @@
 # General Iteration Implementation Roadmap
 
-Status: in progress. `IT7` is complete; `IT8` is next.
+Status: in progress. `IT8` is complete; `IT9` is next.
 
 This roadmap implements the frozen
 [general-iteration language contract](../language/ITERATION.md) and
@@ -86,7 +86,7 @@ Every task preserves these cross-cutting decisions:
 | [IT5](#it5--loop-duration-receiver-composition) | [x] Complete | Every frozen exact, produced, polymorphic, checked, shared, optional, and array receiver family remains valid for the loop duration. |
 | [IT6](#it6--complete-item-state-and-nested-optional-matrix) | [x] Complete | All admitted stored-value families and genuine optional items execute with exact lifecycle. |
 | [IT7](#it7--ordinary-vec-adoption) | [x] Complete | `Vec<T>` implements `Iterable<T, u64>` in ordinary source and composes with generic consumers. |
-| [IT8](#it8--verification-diagnostics-and-determinism-hardening) | [ ] Planned | Negative verifier evidence, stable diagnostics, dumps, and reordered-declaration determinism close trust gaps. |
+| [IT8](#it8--verification-diagnostics-and-determinism-hardening) | [x] Complete | Negative verifier evidence, stable diagnostics, dumps, and reordered-declaration determinism close trust gaps. |
 | [IT9](#it9--native-boundary-and-release-closure) | [ ] Planned | Native evidence, unchanged runtime/ABI checks, full gates, living status, and archival complete delivery. |
 
 Only one task should be marked in progress at a time. Check an item only after
@@ -575,25 +575,25 @@ Primary implementation areas:
 
 Checklist:
 
-- [ ] Stabilize diagnostics for canonical declaration failure, no candidate,
+- [x] Stabilize diagnostics for canonical declaration failure, no candidate,
   ambiguity, annotation mismatch, invalid state/item capability, unsafe
   receiver, invalid scope, and malformed header.
-- [ ] Ensure primary labels point at the actionable loop/interface component
+- [x] Ensure primary labels point at the actionable loop/interface component
   and secondary labels identify conflicting claims/declarations.
-- [ ] Stabilize syntax, resolved, HIR, and MIR dumps with exact identities and
+- [x] Stabilize syntax, resolved, HIR, and MIR dumps with exact identities and
   source order; avoid unordered candidate/debug rendering.
-- [ ] Audit every exhaustive statement/control-flow/static-effect/cell-write
+- [x] Audit every exhaustive statement/control-flow/static-effect/cell-write
   match introduced or affected by `HirForIn`.
-- [ ] Mutate interface and requirement identities, Item/State/result types,
+- [x] Mutate interface and requirement identities, Item/State/result types,
   state alias targets, optional presence layers, loop destinations, storage
   epochs, and cleanup edges; require verifier rejection or demonstrate the
   malformed state cannot be represented below HIR.
-- [ ] Mutate receiver owner/guard/anchor lifetimes and duplicate/missing cleanup.
-- [ ] Prove calls after termination and item use outside its epoch cannot pass
+- [x] Mutate receiver owner/guard/anchor lifetimes and duplicate/missing cleanup.
+- [x] Prove calls after termination and item use outside its epoch cannot pass
   final MIR verification.
-- [ ] Run repeated and declaration/module-order-perturbed compilations and
+- [x] Run repeated and declaration/module-order-perturbed compilations and
   compare diagnostics, dumps, and assembly.
-- [ ] Add depth/stress cases without introducing recursive parser/resolver or
+- [x] Add depth/stress cases without introducing recursive parser/resolver or
   verifier behavior beyond repository limits.
 
 Tests:
@@ -608,6 +608,22 @@ Tests:
 Exit condition: every trust-boundary invariant has positive and negative
 evidence, all user failures are deterministic source diagnostics, and repeated
 or reordered equivalent inputs produce stable observable output.
+
+Completion evidence: parser recovery and diagnostic goldens cover every header
+component plus canonical-declaration, missing-candidate, ambiguous-candidate,
+and annotation-mismatch failures with exact actionable primary and declaration
+secondary spans. HIR construction rejects inconsistent protocol identities,
+access modes, and substituted types. A dedicated final-MIR mutation suite
+rejects corrupt call identities and types, aliases, nested optional layers,
+storage and item epochs, loop destinations, owner/guard/anchor lifetimes,
+cleanup multiplicity, and control flow after termination. Exhaustive HIR cell
+write traversal is exercised through a loop body. Reordered files, provider
+modules, claims, and generic demand produce equal resolved, HIR, preliminary,
+planned and final MIR, diagnostic, and assembly observations across processes.
+For-in punctuation mutations and depth-24 mixed loops retain deterministic,
+bounded behavior. The full repository gate passes all 366 golden sources,
+2,238 compiler unit tests, robustness and 47 process-determinism tests,
+documentation/static checks, and the Rust 1.82 MSRV check.
 
 ## IT9 — Native boundary and release closure
 

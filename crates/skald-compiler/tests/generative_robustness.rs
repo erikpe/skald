@@ -34,7 +34,35 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_optional_syntax_mutations();
     exercise_array_syntax_mutations();
     exercise_generic_syntax_mutations();
+    exercise_for_in_syntax_mutations();
     exercise_byte_literal_mutations();
+}
+
+fn exercise_for_in_syntax_mutations() {
+    const SEEDS: &[&str] = &[
+        "fn main(values: Source) -> unit { for (item in values) { while (false) { continue; } } }",
+        "class Scanner<Source> where Source: Iterable<i64, u64> { fn scan(ref values: Source) -> unit { for (item: i64 in values) { for (nested in values) {} } } }",
+    ];
+    const INSERTIONS: &[&str] = &["for", "(", ")", ":", "in", "{", "}", ";"];
+
+    for (seed_index, seed) in SEEDS.iter().enumerate() {
+        for index in 0..seed.len() {
+            let mut deletion = (*seed).to_owned();
+            deletion.remove(index);
+            assert_deterministic_frontend_recovery(
+                &format!("for-in-{seed_index}-delete-{index}"),
+                &deletion,
+            );
+        }
+        for index in 0..=seed.len() {
+            let mut insertion = (*seed).to_owned();
+            insertion.insert_str(index, INSERTIONS[index % INSERTIONS.len()]);
+            assert_deterministic_frontend_recovery(
+                &format!("for-in-{seed_index}-insert-{index}"),
+                &insertion,
+            );
+        }
+    }
 }
 
 fn exercise_generic_syntax_mutations() {

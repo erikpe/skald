@@ -1,10 +1,15 @@
 use super::*;
 use crate::{
+    diagnostics::LabelStyle,
     identity::{
         InterfaceTemplateId, InterfaceTemplateRequirementId, LocalId, LoopId, TypeParameterId,
     },
     test_support::{load_module_sources, CANONICAL_ITER_SOURCE},
 };
+
+fn source_slice(source: &str, span: crate::source::Span) -> &str {
+    &source[span.range().start()..span.range().end()]
+}
 
 const APP: &str = "import std::iter;\nfn main() -> i64 { return 0; }\n";
 
@@ -251,6 +256,34 @@ fn malformed_canonical_iterable_declarations_are_rejected_structurally() {
 }
 
 #[test]
+fn canonical_declaration_failure_labels_the_bad_component_and_requirement_site() {
+    let source = concat!(
+        "public interface Iterable<Item, State> {\n",
+        "  fn iter_state() -> State;\n",
+        "  fn iter_next(mut ref state: State) -> Item;\n",
+        "}\n",
+    );
+    let output = resolve_iteration_module(source);
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == INVALID_ITERABLE_LANGUAGE_ITEM
+                && diagnostic.message.contains("must return `Item?`")
+        })
+        .expect("malformed result must have one focused language-item diagnostic");
+    assert_eq!(diagnostic.labels.len(), 2);
+    assert_eq!(diagnostic.labels[0].style, LabelStyle::Primary);
+    assert_eq!(source_slice(source, diagnostic.labels[0].span), "Item");
+    assert_eq!(diagnostic.labels[0].message, "result has the wrong type");
+    assert_eq!(diagnostic.labels[1].style, LabelStyle::Secondary);
+    assert_eq!(
+        diagnostic.labels[1].message,
+        "iteration language item required here"
+    );
+}
+
+#[test]
 fn direct_claim_selects_exact_protocol_evidence_item_scope_and_loop_identity() {
     let source = format!(
         "{COUNTER}fn main(values: Counter) -> i64 {{\n  for (item in values) {{ var observed: i64 = item; continue; }}\n  return 0;\n}}\n"
@@ -340,6 +373,59 @@ fn exact_annotation_filters_ambiguity_without_conversion_rules() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == ITERATION_ITEM_TYPE_MISMATCH));
+}
+
+#[test]
+fn selection_failures_label_the_actionable_header_and_conflicting_claims() {
+    let source = concat!(
+        "from std::iter import Iterable;\n",
+        "class Both implements Iterable<i64, u64>, Iterable<u8, bool> { init() {} }\n",
+        "fn missing(number: u64) -> unit { for (item in number) {} }\n",
+        "fn ambiguous(values: Both) -> unit { for (item in values) {} }\n",
+        "fn mismatch(values: Both) -> unit { for (item: bool in values) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let output = resolve_iteration_app(source);
+
+    let missing = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == MISSING_ITERABLE_APPLICATION)
+        .expect("primitive source must report missing nominal conformance");
+    assert_eq!(missing.labels.len(), 1);
+    assert_eq!(missing.labels[0].style, LabelStyle::Primary);
+    assert_eq!(source_slice(source, missing.labels[0].span), "number");
+
+    let ambiguous = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == AMBIGUOUS_ITERABLE_APPLICATION)
+        .expect("unannotated source must report ambiguous conformance");
+    assert_eq!(ambiguous.labels[0].style, LabelStyle::Primary);
+    assert_eq!(source_slice(source, ambiguous.labels[0].span), "values");
+    assert_eq!(ambiguous.labels.len(), 3);
+    assert!(ambiguous.labels[1..]
+        .iter()
+        .all(|label| label.style == LabelStyle::Secondary));
+    assert_eq!(
+        ambiguous.labels[1..]
+            .iter()
+            .map(|label| source_slice(source, label.span))
+            .collect::<Vec<_>>(),
+        ["Iterable<i64, u64>", "Iterable<u8, bool>"]
+    );
+
+    let mismatch = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == ITERATION_ITEM_TYPE_MISMATCH)
+        .expect("nonmatching annotation must report exact item mismatch");
+    assert_eq!(mismatch.labels[0].style, LabelStyle::Primary);
+    assert_eq!(source_slice(source, mismatch.labels[0].span), "bool");
+    assert_eq!(mismatch.labels.len(), 3);
+    assert!(mismatch.labels[1..]
+        .iter()
+        .all(|label| label.style == LabelStyle::Secondary));
 }
 
 #[test]

@@ -1,0 +1,9 @@
+fn main() -> i64 {
+    for (: u64 in values) {}
+    var recovered_binding: i64 = 1;
+    for (item values) {}
+    var recovered_delimiter: i64 = 2;
+    for (item in) {}
+    var recovered_iterable: i64 = 3;
+    return recovered_binding + recovered_delimiter + recovered_iterable;
+}

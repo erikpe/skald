@@ -1,5 +1,6 @@
 use super::*;
 use crate::{
+    diagnostics::LabelStyle,
     hir::{
         HirAccess, HirIterationReceiverCarrier, HirIterationReceiverLifetime,
         HirIterationValueCopy, HirOptionalPresenceTestPlan, HirOptionalUnwrapPlan, HirStatement,
@@ -12,6 +13,10 @@ use crate::{
     },
     typeck::{type_check, COPY_OPERATION_UNAVAILABLE, GENERAL_ITERATION_UNSUPPORTED},
 };
+
+fn source_slice(source: &str, span: crate::source::Span) -> &str {
+    &source[span.range().start()..span.range().end()]
+}
 
 const COUNTER: &str = concat!(
     "from std::iter import Iterable;\n",
@@ -207,7 +212,7 @@ fn class_state_is_supported_and_unavailable_item_copy_is_diagnosed() {
     crate::mir::verify_mir(&crate::mir::lower_hir(&hir))
         .expect("exact-class iteration state must lower through ordinary MIR");
 
-    let mut unavailable = resolve_iteration(concat!(
+    let unavailable_source = concat!(
         "from std::iter import Iterable;\n",
         "class Item { init() {} }\n",
         "class Values implements Iterable<Item, u64> {\n",
@@ -217,7 +222,8 @@ fn class_state_is_supported_and_unavailable_item_copy_is_diagnosed() {
         "}\n",
         "fn scan(values: Values) -> unit { for (item in values) {} }\n",
         "fn main() -> i64 { return 0; }\n",
-    ));
+    );
+    let mut unavailable = resolve_iteration(unavailable_source);
     assert!(
         unavailable.diagnostics.is_empty(),
         "{:?}",
@@ -234,10 +240,17 @@ fn class_state_is_supported_and_unavailable_item_copy_is_diagnosed() {
         crate::resolve::ResolvedCopyOperation::Unavailable;
     let checked = type_check(&unavailable.program);
     assert!(checked.hir.is_none());
-    assert!(checked
+    let diagnostic = checked
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE));
+        .find(|diagnostic| diagnostic.code == COPY_OPERATION_UNAVAILABLE)
+        .expect("unavailable item copy must be diagnosed");
+    assert_eq!(diagnostic.labels.len(), 1);
+    assert_eq!(diagnostic.labels[0].style, LabelStyle::Primary);
+    assert_eq!(
+        source_slice(unavailable_source, diagnostic.labels[0].span),
+        "item"
+    );
 }
 
 #[test]
@@ -486,6 +499,28 @@ fn item_is_immutable_and_loop_effects_keep_termination_fallthrough() {
 }
 
 #[test]
+fn exhaustive_hir_consumers_descend_into_iteration_bodies() {
+    let hir = check_iteration(concat!(
+        "from std::iter import Iterable;\n",
+        "class Scanner implements Iterable<i64, u64> {\n",
+        "  private cell observed: i64;\n",
+        "  init() { self.observed = 0; }\n",
+        "  fn iter_state() -> u64 { return 0u; }\n",
+        "  fn iter_next(mut ref state: u64) -> i64? { return none; }\n",
+        "  fn scan() -> unit { for (item in self) { self.observed = item; } }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let writes = crate::hir::collect_cell_writes(&hir);
+    assert_eq!(writes.len(), 1, "the nested loop-body write must be found");
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("ForIn"), "{dump}");
+    let mir = crate::mir::lower_hir(&hir);
+    crate::mir::verify_mir(&mir).expect("exhaustively consumed iteration must still verify");
+}
+
+#[test]
 fn manually_rebuilt_hir_enforces_identity_invariants_and_dumps_deterministically() {
     let hir = check_iteration(&format!(
         "{COUNTER}fn scan(values: Counter) -> unit {{ for (item in values) {{}} }}\nfn main() -> i64 {{ return 0; }}\n"
@@ -505,25 +540,46 @@ fn manually_rebuilt_hir_enforces_identity_invariants_and_dumps_deterministically
     assert_eq!(rebuilt, original);
     assert_eq!(dump_hir(&hir), dump_hir(&hir));
 
-    let mut invalid_state = original.state.clone();
-    invalid_state.advance.target.requirement = original.protocol.iter_state;
-    let rejected = std::panic::catch_unwind(|| {
-        crate::hir::HirForIn::new(
-            original.loop_id,
-            original.binding,
-            original.protocol,
-            original.receiver,
-            invalid_state,
-            original.result,
-            original.item,
-            original.body,
-            original.spans,
-        )
+    let assert_rejected = |name: &str, mutate: fn(&mut crate::hir::HirForIn)| {
+        let mut candidate = original.clone();
+        mutate(&mut candidate);
+        let rejected = std::panic::catch_unwind(|| {
+            crate::hir::HirForIn::new(
+                candidate.loop_id,
+                candidate.binding,
+                candidate.protocol,
+                candidate.receiver,
+                candidate.state,
+                candidate.result,
+                candidate.item,
+                candidate.body,
+                candidate.spans,
+            )
+        });
+        assert!(rejected.is_err(), "{name} must be rejected before MIR");
+    };
+    assert_rejected("mismatched iter_next identity", |candidate| {
+        candidate.state.advance.target.requirement = candidate.protocol.iter_state;
     });
-    assert!(
-        rejected.is_err(),
-        "mismatched iter_next identity must be rejected"
-    );
+    assert_rejected("foreign requirement owner", |candidate| {
+        candidate.protocol.iter_next = crate::identity::InterfaceRequirementId::new(
+            crate::identity::InterfaceId::new(usize::MAX),
+            0,
+        );
+        candidate.state.advance.target.requirement = candidate.protocol.iter_next;
+    });
+    assert_rejected("read-only state alias", |candidate| {
+        candidate.state.advance.state_alias.access = HirAccess::ReadOnly;
+    });
+    assert_rejected("mismatched item type", |candidate| {
+        candidate.item.value.ty = Type::U8;
+    });
+    assert_rejected("mismatched result payload", |candidate| {
+        candidate.result.payload = Type::U8;
+    });
+    assert_rejected("mutable protocol receiver", |candidate| {
+        candidate.state.advance.receiver_access = HirAccess::Mutable;
+    });
 }
 
 #[test]
@@ -707,10 +763,17 @@ fn rejects_body_write_that_invalidates_guarded_optional_receiver() {
     );
     let checked = type_check(&resolved.program);
     assert!(checked.hir.is_none());
-    assert!(checked.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == GENERAL_ITERATION_UNSUPPORTED
-            && diagnostic.message.contains("guarded optional")
-    }));
+    let diagnostic = checked
+        .diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == GENERAL_ITERATION_UNSUPPORTED
+                && diagnostic.message.contains("guarded optional")
+        })
+        .expect("unsafe optional replacement must be diagnosed");
+    assert_eq!(diagnostic.labels.len(), 2);
+    assert_eq!(diagnostic.labels[0].style, LabelStyle::Primary);
+    assert_eq!(diagnostic.labels[1].style, LabelStyle::Secondary);
 }
 
 #[test]

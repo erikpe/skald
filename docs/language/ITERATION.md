@@ -106,6 +106,15 @@ Diagnostics distinguish no application, ambiguity, and an exact annotation
 mismatch and retain both use and claim/bound spans. The initial typed-HIR
 construction and ordinary-MIR execution matrix is also implemented.
 
+Malformed headers recover at their actionable delimiter or component so later
+statements can still be checked. A canonical-interface declaration error points
+at the invalid declaration component and its requirement site. A selection
+error points at the iterable expression, or at the item annotation when that
+annotation rejects every candidate; ambiguity also identifies each conflicting
+claim in canonical order. Unsupported item copies, state storage, or retained
+receiver forms remain ordinary capability and lifetime diagnostics rather than
+lowering failures.
+
 ## Execution and termination
 
 The iterable expression is evaluated exactly once. Before the first iteration

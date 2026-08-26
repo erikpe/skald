@@ -84,3 +84,25 @@ source = "general_iteration_value_matrix.ska"
 [[test.run]]
 name = "stored_values_and_nested_optional_sentinel"
 expect = { stdout = { inline = "10\n11\n20\n40\n40\n41\n61\n100\n100\n70\n70\n80\n81\n81\n91\n90\n" } }
+
+[[test]]
+name = "general_iteration_header_failures"
+mode = "compile-fail"
+source = "general_iteration_header_failures.ska"
+[test.expect.stderr]
+matches = [
+  { name = "missing binding", match = "contains", inline = "error[PAR002]: expected an item binding after `for (`" },
+  { name = "missing delimiter", match = "contains", inline = "error[PAR002]: expected contextual `in` after the item binding" },
+  { name = "missing iterable", match = "contains", inline = "error[PAR004]: expected an iterable expression after `in`" },
+]
+
+[[test]]
+name = "general_iteration_selection_failures"
+mode = "compile-fail"
+source = "general_iteration_selection_failures.ska"
+[test.expect.stderr]
+matches = [
+  { name = "missing conformance", match = "contains", inline = "error[RES054]: the iterable type provides no eligible `std::iter::Iterable` application" },
+  { name = "ambiguous conformance", match = "contains", inline = "error[RES055]: multiple eligible `std::iter::Iterable` applications remain" },
+  { name = "annotation mismatch", match = "contains", inline = "error[RES056]: the iteration item annotation matches no eligible `Iterable` application" },
+]

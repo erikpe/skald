@@ -47,18 +47,22 @@ impl HirForIn {
         spans: HirIterationSpans,
     ) -> Self {
         assert_eq!(binding.callable(), loop_id.callable());
+        assert_eq!(protocol.iter_state.interface(), protocol.interface);
+        assert_eq!(protocol.iter_next.interface(), protocol.interface);
         assert_eq!(
             receiver.carrier.target(),
             HirViewTarget::Interface(protocol.interface)
         );
         assert_eq!(receiver.carrier.access(), HirAccess::ReadOnly);
         assert_eq!(state.value.ty, protocol.state);
+        assert_eq!(state.initialize.receiver_access, HirAccess::ReadOnly);
         assert_eq!(state.initialize.result, protocol.state);
         assert_eq!(state.initialize.target.interface, protocol.interface);
         assert_eq!(state.initialize.target.requirement, protocol.iter_state);
         assert_eq!(state.advance.result, Type::Optional(protocol.result));
         assert_eq!(state.advance.target.interface, protocol.interface);
         assert_eq!(state.advance.target.requirement, protocol.iter_next);
+        assert_eq!(state.advance.receiver_access, HirAccess::ReadOnly);
         assert_eq!(state.advance.state_alias.ty, protocol.state);
         assert_eq!(state.advance.state_alias.access, HirAccess::Mutable);
         assert_eq!(result.optional, protocol.result);

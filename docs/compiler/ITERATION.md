@@ -182,6 +182,23 @@ wrong state aliases or item types, calls after termination, missing or duplicate
 cleanup, invalid loop targets, unbalanced storage, and insufficient receiver
 anchors.
 
+These boundaries have direct hardening evidence. Parser recovery retains the
+following statement after every malformed header component. Resolution labels
+the malformed canonical declaration or loop header as the primary cause and
+labels candidate declarations or requirements as secondary evidence, with
+candidate identities in canonical order. HIR construction rejects inconsistent
+interface/requirement identities, receiver access, and `Item`/`State`/result
+types before lowering. Final-MIR mutation tests cover call signatures, aliases,
+nested optional layers, storage epochs, loop destinations, receiver owners,
+checked-view guards, shared anchors, cleanup multiplicity, and post-termination
+control flow through the ordinary verifier.
+
+Determinism tests compare resolved, HIR, preliminary-MIR, planned-MIR,
+final-MIR, and assembly output across processes while reversing source-file,
+provider-module, and equivalent ambiguous-claim discovery order. Deep mixed
+`while`/`for-in` construction additionally checks deterministic verified CFG
+growth without adding an iteration-specific recursion path.
+
 ## Target and ABI boundary
 
 Backends receive only verified ordinary MIR calls, optional operations,

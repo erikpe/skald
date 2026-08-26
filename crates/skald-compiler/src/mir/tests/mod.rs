@@ -37,6 +37,7 @@ mod integer_division;
 mod interface_dispatch;
 mod interface_fixtures;
 mod io;
+mod iteration_hardening;
 mod logical_boundaries;
 mod logical_expressions;
 mod logical_fixtures;
